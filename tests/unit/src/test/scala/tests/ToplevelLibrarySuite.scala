@@ -5,6 +5,8 @@ import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
 /**
@@ -24,14 +26,24 @@ class ToplevelLibrarySuite extends BaseSuite {
     "/scala/Singleton.scala"
   )
   val javaTestClasspath: List[AbsolutePath] = Library.damlrxjavaSources
+  def toplevels(document: TextDocument): List[String] = {
+    document.occurrences.iterator
+      .filter { occ =>
+        occ.role.isDefinition &&
+        Symbol(occ.symbol).isToplevel
+      }
+      .map(_.symbol)
+      .toList
+  }
 
   scala2TestClasspath.foreach { entry =>
     test(entry.toNIO.getFileName.toString) {
       forAllScalaFilesInJar(entry) { file =>
         if (!scala2ExclusionList.contains(file.toString)) {
           val input = file.toInput
-          val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala213))
-          val scalaToplevelMtags = Mtags.topLevelSymbols(file)
+          val scalaMtags =
+            toplevels(Mtags.testingSingleton.index(file, dialects.Scala213))
+          val scalaToplevelMtags = Mtags.testingSingleton.topLevelSymbols(file)
 
           assertTopLevels(scalaToplevelMtags, scalaMtags, input)
 
@@ -39,7 +51,10 @@ class ToplevelLibrarySuite extends BaseSuite {
           // to scala2 parser
           if (!scala3ExclusionList(file.toString)) {
             val scala3Toplevels =
-              Mtags.topLevelSymbols(file, dialect = dialects.Scala3)
+              Mtags.testingSingleton.topLevelSymbols(
+                file,
+                dialect = dialects.Scala3,
+              )
             assertTopLevels(scala3Toplevels, scalaMtags, input)
           }
         }
@@ -52,8 +67,10 @@ class ToplevelLibrarySuite extends BaseSuite {
       forAllScalaFilesInJar(entry) { file =>
         if (!scala3ExclusionList.contains(file.toString)) {
           val input = file.toInput
-          val scalaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala3))
-          val scalaToplevelMtags = Mtags.topLevelSymbols(file, dialects.Scala3)
+          val scalaMtags =
+            toplevels(Mtags.testingSingleton.index(file, dialects.Scala3))
+          val scalaToplevelMtags =
+            Mtags.testingSingleton.topLevelSymbols(file, dialects.Scala3)
           assertTopLevels(scalaToplevelMtags, scalaMtags, input)
         }
       }
@@ -64,8 +81,10 @@ class ToplevelLibrarySuite extends BaseSuite {
     test(entry.toNIO.getFileName.toString) {
       forAllJavaFilesInJar(entry) { file =>
         val input = file.toInput
-        val javaMtags = Mtags.toplevels(Mtags.index(file, dialects.Scala3))
-        val javaToplevelMtags = Mtags.topLevelSymbols(file, dialects.Scala3)
+        val javaMtags =
+          toplevels(Mtags.testingSingleton.index(file, dialects.Scala3))
+        val javaToplevelMtags =
+          Mtags.testingSingleton.topLevelSymbols(file, dialects.Scala3)
         assertTopLevels(javaToplevelMtags, javaMtags, input)
       }
     }

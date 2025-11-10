@@ -2,7 +2,7 @@ package example;
 
 import java.io.IOException;
 
-public class JavaExtends/*example.JavaExtends#*/ {
+public class JavaExtends/*example.JavaExtends#*//*example.JavaExtends#`<init>`().*/ {
 
   enum Color/*example.JavaExtends#Color#*/ implements AutoCloseable, Runnable {
     RED/*example.JavaExtends#Color#RED.*/("red"),
@@ -47,7 +47,7 @@ public class JavaExtends/*example.JavaExtends#*/ {
     }
   }
 
-  class MyClass/*example.JavaExtends#MyClass#*/ extends Exception implements MyInterface, Runnable {
+  class MyClass/*example.JavaExtends#MyClass#*//*example.JavaExtends#MyClass#`<init>`().*/ extends Exception implements MyInterface, Runnable {
 
     @Override
     public void close/*example.JavaExtends#MyClass#close().*/() throws IOException {

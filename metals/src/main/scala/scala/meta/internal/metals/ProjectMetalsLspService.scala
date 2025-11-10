@@ -607,6 +607,7 @@ class ProjectMetalsLspService(
       clientConfig,
       trees,
       buffers,
+      () => mtags,
     )
 
   protected def onBuildTargetChanges(

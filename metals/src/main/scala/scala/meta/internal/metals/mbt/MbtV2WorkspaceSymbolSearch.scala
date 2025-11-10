@@ -26,7 +26,6 @@ import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.Time
@@ -47,11 +46,11 @@ class MbtV2WorkspaceSymbolSearch(
     buffers: Buffers = Buffers(),
     time: Time = Time.system,
     metrics: MonitoringClient = new NoopMonitoringClient(),
+    mtags: () => Mtags = () => Mtags.testingSingleton,
 )(implicit val ec: ExecutionContext)
     extends MbtWorkspaceSymbolSearch {
 
   private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
-  private val mtags = new Mtags()(EmptyReportContext)
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
 
   override def close(): Unit = {}
@@ -104,7 +103,7 @@ class MbtV2WorkspaceSymbolSearch(
 
     // Step 3: The actual indexing, happens in parallel. Treat these as regular
     // didChange events for each individual file.
-    toIndex.foreach(file => onDidChange(file))
+    toIndex.toList.foreach(file => onDidChange(file))
 
     // Step 4: Write the index to disk. It's technically fine to move writing
     // the index to a background job.  Might be worth doing someday.
@@ -159,7 +158,8 @@ class MbtV2WorkspaceSymbolSearch(
     }
   }
   def onDidChange(file: AbsolutePath): Unit = try {
-    val mdoc = IndexedDocument.fromFile(file, mtags, buffers, dialects.Scala213)
+    val mdoc =
+      IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
     putDocument(file, mdoc)
   } catch {
     case _: UnexpectedInputEndException =>
@@ -346,8 +346,7 @@ class MbtV2WorkspaceSymbolSearch(
       for {
         doc <- index.getDocumentsList().asScala.iterator
         // Don't load old and incompatible versions of indexed files
-        if doc.getBloomFilterVersion() ==
-          IndexedDocument.currentBloomFilterVersion
+        if IndexedDocument.matchesCurrentVersion(doc)
       } {
         try {
           val path = AbsolutePath.fromAbsoluteUri(URI.create(doc.getUri()))

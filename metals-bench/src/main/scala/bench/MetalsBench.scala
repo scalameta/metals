@@ -1,11 +1,14 @@
 package bench
 
+import java.net.URI
+
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
 import scala.tools.nsc.interactive.Global
 
 import scala.meta.dialects
 import scala.meta.interactive.InteractiveSemanticdb
+import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.IdentifierIndex
 import scala.meta.internal.metals.JdkSources
@@ -13,10 +16,11 @@ import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments.XtensionScanner
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.JavaToplevelMtags
+import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
+import scala.meta.internal.mtags.QdoxJavaMtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -28,6 +32,10 @@ import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import com.sun.source.util.TreePath
+import com.sun.source.util.TreePathScanner
+import com.sun.tools.javac.util.Context
+import com.sun.tools.javac.util.Log
 import one.profiler.AsyncProfiler
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
@@ -103,7 +111,7 @@ class MetalsBench {
   def setup(): Unit = {
     flamegraphPath().foreach { _ =>
       val startResult = profiler.execute(s"start,flamegraph")
-      if (startResult != "Profiling started") {
+      if (startResult.trim() != "Profiling started") {
         scribe.info(s"started profiler: $startResult")
       }
     }
@@ -214,16 +222,67 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def mtagsJavaParse(): Unit = {
+  def mtagsJavaQdoxParse(): Unit = {
     javaDependencySources.foreach { input =>
-      new JavaMtags(input, includeMembers = true)(EmptyReportContext)
+      new QdoxJavaMtags(input, includeMembers = true)(EmptyReportContext)
         .index()
+    }
+  }
+
+  def mtagsJavacParse(): Unit = {
+    javaDependencySources.foreach { input =>
+      new JavacMtags(input, includeMembers = true)(EmptyReportContext).index()
     }
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def toplevelJavaMtags(): Unit = {
+  def mtagsJavacBaseline(): Int = {
+    var count = 0
+    javaDependencySources.foreach { input =>
+      val ctx = new Context()
+      val task = JavacMtags.createParserFactory(ctx)
+      val source = SourceJavaFileObject.make(input.text, URI.create(input.path))
+      Log.instance(ctx).useSource(source)
+      val parser = task.factory.newParser(input.text, false, true, true)
+      val cu = parser.parseCompilationUnit()
+      val visitor = new TreePathScanner[TreePath, Unit]() {
+        override def scan(tree: TreePath, p: Unit): TreePath = {
+          count += 1
+          super.scan(tree, p)
+        }
+      }
+      count += 1
+      visitor.scan(cu, ())
+      task.fileManager.close()
+    }
+    count
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def mtagsJavacToplevelParse(): Unit = {
+    javaDependencySources.foreach { input =>
+      new JavacMtags(input, includeMembers = false)(EmptyReportContext).index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def mtagsJavacFuzzyReferencesParse(): Unit = {
+    javaDependencySources.foreach { input =>
+      new JavacMtags(
+        input,
+        includeMembers = true,
+        includeFuzzyReferences = true,
+        includeUniqueFuzzyReferences = true,
+      )(EmptyReportContext).index()
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Array(Mode.SingleShotTime))
+  def mtagsJavaToplevelParse(): Unit = {
     javaDependencySources.inputs.foreach { case (input, _) =>
       new JavaToplevelMtags(input, includeInnerClasses = true)(
         LoggerReportContext
@@ -234,7 +293,7 @@ class MetalsBench {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def indexSources(): Unit = {
-    val index = OnDemandSymbolIndex.empty()(LoggerReportContext)
+    val index = OnDemandSymbolIndex.empty(mtags = () => Mtags.testingSingleton)
     fullClasspath.entries.foreach(entry =>
       index.addSourceJar(entry, dialects.Scala213)
     )
@@ -244,7 +303,7 @@ class MetalsBench {
   @BenchmarkMode(Array(Mode.SingleShotTime))
   def alltoplevelsScalaIndex(): Unit = {
     scalaDependencySources.foreach { input =>
-      Mtags.allToplevels(input, dialects.Scala213)
+      Mtags.testingSingleton.allToplevels(input, dialects.Scala213)
     }
   }
 
@@ -273,7 +332,7 @@ class MetalsBench {
     var btIndex = 0
     val index = new IdentifierIndex
     scalaDependencySources.inputs.foreach { case (input, path) =>
-      val mtags = new ScalaToplevelMtags(
+      val indexer = new ScalaToplevelMtags(
         input,
         includeInnerClasses = true,
         includeMembers = true,
@@ -281,9 +340,9 @@ class MetalsBench {
         collectIdentifiers = true,
       )(EmptyReportContext)
 
-      mtags.indexRoot()
+      indexer.indexRoot()
 
-      val identifiers = mtags.allIdentifiers
+      val identifiers = indexer.allIdentifiers
       if (identifiers.nonEmpty)
         index.addIdentifiers(
           path,

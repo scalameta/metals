@@ -1,7 +1,6 @@
 package tests
 
 import scala.meta.dialects
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
@@ -13,7 +12,7 @@ class JdkSourcesSuite extends BaseSuite {
 
   test("index-src.zip") {
     val jdk = JdkSources().right.get
-    val symbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext)
+    val symbolIndex = OnDemandSymbolIndex.empty()
 
     symbolIndex.addSourceJar(jdk, dialects.Scala213)
 

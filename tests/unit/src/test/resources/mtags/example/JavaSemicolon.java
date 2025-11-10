@@ -1,6 +1,6 @@
 package example;
 
-public class JavaSemicolon/*example.JavaSemicolon#*/ {
+public class JavaSemicolon/*example.JavaSemicolon#*//*example.JavaSemicolon#`<init>`().*/ {
   public static void a/*example.JavaSemicolon#a().*/() {}
 
   public int b/*example.JavaSemicolon#b().*/() {
@@ -10,7 +10,7 @@ public class JavaSemicolon/*example.JavaSemicolon#*/ {
 
   public static int c/*example.JavaSemicolon#c.*/ = 2;
 
-  public class C/*example.JavaSemicolon#C#*/ {
+  public class C/*example.JavaSemicolon#C#*//*example.JavaSemicolon#C#`<init>`().*/ {
     public int b/*example.JavaSemicolon#C#b().*/() {
       return 1;
     }
@@ -19,7 +19,7 @@ public class JavaSemicolon/*example.JavaSemicolon#*/ {
     public int d/*example.JavaSemicolon#C#d.*/ = 2;
   }
 
-  public static class F/*example.JavaSemicolon#F#*/ {
+  public static class F/*example.JavaSemicolon#F#*//*example.JavaSemicolon#F#`<init>`().*/ {
     public static void a/*example.JavaSemicolon#F#a().*/() {}
 
     public int b/*example.JavaSemicolon#F#b().*/() {

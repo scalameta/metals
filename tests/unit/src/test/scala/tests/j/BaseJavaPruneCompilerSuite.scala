@@ -9,7 +9,6 @@ import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.Embedded
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
@@ -26,8 +25,6 @@ import tests.FileLayout
 abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
   val tmp = new tests.TemporaryDirectoryFixture()
   override def munitFixtures: Seq[AnyFixture[_]] = List(tmp)
-
-  val mtags = new Mtags()(EmptyReportContext)
 
   val logger: Logger = LoggerFactory.getLogger(classOf[JavaPruneCompilerSuite])
   def compileFilesWithFormattedDiagnostics(
@@ -58,7 +55,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
     }
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
     val semanticdbFileManager =
-      new TestingSemanticdbFileManager(tmp(), mtags, languages)
+      new TestingSemanticdbFileManager(tmp(), Mtags.testingSingleton, languages)
     val dir = FileLayout.fromString(layout, root = tmp())
     val uri = dir.resolve(mainPath).toNIO.toUri
     val text = dir.resolve(mainPath).toInputFromBuffers(Buffers()).text

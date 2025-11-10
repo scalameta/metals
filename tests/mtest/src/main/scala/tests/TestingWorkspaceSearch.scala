@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments.XtensionWorkspaceSymbolQuery
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -32,6 +33,7 @@ class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
       (path, (text, dialect)) <- inputs
     } {
       SemanticdbDefinition.foreach(
+        Mtags.testingSingleton,
         Input.VirtualFile(path, text),
         dialect,
         includeMembers = true

@@ -2,6 +2,7 @@ package scala.meta.internal.jpc
 
 import java.io.Closeable
 import java.io.File
+import java.io.StringWriter
 import java.io.Writer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
@@ -229,8 +230,9 @@ object JavaMetalsCompiler {
     parse(SourceJavaFileObject.fromParams(params))
   }
   def parse(source: JavaFileObject): Option[(Trees, CompilationUnitTree)] = {
+    val printer = new StringWriter()
     val task = COMPILER.getTask(
-      null,
+      printer,
       STANDARD_FILE_MANAGER,
       null,
       List.empty[String].asJava,

@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mbt
 import scala.meta.Dialect
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jsemanticdb.Semanticdb
+import scala.meta.internal.jsemanticdb.Semanticdb.Language.JAVA
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -60,7 +61,10 @@ case class IndexedDocument(
       .setLanguage(language)
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
-      .setBloomFilterVersion(Mbt.IndexedDocument.BloomFilterVersion.V1)
+      .setBloomFilterVersion(
+        if (language.isJava) Mbt.IndexedDocument.BloomFilterVersion.V2
+        else Mbt.IndexedDocument.BloomFilterVersion.V1
+      )
   }
 }
 
@@ -170,7 +174,12 @@ object IndexedDocument {
   }
 
   // Bump up this version when we make changes to what kinds of strings we
-  // insert into the bloom filter.
-  def currentBloomFilterVersion: Mbt.IndexedDocument.BloomFilterVersion =
-    Mbt.IndexedDocument.BloomFilterVersion.V1
+  // insert into the bloom filter. For example, if we change mtags for a
+  // specific language, then we should bump the version requirement for
+  // that language.
+  def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
+    doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
+      case JAVA => Mbt.IndexedDocument.BloomFilterVersion.V2
+      case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
+    }).getNumber()
 }

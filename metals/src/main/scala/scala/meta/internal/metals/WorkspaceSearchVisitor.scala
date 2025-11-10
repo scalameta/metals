@@ -7,6 +7,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -32,6 +33,7 @@ class WorkspaceSearchVisitor(
     token: CancelChecker,
     index: GlobalSymbolIndex,
     saveClassFileToDisk: Boolean,
+    mtags: Mtags,
     resultOrdering: Ordering[SymbolDefinition] = DefaultSymbolDefinitionOrdering,
 )(implicit rc: ReportContext)
     extends SymbolSearchVisitor {
@@ -130,6 +132,7 @@ class WorkspaceSearchVisitor(
       isVisited += defn.path
       val input = defn.path.toInput
       SemanticdbDefinition.foreach(
+        mtags,
         input,
         defn.dialect,
         includeMembers = false,

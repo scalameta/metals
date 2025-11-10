@@ -26,6 +26,14 @@ trait MtagsIndexer {
       symbols = symbols.result()
     )
   }
+
+  // Experiment to replace IdentifierIndex
+  def visitFuzzyReferenceOccurrence(
+      occ: s.SymbolOccurrence
+  ): Unit = {
+    names += occ
+  }
+
   // This method is intentionally non-final to allow accessing this stream directly without building a s.TextDocument.
   def visitOccurrence(
       occ: s.SymbolOccurrence,

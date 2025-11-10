@@ -36,7 +36,11 @@ abstract class BaseToplevelSuite extends BaseSuite {
           case All | ToplevelWithInner =>
             val includeMembers = mode == All
             val (doc, overrides) =
-              Mtags.indexWithOverrides(input, dialect, includeMembers)
+              Mtags.testingSingleton.indexWithOverrides(
+                input,
+                dialect,
+                includeMembers,
+              )
             val overriddenMap = overrides.toMap
             doc.symbols.map { symbolInfo =>
               val suffix = if (symbolInfo.isExtension) " EXT" else ""
@@ -54,7 +58,8 @@ abstract class BaseToplevelSuite extends BaseSuite {
                   s"$symbol$suffix -> $overridden"
               }
             }
-          case Toplevel => Mtags.topLevelSymbols(input, dialect)
+          case Toplevel =>
+            Mtags.testingSingleton.topLevelSymbols(input, dialect)
         }
       input.delete()
       dir.delete()

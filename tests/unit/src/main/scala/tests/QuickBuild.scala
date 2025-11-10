@@ -333,14 +333,14 @@ object QuickBuild {
       else Set.empty[String]
 
     val repositories =
-      Repository.defaults().asScala ++
-        List(
-          Repository.central(),
-          Repository.ivy2Local(),
-          MavenRepository.of(
-            "https://oss.sonatype.org/content/repositories/public"
-          ),
-        )
+      // Repository.defaults().asScala ++
+      List(
+        Repository.central(),
+        Repository.ivy2Local(),
+        MavenRepository.of(
+          "https://oss.sonatype.org/content/repositories/public"
+        ),
+      )
 
     Fetch
       .create()

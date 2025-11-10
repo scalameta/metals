@@ -12,6 +12,7 @@ import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.watcher.FileWatcher
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
@@ -31,6 +32,7 @@ trait IndexProviders {
   def referencesProvider: ReferenceProvider
   def workspaceSymbols: WorkspaceSymbolProvider
   def mbtSymbolSearch: MbtWorkspaceSymbolSearch
+  def mtags: Mtags
   def buildTargets: BuildTargets
   def semanticDBIndexer: SemanticdbIndexer
   def fileWatcher: FileWatcher

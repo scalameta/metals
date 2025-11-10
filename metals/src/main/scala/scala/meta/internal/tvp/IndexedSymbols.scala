@@ -14,7 +14,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.mtags.JavaMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.Symbol
@@ -29,9 +28,8 @@ class IndexedSymbols(
     trees: Trees,
     buffers: Buffers,
     buildTargets: BuildTargets,
+    mtags: () => Mtags,
 )(implicit rc: ReportContext) {
-
-  private val mtags = new Mtags()
   // Used for workspace, is eager
   private val workspaceCache = TrieMap.empty[
     AbsolutePath,
@@ -86,9 +84,9 @@ class IndexedSymbols(
               ) =>
             parsed.input match {
               case input: Input.VirtualFile =>
-                val mtags =
+                val indexer =
                   new ScalaMtags(input, parsed.dialect, Some(src))
-                Some(mtags.index().symbols)
+                Some(indexer.index().symbols)
               case _ => None
             }
           case _ => None
@@ -104,11 +102,11 @@ class IndexedSymbols(
   }
 
   private def javaSymbols(in: AbsolutePath) = {
-    val mtags = new JavaMtags(
+    val indexer = mtags().config.javaInstance(
       Input.VirtualFile(in.toString(), buffers.get(in).getOrElse(in.readText)),
       includeMembers = true,
     )
-    mtags
+    indexer
       .index()
       .symbols
   }
@@ -294,7 +292,7 @@ class IndexedSymbols(
         try {
           root.listRecursive.toList.collect {
             case source if source.isFile =>
-              (source, mtags.toplevels(source, dialect).symbols)
+              (source, mtags().toplevels(source, dialect).symbols)
           }
         } catch {
           // this happens in broken jars since file from FileWalker should exists
@@ -306,7 +304,7 @@ class IndexedSymbols(
     val pathSymbolInfos = if (path.isSourcesJar) {
       indexJar(path)
     } else {
-      List((path, mtags.toplevels(path, dialect).symbols))
+      List((path, mtags().toplevels(path, dialect).symbols))
     }
     pathSymbolInfos.collect { case (path, infos) =>
       infos.map { info =>
@@ -327,7 +325,7 @@ class IndexedSymbols(
       path: AbsolutePath,
       dialect: Dialect,
   ): List[SymbolDefinition] = {
-    val document = mtags.allSymbols(path, dialect)
+    val document = mtags().allSymbols(path, dialect)
     document.symbols.map { info =>
       SymbolDefinition(
         Symbol("_empty_"),

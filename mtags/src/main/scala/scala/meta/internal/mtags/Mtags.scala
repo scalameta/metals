@@ -17,7 +17,9 @@ import scala.meta.internal.semanticdb.Schema
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 
-final class Mtags(implicit rc: ReportContext) {
+final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
+    val rc: ReportContext
+) {
   def totalLinesOfCode: Long = lineCounts.values.asScala.sum
   def totalSymbols: Long = symbolsCount
   def totalLinesOfScala: Long =
@@ -39,7 +41,7 @@ final class Mtags(implicit rc: ReportContext) {
     val language = input.toJLanguage
 
     if (language.isJava || language.isScala) {
-      val mtags =
+      val indexer =
         if (language.isJava)
           new JavaToplevelMtags(input, includeInnerClasses = false)
         else
@@ -52,7 +54,7 @@ final class Mtags(implicit rc: ReportContext) {
       addLines(language, input.text)
       Mtags.stdLibPatches.patchDocument(
         path,
-        mtags.index()
+        indexer.index()
       )
     } else if (language.isProtobuf) {
       new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
@@ -69,9 +71,12 @@ final class Mtags(implicit rc: ReportContext) {
     val input = path.toInput
     val language = input.toJLanguage
     if (language.isJava || language.isScala) {
-      val mtags =
+      val indexer =
         if (language.isJava)
-          new JavaToplevelMtags(input, includeInnerClasses = true)
+          if (includeMembers)
+            config.javaInstance(input, includeMembers = true)
+          else
+            new JavaToplevelMtags(input, includeInnerClasses = true)
         else if (language.isScala)
           new ScalaToplevelMtags(
             input,
@@ -86,9 +91,9 @@ final class Mtags(implicit rc: ReportContext) {
       val doc =
         Mtags.stdLibPatches.patchDocument(
           path,
-          mtags.index()
+          indexer.index()
         )
-      val overrides = mtags.overrides()
+      val overrides = indexer.overrides()
       (doc, overrides)
     } else if (language.isProtobuf) {
       new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
@@ -117,7 +122,7 @@ final class Mtags(implicit rc: ReportContext) {
     addLines(language, input.text)
     val result =
       if (language == Semanticdb.Language.JAVA) {
-        new JavaMtags(input, includeMembers = true).index()
+        config.javaInstance(input, includeMembers = true).index()
       } else if (language == Semanticdb.Language.SCALA) {
         ScalaMtags.index(input, dialect).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {
@@ -134,6 +139,22 @@ final class Mtags(implicit rc: ReportContext) {
       .withText(input.text)
   }
 
+  def allToplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean = true
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
+    input.toLanguage match {
+      case Language.JAVA =>
+        config.javaInstance(input, includeMembers = true).index()
+      case Language.SCALA =>
+        val indexer =
+          new ScalaToplevelMtags(input, true, includeMembers, dialect)
+        indexer.index()
+      case _ =>
+        TextDocument()
+    }
+
   def indexToplevelSymbols(
       language: Semanticdb.Language,
       input: Input.VirtualFile,
@@ -142,8 +163,7 @@ final class Mtags(implicit rc: ReportContext) {
     addLines(language, input.text)
     val result =
       if (language == Semanticdb.Language.JAVA) {
-        new JavaToplevelMtags(input, includeInnerClasses = true)
-          .index()
+        config.javaInstance(input, includeMembers = true).index()
       } else if (language == Semanticdb.Language.SCALA) {
         new ScalaToplevelMtags(
           input,
@@ -177,61 +197,7 @@ final class Mtags(implicit rc: ReportContext) {
   }
 }
 object Mtags {
-  def index(path: AbsolutePath, dialect: Dialect)(implicit
-      rc: ReportContext = EmptyReportContext
-  ): TextDocument = {
-    new Mtags().index(path, dialect)
-  }
-
-  def toplevels(document: TextDocument): List[String] = {
-    document.occurrences.iterator
-      .filter { occ =>
-        occ.role.isDefinition &&
-        Symbol(occ.symbol).isToplevel
-      }
-      .map(_.symbol)
-      .toList
-  }
-
-  def allToplevels(
-      input: Input.VirtualFile,
-      dialect: Dialect,
-      includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
-    input.toLanguage match {
-      case Language.JAVA =>
-        new JavaMtags(input, includeMembers = true).index()
-      case Language.SCALA =>
-        val mtags =
-          new ScalaToplevelMtags(input, true, includeMembers, dialect)
-        mtags.index()
-      case _ =>
-        TextDocument()
-    }
-
-  def toplevels(
-      path: AbsolutePath,
-      dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument = {
-    new Mtags().toplevels(path, dialect)
-  }
-
-  def indexWithOverrides(
-      path: AbsolutePath,
-      dialect: Dialect = dialects.Scala213,
-      includeMembers: Boolean = false
-  )(implicit
-      rc: ReportContext = EmptyReportContext
-  ): (TextDocument, MtagsIndexer.AllOverrides) = {
-    new Mtags().indexWithOverrides(path, dialect, includeMembers)
-  }
-
-  def topLevelSymbols(
-      path: AbsolutePath,
-      dialect: Dialect = dialects.Scala213
-  )(implicit rc: ReportContext = EmptyReportContext): List[String] = {
-    new Mtags().topLevelSymbols(path, dialect)
-  }
+  lazy val testingSingleton: Mtags = new Mtags()(EmptyReportContext)
 
   /**
    * Scala 3 has a specific package that adds / replaces some symbols in scala.Predef + scala.language

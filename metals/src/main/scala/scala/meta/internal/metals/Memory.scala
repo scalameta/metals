@@ -32,7 +32,7 @@ object Memory {
     val size = layout.totalSize()
     val suffix: String = value match {
       case index: OnDemandSymbolIndex =>
-        val n = index.mtags.totalLinesOfScala
+        val n = index.mtags().totalLinesOfScala
         s" (${format(n)} lines Scala)"
       case i: TrieMap[_, _] =>
         val elements = i.values.foldLeft(0L) {

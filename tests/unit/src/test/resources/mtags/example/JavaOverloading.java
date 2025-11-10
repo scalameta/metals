@@ -1,6 +1,6 @@
 package example;
 
-public class JavaOverloading/*example.JavaOverloading#*/ {
+public class JavaOverloading/*example.JavaOverloading#*//*example.JavaOverloading#`<init>`().*/ {
   public int name/*example.JavaOverloading#name.*/ = 1;
 
   public static int name/*example.JavaOverloading#name(+2).*/(String name) {

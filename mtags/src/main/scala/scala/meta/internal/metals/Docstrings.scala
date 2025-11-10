@@ -9,6 +9,7 @@ import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -31,7 +32,7 @@ import org.slf4j.LoggerFactory
  *
  * Handles both javadoc and scaladoc.
  */
-class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
+class Docstrings(index: GlobalSymbolIndex, mtags: () => Mtags) {
   val cache = new TrieMap[Content, SymbolDocumentation]()
   private val logger = LoggerFactory.getLogger(classOf[Docstrings])
 
@@ -169,6 +170,8 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
     ) cache.put(queryContent, new ProxySymbolDocumentation(defSymbol))
   }
 
+  private implicit def rc: ReportContext = mtags().rc
+
   private def indexSymbolDefinition(
       defn: SymbolDefinition,
       contentType: ContentType
@@ -204,9 +207,11 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
 }
 
 object Docstrings {
-  def empty(implicit rc: ReportContext): Docstrings = new Docstrings(
-    OnDemandSymbolIndex.empty()
-  )
+  def empty(mtags: () => Mtags): Docstrings =
+    new Docstrings(
+      OnDemandSymbolIndex.empty(mtags = mtags),
+      mtags
+    )
 }
 
 sealed trait Content extends Any

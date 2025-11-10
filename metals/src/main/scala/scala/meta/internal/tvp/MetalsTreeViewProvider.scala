@@ -26,6 +26,7 @@ import org.eclipse.{lsp4j => l}
 class MetalsTreeViewProvider(
     getFolderTreeViewProviders: () => List[FolderTreeViewProvider],
     languageClient: MetalsLanguageClient,
+    mtags: () => Mtags,
 )(implicit rc: ReportContext)
     extends TreeViewProvider {
   private val ticks =
@@ -141,7 +142,7 @@ class MetalsTreeViewProvider(
       } else dialectFromWorkspace
     val input = path.toInput
     val occurrences =
-      Mtags
+      mtags()
         .allToplevels(
           input,
           dialect,
@@ -227,12 +228,14 @@ class FolderTreeViewProvider(
     clientConfig: ClientConfiguration,
     trees: Trees,
     buffers: Buffers,
+    mtags: () => Mtags,
 )(implicit context: ReportContext) {
   val classpath = new IndexedSymbols(
     isStatisticsEnabled = clientConfig.initialConfig.statistics.isTreeView,
     trees,
     buffers,
     buildTargets,
+    mtags,
   )
 
   def dialectOf(path: AbsolutePath): Option[Dialect] =

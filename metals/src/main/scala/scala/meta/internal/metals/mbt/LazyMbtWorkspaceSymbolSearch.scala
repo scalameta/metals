@@ -5,12 +5,12 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 
 import scala.meta.infra.MonitoringClient
-import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.TimerProvider
+import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SemanticdbCompilationUnit
 import scala.meta.pc.SymbolSearch
@@ -25,22 +25,23 @@ import scala.meta.pc.SymbolSearchVisitor
  */
 class LazyMbtWorkspaceSymbolSearch(
     workspace: AbsolutePath,
-    config: () => WorkspaceSymbolProviderConfig = () =>
-      WorkspaceSymbolProviderConfig.default,
-    statistics: () => StatisticsConfig = () => StatisticsConfig.default,
-    buffers: Buffers = Buffers(),
-    time: Time = Time.system,
-    metrics: MonitoringClient = new NoopMonitoringClient(),
-    timerProvider: TimerProvider = TimerProvider.empty,
+    config: () => WorkspaceSymbolProviderConfig,
+    statistics: () => StatisticsConfig,
+    buffers: Buffers,
+    time: Time,
+    metrics: MonitoringClient,
+    timerProvider: TimerProvider,
+    mtags: () => Mtags,
 )(implicit ec: ExecutionContext)
     extends MbtWorkspaceSymbolSearch {
   private lazy val mbt1 = new MbtWorkspaceSymbolProvider(
     gitWorkspace = workspace,
     config = config,
     statistics = statistics,
-    metrics,
-    buffers,
-    timerProvider,
+    mtags = mtags,
+    metrics = metrics,
+    buffers = buffers,
+    timerProvider = timerProvider,
   )
   private lazy val mbt2 = new MbtV2WorkspaceSymbolSearch(
     workspace = workspace,
@@ -49,6 +50,7 @@ class LazyMbtWorkspaceSymbolSearch(
     buffers = buffers,
     time = time,
     metrics = metrics,
+    mtags = mtags,
   )
   private def delegate: MbtWorkspaceSymbolSearch =
     if (config().isMBT1) {

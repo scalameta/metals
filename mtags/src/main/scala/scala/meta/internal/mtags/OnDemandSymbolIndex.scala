@@ -9,7 +9,6 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
-import scala.meta.internal.metals.ReportContext
 import scala.meta.io.AbsolutePath
 
 /**
@@ -26,13 +25,12 @@ import scala.meta.io.AbsolutePath
  * in Option.scala is non-trivial while `Option#` in Option.scala is trivial.
  */
 final class OnDemandSymbolIndex(
-    dialectBuckets: TrieMap[Dialect, SymbolIndexBucket],
     onError: PartialFunction[Throwable, Unit],
     toIndexSource: AbsolutePath => AbsolutePath,
-    isClasspathDefinitionIndexEnabled: () => Boolean
-)(implicit rc: ReportContext)
-    extends GlobalSymbolIndex {
-  val mtags = new Mtags
+    isClasspathDefinitionIndexEnabled: () => Boolean,
+    val mtags: () => Mtags,
+    dialectBuckets: TrieMap[Dialect, SymbolIndexBucket] = TrieMap.empty
+) extends GlobalSymbolIndex {
   var indexedSources = 0L
   def close(): Unit = {
     dialectBuckets.values.foreach(_.close())
@@ -43,9 +41,9 @@ final class OnDemandSymbolIndex(
     dialectBuckets.getOrElseUpdate(
       dialect,
       new SymbolIndexBucket(
+        mtags = mtags,
         isClasspathDefinitionIndexEnabled = isClasspathDefinitionIndexEnabled,
         dialect = dialect,
-        mtags = mtags,
         toIndexSource = toIndexSource,
         onError = onError
       )
@@ -180,14 +178,15 @@ object OnDemandSymbolIndex {
       onError: PartialFunction[Throwable, Unit] = { case NonFatal(e) =>
         throw e
       },
+      mtags: () => Mtags = () => Mtags.testingSingleton,
       toIndexSource: AbsolutePath => AbsolutePath = identity,
       isClasspathDefinitionIndexEnabled: () => Boolean = () => false
-  )(implicit rc: ReportContext): OnDemandSymbolIndex = {
+  ): OnDemandSymbolIndex = {
     new OnDemandSymbolIndex(
-      TrieMap.empty,
       onError,
       toIndexSource,
-      isClasspathDefinitionIndexEnabled
+      isClasspathDefinitionIndexEnabled,
+      mtags = mtags
     )
   }
 

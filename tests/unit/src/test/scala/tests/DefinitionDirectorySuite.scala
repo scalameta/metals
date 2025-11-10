@@ -1,13 +1,12 @@
 package tests
 
 import scala.meta.dialects
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 
 class DefinitionDirectorySuite extends BaseSuite {
   test("basicScala") {
-    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
+    val index = OnDemandSymbolIndex.empty()
     def assertDefinition(sym: String): Unit = {
       val definition = index.definition(Symbol(sym))
       if (definition.isEmpty) throw new NoSuchElementException(sym)
@@ -25,7 +24,7 @@ class DefinitionDirectorySuite extends BaseSuite {
     assertDefinition("com/foo/Bar.")
   }
   test("basicJava") {
-    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
+    val index = OnDemandSymbolIndex.empty()
     def assertDefinition(sym: String): Unit = {
       val definition = index.definition(Symbol(sym))
       if (definition.isEmpty) throw new NoSuchElementException(sym)

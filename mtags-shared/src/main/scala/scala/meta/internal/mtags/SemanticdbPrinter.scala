@@ -7,8 +7,13 @@ import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.mtags.SemanticdbRanges._
 
 object SemanticdbPrinter {
-  def printDocument(doc: Semanticdb.TextDocument): String = {
+  def printDocument(
+      doc: Semanticdb.TextDocument,
+      includeInfo: Boolean = false
+  ): String = {
     val out = new StringBuilder
+
+    val symtab = doc.getSymbolsList().asScala.map(s => s.getSymbol() -> s).toMap
 
     def printRange(
         range: Semanticdb.Range,
@@ -92,8 +97,23 @@ object SemanticdbPrinter {
         }
       }
       foreach[Semanticdb.SymbolOccurrence](occs, _.getRange()) { occ =>
+        val infoMessage =
+          if (
+            !includeInfo ||
+            occ.getRole() != Semanticdb.SymbolOccurrence.Role.DEFINITION
+          ) {
+            ""
+          } else {
+            val occSymbol = occ.getSymbol()
+            symtab.get(occSymbol) match {
+              case Some(info) =>
+                val props = properties(info.getProperties())
+                s" ${info.getKind()}$props"
+              case None => ""
+            }
+          }
         val message =
-          s"${occ.getRole().toString().toLowerCase()} ${occ.getSymbol()}"
+          s"${occ.getRole().toString().toLowerCase()} ${occ.getSymbol()}$infoMessage"
         printRange(occ.getRange(), message, line)
       }
       foreach[Semanticdb.Diagnostic](diags, _.getRange()) { diag =>
@@ -103,6 +123,17 @@ object SemanticdbPrinter {
       }
     }
     out.toString()
+  }
+
+  private def properties(properties: Int): String = {
+    val props = for {
+      prop <- Semanticdb.SymbolInformation.Property.values()
+      if prop != Semanticdb.SymbolInformation.Property.UNKNOWN_PROPERTY
+      if prop != Semanticdb.SymbolInformation.Property.UNRECOGNIZED
+      if (properties & prop.getNumber()) != 0
+    } yield prop.toString().toLowerCase()
+    if (props.isEmpty) ""
+    else props.mkString("(", ", ", ")")
   }
 
   private def replaceTabs(line: String): String = {

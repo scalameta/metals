@@ -4,7 +4,6 @@ import java.nio.file.Files
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.IndexedDocument
@@ -224,10 +223,9 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
     def simulateOldIndexFile(): Unit = {
       val buffers = Buffers()
       val dialect = scala.meta.dialects.Scala213
-      val mtags = new Mtags()(EmptyReportContext)
       val mdoc = IndexedDocument.fromFile(
         server.workspace.resolve(greeting),
-        mtags,
+        Mtags.testingSingleton,
         buffers,
         dialect,
       )

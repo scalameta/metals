@@ -28,12 +28,14 @@ abstract class ToplevelSuite(
           val reluri = relpath.toURI(isDirectory = false).toString
           val path = dir.resolve(relpath)
           val fileSymtab = symtab(path)
-          Mtags.topLevelSymbols(path, dialect).foreach { toplevel =>
-            if (fileSymtab.info(toplevel).isEmpty) {
-              missingSymbols += toplevel
+          Mtags.testingSingleton
+            .topLevelSymbols(path, dialect)
+            .foreach { toplevel =>
+              if (fileSymtab.info(toplevel).isEmpty) {
+                missingSymbols += toplevel
+              }
+              toplevels += s"$reluri -> $toplevel"
             }
-            toplevels += s"$reluri -> $toplevel"
-          }
         }
       }
     }

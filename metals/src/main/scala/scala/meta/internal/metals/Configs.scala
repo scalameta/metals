@@ -192,7 +192,6 @@ object Configs {
       value == "bsp" // The classic BSP-based workspace/symbol implementation
   }
 
-  @nowarn
   final case class DefinitionIndexStrategy(val value: String) {
     require(List("classpath", "sources").contains(value), value)
     def isClasspath: Boolean =
@@ -226,6 +225,44 @@ object Configs {
             Right(DefinitionIndexStrategy.sources)
           } else {
             Right(DefinitionIndexStrategy.default)
+          }
+      }
+    }
+  }
+
+  final case class JavaOutlineProviderConfig(val value: String) {
+    require(List("qdox", "javac").contains(value), value)
+    def isQdox: Boolean =
+      value == "qdox"
+    def isJavac: Boolean =
+      value == "javac"
+  }
+
+  object JavaOutlineProviderConfig {
+    def qdox: JavaOutlineProviderConfig =
+      JavaOutlineProviderConfig("qdox")
+    def javac: JavaOutlineProviderConfig =
+      JavaOutlineProviderConfig("javac")
+    def default: JavaOutlineProviderConfig = qdox
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, JavaOutlineProviderConfig] = {
+      value match {
+        case Some(ok @ ("qdox" | "javac")) =>
+          Right(JavaOutlineProviderConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for javaOutlineProvider. Valid values are \"qdox\" and \"javac\""
+          )
+        case None =>
+          val isJavacEnabled = featureFlags
+            .readBoolean(FeatureFlag.JAVAC_OUTLINE_PROVIDER)
+            .orElse(false)
+          if (isJavacEnabled) {
+            Right(JavaOutlineProviderConfig.javac)
+          } else {
+            Right(JavaOutlineProviderConfig.default)
           }
       }
     }

@@ -8,7 +8,7 @@ import tests.BuildInfo
 
 abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
   override def userConfig: UserConfiguration =
-    UserConfiguration(
+    super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = true,
       buildOnChange = false,

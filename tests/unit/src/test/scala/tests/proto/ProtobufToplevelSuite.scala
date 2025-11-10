@@ -6,7 +6,7 @@ import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
 import munit.TestOptions
 
 abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
-  def createMtags(input: Input.VirtualFile): ProtobufToplevelMtags = {
+  def createMtagsIndexer(input: Input.VirtualFile): ProtobufToplevelMtags = {
     new ProtobufToplevelMtags(input)
   }
   def check(
@@ -16,8 +16,8 @@ abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
   ): Unit =
     test(name) {
       val input = Input.VirtualFile("example.proto", protoFileContent)
-      val mtags = createMtags(input)
-      val doc = mtags.index()
+      val indexer = createMtagsIndexer(input)
+      val doc = indexer.index()
       assertNoDiff(
         doc.occurrences
           .map(o => o.symbol)

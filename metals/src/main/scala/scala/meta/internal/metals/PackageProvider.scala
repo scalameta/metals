@@ -8,6 +8,7 @@ import scala.{meta => m}
 import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.semanticdb.Scala._
@@ -31,6 +32,7 @@ class PackageProvider(
     refProvider: ReferenceProvider,
     buffers: Buffers,
     defProvider: DefinitionProvider,
+    mtags: () => Mtags,
 ) {
   import PackageProvider._
 
@@ -713,7 +715,7 @@ class PackageProvider(
         )
       optDialect.getOrElse(dialects.Scala213)
     }
-    m.internal.mtags.Mtags
+    mtags()
       .index(path.value, dialect)
       .symbols
       .flatMap { si =>

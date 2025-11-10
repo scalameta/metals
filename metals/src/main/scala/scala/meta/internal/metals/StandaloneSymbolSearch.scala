@@ -30,9 +30,9 @@ class StandaloneSymbolSearch(
     buildTargets: BuildTargets,
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    mtags: () => Mtags,
     workspaceFallback: Option[SymbolSearch] = None,
-)(implicit rc: ReportContext)
-    extends SymbolSearch {
+) extends SymbolSearch {
 
   private val dependencySourceCache =
     new TrieMap[AbsolutePath, ju.List[String]]()
@@ -42,7 +42,7 @@ class StandaloneSymbolSearch(
       excludedPackages(),
     )
 
-  private val index = OnDemandSymbolIndex.empty()
+  private val index = OnDemandSymbolIndex.empty(mtags = mtags)
   sources.foreach(s =>
     index.addSourceJar(
       s,
@@ -50,8 +50,7 @@ class StandaloneSymbolSearch(
     )
   )
 
-  private val docs = new Docstrings(index)
-  private val mtags = new Mtags()
+  private val docs = new Docstrings(index, mtags)
   private val destinationProvider =
     new DestinationProvider(
       index,
@@ -102,7 +101,7 @@ class StandaloneSymbolSearch(
       .map { symDef =>
         dependencySourceCache.getOrElseUpdate(
           symDef.path,
-          mtags.topLevelSymbols(symDef.path).asJava,
+          mtags().topLevelSymbols(symDef.path).asJava,
         )
       }
       .orElse(workspaceFallback.map(_.definitionSourceToplevels(sym, source)))
@@ -145,8 +144,9 @@ object StandaloneSymbolSearch {
       buildTargets: BuildTargets,
       saveSymbolFileToDisk: Boolean,
       sourceMapper: SourceMapper,
+      mtags: () => Mtags,
       workspaceFallback: Option[SymbolSearch] = None,
-  )(implicit rc: ReportContext): StandaloneSymbolSearch = {
+  ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
         scalaVersion,
@@ -165,6 +165,7 @@ object StandaloneSymbolSearch {
       buildTargets,
       saveSymbolFileToDisk,
       sourceMapper,
+      mtags,
       workspaceFallback,
     )
   }

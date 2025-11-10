@@ -543,6 +543,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val allSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
+          indexProviders.mtags,
           input,
           dialect,
           includeMembers = true,

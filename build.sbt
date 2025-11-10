@@ -53,6 +53,7 @@ inThisBuild(
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
+    javaHome := Some(file(sys.env("JAVA_HOME"))),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
     scalaVersion := V.scala213,
@@ -319,7 +320,6 @@ lazy val jsemanticdb = project
     autoScalaLibrary := false,
     crossPaths := false,
     // Must set Java home to fork on compile and see errors in sbt compile
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
     crossVersion := CrossVersion.disabled,
     Compile / fullClasspath := Nil,
     libraryDependencies ++= List(
@@ -495,7 +495,6 @@ lazy val `java-header-compiler` = project
     autoScalaLibrary := false,
     crossPaths := false,
     // Must set Java home to fork on compile and see errors in sbt compile
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
     crossVersion := CrossVersion.disabled,
     Compile / fullClasspath := Nil,
     // For some reason, need the same options for java and javac to pass compilation
@@ -523,7 +522,6 @@ lazy val `semanticdb-javac` = project
     autoScalaLibrary := false,
     crossPaths := false,
     // Must set Java home to fork on compile and see errors in sbt compile
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
     crossVersion := CrossVersion.disabled,
     Compile / fullClasspath := Nil,
     // For some reason, need the same options for java and javac to pass compilation
@@ -546,8 +544,6 @@ lazy val `semanticdb-javac` = project
 lazy val `mtags-java` = project
   .settings(
     libraryDependencies ++= pprintDebuggingDependency,
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
-    Test / javaOptions ++= sharedJavaOptions,
     Compile / javacOptions ++= sharedJavaOptions.map(o => s"-J$o"),
     Compile / javacOptions ++= List("-Xlint:deprecation"),
   )
@@ -723,9 +719,7 @@ lazy val input = project
   .settings(
     sharedSettings,
     scalacOptions -= "-Xsource:3",
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
     publish / skip := true,
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
     Compile / unmanagedJars ++= List(
       // Normally, we would be able to `.dependsOn(semanticdb-javac)`, but it
       // doesn't work because the project doesn't have a normal resource file
@@ -781,6 +775,11 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
       Nil
     }
   },
+  Test / javaOptions ++= sharedJavaOptions,
+  Test / javaOptions ++= Seq(
+    "-Dmetals.telemetry=disabled", "-Dmetals.env=testing", "-Xmx16G",
+    "-XX:+HeapDumpOnOutOfMemoryError", "-XX:+ExitOnOutOfMemoryError",
+  ),
 )
 
 def runMtagsPublishLocal(
@@ -934,7 +933,6 @@ lazy val javapc = project
       "com.outr" %% "scribe-slf4j2" % V.scribe,
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
-    Test / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(mtest, `mtags-java`)
 
@@ -988,12 +986,6 @@ lazy val unit = project
       Tests.Filter(name => isInTestShard(name))
     ),
     sharedSettings,
-    Test / javaOptions ++= sharedJavaOptions ++ Seq(
-      "-Dmetals.env=testing",
-      "-Xmx16G",
-      "-XX:+HeapDumpOnOutOfMemoryError",
-      "-XX:+ExitOnOutOfMemoryError",
-    ),
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,

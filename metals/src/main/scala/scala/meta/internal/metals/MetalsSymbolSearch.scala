@@ -25,8 +25,8 @@ class MetalsSymbolSearch(
     docs: Docstrings,
     wsp: WorkspaceSymbolProvider,
     defn: DefinitionProvider,
-)(implicit rc: ReportContext)
-    extends SymbolSearch {
+    mtags: () => Mtags,
+) extends SymbolSearch {
   // A cache for definitionSourceToplevels.
   // The key is an absolute path to the dependency source file, and
   // the value is the list of symbols that the file contains.
@@ -90,7 +90,7 @@ class MetalsSymbolSearch(
         } else {
           dependencySourceCache.getOrElseUpdate(
             path,
-            Mtags.topLevelSymbols(path).asJava,
+            mtags().topLevelSymbols(path).asJava,
           )
         }
       })

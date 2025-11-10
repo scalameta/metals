@@ -179,11 +179,11 @@ abstract class MetalsLspService(
   def javaHome = userConfig.javaHome
 
   protected val fingerprints = new MutableMd5Fingerprints
-  protected val mtags = new Mtags
+  @volatile var mtags: Mtags = new Mtags()
   val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
   val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-  val symbolDocs = new Docstrings(definitionIndex)
+  val symbolDocs = new Docstrings(definitionIndex, () => mtags)
   def bspSession: Option[BspSession] = indexer.bspSession
   protected val savedFiles = new ActiveFiles(time)
   protected val recentlyOpenedFiles = new ActiveFiles(time)
@@ -302,6 +302,8 @@ abstract class MetalsLspService(
         buffers = buffers,
         time = time,
         metrics = metrics,
+        timerProvider = timerProvider,
+        mtags = () => mtags,
       )
     )
   val workspaceSymbols: WorkspaceSymbolProvider =
@@ -314,13 +316,14 @@ abstract class MetalsLspService(
       excludedPackageHandler = () => excludedPackageHandler,
       classpathSearchIndexer = classpathSearchIndexer,
       mbtWorkspaceSymbolProvider = mbtSymbolSearch,
+      mtags = () => mtags,
     )
 
   protected def warnings: Warnings = NoopWarnings
 
   protected val definitionProvider: DefinitionProvider = new DefinitionProvider(
     folder,
-    mtags,
+    () => mtags,
     buffers,
     definitionIndex,
     semanticdbs,
@@ -429,6 +432,7 @@ abstract class MetalsLspService(
     symbolDocs,
     workspaceSymbols,
     definitionProvider,
+    () => mtags,
   )
 
   val worksheetProvider: WorksheetProvider = register(
@@ -464,6 +468,7 @@ abstract class MetalsLspService(
       () => excludedPackageHandler,
       scalaVersionSelector,
       trees,
+      () => mtags,
       mtagsResolver,
       sourceMapper,
       worksheetProvider,
@@ -492,6 +497,7 @@ abstract class MetalsLspService(
       referencesProvider,
       buffers,
       definitionProvider,
+      () => mtags,
     )
 
   protected val newFileProvider: NewFileProvider = new NewFileProvider(
@@ -525,6 +531,7 @@ abstract class MetalsLspService(
       scalaVersionSelector,
       compilers,
       buildTargets,
+      () => mtags,
     )
 
   protected val symbolHierarchyOps: SymbolHierarchyOps =
@@ -536,6 +543,7 @@ abstract class MetalsLspService(
       scalaVersionSelector,
       buffers,
       trees,
+      () => mtags,
     )
 
   protected val supermethods: Supermethods = new Supermethods(
@@ -778,6 +786,12 @@ abstract class MetalsLspService(
 
     if (old.workspaceSymbolProvider != newConfig.workspaceSymbolProvider) {
       Future(mbtSymbolSearch.onReindex())
+    }
+
+    if (old.javaOutlineProvider != newConfig.javaOutlineProvider) {
+      mtags = new Mtags(
+        mtags.config.copy(useQdox = newConfig.javaOutlineProvider.isQdox)
+      )
     }
 
     if (userConfig.excludedPackages != old.excludedPackages) {
@@ -1867,7 +1881,7 @@ abstract class MetalsLspService(
   }
 
   protected def newSymbolIndex(): OnDemandSymbolIndex = {
-    OnDemandSymbolIndex.empty(
+    new OnDemandSymbolIndex(
       onError = {
         case e @ (_: ParseException | _: TokenizeException) =>
           scribe.error(e.toString)
@@ -1890,8 +1904,9 @@ abstract class MetalsLspService(
           scribe.error("unexpected error during source scanning", e)
       },
       toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
-      isClasspathDefinitionIndexEnabled =
-        () => userConfig.definitionIndexStrategy.isClasspath,
+      isClasspathDefinitionIndexEnabled = () =>
+        userConfig.definitionIndexStrategy.isClasspath,
+      mtags = () => mtags,
     )
   }
 

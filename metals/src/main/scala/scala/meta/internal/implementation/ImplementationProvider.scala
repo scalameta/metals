@@ -56,6 +56,7 @@ final class ImplementationProvider(
     scalaVersionSelector: ScalaVersionSelector,
     compilers: Compilers,
     buildTargets: BuildTargets,
+    mtags: () => Mtags,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
   import ImplementationProvider._
@@ -328,6 +329,7 @@ final class ImplementationProvider(
             symInfo <- implDocument.symbols.find(_.symbol == sym)
             if (!symInfo.isType || parentSymbol.kind == PcSymbolKind.TYPE)
             implOccurrence <- findDefOccurrence(
+              mtags(),
               implDocument,
               sym,
               implPath,
@@ -399,7 +401,7 @@ final class ImplementationProvider(
     val dialect =
       ScalaVersions.dialectForDependencyJar(fileSource, buildTargets)
     FileIO.slurp(fileSource, StandardCharsets.UTF_8)
-    val textDocument = Mtags.index(fileSource, dialect)
+    val textDocument = mtags().index(fileSource, dialect)
     textDocument
   }
 

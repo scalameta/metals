@@ -28,8 +28,12 @@ import com.thoughtworks.qdox.model.JavaModel
 import com.thoughtworks.qdox.parser.ParseException
 import org.eclipse.lsp4j
 
-class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
-    implicit rc: ReportContext
+// This class will eventually be removed since it's superseded by JavacMtags.
+class QdoxJavaMtags(
+    virtualFile: Input.VirtualFile,
+    includeMembers: Boolean
+)(implicit
+    rc: ReportContext
 ) extends MtagsIndexer { self =>
   val builder = new JavaProjectBuilder()
   override def language: Language = Language.JAVA

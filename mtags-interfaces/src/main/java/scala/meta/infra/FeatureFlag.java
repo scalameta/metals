@@ -24,4 +24,7 @@ public enum FeatureFlag {
    * debug attribute in classfiles.
    */
   CLASSPATH_DEFINITION_INDEX,
+
+  /** If enabled, uses the javac-based outline provider. */
+  JAVAC_OUTLINE_PROVIDER,
 }

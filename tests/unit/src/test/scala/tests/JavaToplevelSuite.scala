@@ -195,9 +195,7 @@ class JavaToplevelSuite extends BaseToplevelSuite {
 
   // The tests below are examples of where the Java toplevel indexer falls short.
   check(
-    "qualified-extends".fail.pending(
-      "Better Java support"
-    ),
+    "qualified-extends".fail.pending("Better Java support"),
     """|
        |package org.apache;
        |
@@ -212,9 +210,7 @@ class JavaToplevelSuite extends BaseToplevelSuite {
   )
 
   check(
-    "fields-and-methods".fail.pending(
-      "Better Java support"
-    ),
+    "fields-and-methods",
     """|
        |package org.apache;
        |
@@ -229,9 +225,10 @@ class JavaToplevelSuite extends BaseToplevelSuite {
     List("""|org/
             |org/apache/
             |org/apache/Range#
-            |org/apache/Range#start.
+            |org/apache/Range#`<init>`().
             |org/apache/Range#end.
             |org/apache/Range#length().
+            |org/apache/Range#start.
             |""".stripMargin),
     mode = All,
   )
@@ -251,7 +248,10 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |  }
         |}
         |""".stripMargin,
-    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#"),
+    List(
+      "jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`().",
+    ),
     mode = All,
   )
 
@@ -265,7 +265,10 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |  }
         |}
         |""".stripMargin,
-    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#"),
+    List(
+      "jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`().",
+    ),
     mode = All,
   )
   check(
@@ -278,7 +281,8 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |  }
         |}
         |""".stripMargin,
-    List("jackson/", "jackson/JsonNode#"),
+    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`()."),
     mode = All,
   )
   check(
@@ -291,7 +295,7 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |  }
         |}
         |""".stripMargin,
-    List("jackson/", "jackson/JsonNode#"),
+    List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#`<init>`()."),
     mode = All,
   )
 }

@@ -21,7 +21,8 @@ abstract class ToplevelWithInnerSuite(
           { () =>
             val input = file.input
             val toplevelMtags =
-              Mtags.allToplevels(input, dialect, includeMembers = false)
+              Mtags.testingSingleton
+                .allToplevels(input, dialect, includeMembers = false)
             Semanticdbs.printTextDocument(toplevelMtags)
           },
         )

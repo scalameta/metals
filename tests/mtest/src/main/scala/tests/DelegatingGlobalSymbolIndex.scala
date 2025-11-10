@@ -1,7 +1,6 @@
 package tests
 
 import scala.meta.Dialect
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -13,7 +12,7 @@ import scala.meta.io.AbsolutePath
  */
 class DelegatingGlobalSymbolIndex(
     var underlying: OnDemandSymbolIndex =
-      OnDemandSymbolIndex.empty()(EmptyReportContext)
+      OnDemandSymbolIndex.empty(mtags = () => mtags.Mtags.testingSingleton)
 ) extends GlobalSymbolIndex {
 
   def definitions(symbol: mtags.Symbol): List[SymbolDefinition] =

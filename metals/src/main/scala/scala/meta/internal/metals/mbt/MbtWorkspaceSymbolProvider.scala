@@ -21,7 +21,6 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CancelTokens
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.Memory
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -74,8 +73,10 @@ import org.lmdbjava.Env
  */
 final class MbtWorkspaceSymbolProvider(
     val gitWorkspace: AbsolutePath,
-    config: () => WorkspaceSymbolProviderConfig,
-    statistics: () => StatisticsConfig,
+    config: () => WorkspaceSymbolProviderConfig = () =>
+      WorkspaceSymbolProviderConfig.default,
+    statistics: () => StatisticsConfig = () => StatisticsConfig.default,
+    mtags: () => Mtags = () => Mtags.testingSingleton,
     metrics: infra.MonitoringClient = new NoopMonitoringClient(),
     buffers: Buffers = Buffers(),
     timerProvider: TimerProvider = TimerProvider.empty,
@@ -346,7 +347,6 @@ final class MbtWorkspaceSymbolProvider(
       )
     }
 
-    val mtags = new Mtags()(EmptyReportContext)
     val missingKeys =
       db.writeTransaction(
         tableName,
@@ -372,7 +372,7 @@ final class MbtWorkspaceSymbolProvider(
         }
 
         // Step 4: index the missing files
-        indexMissingFiles(mtags, files, missingKeys)
+        indexMissingFiles(mtags(), files, missingKeys)
 
         // Step 5: write the indexed files to the database
         missingKeys.foreach { index =>
@@ -420,7 +420,7 @@ final class MbtWorkspaceSymbolProvider(
 
     if (isStatisticsEnabled && missingKeys.length > 0) {
       val linesPerSecond =
-        if (elapsed > 0) mtags.totalLinesOfCode / elapsed else 0
+        if (elapsed > 0) mtags().totalLinesOfCode / elapsed else 0
       scribe.info(
         f"time: workspace/symbol indexed ${missingKeys.length} files (${linesPerSecond.toInt}%,d loc/s) in ${timer}"
       )

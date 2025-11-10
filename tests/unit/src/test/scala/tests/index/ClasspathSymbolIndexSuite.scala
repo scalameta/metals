@@ -1,7 +1,6 @@
 package tests.index
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.mtags.ClasspathDefinitionIndex
@@ -26,8 +25,8 @@ class ClasspathDefinitionIndexSuite extends munit.FunSuite {
       libs: () => Library = () => defaultLibs,
   )(implicit loc: munit.Location): Unit = {
     test(name) {
-      val mtags = new Mtags()(EmptyReportContext)
-      val index = new ClasspathDefinitionIndex(mtags)
+      val index =
+        new ClasspathDefinitionIndex(mtags = () => Mtags.testingSingleton)
       libs().asModules.foreach(module => index.addDependencyModule(module))
 
       val defns = index.definitions(Symbol(symbol))

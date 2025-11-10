@@ -86,15 +86,19 @@ object MetalsTestEnrichments {
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val includeMembers =
           wsp.workspace.extension != "zip" && wsp.workspace.extension != "jar"
-        SemanticdbDefinition.foreach(input, dialect, includeMembers) {
-          case defn @ SemanticdbDefinition(info, _, _) =>
-            if (info.isExtension) {
-              methodSymbols += defn.toCached
-            } else {
-              if (info.kind.isRelevantKind) {
-                symbols += defn.toCached
-              }
+        SemanticdbDefinition.foreach(
+          m.internal.mtags.Mtags.testingSingleton,
+          input,
+          dialect,
+          includeMembers,
+        ) { case defn @ SemanticdbDefinition(info, _, _) =>
+          if (info.isExtension) {
+            methodSymbols += defn.toCached
+          } else {
+            if (info.kind.isRelevantKind) {
+              symbols += defn.toCached
             }
+          }
         }(m.internal.metals.EmptyReportContext)
         wsp.didChange(source, symbols.toSeq, methodSymbols.toSeq)
       }

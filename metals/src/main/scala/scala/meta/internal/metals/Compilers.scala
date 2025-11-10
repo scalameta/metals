@@ -21,6 +21,7 @@ import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
@@ -87,6 +88,7 @@ class Compilers(
     excludedPackages: () => ExcludedPackagesHandler,
     scalaVersionSelector: ScalaVersionSelector,
     trees: Trees,
+    mtags: () => Mtags,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     worksheetProvider: WorksheetProvider,
@@ -108,6 +110,7 @@ class Compilers(
     initializeParams,
     excludedPackages,
     trees,
+    mtags,
     mtagsResolver,
     sourceMapper,
     semanticdbFileManager,

@@ -6,6 +6,7 @@ import scala.meta.dialects
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.tvp.IndexedSymbols
 import scala.meta.io.AbsolutePath
 
@@ -43,6 +44,7 @@ class ClasspathSymbolsBench {
       trees,
       buffers,
       BuildTargets.empty,
+      () => Mtags.testingSingleton,
     )
     classpath.foreach { jar =>
       jars.jarSymbols(jar, "cats/", dialects.Scala213)

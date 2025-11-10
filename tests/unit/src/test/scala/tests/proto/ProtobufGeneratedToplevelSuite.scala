@@ -4,7 +4,9 @@ import scala.meta.inputs.Input
 import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
 
 class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
-  override def createMtags(input: Input.VirtualFile): ProtobufToplevelMtags = {
+  override def createMtagsIndexer(
+      input: Input.VirtualFile
+  ): ProtobufToplevelMtags = {
     new ProtobufToplevelMtags(input, includeGeneratedSymbols = true)
   }
 

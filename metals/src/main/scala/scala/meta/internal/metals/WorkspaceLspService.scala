@@ -31,6 +31,7 @@ import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.logging.LanguageClientLogger
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.pc
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -244,12 +245,22 @@ class WorkspaceLspService(
   def nonScalaProjects = workspaceFolders.nonScalaProjects
   def optFallback: Option[FallbackMetalsLspService] =
     Option.when(fallbackIsInitialized.get())(fallbackService)
+  def serverMtagsInstance: Mtags =
+    // In multi-root workspaces, use the mtags instance from the first folder
+    // service as the global mtags instance for stuff like tree views that are
+    // not attached to a workspace.  The mtags instance is tied to a workspace
+    // because it's configurable and we only know the config within the context
+    // of a workspace.
+    workspaceFolders.getFolderServices.headOption
+      .map(_.mtags)
+      .getOrElse(Mtags.testingSingleton)
 
   val treeView: TreeViewProvider =
     if (clientConfig.isTreeViewProvider()) {
       new MetalsTreeViewProvider(
         () => folderServices.map(_.treeView),
         languageClient,
+        mtags = () => serverMtagsInstance,
       )
     } else NoopTreeViewProvider
 

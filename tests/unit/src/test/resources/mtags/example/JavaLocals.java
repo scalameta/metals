@@ -3,7 +3,7 @@ package example;
 import java.util.Scanner;
 import java.util.stream.Stream;
 
-public class JavaLocals/*example.JavaLocals#*/ {
+public class JavaLocals/*example.JavaLocals#*//*example.JavaLocals#`<init>`().*/ {
   record Point/*example.JavaLocals#Point#*//*example.JavaLocals#Point#`<init>`().*/(int x/*example.JavaLocals#Point#x().*/, int y/*example.JavaLocals#Point#y().*/) {}
 
   public int test/*example.JavaLocals#test().*/(int x) {

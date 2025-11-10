@@ -5,7 +5,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.jsemanticdb.Semanticdb
-import scala.meta.internal.mtags.JavaToplevelMtags
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -41,6 +41,7 @@ case class SemanticdbDefinition(
 
 object SemanticdbDefinition {
   def foreach(
+      mtags: Mtags,
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean
@@ -48,6 +49,7 @@ object SemanticdbDefinition {
       fn: SemanticdbDefinition => Unit
   )(implicit rc: ReportContext): Unit =
     foreachWithReturnMtags(
+      mtags,
       input,
       dialect,
       includeMembers,
@@ -55,6 +57,7 @@ object SemanticdbDefinition {
     )(fn)
 
   def foreachWithReturnMtags(
+      mtags: Mtags,
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean,
@@ -64,7 +67,7 @@ object SemanticdbDefinition {
   )(implicit rc: ReportContext): Option[MtagsIndexer] = {
     input.toJLanguage match {
       case Semanticdb.Language.SCALA =>
-        val mtags = new ScalaToplevelMtags(
+        val indexer = new ScalaToplevelMtags(
           input,
           includeInnerClasses = true,
           includeMembers = includeMembers,
@@ -79,32 +82,24 @@ object SemanticdbDefinition {
             fn(SemanticdbDefinition(info, occ, owner))
           }
         }
-        try mtags.indexRoot()
+        try indexer.indexRoot()
         catch {
           case _: TokenizeException =>
             () // ignore because we don't need to index untokenizable files.
         }
-        Some(mtags)
+        Some(indexer)
       case Semanticdb.Language.JAVA =>
-        // NOTE: this indexer does not support methods yet but it's the same
-        // indexer we use for the mbt-based repo-wide symbol index, and that's
-        // important for consistency.
-        val mtags = new JavaToplevelMtags(input, includeInnerClasses = true) {
-          override def visitOccurrence(
-              occ: SymbolOccurrence,
-              info: SymbolInformation,
-              owner: String
-          ): Unit = {
-            fn(SemanticdbDefinition(info, occ, owner))
-          }
-        }
-        try mtags.indexRoot()
+        val indexer = mtags.config.javaInstanceWithOccurrenceVisitor(
+          input,
+          includeMembers = includeMembers
+        )((occ, info, owner) => fn(SemanticdbDefinition(info, occ, owner)))
+        try indexer.indexRoot()
         catch {
           case NonFatal(_) =>
         }
-        Some(mtags)
+        Some(indexer)
       case Semanticdb.Language.PROTOBUF =>
-        val mtags =
+        val indexer =
           new ProtobufToplevelMtags(input, includeGeneratedSymbols = true) {
             override def visitOccurrence(
                 occ: SymbolOccurrence,
@@ -114,11 +109,11 @@ object SemanticdbDefinition {
               fn(SemanticdbDefinition(info, occ, owner))
             }
           }
-        try mtags.indexRoot()
+        try indexer.indexRoot()
         catch {
           case NonFatal(_) =>
         }
-        Some(mtags)
+        Some(indexer)
       case _ => None
     }
   }

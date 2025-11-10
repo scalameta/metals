@@ -2,7 +2,6 @@ package tests
 
 import scala.meta._
 import scala.meta.internal.inputs._
-import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
@@ -37,7 +36,7 @@ abstract class DefinitionSuiteBase(
   override lazy val input: InputProperties = inputProps()
 
   private def loadIndex(): OnDemandSymbolIndex = {
-    val index = OnDemandSymbolIndex.empty()(EmptyReportContext)
+    val index = OnDemandSymbolIndex.empty()
     // Step 1. Index project sources
     input.allFiles.foreach { source =>
       index.addSourceFile(source.file, Some(source.sourceDirectory), dialect)

@@ -7,7 +7,6 @@ import java.{util => ju}
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -30,12 +29,13 @@ import org.eclipse.{lsp4j => l}
  */
 class TestingSymbolSearch(
     classpath: ClasspathSearch = ClasspathSearch.empty,
-    docs: Docstrings = Docstrings.empty(EmptyReportContext),
+    docs: Docstrings = Docstrings.empty(mtags = () => Mtags.testingSingleton),
     workspace: TestingWorkspaceSearch =
       TestingWorkspaceSearch.empty(EmptyReportContext),
-    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty()(EmptyReportContext)
-)(implicit rc: ReportContext = EmptyReportContext)
-    extends SymbolSearch {
+    index: GlobalSymbolIndex = OnDemandSymbolIndex.empty(
+      mtags = () => Mtags.testingSingleton
+    )
+) extends SymbolSearch {
 
   override def documentation(
       symbol: String,
@@ -78,7 +78,7 @@ class TestingSymbolSearch(
         ju.Collections.emptyList()
       case Some(value) =>
         import scala.meta.internal.jdk.CollectionConverters._
-        Mtags.topLevelSymbols(value.path).asJava
+        Mtags.testingSingleton.topLevelSymbols(value.path).asJava
     }
   }
 

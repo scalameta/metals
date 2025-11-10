@@ -234,14 +234,15 @@ class TreeViewLspSuite extends BaseLspSuite("tree-view") {
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("lsp4j-")}!/org/eclipse/lsp4j/FileChangeType#",
-          """|getValue() symbol-method
-             |forValue() symbol-method
-             |<init>() symbol-method
-             |Created symbol-enum-member
-             |Changed symbol-enum-member
-             |Deleted symbol-enum-member
-             |value symbol-field
-             |""".stripMargin,
+          """
+            |Created symbol-enum-member
+            |Changed symbol-enum-member
+            |Deleted symbol-enum-member
+            |value symbol-field
+            |<init>() symbol-method
+            |getValue() symbol-method
+            |forValue() symbol-method
+            |""".stripMargin,
         )
         server.assertTreeViewChildren(
           s"libraries-$folder:${server.jar("circe-core")}!/_root_/",

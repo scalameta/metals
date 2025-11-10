@@ -28,6 +28,7 @@ message IndexedDocument {
   enum BloomFilterVersion {
     UNKNOWN_BLOOM_FILTER_VERSION = 0;
     V1 = 1;
+    V2 = 2;
   }
 
   enum Source {

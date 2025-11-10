@@ -11,6 +11,7 @@ import scala.util.Try
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
+import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -72,6 +73,8 @@ case class UserConfiguration(
       WorkspaceSymbolProviderConfig.default,
     definitionIndexStrategy: DefinitionIndexStrategy =
       DefinitionIndexStrategy.default,
+    javaOutlineProvider: JavaOutlineProviderConfig =
+      JavaOutlineProviderConfig.default,
 ) {
 
   override def toString(): String = {
@@ -198,6 +201,12 @@ case class UserConfiguration(
           (
             "definitionIndexStrategy",
             definitionIndexStrategy.value,
+          )
+        ),
+        Some(
+          (
+            "javaOutlineProvider",
+            javaOutlineProvider.value,
           )
         ),
       ).flatten
@@ -898,6 +907,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(DefinitionIndexStrategy.default)
+    val javaOutlineProvider = getParsedKey(
+      "java-outline-provider",
+      value =>
+        JavaOutlineProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(JavaOutlineProviderConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -939,6 +956,7 @@ object UserConfiguration {
           useSourcePath,
           workspaceSymbolProvider,
           definitionIndexStrategy,
+          javaOutlineProvider,
         )
       )
     } else {

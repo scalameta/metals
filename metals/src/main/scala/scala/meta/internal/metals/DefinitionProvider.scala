@@ -50,7 +50,7 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
  */
 final class DefinitionProvider(
     workspace: AbsolutePath,
-    mtags: Mtags,
+    mtags: () => Mtags,
     buffers: Buffers,
     index: GlobalSymbolIndex,
     semanticdbs: () => Semanticdbs,
@@ -357,7 +357,7 @@ final class DefinitionProvider(
   private def fromMtags(source: AbsolutePath, dirtyPos: Position) = {
     // in case the index is off and the file has been deleted, we don't want to throw an exception.
     if (source.exists)
-      Mtags
+      mtags()
         .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
         .occurrences
         .find(_.encloses(dirtyPos))
@@ -400,7 +400,7 @@ case class DefinitionDestination(
 class DestinationProvider(
     index: GlobalSymbolIndex,
     buffers: Buffers,
-    mtags: Mtags,
+    mtags: () => Mtags,
     workspace: AbsolutePath,
     semanticdbsFallback: () => Option[Semanticdbs],
     trees: Trees,
@@ -415,7 +415,7 @@ class DestinationProvider(
     // Read text file from disk instead of editor buffers because the file
     // on disk is more likely to parse.
     lazy val parsed = {
-      mtags.index(
+      mtags().index(
         symbolDefinition.path,
         symbolDefinition.dialect,
       )

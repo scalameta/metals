@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearchParams
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
@@ -35,6 +36,7 @@ final class WorkspaceSymbolProvider(
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
     mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolSearch,
+    mtags: () => Mtags,
 )(implicit rc: ReportContext) {
   val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
@@ -81,6 +83,7 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
+        mtags(),
         SymbolDefinitionOrdering.fromOptPath(fileInFocus),
       )
     val targetId = buildTargets.inverseSources(path)
@@ -259,6 +262,7 @@ final class WorkspaceSymbolProvider(
         token,
         index,
         saveClassFileToDisk,
+        mtags(),
         SymbolDefinitionOrdering.fromOptPath(fileInFocus),
       )
     search(query, visitor, None)

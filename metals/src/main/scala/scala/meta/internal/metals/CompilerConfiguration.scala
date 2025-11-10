@@ -18,6 +18,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
@@ -43,6 +44,7 @@ class CompilerConfiguration(
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     trees: Trees,
+    mtags: () => Mtags,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     semanticdbFileManager: SemanticdbFileManager,
@@ -71,12 +73,12 @@ class CompilerConfiguration(
       classpath: Seq[Path],
       referenceCounter: CompletionItemPriority,
   ) extends MtagsPresentationCompiler {
-    private val mtags =
+    private val mtagsBinaries =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
     val standalone: PresentationCompiler =
       fromMtags(
-        mtags,
+        mtagsBinaries,
         options = Nil,
         classpath ++ Embedded.scalaLibrary(scalaVersion),
         "default",
@@ -416,6 +418,7 @@ class CompilerConfiguration(
       buildTargets,
       saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
       sourceMapper,
+      mtags,
       workspaceFallback,
     )
   } catch {

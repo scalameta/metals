@@ -6,6 +6,7 @@ import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 
 import munit.AnyFixture
@@ -35,6 +36,7 @@ class MbtWorkspaceSymbolProviderSuite extends munit.FunSuite {
       workspace(),
       () => Configs.WorkspaceSymbolProviderConfig.mbt,
       () => StatisticsConfig.workspaceSymbol,
+      () => Mtags.testingSingleton,
     )
 
   test("multi-language") {
@@ -157,6 +159,7 @@ object Hello2 {
         AbsolutePath(dir.name),
         () => Configs.WorkspaceSymbolProviderConfig.mbt,
         () => StatisticsConfig.default,
+        () => Mtags.testingSingleton,
       )
       provider.onReindex()
       val result =

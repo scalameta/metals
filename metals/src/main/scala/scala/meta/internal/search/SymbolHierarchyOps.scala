@@ -35,6 +35,7 @@ class SymbolHierarchyOps(
     scalaVersionSelector: ScalaVersionSelector,
     buffer: Buffers,
     trees: Trees,
+    mtags: () => Mtags,
 ) {
   private val globalTable = new GlobalClassTable(buildTargets)
   def defaultSymbolSearch(
@@ -170,6 +171,7 @@ class SymbolHierarchyOps(
       parentDoc <- parentTextDocument
       source = workspace.resolve(parentDoc.uri)
       implOccurrence <- findDefOccurrence(
+        mtags(),
         parentDoc,
         symbol,
         source,
@@ -208,6 +210,7 @@ object SymbolHierarchyOps {
     info.isObject || info.isClass || info.isTrait || info.isInterface
 
   def findDefOccurrence(
+      mtags: Mtags,
       semanticDb: TextDocument,
       symbol: String,
       source: AbsolutePath,
@@ -219,7 +222,7 @@ object SymbolHierarchyOps {
     semanticDb.occurrences
       .find(isDefinitionOccurrence)
       .orElse(
-        Mtags
+        mtags
           .allToplevels(source.toInput, scalaVersionSelector.getDialect(source))
           .occurrences
           .find(isDefinitionOccurrence)

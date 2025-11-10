@@ -49,6 +49,7 @@ abstract class BaseLspSuite(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
+      javaOutlineProvider = Configs.JavaOutlineProviderConfig.javac,
     )
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
