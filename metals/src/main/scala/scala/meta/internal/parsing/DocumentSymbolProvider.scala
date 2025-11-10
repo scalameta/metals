@@ -216,6 +216,14 @@ final class DocumentSymbolProvider(
             t.decltpe.fold("")(_.syntax),
           )
           newOwner()
+        case t: Term.Param =>
+          addChild(
+            t.name.value,
+            SymbolKind.Variable,
+            t.pos,
+            t.name.pos,
+            t.decltpe.fold("")(_.syntax),
+          )
         case t: Decl.Val =>
           addPats(
             t.pats,
@@ -339,6 +347,8 @@ final class DocumentSymbolProvider(
             t.name.pos,
             t.decltpe.syntax,
           )
+        case _: Ctor.Primary | _: Term.ParamClause =>
+          continue()
         case _ =>
       }
     }
