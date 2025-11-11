@@ -11,7 +11,6 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -187,8 +186,23 @@ final class BloopInstall(
           ImportBuild.yes
       }
     languageClient
-      .showMessageRequest(params)
-      .asScala
+      .showMessageRequest(
+        params,
+        () => {
+          val notNow = if (buildTools.isBloop(buildTool.projectRoot)) {
+            languageClient.showMessage(
+              ImportBuildChanges.notificationParams(buildTool.toString)
+            )
+            ImportBuildChanges.notNow
+          } else {
+            languageClient.showMessage(
+              ImportBuild.notificationParams(buildTool.toString)
+            )
+            ImportBuild.notNow
+          }
+          notNow
+        },
+      )
       .map { item =>
         if (item == dontShowAgain) {
           notification.dismissForever()

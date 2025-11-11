@@ -21,14 +21,14 @@ class PopupChoiceReset(
   import PopupChoiceReset._
 
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
-    val result = if (value == BuildTool) {
+    val result = if (value == BuildTool || value == All) {
       scribe.info("Resetting build tool selection.")
       tables.buildTool.reset()
       slowConnect().ignoreValue
-    } else if (value == BuildImport) {
+    } else if (value == BuildImport || value == All) {
       tables.dismissedNotifications.ImportChanges.reset()
       Future.successful(())
-    } else if (value == BuildServer) {
+    } else if (value == BuildServer || value == All) {
       scribe.info("Resetting build server selection.")
       switchBspServer()
     } else {
@@ -54,10 +54,15 @@ class PopupChoiceReset(
       )
       params
     }
+    val all = new MessageActionItem(PopupChoiceReset.All)
 
     languageClient
-      .showMessageRequest(choicesParams())
-      .asScala
+      .showMessageRequest(
+        choicesParams(),
+        defaultTo = () => {
+          all
+        },
+      )
       .flatMap { item =>
         if (item == null) {
           Future.successful(())
@@ -67,6 +72,8 @@ class PopupChoiceReset(
           reset(PopupChoiceReset.BuildImport)
         } else if (item.getTitle() == PopupChoiceReset.BuildServer) {
           reset(PopupChoiceReset.BuildServer)
+        } else if (item.getTitle() == PopupChoiceReset.All) {
+          reset(PopupChoiceReset.All)
         } else {
           Future.successful(())
         }
@@ -76,6 +83,7 @@ class PopupChoiceReset(
 
 object PopupChoiceReset {
   final val BuildTool = "Build tool selection"
-  final val BuildImport = "Build import"
+  final val BuildImport = "Build import choice"
   final val BuildServer = "Build server selection"
+  final val All = "All choices"
 }

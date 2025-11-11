@@ -49,6 +49,17 @@ final class ConfiguredLanguageClient(
     underlying = NoopLanguageClient
   }
 
+  override def showMessageRequest(
+      params: ShowMessageRequestParams,
+      defaultTo: () => MessageActionItem,
+  ): Future[MessageActionItem] = {
+    if (clientConfig.initialConfig.disableShowMessageRequest) {
+      Future.successful(defaultTo())
+    } else {
+      showMessageRequest(params).asScala
+    }
+  }
+
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     val level =
       params.level match {
