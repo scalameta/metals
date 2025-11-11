@@ -135,6 +135,10 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(3),
+    disableShowMessageRequest: Boolean = MetalsServerConfig.binaryOption(
+      "metals.disable-show-message-request",
+      default = false,
+    ),
 ) {
   override def toString: String =
     List[String](
@@ -160,6 +164,7 @@ final case class MetalsServerConfig(
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
+      s"disable-show-message-request=$disableShowMessageRequest",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
@@ -187,6 +192,7 @@ object MetalsServerConfig {
     val cocMetals = "coc-metals"
     val sublime = "sublime"
     val emacs = "emacs"
+    val helix = "helix"
   }
 
   def base: MetalsServerConfig = MetalsServerConfig()
@@ -202,6 +208,10 @@ object MetalsServerConfig {
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
           ),
+        )
+      case MetalsClientType.helix =>
+        base.copy(
+          disableShowMessageRequest = true
         )
       case MetalsClientType.vimLsc =>
         base.copy(
