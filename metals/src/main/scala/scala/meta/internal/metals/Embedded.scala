@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.io.File
+import java.io.IOException
 import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
@@ -15,6 +16,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.semver.SemVer.Version
 import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
@@ -35,6 +37,8 @@ import coursier.ivy.IvyRepository
 import coursier.params.ResolutionParams
 import coursier.util.Task
 import mdoc.interfaces.Mdoc
+import scalafix.interfaces.Scalafix
+import scalafix.interfaces.ScalafixException
 
 /**
  * Wrapper around software that is embedded with Metals.
@@ -448,6 +452,62 @@ object Embedded {
       semanticdbScalacDependency(scalaVersion),
       Some(scalaVersion),
     )
+
+  def downloadScalafix(scalaVersion: String): List[Path] =
+    downloadDependency(
+      scalafixDependency(scalaVersion),
+      Some(scalaVersion),
+    )
+
+  /**
+   *  Fallback to use the scalafix version that is compatible with the requested scala version,
+   *  Follows the logic from scalafix.
+   */
+  private def scalaVersionForScalafixCli(
+      requestedScalaVersion: String
+  ): (String, String) = {
+
+    val properties = new java.util.Properties()
+    val propertiesPath = "scalafix-interfaces.properties"
+    val stream =
+      classOf[Scalafix].getClassLoader().getResourceAsStream(propertiesPath);
+    try {
+      properties.load(stream)
+    } catch {
+      case e @ (_: IOException | _: NullPointerException) =>
+        throw new ScalafixException(
+          "Failed to load '" + propertiesPath + "' to lookup versions",
+          e,
+        )
+    }
+
+    val scalafixVersion = properties.getProperty("scalafixVersion");
+    val scalaVersion = Version.fromString(requestedScalaVersion) match {
+      case Version(2, minor, _, _, _, _) =>
+        properties.getProperty(s"scala2$minor")
+      case Version(3, minor, _, _, _, _) if minor <= 3 =>
+        properties.getProperty(s"scala33")
+      case Version(3, minor, _, _, _, _) =>
+        Option(properties.getProperty(s"scala3$minor"))
+          .getOrElse(properties.getProperty("scala3Next"))
+      case _ =>
+        throw new IllegalArgumentException(
+          "Unsupported scala version " + requestedScalaVersion
+        )
+    }
+    (scalafixVersion, scalaVersion)
+  }
+
+  private def scalafixDependency(scalaVersion: String): Dependency = {
+    val (scalafixVersion, scalaVersionForScalafix) = scalaVersionForScalafixCli(
+      scalaVersion
+    )
+    dependencyOf(
+      "ch.epfl.scala",
+      s"scalafix-cli_$scalaVersionForScalafix",
+      scalafixVersion,
+    )
+  }
 
   def downloadSemanticdbJavac: List[Path] = {
     downloadDependency(
