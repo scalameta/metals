@@ -248,10 +248,6 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
-  def didOpen(path: AbsolutePath): Future[List[Diagnostic]] = {
-    didFocus(path)
-  }
-
   def didFocus(path: AbsolutePath): Future[List[Diagnostic]] = {
     val maybeDiagnostics =
       for (pc <- loadCompiler(path); contents <- buffers.get(path))

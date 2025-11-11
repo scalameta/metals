@@ -853,12 +853,11 @@ abstract class MetalsLspService(
     }
 
     val parser = parseTrees(path)
-    val didOpen = compilers.didOpen(path)
 
     if (path.isDependencySource(folder)) {
       Future
         .sequence(
-          List(parser, didOpen.ignoreValue)
+          List(parser)
         )
         .ignoreValue
         .asJava
@@ -871,7 +870,6 @@ abstract class MetalsLspService(
                 maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
                 parser,
-                didOpen.ignoreValue,
                 interactive,
                 testProvider.didOpen(path),
               )
