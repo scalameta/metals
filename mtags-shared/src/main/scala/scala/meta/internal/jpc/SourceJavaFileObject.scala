@@ -29,21 +29,24 @@ case class PatchedModule(moduleName: String, sourceRoot: String) {
 }
 
 object SourceJavaFileObject {
+
+  def makeRelativeURI(uri: URI): URI = {
+    // parent `javax.tools.SimpleJavaObject` fails if URI doesn't have path
+    if (uri.getScheme() == "jar") {
+      val parts = uri.getSchemeSpecificPart().split("!")
+      if (parts.length == 2) URI.create(parts(1)) else uri
+    } else {
+      uri
+    }
+  }
   def fromParams(params: VirtualFileParams): SourceJavaFileObject = {
     make(params.text(), params.uri())
   }
   def make(code: String, uri: URI): SourceJavaFileObject = {
-    // parent `javax.tools.SimpleJavaObject` fails if URI doesn't have path
-    val relativeUri =
-      if (uri.getScheme() == "jar") {
-        val parts = uri.getSchemeSpecificPart().split("!")
-        if (parts.length == 2) URI.create(parts(1)) else uri
-      } else uri
-
     new SourceJavaFileObject(
       code,
       originalUri = uri.toString,
-      uri = relativeUri
+      uri = makeRelativeURI(uri)
     )
   }
 }

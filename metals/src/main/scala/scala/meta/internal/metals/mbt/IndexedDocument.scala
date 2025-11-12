@@ -2,6 +2,7 @@ package scala.meta.internal.metals.mbt
 
 import scala.meta.Dialect
 import scala.meta.internal.jmbt.Mbt
+import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.jsemanticdb.Semanticdb.Language.JAVA
 import scala.meta.internal.metals.Buffers
@@ -37,7 +38,7 @@ case class IndexedDocument(
     }
 
     VirtualTextDocument(
-      file.toURI,
+      SourceJavaFileObject.makeRelativeURI(file.toURI),
       language.toPCLanguage,
       file.toInputFromBuffers(buffers).text,
       semanticdbPackage,
