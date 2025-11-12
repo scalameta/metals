@@ -222,7 +222,7 @@ object Configs {
             .readBoolean(FeatureFlag.CLASSPATH_DEFINITION_INDEX)
             .orElse(false)
           if (isClasspathEnabled) {
-            Right(DefinitionIndexStrategy.sources)
+            Right(DefinitionIndexStrategy.classpath)
           } else {
             Right(DefinitionIndexStrategy.default)
           }
