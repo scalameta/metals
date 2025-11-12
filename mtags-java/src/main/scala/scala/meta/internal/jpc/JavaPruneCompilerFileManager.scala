@@ -1,6 +1,7 @@
 package scala.meta.internal.jpc
 
 import java.lang
+import java.nio.file.ClosedFileSystemException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.{util => ju}
 import javax.tools.ForwardingJavaFileManager
@@ -48,6 +49,9 @@ class PruneCompilerFileManager(
         super.inferBinaryName(location, file)
     }
   } catch {
+    case _: ClosedFileSystemException =>
+      // Happens for cancelled tasks
+      ""
     case NonFatal(e) =>
       val fallback =
         file.toUri().toString().stripSuffix(".java").stripPrefix("file://")
@@ -81,6 +85,9 @@ class PruneCompilerFileManager(
         super.list(location, packageName, kinds, recurse)
     }
   } catch {
+    case _: ClosedFileSystemException =>
+      // Happens for cancelled tasks
+      ju.Collections.emptyList()
     case NonFatal(e) =>
       logger.error(
         s"PruneCompilerFileManager: failed to list files for package '$packageName' at location '$location'. Returning an empty list to let compilation continue.",
