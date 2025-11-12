@@ -112,7 +112,7 @@ class MbtV2WorkspaceSymbolSearch(
     val indexedFilesCount = new AtomicInteger()
     // Step 3: The actual indexing, happens in parallel. Treat these as regular
     // didChange events for each individual file.
-    toIndex.toList.foreach { file =>
+    toIndex.foreach { file =>
       onDidChangeInternal(file, updateDocumentKeys = false)
       val count = indexedFilesCount.incrementAndGet()
       if (count % 50 == 0) {
