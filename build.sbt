@@ -1034,12 +1034,15 @@ lazy val bench = project
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     buildInfoPackage := "bench",
-    libraryDependencies += "tools.profiler" % "async-profiler" % "4.2",
+    libraryDependencies ++= List(
+      "tools.profiler" % "async-profiler" % "4.2",
+      "tools.profiler" % "jfr-converter" % "4.2",
+    ),
     Jmh / bspEnabled := false,
     Jmh / fork := true,
     Jmh / javaOptions ++= sharedJavaOptions,
     Jmh / javaOptions +=
-      s"-Dmetals.flamegraph=${(ThisBuild / baseDirectory).value / "target"}/flamegraph.html",
+      s"-Dmetals.jfr.dir=${(ThisBuild / baseDirectory).value / "target"}",
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)

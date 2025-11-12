@@ -35,7 +35,7 @@ import org.openjdk.jmh.annotations.TearDown
 import tests.Library
 
 @State(Scope.Benchmark)
-class HeaderCompilerBench {
+class JavaCompilerBench {
   MetalsLogger.updateDefaultFormat()
 
   val COMPILER: JavaCompiler = ToolProvider.getSystemJavaCompiler()
@@ -53,6 +53,7 @@ class HeaderCompilerBench {
 
   @Setup
   def setup(): Unit = {
+    Flamegraphs.setup()
     sout.close()
     sout = new StringWriter()
     library = Library.springbootStarterWeb
@@ -76,6 +77,7 @@ class HeaderCompilerBench {
 
   @TearDown
   def teardown(): Unit = {
+    Flamegraphs.tearDown()
     tmp.deleteRecursively()
   }
 
@@ -110,25 +112,25 @@ class HeaderCompilerBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def generateNormal(): Unit = {
+  def javacGenerate(): Unit = {
     getTask(isHeaderCompilerEnabled = false).generate()
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def analyzeNormal(): Unit = {
+  def javacAnalyze(): Unit = {
     getTask(isHeaderCompilerEnabled = false)
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def generateHeaders(): Unit = {
+  def javacHeaderGenerate(): Unit = {
     getTask(isHeaderCompilerEnabled = true).generate()
   }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def analyzeHeaders(): Unit = {
+  def javacHeaderAnalyze(): Unit = {
     getTask(isHeaderCompilerEnabled = true).analyze()
     println(sout.toString)
   }
@@ -148,7 +150,7 @@ class HeaderCompilerBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def parse(): Unit = {
+  def javacParse(): Unit = {
     val v = new MethodInvocationVisitor
     getTask(isHeaderCompilerEnabled = false).parse().asScala.foreach { tree =>
       tree.accept(v, ())

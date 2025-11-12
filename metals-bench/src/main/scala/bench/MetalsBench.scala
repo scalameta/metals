@@ -36,7 +36,6 @@ import com.sun.source.util.TreePath
 import com.sun.source.util.TreePathScanner
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
-import one.profiler.AsyncProfiler
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -101,32 +100,14 @@ class MetalsBench {
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
 
-  val profiler: AsyncProfiler = AsyncProfiler.getInstance()
-
-  private def flamegraphPath(): Option[String] =
-    // Return None here to disable automatic flamegraph generation
-    Option(System.getProperty("metals.flamegraph"))
-
   @Setup
   def setup(): Unit = {
-    flamegraphPath().foreach { _ =>
-      val startResult = profiler.execute(s"start,flamegraph")
-      if (startResult.trim() != "Profiling started") {
-        scribe.info(s"started profiler: $startResult")
-      }
-    }
+    Flamegraphs.setup()
   }
 
   @TearDown
   def tearDown(): Unit = {
-    flamegraphPath().foreach { flamegraph =>
-      val stopResult = profiler.execute(s"stop,file=$flamegraph")
-      if (stopResult == "OK") {
-        scribe.info(s"flamegraph: $flamegraph")
-      } else {
-        scribe.info(s"stopped profiler: $stopResult")
-      }
-    }
+    Flamegraphs.tearDown()
   }
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
