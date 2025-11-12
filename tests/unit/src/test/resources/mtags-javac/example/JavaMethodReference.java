@@ -13,10 +13,10 @@
      public void method() {
 //               ^^^^^^ definition example/JavaMethodReference#method(). METHOD
        Stream.of("hello", "world").map(String::length).forEach(System.out::println);
-//     ^^ reference of.
-//     ^^^ reference map.
+//     ^^ reference of().
+//     ^^^ reference map().
 //     ^^^^^^ reference Stream.
-//     ^^^^^^^ reference forEach.
+//     ^^^^^^^ reference forEach().
 //                                     ^^^^^^ reference String.
 //                                     ^^^^^^ reference length().
 //                                                             ^^^ reference out.

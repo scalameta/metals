@@ -90,6 +90,9 @@ public class SemanticdbTrees {
     }
 
     TreePath annotationTreePath = nodes.get(annotation);
+    if (annotationTreePath == null) {
+      return Semanticdb.AnnotationTree.newBuilder().build();
+    }
     Element annotationSym = trees.getElement(annotationTreePath);
 
     Semanticdb.Type type = typeVisitor.semanticdbType(annotationSym.asType());

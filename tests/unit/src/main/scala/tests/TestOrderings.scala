@@ -20,4 +20,6 @@ object TestOrderings {
       }
     }
   }
+  implicit val lspLocation: Ordering[l.Location] =
+    Ordering.by(loc => (loc.getUri(), loc.getRange()))
 }

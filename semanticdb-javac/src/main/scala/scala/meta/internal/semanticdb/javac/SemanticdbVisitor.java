@@ -324,7 +324,11 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
     Element sym = trees.getElement(treePath);
     if (sym != null && sym.getSimpleName().length() > 0) {
       emitSymbolOccurrence(
-          sym, node, sym.getSimpleName(), Role.DEFINITION, CompilerRange.FROM_POINT_TO_SYMBOL_NAME);
+          sym,
+          node,
+          sym.getSimpleName(),
+          Role.DEFINITION,
+          CompilerRange.FROM_POINT_WITH_TEXT_SEARCH);
     }
   }
 

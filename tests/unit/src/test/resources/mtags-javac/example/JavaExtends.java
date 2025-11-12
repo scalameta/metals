@@ -32,6 +32,7 @@
        }
 
        @Override
+//     ^^^^^ reference close():
 //      ^^^^^^^^ reference Override.
        public void close() throws IOException {
 //                 ^^^^^ definition example/JavaExtends#Color#close(). METHOD
@@ -39,17 +40,18 @@
          System.out.println("Closing...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
 
        @Override
+//     ^^^ reference run():
 //      ^^^^^^^^ reference Override.
        public void run() {
 //                 ^^^ definition example/JavaExtends#Color#run(). METHOD
          System.out.println("Running...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
      }
 
@@ -68,6 +70,7 @@
 //                                           ^^^^^^^^^^^ reference MyInterface:
 //                                                        ^^^^^^^^ reference Runnable:
        @Override
+//     ^^^^^ reference close():
 //      ^^^^^^^^ reference Override.
        public void close() throws IOException {
 //                 ^^^^^ definition example/JavaExtends#MyRecord#close(). METHOD
@@ -75,27 +78,29 @@
          System.out.println("Closing...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
 
        @Override
+//     ^^^^^^^^ reference myMethod():
 //      ^^^^^^^^ reference Override.
        public void myMethod() {
 //                 ^^^^^^^^ definition example/JavaExtends#MyRecord#myMethod(). METHOD
          System.out.println("MyMethod");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
 
        @Override
+//     ^^^ reference run():
 //      ^^^^^^^^ reference Override.
        public void run() {
 //                 ^^^ definition example/JavaExtends#MyRecord#run(). METHOD
          System.out.println("Running...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
      }
 
@@ -107,6 +112,7 @@
 //                                                           ^^^^^^^^ reference Runnable:
 
        @Override
+//     ^^^^^ reference close():
 //      ^^^^^^^^ reference Override.
        public void close() throws IOException {
 //                 ^^^^^ definition example/JavaExtends#MyClass#close(). METHOD
@@ -114,20 +120,22 @@
          System.out.println("Closing...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
 
        @Override
+//     ^^^^^^^^ reference myMethod():
 //      ^^^^^^^^ reference Override.
        public void myMethod() {
 //                 ^^^^^^^^ definition example/JavaExtends#MyClass#myMethod(). METHOD
          System.out.println("MyMethod");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
 
        @Override
+//     ^^^^^^^^^^ reference getMessage():
 //      ^^^^^^^^ reference Override.
        public String getMessage() {
 //            ^^^^^^ reference String.
@@ -136,6 +144,7 @@
        }
 
        @Override
+//     ^^^^^^^^^^^^^^^^ reference fillInStackTrace():
 //      ^^^^^^^^ reference Override.
        public synchronized Throwable fillInStackTrace() {
 //                         ^^^^^^^^^ reference Throwable.
@@ -144,13 +153,14 @@
        }
 
        @Override
+//     ^^^ reference run():
 //      ^^^^^^^^ reference Override.
        public void run() {
 //                 ^^^ definition example/JavaExtends#MyClass#run(). METHOD
          System.out.println("Running...");
 //       ^^^ reference out.
 //       ^^^^^^ reference System.
-//       ^^^^^^^ reference println.
+//       ^^^^^^^ reference println().
        }
      }
    }

@@ -37,7 +37,7 @@
          a += p2.x();
 //            ^^ reference p2.
          a += p2.y();
-//            ^ reference y.
+//            ^ reference y().
 //            ^^ reference p2.
        }
        try {
@@ -47,8 +47,8 @@
        } catch (Exception e) {
 //              ^^^^^^^^^ reference Exception.
          a += e.getMessage().length();
-//            ^^^^^^ reference length.
-//            ^^^^^^^^^^ reference getMessage.
+//            ^^^^^^ reference length().
+//            ^^^^^^^^^^ reference getMessage().
        }
        for (int e : new int[] {1, 2, 3}) {
          a += e;
@@ -58,12 +58,12 @@
 //                              ^^ reference in.
 //                              ^^^^^^ reference System.
          a += s.nextInt();
-//            ^^^^^^^ reference nextInt.
+//            ^^^^^^^ reference nextInt().
        }
        return Stream.of(a, b).map(i -> i * 2).reduce(0, (i, j) -> i + j);
-//            ^^ reference of.
-//            ^^^ reference map.
+//            ^^ reference of().
+//            ^^^ reference map().
+//            ^^^^^^ reference reduce().
 //            ^^^^^^ reference Stream.
-//            ^^^^^^ reference reduce.
      }
    }

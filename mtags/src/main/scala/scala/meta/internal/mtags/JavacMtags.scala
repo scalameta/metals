@@ -6,6 +6,7 @@ import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.{util => ju}
 import javax.lang.model.element.Modifier
+import javax.lang.model.element.Name
 import javax.tools.DiagnosticCollector
 import javax.tools.DiagnosticListener
 import javax.tools.JavaFileManager
@@ -44,6 +45,7 @@ import com.sun.source.tree.LambdaExpressionTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.source.tree.MemberSelectTree
+import com.sun.source.tree.MethodInvocationTree
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.PackageTree
@@ -458,6 +460,27 @@ class JavacMtags(
             s.SymbolInformation.Property.ENUM.value
           else 0
         )
+        node.getTypeParameters().forEach { tparam =>
+          mtags.withOwner() {
+            val tparamName = tparam.getName().toString()
+            mtags.tparam(
+              tparamName,
+              findNameRange(
+                start = tparam
+                  .getAnnotations()
+                  .asScala
+                  .lastOption match {
+                  case None => FromStart(tparam)
+                  case Some(value) => FromEnd(value)
+                },
+                end = FromEnd(tparam),
+                name = tparamName
+              ),
+              kind = s.SymbolInformation.Kind.TYPE_PARAMETER,
+              properties = 0
+            )
+          }
+        }
         lazy val constructorCount = node.getMembers().asScala.count {
           case method: MethodTree =>
             val name = method.getName()
@@ -476,14 +499,41 @@ class JavacMtags(
             )
           }
         }
-        var r = scan(node.getModifiers(), p);
-        r = scanAndReduceIterable(node.getTypeParameters(), p, r);
-        insideExtendsClause = true;
-        r = scanAndReduce(node.getExtendsClause(), p, r);
-        r = scanAndReduceIterable(node.getImplementsClause(), p, r);
-        insideExtendsClause = false;
-        r = scanAndReduceIterable(node.getMembers(), p, r);
-        r;
+        withScope {
+          node.getTypeParameters().forEach { tparam =>
+            localVariableScope.addName(tparam.getName())
+          }
+          var r = scan(node.getModifiers(), p);
+          r = scanAndReduceIterable(node.getTypeParameters(), p, r);
+          insideExtendsClause = true;
+          r = scanAndReduce(node.getExtendsClause(), p, r);
+          r = scanAndReduceIterable(node.getImplementsClause(), p, r);
+          insideExtendsClause = false;
+          r = scanAndReduceIterable(node.getMembers(), p, r);
+          r
+        }
+      }
+    }
+
+    private var overrideName: Name = _
+    private def isOverride(node: MethodTree): Boolean = {
+      node.getModifiers().getAnnotations().asScala.exists { annotation =>
+        annotation.getAnnotationType() match {
+          case identifier: IdentifierTree =>
+            val name = identifier.getName()
+            if (overrideName != null) {
+              name == overrideName
+            } else {
+              val result = name.contentEquals("Override")
+              if (result) {
+                // Cache the reference to this name to avoid string comparisons
+                // on the hot path.
+                overrideName = name
+              }
+              result
+            }
+          case _ => false
+        }
       }
     }
 
@@ -496,6 +546,11 @@ class JavacMtags(
         return null
       }
       mtags.withOwner() {
+        if (isOverride(node)) {
+          // The @Override annotation is technically optional, but we assume it
+          // needs to be present to shrink the search by a significant amount.
+          addName(name, "():", sourcePositions.getStartPosition(cu, node))
+        }
         mtags.method(
           name = name,
           disambiguator = disambiguators.getOrDefault(node, 0) match {
@@ -529,6 +584,9 @@ class JavacMtags(
             else s.SymbolInformation.Kind.METHOD
         )
         withScope {
+          node.getTypeParameters().forEach { tparam =>
+            localVariableScope.addName(tparam.getName())
+          }
           node.getParameters().forEach { parameter =>
             localVariableScope.addName(parameter.getName())
           }
@@ -617,6 +675,31 @@ class JavacMtags(
       insideAnnotationArguments = true
       r = scanAndReduceIterable(node.getArguments(), p, r);
       insideAnnotationArguments = false
+      r;
+    }
+    override def visitMethodInvocation(
+        node: MethodInvocationTree,
+        p: Unit
+    ): TreePath = {
+      var r = scan(node.getTypeArguments(), p);
+      node.getMethodSelect() match {
+        case identifier: IdentifierTree =>
+          addName(
+            identifier.getName(),
+            "().",
+            sourcePositions.getStartPosition(cu, identifier)
+          )
+        case memberSelect: MemberSelectTree =>
+          addName(
+            memberSelect.getIdentifier(),
+            "().",
+            sourcePositions.getStartPosition(cu, memberSelect)
+          )
+          r = super.visitMemberSelect(memberSelect, p);
+        case _ =>
+          r = scanAndReduce(node.getMethodSelect(), p, r);
+      }
+      r = scanAndReduceIterable(node.getArguments(), p, r);
       r;
     }
     override def visitMemberSelect(

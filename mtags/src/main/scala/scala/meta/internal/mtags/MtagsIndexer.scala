@@ -80,9 +80,11 @@ trait MtagsIndexer {
   def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
   def tparam(name: Name, kind: Kind, properties: Int): String =
+    tparam(name.value, name.pos, kind, properties)
+  def tparam(name: String, pos: Position, kind: Kind, properties: Int): String =
     addSignature(
-      Descriptor.TypeParameter(name.value),
-      name.pos,
+      Descriptor.TypeParameter(name),
+      pos,
       kind,
       properties
     )

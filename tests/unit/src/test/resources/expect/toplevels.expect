@@ -21,6 +21,7 @@ example/JavaOverloading.java -> example/JavaOverloading#
 example/JavaRecord.java -> example/JavaRecord#
 example/JavaSemicolon.java -> example/JavaSemicolon#
 example/JavaThenScala.scala -> example/JavaThenScala#
+example/JavaTypeVariable.java -> example/JavaTypeVariable#
 example/Locals.scala -> example/Locals#
 example/MacroAnnotation.scala -> example/MacroAnnotation#
 example/MacroAnnotation.scala -> example/MacroAnnotations.

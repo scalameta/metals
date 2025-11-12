@@ -11,7 +11,7 @@
 //                     ^^^^ definition example/JavaOverloading#name(+2). METHOD
 //                          ^^^^^^ reference String.
        return name.length();
-//            ^^^^^^ reference length.
+//            ^^^^^^ reference length().
      }
 
      public int name() {
