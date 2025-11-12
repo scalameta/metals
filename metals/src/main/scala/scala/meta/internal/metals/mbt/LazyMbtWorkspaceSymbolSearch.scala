@@ -5,6 +5,7 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 
 import scala.meta.infra.MonitoringClient
+import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.StatisticsConfig
@@ -32,6 +33,7 @@ class LazyMbtWorkspaceSymbolSearch(
     metrics: MonitoringClient,
     timerProvider: TimerProvider,
     mtags: () => Mtags,
+    progress: BaseWorkDoneProgress,
 )(implicit ec: ExecutionContext)
     extends MbtWorkspaceSymbolSearch {
   private lazy val mbt1 = new MbtWorkspaceSymbolProvider(
@@ -46,11 +48,11 @@ class LazyMbtWorkspaceSymbolSearch(
   private lazy val mbt2 = new MbtV2WorkspaceSymbolSearch(
     workspace = workspace,
     config = config,
-    statistics = statistics,
     buffers = buffers,
     time = time,
     metrics = metrics,
     mtags = mtags,
+    progress = progress,
   )
   private def delegate: MbtWorkspaceSymbolSearch =
     if (config().isMBT1) {

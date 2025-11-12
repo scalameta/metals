@@ -5,7 +5,6 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.Configs
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
@@ -38,7 +37,6 @@ class MbtV2WorkspaceSymbolSearchSuite extends munit.FunSuite {
     new MbtV2WorkspaceSymbolSearch(
       workspace(),
       config = () => Configs.WorkspaceSymbolProviderConfig.mbt2,
-      statistics = () => StatisticsConfig.workspaceSymbol,
     )(munitExecutionContext)
 
   test("multi-language") {
@@ -160,7 +158,6 @@ object Hello2 {
       val provider = new MbtV2WorkspaceSymbolSearch(
         workspace = AbsolutePath(dir.name),
         config = () => Configs.WorkspaceSymbolProviderConfig.mbt2,
-        statistics = () => StatisticsConfig.default,
       )(munitExecutionContext)
       provider.onReindex()
       val result =

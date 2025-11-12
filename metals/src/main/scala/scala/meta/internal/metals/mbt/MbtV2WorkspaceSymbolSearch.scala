@@ -23,11 +23,12 @@ import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.jmbt.Mbt
+import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
@@ -38,19 +39,20 @@ import scala.meta.pc.SemanticdbCompilationUnit
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import org.eclipse.{lsp4j => l}
+
 class MbtV2WorkspaceSymbolSearch(
     val workspace: AbsolutePath,
     config: () => WorkspaceSymbolProviderConfig = () =>
       WorkspaceSymbolProviderConfig.default,
-    statistics: () => StatisticsConfig = () => StatisticsConfig.default,
     buffers: Buffers = Buffers(),
     time: Time = Time.system,
     metrics: MonitoringClient = new NoopMonitoringClient(),
     mtags: () => Mtags = () => Mtags.testingSingleton,
+    progress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
 )(implicit val ec: ExecutionContext)
     extends MbtWorkspaceSymbolSearch {
 
-  private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
 
   override def close(): Unit = {}
@@ -81,7 +83,6 @@ class MbtV2WorkspaceSymbolSearch(
     }
 
     val timer = new Timer(time)
-
     // Step 1: list all files in HEAD and include OIDs.
     val files = GitVCS.lsFilesStage(workspace)
     if (files.isEmpty) {
@@ -100,10 +101,28 @@ class MbtV2WorkspaceSymbolSearch(
     if (toIndex.nonEmpty) {
       scribe.info(s"mbt-v2: indexing ${toIndex.length} files")
     }
+    val (task, token) = progress.startProgress(
+      message = "Indexing workspace symbols",
+      withProgress = true,
+      showTimer = true,
+      onCancel = None,
+    )
+    task.maybeProgress.foreach(_.update(0, toIndex.length))
 
+    val indexedFilesCount = new AtomicInteger()
     // Step 3: The actual indexing, happens in parallel. Treat these as regular
     // didChange events for each individual file.
-    toIndex.toList.foreach(file => onDidChange(file))
+    toIndex.toList.foreach { file =>
+      onDidChange(file)
+      val count = indexedFilesCount.incrementAndGet()
+      if (count % 50 == 0) {
+        task.maybeProgress.foreach(_.update(count, toIndex.length))
+      }
+    }
+
+    val end = new l.WorkDoneProgressEnd()
+    end.setMessage(s"done in $timer")
+    progress.endProgress(token)
 
     // Step 4: Write the index to disk. It's technically fine to move writing
     // the index to a background job.  Might be worth doing someday.
@@ -118,11 +137,9 @@ class MbtV2WorkspaceSymbolSearch(
     metrics.recordEvent(
       Event.duration("mbt2_index_workspace_symbol", timer.elapsed)
     )
-    if (isStatisticsEnabled) {
-      scribe.info(
-        f"time: mbt-v2 loaded index for ${documents.size} files in ${timer}"
-      )
-    }
+    scribe.info(
+      f"time: mbt-v2 loaded index for ${documents.size} files in ${timer}"
+    )
 
     IndexingStats(
       files.length,

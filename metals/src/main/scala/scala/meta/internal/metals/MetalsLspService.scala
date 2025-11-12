@@ -304,6 +304,7 @@ abstract class MetalsLspService(
         metrics = metrics,
         timerProvider = timerProvider,
         mtags = () => mtags,
+        progress = workDoneProgress,
       )
     )
   val workspaceSymbols: WorkspaceSymbolProvider =

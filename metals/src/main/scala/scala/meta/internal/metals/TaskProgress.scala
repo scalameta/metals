@@ -9,10 +9,18 @@ package scala.meta.internal.metals
 class TaskProgress(
     var progress: Long,
     var total: Long,
+    var message: String = "",
 ) {
-  def update(newProgress: Long, newTotal: Long = 100): Unit = {
+  def update(
+      newProgress: Long,
+      newTotal: Long = 100,
+      newMessage: Option[String] = None,
+  ): Unit = {
     progress = newProgress
     total = newTotal
+    newMessage.foreach { msg =>
+      message = msg
+    }
   }
   def percentage: Int = {
     if (total == 0) 0

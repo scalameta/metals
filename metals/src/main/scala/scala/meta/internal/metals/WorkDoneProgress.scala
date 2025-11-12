@@ -27,10 +27,63 @@ import org.eclipse.lsp4j.services.LanguageClient
 
 trait BaseWorkDoneProgress {
   def trackBlocking[T](message: String)(thunk: => T): T
+  def startProgress(
+      message: String,
+      withProgress: Boolean = false,
+      showTimer: Boolean = true,
+      onCancel: Option[() => Unit] = None,
+  ): (Task, Future[Token])
+
+  def endProgress(token: Future[Token]): Future[Unit]
 }
 
 object EmptyWorkDoneProgress extends BaseWorkDoneProgress {
   override def trackBlocking[T](message: String)(thunk: => T): T = thunk
+  override def endProgress(token: Future[Token]): Future[Unit] =
+    Future.successful(())
+  def startProgress(
+      message: String,
+      withProgress: Boolean,
+      showTimer: Boolean,
+      onCancel: Option[() => Unit],
+  ): (Task, Future[Token]) = (
+    Task.empty(Time.system),
+    Future.successful(messages.Either.forLeft[String, Integer]("")),
+  )
+}
+case class Task(
+    onCancel: Option[() => Unit],
+    showTimer: Boolean,
+    maybeProgress: Option[TaskProgress],
+    time: Time,
+) {
+  val timer = new Timer(time)
+  val wasFinished = new AtomicBoolean(false)
+  def additionalMessage: Option[String] =
+    if (showTimer) {
+      val seconds = timer.elapsedSeconds
+      if (seconds == 0) None
+      else {
+        val prefix = maybeProgress.fold("")(p => s"${p.message} ")
+        maybeProgress match {
+          case Some(TaskProgress(percentage))
+              if percentage > 0 && seconds > 3 =>
+            Some(s"$prefix${Timer.readableSeconds(seconds)} ($percentage%)")
+          case _ =>
+            Some(s"$prefix${Timer.readableSeconds(seconds)}")
+        }
+      }
+    } else
+      maybeProgress match {
+        case Some(TaskProgress(0)) => None
+        case Some(TaskProgress(percentage)) => Some(s"($percentage%)")
+        case _ => None
+      }
+}
+
+object Task {
+  def empty(time: Time): Task =
+    Task(onCancel = None, showTimer = false, maybeProgress = None, time = time)
 }
 class WorkDoneProgress(
     client: LanguageClient,
@@ -38,37 +91,6 @@ class WorkDoneProgress(
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with BaseWorkDoneProgress {
-  case class Task(
-      onCancel: Option[() => Unit],
-      showTimer: Boolean,
-      maybeProgress: Option[TaskProgress],
-  ) {
-    val timer = new Timer(time)
-    val wasFinished = new AtomicBoolean(false)
-    def additionalMessage: Option[String] =
-      if (showTimer) {
-        val seconds = timer.elapsedSeconds
-        if (seconds == 0) None
-        else {
-          maybeProgress match {
-            case Some(TaskProgress(percentage)) if seconds > 3 =>
-              Some(s"${Timer.readableSeconds(seconds)} ($percentage%)")
-            case _ =>
-              Some(s"${Timer.readableSeconds(seconds)}")
-          }
-        }
-      } else
-        maybeProgress match {
-          case Some(TaskProgress(0)) => None
-          case Some(TaskProgress(percentage)) => Some(s"($percentage%)")
-          case _ => None
-        }
-  }
-
-  object Task {
-    def empty: Task =
-      Task(onCancel = None, showTimer = false, maybeProgress = None)
-  }
 
   private val taskMap = new ConcurrentHashMap[Token, Task]()
 
@@ -87,7 +109,7 @@ class WorkDoneProgress(
 
   private def updateTimers() = taskMap.keys.asScala.foreach(notifyProgress(_))
 
-  def startProgress(
+  override def startProgress(
       message: String,
       withProgress: Boolean = false,
       showTimer: Boolean = true,
@@ -97,7 +119,7 @@ class WorkDoneProgress(
     val token = messages.Either.forLeft[String, Integer](uuid)
 
     val optProgress = Option.when(withProgress)(TaskProgress.empty)
-    val task = Task(onCancel, showTimer, optProgress)
+    val task = Task(onCancel, showTimer, optProgress, time)
     taskMap.put(token, task)
 
     val tokenFuture = client
@@ -128,7 +150,7 @@ class WorkDoneProgress(
       percentage: Int,
   ): Future[Unit] =
     token.map { token =>
-      val task = taskMap.getOrDefault(token, Task.empty)
+      val task = taskMap.getOrDefault(token, Task.empty(time))
       task.maybeProgress match {
         case Some(progress) =>
           progress.update(percentage)
@@ -138,7 +160,7 @@ class WorkDoneProgress(
     }
 
   def notifyProgress(token: Token): Unit = {
-    val task = taskMap.getOrDefault(token, Task.empty)
+    val task = taskMap.getOrDefault(token, Task.empty(time))
     if (task.showTimer) notifyProgress(token, task)
     else Future.successful(())
   }
@@ -162,7 +184,7 @@ class WorkDoneProgress(
     }
   }
 
-  def endProgress(token: Future[Token]): Future[Unit] =
+  override def endProgress(token: Future[Token]): Future[Unit] =
     token
       .map { token =>
         taskMap.remove(token)
