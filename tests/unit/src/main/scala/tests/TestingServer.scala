@@ -1930,10 +1930,7 @@ final case class TestingServer(
         val position = params.getPosition()
         position.setCharacter(position.getCharacter() + 1)
       }
-      val definition = server
-        .definitionOrReferences(params, definitionOnly = true)
-        .asJava
-        .get()
+      val definition = server.definitionResult(params).asJava.get()
       definition.definition.foreach { path =>
         if (path.isJarFileSystem) {
           virtualDocSources(path.toString.stripPrefix("/")) = path

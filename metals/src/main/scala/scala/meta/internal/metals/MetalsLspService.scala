@@ -1136,10 +1136,11 @@ abstract class MetalsLspService(
   }
 
   override def definition(
-      position: TextDocumentPositionParams
+      params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      definitionOrReferences(position, token).map(_.locations)
+      val result = definitionResult(params, token)
+      result.map(_.locations)
     }
 
   override def typeDefinition(
@@ -1768,82 +1769,6 @@ abstract class MetalsLspService(
         // we need to refresh tokens for worksheets since dependencies could have been added
         languageClient.refreshSemanticTokens().asScala.map(_ => ())
       }
-  }
-
-  /**
-   * Returns the definition location or reference locations of a symbol at a
-   * given text document position. If the symbol represents the definition
-   * itself, this method returns the reference locations, otherwise this returns
-   * definition location. https://github.com/scalameta/metals/issues/755
-   */
-  def definitionOrReferences(
-      positionParams: TextDocumentPositionParams,
-      token: CancelToken = EmptyCancelToken,
-      definitionOnly: Boolean = false,
-  ): Future[DefinitionResult] = {
-    val source = positionParams.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename || source.isJavaFilename) {
-      val semanticDBDoc =
-        semanticdbs().textDocument(source).documentIncludingStale
-      (for {
-        doc <- semanticDBDoc
-        positionOccurrence = definitionProvider.positionOccurrence(
-          source,
-          positionParams.getPosition,
-          doc,
-        )
-        occ <- positionOccurrence.occurrence
-      } yield occ) match {
-        case Some(occ) =>
-          if (occ.role.isDefinition && !definitionOnly)
-            getReferencesForGoToDefinition(positionParams, token)
-          else definitionResult(positionParams, token)
-        case None =>
-          // Even if it failed to retrieve the symbol occurrence from semanticdb,
-          // try to find its definitions from presentation compiler.
-          definitionResult(positionParams, token).flatMap { definition =>
-            def isOnDefinition = definition.locations.asScala.exists(
-              _.getRange().encloses(positionParams.getPosition())
-            )
-            if (!definitionOnly && isOnDefinition)
-              getReferencesForGoToDefinition(positionParams, token)
-            else Future.successful(definition)
-          }
-      }
-    } else {
-      // Ignore non-scala files.
-      Future.successful(DefinitionResult.empty)
-    }
-  }
-
-  private def getReferencesForGoToDefinition(
-      positionParams: TextDocumentPositionParams,
-      token: CancelToken,
-  ) = {
-    val refParams = new ReferenceParams(
-      positionParams.getTextDocument(),
-      positionParams.getPosition(),
-      new ReferenceContext(false),
-    )
-    referencesResult(refParams).flatMap { results =>
-      if (results.flatMap(_.locations).isEmpty) {
-        // Fallback again to the original behavior that returns
-        // the definition location itself if no reference locations found,
-        // for avoiding the confusing messages like "No definition found ..."
-        definitionResult(positionParams, token)
-      } else {
-        Future.successful(
-          DefinitionResult(
-            locations = getSortedLocations(results),
-            symbol = results.head.symbol,
-            definition = None,
-            semanticdb = None,
-            querySymbol = results.head.symbol,
-          )
-        )
-      }
-    }
-
   }
 
   /**
