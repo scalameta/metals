@@ -8,7 +8,6 @@ import scala.meta.pc.RangeParams
 
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.util.JavacTask
-import com.sun.source.util.TreePath
 import com.sun.source.util.Trees
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.DocumentHighlightKind
@@ -42,31 +41,18 @@ class JavaDocumentHighlightProvider(
     val position = compiler.positionFromParams(params)
     val node = compiler.compilerTreeNode(scanner, position)
 
-    def isAtIdentifier(treePath: TreePath, element: Element): Boolean = {
-      val leaf = treePath.getLeaf()
-      val sourcePositions = trees.getSourcePositions()
-      val treeStart = sourcePositions.getStartPosition(scanner.root, leaf)
-      val treeEnd = sourcePositions.getEndPosition(scanner.root, leaf)
-      if (treeStart >= 0 && treeEnd >= 0) {
-        val elementName = element.getSimpleName().toString()
-        val (start, end) = compiler.findIndentifierStartAndEnd(
-          params.text(),
-          elementName,
-          treeStart.toInt,
-          treeEnd.toInt,
-          leaf,
-          scanner.root,
-          sourcePositions
-        )
-        start <= params.offset() && end >= params.offset()
-      } else false
-    }
-
     node match {
       case Some(treePath) =>
         val element = trees.getElement(treePath)
-
-        if (element != null && isAtIdentifier(treePath, element)) {
+        def atIdentifier = compiler.isAtIdentifier(
+          treePath,
+          element,
+          params.text(),
+          params.offset(),
+          trees,
+          scanner.root
+        )
+        if (element != null && atIdentifier) {
           findAllReferences(scanner.root, element, trees, params.text())
         } else {
           Nil
