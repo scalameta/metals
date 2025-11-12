@@ -113,12 +113,13 @@ class MbtV2WorkspaceSymbolSearch(
     // Step 3: The actual indexing, happens in parallel. Treat these as regular
     // didChange events for each individual file.
     toIndex.toList.foreach { file =>
-      onDidChange(file)
+      onDidChangeInternal(file, updateDocumentKeys = false)
       val count = indexedFilesCount.incrementAndGet()
       if (count % 50 == 0) {
         task.maybeProgress.foreach(_.update(count, toIndex.length))
       }
     }
+    updateDocumentsKeys(documents)
 
     val end = new l.WorkDoneProgressEnd()
     end.setMessage(s"done in $timer")
@@ -163,7 +164,7 @@ class MbtV2WorkspaceSymbolSearch(
       params: OnDidChangeSymbolsParams
   ): Unit = {
     val indexedDoc = IndexedDocument.fromOnDidChangeParams(params)
-    putDocument(params.path, indexedDoc)
+    putDocument(params.path, indexedDoc, updateDocumentKeys = true)
   }
   def onDidDelete(file: AbsolutePath): Unit = {
     for {
@@ -174,10 +175,17 @@ class MbtV2WorkspaceSymbolSearch(
       files.remove(file.toNIO)
     }
   }
-  def onDidChange(file: AbsolutePath): Unit = try {
+  def onDidChange(file: AbsolutePath): Unit = {
+    onDidChangeInternal(file, updateDocumentKeys = true)
+  }
+
+  private def onDidChangeInternal(
+      file: AbsolutePath,
+      updateDocumentKeys: Boolean,
+  ): Unit = try {
     val mdoc =
       IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
-    putDocument(file, mdoc)
+    putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
   } catch {
     case _: UnexpectedInputEndException =>
       scribe.debug(s"${file}: syntax error")
@@ -273,9 +281,13 @@ class MbtV2WorkspaceSymbolSearch(
     }
   }
 
-  private def putDocument(file: AbsolutePath, doc: IndexedDocument): Unit = {
+  private def putDocument(
+      file: AbsolutePath,
+      doc: IndexedDocument,
+      updateDocumentKeys: Boolean,
+  ): Unit = {
     val old = documents.put(file, doc)
-    if (old == None) {
+    if (old == None && updateDocumentKeys) {
       updateDocumentsKeys(documents)
     }
     addDocumentToPackage(doc.semanticdbPackage, file)
