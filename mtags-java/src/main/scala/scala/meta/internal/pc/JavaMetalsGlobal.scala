@@ -38,6 +38,8 @@ import com.sun.source.tree.VariableTree
 import com.sun.source.util.JavacTask
 import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePath
+import com.sun.source.util.Trees
+import org.eclipse.lsp4j.Position
 
 class JavaMetalsGlobal(
     val search: SymbolSearch,
@@ -109,6 +111,49 @@ class JavaMetalsGlobal(
       None,
       List("-classpath", classpath.mkString(File.pathSeparator))
     )
+  }
+
+  def isAtIdentifier(
+      treePath: TreePath,
+      element: Element,
+      text: String,
+      offset: Int,
+      trees: Trees,
+      root: CompilationUnitTree
+  ): Boolean = {
+    val leaf = treePath.getLeaf()
+    val sourcePositions = trees.getSourcePositions()
+    val treeStart = sourcePositions.getStartPosition(root, leaf)
+    val treeEnd = sourcePositions.getEndPosition(root, leaf)
+    if (treeStart >= 0 && treeEnd >= 0) {
+      val elementName = element.getSimpleName().toString()
+      val (start, end) = findIndentifierStartAndEnd(
+        text,
+        elementName,
+        treeStart.toInt,
+        treeEnd.toInt,
+        leaf,
+        root,
+        sourcePositions
+      )
+      start <= offset && end >= offset
+    } else false
+  }
+
+  def offsetToPosition(offset: Int, text: String): Position = {
+    var line = 0
+    var character = 0
+    var i = 0
+    while (i < offset && i < text.length()) {
+      if (text.charAt(i) == '\n') {
+        line += 1
+        character = 0
+      } else {
+        character += 1
+      }
+      i += 1
+    }
+    new Position(line, character)
   }
 
   def documentation(
