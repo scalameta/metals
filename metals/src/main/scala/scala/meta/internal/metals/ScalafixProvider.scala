@@ -676,15 +676,7 @@ case class ScalafixProvider(
               } catch {
                 case e: ScalafixException
                     if e.getMessage().contains("Failed to fetch") =>
-                  val binaryVersion =
-                    ScalaVersions.scalaBinaryVersionFromFullVersion(
-                      scalaVersion
-                    )
-                  Embedded.downloadDependency(
-                    "ch.epfl.scala",
-                    s"scalafix-cli_$binaryVersion",
-                    BuildInfo.scalafixVersion,
-                  )
+                  Embedded.downloadScalafix(scalaVersion)
                   Scalafix.fetchAndClassloadInstance(scalaVersion)
               }
           scalafix
