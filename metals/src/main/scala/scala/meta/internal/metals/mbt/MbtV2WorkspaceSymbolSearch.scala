@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.{util => ju}
 
@@ -54,6 +55,7 @@ class MbtV2WorkspaceSymbolSearch(
     extends MbtWorkspaceSymbolSearch {
 
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
+  private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
 
   override def close(): Unit = {}
 
@@ -76,7 +78,24 @@ class MbtV2WorkspaceSymbolSearch(
   private val documentsByPackage =
     TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
 
-  override def onReindex(): IndexingStats = {
+  override def onReindex(): IndexingStats = try {
+    if (isIndexing.compareAndSet(false, true)) {
+      onReindexInternal()
+    } else {
+      scribe.warn(
+        "mbt-v2: already indexing workspace symbols, skipping reindex"
+      )
+      IndexingStats.empty
+    }
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"mbt-v2: error reindexing workspace symbols", e)
+      IndexingStats.empty
+  } finally {
+    isIndexing.set(false)
+  }
+
+  private def onReindexInternal(): IndexingStats = {
     if (!config().isMBT2) {
       scribe.warn(s"mbt-v2: config is not mbt-v2, skipping reindex")
       return IndexingStats.empty
@@ -101,29 +120,38 @@ class MbtV2WorkspaceSymbolSearch(
     if (toIndex.nonEmpty) {
       scribe.info(s"mbt-v2: indexing ${toIndex.length} files")
     }
+
     val (task, token) = progress.startProgress(
       message = "Indexing workspace symbols",
       withProgress = true,
       showTimer = true,
       onCancel = None,
     )
-    task.maybeProgress.foreach(_.update(0, toIndex.length))
+    try {
+      task.maybeProgress.foreach(_.update(0, toIndex.length))
 
-    val indexedFilesCount = new AtomicInteger()
-    // Step 3: The actual indexing, happens in parallel. Treat these as regular
-    // didChange events for each individual file.
-    toIndex.foreach { file =>
-      onDidChangeInternal(file, updateDocumentKeys = false)
-      val count = indexedFilesCount.incrementAndGet()
-      if (count % 50 == 0) {
-        task.maybeProgress.foreach(_.update(count, toIndex.length))
+      val indexedFilesCount = new AtomicInteger()
+      // Step 3: The actual indexing, happens in parallel. Treat these as regular
+      // didChange events for each individual file.
+      toIndex.foreach { file =>
+        try {
+          onDidChangeInternal(file, updateDocumentKeys = false)
+          val count = indexedFilesCount.incrementAndGet()
+          if (count % 50 == 0) {
+            task.maybeProgress.foreach(_.update(count, toIndex.length))
+          }
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(s"mbt-v2: error indexing file ${file}", e)
+        }
       }
-    }
-    updateDocumentsKeys(documents)
+      updateDocumentsKeys(documents)
+    } finally {
 
-    val end = new l.WorkDoneProgressEnd()
-    end.setMessage(s"done in $timer")
-    progress.endProgress(token)
+      val end = new l.WorkDoneProgressEnd()
+      end.setMessage(s"done in $timer")
+      progress.endProgress(token)
+    }
 
     // Step 4: Write the index to disk. It's technically fine to move writing
     // the index to a background job.  Might be worth doing someday.
