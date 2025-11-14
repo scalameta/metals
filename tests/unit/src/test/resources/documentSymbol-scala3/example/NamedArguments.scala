@@ -1,7 +1,7 @@
 /*example(Package):34*/package example
 
 /*example.User(Class):8*/case class User(
-    name: String = {
+    /*example.User#name(Variable):7*/name: String = {
       // assert default values have occurrences
       Map.toString
     }
