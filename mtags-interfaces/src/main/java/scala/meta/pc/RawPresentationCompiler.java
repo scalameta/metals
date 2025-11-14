@@ -18,6 +18,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.Collections;
 
 /**
  * The raw public API of the presentation compiler that does not handle synchronisation.
@@ -166,6 +167,13 @@ public abstract class RawPresentationCompiler {
 	 * The text contents of the given file changed.
 	 */
 	public abstract List<Diagnostic> didChange(VirtualFileParams params);
+
+	/**
+	 * Return source metadata of symbol at given position
+	 */
+	public List<SymbolSource> symbolSource(OffsetParams params) {
+		return Collections.emptyList();
+	}
 
 	/**
 	 * Returns decorations for missing type adnotations, inferred type parameters,
