@@ -105,4 +105,31 @@ class DefinitionSuite extends BaseJavaDefinitionSuite {
        |java/lang/String#copyValueOf(+1). String.java
        |""".stripMargin,
   )
+
+  check(
+    "already-method-definition",
+    """
+      |class A {
+      |    public String fo@@o() { return "message"; }
+      |}
+      |""".stripMargin,
+    """|Definition.java:4:19: info: definition
+       |    public String foo() { return "message"; }
+       |                  ^^^
+       |""".stripMargin,
+  )
+
+  check(
+    "already-field-definition",
+    """
+      |class A {
+      |    public static Object fo@@o = "message";
+      |}
+      |""".stripMargin,
+    """|Definition.java:4:26: info: definition
+       |    public static Object foo = "message";
+       |                         ^^^
+       |""".stripMargin,
+  )
+
 }

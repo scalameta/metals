@@ -9,6 +9,7 @@ import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.ImportTree
 import com.sun.source.tree.MemberReferenceTree
 import com.sun.source.tree.MemberSelectTree
+import com.sun.source.tree.MethodTree
 import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
@@ -103,6 +104,20 @@ class JavaTreeScanner(
       p: CursorPosition
   ): TreePath =
     scan(node.getErrorTrees, p)
+
+  override def visitMethod(
+      node: MethodTree,
+      p: CursorPosition
+  ): TreePath = {
+    val pos = Trees.instance(task).getSourcePositions
+    val start = pos.getStartPosition(root, node)
+    val end = pos.getEndPosition(root, node)
+
+    if (start <= p.start && p.end <= end) {
+      lastVisitedParentTrees = getCurrentPath :: lastVisitedParentTrees
+    }
+    super.visitMethod(node, p)
+  }
 
   override def visitVariable(
       node: VariableTree,
