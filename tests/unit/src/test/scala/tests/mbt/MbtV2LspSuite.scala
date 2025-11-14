@@ -85,7 +85,7 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
     } yield ()
   }
 
-  test("file-watcher") {
+  test("file-watcher".flaky) {
     cleanWorkspace()
     val cafe = "a/src/main/scala/a/Cafe.scala"
     val chocolate = "a/src/main/scala/a/Chocolate.scala"

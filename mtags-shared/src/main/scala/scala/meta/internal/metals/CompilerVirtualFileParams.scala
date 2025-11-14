@@ -12,8 +12,8 @@ import scala.meta.pc.VirtualFileParams
 case class CompilerVirtualFileParams(
     uri: URI,
     text: String,
-    token: CancelToken,
-    override val outlineFiles: Optional[OutlineFiles]
+    token: CancelToken = EmptyCancelToken,
+    override val outlineFiles: Optional[OutlineFiles] = Optional.empty()
 ) extends VirtualFileParams {
 
   // The code below is copied from scala.meta InternalInput. Having the
@@ -79,10 +79,4 @@ case class CompilerVirtualFileParams(
 
 object CompilerVirtualFileParams {
   private val newLine = Set('\n', '\r')
-  def apply(
-      uri: URI,
-      text: String,
-      token: CancelToken = EmptyCancelToken
-  ): CompilerVirtualFileParams =
-    CompilerVirtualFileParams(uri, text, token, Optional.empty())
 }
