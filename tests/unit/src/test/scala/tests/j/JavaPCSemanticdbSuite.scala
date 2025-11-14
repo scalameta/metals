@@ -4,46 +4,49 @@ class JavaPCSemanticdbSuite extends BaseJavaPCSuite("java-pc-semanticdb") {
 
   testLSP("basic") {
     cleanWorkspace()
+    val a = "Main.java"
     for {
       _ <- initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/java/com/app/Main.java
-           |package com.app;
-           |
-           |import java.io.IOException;
-           |import java.io.UncheckedIOException;
-           |import java.nio.file.FileVisitResult;
-           |import java.nio.file.Files;
-           |import java.nio.file.SimpleFileVisitor;
-           |import java.nio.file.attribute.BasicFileAttributes;
-           |import java.nio.file.FileVisitResult;
-           |import java.nio.file.Path;
-           |import java.nio.file.Paths;
-           |import java.nio.file.Paths;
-           |
-           |public class Main {
-           |
-           |
-           |	public static void blah(String[] args) throws IOException {
-           |		Files.walkFileTree(java.nio.file.Paths.get(""), new SimpleFileVisitor<Path>() {
-           |			@Override
-           |			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-           |				System.out.println(file);
-           |				return FileVisitResult.CONTINUE;
-           |			}
-           |		});
-           |	}
-           |}
-           |
-           |""".stripMargin
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$a
+            |package com.app;
+            |
+            |import java.io.IOException;
+            |import java.io.UncheckedIOException;
+            |import java.nio.file.FileVisitResult;
+            |import java.nio.file.Files;
+            |import java.nio.file.SimpleFileVisitor;
+            |import java.nio.file.attribute.BasicFileAttributes;
+            |import java.nio.file.FileVisitResult;
+            |import java.nio.file.Path;
+            |import java.nio.file.Paths;
+            |import java.nio.file.Paths;
+            |
+            |public class Main {
+            |
+            |
+            |	public static void blah(String[] args) throws IOException {
+            |		Files.walkFileTree(java.nio.file.Paths.get(""), new SimpleFileVisitor<Path>() {
+            |			@Override
+            |			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+            |				System.out.println(file);
+            |				return FileVisitResult.CONTINUE;
+            |			}
+            |		});
+            |	}
+            |}
+            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/java/com/app/Main.java")
-      decodeURI =
-        s"metalsDecode:${server.toPath("a/src/main/java/com/app/Main.java").toURI}.semanticdb-detailed"
+      _ <- server.didOpen(a)
+      decodeURI = s"metalsDecode:${server.toPath(a).toURI}.semanticdb-detailed"
+      // NOTE: this command fails if the file is part of a build target because
+      // then InteractiveSemanticdbs will not index it. We should probably fix
+      // that but it should be consistent for Scala/Java, and this test is
+      // unrelated to that logic.
       result <- server.executeDecodeFileCommand(decodeURI)
       shortResult = result.value.linesIterator
         .dropWhile(line => !line.contains("visitFile"))
@@ -66,28 +69,28 @@ class JavaPCSemanticdbSuite extends BaseJavaPCSuite("java-pc-semanticdb") {
 
   testLSP("errors") {
     cleanWorkspace()
+    val a = "Main.java"
     for {
       _ <- initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/a/src/main/java/com/app/Main.java
-           |
-           |package com.app;
-           |
-           |public class Main {
-           |	public int test(Foobar foobar) { // Foobar is not defined
-           |	  String message = foobar.greeting();
-           |		return message.length();
-           |	}
-           |}
-           |""".stripMargin
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$a
+            |
+            |package com.app;
+            |
+            |public class Main {
+            |	public int test(Foobar foobar) { // Foobar is not defined
+            |	  String message = foobar.greeting();
+            |		return message.length();
+            |	}
+            |}
+            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/java/com/app/Main.java")
-      decodeURI =
-        s"metalsDecode:${server.toPath("a/src/main/java/com/app/Main.java").toURI}.semanticdb-detailed"
+      _ <- server.didOpen(a)
+      decodeURI = s"metalsDecode:${server.toPath(a).toURI}.semanticdb-detailed"
       result <- server.executeDecodeFileCommand(decodeURI)
       _ = assertNoDiff(
         result.value,

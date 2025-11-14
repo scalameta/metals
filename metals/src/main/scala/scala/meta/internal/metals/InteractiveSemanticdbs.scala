@@ -70,7 +70,6 @@ final class InteractiveSemanticdbs(
       source.isLocalFileSystem(workspace) && (
         unsavedContents.isDefined ||
           source.isInReadonlyDirectory(workspace) || // dependencies
-          source.isJava || // we enable it always for Java
           source.isSbt || // sbt files
           source.isMill || // mill files
           source.isWorksheet || // worksheets
