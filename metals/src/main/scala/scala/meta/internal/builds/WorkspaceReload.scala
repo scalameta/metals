@@ -7,7 +7,6 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.Messages.dontShowAgain
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
@@ -52,8 +51,15 @@ final class WorkspaceReload(
       ImportBuildChanges.params(buildTool.toString) ->
         ImportBuildChanges.yes
     languageClient
-      .showMessageRequest(params)
-      .asScala
+      .showMessageRequest(
+        params,
+        defaultTo = () => {
+          languageClient.showMessage(
+            ImportBuildChanges.notificationParams(buildTool.executableName)
+          )
+          ImportBuildChanges.notNow
+        },
+      )
       .map { item =>
         if (item == dontShowAgain) {
           notification.dismissForever()

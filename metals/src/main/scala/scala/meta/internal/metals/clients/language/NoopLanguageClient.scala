@@ -2,6 +2,9 @@ package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -19,6 +22,13 @@ import org.eclipse.lsp4j.WorkDoneProgressCreateParams
  * or log messages are published during shutdown.
  */
 abstract class NoopLanguageClient extends MetalsLanguageClient {
+
+  override def showMessageRequest(
+      params: ShowMessageRequestParams,
+      defaultTo: () => MessageActionItem,
+  ): Future[MessageActionItem] = {
+    showMessageRequest(params).asScala
+  }
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =
@@ -68,4 +78,4 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   }
 }
 
-object NoopLanguageClient extends NoopLanguageClient
+object NoopLanguageClient extends NoopLanguageClient {}

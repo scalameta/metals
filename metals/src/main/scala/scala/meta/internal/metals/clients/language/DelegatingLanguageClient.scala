@@ -3,6 +3,8 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import java.{util => ju}
 
+import scala.concurrent.Future
+
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
@@ -23,6 +25,13 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
 
   override def shutdown(): Unit = {
     underlying.shutdown()
+  }
+
+  override def showMessageRequest(
+      params: ShowMessageRequestParams,
+      defaultTo: () => MessageActionItem,
+  ): Future[MessageActionItem] = {
+    underlying.showMessageRequest(params, defaultTo)
   }
 
   override def registerCapability(
@@ -113,4 +122,5 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
 
   override def notifyProgress(params: ProgressParams): Unit =
     underlying.notifyProgress(params)
+
 }

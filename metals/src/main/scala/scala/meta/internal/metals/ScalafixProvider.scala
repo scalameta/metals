@@ -613,9 +613,18 @@ case class ScalafixProvider(
           languageClient
             .showMessageRequest(
               Messages.ScalafixConfig
-                .amendRequest(settingLines, scalaVersion, isScalaSource)
+                .amendRequest(settingLines, scalaVersion, isScalaSource),
+              defaultTo = () => {
+                languageClient.showMessage(
+                  Messages.ScalafixConfig.notificationParams(
+                    settingLines,
+                    scalaVersion,
+                    isScalaSource,
+                  )
+                )
+                Messages.ScalafixConfig.ignore
+              },
             )
-            .asScala
             .map {
               case Messages.ScalafixConfig.adjustScalafix =>
                 try {

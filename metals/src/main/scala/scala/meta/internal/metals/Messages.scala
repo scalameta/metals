@@ -70,6 +70,13 @@ object Messages {
       message,
     )
 
+    def notificationParams(buildTool: BuildTool): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        s"Multiple build tools found that could be build servers. Using ${buildTool.executableName}",
+      )
+    }
+
     def params(buildTools: List[BuildTool]): ShowMessageRequestParams = {
       val messageActionItems =
         buildTools.map(bt => new MessageActionItem(bt.executableName))
@@ -185,6 +192,13 @@ object Messages {
       )
       params
     }
+
+    def notificationParams(buildToolName: String): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        s"$buildToolName build needs to be re-imported.",
+      )
+    }
   }
 
   object ImportBuild {
@@ -206,6 +220,13 @@ object Messages {
         ).asJava
       )
       params
+    }
+
+    def notificationParams(buildToolName: String): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        s"New $buildToolName workspace detected, please import the build using the 'Import build' command.",
+      )
     }
   }
 
@@ -264,6 +285,14 @@ object Messages {
   object ChooseBuildTool {
     def message =
       "Multiple build definitions found. Which would you like to use?"
+
+    def notificationParams(buildTool: BuildTool): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        s"Multiple build definitions found. Using ${buildTool.executableName}. Use `metals.targetBuildTool` to change the build tool.",
+      )
+    }
+
     def params(builtTools: List[BuildTool]): ShowMessageRequestParams = {
       val messageActionItems =
         builtTools.map(bt => new MessageActionItem(bt.executableName))
@@ -609,6 +638,14 @@ object Messages {
         s"Update .scalafmt.conf to use v${BuildInfo.scalafmtVersion}"
       )
 
+    def notificationParams(): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        s"No Scalafmt version is configured for this workspace. " +
+          s"To fix this problem, update .scalafmt.conf to include 'version=${BuildInfo.scalafmtVersion}'.",
+      )
+    }
+
     def messageRequest(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(messageRequestMessage)
@@ -654,7 +691,12 @@ object Messages {
     def createScalafmtConfMessage: String =
       s"No .scalafmt.conf file detected. " +
         s"How would you like to proceed:"
-
+    def notificationParams(): MessageParams = {
+      new MessageParams(
+        MessageType.Error,
+        "No .scalafmt.conf file detected. It should be present in the workspace root.",
+      )
+    }
     def params(): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(createScalafmtConfMessage)
@@ -679,6 +721,13 @@ object Messages {
         s"because they require the `runner.dialect = ${dialect.value}` setting." +
         "[See scalafmt docs](https://scalameta.org/scalafmt/docs/configuration.html#scala-3)" +
         " and logs for more details"
+    }
+
+    def notificationParams(dialect: ScalafmtDialect): MessageParams = {
+      new MessageParams(
+        MessageType.Warning,
+        createMessage(dialect),
+      )
     }
 
     def params(
@@ -1059,6 +1108,12 @@ object Messages {
     val waitAction = new MessageActionItem("Wait")
     val waitAlways = new MessageActionItem("Wait always")
 
+    def notificationParams(actionName: String, minutes: Int): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        s"$actionName request is taking longer than expected (over $minutes minutes)",
+      )
+    }
     def params(actionName: String, minutes: Int): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
       params.setMessage(
@@ -1088,16 +1143,38 @@ object Messages {
     val adjustScalafix = new MessageActionItem("Yes")
     val ignore = new MessageActionItem("Not now")
     val dontShowAgain = new MessageActionItem("Don't show again")
+
+    def message(
+        settings: List[String],
+        scalaVersion: String,
+        isScala3Source: Boolean,
+    ): String = {
+      val scala3SourceText = if (isScala3Source) " with `-Xsource:3`" else ""
+      s"""|Your `.scalafix.conf` misses the following settings for organize imports for $scalaVersion$scala3SourceText:
+          |${settings.map(s => s"`$s`").mkString(", ")}.
+          |""".stripMargin
+    }
+
+    def notificationParams(
+        settings: List[String],
+        scalaVersion: String,
+        isScala3Source: Boolean,
+    ): MessageParams = {
+      new MessageParams(
+        MessageType.Info,
+        message(settings, scalaVersion, isScala3Source),
+      )
+    }
+
     def amendRequest(
         settings: List[String],
         scalaVersion: String,
         isScala3Source: Boolean,
     ): ShowMessageRequestParams = {
       val params = new ShowMessageRequestParams()
-      val scala3SourceText = if (isScala3Source) " with `-Xsource:3`" else ""
+      if (isScala3Source) " with `-Xsource:3`" else ""
       params.setMessage(
-        s"""|Your `.scalafix.conf` misses the following settings for organize imports for $scalaVersion$scala3SourceText:
-            |${settings.map(s => s"`$s`").mkString(", ")}.
+        s"""|${message(settings, scalaVersion, isScala3Source)}
             |Would you like to add them?
             |""".stripMargin
       )

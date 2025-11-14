@@ -162,8 +162,10 @@ class NewProjectProvider(
 
     if (config.isOpenNewWindowProvider()) {
       client
-        .showMessageRequest(NewScalaProject.askForNewWindowParams())
-        .asScala
+        .showMessageRequest(
+          NewScalaProject.askForNewWindowParams(),
+          defaultTo = () => NewScalaProject.no,
+        )
         .map {
           case msg if msg == NewScalaProject.no =>
             openWindow(newWindow = false)
