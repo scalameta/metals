@@ -116,7 +116,7 @@ abstract class MetalsLspService(
     val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
-    metrics: MonitoringClient,
+    val metrics: MonitoringClient,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
@@ -1702,7 +1702,7 @@ abstract class MetalsLspService(
       compilations,
       workDoneProgress,
       buffers,
-      () => indexer.index(() => ()),
+      () => indexer.index(() => (), TaskProgress.empty),
       () => diagnostics,
       tables,
       () => buildClient,

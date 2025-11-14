@@ -9,6 +9,7 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ImportedBuild
+import scala.meta.internal.metals.TaskProgress
 
 case class BspSession(
     main: BuildServerConnection,
@@ -21,11 +22,22 @@ case class BspSession(
 
   def lastImportedBuild: Seq[ImportedBuild] = lastImported.get().map(_.build)
 
-  def importBuilds(): Future[List[BspSession.BspBuild]] = {
+  def importBuilds(
+      progress: TaskProgress
+  ): Future[List[BspSession.BspBuild]] = {
     def importSingle(conn: BuildServerConnection): Future[BspSession.BspBuild] =
       ImportedBuild.fromConnection(conn).map(BspSession.BspBuild(conn, _))
 
-    Future.sequence(connections.map(importSingle)).map { imports =>
+    val imports = connections.map(conn => {
+      progress.message = s"importing ${conn.name} build"
+      val result = importSingle(conn)
+      result.onComplete { _ =>
+        progress.message = s"imported ${conn.name} build"
+      }
+      result
+    })
+
+    Future.sequence(imports).map { imports =>
       lastImported.set(imports)
       imports
     }

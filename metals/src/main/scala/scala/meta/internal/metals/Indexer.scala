@@ -51,24 +51,25 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     tables,
   )
 
-  def index(check: () => Unit): Future[Unit] = profiledIndexWorkspace(check)
+  def index(check: () => Unit, progress: TaskProgress): Future[Unit] =
+    profiledIndexWorkspace(check, progress)
 
-  protected def profiledIndexWorkspace(check: () => Unit): Future[Unit] = {
-    val tracked = workDoneProgress.trackFuture(
-      Messages.indexing,
-      Future {
-        timerProvider.timedThunk(
-          "indexed workspace",
-          onlyIf = true,
-          metricName = Some("index_workspace"),
-        ) {
-          try indexWorkspace(check)
-          finally {
-            indexingPromise.trySuccess(())
-          }
+  protected def profiledIndexWorkspace(
+      check: () => Unit,
+      progress: TaskProgress,
+  ): Future[Unit] = {
+    val tracked = Future {
+      timerProvider.timedThunk(
+        "indexed workspace",
+        onlyIf = true,
+        metricName = Some("index_workspace"),
+      ) {
+        try indexWorkspace(check, progress)
+        finally {
+          indexingPromise.trySuccess(())
         }
-      },
-    )
+      }
+    }
     tracked.foreach { _ =>
       statusBar.addMessage(
         s"${clientConfig.icons().rocket} Indexing complete!"
@@ -92,7 +93,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     tracked
   }
 
-  private def indexWorkspace(check: () => Unit): Unit = {
+  private def indexWorkspace(
+      check: () => Unit,
+      progress: TaskProgress,
+  ): Unit = {
     fileWatcher.cancel()
 
     timerProvider.timedThunk(
@@ -100,6 +104,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       clientConfig.initialConfig.statistics.isIndex,
       metricName = Some("index_workspace_reset_stuff"),
     ) {
+      progress.message = "indexing setup"
       resetService()
     }
     val allBuildTargetsData = buildData()
@@ -109,6 +114,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         clientConfig.initialConfig.statistics.isIndex,
         metricName = Some("index_workspace_update_build_targets"),
       ) {
+        progress.message = "indexing build targets"
         val data = buildTool.data
         val importedBuild = buildTool.importedBuild
         data.reset()
@@ -152,6 +158,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       clientConfig.initialConfig.statistics.isIndex,
       metricName = Some("index_workspace_post_update_build_targets"),
     ) {
+      progress.message = "analyzing build targets"
       check()
     }
     timerProvider.timedThunk(
@@ -159,6 +166,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       clientConfig.initialConfig.statistics.isIndex,
       metricName = Some("index_workspace_file_watcher"),
     ) {
+      progress.message = "creating file watchers"
       try {
         fileWatcher.cancel()
         fileWatcher.start()
@@ -176,20 +184,23 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         clientConfig.initialConfig.statistics.isIndex,
         metricName = Some("index_workspace_sources"),
       ) {
-        indexWorkspaceSources(buildTool.data)
+        progress.message = "indexing sources"
+        indexWorkspaceSources(buildTool.data, progress)
       }
     timerProvider.timedThunk(
       "indexed library classpath",
       clientConfig.initialConfig.statistics.isIndex,
       metricName = Some("index_workspace_classpath"),
     ) {
-      workspaceSymbols.indexClasspath()
+      progress.message = "indexing classpath"
+      workspaceSymbols.indexClasspath(progress)
     }
     timerProvider.timedThunk(
       "indexed workspace SemanticDBs",
       clientConfig.initialConfig.statistics.isIndex,
       metricName = Some("index_workspace_semanticdb"),
     ) {
+      progress.message = "indexing semanticdbs"
       semanticDBIndexer.onTargetRoots()
     }
     var usedJars = Set.empty[AbsolutePath]
@@ -199,16 +210,23 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         clientConfig.initialConfig.statistics.isIndex,
         metricName = Some("index_library_sources"),
       ) {
+        progress.message = "indexing JDK sources"
         usedJars ++= indexJdkSources(
           buildTool.data,
           buildTool.importedBuild.dependencySources,
         )
+        progress.message =
+          s"indexing ${buildTool.importedBuild.dependencyModules.getItems().size()} dependencies"
         if (indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
-          indexDependencyModules(buildTool.importedBuild.dependencyModules)
+          indexDependencyModules(
+            buildTool.importedBuild.dependencyModules,
+            progress,
+          )
         }
         usedJars ++= indexDependencySources(
           buildTool.data,
           buildTool.importedBuild.dependencySources,
+          progress,
         )
         scribe.debug(s"indexed ${usedJars.size} dependency source jars")
       }
@@ -225,18 +243,21 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         TimeUnit.SECONDS,
       )
 
+    progress.message = "updating focused documents"
     focusedDocument.foreach { doc =>
       buildTargets
         .inverseSources(doc)
         .foreach(focusedDocumentBuildTarget.set)
     }
 
+    progress.message = "updating classes"
     val targets = buildTargets.allBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>
         languageClient.refreshModel()
       }
+    progress.message = ""
   }
 
   /*
@@ -337,17 +358,20 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     }
   }
 
-  def indexWorkspaceSources(data: Seq[TargetData]): Unit = {
+  def indexWorkspaceSources(
+      data: Seq[TargetData],
+      progress: TaskProgress = TaskProgress.empty,
+  ): Unit = {
     for (data0 <- data.iterator)
-      indexWorkspaceSources(data0)
+      indexWorkspaceSources(data0, progress)
   }
-  def indexWorkspaceSources(data: TargetData): Unit = {
+  def indexWorkspaceSources(data: TargetData, progress: TaskProgress): Unit = {
     case class SourceToIndex(
         source: AbsolutePath,
         sourceItem: AbsolutePath,
         targets: Iterable[b.BuildTargetIdentifier],
     )
-    val sourcesToIndex = mutable.ListBuffer.empty[SourceToIndex]
+    val sourcesToIndex = mutable.ArrayBuffer.empty[SourceToIndex]
     for {
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
       source <- sourceItem.listRecursive
@@ -371,6 +395,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     )
     try {
       val parSourcesToIndex = sourcesToIndex.toSeq.par
+      progress.message = s"indexing ${parSourcesToIndex.length} sources"
       parSourcesToIndex.tasksupport = new ForkJoinTaskSupport(threadPool)
       parSourcesToIndex.foreach(f =>
         indexSourceFile(
@@ -384,7 +409,8 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
   }
 
   private def indexDependencyModules(
-      dependencyModules: b.DependencyModulesResult
+      dependencyModules: b.DependencyModulesResult,
+      progress: TaskProgress,
   ): Unit = {
     val isVisited = new ju.HashSet[AbsolutePath]()
     for {
@@ -396,6 +422,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       }
       if jar.isJar && !isVisited.contains(jar)
     } {
+      progress.progress = progress.progress + 1
       isVisited.add(jar)
       val sources = maven.getArtifacts().asScala.collectFirst {
         case a if a.getClassifier() == "sources" =>
@@ -423,6 +450,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
   private def indexDependencySources(
       data: TargetData,
       dependencySources: b.DependencySourcesResult,
+      progress: TaskProgress,
   ): Set[AbsolutePath] = {
     // Track used Jars so that we can
     // remove cached symbols from Jars
@@ -436,6 +464,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       _ = data.addDependencySource(path, item.getTarget)
       if !isVisited.contains(sourceUri)
     } {
+      progress.progress = progress.progress + 1
       isVisited.add(sourceUri)
       try {
         if (path.isJar && path.exists) {

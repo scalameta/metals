@@ -22,6 +22,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SlowConnect
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -85,7 +86,11 @@ class BspConnector(
       workspace: AbsolutePath,
       userConfiguration: () => UserConfiguration,
       shellRunner: ShellRunner,
+      progress: TaskProgress,
   )(implicit ec: ExecutionContext): Future[Option[BspSession]] = {
+    buildTool.foreach(bt =>
+      progress.message = s"connecting to ${bt.buildServerName}"
+    )
     val projectRoot = buildTool
       .map(_.projectRoot)
       .orElse(userConfiguration().getCustomProjectRoot(workspace))
@@ -110,10 +115,12 @@ class BspConnector(
               bspTraceRoot,
               userConfiguration,
               bspStatusOpt,
+              progress,
             )
             .map(Some(_))
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
+          progress.message = "connecting to sbt"
           tables.buildServers.chooseServer(SbtBuildTool.name)
           val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
           def restartSbtBuildServer() = currentConnection()
@@ -134,15 +141,19 @@ class BspConnector(
                 bspTraceRoot,
                 details,
                 bspStatusOpt,
+                progress,
               )
               _ <-
-                if (shouldReload) connection.workspaceReload()
-                else Future.successful(())
+                if (shouldReload) {
+                  progress.message = s"reloading ${details.getName()} workspace"
+                  connection.workspaceReload()
+                } else Future.successful(())
             } yield connection
           workDoneProgress
             .trackFuture("Connecting to sbt", connectionF)
             .map(Some(_))
         case ResolvedBspOne(details) =>
+          progress.message = s"connecting to ${details.getName()}"
           tables.buildServers.chooseServer(details.getName())
           optSetBuildTool(details.getName())
           buildTool match {
@@ -153,6 +164,7 @@ class BspConnector(
               scribe.info(
                 s"Regenerating ${details.getName()} json config to latest."
               )
+              progress.message = s"generating ${details.getName()} json config"
               bsp
                 .generateBspConfig(
                   workspace,
@@ -168,8 +180,15 @@ class BspConnector(
                   )
                 }
             case _ =>
+              progress.message = s"connecting to ${details.getName()}"
               bspServers
-                .newServer(projectRoot, bspTraceRoot, details, bspStatusOpt)
+                .newServer(
+                  projectRoot,
+                  bspTraceRoot,
+                  details,
+                  bspStatusOpt,
+                  progress,
+                )
                 .map(Some(_))
           }
 
@@ -186,6 +205,7 @@ class BspConnector(
               bspTraceRoot,
               preferredServer.get,
               bspStatusOpt,
+              progress,
             )
             .map(Some(_))
         case ResolvedMultiple(_, availableServers) =>
@@ -210,6 +230,7 @@ class BspConnector(
               distinctServers.keySet.toList,
               None,
             )
+          progress.message = s"choosing build server"
           for {
             Some(item) <- client
               .showMessageRequest(query.params)
@@ -225,6 +246,7 @@ class BspConnector(
               bspTraceRoot,
               item,
               bspStatusOpt,
+              progress,
             )
           } yield Some(conn)
       }

@@ -90,7 +90,9 @@ final class BloopServers(
       bspTraceRoot: AbsolutePath,
       userConfiguration: () => UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
+      progress: TaskProgress,
   ): Future[BuildServerConnection] = {
+    progress.message = "connecting to bloop"
     BuildServerConnection
       .fromSockets(
         projectRoot,

@@ -19,6 +19,20 @@ object TimerProvider {
 final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
     ec: ExecutionContext
 ) {
+
+  // Records a metric for how long a future takes to complete.
+  def recorded[T](
+      metricName: String,
+      thunk: => Future[T],
+  ): Future[T] = {
+    val timer = new Timer(time)
+    val result = thunk
+    result.onComplete { _ =>
+      metrics.recordEvent(infra.Event.duration(metricName, timer.elapsed))
+    }
+    result
+  }
+
   def timed[T](
       didWhat: String,
       reportStatus: Boolean = false,

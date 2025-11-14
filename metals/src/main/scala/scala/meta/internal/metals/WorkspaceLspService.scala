@@ -133,7 +133,7 @@ class WorkspaceLspService(
   }
 
   private val workDoneProgress = register {
-    new WorkDoneProgress(languageClient, time)
+    new WorkDoneProgress(languageClient, time, metrics)
   }
 
   private val userConfigSync =
@@ -836,7 +836,13 @@ class WorkspaceLspService(
         ).asJavaObject
       case ServerCommands.ImportBuild() =>
         onCurrentFolder(
-          _.connectionProvider.slowConnectToBuildServer(forceImport = true),
+          service =>
+            workDoneProgress.trackProgressFuture(
+              "Import",
+              progress =>
+                service.connectionProvider
+                  .slowConnectToBuildServer(forceImport = true, progress),
+            ),
           ServerCommands.ImportBuild.title,
           default = () => BuildChange.None,
         ).asJavaObject

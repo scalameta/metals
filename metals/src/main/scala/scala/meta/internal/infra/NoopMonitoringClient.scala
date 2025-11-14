@@ -4,6 +4,7 @@ import scala.meta.infra.Event
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 
+object NoopMonitoringClient extends NoopMonitoringClient
 class NoopMonitoringClient extends MonitoringClient {
   override def recordUsage(metric: Metric): Unit = {}
   override def recordEvent(event: Event): Unit = {}

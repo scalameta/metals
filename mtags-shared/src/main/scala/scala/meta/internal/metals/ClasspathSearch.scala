@@ -103,9 +103,9 @@ object ClasspathSearch {
         )
         val map = CompressedPackageIndex.fromPackages(
           () =>
-            packages.packages.asScala.iterator.map(pkg =>
+            packages.packages.asScala.iterator.map { pkg =>
               (pkg._1, pkg._2.asScala)
-            ),
+            },
           excludePackages.isExcludedPackage,
           bucketSize
         )

@@ -99,10 +99,10 @@ class ProjectMetalsLspService(
   override def indexer: Indexer = connectionProvider
   def buildServerPromise = connectionProvider.buildServerPromise
   def connect[T](config: ConnectRequest): Future[BuildChange] =
-    workDoneProgress.trackFuture(
+    workDoneProgress.trackProgressFuture(
       config.userMessage,
-      connectionProvider.Connect.connect(config),
-      metricName = config.metricName.map(name => name -> metrics),
+      progress => connectionProvider.Connect.connect(config, progress),
+      metricName = config.metricName,
     )
 
   override val fileWatcher: FileWatcher =
@@ -191,7 +191,6 @@ class ProjectMetalsLspService(
     mainBuildTargetsData,
     this,
     syncStatusReporter,
-    metrics,
   )
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =
@@ -299,9 +298,13 @@ class ProjectMetalsLspService(
           connectionProvider.fullConnect()
         // used build tool changed
         case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
-          connectionProvider
-            .slowConnectToBuildServer(forceImport = false)
-            .ignoreValue
+          workDoneProgress.trackProgressFuture(
+            "Changed",
+            progress =>
+              connectionProvider
+                .slowConnectToBuildServer(forceImport = false, progress)
+                .ignoreValue,
+          )
         // maybe new build tool added
         case Some(chosenBuildTool) if changedBuilds.nonEmpty =>
           onBuildToolsAdded(chosenBuildTool, changedBuilds)
@@ -331,7 +334,13 @@ class ProjectMetalsLspService(
         .onNewBuildToolAdded(newBuildTool, currentBuildTool)
         .flatMap { switch =>
           if (switch)
-            connectionProvider.slowConnectToBuildServer(forceImport = false)
+            workDoneProgress.trackProgressFuture(
+              "Added",
+              progress =>
+                connectionProvider
+                  .slowConnectToBuildServer(forceImport = false, progress)
+                  .ignoreValue,
+            )
           else Future.successful(BuildChange.None)
         }
     }.ignoreValue
@@ -355,7 +364,13 @@ class ProjectMetalsLspService(
         .flatMap {
           case Messages.ProjectJavaHomeUpdate.restart =>
             if (session.main.isBloop)
-              connectionProvider.slowConnectToBuildServer(forceImport = true)
+              workDoneProgress.trackProgressFuture(
+                "Updated Java Home",
+                progress =>
+                  connectionProvider
+                    .slowConnectToBuildServer(forceImport = true, progress)
+                    .ignoreValue,
+              )
             else
               buildToolProvider.buildTool
                 .map { case bt: BuildServerProvider =>
@@ -455,7 +470,7 @@ class ProjectMetalsLspService(
       languageClient,
       buildClient,
       () => userConfig,
-      () => indexer.index(() => ()),
+      () => indexer.index(() => (), TaskProgress.empty),
       () => folder,
       focusedDocument,
       clientConfig.initialConfig,
@@ -470,7 +485,13 @@ class ProjectMetalsLspService(
     tables,
     languageClient,
     headDoctor.executeRefreshDoctor,
-    () => connectionProvider.slowConnectToBuildServer(forceImport = true),
+    () =>
+      workDoneProgress.trackProgressFuture(
+        "Reset",
+        progress =>
+          connectionProvider
+            .slowConnectToBuildServer(forceImport = true, progress),
+      ),
     () => switchBspServer(),
   )
 

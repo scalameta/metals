@@ -125,9 +125,9 @@ final class WorkspaceSymbolProvider(
     SymbolSearch.Result.COMPLETE
   }
 
-  def indexClasspath(): Unit = {
+  def indexClasspath(progress: TaskProgress = TaskProgress.empty): Unit = {
     try {
-      indexClasspathUnsafe()
+      indexClasspathUnsafe(progress)
     } catch {
       case NonFatal(e) =>
         scribe.error("failed to index classpath for workspace/symbol", e)
@@ -168,8 +168,9 @@ final class WorkspaceSymbolProvider(
     } yield sym
   }
 
-  private def indexClasspathUnsafe(): Unit = {
+  private def indexClasspathUnsafe(progress: TaskProgress): Unit = {
     val jars = buildTargets.allWorkspaceJars.map(_.toNIO).toSeq
+    progress.message = s"indexing ${jars.length} jars"
     inDependencies = classpathSearchIndexer.index(
       jars,
       excludedPackageHandler(),

@@ -11,7 +11,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
-import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp
 import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
 import scala.meta.internal.bsp.BspConnector
@@ -58,7 +57,6 @@ class ConnectionProvider(
     mainBuildTargetsData: TargetData,
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
-    metrics: MonitoringClient,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders)
     with Cancelable {
@@ -103,7 +101,7 @@ class ConnectionProvider(
     workDoneProgress,
     bspConfigGenerator,
     () => bspSession.map(_.mainConnection),
-    () => connect(new CreateSession(true)).ignoreValue,
+    () => connect(new CreateSession(true), TaskProgress.empty).ignoreValue,
     bspStatus,
   )
 
@@ -120,24 +118,24 @@ class ConnectionProvider(
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 
-  override def index(check: () => Unit): Future[Unit] = connect(
-    Index(check)
-  ).ignoreValue
+  override def index(check: () => Unit, progress: TaskProgress): Future[Unit] =
+    connect(Index(check), progress).ignoreValue
   override def cancel(): Unit = {
     cancelables.cancel()
   }
 
   def fullConnect(): Future[Unit] = {
     buildTools.initialize()
-    workDoneProgress.trackFuture(
-      "Syncing workspace",
-      for {
-        _ <-
-          if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
-            connect(CreateSession())
-          else slowConnectToBuildServer(forceImport = false)
-      } yield buildServerPromise.trySuccess(()),
-      metricName = Some("initialize_build_server" -> metrics),
+    workDoneProgress.trackProgressFuture(
+      "Sync",
+      progress =>
+        for {
+          _ <-
+            if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
+              connect(CreateSession(), progress)
+            else slowConnectToBuildServer(forceImport = false, progress)
+        } yield buildServerPromise.trySuccess(()),
+      metricName = Some("initialize_build_server"),
     )
   }
 
@@ -147,7 +145,8 @@ class ConnectionProvider(
     )
 
   def slowConnectToBuildServer(
-      forceImport: Boolean
+      forceImport: Boolean,
+      progress: TaskProgress,
   ): Future[BuildChange] = {
     val chosenBuildServer = tables.buildServers.selectedServer()
     def useBuildToolBsp(buildTool: BloopInstallProvider) =
@@ -173,41 +172,49 @@ class ConnectionProvider(
             digest,
             forceImport,
             shutdownServer = false,
-          )
+          ),
+          progress,
         )
       case Some(found)
           if isSelected(found.buildTool) &&
             isBspAvailable(found.buildTool) =>
         reloadWorkspaceAndIndex(
           forceImport,
+          progress,
           found.buildTool,
           found.digest,
         )
       case Some(BuildTool.Found(buildTool: BuildServerProvider, _)) =>
-        slowConnectToBuildToolBsp(buildTool, forceImport, isSelected(buildTool))
+        slowConnectToBuildToolBsp(
+          buildTool,
+          forceImport,
+          isSelected(buildTool),
+          progress,
+        )
       // Used when there are multiple `.bsp/<name>.json` configs and a known build tool (e.g. sbt)
       case Some(BuildTool.Found(buildTool, _)) if isBspAvailable(buildTool) =>
         maybeChooseServer(buildTool.buildServerName, isSelected(buildTool))
-        connect(CreateSession())
+        connect(CreateSession(), progress)
       // Used in tests, `.bloop` folder exists but no build tool is detected
       case _ => quickConnectToBuildServer()
     }
   }
 
-  protected def slowConnectToBuildToolBsp(
+  private def slowConnectToBuildToolBsp(
       buildTool: BuildServerProvider,
       forceImport: Boolean,
       isSelected: Boolean,
+      progress: TaskProgress,
   ): Future[BuildChange] = {
     val notification = tables.dismissedNotifications.ImportChanges
     if (isBspAvailable(buildTool)) {
       maybeChooseServer(buildTool.buildServerName, isSelected)
-      connect(CreateSession())
+      connect(CreateSession(), progress)
     } else if (
       userConfig.shouldAutoImportNewProject || forceImport || isSelected ||
       buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
-      connect(GenerateBspConfigAndConnect(buildTool))
+      connect(GenerateBspConfigAndConnect(buildTool), progress)
     } else if (notification.isDismissed) {
       Future.successful(BuildChange.None)
     } else {
@@ -223,7 +230,7 @@ class ConnectionProvider(
             notification.dismissForever()
             Future.successful(BuildChange.None)
           } else if (item == Messages.GenerateBspAndConnect.yes) {
-            connect(GenerateBspConfigAndConnect(buildTool))
+            connect(GenerateBspConfigAndConnect(buildTool), progress)
           } else {
             notification.dismiss(2, TimeUnit.MINUTES)
             Future.successful(BuildChange.None)
@@ -234,13 +241,16 @@ class ConnectionProvider(
 
   def quickConnectToBuildServer(): Future[BuildChange] =
     for {
-      change <-
-        if (!buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
-          scribe.warn("Build server is not auto-connectable.")
-          Future.successful(BuildChange.None)
-        } else {
-          connect(CreateSession())
-        }
+      change <- workDoneProgress.trackProgressFuture(
+        "Connect",
+        progress =>
+          if (!buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
+            scribe.warn("Build server is not auto-connectable.")
+            Future.successful(BuildChange.None)
+          } else {
+            connect(CreateSession(), progress)
+          },
+      )
     } yield {
       buildServerPromise.trySuccess(())
       change
@@ -252,32 +262,38 @@ class ConnectionProvider(
 
   private def reloadWorkspaceAndIndex(
       forceRefresh: Boolean,
+      progress: TaskProgress,
       buildTool: BuildTool,
       checksum: String,
   ): Future[BuildChange] = {
     def reloadAndIndex(session: BspSession): Future[BuildChange] = {
-      workspaceReload.persistChecksumStatus(Status.Started, buildTool)
+      workspaceReload.persistChecksumStatus(Status.Started, buildTool, progress)
 
       buildTool.ensurePrerequisites(folder)
       buildTool match {
         case _: BspOnly =>
-          connect(CreateSession())
+          connect(CreateSession(), progress)
         case _ if !session.canReloadWorkspace =>
-          connect(CreateSession())
+          connect(CreateSession(), progress)
         case _ =>
           session.workspaceReload
-            .flatMap(_ => connect(new ImportBuildAndIndex(session)))
+            .flatMap(_ => connect(new ImportBuildAndIndex(session), progress))
             .map { _ =>
               scribe.info("Correctly reloaded workspace")
               workspaceReload.persistChecksumStatus(
                 Status.Installed,
                 buildTool,
+                progress,
               )
               BuildChange.Reloaded
             }
             .recoverWith { case NonFatal(e) =>
               scribe.error(s"Unable to reload workspace: ${e.getMessage()}")
-              workspaceReload.persistChecksumStatus(Status.Failed, buildTool)
+              workspaceReload.persistChecksumStatus(
+                Status.Failed,
+                buildTool,
+                progress,
+              )
               languageClient.showMessage(Messages.ReloadProjectFailed)
               Future.successful(BuildChange.Failed)
             }
@@ -321,16 +337,20 @@ class ConnectionProvider(
   }
 
   object Connect {
-    def connect[T](request: ConnectRequest): Future[BuildChange] = {
+    def connect[T](
+        request: ConnectRequest,
+        progress: TaskProgress,
+    ): Future[BuildChange] = {
       request match {
         case Disconnect(shutdownBuildServer) => disconnect(shutdownBuildServer)
-        case Index(check) => index(check)
-        case ImportBuildAndIndex(session) => importBuildAndIndex(session)
-        case ConnectToSession(session) => connectToSession(session)
+        case Index(check) => index(check, progress)
+        case ImportBuildAndIndex(session) =>
+          importBuildAndIndex(session, progress)
+        case ConnectToSession(session) => connectToSession(session, progress)
         case CreateSession(shutdownBuildServer) =>
-          createSession(shutdownBuildServer)
+          createSession(shutdownBuildServer, progress)
         case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
-          generateBspConfigAndConnect(buildTool, shutdownServer)
+          generateBspConfigAndConnect(buildTool, shutdownServer, progress)
         case BloopInstallAndConnect(
               buildTool,
               checksum,
@@ -342,6 +362,7 @@ class ConnectionProvider(
             checksum,
             forceImport,
             shutdownServer,
+            progress,
           )
       }
     }
@@ -387,21 +408,24 @@ class ConnectionProvider(
       } yield BuildChange.None
     }
 
-    private def index(check: () => Unit): Future[BuildChange] =
-      profiledIndexWorkspace(check).map(_ => BuildChange.None)
+    private def index(
+        check: () => Unit,
+        progress: TaskProgress,
+    ): Future[BuildChange] =
+      profiledIndexWorkspace(check, progress).map { _ =>
+        progress.message = "wrapping up"
+        BuildChange.None
+      }
 
     private def importBuildAndIndex(
-        session: BspSession
+        session: BspSession,
+        progress: TaskProgress,
     ): Future[BuildChange] = {
       syncStatusReporter.importStarted(focusedDocument.map(_.toURI.toString))
-      val importedBuilds0 = timerProvider.timed("Imported build") {
-        session.importBuilds()
-      }
       for {
-        bspBuilds <- workDoneProgress.trackFuture(
-          Messages.importingBuild,
-          importedBuilds0,
-        )
+        bspBuilds <- timerProvider.timed("imported build") {
+          session.importBuilds(progress)
+        }
         _ = {
           val connections = bspBuilds.map(_.connection)
           val idToConnection = bspBuilds.flatMap { bspBuild =>
@@ -413,7 +437,7 @@ class ConnectionProvider(
           saveProjectReferencesInfo(bspBuilds)
         }
         _ = compilers.cancel()
-        buildChange <- index(check)
+        buildChange <- index(check, progress)
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
@@ -438,29 +462,45 @@ class ConnectionProvider(
         DelegateSetting.writeProjectRef(folder, projectRefs)
     }
 
-    private def connectToSession(session: BspSession): Future[BuildChange] = {
+    private def connectToSession(
+        session: BspSession,
+        progress: TaskProgress,
+    ): Future[BuildChange] = {
       scribe.info(
         s"Connected to Build server: ${session.main.name} v${session.version}"
       )
       cancelables.add(session)
-      buildToolProvider.buildTool.foreach(
-        workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
+      buildToolProvider.buildTool.foreach(bt =>
+        workspaceReload.persistChecksumStatus(
+          Digest.Status.Started,
+          bt,
+          progress,
+        )
       )
       bspSession = Some(session)
       isConnecting.set(false)
       for {
-        _ <- importBuildAndIndex(session)
-        _ = buildToolProvider.buildTool.foreach(
-          workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+        _ <- importBuildAndIndex(session, progress)
+        _ = buildToolProvider.buildTool.foreach(bt =>
+          workspaceReload.persistChecksumStatus(
+            Digest.Status.Installed,
+            bt,
+            progress,
+          )
         )
-        _ = if (session.main.isBloop)
-          checkRunningBloopVersion(session.version)
+        _ = if (session.main.isBloop) {
+          checkRunningBloopVersion(session.version, progress)
+        }
       } yield {
         BuildChange.Reconnected
       }
     }
 
-    private def checkRunningBloopVersion(bspServerVersion: String): Unit = {
+    private def checkRunningBloopVersion(
+        bspServerVersion: String,
+        progress: TaskProgress,
+    ): Unit = {
+      progress.message = "checking bloop version"
       if (doctor.isUnsupportedBloopVersion()) {
         val notification = tables.dismissedNotifications.IncompatibleBloop
         if (!notification.isDismissed) {
@@ -471,7 +511,7 @@ class ConnectionProvider(
           )
           languageClient.showMessageRequest(messageParams).asScala.foreach {
             case action if action == IncompatibleBloopVersion.shutdown =>
-              connect(new CreateSession(true))
+              connect(new CreateSession(true), progress)
             case action if action == IncompatibleBloopVersion.dismissForever =>
               notification.dismissForever()
             case _ =>
@@ -480,13 +520,17 @@ class ConnectionProvider(
       }
     }
 
-    def createSession(shutdownServer: Boolean): Future[BuildChange] = {
+    def createSession(
+        shutdownServer: Boolean,
+        progress: TaskProgress,
+    ): Future[BuildChange] = {
       def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
         case change if !change.isFailed =>
           Future
             .sequence(
               List(
                 if (userConfig.buildOnFocus) {
+                  progress.message = "compiling open files"
                   compilations
                     .compileFiles(buffers.open.toSeq, None)
                     .ignoreValue
@@ -503,6 +547,7 @@ class ConnectionProvider(
       val scalaCliPaths = scalaCli.paths
 
       isConnecting.set(true)
+      progress.message = "disconnecting from build server"
       (for {
         _ <- disconnect(shutdownServer)
         maybeSession <- timerProvider.timed(
@@ -514,14 +559,15 @@ class ConnectionProvider(
             folder,
             () => userConfig,
             shellRunner,
+            progress,
           )
         }
         result <- maybeSession match {
           case Some(session) =>
-            val result = connectToSession(session)
+            val result = connectToSession(session, progress)
             session.mainConnection.onReconnection { newMainConn =>
               val updSession = session.copy(main = newMainConn)
-              connect(ConnectToSession(updSession))
+              connect(ConnectToSession(updSession), progress)
                 .flatMap(compileAllOpenFiles)
                 .ignoreValue
             }
@@ -533,10 +579,14 @@ class ConnectionProvider(
           scalaCliPaths
             .collect {
               case path if (!buildTargets.belongsToBuildTarget(path.toNIO)) =>
+                progress.message = s"starting scala-cli"
                 scalaCli.start(path)
             }
         )
-        _ = initTreeView()
+        _ = {
+          progress.message = "initializing tree view"
+          initTreeView()
+        }
       } yield result)
         .recover { case NonFatal(e) =>
           disconnect(false)
@@ -559,6 +609,7 @@ class ConnectionProvider(
     private def generateBspConfigAndConnect(
         buildTool: BuildServerProvider,
         shutdownServer: Boolean,
+        progress: TaskProgress,
     ): Future[BuildChange] = {
       tables.buildTool.chooseBuildTool(buildTool.executableName)
       maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
@@ -574,7 +625,7 @@ class ConnectionProvider(
           )
         shouldConnect = handleGenerationStatus(buildTool, status)
         status <-
-          if (shouldConnect) createSession(false)
+          if (shouldConnect) createSession(false, progress)
           else Future.successful(BuildChange.Failed)
       } yield status
     }
@@ -617,6 +668,7 @@ class ConnectionProvider(
         checksum: String,
         forceImport: Boolean,
         shutdownServer: Boolean,
+        progress: TaskProgress,
     ): Future[BuildChange] = {
       for {
         result <- {
@@ -633,7 +685,8 @@ class ConnectionProvider(
             )
         }
         change <- {
-          if (result.isInstalled) createSession(shutdownServer)
+          if (result.isInstalled)
+            createSession(shutdownServer, progress)
           else if (result.isFailed) {
             for {
               change <-
@@ -649,7 +702,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer)
+                  createSession(shutdownServer, progress)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
@@ -675,19 +728,22 @@ class ConnectionProvider(
     }
   }
 
-  def switchBspServer(): Future[Unit] =
-    withWillGenerateBspConfig {
-      for {
-        connectKind <- bspConnector.switchBuildServer()
-        _ <-
-          connectKind match {
-            case None => Future.unit
-            case Some(SlowConnect) =>
-              slowConnectToBuildServer(forceImport = true)
-            case Some(request: ConnectRequest) => connect(request)
-          }
-      } yield ()
-    }
+  def switchBspServer(): Future[Unit] = workDoneProgress.trackProgressFuture(
+    "Switch",
+    progress =>
+      withWillGenerateBspConfig {
+        for {
+          connectKind <- bspConnector.switchBuildServer()
+          _ <-
+            connectKind match {
+              case None => Future.unit
+              case Some(SlowConnect) =>
+                slowConnectToBuildServer(forceImport = true, progress)
+              case Some(request: ConnectRequest) => connect(request, progress)
+            }
+        } yield ()
+      },
+  )
 }
 
 sealed trait ConnectKind
@@ -705,8 +761,9 @@ case class ImportBuildAndIndex(bspSession: BspSession)
     extends ConnectRequest("Importing build")
 case class ConnectToSession(bspSession: BspSession)
     extends ConnectRequest("Connecting to build server")
-case class CreateSession(shutdownBuildServer: Boolean = false)
-    extends ConnectRequest("Establishing build server session")
+case class CreateSession(
+    shutdownBuildServer: Boolean = false
+) extends ConnectRequest("Establishing build server session")
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,

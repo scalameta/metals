@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
@@ -19,6 +20,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 trait IndexProviders {
+  def metrics: MonitoringClient
   def languageClient: DelegatingLanguageClient
   def executionContext: ExecutionContextExecutorService
   def tables: Tables

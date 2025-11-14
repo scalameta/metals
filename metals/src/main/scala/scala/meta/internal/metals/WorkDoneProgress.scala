@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.infra
 import scala.meta.infra.MonitoringClient
+import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.WorkDoneProgress.Token
 
@@ -88,6 +89,7 @@ object Task {
 class WorkDoneProgress(
     client: LanguageClient,
     time: Time,
+    metrics: MonitoringClient = NoopMonitoringClient,
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with BaseWorkDoneProgress {
@@ -199,6 +201,30 @@ class WorkDoneProgress(
         case NonFatal(e) =>
           scribe.error("Could not end a progress task", e)
       }
+
+  def trackProgressFuture[T](
+      message: String,
+      value: TaskProgress => Future[T],
+      onCancel: Option[() => Unit] = None,
+      showTimer: Boolean = true,
+      metricName: Option[String] = None,
+  )(implicit ec: ExecutionContext): Future[T] = {
+    val (task, token) = startProgress(
+      message,
+      onCancel = onCancel,
+      showTimer = showTimer,
+      withProgress = true,
+    )
+    val result = value(task.maybeProgress.get)
+    result.onComplete { _ =>
+      task.wasFinished.set(true)
+      endProgress(token)
+      metricName.foreach { name =>
+        metrics.recordEvent(infra.Event.duration(name, task.timer.elapsed))
+      }
+    }
+    result
+  }
 
   def trackFuture[T](
       message: String,

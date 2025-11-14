@@ -25,6 +25,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -77,7 +78,9 @@ final class BspServers(
       bspTraceRoot: AbsolutePath,
       details: BspConnectionDetails,
       bspStatusOpt: Option[ConnectionBspStatus],
+      progress: TaskProgress,
   ): Future[BuildServerConnection] = {
+    progress.message = s"connecting to ${details.getName()}"
 
     def newConnection(): Future[SocketConnection] = {
 
@@ -137,6 +140,7 @@ final class BspServers(
 
       val finished = Promise[Unit]()
       proc.complete.ignoreValue.onComplete { res =>
+        progress.message = s"connected to ${details.getName()}"
         finished.tryComplete(res)
       }
 
