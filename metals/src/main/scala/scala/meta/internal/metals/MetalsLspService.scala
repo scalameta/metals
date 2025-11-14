@@ -40,6 +40,7 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -1512,6 +1513,10 @@ abstract class MetalsLspService(
   )
   buildClient.registerLogForwarder(debugProvider)
 
+  private[metals] def cancelPendingCompilations(): Unit = {
+    compilations.cancel()
+  }
+
   private def afterCompilationFinished[T](
       params: DebugDiscoveryParams
   )(action: DebugDiscoveryParams => Future[T]): Future[T] = {
@@ -1528,7 +1533,13 @@ abstract class MetalsLspService(
       case Some(target) =>
         compilations
           .compileTarget(target)
-          .flatMap(_ => action(params))
+          .flatMap { result =>
+            if (result.getStatusCode == b.StatusCode.CANCELLED) {
+              Future.failed(DiscoveryFailures.WorkspaceResetException)
+            } else {
+              action(params)
+            }
+          }
       case None =>
         action(params)
     }

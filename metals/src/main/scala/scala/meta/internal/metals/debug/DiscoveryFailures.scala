@@ -71,4 +71,9 @@ object DiscoveryFailures {
       extends Exception(
         "Build misconfiguration. No semanticdb can be found for you file, please check the doctor."
       )
+
+  case object WorkspaceResetException
+      extends Exception(
+        "Run cancelled due to workspace reset. Please try running again."
+      )
 }
