@@ -151,6 +151,9 @@ final class Diagnostics(
   }
 
   def didChange(path: AbsolutePath): Unit = {
+    if (userConfig().presentationCompilerDiagnostics) {
+      return
+    }
     publishDiagnostics(path)
   }
 
