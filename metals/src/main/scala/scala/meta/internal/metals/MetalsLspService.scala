@@ -1513,10 +1513,6 @@ abstract class MetalsLspService(
   )
   buildClient.registerLogForwarder(debugProvider)
 
-  private[metals] def cancelPendingCompilations(): Unit = {
-    compilations.cancel()
-  }
-
   private def afterCompilationFinished[T](
       params: DebugDiscoveryParams
   )(action: DebugDiscoveryParams => Future[T]): Future[T] = {

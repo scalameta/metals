@@ -618,8 +618,7 @@ class ProjectMetalsLspService(
           .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
     }
 
-  def resetWorkspace(): Future[ResetWorkspaceState] = {
-    cancelPendingCompilations()
+  def resetWorkspace(): Future[ResetWorkspaceState] =
     for {
       _ <- compilations.clean(recompile = false)
       wasBloop = optProjectRoot match {
@@ -639,7 +638,6 @@ class ProjectMetalsLspService(
       }
       _ = tables.cleanAll()
     } yield ResetWorkspaceState(wasBloop)
-  }
 
   val treeView =
     new FolderTreeViewProvider(
