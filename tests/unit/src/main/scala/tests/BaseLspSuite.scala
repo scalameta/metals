@@ -13,6 +13,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildChangedAction
 import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.Configs.TelemetryConfig
 import scala.meta.internal.metals.Debug
@@ -46,6 +47,8 @@ abstract class BaseLspSuite(
   def icons: Icons = Icons.default
   def userConfig: UserConfiguration =
     UserConfiguration(
+      // "prompt" is the setting value that all the test cases have been written against.
+      buildChangedAction = BuildChangedAction.prompt,
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,

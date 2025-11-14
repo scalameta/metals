@@ -49,6 +49,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     folder,
     languageClient,
     tables,
+    () => userConfig.buildChangedAction,
   )
 
   def index(check: () => Unit, progress: TaskProgress): Future[Unit] =

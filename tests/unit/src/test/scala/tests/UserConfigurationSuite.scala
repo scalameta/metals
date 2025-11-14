@@ -395,6 +395,7 @@ class UserConfigurationSuite extends BaseSuite {
   "scalaCliLauncher": "scala-cli",
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
+  "buildChangedAction": "none",
   "buildOnChange": true,
   "buildOnFocus": true,
   "useSourcePath": true,

@@ -65,6 +65,7 @@ case class UserConfiguration(
     scalaCliLauncher: Option[String] = None,
     defaultBspToBuildTool: Boolean = false,
     presentationCompilerDiagnostics: Boolean = true,
+    buildChangedAction: BuildChangedAction = BuildChangedAction.default,
     buildOnChange: Boolean = true,
     buildOnFocus: Boolean = true,
     preferredBuildServer: Option[String] = None,
@@ -168,6 +169,9 @@ case class UserConfiguration(
         Some(
           "presentationCompilerDiagnostics",
           presentationCompilerDiagnostics,
+        ),
+        Some(
+          "buildChangedAction" -> buildChangedAction.value
         ),
         Some(
           (
@@ -887,6 +891,13 @@ object UserConfiguration {
 
     val presentationCompilerDiagnostics =
       getBooleanKey("presentation-compiler-diagnostics").getOrElse(true)
+    val buildChangedAction = getParsedKey(
+      "build-changed-action",
+      value =>
+        BuildChangedAction.fromString(
+          value.getOrElse(BuildChangedAction.default.value)
+        ),
+    ).getOrElse(BuildChangedAction.default)
     val buildOnChange = getBooleanKey("build-on-change").getOrElse(true)
     val buildOnFocus = getBooleanKey("build-on-focus").getOrElse(true)
     val preferredBuildServer = getStringKey("preferred-build-server")
@@ -950,6 +961,7 @@ object UserConfiguration {
           scalaCliLauncher,
           defaultBspToBuildTool,
           presentationCompilerDiagnostics,
+          buildChangedAction,
           buildOnChange,
           buildOnFocus,
           preferredBuildServer,
@@ -979,6 +991,27 @@ object TestUserInterfaceKind {
   object TestExplorer extends TestUserInterfaceKind {
     override def toString: String = "test explorer"
   }
+}
+object BuildChangedAction {
+  def default: BuildChangedAction = BuildChangedAction("none")
+  def prompt: BuildChangedAction = BuildChangedAction("prompt")
+  def fromString(value: String): Either[String, BuildChangedAction] =
+    value match {
+      case ok @ ("none" | "prompt") => Right(BuildChangedAction(ok))
+      case _ =>
+        Left(
+          s"Invalid build changed action: $value. Expected 'none' or 'prompt'."
+        )
+    }
+
+}
+case class BuildChangedAction(value: String) {
+  require(
+    List("none", "prompt").contains(value),
+    s"Invalid build changed action: $value",
+  )
+  def isNone: Boolean = value == "none"
+  def isPrompt: Boolean = value == "prompt"
 }
 
 sealed trait AutoImportBuildKind

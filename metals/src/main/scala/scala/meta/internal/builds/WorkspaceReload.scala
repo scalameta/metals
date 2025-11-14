@@ -4,6 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
+import scala.meta.internal.metals.BuildChangedAction
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.Messages.dontShowAgain
@@ -20,11 +21,15 @@ final class WorkspaceReload(
     workspace: AbsolutePath,
     languageClient: MetalsLanguageClient,
     tables: Tables,
+    action: () => BuildChangedAction,
 ) {
 
   private val notification = tables.dismissedNotifications.ImportChanges
 
   def oldReloadResult(digest: String): Option[WorkspaceLoadedStatus] = {
+    if (action().isNone) {
+      return None
+    }
     if (tables.dismissedNotifications.ImportChanges.isDismissed) {
       Some(WorkspaceLoadedStatus.Dismissed)
     } else {
@@ -40,6 +45,9 @@ final class WorkspaceReload(
       buildTool: BuildTool,
       progress: TaskProgress,
   ): Unit = {
+    if (action().isNone) {
+      return
+    }
     progress.message = s"persisting ${buildTool.toString()} checksum status"
     buildTool.digestWithRetry(workspace).foreach { checksum =>
       tables.digests.setStatus(checksum, status)
@@ -50,6 +58,15 @@ final class WorkspaceReload(
       buildTool: BuildTool,
       digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
+    if (action().isNone) {
+      // I'm not 100% sure when this gets called, but we don't have to spam the user
+      // with a popup if it's triggered regularly behind the scenes. The logs
+      // will have this message in case something is behaving unusually.
+      scribe.warn(
+        "The setting 'buildChangeAction' is set to 'none' meaning that you need to explicitily trigger the 'Import build' command to re-import the build. You won't be prompted to re-import when the build files change."
+      )
+      return Future.successful(Confirmation.No)
+    }
     tables.digests.setStatus(digest, Status.Requested)
     val (params, yes) =
       ImportBuildChanges.params(buildTool.toString) ->
