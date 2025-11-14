@@ -21,7 +21,7 @@ import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
-import coursierapi._
+import coursier.Dependency
 
 class ShellRunner(
     time: Time,

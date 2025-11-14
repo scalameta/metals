@@ -627,7 +627,7 @@ final class PcInlayHintsProvider(
               if inner.pos.isRange && !isParentOnSameLine && !isParentApply &&
                 endsInSimpleSelect(a) && tree.pos.source.isEndOfLine(
                   tree.pos.end
-                ) =>
+                ) && a.tpe != null =>
             Some((a.tpe.finalResultType, tree.pos))
           /*
           innerTree
@@ -635,7 +635,7 @@ final class PcInlayHintsProvider(
            */
           case select @ Select(innerTree, _)
               if innerTree.pos.isRange && !isParentOnSameLine && !isParentApply && tree.pos.source
-                .isEndOfLine(tree.pos.end) =>
+                .isEndOfLine(tree.pos.end) && select.tpe != null =>
             Some((select.tpe.finalResultType, tree.pos))
           case _ => None
         }

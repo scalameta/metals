@@ -9,7 +9,6 @@ import com.sun.source.tree.Tree
 import com.sun.source.util.TreePath
 import com.sun.source.util.TreePathScanner
 import com.sun.source.util.Trees
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 
 abstract class ReferenceScanner[T](
@@ -50,12 +49,16 @@ abstract class ReferenceScanner[T](
           )
 
           val isAtDefinition = isDefinition(tree)
+          // We will already us the identifier in this case, so it would be duplicated
+          def isNotInvocation = tree.getKind() != Tree.Kind.METHOD_INVOCATION
 
-          if (isAtDefinition && includeDefinition || !isAtDefinition) {
+          if (
+            isNotInvocation && (isAtDefinition && includeDefinition || !isAtDefinition)
+          ) {
             elementBuffer += createElement(
               new Range(
-                offsetToPosition(start, text),
-                offsetToPosition(end, text)
+                compiler.offsetToPosition(start, text),
+                compiler.offsetToPosition(end, text)
               ),
               isAtDefinition
             )
@@ -75,19 +78,4 @@ abstract class ReferenceScanner[T](
     }
   }
 
-  private def offsetToPosition(offset: Int, text: String): Position = {
-    var line = 0
-    var character = 0
-    var i = 0
-    while (i < offset && i < text.length()) {
-      if (text.charAt(i) == '\n') {
-        line += 1
-        character = 0
-      } else {
-        character += 1
-      }
-      i += 1
-    }
-    new Position(line, character)
-  }
 }

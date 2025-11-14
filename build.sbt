@@ -6,8 +6,8 @@ import Tests._
 Global / onChangedBuildSource := ReloadOnSourceChanges
 
 // For testing nightlies
-Global / resolvers += "scala-integration" at
-  "https://scala-ci.typesafe.com/artifactory/scala-integration/"
+Global / resolvers += "scala-nightlies" at
+  "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
 def localSnapshotVersion = "1.6.4-SNAPSHOT"
 def isCI = System.getenv("CI") != null
@@ -482,6 +482,7 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
+      "scalafixVersion" -> V.scalafix,
       "scalaCliVersion" -> V.scalaCli,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,

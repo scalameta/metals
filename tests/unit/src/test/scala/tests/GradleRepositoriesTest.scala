@@ -3,14 +3,15 @@ package tests
 import scala.meta.internal.builds.GradleBuildTool
 import scala.meta.internal.metals.Embedded
 
-import coursierapi.Credentials
-import coursierapi.IvyRepository
-import coursierapi.MavenRepository
-import coursierapi.Repository
+import coursier.MavenRepository
+import coursier.Repositories
+import coursier.core.Authentication
+import coursier.ivy.IvyRepository
 
 class GradleRepositoriesTest extends BaseSuite {
 
   check(
+    "basic",
     Nil,
     """|  repositories {
        |    mavenCentral()
@@ -25,6 +26,7 @@ class GradleRepositoriesTest extends BaseSuite {
       .replace("file:///", "file:/")
 
   check(
+    "default",
     Embedded.repositories,
     s"""|  repositories {
         |    mavenCentral()
@@ -40,18 +42,16 @@ class GradleRepositoriesTest extends BaseSuite {
         |    maven {
         |      url "${userHomeString + ".m2/repository"}"
         |    }
-        |    maven {
-        |      url "https://central.sonatype.com/repository/maven-snapshots/"
-        |    }
         |  }
         |""".stripMargin,
   )
 
   check(
+    "custom",
     List(
-      Repository.central(),
-      Repositories.google,
-      Repositories.bintrayIvy("testId"),
+      Repositories.central,
+      GradleRepositoriesTest.google,
+      GradleRepositoriesTest.bintrayIvy("testId"),
     ),
     """|  repositories {
        |    mavenCentral()
@@ -69,12 +69,15 @@ class GradleRepositoriesTest extends BaseSuite {
   )
 
   check(
+    "with-authentication",
     List(
-      Repository.central(),
-      Repositories.google.withCredentials(Repositories.testCredentials()),
-      Repositories
+      Repositories.central,
+      GradleRepositoriesTest.google.withAuthentication(
+        Some(Authentication("testUser", "testPassword"))
+      ),
+      GradleRepositoriesTest
         .bintrayIvy("testId")
-        .withCredentials(Repositories.testCredentials()),
+        .withAuthentication(Some(Authentication("testUser", "testPassword"))),
     ),
     """|  repositories {
        |    mavenCentral()
@@ -100,26 +103,30 @@ class GradleRepositoriesTest extends BaseSuite {
   )
 
   def check(
-      repos: List[Repository],
+      name: String,
+      repos: List[coursier.Repository],
       expected: String,
   ): Unit = {
-    test(expected) {
+    test(name) {
       val obtained = GradleBuildTool.toGradleRepositories(repos)
       assertNoDiff(obtained, expected)
     }
   }
 }
 
-object Repositories {
+object GradleRepositoriesTest {
   val defaultIvyPattern =
     "[organisation]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
   def google: MavenRepository =
-    MavenRepository.of("https://maven.google.com")
+    MavenRepository("https://maven.google.com")
   def bintrayIvy(id: String): IvyRepository =
-    IvyRepository.of(
-      s"https://dl.bintray.com/${id.stripSuffix("/")}/" +
-        defaultIvyPattern
-    )
-  def testCredentials(): Credentials =
-    Credentials.of("testUser", "testPassword")
+    IvyRepository
+      .parse(
+        s"https://dl.bintray.com/${id.stripSuffix("/")}/" +
+          defaultIvyPattern
+      )
+      .right
+      .get
+  // def testCredentials(): Credentials =
+  //   Credentials.of("testUser", "testPassword")
 }

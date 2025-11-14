@@ -9,5 +9,3 @@ addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.5.0")
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
 
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
-
-resolvers ++= Resolver.sonatypeOssRepos("public")
