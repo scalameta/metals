@@ -18,6 +18,7 @@ import javax.tools.ToolProvider
 
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
@@ -36,6 +37,7 @@ import org.slf4j.Logger
 class JavaMetalsCompiler(
     val buildTargetId: String,
     val logger: Logger,
+    val reportsLevel: ReportLevel,
     val search: SymbolSearch,
     val embedded: EmbeddedClient,
     val semanticdbFileManager: SemanticdbFileManager,
@@ -46,6 +48,7 @@ class JavaMetalsCompiler(
   var lastVisitedParentTrees: List[TreePath] = Nil
   private lazy val prune = new JavaPruneCompiler(
     logger,
+    reportsLevel,
     semanticdbFileManager,
     embedded
   )

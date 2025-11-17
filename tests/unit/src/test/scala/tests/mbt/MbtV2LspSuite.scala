@@ -266,7 +266,10 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
         greetingFile.toURI.toString(),
         l.FileChangeType.Deleted,
       )
-      _ <- server.didChange(example)(identity)
+      // NOTE: use didChange to invalidate the javac compile cache. We
+      // intentionally don't invalidate the javac compile cache with didSave
+      // since that would be really slow down the editing experience.
+      _ <- server.didChange(example)(code => code + "\n// comment")
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/java/a/b/Example.java:4:43: error: package wherever does not exist

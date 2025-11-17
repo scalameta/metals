@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
@@ -64,6 +65,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
     val global = new JavaMetalsCompiler(
       buildTargetId = "",
       logger = LoggerFactory.getLogger(classOf[JavaMetalsCompiler]),
+      reportsLevel = ReportLevel.Info,
       search = EmptySymbolSearch,
       embedded = embedded,
       semanticdbFileManager = semanticdbFileManager,

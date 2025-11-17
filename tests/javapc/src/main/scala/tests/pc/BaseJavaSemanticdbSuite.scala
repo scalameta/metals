@@ -69,6 +69,19 @@ class BaseJavaSemanticdbSuite extends BaseJavaPCSuite {
       val code = s"package $pkg;\n$original"
       val actualUri = uri.getOrElse(URI.create(s"file:///$filename"))
       val doc = textDocument(code, actualUri)
+
+      assertEquals(
+        doc,
+        textDocument(code, actualUri),
+        "textDocument should return the same document",
+      )
+
+      assertNotEquals(
+        doc,
+        textDocument("// prefix comment\n" + code, actualUri),
+        "textDocument should return different document for different code",
+      )
+
       val docs =
         batchTextDocuments(List(CompilerVirtualFileParams(actualUri, code)))
       assertEquals(docs.size, 1)

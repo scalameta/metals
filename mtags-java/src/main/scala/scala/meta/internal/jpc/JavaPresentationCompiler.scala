@@ -80,6 +80,7 @@ case class JavaPresentationCompiler(
         new JavaMetalsCompiler(
           buildTargetId,
           logger,
+          reportsLevel,
           search,
           embedded,
           semanticdbFileManager,
@@ -387,7 +388,12 @@ case class JavaPresentationCompiler(
       .mkString(", ")
     val debugOptions =
       Try(
-        new JavaPruneCompiler(logger, semanticdbFileManager, embedded)
+        new JavaPruneCompiler(
+          logger,
+          reportsLevel,
+          semanticdbFileManager,
+          embedded
+        )
           .compileOptions(
             PruneJavaFile.simple(lastParams) :: Nil,
             classpath,

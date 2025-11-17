@@ -4,6 +4,7 @@ import java.io.Closeable
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.ConcurrentSkipListMap
 import javax.tools.JavaCompiler
 import javax.tools.JavaFileObject
 import javax.tools.ToolProvider
@@ -11,9 +12,12 @@ import javax.tools.ToolProvider
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc
 
 import com.sun.source.util.JavacTask
+import net.jpountz.xxhash.StreamingXXHash64
+import net.jpountz.xxhash.XXHashFactory
 import org.slf4j.Logger
 
 /**
@@ -33,9 +37,16 @@ import org.slf4j.Logger
  */
 class JavaPruneCompiler(
     val logger: Logger,
+    val reportsLevel: ReportLevel,
     val semanticdbFileManager: pc.SemanticdbFileManager,
     embedded: pc.EmbeddedClient
 ) extends Closeable {
+
+  private val isDebugEnabled = reportsLevel == ReportLevel.Debug
+
+  // Only used for testing purposes
+  var isCacheEnabled = true
+
   private lazy val headerCompiler =
     embedded.javaHeaderCompilerPluginJarPath()
 
@@ -128,6 +139,69 @@ class JavaPruneCompiler(
     options.result()
   }
 
+  private val cache = new TaskCache()
+  private val factory = XXHashFactory.fastestJavaInstance()
+  class TaskCache() {
+    val tasks = new ConcurrentSkipListMap[String, JavaSourceCompile]
+    private def updateHash(hasher: StreamingXXHash64, value: String): Unit = {
+      val bytes = value.getBytes(StandardCharsets.UTF_8)
+      hasher.update(bytes, 0, bytes.length)
+    }
+    private def hashInputs(
+        options: List[String],
+        sources: List[JavaFileObject]
+    ): String = {
+      val hasher = factory.newStreamingHash64(1234)
+      options.foreach(option => updateHash(hasher, option))
+      sources.foreach(source => {
+        updateHash(hasher, source.toUri().toString())
+        updateHash(hasher, source.getCharContent(true).toString())
+      })
+      s"xxhash:${hasher.getValue()}"
+    }
+
+    def reset(): Unit = {
+      // Clear the cache. This is triggered when the user saves files, and it
+      // helps us pick up changes across external deps that get loaded via
+      // -sourcepath but are not part of the input digest (options or sources).
+      var task = tasks.pollFirstEntry()
+      while (task != null) {
+        task.getValue().analyzeCompleted()
+        task = tasks.pollFirstEntry()
+      }
+    }
+    def getTask(options: List[String], sources: List[JavaFileObject])(
+        onUpdate: => JavaSourceCompile
+    ): JavaSourceCompile = {
+      val result = if (isCacheEnabled) {
+        val key = hashInputs(options, sources)
+        tasks.compute(
+          key,
+          (_, task) => {
+            if (task == null) {
+              if (isDebugEnabled) {
+                logger.debug(s"javacache: cache miss for key $key")
+              }
+              onUpdate
+            } else {
+              if (isDebugEnabled) {
+                logger.debug(s"javacache: cache hit for key $key")
+              }
+              task
+            }
+          }
+        )
+      } else {
+        onUpdate
+      }
+      while (tasks.size() > 3) {
+        // Only hold a small number of tasks in memory
+        tasks.pollFirstEntry().getValue().analyzeCompleted()
+      }
+      result
+    }
+  }
+
   /**
    * Returns a parsed but not analyzed compile task. Call `.withAnalyze()` to
    * also run the analysis phase.
@@ -163,59 +237,62 @@ class JavaPruneCompiler(
     }
     val store = new JavaCompileTaskListener()
     val options = compileOptions(files, classpath, extraOptions)
-    val task =
-      try
-        compiler.getTask(
-          store.sout,
-          fileManager,
-          store,
-          options.asJava,
-          null,
-          files.map(_.source).asJava
+    cache.getTask(options, files.map(_.source)) {
+      val task =
+        try
+          compiler.getTask(
+            store.sout,
+            fileManager,
+            store,
+            options.asJava,
+            null,
+            files.map(_.source).asJava
+          )
+        catch {
+          case e: RuntimeException
+              if e
+                .getMessage()
+                .contains("--patch-module specified more than once") =>
+            // This is a known issue that happens when we reuse the same JavaPruneCompiler instance
+            // when switching between virtual files and readonly sources. The compiler is stateful and
+            // preserves the --patch-module option between tasks. The fix is to try again with a fresh instance,
+            // which is what happens when we throw this exception.
+            throw new DuplicatePatchModuleException(e)
+        }
+      // Log reported diagnostics *before* we even parse. These are usually high-signal
+      store.diagnostics.iterator.foreach { diagnostic =>
+        logger.warn(
+          s"JavaMetalsGlobal: diagnostic reported before parsing - ${diagnostic}"
         )
-      catch {
-        case e: RuntimeException
-            if e
-              .getMessage()
-              .contains("--patch-module specified more than once") =>
-          // This is a known issue that happens when we reuse the same JavaPruneCompiler instance
-          // when switching between virtual files and readonly sources. The compiler is stateful and
-          // preserves the --patch-module option between tasks. The fix is to try again with a fresh instance,
-          // which is what happens when we throw this exception.
-          throw new DuplicatePatchModuleException(e)
       }
-    // Log reported diagnostics *before* we even parse. These are usually high-signal
-    store.diagnostics.iterator.foreach { diagnostic =>
-      logger.warn(
-        s"JavaMetalsGlobal: diagnostic reported before parsing - ${diagnostic}"
-      )
-    }
-    val stdout = store.sout.toString()
-    if (stdout.nonEmpty) {
-      val filesStr = files.map(_.source.toUri()).mkString(", ")
-      logger.info(s"JavaMetalsGlobal: stdout for files $filesStr - $stdout")
-    }
-    val jtask = task.asInstanceOf[JavacTask]
-    val elems = jtask.parse().asScala
-    val it = elems.iterator
-    if (it.hasNext) {
-      val cu = it.next()
-      val rest = it.toSeq
-      JavaSourceCompile(jtask, store, cu, rest)
-    } else {
-      if (store.diagnostics.isEmpty) {
+      val stdout = store.sout.toString()
+      if (stdout.nonEmpty) {
+        val filesStr = files.map(_.source.toUri()).mkString(", ")
+        logger.info(s"JavaMetalsGlobal: stdout for files $filesStr - $stdout")
+      }
+      val jtask = task.asInstanceOf[JavacTask]
+      val elems = jtask.parse().asScala
+      val it = elems.iterator
+      if (it.hasNext) {
+        val cu = it.next()
+        val rest = it.toSeq
+        JavaSourceCompile(jtask, store, cu, rest)
+      } else {
+        if (store.diagnostics.isEmpty) {
+          throw new RuntimeException(
+            s"Expected single compilation unit but got none. The compiler reported no diagnostics. The print writer returned '${store.sout}'."
+          )
+        }
+        val diagnostics = store.diagnostics
+          .map(d =>
+            s"${d.getKind} Source=${d.getSource()} Message=${d.getMessage(null)}"
+          )
+          .mkString("\n  ")
+
         throw new RuntimeException(
-          s"Expected single compilation unit but got none. The compiler reported no diagnostics. The print writer returned '${store.sout}'."
+          s"Failed to get a compilation unit from the Java compiler. Errors:\n  ${diagnostics}"
         )
       }
-      val diagnostics = store.diagnostics
-        .map(d =>
-          s"${d.getKind} Source=${d.getSource()} Message=${d.getMessage(null)}"
-        )
-        .mkString("\n  ")
-      throw new RuntimeException(
-        s"Failed to get a compilation unit from the Java compiler. Errors:\n  ${diagnostics}"
-      )
     }
   }
 
