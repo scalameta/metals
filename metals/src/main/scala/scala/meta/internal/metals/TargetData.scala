@@ -314,6 +314,7 @@ final class TargetData(val isAmmonite: Boolean = false) {
     scalaTargetInfo.clear()
     inverseDependencies.clear()
     buildTargetSources.clear()
+    buildTargetClasspath.clear()
     buildTargetGeneratedDirs.clear()
     buildTargetGeneratedFiles.clear()
     inverseDependencySources.clear()
