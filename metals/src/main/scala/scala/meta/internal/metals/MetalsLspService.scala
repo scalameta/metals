@@ -409,7 +409,7 @@ abstract class MetalsLspService(
       semanticdbs,
     )
 
-  protected def onCreate(path: AbsolutePath): Future[List[Diagnostic]] = {
+  protected def onCreate(path: AbsolutePath): Future[Unit] = {
     buildTargets.onCreate(path)
     compilers.didChange(path)
   }
@@ -461,6 +461,7 @@ abstract class MetalsLspService(
       () => userConfig,
       buildTargets,
       buffers,
+      diagnostics,
       symbolSearch,
       embedded,
       workDoneProgress,
@@ -621,37 +622,6 @@ abstract class MetalsLspService(
     new InlayHintResolveProvider(
       definitionProvider,
       compilers,
-    )
-
-  val diagnosticsDebouncerDelay: FiniteDuration =
-    if (Testing.isEnabled) 0.millis
-    else sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis
-  protected val fileDidChange: BatchedFunction[AbsolutePath, Unit] =
-    BatchedFunction.fromFuture[AbsolutePath, Unit](
-      changedFiles => {
-        for {
-          _ <- sh.sleep(diagnosticsDebouncerDelay)
-          futures = for {
-            file <- changedFiles.distinct
-            pc <- compilers.loadCompiler(file).toList
-            contents <- buffers.get(file).toList
-          } yield {
-            for {
-              reportedDiagnostics <- pc
-                .didChange(
-                  CompilerVirtualFileParams(file.toNIO.toUri, contents)
-                )
-                .asScala
-              _ = diagnostics.publishDiagnosticsNotAdjusted(
-                file,
-                reportedDiagnostics.asScala.toList,
-              )
-            } yield ()
-          }
-          _ <- Future.sequence(futures)
-        } yield ()
-      },
-      "fileDidChange",
     )
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
@@ -976,8 +946,7 @@ abstract class MetalsLspService(
         buffers.put(path, change.getText)
         diagnostics.didChange(path)
         val futures = List.newBuilder[Future[Unit]]
-        futures += compilers.didChange(path).ignoreValue
-        futures += fileDidChange(path)
+        futures += compilers.didChange(path)
         futures += referencesProvider.didChange(path, change.getText)
         futures += parseTrees(path)
         Future.sequence(futures.result()).ignoreValue.asJava

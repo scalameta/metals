@@ -9,12 +9,15 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
+import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
@@ -82,6 +85,7 @@ class Compilers(
     userConfig: () => UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
+    diagnostics: Diagnostics,
     search: SymbolSearch,
     embedded: Embedded,
     workDoneProgress: WorkDoneProgress,
@@ -277,7 +281,49 @@ class Compilers(
     maybeDiagnostics.getOrElse(Future.successful(List.empty))
   }
 
-  def didChange(path: AbsolutePath): Future[List[Diagnostic]] = {
+  private val inFlightDidChange =
+    TrieMap.empty[AbsolutePath, CompletableCancelToken]
+  private val diagnosticsDebouncerDelay: FiniteDuration =
+    if (Testing.isEnabled) 0.millis
+    else sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis
+  private val fileDidChange: BatchedFunction[AbsolutePath, Unit] =
+    BatchedFunction.fromFuture[AbsolutePath, Unit](
+      changedFiles => {
+        for {
+          _ <- sh.sleep(diagnosticsDebouncerDelay)
+          futures = for {
+            file <- changedFiles.distinct
+            pc <- this.loadCompiler(file).toList
+            contents <- buffers.get(file).toList
+          } yield {
+            val token = new CompletableCancelToken()
+            inFlightDidChange.put(file, token).foreach { old =>
+              old.cancel()
+            }
+            val params = CompilerVirtualFileParams(
+              file.toNIO.toUri,
+              contents,
+              token = token,
+            )
+            for {
+              reportedDiagnostics <- pc
+                .didChange(params)
+                .asScala
+              _ = diagnostics.publishDiagnosticsNotAdjusted(
+                file,
+                reportedDiagnostics.asScala.toList,
+              )
+            } yield ()
+          }
+          _ <- Future.sequence(futures)
+        } yield ()
+      },
+      "fileDidChange",
+    )
+
+  private def didChangeBSPDiagnostics(
+      path: AbsolutePath
+  ): Future[List[Diagnostic]] = {
     def originInput =
       path
         .toInputFromBuffers(buffers)
@@ -305,6 +351,14 @@ class Compilers(
         Future.successful(Nil)
       }
       .getOrElse(Future.successful(Nil))
+  }
+
+  def didChange(path: AbsolutePath): Future[Unit] = {
+    if (userConfig().presentationCompilerDiagnostics)
+      // Batch/debounce these requests since they can arrivein bursts
+      fileDidChange(Seq(path))
+    else
+      didChangeBSPDiagnostics(path).ignoreValue
   }
 
   def didCompile(report: CompileReport): Unit = {
