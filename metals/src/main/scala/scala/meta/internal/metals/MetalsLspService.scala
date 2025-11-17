@@ -815,15 +815,6 @@ abstract class MetalsLspService(
       .map(new ApplyWorkspaceEditParams(_))
       .foreach(languageClient.applyEdit)
 
-    /**
-     * Trigger compilation in preparation for definition requests for dependency
-     * sources and standalone files, but wait for build tool information, so
-     * that we don't try to generate it for project files
-     */
-    val interactive = buildServerPromise.future.map { _ =>
-      interactiveSemanticdbs.textDocument(path)
-    }
-
     val parser = parseTrees(path)
 
     if (path.isDependencySource(folder)) {
@@ -842,7 +833,6 @@ abstract class MetalsLspService(
                 maybeCompileOnDidFocus(path, prevBuildTarget),
                 compilers.load(List(path)),
                 parser,
-                interactive,
                 testProvider.didOpen(path),
               )
             )
