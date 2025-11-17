@@ -644,7 +644,6 @@ lazy val mtest = project
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
           else if (scalaVersion.value == "2.13.15") "1.0.4"
-          else if (scalaVersion.value == "2.13.14") "1.0.2"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
           else V.munit

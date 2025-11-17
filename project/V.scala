@@ -7,7 +7,7 @@ object V {
 
   val scala212 = "2.12.20"
 
-  val scala213 = "2.13.17"
+  val scala213 = "2.13.18"
 
   val scala3 = "3.3.6"
 
@@ -51,7 +51,7 @@ object V {
 
   val jsoup = "1.21.2"
 
-  val kindProjector = "0.13.3"
+  val kindProjector = "0.13.4"
 
   val lsp4jV = "0.24.0"
 
@@ -75,7 +75,7 @@ object V {
 
   val scalafmt = "3.10.0"
 
-  val scalameta = "4.13.10"
+  val scalameta = "4.14.0"
 
   val scribe = "3.17.0"
 
@@ -182,9 +182,9 @@ object V {
     "2.12.19",
     "2.12.18",
     "2.12.17",
-    "2.13.14",
     "2.13.15",
     "2.13.16",
+    "2.13.17",
   )
 
   def minimumSupportedSbtVersion = {

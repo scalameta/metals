@@ -196,8 +196,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
             |                  ^^^^^^^^^^^^^^^^^
             |  @param op (Int, Int) => Int
             |""".stripMargin,
-      "2.13.13" -> docsAfter21313,
-      "2.13.14" -> docsAfter21313,
       "2.13.15" -> docsAfter21313,
       "2.13.16" -> docsAfter21313,
       "2.13.17" -> docsAfter21313,
