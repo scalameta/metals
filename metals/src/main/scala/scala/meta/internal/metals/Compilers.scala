@@ -39,6 +39,7 @@ import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
+import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
@@ -1597,6 +1598,31 @@ class Compilers(
     debugItem.setType(toDebugCompletionType(item.getKind()))
     debugItem.setSortText(item.getFilterText())
     debugItem
+  }
+
+  def batchSemanticdbTextDocuments(
+      sources: Seq[AbsolutePath],
+      cancelToken: CancelToken,
+  ): Future[s.TextDocuments] = {
+    val futures = for {
+      (pc, paths) <- sources
+        .flatMap(s => loadCompiler(s).map(pc => (pc, s)))
+        .groupBy(_._1)
+    } yield {
+      val params = paths.map { case (_, s) =>
+        CompilerVirtualFileParams(
+          s.toURI,
+          s.toInputFromBuffers(buffers).text,
+          token = cancelToken,
+        ): VirtualFileParams
+      }
+      pc.batchSemanticdbTextDocuments(params.asJava).asScala.map { bytes =>
+        s.TextDocuments.parseFrom(bytes).documents
+      }
+    }
+    Future
+      .sequence(futures)
+      .map(docss => s.TextDocuments(documents = docss.flatten.toSeq))
   }
 
   def semanticdbTextDocument(

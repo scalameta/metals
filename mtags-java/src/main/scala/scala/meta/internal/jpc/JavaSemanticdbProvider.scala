@@ -25,6 +25,26 @@ class JavaSemanticdbProvider(
   def textDocumentBytes(params: VirtualFileParams): Array[Byte] = {
     textDocument(params, None).toByteArray()
   }
+  def batchTextDocumentBytes(
+      params: List[VirtualFileParams]
+  ): Array[Byte] = {
+    val compile = compiler
+      .batchCompilationTask(params)
+      .withAnalyzePhase()
+    val docs = Semanticdb.TextDocuments.newBuilder()
+    val isRequestedURI = params.iterator
+      .map(param =>
+        SourceJavaFileObject.makeOriginalURI(param.uri().toString())
+      )
+      .toSet
+    for {
+      cu <- compile.allCompilationUnits
+      if isRequestedURI(cu.getSourceFile().getName())
+    } {
+      docs.addDocuments(textDocumentFromSource(compile, cu, None))
+    }
+    docs.build().toByteArray()
+  }
 
   def textDocument(
       params: VirtualFileParams,
@@ -40,10 +60,18 @@ class JavaSemanticdbProvider(
       compile: JavaSourceCompile,
       targetRange: Option[TargetRange]
   ): Semanticdb.TextDocument = {
+    textDocumentFromSource(compile, compile.cu, targetRange)
+  }
+
+  def textDocumentFromSource(
+      compile: JavaSourceCompile,
+      cuParam: CompilationUnitTree,
+      targetRange: Option[TargetRange]
+  ): Semanticdb.TextDocument = {
     val sourceroot = compiler.metalsConfig.workspaceRoot()
     val cu = targetRange match {
       case Some(range) => range.cu
-      case None => compile.cu
+      case None => cuParam
     }
     val options = new SemanticdbJavacOptions()
     options.sourceroot = sourceroot
@@ -56,7 +84,7 @@ class JavaSemanticdbProvider(
     // HACK: we set the URI manually here so it matches exactly the requested URI.
     // It's a complicated story how URIs get interpreted in our LSP setup and the
     // virtual file system we have for Java.
-    visitor.uri = compile.cu.getSourceFile().toUri().toString()
+    visitor.uri = cu.getSourceFile().toUri().toString()
     val textDocument = visitor.buildTextDocumentBuilder(cu);
     compile.listener.diagnostics.foreach { d =>
       val line = (d.getLineNumber() - 1).toInt

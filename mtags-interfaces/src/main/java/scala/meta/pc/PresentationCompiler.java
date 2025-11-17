@@ -192,6 +192,10 @@ public abstract class PresentationCompiler {
    */
   public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
 
+  public CompletableFuture<byte[]> batchSemanticdbTextDocuments(List<VirtualFileParams> params) {
+    return CompletableFuture.completedFuture(new byte[0]);
+  }
+
   /**
    * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for
    * the given source.

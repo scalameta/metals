@@ -63,9 +63,9 @@ class JavaMetalsCompiler(
       case Some(value) => value
       case None =>
         val name = source.getName()
-        // HACK: see SourceJavaFileObject.make() for an explanation why `toUri()` is
-        // a post-processed URI, and why we use the `getName()` method instead to
-        // recover the original URI
+        // HACK: see SourceJavaFileObject.makeOriginalURI() for an explanation
+        // why we use the `getName()` method instead of `toUri()` to recover the
+        // original URI.
         if (name.startsWith("originaluri-")) {
           name.stripPrefix("originaluri-")
         } else {
@@ -101,6 +101,17 @@ class JavaMetalsCompiler(
       extraOptions: List[String] = Nil
   ): JavaSourceCompile = {
     prune.compileTask(
+      params,
+      extraClasspath ++ classpath,
+      extraOptions ++ options
+    )
+  }
+  def batchCompilationTask(
+      params: List[VirtualFileParams],
+      extraClasspath: Seq[Path] = Nil,
+      extraOptions: List[String] = Nil
+  ): JavaSourceCompile = {
+    prune.batchCompileTask(
       params,
       extraClasspath ++ classpath,
       extraOptions ++ options

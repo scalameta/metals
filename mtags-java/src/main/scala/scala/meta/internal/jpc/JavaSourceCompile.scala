@@ -10,8 +10,10 @@ import com.sun.tools.javac.api.JavacTaskImpl
 case class JavaSourceCompile(
     task: JavacTask,
     listener: JavaCompileTaskListener,
-    cu: CompilationUnitTree
+    cu: CompilationUnitTree,
+    rest: collection.Seq[CompilationUnitTree]
 ) {
+  def allCompilationUnits: collection.Seq[CompilationUnitTree] = cu +: rest
   def withAnalyzePhase(): this.type = {
     task match {
       case task: JavacTaskImpl =>

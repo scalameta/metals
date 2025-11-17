@@ -63,7 +63,7 @@ class JavaPruneCompiler(
   }
 
   def compileOptions(
-      file: PruneJavaFile,
+      files: List[PruneJavaFile],
       classpath: Seq[Path] = Nil,
       extraOptions: List[String] = Nil
   ): List[String] = {
@@ -110,18 +110,20 @@ class JavaPruneCompiler(
       options += "-classpath"
       options += finalClasspath.mkString(File.pathSeparator)
     }
-    options ++= processExtraOptions(extraOptions, file)
+    options ++= processExtraOptions(extraOptions, files)
     // Add --patch-module option if we're compiling sources from the JDK.
-    file.patch.foreach { patch =>
-      if (!patches.contains(patch)) {
-        // The JavaCompiler instance is stateful and only allows you to define
-        // the --patch-module option once per module. It throws an exception if
-        // you define conflicting patches, and we automatically handle this by
-        // throwing a DuplicatePatchModuleException, which triggers a restart of
-        // the JavaCompiler instance.
-        patches.add(patch)
-        options ++= patch.asOptions
-      }
+    for {
+      file <- files
+      patch <- file.patch
+      if !patches.contains(patch)
+    } {
+      // The JavaCompiler instance is stateful and only allows you to define
+      // the --patch-module option once per module. It throws an exception if
+      // you define conflicting patches, and we automatically handle this by
+      // throwing a DuplicatePatchModuleException, which triggers a restart of
+      // the JavaCompiler instance.
+      patches.add(patch)
+      options ++= patch.asOptions
     }
     options.result()
   }
@@ -143,11 +145,24 @@ class JavaPruneCompiler(
       classpath: Seq[Path] = Nil,
       extraOptions: List[String] = Nil
   ): JavaSourceCompile = {
+    batchCompileTask(List(params), classpath, extraOptions)
+  }
+
+  def batchCompileTask(
+      params: List[pc.VirtualFileParams],
+      classpath: Seq[Path] = Nil,
+      extraOptions: List[String] = Nil
+  ): JavaSourceCompile = {
+    require(params.nonEmpty, "params must be non-empty")
     originalURIs.clear()
-    val file = PruneJavaFile.fromParams(params, embedded, standardFileManager)
-    originalURIs.put(file.source, params.uri().toString())
+    val files = params.map { p =>
+      val result =
+        PruneJavaFile.fromParams(p, embedded, standardFileManager)
+      originalURIs.put(result.source, p.uri().toString())
+      result
+    }
     val store = new JavaCompileTaskListener()
-    val options = compileOptions(file, classpath, extraOptions)
+    val options = compileOptions(files, classpath, extraOptions)
     val task =
       try
         compiler.getTask(
@@ -156,7 +171,7 @@ class JavaPruneCompiler(
           store,
           options.asJava,
           null,
-          List(file.source).asJava
+          files.map(_.source).asJava
         )
       catch {
         case e: RuntimeException
@@ -177,38 +192,36 @@ class JavaPruneCompiler(
     }
     val stdout = store.sout.toString()
     if (stdout.nonEmpty) {
-      logger.info(
-        s"JavaMetalsGlobal: stdout for ${file.source.toUri()} - ${stdout}"
-      )
+      val filesStr = files.map(_.source.toUri()).mkString(", ")
+      logger.info(s"JavaMetalsGlobal: stdout for files $filesStr - $stdout")
     }
     val jtask = task.asInstanceOf[JavacTask]
     val elems = jtask.parse().asScala
     val it = elems.iterator
     if (it.hasNext) {
       val cu = it.next()
-      JavaSourceCompile(jtask, store, cu)
+      val rest = it.toSeq
+      JavaSourceCompile(jtask, store, cu, rest)
     } else {
       if (store.diagnostics.isEmpty) {
         throw new RuntimeException(
           s"Expected single compilation unit but got none. The compiler reported no diagnostics. The print writer returned '${store.sout}'."
         )
       }
-
       val diagnostics = store.diagnostics
         .map(d =>
           s"${d.getKind} Source=${d.getSource()} Message=${d.getMessage(null)}"
         )
         .mkString("\n  ")
-
       throw new RuntimeException(
-        s"Failed to get a compilation unit from the Java compiler. Errors:\n  $diagnostics"
+        s"Failed to get a compilation unit from the Java compiler. Errors:\n  ${diagnostics}"
       )
     }
   }
 
   private def processExtraOptions(
       extraOptions: List[String],
-      file: PruneJavaFile
+      files: List[PruneJavaFile]
   ): List[String] = {
     val options = List.newBuilder[String]
     if (headerCompiler == null) {
@@ -218,7 +231,10 @@ class JavaPruneCompiler(
     }
     // Tell the header compiler to keep the bodies of the source file but
     // remove the bodies for all other sources on the sourcepath.
-    options += s"-Xplugin:MetalsHeaderCompiler -keep-bodies:${file.source.getName()}"
+    val headerCompilerOption = files.iterator
+      .map(file => "-keep-bodies:" + file.source.getName())
+      .mkString("-Xplugin:MetalsHeaderCompiler ", " ", "")
+    options += headerCompilerOption
     var isAnnotationPath = false
     extraOptions.foreach { extraOption =>
       val nextOption: String =

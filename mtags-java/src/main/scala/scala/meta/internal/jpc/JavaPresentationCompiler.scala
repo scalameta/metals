@@ -261,6 +261,20 @@ case class JavaPresentationCompiler(
     }
   }
 
+  override def batchSemanticdbTextDocuments(
+      params: util.List[VirtualFileParams]
+  ): CompletableFuture[Array[Byte]] = {
+    if (params.isEmpty()) {
+      return CompletableFuture.completedFuture(Array.emptyByteArray)
+    } else {
+      request(params.get(0), Array.emptyByteArray) { pc =>
+        new JavaSemanticdbProvider(pc).batchTextDocumentBytes(
+          params.asScala.toList
+        )
+      }
+    }
+  }
+
   override def selectionRange(
       params: util.List[OffsetParams]
   ): CompletableFuture[util.List[SelectionRange]] =
@@ -374,7 +388,11 @@ case class JavaPresentationCompiler(
     val debugOptions =
       Try(
         new JavaPruneCompiler(logger, semanticdbFileManager, embedded)
-          .compileOptions(PruneJavaFile.simple(lastParams), classpath, options)
+          .compileOptions(
+            PruneJavaFile.simple(lastParams) :: Nil,
+            classpath,
+            options
+          )
       )
         .getOrElse(options)
     s"""|Scala version: $scalaVersion

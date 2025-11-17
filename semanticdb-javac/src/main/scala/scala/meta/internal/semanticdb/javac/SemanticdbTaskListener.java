@@ -238,11 +238,13 @@ public final class SemanticdbTaskListener implements TaskListener {
           return options.sourceroot.resolve(path);
         }
       }
-      // Fallback to default behavior.
     } else if (file.getName().startsWith("originaluri-")) {
+      // NOTE(olafurpg): see SourceJavaFileObject.makeOriginalURI() for an
+      // explanation behind the "originaluri-" prefix.
       uri = URI.create(file.getName().substring("originaluri-".length()));
     }
 
+    // Fallback to default behavior.
     return Paths.get(uri);
   }
 

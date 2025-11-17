@@ -16,8 +16,8 @@ class SourceJavaFileObject(
 ) extends SimpleJavaFileObject(uri, kind) {
   override def getCharContent(ignoreEncodingErrors: Boolean): CharSequence = src
 
-  // HACK: we need a way to recover the original URI
-  override def getName(): String = s"originaluri-$originalUri"
+  override def getName(): String =
+    SourceJavaFileObject.makeOriginalURI(originalUri)
   override def toUri(): URI = uri
 }
 
@@ -29,6 +29,15 @@ case class PatchedModule(moduleName: String, sourceRoot: String) {
 }
 
 object SourceJavaFileObject {
+  // NOTE(olafurpg): This method exists because `JavaFileObject.toUri()` is not
+  // a reliable identifier for non-file URIs, for example
+  // `jar:file:/path/to/file.jar!/path/to/file.java`.  Instead, we format
+  // `.getName()` as "original-ORIGINAL_URI" so that we can recover the original
+  // URI later. This is sort of a hack, but I don't know of a cleaner way to
+  // communicate URIs to the header-compiler plugin, which does not have access
+  // to other Metals APIs, it's a small standalone Java file that can only call
+  // `JavaFileObject` APIs.
+  def makeOriginalURI(originalURI: String): String = s"originaluri-$originalURI"
 
   def makeRelativeURI(uri: URI): URI = {
     // parent `javax.tools.SimpleJavaObject` fails if URI doesn't have path
