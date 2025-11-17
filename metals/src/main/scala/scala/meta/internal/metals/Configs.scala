@@ -268,6 +268,49 @@ object Configs {
     }
   }
 
+  final case class CompilerProgressConfig(val value: String) {
+    require(List("enabled", "disabled").contains(value), value)
+    def isEnabled: Boolean =
+      value == "enabled"
+    def isDisabled: Boolean =
+      value == "disabled"
+  }
+
+  object CompilerProgressConfig {
+    def enabled: CompilerProgressConfig =
+      CompilerProgressConfig("enabled")
+    def disabled: CompilerProgressConfig =
+      CompilerProgressConfig("disabled")
+    // NOTE(olafurpg): it's unclear if we ever want to enable it by default.
+    // For now, this setting is incredibly helpful to debug Java PC performance
+    // issues so I want to have the functionality in Metals even if users are
+    // not using it by default. It might be helpful for users to troubleshoot
+    // performance issues on their projects.
+    def default: CompilerProgressConfig = disabled
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, CompilerProgressConfig] = {
+      value match {
+        case Some(ok @ ("enabled" | "disabled")) =>
+          Right(CompilerProgressConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for compilerProgress. Valid values are \"enabled\" and \"disabled\""
+          )
+        case None =>
+          val isEnabled = featureFlags
+            .readBoolean(FeatureFlag.COMPILE_PROGRESS)
+            .orElse(false)
+          if (isEnabled) {
+            Right(CompilerProgressConfig.enabled)
+          } else {
+            Right(CompilerProgressConfig.default)
+          }
+      }
+    }
+  }
+
   object TelemetryConfig {
     def default: TelemetryConfig =
       // NOTE: by default, Metals confusingly does not send telemetry even when

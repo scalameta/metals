@@ -13,7 +13,6 @@ import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.EmbeddedClient
-import scala.meta.pc.PresentationCompiler
 
 import coursierapi.Dependency
 import org.slf4j.LoggerFactory
@@ -41,7 +40,7 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
 
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("java.metals"))
 
-  protected lazy val presentationCompiler: PresentationCompiler = {
+  protected lazy val presentationCompiler: JavaPresentationCompiler = {
     val fetch = createFetch()
     extraDependencies.foreach(fetch.addDependencies(_))
 
@@ -57,13 +56,17 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
       .withSearch(search(myclasspath))
       .withConfiguration(
         PresentationCompilerConfigImpl()
-          .copy(isHoverDocumentationEnabled = documentationHoverEnabled)
+          .copy(
+            isHoverDocumentationEnabled = documentationHoverEnabled,
+            emitDiagnostics = true,
+          )
       )
       .withLogger(LoggerFactory.getLogger("java.metals"))
       // TODO: we need a real instance of the embedded client here.
       .withEmbeddedClient(new TestingEmbeddedClient(tmp))
       .withSemanticdbFileManager(EmptySemanticdbFileManager)
       .newInstance("", myclasspath.asJava, Nil.asJava, () => Nil.asJava)
+      .asInstanceOf[JavaPresentationCompiler]
   }
 
   override def params(

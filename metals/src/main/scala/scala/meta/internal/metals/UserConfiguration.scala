@@ -10,6 +10,7 @@ import scala.util.Try
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
@@ -76,6 +77,7 @@ case class UserConfiguration(
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
+    compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
 ) {
 
   override def toString(): String = {
@@ -211,6 +213,12 @@ case class UserConfiguration(
           (
             "javaOutlineProvider",
             javaOutlineProvider.value,
+          )
+        ),
+        Some(
+          (
+            "compilerProgress",
+            compilerProgress.value,
           )
         ),
       ).flatten
@@ -926,6 +934,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaOutlineProviderConfig.default)
+    val compilerProgress = getParsedKey(
+      "compiler-progress",
+      value =>
+        CompilerProgressConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(CompilerProgressConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -969,6 +985,7 @@ object UserConfiguration {
           workspaceSymbolProvider,
           definitionIndexStrategy,
           javaOutlineProvider,
+          compilerProgress,
         )
       )
     } else {

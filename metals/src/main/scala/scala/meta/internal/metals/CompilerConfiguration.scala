@@ -25,6 +25,7 @@ import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.ProgressBars
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolSearch
@@ -40,6 +41,7 @@ class CompilerConfiguration(
     buildTargets: BuildTargets,
     buffers: Buffers,
     embedded: Embedded,
+    progressBars: ProgressBars,
     sh: ScheduledExecutorService,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
@@ -345,6 +347,10 @@ class CompilerConfiguration(
       .withScheduledExecutorService(sh)
       .withSemanticdbFileManager(semanticdbFileManager)
       .withEmbeddedClient(embedded)
+      .withProgressBars(
+        if (userConfig().compilerProgress.isDisabled) ProgressBars.EMPTY
+        else progressBars
+      )
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
       .withConfiguration {
         val options =

@@ -27,4 +27,7 @@ public enum FeatureFlag {
 
   /** If enabled, uses the javac-based outline provider. */
   JAVAC_OUTLINE_PROVIDER,
+
+  /** If enabled, shows compiler progress in the status bar. */
+  COMPILE_PROGRESS,
 }

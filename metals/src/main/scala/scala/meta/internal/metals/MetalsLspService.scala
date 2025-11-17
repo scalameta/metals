@@ -475,6 +475,7 @@ abstract class MetalsLspService(
       worksheetProvider,
       () => referencesProvider,
       mbtSymbolSearch,
+      workDoneProgress,
       timerProvider,
       featureFlags,
     )

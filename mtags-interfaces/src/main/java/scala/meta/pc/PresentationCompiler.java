@@ -242,6 +242,10 @@ public abstract class PresentationCompiler {
   }
   ;
 
+  public PresentationCompiler withProgressBars(ProgressBars progressBars) {
+    return this;
+  }
+
   /**
    * Provide a SymbolSearch to extract docstrings, java parameter names and Scala default parameter
    * values.

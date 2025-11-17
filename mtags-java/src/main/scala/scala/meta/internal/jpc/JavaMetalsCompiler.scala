@@ -6,6 +6,7 @@ import java.io.StringWriter
 import java.io.Writer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 import javax.lang.model.element.Element
 import javax.lang.model.element.ExecutableElement
@@ -23,6 +24,7 @@ import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ProgressBars
 import scala.meta.pc.RangeParams
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
@@ -43,14 +45,17 @@ class JavaMetalsCompiler(
     val semanticdbFileManager: SemanticdbFileManager,
     val metalsConfig: PresentationCompilerConfig,
     val classpath: Seq[Path],
-    val options: List[String]
+    val options: List[String],
+    val progressBars: ProgressBars,
+    val sh: Option[ScheduledExecutorService] = None
 ) extends Closeable {
   var lastVisitedParentTrees: List[TreePath] = Nil
   private lazy val prune = new JavaPruneCompiler(
     logger,
     reportsLevel,
     semanticdbFileManager,
-    embedded
+    embedded,
+    progressBars
   )
 
   def doSearch(query: String): Seq[String] = {

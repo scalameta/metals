@@ -36,6 +36,7 @@ import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
+import scala.meta.pc.ProgressBars
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SyntheticDecorationsParams
@@ -95,6 +96,7 @@ class Compilers(
     worksheetProvider: WorksheetProvider,
     completionItemPriority: () => CompletionItemPriority,
     semanticdbFileManager: SemanticdbFileManager,
+    progressBars: ProgressBars,
     timerProvider: TimerProvider,
     featureFlags: FeatureFlagProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
@@ -107,6 +109,7 @@ class Compilers(
     buildTargets,
     buffers,
     embedded,
+    progressBars,
     sh,
     initializeParams,
     excludedPackages,

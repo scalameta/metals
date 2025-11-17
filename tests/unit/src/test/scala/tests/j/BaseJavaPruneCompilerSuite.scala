@@ -16,6 +16,7 @@ import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
+import scala.meta.pc.ProgressBars
 
 import munit.AnyFixture
 import org.eclipse.{lsp4j => l}
@@ -72,6 +73,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       metalsConfig = PresentationCompilerConfigImpl(),
       classpath = Nil,
       options = Nil,
+      progressBars = ProgressBars.EMPTY,
     )
     val params = CompilerVirtualFileParams(uri, text)
     val diagnosticProvider = new JavaDiagnosticProvider(global, params)

@@ -37,6 +37,7 @@ import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.ProgressBars
 import scala.meta.pc.RangeParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
@@ -68,7 +69,8 @@ case class JavaPresentationCompiler(
     workspace: Option[Path] = None,
     semanticdbFileManager: SemanticdbFileManager = EmptySemanticdbFileManager,
     logger: Logger = LoggerFactory.getLogger("mtags"),
-    reportsLevel: ReportLevel = ReportLevel.Info
+    reportsLevel: ReportLevel = ReportLevel.Info,
+    progressBars: ProgressBars = ProgressBars.EMPTY
 ) extends PresentationCompiler {
 
   private val compiler = new JavaPresentationCompilerAccess(
@@ -86,7 +88,9 @@ case class JavaPresentationCompiler(
           semanticdbFileManager,
           config,
           classpath,
-          options
+          options,
+          progressBars,
+          sh
         )
       ),
     s"javac-$buildTargetId"
@@ -303,6 +307,11 @@ case class JavaPresentationCompiler(
       logger.error("Error restarting JavaPresentationCompiler", e)
   }
 
+  override def withProgressBars(
+      progressBars: ProgressBars
+  ): PresentationCompiler =
+    copy(progressBars = progressBars)
+
   override def withReportsLoggerLevel(level: String): PresentationCompiler =
     copy(reportsLevel = ReportLevel.fromString(level))
 
@@ -392,7 +401,8 @@ case class JavaPresentationCompiler(
           logger,
           reportsLevel,
           semanticdbFileManager,
-          embedded
+          embedded,
+          progressBars
         )
           .compileOptions(
             PruneJavaFile.simple(lastParams) :: Nil,

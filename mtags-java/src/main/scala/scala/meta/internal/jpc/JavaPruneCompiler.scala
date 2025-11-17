@@ -39,7 +39,8 @@ class JavaPruneCompiler(
     val logger: Logger,
     val reportsLevel: ReportLevel,
     val semanticdbFileManager: pc.SemanticdbFileManager,
-    embedded: pc.EmbeddedClient
+    embedded: pc.EmbeddedClient,
+    progressBars: pc.ProgressBars
 ) extends Closeable {
 
   private val isDebugEnabled = reportsLevel == ReportLevel.Debug
@@ -166,7 +167,6 @@ class JavaPruneCompiler(
       // -sourcepath but are not part of the input digest (options or sources).
       var task = tasks.pollFirstEntry()
       while (task != null) {
-        task.getValue().analyzeCompleted()
         task = tasks.pollFirstEntry()
       }
     }
@@ -196,7 +196,7 @@ class JavaPruneCompiler(
       }
       while (tasks.size() > 3) {
         // Only hold a small number of tasks in memory
-        tasks.pollFirstEntry().getValue().analyzeCompleted()
+        tasks.pollFirstEntry().getValue()
       }
       result
     }
@@ -268,7 +268,9 @@ class JavaPruneCompiler(
       val stdout = store.sout.toString()
       if (stdout.nonEmpty) {
         val filesStr = files.map(_.source.toUri()).mkString(", ")
-        logger.info(s"JavaMetalsGlobal: stdout for files $filesStr - $stdout")
+        logger.info(
+          s"JavaMetalsGlobal: stdout for $filesStr - $stdout"
+        )
       }
       val jtask = task.asInstanceOf[JavacTask]
       val elems = jtask.parse().asScala
@@ -276,13 +278,14 @@ class JavaPruneCompiler(
       if (it.hasNext) {
         val cu = it.next()
         val rest = it.toSeq
-        JavaSourceCompile(jtask, store, cu, rest)
+        JavaSourceCompile(jtask, store, cu, rest, progressBars)
       } else {
         if (store.diagnostics.isEmpty) {
           throw new RuntimeException(
             s"Expected single compilation unit but got none. The compiler reported no diagnostics. The print writer returned '${store.sout}'."
           )
         }
+
         val diagnostics = store.diagnostics
           .map(d =>
             s"${d.getKind} Source=${d.getSource()} Message=${d.getMessage(null)}"
