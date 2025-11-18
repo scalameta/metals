@@ -117,6 +117,9 @@ final class Diagnostics(
   }
 
   def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
+    if (userConfig().presentationCompilerDiagnostics) {
+      return
+    }
     diags.headOption match {
       case Some(diagnostic) if !workspace.exists(path.isInReadonlyDirectory) =>
         syntaxError(path) = diagnostic
