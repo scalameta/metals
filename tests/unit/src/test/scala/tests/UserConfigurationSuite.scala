@@ -8,6 +8,7 @@ import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
@@ -325,6 +326,7 @@ class UserConfigurationSuite extends BaseSuite {
       enableSemanticHighlighting = false,
       excludedPackages = Some(List("excluded")),
       fallbackScalaVersion = Some("3.2.1"),
+      fallbackClasspath = FallbackClasspathConfig.all3rdparty,
       testUserInterface = TestUserInterfaceKind.TestExplorer,
       javaFormatConfig = Some(JavaFormatConfig(fakePath, Some("profile"))),
       scalafixRulesDependencies = List("rule1", "rule2"),
@@ -380,6 +382,9 @@ class UserConfigurationSuite extends BaseSuite {
     "excluded"
   ],
   "fallbackScalaVersion": "3.2.1",
+  "fallbackClasspath": [
+    "all-3rdparty"
+  ],
   "testUserInterface": "test explorer",
   "javaFormat": {
     "eclipseConfigPath": "$fakePathString",

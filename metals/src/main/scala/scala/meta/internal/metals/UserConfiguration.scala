@@ -12,6 +12,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
+import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
@@ -59,6 +60,8 @@ case class UserConfiguration(
     enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
+    fallbackClasspath: FallbackClasspathConfig =
+      FallbackClasspathConfig.default,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
     javaFormatter: Option[JavaFormatterConfig] = None,
@@ -148,6 +151,7 @@ case class UserConfiguration(
         ),
         listField("excludedPackages", excludedPackages),
         optStringField("fallbackScalaVersion", fallbackScalaVersion),
+        listField("fallbackClasspath", Some(fallbackClasspath.values)),
         Some("testUserInterface" -> testUserInterface.toString()),
         javaFormatConfig.map(value =>
           "javaFormat" -> List(
@@ -884,6 +888,14 @@ object UserConfiguration {
     // It was added only to have a meaningful option value in vscode
     val defaultScalaVersion =
       getStringKey("fallback-scala-version").filter(_ != "automatic")
+    val fallbackClasspath = getParsedArrayKey(
+      "fallback-classpath",
+      values =>
+        FallbackClasspathConfig.fromConfigOrFeatureFlag(
+          values,
+          featureFlags,
+        ),
+    ).getOrElse(FallbackClasspathConfig.default)
     val disableTestCodeLenses = {
       val isTestExplorerEnabled = clientConfiguration.isTestExplorerProvider()
       getStringKey("test-user-interface").map(_.toLowerCase()) match {
@@ -997,6 +1009,7 @@ object UserConfiguration {
           enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,
+          fallbackClasspath,
           disableTestCodeLenses,
           javaFormatConfig,
           javaFormatter,

@@ -782,6 +782,10 @@ abstract class MetalsLspService(
       }
     }
 
+    if (userConfig.fallbackScalaVersion != old.fallbackScalaVersion) {
+      compilers.restartFallbackCompilers()
+    }
+
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
       userConfig.javaHome != old.javaHome
@@ -969,7 +973,7 @@ abstract class MetalsLspService(
               .inverseSources(path)
               .foreach(compilers.restartPresentationCompilers)
           ),
-          refreshDiagnostics(),
+          refreshAllDiagnostics(),
           renameProvider.runSave(),
           parseTrees(path),
           onChange(List(path)),
@@ -979,20 +983,33 @@ abstract class MetalsLspService(
       .asJava
   }
 
-  protected def refreshDiagnostics(): Future[Unit] = {
+  private def refreshAllDiagnostics(): Future[Unit] = {
+    refreshDiagnostics(_ => true)
+  }
+  protected def refreshDiagnostics(
+      isIncludedPath: AbsolutePath => Boolean
+  ): Future[Unit] = {
     // rerun diagnostics for all open documents
-    val futures = buffers.open.map(path =>
-      for {
-        reportedDiagnostics <- compilers.didFocus(path)
-        _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
-      } yield ()
-    )
+    val futures =
+      buffers.open.filter(isIncludedPath).map { path =>
+        scribe.info(s"fallbackclasspath: refreshing diagnostics for $path")
+        for {
+          reportedDiagnostics <- compilers.didFocus(path)
+          _ = diagnostics
+            .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+        } yield ()
+      }
     Future.sequence(futures).map(_ => ())
   }
 
   def resetPresentationCompilers(): Future[Unit] = {
     compilers.restartAll()
-    refreshDiagnostics()
+    refreshDiagnostics(path => buildTargets.inverseSources(path).isDefined)
+  }
+
+  def restartFallbackCompilers(): Future[Unit] = {
+    compilers.restartFallbackCompilers()
+    refreshDiagnostics(path => buildTargets.inverseSources(path).isEmpty)
   }
 
   protected def didCompileTarget(report: CompileReport): Unit = {

@@ -134,6 +134,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           importedBuild.dependencyModules
         )
 
+        // Fallback compilers can possibly use the jars from the build target data, so we trigger a restart
+        // here to pick up the newly indexed jar data.
+        indexProviders.restartFallbackCompilers()
+
         // For "wrapped sources", we create dedicated TargetData.MappedSource instances,
         // able to convert back and forth positions from the user-facing file to
         // the compiler-facing actual underlying source.
@@ -231,6 +235,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         )
         scribe.debug(s"indexed ${usedJars.size} dependency source jars")
       }
+
     // Schedule removal of unused toplevel symbols from cache
     if (usedJars.nonEmpty)
       sh.schedule(

@@ -20,6 +20,13 @@ public enum FeatureFlag {
   SCALA_SOURCEPATH_PRUNED,
 
   /**
+   * If enabled, the fallback presentation compiler will the classpath of all 3rd-party jars from
+   * synced targets. For example, if one target has synced JUnit, then this jar is on the classpath
+   * for all unsynced files (aka. the fallback classpath).
+   */
+  FALLBACK_CLASSPATH_ALL_3RD_PARTY,
+
+  /**
    * If enabled, uses more lightweight indexing for "Go to definition" by skipping up-frontindexing
    * of *-sources.jar files. Instead, definitions are resolved at query time by reading the "source"
    * debug attribute in classfiles.

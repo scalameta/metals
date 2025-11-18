@@ -110,6 +110,7 @@ class Compilers(
     workspace,
     config,
     userConfig,
+    scalaVersionSelector,
     buildTargets,
     buffers,
     embedded,
@@ -183,7 +184,7 @@ class Compilers(
                   StandaloneCompiler(
                     scalaVersion,
                     search,
-                    Nil,
+                    fallbackClasspaths.scalaCompilerClasspath(),
                     completionItemPriority(),
                   )
                 }
@@ -193,12 +194,13 @@ class Compilers(
                 StandaloneJavaCompiler(
                   search,
                   completionItemPriority(),
+                  fallbackClasspaths.javaCompilerClasspath(),
                 )
               } else {
                 StandaloneCompiler(
                   scalaVersion,
                   search,
-                  Nil,
+                  fallbackClasspaths.scalaCompilerClasspath(),
                   completionItemPriority(),
                 )
               }
@@ -393,6 +395,17 @@ class Compilers(
       } {
         compiler.restart()
       }
+    }
+  }
+
+  def restartFallbackCompilers(): Unit = {
+    for {
+      language <- List(s.Language.SCALA, s.Language.JAVA)
+      compiler <- Option(
+        jcache.remove(PresentationCompilerKey.Default(language))
+      )
+    } {
+      compiler.await.shutdown()
     }
   }
 

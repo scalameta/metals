@@ -350,6 +350,43 @@ object Configs {
     }
   }
 
+  final case class FallbackClasspathConfig(val values: List[String]) {
+    require(values.forall(List("all-3rdparty").contains), values)
+    def isAll3rdparty: Boolean =
+      values.contains("all-3rdparty")
+  }
+
+  object FallbackClasspathConfig {
+    def all3rdparty: FallbackClasspathConfig =
+      FallbackClasspathConfig(List("all-3rdparty"))
+    def default: FallbackClasspathConfig = FallbackClasspathConfig(Nil)
+    def fromConfigOrFeatureFlag(
+        values: Option[List[String]],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, FallbackClasspathConfig] = {
+      values match {
+        case Some(ok @ (List("all-3rdparty") | Nil)) =>
+          // We may want to support richer settings here in the future. For
+          // example, defining dependencies inline like
+          // "dependency:com.google:guava:VERSION" or "file://path/to/some.jar".
+          Right(FallbackClasspathConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for fallbackClasspath. Valid values are \"all-3rdparty\""
+          )
+        case None =>
+          val isAll3rdpartyEnabled = featureFlags
+            .readBoolean(FeatureFlag.FALLBACK_CLASSPATH_ALL_3RD_PARTY)
+            .orElse(false)
+          if (isAll3rdpartyEnabled) {
+            Right(FallbackClasspathConfig.all3rdparty)
+          } else {
+            Right(FallbackClasspathConfig.default)
+          }
+      }
+    }
+  }
+
   object TelemetryConfig {
     def default: TelemetryConfig =
       // NOTE: by default, Metals confusingly does not send telemetry even when

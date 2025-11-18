@@ -38,6 +38,7 @@ class CompilerConfiguration(
     workspace: AbsolutePath,
     config: ClientConfiguration,
     userConfig: () => UserConfiguration,
+    scalaVersionSelector: ScalaVersionSelector,
     buildTargets: BuildTargets,
     buffers: Buffers,
     embedded: Embedded,
@@ -54,6 +55,11 @@ class CompilerConfiguration(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
+  val fallbackClasspaths = new FallbackClasspaths(
+    buildTargets,
+    userConfig,
+    scalaVersionSelector,
+  )
 
   sealed trait MtagsPresentationCompiler {
     def await: PresentationCompiler
@@ -63,9 +69,15 @@ class CompilerConfiguration(
   case class StandaloneJavaCompiler(
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
+      classpath: Seq[Path],
   ) extends MtagsPresentationCompiler {
     private val pc =
       configure(JavaPresentationCompiler(), search, completionItemPriority)
+        .newInstance(
+          "default-java",
+          classpath.asJava,
+          List.empty[String].asJava,
+        )
     def await: PresentationCompiler = pc
     def shutdown(): Unit = pc.shutdown()
   }
@@ -329,7 +341,11 @@ class CompilerConfiguration(
     }
 
     protected def fallback: PresentationCompiler =
-      StandaloneJavaCompiler(search, completionItemPriority).await
+      StandaloneJavaCompiler(
+        search,
+        completionItemPriority,
+        fallbackClasspaths.javaCompilerClasspath(),
+      ).await
   }
 
   private val mtagsLogger = LoggerFactory.getLogger("mtags")

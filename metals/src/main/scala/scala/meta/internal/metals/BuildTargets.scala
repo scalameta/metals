@@ -21,6 +21,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.InverseSourcesParams
+import ch.epfl.scala.bsp4j.MavenDependencyModule
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 
 /**
@@ -172,6 +173,26 @@ final class BuildTargets private (
 
   def allSourceJars: Iterator[AbsolutePath] =
     data.fromIterators(_.inverseDependencySources.keysIterator)
+
+  def allDependencyModuleArtifacts(
+      includeBuildTarget: BuildTargetIdentifier => Boolean,
+      includeModule: MavenDependencyModule => Boolean,
+  ): Iterator[AbsolutePath] = {
+    (for {
+      (buildTargetID, modules) <- data.fromIterators(
+        _.buildTargetDependencyModules.iterator
+      )
+      if includeBuildTarget(buildTargetID)
+      module <- modules.iterator
+      if includeModule(module)
+      artifact <- module.getArtifacts().asScala
+      // The classifier is "sources" for source jars, and null for jars on the
+      // compile classpath.
+      if artifact.getClassifier() == null
+    } yield {
+      artifact.getUri().toAbsolutePath
+    }).distinct
+  }
 
   def buildTargetSources(
       id: BuildTargetIdentifier
