@@ -39,6 +39,7 @@ import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
@@ -197,7 +198,7 @@ object MetalsEnrichments
     def isError: Boolean = result.getStatusCode.isError
   }
 
-  implicit class XtensionEditDistance(result: Either[EmptyResult, m.Position]) {
+  implicit class XtensionEditDistance(result: Either[EmptyResult, Position]) {
     def toPosition(dirty: l.Position): Option[l.Position] =
       foldResult(
         onPosition =
@@ -224,7 +225,7 @@ object MetalsEnrichments
       )
 
     def foldResult[B](
-        onPosition: m.Position => B,
+        onPosition: Position => B,
         onUnchanged: () => B,
         onNoMatch: () => B,
     ): B =
@@ -632,7 +633,7 @@ object MetalsEnrichments
     /**
      * Reads file contents from editor buffer with fallback to disk.
      */
-    def toInputFromBuffers(buffers: Buffers): m.Input.VirtualFile = {
+    def toInputFromBuffers(buffers: Buffers): Input.VirtualFile = {
       buffers.get(path) match {
         case Some(text) => Input.VirtualFile(path.toURI.toString(), text)
         case None => path.toInput
@@ -950,9 +951,9 @@ object MetalsEnrichments
         None
     }
 
-    def toMeta(input: m.Input): Option[m.Position] =
+    def toMeta(input: Input): Option[Position] =
       Try(
-        m.Position.Range(
+        Position.Range(
           input,
           range.startLine,
           range.startCharacter,
@@ -963,9 +964,9 @@ object MetalsEnrichments
   }
 
   implicit class XtensionRangeBsp(range: b.Range) {
-    def toMeta(input: m.Input): Option[m.Position] =
+    def toMeta(input: Input): Option[Position] =
       Try(
-        m.Position.Range(
+        Position.Range(
           input,
           range.getStart.getLine,
           range.getStart.getCharacter,
@@ -1257,11 +1258,10 @@ object MetalsEnrichments
       state.map(_.flatMap(f))
   }
 
-  implicit class XtensionTreeTokenStream(tree: m.Tree) {
-
+  implicit class XtensionTreeTokenStream(tree: Tree) {
     import scala.meta._
 
-    def leadingTokens: Iterator[m.Token] =
+    def leadingTokens: Iterator[Token] =
       tree.origin match {
         case Origin.Parsed(parsed, start, _) =>
           val tokens = parsed.dialect(parsed.input).tokenize.get
@@ -1269,7 +1269,7 @@ object MetalsEnrichments
         case _ => Iterator.empty
       }
 
-    def trailingTokens: Iterator[m.Token] =
+    def trailingTokens: Iterator[Token] =
       tree.origin match {
         case Origin.Parsed(parsed, _, end) =>
           val tokens = parsed.dialect(parsed.input).tokenize.get
@@ -1277,10 +1277,10 @@ object MetalsEnrichments
         case _ => Iterator.empty
       }
 
-    def findFirstLeading(predicate: m.Token => Boolean): Option[m.Token] =
+    def findFirstLeading(predicate: Token => Boolean): Option[Token] =
       leadingTokens.find(predicate)
 
-    def findFirstTrailing(predicate: m.Token => Boolean): Option[m.Token] =
+    def findFirstTrailing(predicate: Token => Boolean): Option[Token] =
       trailingTokens.find(predicate)
   }
   implicit class XtensionScheduledExecutorService(

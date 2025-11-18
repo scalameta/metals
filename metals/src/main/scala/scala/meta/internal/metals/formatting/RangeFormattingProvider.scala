@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.formatting
 
 import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
@@ -16,8 +17,8 @@ case class RangeFormatterParams(
     sourceText: String,
     range: Range,
     formattingOptions: FormattingOptions,
-    startPos: meta.Position,
-    endPos: meta.Position,
+    startPos: Position,
+    endPos: Position,
     tokens: Option[Tokens],
 ) extends FormatterParams {
   lazy val splitLines: Array[String] = sourceText.split("\\r?\\n")
