@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.TimeUnit
@@ -205,10 +206,13 @@ abstract class CompilerAccess[Reporter, Compiler](
     jobs.submit(
       result,
       { () =>
-        token.checkCanceled()
-        Thread.interrupted() // clear interrupt bit
         try {
-          result.complete(thunk())
+          if (token.isCanceled()) {
+            result.completeExceptionally(new CancellationException())
+          } else {
+            Thread.interrupted() // clear interrupt bit
+            result.complete(thunk())
+          }
         } catch {
           case NonFatal(e) =>
             logger.error(s"presentation compiler error ${e.getMessage()}", e)
