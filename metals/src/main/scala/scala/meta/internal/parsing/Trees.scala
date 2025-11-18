@@ -2,7 +2,6 @@ package scala.meta.internal.parsing
 
 import java.util.Optional
 
-import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.reflect.ClassTag
@@ -18,7 +17,6 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 import scala.meta.parsers.ParseException
 import scala.meta.parsers.Parsed
-import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Diagnostic
@@ -209,60 +207,6 @@ final class Trees(
     } yield tokens
   }
 
-  private def withFallbackDialect(
-      dialect: Dialect,
-      input: Input,
-      tokens: Option[Tokens],
-  ): Option[Parsed[Tree]] = {
-    // Check if first lines contain experimental import
-    if (
-      dialect.allowOpaqueTypes && !dialect.allowCaptureChecking &&
-      tokens.exists(hasExperimentalImport(_))
-    ) {
-      Some(input.safeParse[Source](scala.meta.dialects.Scala3Future))
-    } else {
-      None
-    }
-
-  }
-
-  @tailrec
-  private def hasExperimentalImport(
-      tokens: Tokens,
-      startingAt: Int = 0,
-  ): Boolean = {
-    val firstImportOrDefn = tokens.indexWhere(
-      {
-        case Token.KwImport() => true
-        case Token.KwVar() | Token.KwVal() | Token.KwDef() | Token.KwObject() |
-            Token.KwClass() | Token.KwTrait() | Token.KwEnum() =>
-          true
-        case _ => false
-      },
-      startingAt,
-    )
-    val isImport =
-      firstImportOrDefn > -1 && tokens(firstImportOrDefn).is[Token.KwImport]
-    if (isImport) {
-      val importLine = tokens
-        .drop(firstImportOrDefn)
-        .takeWhile {
-          case _: Token.EOL => false
-          case _ => true
-        }
-        .map(_.syntax)
-        .mkString
-
-      if (importLine.contains("language.experimental.")) {
-        true
-      } else {
-        hasExperimentalImport(tokens, firstImportOrDefn + 1)
-      }
-    } else {
-      false
-    }
-  }
-
   private def parse(
       path: AbsolutePath,
       dialect: Dialect,
@@ -286,9 +230,11 @@ final class Trees(
       possiblyParsed match {
         case err: Parsed.Error =>
           val tokens = tokenize(path)
-          withFallbackDialect(dialect, input, tokens) match {
-            case Some(Parsed.Success(tree)) =>
-              tokenized.remove(path)
+          input.safeParseWithExperimentalFallback[Source](
+            dialect,
+            () => tokens,
+          ) match {
+            case Parsed.Success(tree) =>
               Parsed.Success(tree)
             case _ =>
               tokens.foreach(tokens => tokenized(path) = tokens)
