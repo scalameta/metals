@@ -52,6 +52,7 @@ object Hello {
 /com/Greeting.java
 package com;
 public class Greeting {
+  enum Day { WORKDAY, WEEKEND }
   public static String greet(User user) {
     return "Hello, " + user.name + "!";
   }
@@ -86,6 +87,8 @@ message User {
         |Class Greeting com.
         |""".stripMargin,
     )
+    val List(workday) = provider.queryWorkspaceSymbol("WORK")
+    assert(clue(workday.getLocation().getRange().getStart().getLine()) > 0)
     assertNoDiff(
       formatSymbols(provider.queryWorkspaceSymbol("User")),
       """

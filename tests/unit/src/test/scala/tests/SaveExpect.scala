@@ -9,7 +9,7 @@ object SaveExpect {
     val errorSuites = mutable.ListBuffer.empty[String]
     for {
       loader <- List[() => BaseExpectSuite](
-        () => new JavacMtagsExpectSuite,
+        () => new JavacMtagsExpectSuite(assertCompat = false),
         () => new DefinitionScala2Suite,
         () => new SemanticdbScala2Suite,
         () => new MtagsScala2Suite,

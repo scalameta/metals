@@ -489,7 +489,10 @@ class JavacMtags(
         }
         val isImplicitConstructor =
           node.getKind() == Tree.Kind.RECORD ||
-            (node.getKind() == Tree.Kind.CLASS && constructorCount == 0)
+            (node.getKind() == Tree.Kind.CLASS && constructorCount == 0) ||
+            // The implicit enum constructor could technically be dropped, but
+            // we include it for compatibility with semanticdb-javac.
+            (node.getKind() == Tree.Kind.ENUM && constructorCount == 0)
         if (isImplicitConstructor) {
           mtags.withOwner() {
             mtags.ctor(
@@ -623,8 +626,11 @@ class JavacMtags(
               case _ => FromStart(node)
             },
             end = Option(node.getInitializer()) match {
-              case None => FromEnd(node)
-              case Some(value) => FromStart(value)
+              case Some(value)
+                  if sourcePositions.getStartPosition(cu, value) >= 0 &&
+                    sourcePositions.getEndPosition(cu, value) >= 0 =>
+                FromStart(value)
+              case _ => FromEnd(node)
             },
             name = name
           )

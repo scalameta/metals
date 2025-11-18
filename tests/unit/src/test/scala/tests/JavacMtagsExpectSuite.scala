@@ -11,7 +11,9 @@ import scala.meta.internal.{semanticdb => s}
 
 import tests.InputFile
 
-class JavacMtagsExpectSuite extends DirectoryExpectSuite("mtags-javac") {
+class JavacMtagsExpectSuite(assertCompat: Boolean)
+    extends DirectoryExpectSuite("mtags-javac") {
+  def this() = this(true)
   override lazy val input: InputProperties = InputProperties.scala2()
   lazy val semanticdbs: SemanticdbClasspath = SemanticdbClasspath(
     input.sourceroot,
@@ -35,7 +37,9 @@ class JavacMtagsExpectSuite extends DirectoryExpectSuite("mtags-javac") {
 
         val sdoc = indexer.index()
         val mdoc = Semanticdb.TextDocument.parseFrom(sdoc.toByteArray)
-        assertCompatWithSemanticdbJavac(file)
+        if (assertCompat) {
+          assertCompatWithSemanticdbJavac(file)
+        }
         SemanticdbPrinter.printDocument(mdoc, includeInfo = true)
       },
     )

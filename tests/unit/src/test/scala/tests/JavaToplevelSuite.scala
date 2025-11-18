@@ -250,7 +250,8 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |""".stripMargin,
     List(
       "jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
-      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`().",
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#Type#`<init>`().",
+      "jackson/JsonNode#`<init>`().",
     ),
     mode = All,
   )
@@ -267,7 +268,8 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |""".stripMargin,
     List(
       "jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
-      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`().",
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#Type#`<init>`().",
+      "jackson/JsonNode#`<init>`().",
     ),
     mode = All,
   )
@@ -282,7 +284,8 @@ class JavaToplevelSuite extends BaseToplevelSuite {
         |}
         |""".stripMargin,
     List("jackson/", "jackson/JsonNode#", "jackson/JsonNode#Type#",
-      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#`<init>`()."),
+      "jackson/JsonNode#Type#Decimal.", "jackson/JsonNode#Type#`<init>`().",
+      "jackson/JsonNode#`<init>`()."),
     mode = All,
   )
   check(
