@@ -288,7 +288,10 @@ class ProjectMetalsLspService(
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[Unit] =
-    if (connectionProvider.willGenerateBspConfig) Future.unit
+    if (
+      connectionProvider.willGenerateBspConfig ||
+      userConfig.buildChangedAction.isNone
+    ) Future.unit
     else {
       val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
       tables.buildTool.selectedBuildTool() match {
