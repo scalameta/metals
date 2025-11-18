@@ -13,6 +13,7 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
+import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -53,6 +54,8 @@ case class UserConfiguration(
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
+    rangeFormattingProviders: RangeFormattingProviders =
+      RangeFormattingProviders.default,
     enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
@@ -133,6 +136,10 @@ case class UserConfiguration(
           )
         ),
         Some(("enableIndentOnPaste", enableIndentOnPaste)),
+        listField(
+          "rangeFormattingProviders",
+          Some(rangeFormattingProviders.values),
+        ),
         Some(
           (
             "enableSemanticHighlighting",
@@ -648,6 +655,20 @@ object UserConfiguration {
             )
         },
       )
+    def getParsedArrayKey[T](
+        key: String,
+        parse: Option[List[String]] => Either[String, T],
+    ): Option[T] = {
+      getStringListKey(key).flatMap { values =>
+        parse(Some(values)).fold(
+          err => {
+            errors += s"json error: $err"
+            None
+          },
+          Some(_),
+        )
+      }
+    }
     def getParsedKey[T](
         key: String,
         parse: Option[String] => Either[String, T],
@@ -847,6 +868,14 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
+    val rangeFormattingProviders = getParsedArrayKey(
+      "range-formatting-providers",
+      values =>
+        RangeFormattingProviders.fromConfigOrFeatureFlag(
+          values,
+          featureFlags,
+        ),
+    ).getOrElse(RangeFormattingProviders.default)
     val enableSemanticHighlighting =
       getBooleanKey("enable-semantic-highlighting").getOrElse(true)
     val excludedPackages =
@@ -964,6 +993,7 @@ object UserConfiguration {
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
+          rangeFormattingProviders,
           enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,

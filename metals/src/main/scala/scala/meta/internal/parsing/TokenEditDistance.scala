@@ -6,8 +6,8 @@ import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Success
 
-import scala.meta.Input
-import scala.meta.Position
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.TokenOps.syntax._
 import scala.meta.internal.{semanticdb => s}
@@ -417,7 +417,7 @@ object TokenEditDistance {
       original: Array[A],
       revisedInput: Input.VirtualFile,
       revised: Array[A],
-  )(implicit ops: TokenOps[A]) = {
+  )(implicit ops: TokenOps[A]): Diff[A] = {
     val buffer = Array.newBuilder[MatchingToken[A]]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec

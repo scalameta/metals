@@ -374,6 +374,7 @@ class UserConfigurationSuite extends BaseSuite {
   },
   "enableStripMarginOnTypeFormatting": false,
   "enableIndentOnPaste": true,
+  "rangeFormattingProviders": [],
   "enableSemanticHighlighting": false,
   "excludedPackages": [
     "excluded"

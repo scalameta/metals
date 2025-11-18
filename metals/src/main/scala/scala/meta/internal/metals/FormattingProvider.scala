@@ -20,7 +20,8 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta._
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
@@ -109,13 +110,14 @@ final class FormattingProvider(
       path: AbsolutePath,
       projectRoot: AbsolutePath,
       token: CancelChecker,
+      defaultUserAction: Option[l.MessageActionItem] = None,
   ): Future[util.List[l.TextEdit]] = {
     scalafmt = scalafmt.withReporter(activeReporter(projectRoot))
     reset(token)
     val input = path.toInputFromBuffers(buffers)
     scalafmtConf(projectRoot) match {
       case None =>
-        handleMissingFile(projectRoot).map {
+        handleMissingFile(projectRoot, defaultUserAction).map {
           case Some(conf) =>
             runFormat(path, conf, input).asJava
           case None =>
@@ -214,11 +216,16 @@ final class FormattingProvider(
   }
 
   private def handleMissingFile(
-      projectRoot: AbsolutePath
+      projectRoot: AbsolutePath,
+      defaultUserAction: Option[l.MessageActionItem],
   ): Future[Option[AbsolutePath]] = {
     if (!tables.dismissedNotifications.CreateScalafmtFile.isDismissed) {
       val params = MissingScalafmtConf.params()
-      client.showMessageRequest(params).asScala.map { item =>
+      val action: Future[l.MessageActionItem] = defaultUserAction match {
+        case None => client.showMessageRequest(params).asScala
+        case Some(value) => Future.successful(value)
+      }
+      action.map { item =>
         if (
           item == MissingScalafmtConf.createFile || item == MissingScalafmtConf.runDefaults
         ) {

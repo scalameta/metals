@@ -230,6 +230,45 @@ object Configs {
     }
   }
 
+  final case class RangeFormattingProviders(val values: List[String]) {
+    values.foreach(value =>
+      require(
+        RangeFormattingProviders.isValid(value),
+        s"invalid value $value for range formatting providers. Valid values are \"scalafmt\"",
+      )
+    )
+    def isScalafmt: Boolean =
+      values.contains("scalafmt")
+  }
+
+  object RangeFormattingProviders {
+    def isValid(value: String): Boolean =
+      value == "scalafmt"
+    def default: RangeFormattingProviders = RangeFormattingProviders(Nil)
+    def fromConfigOrFeatureFlag(
+        values: Option[List[String]],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, RangeFormattingProviders] = {
+      values match {
+        case Some(ok) if ok.forall(RangeFormattingProviders.isValid) =>
+          Right(RangeFormattingProviders(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for range formatting providers. Valid values are \"scalafmt\""
+          )
+        case None =>
+          val isScalafmtEnabled = featureFlags
+            .readBoolean(FeatureFlag.SCALAFMT_RANGE_FORMATTER)
+            .orElse(false)
+          if (isScalafmtEnabled) {
+            Right(RangeFormattingProviders(List("scalafmt")))
+          } else {
+            Right(RangeFormattingProviders.default)
+          }
+      }
+    }
+  }
+
   final case class JavaOutlineProviderConfig(val value: String) {
     require(List("qdox", "javac").contains(value), value)
     def isQdox: Boolean =

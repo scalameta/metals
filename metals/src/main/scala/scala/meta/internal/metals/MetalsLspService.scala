@@ -257,11 +257,6 @@ abstract class MetalsLspService(
     initializeParams.supportsHierarchicalDocumentSymbols,
   )
 
-  protected val onTypeFormattingProvider =
-    new OnTypeFormattingProvider(buffers, trees, () => userConfig)
-  protected val rangeFormattingProvider =
-    new RangeFormattingProvider(buffers, trees, () => userConfig)
-
   protected val foldingRangeProvider = new FoldingRangeProvider(
     trees,
     buffers,
@@ -402,6 +397,15 @@ abstract class MetalsLspService(
     tables,
     buildTargets,
   )
+  protected val onTypeFormattingProvider =
+    new OnTypeFormattingProvider(buffers, trees, () => userConfig)
+  protected val rangeFormattingProvider =
+    new RangeFormattingProvider(
+      buffers,
+      trees,
+      () => userConfig,
+      formattingProvider,
+    )
 
   protected val javaHighlightProvider: JavaDocumentHighlightProvider =
     new JavaDocumentHighlightProvider(
@@ -1202,12 +1206,14 @@ abstract class MetalsLspService(
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens { _ =>
+    CancelTokens { token =>
       val path = params.getTextDocument.getUri.toAbsolutePath
       if (path.isJava)
         javaFormattingProvider.formatRange(params)
-      else
-        rangeFormattingProvider.format(params).asJava
+      else {
+        val projectRoot = optProjectRoot.getOrElse(folder)
+        rangeFormattingProvider.format(params, projectRoot, token).asJava
+      }
     }
 
   override def prepareRename(

@@ -30,4 +30,7 @@ public enum FeatureFlag {
 
   /** If enabled, shows compiler progress in the status bar. */
   COMPILE_PROGRESS,
+
+  /** If enabled, uses the scalafmt range formatter. */
+  SCALAFMT_RANGE_FORMATTER,
 }
