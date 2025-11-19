@@ -48,6 +48,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.LazyMbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -485,6 +486,14 @@ abstract class MetalsLspService(
       timerProvider,
       featureFlags,
     )
+  )
+
+  val mbtReferenceProvider = new MbtReferenceProvider(
+    mbtSymbolSearch,
+    compilers,
+    buffers,
+    time,
+    languageClient,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
@@ -1137,7 +1146,11 @@ abstract class MetalsLspService(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
-      implementationProvider.implementations(position).map(_.asJava)
+      if (userConfig.referenceProvider.isMbt) {
+        mbtReferenceProvider.implementations(position).map(_.asJava)
+      } else {
+        implementationProvider.implementations(position).map(_.asJava)
+      }
     }
 
   override def hover(params: HoverExtParams): CompletableFuture[Hover] = {
@@ -1252,7 +1265,15 @@ abstract class MetalsLspService(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
-      referencesResult(params).map(getSortedLocations)
+      if (
+        userConfig.referenceProvider.isMbt &&
+        // Remove this condition once we have Scala support for MbtReferenceProvider
+        params.getTextDocument().getUri().isJavaFilename
+      ) {
+        mbtReferenceProvider.references(params).map(getSortedLocations)
+      } else {
+        referencesProvider.references(params).map(getSortedLocations)
+      }
     }
 
   private def getSortedLocations(referencesResult: List[ReferencesResult]) =

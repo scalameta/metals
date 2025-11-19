@@ -1,11 +1,14 @@
 package scala.meta.internal.metals.mbt
 
+import scala.collection.View
+
 import scala.meta.Dialect
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.jsemanticdb.Semanticdb.Language.JAVA
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StringBloomFilter
@@ -63,7 +66,7 @@ case class IndexedDocument(
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
       .setBloomFilterVersion(
-        if (language.isJava) Mbt.IndexedDocument.BloomFilterVersion.V2
+        if (language.isJava) Mbt.IndexedDocument.BloomFilterVersion.V3
         else Mbt.IndexedDocument.BloomFilterVersion.V1
       )
   }
@@ -82,10 +85,11 @@ object IndexedDocument {
       dialect: Dialect,
   ): IndexedDocument = {
     val input = file.toInputFromBuffers(buffers)
-    val sdoc = mtags.indexToplevelSymbols(
+    val sdoc = mtags.indexMBT(
       file.toNIO.toJLanguage,
       input,
       dialect,
+      includeReferences = true,
     )
     val symbols = for {
       info <- sdoc.symbols.iterator
@@ -104,16 +108,32 @@ object IndexedDocument {
       .maxByOption(_.symbol.length)
       .map(_.symbol)
       .getOrElse(Symbol.EmptyPackage.value)
+    val definitions =
+      sdoc.occurrences.view.filter(_.role.isDefinition).map(_.symbol)
+    val references =
+      sdoc.occurrences.view.filter(_.role.isReference).map(_.symbol)
     IndexedDocument(
       file = file,
       oid = OID.fromText(input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_FILE,
       semanticdbPackage = semanticdbPackage,
-      bloomFilter =
-        Fuzzy.bloomFilterSymbolStrings(sdoc.occurrences.map(_.symbol)),
+      bloomFilter = bloomFilterMBT(definitions, references),
       language = file.toJLanguage,
       symbols = symbols.toSeq,
     )
+  }
+
+  private def bloomFilterMBT(
+      definitions: View[String],
+      references: View[String],
+  ): StringBloomFilter = {
+    val symbolsSize = Fuzzy.estimateSizeOfSymbolStrings(definitions)
+    val bf = StringBloomFilter.forEstimatedSize(symbolsSize + references.size)
+    Fuzzy.bloomFilterSymbolStrings(definitions, bf)
+    references.foreach { sym =>
+      bf.putCharSequence(FingerprintedCharSequence.fuzzyReference(sym))
+    }
+    bf
   }
 
   /**
@@ -131,8 +151,10 @@ object IndexedDocument {
       oid = OID.fromText(params.input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_SYMBOLS,
       semanticdbPackage = semanticdbPackage,
-      bloomFilter =
-        Fuzzy.bloomFilterSymbolStrings(params.symbols.map(_.symbol)),
+      bloomFilter = bloomFilterMBT(
+        params.symbols.view.map(_.symbol),
+        params.references.view,
+      ),
       language = params.path.toJLanguage,
       symbols = params.symbols
         .map(s =>
@@ -180,7 +202,7 @@ object IndexedDocument {
   // that language.
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
-      case JAVA => Mbt.IndexedDocument.BloomFilterVersion.V2
+      case JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }

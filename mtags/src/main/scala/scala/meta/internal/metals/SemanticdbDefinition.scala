@@ -25,6 +25,7 @@ case class SemanticdbDefinition(
     occ: SymbolOccurrence,
     owner: String
 ) {
+  def isReference: Boolean = occ.role.isReference
   def toCached: WorkspaceSymbolInformation = {
     val range = occ.range.getOrElse(s.Range())
     WorkspaceSymbolInformation(info.symbol, info.kind, range.toLsp)
@@ -91,7 +92,8 @@ object SemanticdbDefinition {
       case Semanticdb.Language.JAVA =>
         val indexer = mtags.config.javaInstanceWithOccurrenceVisitor(
           input,
-          includeMembers = includeMembers
+          includeMembers = includeMembers,
+          includeReferences = collectIdentifiers
         )((occ, info, owner) => fn(SemanticdbDefinition(info, occ, owner)))
         try indexer.indexRoot()
         catch {

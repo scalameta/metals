@@ -8,7 +8,7 @@ import scala.meta.internal.metals.UserConfiguration
 
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
   override def userConfig: UserConfiguration =
-    UserConfiguration(
+    super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = true,
       buildOnChange = false,

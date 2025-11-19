@@ -15,6 +15,7 @@ import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
+import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -84,6 +85,7 @@ case class UserConfiguration(
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
+    referenceProvider: ReferenceProviderConfig = ReferenceProviderConfig.default,
 ) {
 
   override def toString(): String = {
@@ -230,6 +232,12 @@ case class UserConfiguration(
           (
             "compilerProgress",
             compilerProgress.value,
+          )
+        ),
+        Some(
+          (
+            "referenceProvider",
+            referenceProvider.value,
           )
         ),
       ).flatten
@@ -983,6 +991,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(CompilerProgressConfig.default)
+    val referenceProvider = getParsedKey(
+      "reference-provider",
+      value =>
+        ReferenceProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(ReferenceProviderConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -1029,6 +1045,7 @@ object UserConfiguration {
           definitionIndexStrategy,
           javaOutlineProvider,
           compilerProgress,
+          referenceProvider,
         )
       )
     } else {

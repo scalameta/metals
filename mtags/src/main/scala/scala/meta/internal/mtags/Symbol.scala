@@ -27,6 +27,7 @@ final class Symbol private (val value: String) {
   def isLocal: Boolean = value.isLocal
   def isTerm: Boolean = desc.isTerm
   def isMethod: Boolean = desc.isMethod
+  def isConstructor: Boolean = desc.isMethod && desc.name.value == "<init>"
   def isType: Boolean = desc.isType
   def isPackage: Boolean = desc.isPackage
   def isParameter: Boolean = desc.isParameter

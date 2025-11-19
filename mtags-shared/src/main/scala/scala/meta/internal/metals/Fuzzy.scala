@@ -291,7 +291,16 @@ class Fuzzy {
   def bloomFilterSymbolStrings(
       symbols: Iterable[String]
   ): StringBloomFilter = {
-    val estimatedSize = symbols.foldLeft(0) { case (accum, string) =>
+    val estimatedSize = estimateSizeOfSymbolStrings(symbols)
+    val hasher = StringBloomFilter.forEstimatedSize(estimatedSize)
+    bloomFilterSymbolStrings(symbols, hasher)
+    hasher
+  }
+
+  def estimateSizeOfSymbolStrings(
+      symbols: Iterable[String]
+  ): Int = {
+    symbols.foldLeft(0) { case (accum, string) =>
       val redundantSuffix =
         if (string.endsWith(".class")) ".class".length()
         else 0
@@ -300,9 +309,6 @@ class Fuzzy {
         TrigramSubstrings.trigramCombinations(uppercases) -
         redundantSuffix
     }
-    val hasher = StringBloomFilter.forEstimatedSize(estimatedSize)
-    bloomFilterSymbolStrings(symbols, hasher)
-    hasher
   }
 
   /**

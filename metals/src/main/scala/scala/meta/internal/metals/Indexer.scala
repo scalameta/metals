@@ -19,6 +19,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
@@ -578,13 +579,16 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
         val allSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
-          indexProviders.mtags,
-          input,
-          dialect,
-          includeMembers = true,
-          collectIdentifiers = true,
-        ) { case SemanticdbDefinition(info, occ, owner) =>
+        val references = mutable.Buffer.empty[String]
+        def onDefinition(defn: SemanticdbDefinition): Unit = {
+          val occ = defn.occ
+          val info = defn.info
+          val owner = defn.owner
+          if (occ.role.isReference) {
+            references += occ.symbol
+            return
+          }
+
           allSymbols += WorkspaceSymbolInformation(
             info.symbol,
             info.kind,
@@ -624,6 +628,15 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             )
           }
         }
+
+        val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
+          indexProviders.mtags,
+          input,
+          dialect,
+          includeMembers = true,
+          collectIdentifiers = true,
+        )(onDefinition)
+
         optMtags
           .map(_.allIdentifiers)
           .filter(_.nonEmpty)
@@ -636,6 +649,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             source,
             input,
             allSymbols,
+            references,
             methodSymbols.toSeq,
           )
         )

@@ -5,15 +5,7 @@ import java.{util => ju}
 import javax.tools.JavaFileObject.Kind
 import javax.tools.SimpleJavaFileObject
 
-import scala.util.control.NonFatal
-
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.semanticdb.Scala.DescriptorParser
-import scala.meta.internal.semanticdb.SymbolInformation.Kind.CLASS
-import scala.meta.internal.semanticdb.SymbolInformation.Kind.OBJECT
-import scala.meta.internal.semanticdb.SymbolInformation.Kind.PACKAGE_OBJECT
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc
 import scala.meta.pc.SemanticdbCompilationUnit
@@ -47,19 +39,7 @@ final case class VirtualTextDocument(
   def widen: SimpleJavaFileObject = this
 }
 object VirtualTextDocument {
-  private def isToplevelSymbol(info: s.SymbolInformation): Boolean = {
-    info.kind match {
-      case PACKAGE_OBJECT => true
-      case CLASS | OBJECT =>
-        try {
-          val (_, owner) = DescriptorParser(info.symbol)
-          owner.endsWith("/")
-        } catch {
-          case NonFatal(_) => false
-        }
-      case _ => false
-    }
-  }
+
   def fromDocument(
       language: pc.Language,
       pkg: String,
@@ -84,28 +64,4 @@ object VirtualTextDocument {
     )
   }
 
-  def fromText(
-      mtags: Mtags,
-      language: pc.Language,
-      uri: URI,
-      text: String,
-  ): VirtualTextDocument = {
-    val input = Input.VirtualFile(uri.toString(), text)
-    val doc = mtags.indexToplevelSymbols(
-      input.toJLanguage,
-      input,
-      meta.dialects.Scala213,
-    )
-    val toplevelSymbols = doc.symbols.collect {
-      case s if isToplevelSymbol(s) => s.symbol
-    }
-    val pkg = toplevelSymbols.headOption
-      .map { sym =>
-        val (_, owner) = DescriptorParser(sym)
-        owner
-      }
-      .getOrElse("_root_")
-
-    VirtualTextDocument(uri, language, text, pkg, toplevelSymbols)
-  }
 }

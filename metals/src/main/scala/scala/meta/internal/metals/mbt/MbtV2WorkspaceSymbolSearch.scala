@@ -12,6 +12,7 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
 import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -29,11 +30,13 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyWorkDoneProgress
+import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SemanticdbCompilationUnit
@@ -233,6 +236,48 @@ class MbtV2WorkspaceSymbolSearch(
         } yield doc.toSemanticdbCompilationUnit(buffers)
         ArrayBuffer.from(result).asJava
     }
+  }
+
+  override def possibleReferences(
+      params: MbtPossibleReferencesParams
+  ): Iterable[AbsolutePath] = {
+    val queries = HashSet.empty[String]
+    params.implementations.foreach { symbol =>
+      val sym = Symbol(symbol)
+      if (sym.isMethod) {
+        queries += s"${sym.displayName}():"
+      } else if (sym.isType) {
+        queries += s"${sym.displayName}:"
+      } else {
+        scribe.warn(
+          s"mbt-v2: unexpected implementation symbol for possibleReferences: ${symbol}"
+        )
+      }
+    }
+    params.references.foreach { ref =>
+      val sym = Symbol(ref)
+      if (sym.isGlobal) {
+        if (sym.isConstructor) {
+          queries += s"${sym.owner.displayName}."
+        } else if (sym.isMethod) {
+          queries += s"${sym.displayName}()."
+        } else {
+          queries += s"${sym.displayName}."
+          queries += s"${sym.displayName}:"
+        }
+      }
+    }
+    val fingerprints =
+      queries.iterator.map(FingerprintedCharSequence.fuzzyReference).toBuffer
+    val result = new ju.concurrent.ConcurrentLinkedDeque[AbsolutePath]()
+    for {
+      path <- documentsKeys.toList
+      doc <- documents.get(path).toList.iterator
+      if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
+    } {
+      result.add(path)
+    }
+    result.asScala
   }
 
   override def workspaceSymbolSearch(

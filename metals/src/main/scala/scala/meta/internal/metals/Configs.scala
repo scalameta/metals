@@ -269,6 +269,43 @@ object Configs {
     }
   }
 
+  final case class ReferenceProviderConfig(val value: String) {
+    require(List("bsp", "mbt").contains(value), value)
+    val isBsp: Boolean =
+      value == "bsp"
+    val isMbt: Boolean =
+      value == "mbt"
+  }
+
+  object ReferenceProviderConfig {
+    def bsp: ReferenceProviderConfig =
+      ReferenceProviderConfig("bsp")
+    def mbt: ReferenceProviderConfig =
+      ReferenceProviderConfig("mbt")
+    def default: ReferenceProviderConfig = bsp
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, ReferenceProviderConfig] = {
+      value match {
+        case Some(ok @ ("bsp" | "mbt")) => Right(ReferenceProviderConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for referenceProvider. Valid values are \"bsp\" and \"mbt\""
+          )
+        case None =>
+          val isMbtEnabled = featureFlags
+            .readBoolean(FeatureFlag.MBT_REFERENCE_PROVIDER)
+            .orElse(false)
+          if (isMbtEnabled) {
+            Right(ReferenceProviderConfig.mbt)
+          } else {
+            Right(ReferenceProviderConfig.default)
+          }
+      }
+    }
+  }
+
   final case class JavaOutlineProviderConfig(val value: String) {
     require(List("qdox", "javac").contains(value), value)
     def isQdox: Boolean =

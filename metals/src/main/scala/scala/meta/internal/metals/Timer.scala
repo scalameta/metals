@@ -6,6 +6,8 @@ import java.time.Duration
 import java.util.Locale
 import java.util.concurrent.TimeUnit
 
+import scala.concurrent.duration.FiniteDuration
+
 class Timer(time: Time) {
   var startNanos: Long = time.nanos()
   def isLogWorthy: Boolean =
@@ -17,6 +19,9 @@ class Timer(time: Time) {
     now - startNanos
   }
   def elapsed: Duration = Duration.ofNanos(elapsedNanos)
+  def hasElapsed(duration: FiniteDuration): Boolean = {
+    elapsedNanos > duration.toNanos
+  }
   def elapsedMillis: Long = {
     TimeUnit.NANOSECONDS.toMillis(elapsedNanos)
   }

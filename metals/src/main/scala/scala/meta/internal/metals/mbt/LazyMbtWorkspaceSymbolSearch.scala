@@ -63,6 +63,9 @@ class LazyMbtWorkspaceSymbolSearch(
       EmptyMbtWorkspaceSymbolSearch
     }
 
+  override def possibleReferences(
+      params: MbtPossibleReferencesParams
+  ): Iterable[AbsolutePath] = delegate.possibleReferences(params)
   override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] =
     delegate.listPackage(pkg)
   override def onReindex(): IndexingStats =

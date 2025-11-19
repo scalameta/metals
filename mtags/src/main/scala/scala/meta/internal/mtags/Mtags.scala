@@ -113,6 +113,22 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       .toList
   }
 
+  def allToplevels(
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeMembers: Boolean = true
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
+    input.toLanguage match {
+      case Language.JAVA =>
+        config.javaInstance(input, includeMembers = true).index()
+      case Language.SCALA =>
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers, dialect)
+        mtags.index()
+      case _ =>
+        TextDocument()
+    }
+
   def index(
       path: AbsolutePath,
       dialect: Dialect
@@ -139,32 +155,24 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       .withText(input.text)
   }
 
-  def allToplevels(
-      input: Input.VirtualFile,
-      dialect: Dialect,
-      includeMembers: Boolean = true
-  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
-    input.toLanguage match {
-      case Language.JAVA =>
-        config.javaInstance(input, includeMembers = true).index()
-      case Language.SCALA =>
-        val indexer =
-          new ScalaToplevelMtags(input, true, includeMembers, dialect)
-        indexer.index()
-      case _ =>
-        TextDocument()
-    }
-
-  def indexToplevelSymbols(
+  def indexMBT(
       language: Semanticdb.Language,
       input: Input.VirtualFile,
-      dialect: Dialect
+      dialect: Dialect,
+      includeReferences: Boolean = false
   ): TextDocument = {
     addLines(language, input.text)
     val result =
       if (language == Semanticdb.Language.JAVA) {
-        config.javaInstance(input, includeMembers = true).index()
+        config
+          .javaInstance(
+            input,
+            includeMembers = true,
+            includeReferences = includeReferences
+          )
+          .index()
       } else if (language == Semanticdb.Language.SCALA) {
+        // References are not supported yet for Scala.
         new ScalaToplevelMtags(
           input,
           includeInnerClasses = true,

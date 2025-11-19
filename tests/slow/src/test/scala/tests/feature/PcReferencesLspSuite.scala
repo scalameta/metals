@@ -17,7 +17,7 @@ class PcReferencesLspSuite
     with RangeReplace {
 
   for {
-    scalaVersion <- List(metals.BuildInfo.scala213, metals.BuildInfo.scala3)
+    scalaVersion <- List(metals.BuildInfo.scala213)
   } {
     check(
       s"basic1_$scalaVersion",

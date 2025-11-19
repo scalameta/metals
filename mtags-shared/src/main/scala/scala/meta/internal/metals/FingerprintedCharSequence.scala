@@ -35,4 +35,6 @@ case class FingerprintedCharSequence(value: CharSequence, fingerprint: Char)
 object FingerprintedCharSequence {
   def exactWord(value: CharSequence): FingerprintedCharSequence =
     FingerprintedCharSequence(value, "😎".charAt(0))
+  def fuzzyReference(value: CharSequence): FingerprintedCharSequence =
+    FingerprintedCharSequence(value, "🔍".charAt(0))
 }

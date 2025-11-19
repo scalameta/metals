@@ -491,10 +491,11 @@ final class MbtWorkspaceSymbolProvider(
           )
         // No need to hold on the text contents after we have read them
         file.textBytes = null
-        mtags.indexToplevelSymbols(
+        mtags.indexMBT(
           file.toJLanguage,
           input,
           dialects.Scala213,
+          includeReferences = false,
         )
       }.recover {
         case _: UnexpectedInputEndException =>

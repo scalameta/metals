@@ -41,4 +41,7 @@ public enum FeatureFlag {
 
   /** If enabled, uses the scalafmt range formatter. */
   SCALAFMT_RANGE_FORMATTER,
+
+  /** If enabled, uses the MBT-based reference provider. */
+  MBT_REFERENCE_PROVIDER,
 }

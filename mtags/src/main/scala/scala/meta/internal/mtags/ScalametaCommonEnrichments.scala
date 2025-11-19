@@ -194,9 +194,9 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
      * @param input file input the position relates to
      * @return scalameta position with offset if the pos is contained in the file
      */
-    def toMeta(input: m.Input): Option[m.Position] = {
+    def toMeta(input: Input): Option[Position] = {
       Try(
-        m.Position.Range(
+        Position.Range(
           input,
           pos.getLine,
           pos.getCharacter,

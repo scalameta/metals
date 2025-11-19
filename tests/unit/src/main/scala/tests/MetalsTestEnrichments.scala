@@ -21,6 +21,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceSources
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
@@ -87,7 +88,7 @@ object MetalsTestEnrichments {
         val includeMembers =
           wsp.workspace.extension != "zip" && wsp.workspace.extension != "jar"
         SemanticdbDefinition.foreach(
-          m.internal.mtags.Mtags.testingSingleton,
+          Mtags.testingSingleton,
           input,
           dialect,
           includeMembers,

@@ -7,18 +7,25 @@ import scala.meta.internal.{semanticdb => s}
 final case class MtagsConfig(
     useQdox: Boolean = false
 ) {
-  def javaInstance(input: Input.VirtualFile, includeMembers: Boolean)(implicit
-      rc: ReportContext
-  ): MtagsIndexer = {
+  def javaInstance(
+      input: Input.VirtualFile,
+      includeMembers: Boolean,
+      includeReferences: Boolean = false
+  )(implicit rc: ReportContext): MtagsIndexer = {
     if (useQdox) {
       new QdoxJavaMtags(input, includeMembers)
     } else {
-      new JavacMtags(input, includeMembers)
+      new JavacMtags(
+        input,
+        includeMembers,
+        includeFuzzyReferences = includeReferences
+      )
     }
   }
   def javaInstanceWithOccurrenceVisitor(
       virtualFile: Input.VirtualFile,
-      includeMembers: Boolean
+      includeMembers: Boolean,
+      includeReferences: Boolean
   )(onOccurrence: (s.SymbolOccurrence, s.SymbolInformation, String) => Unit)(
       implicit rc: ReportContext
   ): MtagsIndexer = {
@@ -33,7 +40,19 @@ final case class MtagsConfig(
         }
       }
     } else {
-      new JavacMtags(virtualFile, includeMembers) {
+      val emptyInfo = s.SymbolInformation()
+      new JavacMtags(
+        virtualFile,
+        includeMembers,
+        includeFuzzyReferences = includeReferences
+      ) {
+        override def visitFuzzyReferenceOccurrence(
+            occ: s.SymbolOccurrence
+        ): Unit = {
+          if (includeReferences) {
+            onOccurrence(occ, emptyInfo, owner)
+          }
+        }
         override def visitOccurrence(
             occ: s.SymbolOccurrence,
             info: s.SymbolInformation,

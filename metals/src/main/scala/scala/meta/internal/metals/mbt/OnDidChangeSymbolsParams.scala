@@ -8,5 +8,6 @@ case class OnDidChangeSymbolsParams(
     path: AbsolutePath,
     input: Input.VirtualFile,
     symbols: collection.Seq[WorkspaceSymbolInformation],
+    references: collection.Seq[String],
     methodSymbols: collection.Seq[WorkspaceSymbolInformation],
 )

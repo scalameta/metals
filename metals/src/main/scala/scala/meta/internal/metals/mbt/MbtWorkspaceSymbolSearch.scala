@@ -16,6 +16,11 @@ case class MbtWorkspaceSymbolSearchParams(
     buildTargetIdentifier: String,
 )
 
+case class MbtPossibleReferencesParams(
+    references: collection.Seq[String] = Nil,
+    implementations: collection.Seq[String] = Nil,
+)
+
 trait MbtWorkspaceSymbolSearch extends SemanticdbFileManager with Closeable {
 
   /**
@@ -27,6 +32,10 @@ trait MbtWorkspaceSymbolSearch extends SemanticdbFileManager with Closeable {
   def onDidChange(file: AbsolutePath): Unit
   def onDidDelete(file: AbsolutePath): Unit
   def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
+
+  def possibleReferences(
+      params: MbtPossibleReferencesParams
+  ): Iterable[AbsolutePath] = Nil
 
   /**
    * The main search API.

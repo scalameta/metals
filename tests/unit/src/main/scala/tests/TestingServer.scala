@@ -125,6 +125,7 @@ import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.{lsp4j => l}
 import tests.MetalsTestEnrichments._
+import tests.TestOrderings._
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -369,6 +370,60 @@ final case class TestingServer(
     exec(expectations).map(expected => {
       Assertions.assertEquals(obtained.toList, expected)
     })
+  }
+
+  def assertImplementationsSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
+    val path = toPath(filename)
+    val params = new l.TextDocumentPositionParams(
+      path.toTextDocumentIdentifier,
+      subqueryPosition(path, subquery).toLspStartPosition,
+    )
+    for {
+      locations <- server.implementation(params).asScala
+    } yield {
+      assertLocations(locations.asScala.toList, "implementation", expected)
+    }
+  }
+
+  def assertReferencesSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
+    val path = toPath(filename)
+    val pos = subqueryPosition(path, subquery)
+    val params = new l.ReferenceParams(
+      path.toTextDocumentIdentifier,
+      pos.toLspStartPosition,
+      new l.ReferenceContext( /* includeDeclaration = */ true),
+    )
+    for {
+      locations <- server.references(params).asScala
+    } yield {
+      assertLocations(locations.asScala.toList, "reference", expected)
+    }
+  }
+
+  private def assertLocations(
+      locations: List[l.Location],
+      kind: String,
+      expected: String,
+  )(implicit loc: munit.Location): Unit = {
+    val sortedLocations = locations.sorted
+    val references = for {
+      loc <- sortedLocations
+      range = loc.getRange()
+      locPath = loc.getUri().toAbsolutePath
+      locInput = locPath
+        .toInputFromBuffers(buffers)
+        .copy(path = locPath.toRelative(workspace).toURI(false).toString)
+      meta <- range.toMeta(locInput).toList
+    } yield meta.formatMessage("", kind)
+    Assertions.assertNoDiff(references.mkString("\n"), expected)
   }
 
   def assertReferences(
@@ -1598,21 +1653,18 @@ final case class TestingServer(
     }
   }
 
-  // Does a goto-definition from a substring AND it does not trigger a didChange
-  // notification.
-  def definitionSubstringQuery(
-      filename: String,
-      substringQuery: String,
-  ): Future[List[Location]] = {
-    val queryOffset = substringQuery.indexOf("@@")
+  private def subqueryPosition(
+      abspath: AbsolutePath,
+      subquery: String,
+  ): m.inputs.Position = {
+    val queryOffset = subquery.indexOf("@@")
     if (queryOffset < 0) {
       throw new IllegalArgumentException(
-        s"query '$substringQuery' does not contain '@@'"
+        s"query '$subquery' does not contain '@@'"
       )
     }
-    val abspath = toPath(filename)
     val input = abspath.toInputFromBuffers(buffers)
-    val queryText = substringQuery.replace("@@", "")
+    val queryText = subquery.replace("@@", "")
     val textOffset = input.text.indexOf(queryText)
     if (textOffset < 0) {
       throw new IllegalArgumentException(
@@ -1620,9 +1672,20 @@ final case class TestingServer(
       )
     }
     val offset = textOffset + queryOffset
+    input.toOffsetPosition(offset)
+  }
+
+  // Does a goto-definition from a substring AND it does not trigger a didChange
+  // notification.
+  def definitionSubstringQuery(
+      filename: String,
+      substringQuery: String,
+  ): Future[List[Location]] = {
+    val abspath = toPath(filename)
+    val pos = subqueryPosition(abspath, substringQuery)
     val params = new TextDocumentPositionParams(
       abspath.toTextDocumentIdentifier,
-      input.toOffsetPosition(offset).toLspStartPosition,
+      pos.toLspStartPosition,
     )
     for {
       definition <- fullServer.definition(params).asScala

@@ -408,7 +408,8 @@ class UserConfigurationSuite extends BaseSuite {
   "workspaceSymbolProvider": "mbt",
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
-  "compilerProgress": "disabled"
+  "compilerProgress": "disabled",
+  "referenceProvider": "bsp"
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
