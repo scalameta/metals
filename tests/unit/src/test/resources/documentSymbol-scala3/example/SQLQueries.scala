@@ -1,7 +1,7 @@
 /*example(Package):27*/package example
 
 /*example.SQLQueries(Class):27*/class SQLQueries {
-    /*example.SQLQueries#SQLStringContext(Class):6*/implicit class SQLStringContext(sc: StringContext) {
+    /*example.SQLQueries#SQLStringContext(Class):6*/implicit class SQLStringContext(/*example.SQLQueries#SQLStringContext#sc(Variable):4*/sc: StringContext) {
         /*example.SQLQueries#SQLStringContext#sql(Method):5*/def sql(args: Any*): String = sc.s(args: _*)
     }
 
