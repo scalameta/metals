@@ -398,7 +398,8 @@ final class TargetData(val isAmmonite: Boolean = false) {
   ): Unit = {
     result.getItems.asScala.foreach { javac =>
       info(javac.getTarget()).foreach { info =>
-        javaTargetInfo(javac.getTarget) = JavaTarget(info, javac, bspSession)
+        javaTargetInfo(javac.getTarget) =
+          JavaTarget(info, info.asJvmBuildTarget, javac, bspSession)
       }
     }
   }

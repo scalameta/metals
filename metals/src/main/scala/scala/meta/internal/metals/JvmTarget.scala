@@ -7,6 +7,8 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
 trait JvmTarget {
 
+  def jvmHome: Option[String]
+
   def displayName: String
 
   def id: BuildTargetIdentifier

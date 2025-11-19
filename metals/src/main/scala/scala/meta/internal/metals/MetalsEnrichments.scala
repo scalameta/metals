@@ -142,6 +142,12 @@ object MetalsEnrichments
 
     def dataKind: String = Option(buildTarget.getDataKind()).getOrElse("")
 
+    def asJvmBuildTarget: Option[b.JvmBuildTarget] = dataKind match {
+      case "jvm" => decodeJson(buildTarget.getData, classOf[b.JvmBuildTarget])
+      case "scala" => asScalaBuildTarget.map(_.getJvmBuildTarget)
+      case _ => None
+    }
+
     def asScalaBuildTarget: Option[b.ScalaBuildTarget] = {
       asSbtBuildTarget
         .map(_.getScalaBuildTarget)

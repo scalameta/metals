@@ -8,15 +8,20 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.JavacOptionsItem
+import ch.epfl.scala.bsp4j.JvmBuildTarget
 
 case class JavaTarget(
     info: BuildTarget,
+    jvmBuildTarget: Option[JvmBuildTarget],
     javac: JavacOptionsItem,
     bspConnection: Option[BuildServerConnection],
 ) extends JvmTarget {
   def displayName: String = info.getName()
 
   def dataKind: String = info.dataKind
+
+  def jvmHome: Option[String] =
+    jvmBuildTarget.flatMap(jvm => Option(jvm.getJavaHome()))
 
   def baseDirectory: String = info.baseDirectory
 
