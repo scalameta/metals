@@ -125,6 +125,7 @@ abstract class MetalsLspService(
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
 
+  def refreshTestSuites(): Unit = testProvider.refreshTestSuites.apply(())
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
   protected val userConfigPromise: Promise[Unit] = Promise()
@@ -216,7 +217,7 @@ abstract class MetalsLspService(
     buildTargetClasses,
     () => folder,
     languageClient,
-    () => testProvider.refreshTestSuites.apply(()),
+    refreshTestSuites,
     () => {
       if (clientConfig.isDoctorVisibilityProvider())
         headDoctor.executeRefreshDoctor()

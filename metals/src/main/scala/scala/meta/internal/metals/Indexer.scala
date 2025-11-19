@@ -261,6 +261,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>
+        refreshTestSuites()
         languageClient.refreshModel()
       }
     progress.message = ""

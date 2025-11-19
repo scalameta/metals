@@ -49,6 +49,7 @@ trait IndexProviders {
   def folder: AbsolutePath
   def implementationProvider: ImplementationProvider
   def resetService(): Unit
+  def refreshTestSuites(): Unit
 
   /** Resets the presentation compilers and refreshes the diagnostics. */
   def resetPresentationCompilers(): Future[Unit]
