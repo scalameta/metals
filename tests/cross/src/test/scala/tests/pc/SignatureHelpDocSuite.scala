@@ -59,7 +59,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         "option map f getOrElse ifEmpty",
         "option.map(f).getOrElse(ifEmpty)"
       ),
-      "2.13.18" -> post21317FoldSecondParam
+      ">=2.13.18" -> post21317FoldSecondParam
     )
   )
 
@@ -91,7 +91,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         "option map f getOrElse ifEmpty",
         "option.map(f).getOrElse(ifEmpty)"
       ),
-      "2.13.18" -> post21317FoldFirstParam
+      ">=2.13.18" -> post21317FoldFirstParam
     )
   )
 
@@ -132,6 +132,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         |                  ^^^^^^^^^^^^^^^^^
         |  @param op (Int, Int) => Int
         |""".stripMargin
+
   checkDoc(
     "curry3",
     """
@@ -170,67 +171,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |  @param op (Int, Int) => Int
        |""".stripMargin,
     compat = Map(
-      "2.13" ->
-        s"""|Applies a binary operator to a start value and all elements of this collection,
-            | going left to right.
-            |
-            | Note: will not terminate for infinite-sized collections.
-            | Note: might return different results for different runs, unless the
-            |underlying collection type is ordered or the operator is associative
-            |and commutative.
-            |
-            |
-            |**Type Parameters**
-            |- `B`: the result type of the binary operator.
-            |
-            |**Parameters**
-            |- `z`: the start value.
-            |- `op`: the binary operator.
-            |
-            |**Returns:** the result of inserting `op` between consecutive elements of this collection,
-            |          going left to right with the start value `z` on the left:
-            |          `op(...op(z, x), x, ..., x)` where `x, ..., x`
-            |          ${addedSpace}are the elements of this collection.
-            |          Returns `z` if this collection is empty.
-            |foldLeft[B](z: B)(op: (B, Int) => B): B
-            |                  ^^^^^^^^^^^^^^^^^
-            |  @param op (Int, Int) => Int
-            |""".stripMargin,
-      "2.13.15" -> docsAfter21313,
-      "2.13.16" -> docsAfter21313,
-      "2.13.17" -> docsAfter21313,
-      "2.13.18" -> docsAfter21313,
-      "3" ->
-        """|Applies the given binary operator `op` to the given initial value `z` and all
-           | elements of this collection, going left to right. Returns the initial value if this collection
-           | is empty.
-           |
-           | "Going left to right" only makes sense if this collection is ordered: then if
-           | `x`, `x`, ..., `x` are the elements of this collection, the result is
-           | `op( op( ... op( op(z, x), x) ... ), x)`.
-           |
-           | If this collection is not ordered, then for each application of the operator, each
-           | right operand is an element. In addition, the leftmost operand is the initial
-           | value, and each other left operand is itself an application of the operator. The
-           | elements of this collection and the initial value all appear exactly once in the
-           | computation.
-           |
-           | Note: might return different results for different runs, unless the underlying collection type is ordered.
-           | Note: will not terminate for infinite-sized collections.
-           |
-           |
-           |**Type Parameters**
-           |- `B`: The result type of the binary operator.
-           |
-           |**Parameters**
-           |- `z`: An initial value.
-           |- `op`: A binary operator.
-           |
-           |**Returns:** The result of applying `op` to `z` and all elements of this collection,
-           |                   going left to right. Returns `z` if this collection is empty.
-           |foldLeft[B](z: B)(op: (B, Int) => B): B
-           |                  ^^^^^^^^^^^^^^^^^
-           |""".stripMargin
+      "2.13" -> docsAfter21313
     )
   )
 
@@ -329,35 +270,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |apply[A](x: A): Option[A]
        |         ^^^^
        |  @param x (Int, Int, Int) the value
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|A tuple of 3 elements; the canonical representation of a [scala.Product3](scala.Product3).
-           |
-           |
-           |**Constructor:** Create a new tuple with 3 elements. Note that it is more idiomatic to create a Tuple3 via `(t1, t2, t3)`
-           |
-           |**Parameters**
-           |- `_1`: Element 1 of this Tuple3
-           |- `_2`: Element 2 of this Tuple3
-           |- `_3`: Element 3 of this Tuple3
-           |apply[T1, T2, T3](_1: T1, _2: T2, _3: T3): (T1, T2, T3)
-           |                                  ^^^^^^
-           |""".stripMargin,
-      ">=3.2.0-RC1-bin-20220610-30f83f7-NIGHTLY" ->
-        """|An Option factory which creates Some(x) if the argument is not null,
-           | and None if it is null.
-           |
-           |
-           |**Parameters**
-           |- `x`: the value
-           |
-           |**Returns:** Some(value) if value != null, None if value == null
-           |apply[A](x: A): Option[A]
-           |         ^^^^
-           |  @param x the value
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   checkDoc(
@@ -381,13 +294,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |singleton[T <: Object](o: T): Set[T]
            |                       ^^^^
            |  @param T <T> the class of the objects in the set
-           |  @param o o the sole object to be stored in the returned set.
-           |""".stripMargin,
-      "3" ->
-        """|Returns an immutable set containing only the specified object.
-           |The returned set is serializable.
-           |singleton[T](o: T): java.util.Set[T]
-           |             ^^^^
            |  @param o o the sole object to be stored in the returned set.
            |""".stripMargin
     )
@@ -418,29 +324,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |  @param pf Partial function used when applying catch logic to determine result value
        |  @param fin Finally logic which if defined will be invoked after catch logic
        |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|A container class for catch/finally logic.
-           |
-           | Pass a different value for rethrow if you want to probably
-           | unwisely allow catching control exceptions and other throwables
-           | which the rest of the world may expect to get through.
-           |
-           |**Type Parameters**
-           |- `T`: result type of bodies used in try and catch blocks
-           |
-           |**Parameters**
-           |- `pf`: Partial function used when applying catch logic to determine result value
-           |- `fin`: Finally logic which if defined will be invoked after catch logic
-           |- `rethrow`: Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |Catch[T](pf: scala.util.control.Exception.Catcher[T], fin: Option[scala.util.control.Exception.Finally], rethrow: Throwable => Boolean)
-           |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-           |  @param pf Partial function used when applying catch logic to determine result value
-           |  @param fin Finally logic which if defined will be invoked after catch logic
-           |  @param rethrow Predicate on throwables determining when to rethrow a caught [Throwable](Throwable)
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -454,15 +338,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |<init>(parent: File, child: String): File
        |<init>(parent: String, child: String): File
        |<init>(pathname: String): File
-       |""".stripMargin,
-    compat = Map(
-      "3" -> """|File(uri: java.net.URI)
-                |     ^^^^^^^^^^^^^^^^^
-                |File(parent: java.io.File, child: String)
-                |File(parent: String, child: String)
-                |File(pathname: String)
-                |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -475,14 +351,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """|substring(beginIndex: Int): String
        |          ^^^^^^^^^^^^^^^
        |substring(beginIndex: Int, endIndex: Int): String
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|substring(beginIndex: Int, endIndex: Int): String
-           |substring(beginIndex: Int): String
-           |          ^^^^^^^^^^^^^^^
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -502,21 +371,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |valueOf(data: Array[Char], offset: Int, count: Int): String
        |valueOf(data: Array[Char]): String
        |valueOf(obj: Any): String
-       |""".stripMargin,
-    compat = Map(
-      "3" ->
-        """|valueOf(d: Double): String
-           |valueOf(f: Float): String
-           |valueOf(l: Long): String
-           |valueOf(i: Int): String
-           |        ^^^^^^
-           |valueOf(c: Char): String
-           |valueOf(b: Boolean): String
-           |valueOf(data: Array[Char], offset: Int, count: Int): String
-           |valueOf(data: Array[Char]): String
-           |valueOf(obj: Object): String
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
@@ -549,18 +404,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |valueOf(l: Long): String
            |valueOf(obj: Object): String
            |valueOf(data: Array[Char], offset: Int, count: Int): String
-           |""".stripMargin,
-      "3" ->
-        """|valueOf(d: Double): String
-           |        ^^^^^^^^^
-           |valueOf(f: Float): String
-           |valueOf(l: Long): String
-           |valueOf(i: Int): String
-           |valueOf(c: Char): String
-           |valueOf(b: Boolean): String
-           |valueOf(data: Array[Char], offset: Int, count: Int): String
-           |valueOf(data: Array[Char]): String
-           |valueOf(obj: Object): String
            |""".stripMargin
     )
   )
@@ -578,12 +421,6 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |       ^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      "3" ->
-        """|Class `Some[A]` represents existing values of type
-           | `A`.
-           |Some[A](value: A)
-           |        ^^^^^^^^
-           |""".stripMargin,
       "2.11" ->
         """|Class `Some[A]` represents existing values of type
            | `A`.
