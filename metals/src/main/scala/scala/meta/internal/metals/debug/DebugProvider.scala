@@ -389,39 +389,34 @@ class DebugProvider(
 
       for {
         _ <- compilations.compileTargets(params.getTargets().asScala.toSeq)
-        uri <- {
-          def createDebuggee(): Future[MetalsDebuggee] = getDebugee match {
-            case Right(debuggeeF) => debuggeeF
-            case Left(errorMessage) =>
-              Future.failed(new RuntimeException(errorMessage))
-          }
-
-          val dapLogger = new DebugLogger()
-          val resolver = new MetalsDebugToolsResolver()
-
-          def runWith(grace: Duration): Future[URI] =
-            createDebuggee().map { debuggee =>
-              val handler =
-                dap.DebugServer.run(
-                  debuggee,
-                  resolver,
-                  dapLogger,
-                  gracePeriod = grace,
-                )
-              handler.uri
-            }
-
-          val initialGraceSeconds =
-            clientConfig.debuggeeStartTimeout()
-          val extendedGraceSeconds = (initialGraceSeconds + 1) * 5
-
-          if (dismissedNotifications.DebuggeeStartTimeout.isDismissed) {
-            runWith(Duration(extendedGraceSeconds.toLong, TimeUnit.SECONDS))
-          } else {
-            runWith(Duration(initialGraceSeconds.toLong, TimeUnit.SECONDS))
-          }
+        debuggee <- getDebugee match {
+          case Right(debuggee) => debuggee
+          case Left(errorMessage) =>
+            Future.failed(new RuntimeException(errorMessage))
         }
-      } yield uri
+      } yield {
+        val dapLogger = new DebugLogger()
+        val resolver = new MetalsDebugToolsResolver()
+        val initialGraceSeconds =
+          clientConfig.debuggeeStartTimeout()
+        val extendedGraceSeconds = (initialGraceSeconds + 1) * 5
+
+        val gracePeriod =
+          (if (dismissedNotifications.DebuggeeStartTimeout.isDismissed) {
+             Duration(extendedGraceSeconds.toLong, TimeUnit.SECONDS)
+           } else {
+             Duration(initialGraceSeconds.toLong, TimeUnit.SECONDS)
+           })
+
+        val handler =
+          dap.DebugServer.run(
+            debuggee,
+            resolver,
+            dapLogger,
+            gracePeriod = gracePeriod,
+          )
+        handler.uri
+      }
     }
 
   def discoverTests(
