@@ -658,7 +658,7 @@ class MetalsGlobal(
 
     try loop(symbol).filterNot(_ == NoSymbol)
     catch {
-      case NoProgressFatalError(e) =>
+      case IgnorablePresentationCompilerErrors(e) =>
         logger.debug(s"invalid SemanticDB symbol: $symbol", e)
         Nil
       case NonFatal(e) =>
