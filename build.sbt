@@ -591,6 +591,8 @@ lazy val metals = project
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
       "dev.dirs" % "directories" % "26",
+      // for decompiling Java code
+      "org.benf" % "cfr" % "0.152",
 
       // ==============================================
       // Databricks dependencies for inlined telemetry.

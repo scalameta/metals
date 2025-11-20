@@ -10,6 +10,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.OffsetParams
 
 import org.eclipse.lsp4j.Location
+import org.eclipse.{lsp4j => l}
 
 class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   import compiler._
@@ -96,14 +97,29 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           case _ =>
             List(symbol)
         }
-        DefinitionResultImpl(
+        val sourceBasedDefs = DefinitionResultImpl(
           semanticdbSymbol(symbol),
           allSyms.flatMap(findSymbolLocations(_, unit)).asJava
         )
+        if (sourceBasedDefs.locations.isEmpty && symbol.associatedFile.exists) {
+          symbol.associatedFile.underlyingSource match {
+            case Some(jarFile) if jarFile.name.endsWith(".jar") =>
+              DefinitionResultImpl(
+                semanticdbSymbol(symbol),
+                List(
+                  new Location(
+                    s"jar:file:${jarFile.path}!/${symbol.associatedFile.path}",
+                    new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+                  )
+                ).asJava,
+                isResolved = false
+              )
+            case _ => sourceBasedDefs
+          }
+        } else sourceBasedDefs
       }
     }
   }
-
   private def findSymbolLocations(
       symbol: Symbol,
       unit: CompilationUnit

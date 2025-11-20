@@ -3,6 +3,7 @@ package tests.pc
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.OffsetParams
 
+import coursierapi.Dependency
 import org.eclipse.lsp4j.Location
 
 class PcDefinitionSuite extends BasePcDefinitionSuite {
@@ -22,6 +23,11 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
       .asScala
       .toList
   }
+
+  override protected def extraDependencies(
+      scalaVersion: String
+  ): Seq[Dependency] =
+    Seq(Dependency.of("args4j", "args4j", "2.37"))
 
   check(
     "basic",
@@ -620,4 +626,51 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin
   )
 
+  check(
+    "args4j-annotation",
+    """|import org.kohsuke.args4j.CmdLineParser;
+       |import org.kohsuke.args4j.Option;
+       |
+       |class Main {
+       |  @O*org/kohsuke/args4j/Option.class*/@@ption(name="-r",usage="recursively run something")
+       |  var recursive: Boolean = false
+       |  def foo() {
+       |    val parser = new CmdLineParser(this)
+       |    parser.parseArgument("--help")
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "args4j-class",
+    """|import org.kohsuke.args4j.CmdLineParser;
+       |import org.kohsuke.args4j.Option;
+       |
+       |class Main {
+       |  @Option(name="-r",usage="recursively run something")
+       |  var recursive: Boolean = false
+       |  def foo() {
+       |    val parser = new /*org/kohsuke/args4j/CmdLineParser.class*/@@CmdLineParser(this)
+       |    parser.parseArgument("--help")
+       |  }
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "args4j-method",
+    """|import org.kohsuke.args4j.CmdLineParser;
+       |import org.kohsuke.args4j.Option;
+       |
+       |class Main {
+       |  @Option(name="-r",usage="recursively run something")
+       |  var recursive: Boolean = false
+       |  def foo() {
+       |    val parser = new CmdLineParser(this)
+       |    parser.parse/*org/kohsuke/args4j/CmdLineParser.class*/@@Argument("--help")
+       |  }
+       |}
+       |""".stripMargin
+  )
 }

@@ -8,7 +8,8 @@ import org.eclipse.lsp4j.Location
 
 case class DefinitionResultImpl(
     symbol: String,
-    locations: ju.List[Location]
+    locations: ju.List[Location],
+    override val isResolved: Boolean = true
 ) extends DefinitionResult
 
 object DefinitionResultImpl {

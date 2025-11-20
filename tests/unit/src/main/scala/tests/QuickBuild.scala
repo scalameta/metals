@@ -72,6 +72,10 @@ case class QuickBuild(
     sbtVersion: String,
     sbtAutoImports: Array[String],
     platformJavaHome: String,
+    // If true, skip fetching sources. Not "fetchSources" because GSon interprets
+    // a missing value as false and it's not worth going through the effort of custom
+    // deserialization for this one field.
+    skipSources: Boolean,
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -86,6 +90,7 @@ case class QuickBuild(
       sbtVersion,
       orEmpty(sbtAutoImports),
       platformJavaHome,
+      skipSources,
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -135,7 +140,7 @@ case class QuickBuild(
       allDependencies,
       scalaVersion,
       binaryVersion,
-      sources = true,
+      sources = !skipSources,
     )
     def isSourceJar(jarFile: Path): Boolean = {
       jarFile.getFileName.toString.endsWith("-sources.jar")

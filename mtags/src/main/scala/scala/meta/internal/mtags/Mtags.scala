@@ -136,6 +136,24 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
     val language = path.toJLanguage
     val input = path.toInput
     addLines(language, input.text)
+    val result = index(input, dialect)
+    Mtags.stdLibPatches
+      .patchDocument(
+        path,
+        result
+      )
+      .withUri(input.path)
+      .withText(input.text)
+  }
+
+  /**
+   * Index a text document on the fly, typically on decompiled code
+   */
+  def index(
+      input: Input.VirtualFile,
+      dialect: Dialect
+  ): TextDocument = {
+    val language = input.toJLanguage
     val result =
       if (language == Semanticdb.Language.JAVA) {
         config.javaInstance(input, includeMembers = true).index()
@@ -146,13 +164,7 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       } else {
         TextDocument()
       }
-    Mtags.stdLibPatches
-      .patchDocument(
-        path,
-        result
-      )
-      .withUri(input.path)
-      .withText(input.text)
+    result
   }
 
   def indexMBT(

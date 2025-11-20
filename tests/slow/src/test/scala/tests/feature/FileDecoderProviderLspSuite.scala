@@ -191,8 +191,8 @@ class FileDecoderProviderLspSuite
       str
         .replace("\\", "/")
         .replaceAll(
-          "[\\s\\S]*(Can't load the class specified:)[\\s]*(org.benf.cfr.reader.util.CannotLoadClassException:.*foo\\/bar\\/example\\/Main\\.class)[\\s\\S]*",
-          "$1$2",
+          """.*(org.benf.cfr.reader.util.CannotLoadClassException: )\S+(foo\/bar\/example\/Main\.class)([^\/]+).*(foo\/bar\/example\/Main\.class)""",
+          "$1$2$3$4",
         ),
   )
 
@@ -439,6 +439,39 @@ class FileDecoderProviderLspSuite
       ),
   )
 
+  check(
+    "decode-jar-cfr-no-sources",
+    s"""
+       |/metals.json
+       |{
+       |  "a": {
+       |    "scalaVersion": "${V.scala213}",
+       |    "libraryDependencies": [
+       |      "args4j:args4j:2.37"
+       |    ],
+       |    "skipSources": "true"
+       |  }
+       |}
+       |/a/src/main/scala/a/Main.scala
+       |""".stripMargin,
+    "a/src/main/scala/a/Main.scala",
+    None,
+    "class",
+    Right(FileDecoderProviderLspSuite.args4jOptionCfr),
+    str =>
+      str
+        .replaceAll(
+          ".*(Decompiled with CFR )(\\d|.)*\\.",
+          " * Decompiled with CFR VERSION.",
+        )
+        .lines()
+        .asScala
+        .map(_.stripTrailing())
+        .mkString("\n"),
+    customUri = Some(
+      s"jar:${coursierCacheDir.toUri}v1/https/repo1.maven.org/maven2/args4j/args4j/2.37/args4j-2.37.jar!/org/kohsuke/args4j/Option.class"
+    ),
+  )
 }
 
 class FileDecoderProviderSbtLspSuite
@@ -1028,7 +1061,7 @@ object FileDecoderProviderLspSuite {
         |""".stripMargin
 
   private val cfrMissing =
-    "Can't load the class specified:org.benf.cfr.reader.util.CannotLoadClassException: foo/bar/example/Main.class - java.io.IOException: No such file foo/bar/example/Main.class"
+    "org.benf.cfr.reader.util.CannotLoadClassException: foo/bar/example/Main.class - java.io.IOException: No such file foo/bar/example/Main.class"
 
   private val cfrToplevel =
     s"""|/*
@@ -1284,4 +1317,40 @@ object FileDecoderProviderLspSuite {
         |  @workspace/somefolder/a/src/main/scala-3/* (empty)
         |  @workspace/somefolder/a/src/main/scala/*
         |  @workspace/somefolder/a/target/scala-${V.scala3}/src_managed/main/* (generated)""".stripMargin
+
+  val args4jOptionCfr: String =
+    """/*
+      | * Decompiled with CFR VERSION.
+      | */
+      |package org.kohsuke.args4j;
+      |
+      |import java.lang.annotation.ElementType;
+      |import java.lang.annotation.Retention;
+      |import java.lang.annotation.RetentionPolicy;
+      |import java.lang.annotation.Target;
+      |import org.kohsuke.args4j.spi.OptionHandler;
+      |
+      |@Retention(value=RetentionPolicy.RUNTIME)
+      |@Target(value={ElementType.FIELD, ElementType.METHOD, ElementType.PARAMETER})
+      |public @interface Option {
+      |    public String name();
+      |
+      |    public String[] aliases() default {};
+      |
+      |    public String usage() default "";
+      |
+      |    public String metaVar() default "";
+      |
+      |    public boolean required() default false;
+      |
+      |    public boolean help() default false;
+      |
+      |    public boolean hidden() default false;
+      |
+      |    public Class<? extends OptionHandler> handler() default OptionHandler.class;
+      |
+      |    public String[] depends() default {};
+      |
+      |    public String[] forbids() default {};
+      |}""".stripMargin
 }

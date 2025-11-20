@@ -1,7 +1,6 @@
 package scala.meta.internal.metals
 
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.PrintStream
 import java.net.URI
 import javax.annotation.Nullable
@@ -23,6 +22,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -38,7 +38,6 @@ import scala.meta.metap.Format.Detailed
 import scala.meta.metap.Settings
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import coursierapi._
 
 /* Response which is sent to the lsp client. Because of java serialization we cannot use
  * sealed hierarchy to model union type of success and error.
@@ -156,7 +155,7 @@ final class FileDecoderProvider(
         uri.getScheme() match {
           case "jar" =>
             val jarURI = convertJarStrToURI(uriAsStr)
-            if (semanticdbExtensions.exists(uriAsStr.endsWith))
+            if (supportedExtensions.exists(uriAsStr.endsWith))
               decodeMetalsFile(jarURI)
             else
               Future { decodeJar(jarURI, uriAsStr) }
@@ -207,19 +206,23 @@ final class FileDecoderProvider(
     "semanticdb-proto",
   )
 
+  val supportedExtensions: Set[String] = Set(
+    "javap", "javap-verbose", "tasty-decoded", "cfr", "class",
+  ) ++ semanticdbExtensions
+
   private def decodeMetalsFile(
       uri: URI
   ): Future[DecoderResponse] = {
-    val supportedExtensions = Set(
-      "javap",
-      "javap-verbose",
-      "tasty-decoded",
-      "cfr",
-    ) ++ semanticdbExtensions
     val additionalExtension = uri.toString().split('.').toList.last
     if (supportedExtensions(additionalExtension)) {
       val stripped = toFile(uri, s".$additionalExtension")
-      stripped match {
+      stripped
+        .orElse(
+          Try(uri.toAbsolutePath)
+            .filter(_.exists)
+            .toOption
+            .toRight(DecoderResponse.failed(uri, s"File $uri doesn't exist"))
+        ) match {
         case Left(value) => Future.successful(value)
         case Right(path) =>
           additionalExtension match {
@@ -227,7 +230,10 @@ final class FileDecoderProvider(
               decodeJavaOrScalaOrClass(path, decodeJavapFromClassFile(false))
             case "javap-verbose" =>
               decodeJavaOrScalaOrClass(path, decodeJavapFromClassFile(true))
-            case "cfr" => decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
+            case "cfr" =>
+              decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
+            case "class" =>
+              decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
             case "tasty-decoded" => decodeTasty(path)
             case "semanticdb-compact" =>
               Future.successful(
@@ -581,11 +587,23 @@ final class FileDecoderProvider(
     }
   }
 
+  private def decodeCFRFromClassFileInJar(
+      path: AbsolutePath
+  ): Future[DecoderResponse] = {
+    val decompiler = DecompileBytecode.cfr
+    val decompiledCode =
+      decompiler.decompilePath(path, buildTargets.allWorkspaceJars.toList)
+    decompiledCode.map {
+      case Left(error) => DecoderResponse.failed(path.toURI, error)
+      case Right(code) => DecoderResponse.success(path.toURI, code)
+    }
+  }
+
   private def decodeCFRFromClassFile(
       path: AbsolutePath
   ): Future[DecoderResponse] = {
-    val cfrDependency = Dependency.of("org.benf", "cfr", "0.151")
-    val cfrMain = "org.benf.cfr.reader.Main"
+    if (path.isJarFileSystem)
+      return decodeCFRFromClassFileInJar(path)
 
     val buildTarget = buildTargets
       .inferBuildTarget(path)
@@ -615,73 +633,11 @@ final class FileDecoderProvider(
           .getOrElse(Nil)
         val extraClassPaths = classesDirs ::: classpaths
 
-        val extraClassPath =
-          if (extraClassPaths.nonEmpty)
-            List(
-              "--extraclasspath",
-              extraClassPaths.mkString(File.pathSeparator),
-            )
-          else Nil
-
-        // if the class file is in the classes dir then use that classes dir to allow CFR to use the other classes
-        val (parent, className) = classesDirs
-          .find(classesPath => path.isInside(classesPath))
-          .map(classesPath => {
-            val classPath = path.toRelative(classesPath)
-            val className = classPath.toString
-            (classesPath, className)
-          })
-          .getOrElse({
-            val parent = path.parent
-            val className = path.filename
-            (parent, className)
-          })
-
-        val args = extraClassPath :::
-          List(
-            // elideScala - must be lowercase - hide @@ScalaSignature and serialVersionUID for aesthetic reasons
-            "--elidescala",
-            "true",
-            // analyseAs - must be lowercase
-            "--analyseas",
-            "CLASS",
-            s"$className",
-          )
-
-        val sbOut = new StringBuilder()
-        val sbErr = new StringBuilder()
-        try {
-          shellRunner
-            .runJava(
-              cfrDependency,
-              cfrMain,
-              parent,
-              args,
-              userConfig().javaHome,
-              redirectErrorOutput = false,
-              s => {
-                sbOut.append(s)
-                sbOut.append(Properties.lineSeparator)
-              },
-              s => {
-                sbErr.append(s)
-                sbErr.append(Properties.lineSeparator)
-              },
-              propagateError = true,
-            )
-            .map(_ => {
-              if (sbOut.isEmpty && sbErr.nonEmpty)
-                DecoderResponse.failed(
-                  path.toURI,
-                  s"$cfrDependency\n$cfrMain\n$parent\n$args\n${sbErr.toString}",
-                )
-              else
-                DecoderResponse.success(path.toURI, sbOut.toString)
-            })
-        } catch {
-          case NonFatal(e) =>
-            scribe.error(e.toString())
-            Future.successful(DecoderResponse.failed(path.toURI, e))
+        val decompiler = DecompileBytecode.cfr
+        val decompiledCode = decompiler.decompilePath(path, extraClassPaths)
+        decompiledCode.map {
+          case Left(error) => DecoderResponse.failed(path.toURI, error)
+          case Right(code) => DecoderResponse.success(path.toURI, code)
         }
       }
   }

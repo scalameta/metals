@@ -12,6 +12,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
+import scala.{meta => m}
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.inputs.Input
@@ -23,6 +24,7 @@ import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
@@ -71,6 +73,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.lsp4j.{Position => LspPosition}
 import org.eclipse.lsp4j.{Range => LspRange}
 import org.eclipse.lsp4j.{debug => d}
+import org.eclipse.{lsp4j => l}
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -1142,31 +1145,80 @@ class Compilers(
         if (findTypeDef) pc.typeDefinition(params)
         else
           pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
-      defResult.asScala
-        .map { c =>
-          adjust.adjustLocations(c.locations())
-          val definitionPaths = c
-            .locations()
-            .map { loc =>
-              loc.getUri().toAbsolutePath
-            }
-            .asScala
-            .toSet
 
-          val definitionPath = if (definitionPaths.size == 1) {
-            Some(definitionPaths.head)
-          } else {
-            None
-          }
-          DefinitionResult(
-            c.locations(),
-            c.symbol(),
-            definitionPath,
-            None,
-            c.symbol(),
-          )
+      for {
+        c <- defResult.asScala
+        locations <-
+          if (c.isResolved())
+            Future.successful(
+              adjust.adjustLocations(c.locations()).asScala.toSeq
+            )
+          else
+            locateInsideDecompiledJar(c.symbol(), c.locations().asScala.toSeq)
+      } yield {
+        val definitionPaths = locations.map { loc =>
+          loc.getUri().toAbsolutePath
+        }.toSet
+
+        val definitionPath = if (definitionPaths.size == 1) {
+          Some(definitionPaths.head)
+        } else {
+          None
         }
+        DefinitionResult(
+          locations.asJava,
+          c.symbol(),
+          definitionPath,
+          None,
+          c.symbol(),
+        )
+      }
     }.getOrElse(Future.successful(DefinitionResult.empty))
+
+  def locateInsideDecompiledJar(
+      symbol: String,
+      locations: Seq[l.Location],
+  ): Future[Seq[l.Location]] = {
+    if (locations.isEmpty || !locations.head.getUri().endsWith(".class"))
+      return Future.successful(Nil)
+
+    scribe.debug(s"locateInsideDecompiledJar: $symbol, $locations")
+    val decoder = DecompileBytecode.cfr
+    val uri = locations.head.getUri()
+    val pathClass = uri.stripSuffix(".class").toAbsolutePath
+    for {
+      decompiledCode <- decoder.decompilePath(
+        pathClass,
+        buildTargets.allWorkspaceJars.toList,
+      )
+    } yield {
+      decompiledCode match {
+        case Left(error) =>
+          scribe.error(s"Error decompiling $pathClass: $error")
+          Nil
+        case Right(code) =>
+          scribe.debug(s"Decompiled code length: ${code.length}")
+          val index = mtags().index(
+            Input.VirtualFile(s"$pathClass.java", code),
+            m.dialects.Scala213,
+          )
+          val occurrences = index.occurrences.filter(sym =>
+            sym.role == s.SymbolOccurrence.Role.DEFINITION && sym.symbol == symbol
+          )
+          if (occurrences.isEmpty) {
+            scribe.warn(
+              s"No occurrences found for symbol $symbol in decompiled $pathClass"
+            )
+            // return unchanged locations so we can at least open the file at the wrong position
+            locations
+          } else
+            occurrences.map { occ =>
+              new l.Location(uri.toString, occ.range.get.toLsp)
+            }.toSeq
+      }
+    }
+
+  }
 
   def signatureHelp(
       params: TextDocumentPositionParams,

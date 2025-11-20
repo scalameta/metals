@@ -56,7 +56,9 @@ abstract class BasePcDefinitionSuite extends BasePCSuite {
             )
           )
         } else {
-          val filename = location.getUri()
+          val uri = location.getUri
+          // for jar-based locations we shorten the path to remove local paths and make it more readable
+          val filename = if (uri.startsWith("jar")) uri.split("!/")(1) else uri
           val comment = s"/*$filename*/"
           List(new TextEdit(offsetRange, comment))
         }
