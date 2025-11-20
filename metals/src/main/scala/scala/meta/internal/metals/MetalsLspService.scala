@@ -287,6 +287,7 @@ abstract class MetalsLspService(
       () => bspSession,
       tables,
       connectionBspStatus,
+      diagnostics,
     )
 
   val workspaceSymbols: WorkspaceSymbolProvider =
