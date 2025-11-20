@@ -42,6 +42,10 @@ object BloopDiagnosticsParser {
           line1 <- split.lift(1).flatMap(_.toIntOption)
           line0 = line1 - 1
           errorText <- split.lift(2).map(_.strip())
+          severity =
+            if (errorText.trim().startsWith("warning:"))
+              DiagnosticSeverity.Warning
+            else DiagnosticSeverity.Error
           uriFilepath = Paths.get(filepath).toUri
 
           // find the line with a pointer to the start of the error
@@ -66,7 +70,7 @@ object BloopDiagnosticsParser {
           diagnostic = new Diagnostic(
             range,
             errorTextEnriched,
-            DiagnosticSeverity.Error,
+            severity,
             "sbt",
           )
         } yield FileDiagnostic(uriFilepath.toString, diagnostic)
