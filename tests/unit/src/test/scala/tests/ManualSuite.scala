@@ -4,6 +4,8 @@ import java.nio.file.Paths
 
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
+import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
+import scala.meta.internal.metals.ServerCommands.SyncFile
 import scala.meta.internal.metals.UserConfiguration
 
 // Uncomment to run this test manually locally
@@ -20,24 +22,30 @@ class ManualSuite extends BaseManualSuite {
     )
 
   inDirectory(
-    universe
-
+    universe,
+    onSetup = { workspace =>
+      // Clear the bazelbsp directory so that we get errors in the file during startup
+      workspace.resolve(".bazelbsp").deleteRecursively
+    },
     // removeCache = true,
-  ).test("definition-classpath") { case (server, _) =>
+  ).test("sync-file-lsp-command") { case (server, client) =>
     val path =
-      "brickstore/scheduler/src/models/models/V1HadronEndpointSpec.java"
+      "experimental/iulian.dragos/class-indexer/src/ClassIndexer.scala"
     for {
-      _ <- server.didOpen(path)
-      _ <- server.didFocus(path)
-      // _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ <- server.assertDefinition(
-        path,
-        "import com.google.gson.stream.JsonW@@riter;",
-        """|.metals/readonly/dependencies/com.google.guava__guava__32.0.1-jre-sources.jar/com/google/common/annotations/VisibleForTesting.java:31:19: definition
-           |public @interface VisibleForTesting {
-           |                  ^^^^^^^^^^^^^^^^^
-           |""".stripMargin,
-      )
+      _ <- server.didOpenAndFocus(path)
+      // _ <- server.assertDefinition(
+      //   path,
+      //   "import com.google.gson.stream.JsonW@@riter;",
+      //   """|.metals/readonly/dependencies/com.google.guava__guava__32.0.1-jre-sources.jar/com/google/common/annotations/VisibleForTesting.java:31:19: definition
+      //      |public @interface VisibleForTesting {
+      //      |                  ^^^^^^^^^^^^^^^^^
+      //      |""".stripMargin,
+      // )
+      // _ <- server.didFocus(path)
+      _ = assert((client.workspaceDiagnostics).nonEmpty)
+      _ <- server.executeCommandUnsafe(SyncFile.id, Seq())
+      // _ <- server.executeCommandUnsafe(ConnectBuildServer.id, Seq())
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
     } yield ()
   }
 }

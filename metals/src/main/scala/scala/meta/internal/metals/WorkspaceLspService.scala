@@ -824,6 +824,34 @@ class WorkspaceLspService(
     params match {
       case ServerCommands.ScanWorkspaceSources() =>
         foreachSeqIncludeFallback(_.indexSources(), ignoreValue = true)
+      case ServerCommands.SyncFile() =>
+        val args = Option(params.getArguments).toList.flatMap(_.asScala)
+        val uri = args.headOption match {
+          case Some(arg: JsonPrimitive) if arg.isString =>
+            Some(arg.getAsString)
+          case Some(arg: String) => Some(arg)
+          case _ => focusedDocument.get().map(_.toURI.toString)
+        }
+        uri match {
+          case Some(u) =>
+            (for {
+              _ <- getServiceFor(u).sync(u)
+              // NOTE(olafurpg): Trigger a "Connect to build server" here so
+              // that this command returns only once we have successfully
+              // connected to the synced build server. I'm not 100% sure how,
+              // but I think the `sync()` method eventually triggers a
+              // side-effect to re-connect, but we can't write tests against
+              // that side-effect.
+              _ <- executeCommand(
+                ServerCommands.ConnectBuildServer.toExecuteCommandParams()
+              ).asScala
+            } yield ()).asJavaObject
+          case None =>
+            scribe.warn(
+              s"file-sync: failed to infer a URI from the provided params ($params). To fix this problem, edit the file you want to sync and try again."
+            )
+            Future.successful(()).asJavaObject
+        }
       case ServerCommands.RestartBuildServer() =>
         onCurrentFolder(
           _.connect(CreateSession(shutdownBuildServer = true)).ignoreValue,

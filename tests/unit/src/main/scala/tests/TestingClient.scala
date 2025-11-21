@@ -28,6 +28,7 @@ import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
@@ -103,6 +104,7 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   val messageRequests = new ConcurrentLinkedDeque[String]()
   val showMessages = new ConcurrentLinkedQueue[MessageParams]()
   val statusParams = new ConcurrentLinkedQueue[MetalsStatusParams]()
+  val syncStatusParams = new ConcurrentLinkedQueue[MetalsSyncStatusParams]()
   val workDoneProgressCreateParams =
     new ConcurrentLinkedQueue[WorkDoneProgressCreateParams]()
   val progressParams = new ConcurrentLinkedQueue[ProgressParams]()
@@ -426,6 +428,10 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     statusParams.add(params)
 
+  }
+
+  override def metalsSyncStatus(params: MetalsSyncStatusParams): Unit = {
+    syncStatusParams.add(params)
   }
 
   override def createProgress(

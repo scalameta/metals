@@ -52,11 +52,13 @@ abstract class BaseManualSuite extends munit.FunSuite {
       config: MetalsServerConfig = defaultMetalsServerConfig,
       userConfig: UserConfiguration = defaultUserConfig,
       removeCache: Boolean = false,
+      onSetup: AbsolutePath => Unit = _ => (),
   ): FunFixture[(TestingServer, TestingClient)] =
     FunFixture.async[(TestingServer, TestingClient)](
       setup = { test =>
         val buffers = Buffers()
         val workspace = AbsolutePath(path)
+        onSetup(workspace)
         if (removeCache) {
           workspace.resolve(".metals").deleteRecursively()
         }

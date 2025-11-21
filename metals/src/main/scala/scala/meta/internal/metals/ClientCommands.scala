@@ -389,5 +389,6 @@ object ClientCommands {
       StartRunSession,
       StartDebugSession,
       ConnectBuildServer,
+      SyncFile,
     )
 }

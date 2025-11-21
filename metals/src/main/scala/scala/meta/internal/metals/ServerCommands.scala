@@ -40,6 +40,13 @@ object ServerCommands {
     """Unconditionally cancel existing build server connection without reconnecting""",
   )
 
+  val SyncFile = new Command(
+    "file-sync",
+    "Sync file",
+    """Sync the currently focused file with the build server.
+      |""".stripMargin,
+  )
+
   val RestartBuildServer = new Command(
     "build-restart",
     "Restart build server",
@@ -765,6 +772,7 @@ object ServerCommands {
       ScalafixRunOnly,
       DecodeFile,
       DisconnectBuildServer,
+      SyncFile,
       ListBuildTargets,
       ScanWorkspaceSources,
       StartAmmoniteBuildServer,
