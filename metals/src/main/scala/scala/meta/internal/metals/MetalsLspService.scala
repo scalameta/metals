@@ -1002,7 +1002,6 @@ abstract class MetalsLspService(
     // rerun diagnostics for all open documents
     val futures =
       buffers.open.filter(isIncludedPath).map { path =>
-        scribe.info(s"fallbackclasspath: refreshing diagnostics for $path")
         for {
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics
