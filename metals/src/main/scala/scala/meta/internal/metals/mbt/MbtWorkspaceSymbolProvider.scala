@@ -111,7 +111,7 @@ final class MbtWorkspaceSymbolProvider(
               result.add(
                 VirtualTextDocument.fromDocument(
                   f.language.toPCLanguage,
-                  f.semanticdbPackage,
+                  List(f.semanticdbPackage),
                   f.toplevelSymbols,
                   doc.copy(text = text),
                 )

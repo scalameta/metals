@@ -201,7 +201,8 @@ class MbtV2WorkspaceSymbolSearch(
     for {
       doc <- documents.remove(file)
       _ = updateDocumentsKeys(documents)
-      files <- documentsByPackage.get(doc.semanticdbPackage)
+      pkg <- doc.semanticdbPackages
+      files <- documentsByPackage.get(pkg)
     } {
       files.remove(file.toNIO)
     }
@@ -363,15 +364,20 @@ class MbtV2WorkspaceSymbolSearch(
     if (old == None && updateDocumentKeys) {
       updateDocumentsKeys(documents)
     }
-    addDocumentToPackage(doc.semanticdbPackage, file)
+    addDocumentToPackages(doc.semanticdbPackages, file)
   }
 
-  private def addDocumentToPackage(pkg: String, file: AbsolutePath): Unit = {
-    val files = documentsByPackage.getOrElseUpdate(
-      pkg,
-      new ju.concurrent.ConcurrentSkipListSet[Path](),
-    )
-    files.add(file.toNIO)
+  private def addDocumentToPackages(
+      pkgs: Seq[String],
+      file: AbsolutePath,
+  ): Unit = {
+    for (pkg <- pkgs) {
+      val files = documentsByPackage.getOrElseUpdate(
+        pkg,
+        new ju.concurrent.ConcurrentSkipListSet[Path](),
+      )
+      files.add(file.toNIO)
+    }
   }
 
   // Dumps the current in-memory index to .metals/index.mbt. This overwrites the
@@ -452,7 +458,10 @@ class MbtV2WorkspaceSymbolSearch(
       } {
         try {
           val path = AbsolutePath.fromAbsoluteUri(URI.create(doc.getUri()))
-          addDocumentToPackage(doc.getSemanticdbPackage(), path)
+          addDocumentToPackages(
+            doc.getSemanticdbPackageList().asScala.toList,
+            path,
+          )
           result.put(path, IndexedDocument.fromProto(path, doc))
         } catch {
           case NonFatal(e) =>

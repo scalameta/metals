@@ -17,10 +17,12 @@ final case class VirtualTextDocument(
     private val _uri: URI,
     override val language: pc.Language,
     text: String,
-    pkg: String,
+    packages: Seq[String],
     _toplevelSymbols: collection.Seq[String],
 ) extends SimpleJavaFileObject(_uri, Kind.SOURCE)
     with SemanticdbCompilationUnit {
+
+  def pkg: String = packages.headOption.getOrElse("")
   override def packageSymbol(): String = pkg
   override def uri(): URI = _uri
   override def toplevelSymbols(): ju.List[String] = _toplevelSymbols.asJava
@@ -42,7 +44,7 @@ object VirtualTextDocument {
 
   def fromDocument(
       language: pc.Language,
-      pkg: String,
+      pkgs: Seq[String],
       toplevelSymbols: collection.Seq[String],
       doc: s.TextDocument,
   ): VirtualTextDocument = {
@@ -59,9 +61,8 @@ object VirtualTextDocument {
       URI.create(doc.uri),
       language,
       doc.text,
-      pkg,
+      pkgs,
       toplevelSymbols,
     )
   }
-
 }

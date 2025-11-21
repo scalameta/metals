@@ -28,7 +28,7 @@ case class IndexedDocument(
     file: AbsolutePath,
     oid: String,
     source: Mbt.IndexedDocument.Source,
-    semanticdbPackage: String,
+    semanticdbPackages: Seq[String],
     language: Semanticdb.Language,
     symbols: collection.Seq[Mbt.SymbolInformation],
     bloomFilter: StringBloomFilter,
@@ -44,7 +44,7 @@ case class IndexedDocument(
       SourceJavaFileObject.makeRelativeURI(file.toURI),
       language.toPCLanguage,
       file.toInputFromBuffers(buffers).text,
-      semanticdbPackage,
+      semanticdbPackages,
       toplevelSymbols,
     )
   }
@@ -61,7 +61,7 @@ case class IndexedDocument(
       .setUri(file.toURI.toString)
       .setOid(oid)
       .setSource(source)
-      .setSemanticdbPackage(semanticdbPackage)
+      .addAllSemanticdbPackage(semanticdbPackages.asJava)
       .setLanguage(language)
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
@@ -103,11 +103,8 @@ object IndexedDocument {
       .setDefinitionRange(range.toJRange)
       .build()
 
-    val semanticdbPackage = sdoc.occurrences.iterator
+    val semanticdbPackages = sdoc.occurrences.iterator
       .filter(_.symbol.endsWith("/"))
-      .maxByOption(_.symbol.length)
-      .map(_.symbol)
-      .getOrElse(Symbol.EmptyPackage.value)
     val definitions =
       sdoc.occurrences.view.filter(_.role.isDefinition).map(_.symbol)
     val references =
@@ -116,7 +113,7 @@ object IndexedDocument {
       file = file,
       oid = OID.fromText(input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_FILE,
-      semanticdbPackage = semanticdbPackage,
+      semanticdbPackages.map(_.symbol).toSeq,
       bloomFilter = bloomFilterMBT(definitions, references),
       language = file.toJLanguage,
       symbols = symbols.toSeq,
@@ -142,15 +139,17 @@ object IndexedDocument {
   def fromOnDidChangeParams(
       params: OnDidChangeSymbolsParams
   ): IndexedDocument = {
-    val semanticdbPackage: String = params.symbols.headOption match {
-      case None => Symbol.EmptyPackage.value
-      case Some(info) => Symbol(info.symbol).enclosingPackage.value
-    }
+
+    val semanticdbPackages =
+      params.symbols.map(_.symbol).filter(_.endsWith("/")) match {
+        case Nil => List(Symbol.EmptyPackage.value)
+        case pkgs => pkgs.toList
+      }
     IndexedDocument(
       file = params.path,
       oid = OID.fromText(params.input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_SYMBOLS,
-      semanticdbPackage = semanticdbPackage,
+      semanticdbPackages,
       bloomFilter = bloomFilterMBT(
         params.symbols.view.map(_.symbol),
         params.references.view,
@@ -188,7 +187,7 @@ object IndexedDocument {
       file = path,
       oid = doc.getOid(),
       source = doc.getSource(),
-      semanticdbPackage = doc.getSemanticdbPackage(),
+      doc.getSemanticdbPackageList().asScala.toList,
       language = doc.getLanguage(),
       symbols = doc.getSymbolsList().asScala,
       bloomFilter =

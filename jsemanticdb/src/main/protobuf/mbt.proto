@@ -54,9 +54,8 @@ message IndexedDocument {
   // blocks of text.
   string text = 3;
   // The SemanticDB package that all the symbols defined in this file belong to.
-  // In Scala, there can be many packages defined in a single file, and this
-  // should be the top-level package that all symbols belong to.
-  string semanticdb_package = 4;
+  // In scala, there may be multiple packages defined in a single file
+  repeated string semanticdb_package = 4;
   scala.meta.internal.semanticdb.Language language = 5;
   repeated SymbolInformation symbols = 6;
   // A bloom filter containing various permutations of the symbols defined in

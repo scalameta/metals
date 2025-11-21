@@ -36,7 +36,7 @@ class TestingSemanticdbFileManager(
   override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
     docs
       .collect {
-        case doc if doc.semanticdbPackage == pkg =>
+        case doc if doc.semanticdbPackages.contains(pkg) =>
           doc.toSemanticdbCompilationUnit(buffers)
       }
       .asJava
