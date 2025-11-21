@@ -171,10 +171,14 @@ final class PcInlayHintsProvider(
     ): List[LabelPart] = {
       val labels = vparams
         .map(v =>
-          List(
-            labelPart(v.tpt.symbol, v.tpt.symbol.decodedName),
-            LabelPart(s"${v.name}: ")
-          )
+          if (v.tpt.symbol != null) {
+            List(
+              labelPart(v.tpt.symbol, v.tpt.symbol.decodedName),
+              LabelPart(s"${v.name}: ")
+            )
+          } else {
+            List(LabelPart(s"${v.name}: "))
+          }
         )
         .reverse
         .flatten
@@ -243,36 +247,55 @@ final class PcInlayHintsProvider(
                     LabelPart(", ") :: label :: parts
                   )
               case Apply(fun, args) =>
-                val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
-                recurseImplicitArgs(
-                  args,
-                  remainingArgs :: remainingArgsLists,
-                  LabelPart("(") :: applyLabel :: parts
-                )
+                if (fun.symbol != null) {
+                  val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
+                  recurseImplicitArgs(
+                    args,
+                    remainingArgs :: remainingArgsLists,
+                    LabelPart("(") :: applyLabel :: parts
+                  )
+                } else {
+                  recurseImplicitArgs(
+                    args,
+                    remainingArgs :: remainingArgsLists,
+                    parts
+                  )
+                }
               case t @ Function(vparams, body) =>
                 val funLabels =
-                  if (t.symbol.isSynthetic)
+                  if (t.symbol != null && t.symbol.isSynthetic)
                     reversedLabelPartsFromParams(vparams)
-                  else List(labelPart(t.symbol, t.symbol.decodedName))
+                  else if (t.symbol != null)
+                    List(labelPart(t.symbol, t.symbol.decodedName))
+                  else
+                    reversedLabelPartsFromParams(vparams)
                 recurseImplicitArgs(
                   List(body),
                   remainingArgs :: remainingArgsLists,
                   LabelPart(" => ") :: funLabels ::: parts
                 )
               case t if t.isTerm =>
-                val termLabel = labelPart(t.symbol, t.symbol.decodedName)
-                if (remainingArgs.isEmpty)
+                if (t.symbol != null) {
+                  val termLabel = labelPart(t.symbol, t.symbol.decodedName)
+                  if (remainingArgs.isEmpty)
+                    recurseImplicitArgs(
+                      remainingArgs,
+                      remainingArgsLists,
+                      termLabel :: parts
+                    )
+                  else
+                    recurseImplicitArgs(
+                      remainingArgs,
+                      remainingArgsLists,
+                      LabelPart(", ") :: termLabel :: parts
+                    )
+                } else {
                   recurseImplicitArgs(
                     remainingArgs,
                     remainingArgsLists,
-                    termLabel :: parts
+                    parts
                   )
-                else
-                  recurseImplicitArgs(
-                    remainingArgs,
-                    remainingArgsLists,
-                    LabelPart(", ") :: termLabel :: parts
-                  )
+                }
               case _ =>
                 recurseImplicitArgs(
                   remainingArgs,
