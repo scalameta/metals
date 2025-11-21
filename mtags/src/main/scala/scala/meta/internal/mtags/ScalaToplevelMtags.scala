@@ -11,6 +11,7 @@ import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.internal.semanticdb
 import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
@@ -425,6 +426,15 @@ class ScalaToplevelMtags(
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
+              if (expect.isImplicit) {
+                addToplevelMembers(
+                  ToplevelMember(
+                    currentOwner,
+                    semanticdb.Range(0, 0, 0, 0),
+                    ToplevelMember.Kind.ImplicitClass
+                  ) :: Nil
+                )
+              }
               val next = expect.startIndentedRegion(
                 currRegion,
                 isImplicitClass = expect.isImplicit
@@ -465,6 +475,15 @@ class ScalaToplevelMtags(
                 scanner.mtagsNextToken()
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
+                if (expect.isImplicit) {
+                  addToplevelMembers(
+                    ToplevelMember(
+                      currentOwner,
+                      semanticdb.Range(0, 0, 0, 0),
+                      ToplevelMember.Kind.ImplicitClass
+                    ) :: Nil
+                  )
+                }
                 val next =
                   expect.startInBraceRegion(
                     currRegion,
@@ -808,7 +827,13 @@ class ScalaToplevelMtags(
         val typeSymbol = symbol(Descriptor.Type(ident.name))
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
-            List(ToplevelMember(typeSymbol, ident.pos.toRange, Kind.TYPE))
+            List(
+              ToplevelMember(
+                typeSymbol,
+                ident.pos.toRange,
+                ToplevelMember.Kind.Type
+              )
+            )
           )
         }
         if (emitTermMember) {

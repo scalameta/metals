@@ -8,12 +8,9 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc._
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
@@ -131,5 +128,17 @@ class MetalsSymbolSearch(
       visitor,
       Some(new BuildTargetIdentifier(buildTargetIdentifier)),
     )
+  }
+
+  override def queryAllImplicitClasses(): ju.List[String] = {
+    val implicitClasses = wsp.topLevelMembers.values.flatten
+      .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
+
+    val classSymbols = implicitClasses
+      .map(_.symbol)
+      .toSet
+      .toList
+
+    classSymbols.asJava
   }
 }
