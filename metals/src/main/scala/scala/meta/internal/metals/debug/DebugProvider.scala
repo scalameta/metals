@@ -397,7 +397,10 @@ class DebugProvider(
             debuggee,
             resolver,
             dapLogger,
-            gracePeriod = Duration(5, TimeUnit.SECONDS),
+            gracePeriod = Duration(
+              clientConfig.initialConfig.debuggeeGracePeriod,
+              TimeUnit.SECONDS,
+            ),
           )
         handler.uri
       }
