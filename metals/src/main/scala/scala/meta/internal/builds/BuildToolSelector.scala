@@ -56,7 +56,21 @@ final class BuildToolSelector(
       buildTools: List[BuildTool]
   ): Future[Option[BuildTool]] = {
     languageClient
-      .showMessageRequest(ChooseBuildTool.params(buildTools))
+      .showMessageRequest(
+        ChooseBuildTool.params(buildTools),
+        defaultTo = () => {
+          val tool = userConfig().targetBuildTool
+            .flatMap { tool =>
+              buildTools.find(_.executableName == tool)
+            }
+            .orElse(buildTools.headOption)
+            .getOrElse {
+              throw new IllegalStateException("No build tool found")
+            }
+          languageClient.showMessage(ChooseBuildTool.notificationParams(tool))
+          new MessageActionItem(tool.executableName)
+        },
+      )
       .asScala
       .map { choice =>
         val foundBuildTool = buildTools.find(buildTool =>
@@ -76,7 +90,16 @@ final class BuildToolSelector(
     languageClient
       .showMessageRequest(
         Messages.NewBuildToolDetected
-          .params(newBuildTool.executableName, currentBuildTool.executableName)
+          .params(newBuildTool.executableName, currentBuildTool.executableName),
+        defaultTo = () => {
+          languageClient.showMessage(
+            Messages.NewBuildToolDetected.notificationParams(
+              newBuildTool.executableName,
+              currentBuildTool.executableName,
+            )
+          )
+          Messages.NewBuildToolDetected.dontSwitch
+        },
       )
       .asScala
       .map {

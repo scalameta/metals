@@ -19,7 +19,6 @@ import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
@@ -190,8 +189,7 @@ class BazelLspSuite
            |  Compile""".stripMargin
       _ = assertNoDiff(result, expectedTarget)
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
-      _ = client.resetWorkspace =
-        new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
+      _ = client.resetWorkspace = Messages.ResetWorkspace.resetWorkspace
       _ <- server.executeCommand(ServerCommands.ResetWorkspace, true)
       _ <- server.server.buildServerPromise.future
       resultAfter <- getTargetInfo(targets.head.bazelEscapedDisplayName)

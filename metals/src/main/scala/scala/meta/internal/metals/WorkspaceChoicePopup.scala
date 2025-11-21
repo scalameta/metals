@@ -4,15 +4,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
-import org.eclipse.lsp4j.services.LanguageClient
 
 class WorkspaceChoicePopup(
     folders: () => List[ProjectMetalsLspService],
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
 ) {
   def interactiveChooseFolder(
       actionName: String
@@ -24,7 +24,13 @@ class WorkspaceChoicePopup(
       languageClient
         .showMessageRequest(
           WorkspaceChoicePopup
-            .choicesParams(actionName, currentFolders.map(_.getVisibleName))
+            .choicesParams(actionName, currentFolders.map(_.getVisibleName)),
+          defaultTo = () => {
+            val first = currentFolders.headOption.getOrElse(
+              throw new IllegalStateException("No folders found")
+            )
+            new MessageActionItem(first.getVisibleName)
+          },
         )
         .asScala
         .map { item =>

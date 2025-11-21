@@ -15,7 +15,6 @@ import scala.meta.internal.metals.scalacli.ScalaCli
 
 import ch.epfl.scala.bsp4j.MessageType
 import org.eclipse.lsp4j.InitializeResult
-import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseLspSuite
 import tests.ScriptsAssertions
 
@@ -84,21 +83,17 @@ abstract class BaseScalaCliSuite(protected val scalaVersion: String)
       )
       if (params == Messages.ImportScalaScript.params())
         Some(
-          new MessageActionItem(
-            if (useBsp)
-              Messages.ImportScalaScript.dismiss
-            else
-              Messages.ImportScalaScript.doImportScalaCli
-          )
+          if (useBsp)
+            Messages.ImportScalaScript.dismiss
+          else
+            Messages.ImportScalaScript.doImportScalaCli
         )
       else if (params == Messages.ImportAllScripts.params())
         Some(
-          new MessageActionItem(
-            if (useBsp)
-              Messages.ImportAllScripts.dismiss
-            else
-              Messages.ImportAllScripts.importAll
-          )
+          if (useBsp)
+            Messages.ImportAllScripts.dismiss
+          else
+            Messages.ImportAllScripts.importAll
         )
       else
         previousShowMessageRequestHandler(params)

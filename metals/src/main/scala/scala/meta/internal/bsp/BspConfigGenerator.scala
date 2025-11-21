@@ -69,7 +69,21 @@ final class BspConfigGenerator(
       buildTools: List[BuildServerProvider]
   ): Future[Option[BuildServerProvider]] = {
     languageClient
-      .showMessageRequest(BspProvider.params(buildTools))
+      .showMessageRequest(
+        BspProvider.params(buildTools),
+        defaultTo = () => {
+          val tool = userConfig().targetBuildTool
+            .flatMap { tool =>
+              buildTools.find(_.buildServerName == tool)
+            }
+            .orElse(buildTools.headOption)
+            .getOrElse {
+              throw new IllegalStateException("No build tool found")
+            }
+          languageClient.showMessage(BspProvider.notificationParams(tool))
+          new MessageActionItem(tool.executableName)
+        },
+      )
       .asScala
       .map { choice =>
         buildTools.find(buildTool =>

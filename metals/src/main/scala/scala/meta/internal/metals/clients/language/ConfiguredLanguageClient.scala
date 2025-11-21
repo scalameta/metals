@@ -49,6 +49,20 @@ final class ConfiguredLanguageClient(
     underlying = NoopLanguageClient
   }
 
+  override def showMessageRequest(
+      params: ShowMessageRequestParams,
+      defaultTo: () => MessageActionItem,
+  ): CompletableFuture[MessageActionItem] = {
+    pendingShowMessage.set(true)
+    val result = if (clientConfig.initialConfig.disableShowMessageRequest) {
+      CompletableFuture.completedFuture(defaultTo())
+    } else {
+      underlying.showMessageRequest(params)
+    }
+    result.asScala.onComplete(_ => pendingShowMessage.set(false))
+    result
+  }
+
   override def metalsStatus(params: MetalsStatusParams): Unit = {
     val level =
       params.level match {
@@ -101,6 +115,7 @@ final class ConfiguredLanguageClient(
   }
 
   private val pendingShowMessage = new AtomicBoolean(false)
+
   override def showMessageRequest(
       params: ShowMessageRequestParams
   ): CompletableFuture[MessageActionItem] = {
@@ -114,6 +129,7 @@ final class ConfiguredLanguageClient(
       params: ShowMessageRequestParams,
       cancelationGroup: String,
       cancelValue: => MessageActionItem = Messages.missedByUser,
+      defaultTo: () => MessageActionItem = () => Messages.missedByUser,
   ): Future[MessageActionItem] = {
     val promise = Promise[Unit]()
     // put promise into cancellation map
@@ -126,7 +142,7 @@ final class ConfiguredLanguageClient(
     )
 
     // call client
-    val result = showMessageRequest(params)
+    val result = showMessageRequest(params, defaultTo)
     val future =
       Future
         .firstCompletedOf(

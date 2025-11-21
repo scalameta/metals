@@ -187,7 +187,23 @@ final class BloopInstall(
           ImportBuild.yes
       }
     languageClient
-      .showMessageRequest(params)
+      .showMessageRequest(
+        params,
+        () => {
+          val notNow = if (buildTools.isBloop(buildTool.projectRoot)) {
+            languageClient.showMessage(
+              ImportBuildChanges.notificationParams(buildTool.toString)
+            )
+            ImportBuildChanges.notNow
+          } else {
+            languageClient.showMessage(
+              ImportBuild.notificationParams(buildTool.toString)
+            )
+            ImportBuild.notNow
+          }
+          notNow
+        },
+      )
       .asScala
       .map { item =>
         if (item == dontShowAgain) {
