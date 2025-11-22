@@ -39,9 +39,12 @@ final class Trees(
   private val tokenized = TrieMap.empty[AbsolutePath, Tokens]
 
   def get(path: AbsolutePath): Option[Tree] =
-    trees.get(path).orElse {
-      // Fallback to parse without caching result.
-      parse(path, scalaVersionSelector.getDialect(path)).flatMap(_.toOption)
+    if (path.isTwirlTemplate) None
+    else {
+      trees.get(path).orElse {
+        // Fallback to parse without caching result.
+        parse(path, scalaVersionSelector.getDialect(path)).flatMap(_.toOption)
+      }
     }
 
   def didClose(fileUri: AbsolutePath): Unit = {
@@ -169,7 +172,7 @@ final class Trees(
   def didChange(path: AbsolutePath): List[Diagnostic] = {
     val dialect = scalaVersionSelector.getDialect(path)
     parse(path, dialect) match {
-      case Some(parsed) =>
+      case Some(parsed) if !path.isTwirlTemplate =>
         parsed match {
           case Parsed.Error(pos, message, _) =>
             List(
