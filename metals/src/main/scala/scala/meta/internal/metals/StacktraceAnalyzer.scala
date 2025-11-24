@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.io.FileWriter
 
 import scala.util.Try
+import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -76,8 +77,11 @@ class StacktraceAnalyzer(
   }
 
   def fileLocationFromLine(line: String): Option[l.Location] = {
-    def findLocationForSymbol(s: String): Option[Location] =
+    def findLocationForSymbol(s: String): Option[Location] = try {
       definitionProvider.fromSymbol(s, None).asScala.headOption
+    } catch {
+      case NonFatal(_) => None
+    }
 
     for {
       symbol <- symbolFromLine(line)
