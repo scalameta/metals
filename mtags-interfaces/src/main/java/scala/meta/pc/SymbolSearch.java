@@ -62,7 +62,7 @@ public interface SymbolSearch {
      * @param kind the kind of toplevel members to query (e.g., IMPLICIT_CLASS for implicit classes)
      * @return list of symbols matching the kind (e.g., "io/circe/syntax/EncoderOps#")
      */
-    default List<String> queryTopLevelMembers(ToplevelMemberKind kind) {
+    default List<String> queryTopLevelMembers(List<ToplevelMemberKind> kind) {
         return java.util.Collections.emptyList();
     }
     

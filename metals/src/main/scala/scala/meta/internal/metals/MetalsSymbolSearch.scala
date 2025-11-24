@@ -131,12 +131,12 @@ class MetalsSymbolSearch(
   }
 
   override def queryTopLevelMembers(
-      kind: ToplevelMemberKind
+      kind: ju.List[ToplevelMemberKind]
   ): ju.List[String] = {
-    val scalaKind = ToplevelMember.Kind.fromJava(kind)
+    val scalaKinds = kind.asScala.map(ToplevelMember.Kind.fromJava).toSet
 
     wsp.topLevelMembers.values.flatten
-      .filter(_.kind == scalaKind)
+      .filter(member => scalaKinds.contains(member.kind))
       .map(_.symbol)
       .toSet
       .toList
