@@ -115,48 +115,7 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
   ): SymbolSearch.Result = {
     workspaceMethodSearch(query, visitor, target)
-    searchImplicitClassMethods(query, visitor, target)
     SymbolSearch.Result.COMPLETE
-  }
-
-  private def isNoisyImplicitClass(classSymbol: String): Boolean = {
-    classSymbol.contains("scala/collection/convert/StreamExtensions") ||
-    classSymbol.contains("scala/reflect/api/Internals") ||
-    classSymbol.contains("scala/Predef")
-  }
-
-  private def searchImplicitClassMethods(
-      query: String,
-      visitor: SymbolSearchVisitor,
-      target: Option[BuildTargetIdentifier],
-  ): Unit = {
-    val implicitClasses = target match {
-      case None =>
-        topLevelMembers.iterator
-          .flatMap { case (path, members) =>
-            members
-              .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
-              .map(member => (path.toNIO, member))
-          }
-      case Some(targetId) =>
-        for {
-          source <- buildTargets.buildTargetTransitiveSources(targetId)
-          members <- topLevelMembers.get(source).iterator
-          member <- members
-          if member.kind == ToplevelMember.Kind.ImplicitClass
-        } yield (source.toNIO, member)
-    }
-
-    implicitClasses.foreach { case (path, implicitClass) =>
-      if (!isNoisyImplicitClass(implicitClass.symbol)) {
-        visitor.visitImplicitClassSymbol(
-          path,
-          implicitClass.symbol,
-          query,
-          implicitClass.range.toLsp,
-        )
-      }
-    }
   }
 
   def searchWorkspacePackages(
