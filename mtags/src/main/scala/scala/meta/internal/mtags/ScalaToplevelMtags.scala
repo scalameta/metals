@@ -430,7 +430,7 @@ class ScalaToplevelMtags(
                 addToplevelMembers(
                   ToplevelMember(
                     currentOwner,
-                    semanticdb.Range(0, 0, 0, 0),
+                    newPosition.toRange,
                     ToplevelMember.Kind.ImplicitClass
                   ) :: Nil
                 )
@@ -479,7 +479,7 @@ class ScalaToplevelMtags(
                   addToplevelMembers(
                     ToplevelMember(
                       currentOwner,
-                      semanticdb.Range(0, 0, 0, 0),
+                      newPosition.toRange,
                       ToplevelMember.Kind.ImplicitClass
                     ) :: Nil
                   )
