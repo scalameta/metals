@@ -1300,7 +1300,7 @@ class MetalsGlobal(
       visit: Member => Boolean
   ): Unit = {
     val context = doLocateContext(pos)
-    val implicitClassSymbols = search.queryAllImplicitClasses()
+    val implicitClassSymbols = search.queryTopLevelMembers(m.pc.ToplevelMemberKind.IMPLICIT_CLASS)
 
     implicitClassSymbols.asScala.foreach { classSymbolStr =>
       val implicitClassSymbol = inverseSemanticdbSymbol(classSymbolStr)

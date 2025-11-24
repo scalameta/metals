@@ -130,15 +130,14 @@ class MetalsSymbolSearch(
     )
   }
 
-  override def queryAllImplicitClasses(): ju.List[String] = {
-    val implicitClasses = wsp.topLevelMembers.values.flatten
-      .filter(_.kind == ToplevelMember.Kind.ImplicitClass)
-
-    val classSymbols = implicitClasses
+  override def queryTopLevelMembers(kind: ToplevelMemberKind): ju.List[String] = {
+    val scalaKind = ToplevelMember.Kind.fromJava(kind)
+    
+    wsp.topLevelMembers.values.flatten
+      .filter(_.kind == scalaKind)
       .map(_.symbol)
       .toSet
       .toList
-
-    classSymbols.asJava
+      .asJava
   }
 }

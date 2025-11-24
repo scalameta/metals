@@ -56,13 +56,13 @@ public interface SymbolSearch {
                   SymbolSearchVisitor visitor);
     
     /**
-     * Returns all implicit classes in the workspace and dependencies.
-     * Returns class symbols that can be resolved in the presentation compiler.
-     * This is used for type-based matching of implicit classes.
+     * Returns toplevel members of a specific kind from the workspace and dependencies.
+     * Returns symbols that can be resolved in the presentation compiler.
      * 
-     * @return list of implicit class symbols (e.g., "io/circe/syntax/EncoderOps#")
+     * @param kind the kind of toplevel members to query (e.g., IMPLICIT_CLASS for implicit classes)
+     * @return list of symbols matching the kind (e.g., "io/circe/syntax/EncoderOps#")
      */
-    default List<String> queryAllImplicitClasses() {
+    default List<String> queryTopLevelMembers(ToplevelMemberKind kind) {
         return java.util.Collections.emptyList();
     }
     
