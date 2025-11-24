@@ -11,7 +11,6 @@ import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
-import scala.meta.internal.semanticdb
 import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
