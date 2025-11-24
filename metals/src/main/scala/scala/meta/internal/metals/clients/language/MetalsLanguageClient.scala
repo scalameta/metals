@@ -9,9 +9,11 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
 import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -42,6 +44,13 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   private[clients] def rawMetalsInputBox(
       params: MetalsInputBoxParams
   ): CompletableFuture[RawMetalsInputBoxResult]
+
+  def showMessageRequest(
+      params: ShowMessageRequestParams,
+      defaultTo: () => MessageActionItem,
+  ): CompletableFuture[MessageActionItem] = {
+    CompletableFuture.completedFuture(defaultTo())
+  }
 
   /**
    * Opens an input box to ask the user for input.

@@ -134,6 +134,7 @@ object TestGroups {
       "tests.mcp.McpServerLspSuite", "tests.mcp.McpFormatLspSuite",
       "tests.CredentialsSuite", "tests.ClassloaderModulesSupport",
       "tests.testProvider.ZioTestFinderSuite", "tests.mcp.McpPortConfigSuite",
-      "tests.mcp.McpCompileToolsLspSuite", "tests.StackTraceMatcherSuite"),
+      "tests.mcp.McpCompileToolsLspSuite", "tests.StackTraceMatcherSuite",
+      "tests.JavaReferencesLspSuite"),
   )
 }

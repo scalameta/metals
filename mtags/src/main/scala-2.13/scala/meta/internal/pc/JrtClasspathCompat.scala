@@ -21,7 +21,9 @@ object JrtClasspathCompat {
         jrtClassPathClass.getDeclaredField("jrtClassPathCache")
       jrtClassPathCacheField.setAccessible(true)
       val jrtClassPathCache =
-        jrtClassPathCacheField.get(null).asInstanceOf[FileBasedCache[_, _]]
+        jrtClassPathCacheField
+          .get(JrtClassPath)
+          .asInstanceOf[FileBasedCache[_, _]]
 
       jrtClassPathCache.clear()
 
@@ -29,7 +31,7 @@ object JrtClasspathCompat {
         jrtClassPathClass.getDeclaredField("ctSymClassPathCache")
       ctSymClassPathCacheField.setAccessible(true)
       val ctSymClassPathCache = ctSymClassPathCacheField
-        .get(null)
+        .get(JrtClassPath)
         .asInstanceOf[FileBasedCache[_, _]]
 
       ctSymClassPathCache.clear()

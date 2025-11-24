@@ -86,7 +86,9 @@ case class JavaPresentationCompiler(
       params: OffsetParams,
       name: String
   ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaRenameProvider(javaCompiler, params, Some(name)).rename().asJava
+    )
 
   override def definition(
       params: OffsetParams
@@ -114,7 +116,11 @@ case class JavaPresentationCompiler(
   override def references(
       params: ReferencesRequest
   ): CompletableFuture[util.List[ReferencesResult]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaReferencesProvider(javaCompiler, params)
+        .references()
+        .asJava
+    )
 
   override def getTasty(
       targetUri: URI,
@@ -216,5 +222,7 @@ case class JavaPresentationCompiler(
   override def prepareRename(
       params: OffsetParams
   ): CompletableFuture[Optional[lsp4j.Range]] =
-    CompletableFuture.completedFuture(Optional.empty())
+    CompletableFuture.completedFuture(
+      new JavaRenameProvider(javaCompiler, params, None).prepareRename()
+    )
 }

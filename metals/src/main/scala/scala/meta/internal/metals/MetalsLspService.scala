@@ -40,6 +40,7 @@ import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -1421,7 +1422,7 @@ abstract class MetalsLspService(
     stacktraceAnalyzer.resolveStacktraceLocationCommand(stacktraceLine)
 
   def findBuildTargetByDisplayName(target: String): Option[b.BuildTarget] =
-    buildTargets.findByDisplayName(target)
+    buildTargets.findByDisplayNameOrUri(target)
 
   def willRenameFile(
       oldPath: AbsolutePath,
@@ -1520,7 +1521,7 @@ abstract class MetalsLspService(
       .flatMap(buildTargets.inverseSources(_))
       .orElse {
         Option(params.buildTarget)
-          .flatMap(buildTargets.findByDisplayName)
+          .flatMap(buildTargets.findByDisplayNameOrUri)
           .map(_.getId())
       }
 
@@ -1528,7 +1529,13 @@ abstract class MetalsLspService(
       case Some(target) =>
         compilations
           .compileTarget(target)
-          .flatMap(_ => action(params))
+          .flatMap { result =>
+            if (result.getStatusCode == b.StatusCode.CANCELLED) {
+              Future.failed(DiscoveryFailures.WorkspaceResetException)
+            } else {
+              action(params)
+            }
+          }
       case None =>
         action(params)
     }

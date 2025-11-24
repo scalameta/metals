@@ -214,6 +214,14 @@ class BspConnector(
                 query.params,
                 ConnectionProvider.ConnectRequestCancelationGroup,
                 throw MetalsCancelException,
+                defaultTo = () => {
+                  client.showMessage(
+                    Messages.BspSwitch
+                      .notificationParams(distinctServers.head._1)
+                  )
+                  query.params.getActions().get(0)
+
+                },
               )
               .map(item =>
                 Option(item)
@@ -325,7 +333,29 @@ class BspConnector(
     )
 
     for {
-      item <- client.showMessageRequest(params.params).asScala
+      item <- client
+        .showMessageRequest(
+          params.params,
+          defaultTo = () => {
+            val switchTo = currentSelectedServer match {
+              case Some(server) =>
+                params.params
+                  .getActions()
+                  .asScala
+                  .find(!_.getTitle().contains(server))
+              case None =>
+                params.params.getActions().asScala.headOption
+            }
+            val serverToSwitchTo = switchTo.getOrElse(
+              throw new IllegalStateException("No server to switch to")
+            )
+            client.showMessage(
+              Messages.BspSwitch.notificationParams(serverToSwitchTo.getTitle())
+            )
+            serverToSwitchTo
+          },
+        )
+        .asScala
     } yield Option(item).map(_.getTitle()).map(params.mapping(_))
   }
 

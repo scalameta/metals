@@ -48,6 +48,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param maxLogBackups The maximum number of backup log files.
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
+ * @param debuggeeGracePeriod Grace period in seconds for the debuggee to start.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -126,6 +127,11 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(60),
+    debuggeeGracePeriod: Int =
+      Option(System.getProperty("metals.debuggee-grace-period"))
+        .filter(_.forall(Character.isDigit(_)))
+        .map(_.toInt)
+        .getOrElse(60),
     enableBestEffort: Boolean = MetalsServerConfig.binaryOption(
       "metals.enable-best-effort",
       default = false,
@@ -135,6 +141,10 @@ final case class MetalsServerConfig(
         .filter(_.forall(Character.isDigit(_)))
         .map(_.toInt)
         .getOrElse(3),
+    disableShowMessageRequest: Boolean = MetalsServerConfig.binaryOption(
+      "metals.disable-show-message-request",
+      default = false,
+    ),
 ) {
   override def toString: String =
     List[String](
@@ -158,8 +168,10 @@ final case class MetalsServerConfig(
       s"build-server-ping-interval=${pingInterval}",
       s"worksheet-timeout=$worksheetTimeout",
       s"debug-server-start-timeout=$debugServerStartTimeout",
+      s"debuggee-grace-period=$debuggeeGracePeriod",
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
+      s"disable-show-message-request=$disableShowMessageRequest",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
@@ -187,6 +199,7 @@ object MetalsServerConfig {
     val cocMetals = "coc-metals"
     val sublime = "sublime"
     val emacs = "emacs"
+    val helix = "helix"
   }
 
   def base: MetalsServerConfig = MetalsServerConfig()
@@ -202,6 +215,10 @@ object MetalsServerConfig {
             _completionCommand = Some("editor.action.triggerSuggest"),
             overrideDefFormat = OverrideDefFormat.Unicode,
           ),
+        )
+      case MetalsClientType.helix =>
+        base.copy(
+          disableShowMessageRequest = true
         )
       case MetalsClientType.vimLsc =>
         base.copy(

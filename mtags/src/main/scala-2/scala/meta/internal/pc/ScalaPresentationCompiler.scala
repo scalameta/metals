@@ -622,8 +622,9 @@ case class ScalaPresentationCompiler(
         completionItemPriority
       )
     } catch {
-      case e: FatalError
-          if scalaVersion.startsWith("2.13") && !withClearedCaches =>
+      // Match Error from https://github.com/scalameta/metals/issues/7844
+      case e @ (_: FatalError | _: MatchError)
+          if scalaVersion.startsWith("2.") && !withClearedCaches =>
         val cleared = JrtClasspathCompat.clearJrtClassPathCaches(logger)
         if (cleared) {
           logger.warning(

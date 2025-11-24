@@ -27,7 +27,13 @@ class ScalaMtags(
   private val root: Parsed[Source] =
     parsedTree
       .map(Parsed.Success(_))
-      .getOrElse(input.safeParse[Source](dialect))
+      .getOrElse(
+        input
+          .safeParseWithExperimentalFallback[Source](
+            dialect,
+            () => input.tokenize.toOption
+          )
+      )
 
   def source: Source = root.get
   override def language: Language = Language.SCALA

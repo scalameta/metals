@@ -208,7 +208,8 @@ class ConnectionProvider(
       languageClient
         .showMessageRequest(
           Messages.GenerateBspAndConnect
-            .params(buildTool.executableName, buildTool.buildServerName)
+            .params(buildTool.executableName, buildTool.buildServerName),
+          defaultTo = () => { Messages.GenerateBspAndConnect.yes },
         )
         .asScala
         .flatMap { item =>
@@ -530,13 +531,20 @@ class ConnectionProvider(
             BuildInfo.bloopVersion,
             isChangedInSettings = userConfig.bloopVersion != None,
           )
-          languageClient.showMessageRequest(messageParams).asScala.foreach {
-            case action if action == IncompatibleBloopVersion.shutdown =>
-              connect(new CreateSession(true))
-            case action if action == IncompatibleBloopVersion.dismissForever =>
-              notification.dismissForever()
-            case _ =>
-          }
+          languageClient
+            .showMessageRequest(
+              messageParams,
+              defaultTo = () => { IncompatibleBloopVersion.dismissForever },
+            )
+            .asScala
+            .foreach {
+              case action if action == IncompatibleBloopVersion.shutdown =>
+                connect(new CreateSession(true))
+              case action
+                  if action == IncompatibleBloopVersion.dismissForever =>
+                notification.dismissForever()
+              case _ =>
+            }
         }
       }
     }
@@ -698,7 +706,9 @@ class ConnectionProvider(
                 ) {
                   languageClient
                     .showMessageRequest(
-                      Messages.ImportProjectPartiallyFailed.params()
+                      Messages.ImportProjectPartiallyFailed.params(),
+                      defaultTo =
+                        () => { Messages.ImportProjectPartiallyFailed.showLogs },
                     )
                     .asScala
                     .foreach {
@@ -729,7 +739,10 @@ class ConnectionProvider(
                     case _: BuildServerProvider =>
                       languageClient
                         .showMessageRequest(
-                          Messages.ImportProjectFailedSuggestBspSwitch.params()
+                          Messages.ImportProjectFailedSuggestBspSwitch.params(),
+                          defaultTo = () => {
+                            Messages.ImportProjectFailedSuggestBspSwitch.cancel
+                          },
                         )
                         .asScala
                         .foreach {

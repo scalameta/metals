@@ -76,7 +76,7 @@ class DebugDiscovery(
     val pathOpt = Option(params.path).map(_.toAbsolutePath)
     val buildTarget = pathOpt.flatMap(buildTargets.inverseSources(_)).orElse {
       Option(params.buildTarget)
-        .flatMap(buildTargets.findByDisplayName)
+        .flatMap(buildTargets.findByDisplayNameOrUri)
         .map(_.getId())
     }
 

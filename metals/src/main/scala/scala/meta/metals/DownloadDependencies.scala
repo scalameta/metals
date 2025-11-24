@@ -21,8 +21,6 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.debugadapter.ScalaVersion
 import coursier.LocalRepositories
 import coursier.paths.CoursierPaths
-import coursierapi.Dependency
-import scalafix.interfaces.Scalafix
 
 object DownloadDependencies {
 
@@ -160,12 +158,12 @@ object DownloadDependencies {
     Files.deleteIfExists(tmp)
     Files.deleteIfExists(config)
     Embedded.downloadDependency(
-      Dependency.of(
+      Embedded.dependencyOf(
         "org.scalameta",
         s"scalafmt-cli_" + metalsBinaryVersion,
         BuildInfo.scalafmtVersion,
       ),
-      scalaVersion = Some(BuildInfo.scala213),
+      Some(BuildInfo.scala213),
     )
   }
 
@@ -222,24 +220,9 @@ object DownloadDependencies {
       (allSupportedScala3Versions ++ BuildInfo.supportedScala2Versions).filter(
         filterVersions
       )
-    val allToDownload = allScalaVersions
-      .map(_.split('.').take(2).mkString("."))
-      .distinct
-      .filter(_ != "2.11")
-    allToDownload.flatMap(downloadScalafix)
-  }
-
-  def downloadScalafix(scalaMinorVersion: String): Array[Path] = {
-    scribe.info(s"Downloading Scalafix for $scalaMinorVersion")
-    Scalafix
-      .fetchAndClassloadInstance(scalaMinorVersion)
-      .getClass()
-      .getClassLoader() match {
-      case cl: java.net.URLClassLoader =>
-        cl.getURLs().map(_.toURI()).map(Paths.get(_))
-      case cl =>
-        throw new Exception(s"Unexpected classloader: $cl")
-    }
+    val allToDownload = allScalaVersions.distinct
+      .filterNot(_.startsWith("2.11"))
+    allToDownload.flatMap(Embedded.downloadScalafix)
   }
 
   def downloadBloop(): Seq[Path] = {

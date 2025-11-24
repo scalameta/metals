@@ -10,6 +10,7 @@ import scala.util.matching.Regex
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -22,8 +23,6 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
-import coursierapi._
-
 class NewProjectProvider(
     client: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
@@ -35,8 +34,11 @@ class NewProjectProvider(
 
   private val templatesUrl =
     "https://github.com/foundweekends/giter8/wiki/giter8-templates.md"
-  private val giterDependency = Dependency
-    .of("org.foundweekends.giter8", "giter8_2.12", BuildInfo.gitter8Version)
+  private val giterDependency = Embedded.dependencyOf(
+    "org.foundweekends.giter8",
+    "giter8_2.12",
+    BuildInfo.gitter8Version,
+  )
   // equal to cmd's: g8 playframework/play-scala-seed.g8 --name=../<<name>>
   private val giterMain = "giter8.Giter8"
 
@@ -160,7 +162,10 @@ class NewProjectProvider(
 
     if (config.isOpenNewWindowProvider()) {
       client
-        .showMessageRequest(NewScalaProject.askForNewWindowParams())
+        .showMessageRequest(
+          NewScalaProject.askForNewWindowParams(),
+          defaultTo = () => NewScalaProject.no,
+        )
         .asScala
         .map {
           case msg if msg == NewScalaProject.no =>
