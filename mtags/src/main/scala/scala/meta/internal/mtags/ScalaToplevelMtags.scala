@@ -1218,10 +1218,10 @@ class ScalaToplevelMtags(
     ownerSymbol.startsWith(
       "scala/collection/convert/StreamExtensions"
     ) ||
-    ownerSymbol.contains(
-      "scala/reflect/api/Internals.InternalApi.DecoratorApi"
+    ownerSymbol.startsWith(
+      "scala/reflect/api/Internals"
     ) ||
-    ownerSymbol.contains(
+    ownerSymbol.startsWith(
       "scala/Predef"
     )
   }
