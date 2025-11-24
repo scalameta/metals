@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.pc.ScalaPresentationCompiler
+import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.Version
 import scala.meta.internal.worksheets.MdocClassLoader
 import scala.meta.io.AbsolutePath
@@ -536,12 +537,23 @@ object Embedded {
       scalaBinaryVersion: String,
       scalaVersion: Option[String],
       resolutionParams: Option[ResolutionParams] = None,
-  ): List[Path] =
+  ): List[Path] = {
+    val replArtifact = scalaVersion match {
+      case Some(version) =>
+        val ver = SemVer.Version.fromString(version)
+        if (ver.major >= 3 && ver.minor >= 8)
+          downloadDependency("org.scala-lang", "scala3-repl_3", version)
+        else Seq.empty
+      case None =>
+        Seq.empty
+    }
+
     downloadDependency(
       mdocDependency(scalaBinaryVersion, scalaVersion),
       scalaVersion = None,
       resolution = resolutionParams,
-    )
+    ) ++ replArtifact
+  }
 
   def rulesClasspath(dependencies: List[Dependency]): List[Path] = {
     for {
