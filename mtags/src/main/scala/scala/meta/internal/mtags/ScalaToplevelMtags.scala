@@ -427,13 +427,7 @@ class ScalaToplevelMtags(
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
               if (expect.isImplicit) {
-                addToplevelMembers(
-                  ToplevelMember(
-                    currentOwner,
-                    newPosition.toRange,
-                    ToplevelMember.Kind.ImplicitClass
-                  ) :: Nil
-                )
+                addTopLevelImplicitClass()
               }
               val next = expect.startIndentedRegion(
                 currRegion,
@@ -476,13 +470,7 @@ class ScalaToplevelMtags(
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
                 if (expect.isImplicit) {
-                  addToplevelMembers(
-                    ToplevelMember(
-                      currentOwner,
-                      newPosition.toRange,
-                      ToplevelMember.Kind.ImplicitClass
-                    ) :: Nil
-                  )
+                  addTopLevelImplicitClass()
                 }
                 val next =
                   expect.startInBraceRegion(
@@ -1204,6 +1192,38 @@ class ScalaToplevelMtags(
     }
     if (isUnapply) resultList.filterNot(_.name.charAt(0).isUpper)
     else resultList
+  }
+
+  /**
+   * Adds an implicit class to the toplevel members if it's not a noisy implicit class.
+   * Filters out implicit classes that introduce a lot of methods which aren't usually useful.
+   */
+  private def addTopLevelImplicitClass(): Unit = {
+    if (!isNoisyImplicitClass(currentOwner)) {
+      addToplevelMembers(
+        ToplevelMember(
+          currentOwner,
+          newPosition.toRange,
+          ToplevelMember.Kind.ImplicitClass
+        ) :: Nil
+      )
+    }
+  }
+
+  /**
+   * Checks if the given owner represents a noisy implicit class.
+   * Noisy implicit classes are those that introduce many methods which aren't usually useful.
+   */
+  private def isNoisyImplicitClass(ownerSymbol: String): Boolean = {
+    ownerSymbol.startsWith(
+      "scala/collection/convert/StreamExtensions"
+    ) ||
+    ownerSymbol.contains(
+      "scala/reflect/api/Internals.InternalApi.DecoratorApi"
+    ) ||
+    ownerSymbol.contains(
+      "scala/Predef"
+    )
   }
 
   private def isNewline: Boolean =
