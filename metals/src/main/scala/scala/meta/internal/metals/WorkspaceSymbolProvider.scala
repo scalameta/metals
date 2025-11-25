@@ -283,11 +283,12 @@ final class WorkspaceSymbolProvider(
       symbol <- symbols
       if Fuzzy.matches(query, symbol.symbol)
     }
-      visitor.visitWorkspaceSymbol(
+      visitor.visitSymbol(
         path,
         symbol.symbol,
         symbol.kind,
         symbol.range,
+        true,
       )
   }
 
@@ -300,14 +301,14 @@ final class WorkspaceSymbolProvider(
       symbol <- symbols
       if query.matches(symbol.symbol)
     } yield {
-      if (symbol.kind == ToplevelMember.Kind.Type) {
-        visitor.visitWorkspaceSymbol(
+        val isFromWorkspace = path.isWorkspaceSource(workspace)
+        visitor.visitSymbol(
           path.toNIO,
           symbol.symbol,
           symbol.kind.toLsp,
           symbol.range.toLsp,
+          isFromWorkspace,
         )
-      }
     }
     all.length
   }
@@ -361,11 +362,12 @@ final class WorkspaceSymbolProvider(
       ) count
       else {
         val (path, symbol) = allSymbols.next()
-        val added = visitor.visitWorkspaceSymbol(
+        val added = visitor.visitSymbol(
           path,
           symbol.symbol,
           symbol.kind,
           symbol.range,
+          true,  // workspaceSearch is for workspace sources
         )
         loopSearch(count + added)
       }

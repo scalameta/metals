@@ -41,11 +41,12 @@ class TestingWorkspaceSearch(implicit
         if (query.matches(defn.info)) {
           val c = defn.toCached
           if (filter(c)) {
-            visitor.visitWorkspaceSymbol(
+            visitor.visitSymbol(
               Paths.get(path),
               c.symbol,
               c.kind,
-              c.range
+              c.range,
+              true
             )
           }
         }

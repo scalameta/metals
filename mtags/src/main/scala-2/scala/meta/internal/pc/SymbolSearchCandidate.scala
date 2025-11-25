@@ -33,6 +33,19 @@ object SymbolSearchCandidate {
     }
     override def termCharacter: Char = '.'
   }
+  final case class Dependency(symbol: String, path: Path)
+      extends SymbolSearchCandidate {
+    def nameString: String = symbol
+    override def packageString: String = {
+      def loop(s: String): String = {
+        if (s.isNone) s
+        else if (s.isPackage) s
+        else loop(s.owner)
+      }
+      loop(symbol)
+    }
+    override def termCharacter: Char = '.'
+  }
   class Comparator(query: String)
       extends java.util.Comparator[SymbolSearchCandidate] {
     override def compare(

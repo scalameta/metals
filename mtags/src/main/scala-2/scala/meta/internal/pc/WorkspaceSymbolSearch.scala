@@ -177,13 +177,19 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     def visitClassfile(pkg: String, filename: String): Int = {
       visit(SymbolSearchCandidate.Classfile(pkg, filename))
     }
-    def visitWorkspaceSymbol(
+    def visitSymbol(
         path: Path,
         symbol: String,
         kind: l.SymbolKind,
-        range: l.Range
+        range: l.Range,
+        isFromWorkspace: Boolean
     ): Int = {
-      visit(SymbolSearchCandidate.Workspace(symbol, path))
+      val candidate = if (isFromWorkspace) {
+        SymbolSearchCandidate.Workspace(symbol, path)
+      } else {
+        SymbolSearchCandidate.Dependency(symbol, path)
+      }
+      visit(candidate)
     }
 
     def shouldVisitPackage(pkg: String): Boolean =
@@ -226,6 +232,11 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           }
           members.filter(sym => isAccessible(sym))
         case SymbolSearchCandidate.Workspace(symbol, path)
+            if !compiler.isOutlinedFile(path) =>
+          val gsym = inverseSemanticdbSymbol(symbol)
+          if (isAccessible(gsym)) gsym :: Nil
+          else Nil
+        case SymbolSearchCandidate.Dependency(symbol, path)
             if !compiler.isOutlinedFile(path) =>
           val gsym = inverseSemanticdbSymbol(symbol)
           if (isAccessible(gsym)) gsym :: Nil

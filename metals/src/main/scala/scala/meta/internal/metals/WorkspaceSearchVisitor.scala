@@ -99,22 +99,32 @@ class WorkspaceSearchVisitor(
     defs.sortBy(_._1)(resultOrdering).headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
-  override def visitWorkspaceSymbol(
+  override def visitSymbol(
       path: Path,
       symbol: String,
       kind: SymbolKind,
       range: l.Range,
+      isFromWorkspace: Boolean,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
-    fromWorkspace.add(
-      new l.SymbolInformation(
-        desc.name.value,
-        kind,
-        new l.Location(path.toUri.toString, range),
-        owner.replace('/', '.'),
-      )
+    val symbolInfo = new l.SymbolInformation(
+      desc.name.value,
+      kind,
+      new l.Location(path.toUri.toString, range),
+      owner.replace('/', '.'),
     )
-    1
+
+    if (isFromWorkspace) {
+      fromWorkspace.add(symbolInfo)
+      1
+    } else {
+      if (fromWorkspace.isEmpty || query.isClasspath) {
+        fromClasspath.add(symbolInfo)
+        1
+      } else {
+        0
+      }
+    }
   }
   override def visitClassfile(pkg: String, filename: String): Int = {
     if (fromWorkspace.isEmpty || query.isClasspath) {
