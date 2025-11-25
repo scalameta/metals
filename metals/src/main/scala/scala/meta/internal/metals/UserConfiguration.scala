@@ -671,15 +671,13 @@ object UserConfiguration {
         key: String,
         parse: Option[List[String]] => Either[String, T],
     ): Option[T] = {
-      getStringListKey(key).flatMap { values =>
-        parse(Some(values)).fold(
-          err => {
-            errors += s"json error: $err"
-            None
-          },
-          Some(_),
-        )
-      }
+      parse(getStringListKey(key)).fold(
+        err => {
+          errors += s"json error: $err"
+          None
+        },
+        Some(_),
+      )
     }
     def getParsedKey[T](
         key: String,
