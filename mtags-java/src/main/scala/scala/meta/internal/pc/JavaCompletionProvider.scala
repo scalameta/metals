@@ -320,28 +320,28 @@ class JavaCompletionProvider(
       root: CompilationUnitTree
   ): Position = {
     val sourcePositions = Trees.instance(task).getSourcePositions()
+    val text = root.getSourceFile.getCharContent(true)
+
+    val imports = root.getImports.asScala
+    if (imports.nonEmpty) {
+      val lastImport = imports.last
+      val endPos = compiler.offsetToPosition(
+        sourcePositions.getEndPosition(root, lastImport).toInt,
+        text.toString
+      )
+      return new Position(endPos.getLine + 1, 0)
+    }
+
     val packageName = root.getPackageName
     if (packageName != null) {
-      val end = sourcePositions.getEndPosition(root, packageName)
-      // Scan for semicolon
-      val text = root.getSourceFile.getCharContent(true)
-      var i = end.toInt
-      while (i < text.length && text.charAt(i) != ';') {
-        i += 1
-      }
-      if (i < text.length) {
-        // Found semicolon, move past it and whitespace/newlines
-        i += 1
-        while (i < text.length && Character.isWhitespace(text.charAt(i))) {
-          i += 1
-        }
-        compiler.offsetToPosition(i, text.toString)
-      } else {
-        new Position(0, 0)
-      }
-    } else {
-      new Position(0, 0)
+      val endPos = compiler.offsetToPosition(
+        sourcePositions.getEndPosition(root, packageName).toInt,
+        text.toString
+      )
+      return new Position(endPos.getLine + 2, 0)
     }
+
+    new Position(0, 0)
   }
 
   private def completeSymbolSearch(
