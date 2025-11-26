@@ -27,11 +27,16 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class JavaCompletionProvider(
     compiler: JavaMetalsGlobal,
     params: OffsetParams,
-    isCompletionSnippetsEnabled: Boolean
+    isCompletionSnippetsEnabled: Boolean,
+    buildTargetIdentifier: String
 ) {
 
   lazy val identifier = extractIdentifier.toLowerCase
@@ -57,7 +62,14 @@ class JavaCompletionProvider(
       case Some(n) =>
         val items = n.getLeaf.getKind match {
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
-          case IDENTIFIER => completeIdentifier(task, n).distinct ++ keywords(n)
+          case IDENTIFIER =>
+            val scope = completeIdentifier(task, n)
+            val scopeLabels = scope.map(_.getLabel).toSet
+            val symbols = completeSymbolSearch(task, scanner.root)
+              .filterNot(i => scopeLabels(i.getLabel))
+            val sorted = (scope ++ symbols).distinct
+              .sortBy(item => identifierScore(item.getLabel)) ++ keywords(n)
+            sorted
           case _ => keywords(n)
         }
         new CompletionList(items.asJava)
@@ -66,8 +78,12 @@ class JavaCompletionProvider(
   }
 
   private def identifierScore(element: Element): Int = {
-    val name = element.getSimpleName().toString().toLowerCase()
-    name.indexOf(identifier) match {
+    identifierScore(element.getSimpleName().toString())
+  }
+
+  private def identifierScore(name: String): Int = {
+    val lower = name.toLowerCase()
+    lower.indexOf(identifier) match {
       case 0 => 0
       case -1 => 2
       case _ => 1
@@ -291,5 +307,71 @@ class JavaCompletionProvider(
       case ElementKind.METHOD => Some(CompletionItemKind.Method)
       case _ => None
     }
+
+  private def autoImportPosition(
+      task: JavacTask,
+      root: CompilationUnitTree
+  ): Position = {
+    val sourcePositions = Trees.instance(task).getSourcePositions()
+    val packageName = root.getPackageName
+    if (packageName != null) {
+      val end = sourcePositions.getEndPosition(root, packageName)
+      // Scan for semicolon
+      val text = root.getSourceFile.getCharContent(true)
+      var i = end.toInt
+      while (i < text.length && text.charAt(i) != ';') {
+        i += 1
+      }
+      if (i < text.length) {
+        // Found semicolon, move past it and whitespace/newlines
+        i += 1
+        while (i < text.length && Character.isWhitespace(text.charAt(i))) {
+          i += 1
+        }
+        compiler.offsetToPosition(i, text.toString)
+      } else {
+        new Position(0, 0)
+      }
+    } else {
+      new Position(0, 0)
+    }
+  }
+
+  private def completeSymbolSearch(
+      task: JavacTask,
+      root: CompilationUnitTree
+  ): List[CompletionItem] = {
+    val identifier = extractIdentifier
+    val result = List.newBuilder[CompletionItem]
+    val visitor = new JavaClassVisitor(
+      task.getElements,
+      element => {
+        val simpleName = element.getSimpleName.toString
+        if (CompletionFuzzy.matches(identifier, simpleName)) {
+          val item = completionItem(element)
+
+          val start = inferIdentStart(params.offset(), params.text())
+          val end = params.offset()
+          val range = new Range(
+            compiler.offsetToPosition(start, params.text()),
+            compiler.offsetToPosition(end, params.text())
+          )
+          val textEdit = new TextEdit(range, simpleName)
+          item.setTextEdit(Either.forLeft(textEdit))
+
+          val pos = autoImportPosition(task, root)
+          val className = element.toString
+          val importText = s"import $className;\n"
+          val edit = new TextEdit(new Range(pos, pos), importText)
+          item.setAdditionalTextEdits(List(edit).asJava)
+
+          result += item
+          true
+        } else false
+      }
+    )
+    compiler.search.search(identifier, buildTargetIdentifier, visitor)
+    result.result()
+  }
 
 }

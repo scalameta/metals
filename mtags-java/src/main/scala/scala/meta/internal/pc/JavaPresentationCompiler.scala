@@ -55,7 +55,8 @@ case class JavaPresentationCompiler(
       new JavaCompletionProvider(
         javaCompiler,
         params,
-        config.isCompletionSnippetsEnabled
+        config.isCompletionSnippetsEnabled,
+        buildTargetIdentifier
       ).completions()
     )
 
