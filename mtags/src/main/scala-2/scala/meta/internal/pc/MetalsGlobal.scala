@@ -1305,7 +1305,6 @@ class MetalsGlobal(
       context,
       implicitClassSymbol => {
         if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
-          // Get the primary constructor parameter type
           val constructorParamTypeOpt = for {
             ctor <-
               implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
@@ -1330,7 +1329,6 @@ class MetalsGlobal(
                 }
 
               if (matches) {
-                // Add (visit) all public accessible methods from the implicit class that match the query
                 implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                   val methodName = extensionMethod.name.decoded
                   val matchesQuery =
