@@ -482,13 +482,9 @@ lazy val mtags = project
   .enablePlugins(BuildInfoPlugin)
 
 val toolchainJavaOptions = List(
-  "--add-modules", "jdk.compiler",
-  "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
-  "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
-  "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
-  "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
-  "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
-)
+  "--add-modules",
+  "jdk.compiler",
+) ++ sharedJavaOptions.filter(_.startsWith("--add-exports="))
 lazy val `java-header-compiler` = project
   .settings(
     moduleName := "java-header-compiler",
@@ -637,6 +633,12 @@ lazy val metals = project
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
+    Compile / resourceGenerators += Def.task {
+      val file =
+        (Compile / managedResourceDirectories).value.head / "META-INF" / "metals-required-vm-options.txt"
+      IO.write(file, sharedJavaOptions.mkString("\n"))
+      Seq(file)
+    },
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
       "localSnapshotVersion" -> localSnapshotVersion,
