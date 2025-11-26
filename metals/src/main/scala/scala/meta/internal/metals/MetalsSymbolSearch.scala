@@ -102,6 +102,14 @@ class MetalsSymbolSearch(
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {

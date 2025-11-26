@@ -17,6 +17,14 @@ object EmptySymbolSearch extends SymbolSearch {
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    SymbolSearch.Result.COMPLETE
+  }
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {

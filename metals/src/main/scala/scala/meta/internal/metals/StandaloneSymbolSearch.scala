@@ -112,6 +112,14 @@ class StandaloneSymbolSearch(
   def search(
       query: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): Result = {
+    search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  def search(
+      query: String,
+      buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): Result = {

@@ -35,7 +35,6 @@ public abstract class SymbolSearchVisitor {
      * @param symbol the SemanticDB symbol, formatted as `scala/Predef.String#`
      * @param kind the kind of this symbol, for example class/interface/trait/method.
      * @param range the source range location where this symbol is defined.
-     * @param isFromWorkspace true if the symbol is from workspace sources, false if from classpath/dependencies.
      * @return the number of produced results from this classfile.
      */
     abstract public int visitWorkspaceSymbol(Path path, String symbol, SymbolKind kind, Range range);

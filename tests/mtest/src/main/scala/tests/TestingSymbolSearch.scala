@@ -80,6 +80,14 @@ class TestingSymbolSearch(
   override def search(
       textQuery: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    search(textQuery, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      textQuery: String,
+      buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {

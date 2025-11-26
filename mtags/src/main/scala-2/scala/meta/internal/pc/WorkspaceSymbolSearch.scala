@@ -181,7 +181,7 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         path: Path,
         symbol: String,
         kind: l.SymbolKind,
-        range: l.Range,
+        range: l.Range
     ): Int = {
       visit(SymbolSearchCandidate.Workspace(symbol, path))
     }
