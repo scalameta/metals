@@ -60,9 +60,6 @@ object ToplevelMember {
         case ImplicitClass => org.eclipse.lsp4j.SymbolKind.Class
       }
 
-      /**
-       * Converts Scala ToplevelMember.Kind to Java ToplevelMemberKind
-       */
       def toJava: ToplevelMemberKind = kind match {
         case Type => ToplevelMemberKind.TYPE
         case ImplicitClass => ToplevelMemberKind.IMPLICIT_CLASS

@@ -117,7 +117,7 @@ class WorkspaceSearchVisitor(
 //    val isFromWorkspace = absolutePath.isWorkspaceSource(workspace)
 
 //    if (isFromWorkspace) {
-      fromWorkspace.add(symbolInfo)
+    fromWorkspace.add(symbolInfo)
 //      1
 //    } else {
 //      if (fromWorkspace.isEmpty || query.isClasspath) {
