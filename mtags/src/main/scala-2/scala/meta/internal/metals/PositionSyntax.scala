@@ -1,8 +1,7 @@
 package scala.meta.internal.metals
 
-import scala.{meta => m}
-
-import scala.meta.Position
+import scala.meta.inputs.Input
+import scala.meta.inputs.Position
 import scala.meta.internal.inputs.XtensionInput
 
 import org.eclipse.{lsp4j => l}
@@ -141,12 +140,12 @@ object PositionSyntax {
     def formatMessage(
         severity: String,
         message: String,
-        input: m.Input
+        input: Input
     ): String = {
       try {
         val start = range.getStart
         val end = range.getEnd
-        val pos = m.Position.Range(
+        val pos = Position.Range(
           input,
           start.getLine,
           start.getCharacter,
@@ -169,7 +168,7 @@ object PositionSyntax {
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
     }
-    def formatMessage(input: m.Input): String = {
+    def formatMessage(input: Input): String = {
       d.getRange.formatMessage(
         d.getSeverity.toString.toLowerCase(),
         d.getMessage,

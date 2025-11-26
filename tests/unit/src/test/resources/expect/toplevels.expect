@@ -46,6 +46,7 @@ example/nested/LocalClass.scala -> example/nested/LocalClass#
 example/nested/LocalDeclarations.scala -> example/nested/Foo#
 example/nested/LocalDeclarations.scala -> example/nested/LocalDeclarations#
 example/nested/LocalDeclarations.scala -> example/nested/LocalDeclarations.
+example/nested/NestedPackage.java -> example/nested/NestedPackage#
 example/nested/package.scala -> example/PackageObjectSibling#
 example/nested/package.scala -> example/nested/package.
 example/package.scala -> example/package.

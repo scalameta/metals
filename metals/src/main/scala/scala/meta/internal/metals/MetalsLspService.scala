@@ -256,6 +256,8 @@ abstract class MetalsLspService(
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
+    () => mtags,
+    buffers,
     initializeParams.supportsHierarchicalDocumentSymbols,
   )
 

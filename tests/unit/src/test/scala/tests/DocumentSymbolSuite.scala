@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.{semanticdb => s}
@@ -20,13 +21,18 @@ abstract class DocumentSymbolSuite(
   override lazy val input: InputProperties = inputProperties
 
   override def testCases(): List[ExpectTestCase] = {
-    input.scalaFiles.map { file =>
+    for {
+      file <- input.allFiles
+      if file.isScalaOrJava
+    } yield {
       ExpectTestCase(
         file,
         () => {
           val (buffers, trees) = TreeUtils.getTrees(scalaVersion)
           val documentSymbolProvider = new DocumentSymbolProvider(
             trees = trees,
+            mtags = () => Mtags.testingSingleton,
+            buffers = buffers,
             supportsHierarchicalDocumentSymbols = true,
           )
 

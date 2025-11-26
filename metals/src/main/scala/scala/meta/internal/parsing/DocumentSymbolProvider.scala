@@ -2,8 +2,16 @@ package scala.meta.internal.parsing
 
 import java.util
 
+import scala.collection.mutable
+
 import scala.meta._
+import scala.meta.inputs.Position
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.Symbol
+import scala.meta.io.AbsolutePath
 import scala.meta.transversers.SimpleTraverser
 import scala.meta.trees.Origin
 
@@ -19,12 +27,102 @@ import org.eclipse.{lsp4j => l}
  */
 final class DocumentSymbolProvider(
     trees: Trees,
+    mtags: () => Mtags,
+    buffers: Buffers,
     supportsHierarchicalDocumentSymbols: Boolean,
 ) {
 
   def documentSymbols(
       path: AbsolutePath
   ): Either[util.List[DocumentSymbol], util.List[l.SymbolInformation]] = {
+    val symbols: Seq[DocumentSymbol] =
+      if (path.isScalaFilename) scalaDocumentSymbols(path)
+      else if (path.isJavaFilename) javaDocumentSymbols(path)
+      else {
+        scribe.warn(s"documentsymbol: unsupported file type $path")
+        Nil
+      }
+    if (supportsHierarchicalDocumentSymbols) {
+      Left(symbols.asJava)
+    } else {
+      val infos = symbols.toSymbolInformation(path.toURI.toString())
+      Right(infos.asJava)
+    }
+  }
+
+  private def javaDocumentSymbols(path: AbsolutePath): Seq[DocumentSymbol] = {
+    val input = path.toInputFromBuffers(buffers)
+    val doc = mtags().index(input, dialects.Scala213)
+    val occurrences =
+      doc.occurrences.iterator.map(occ => occ.symbol -> occ).toMap
+    val symbols = (for {
+      info <- doc.symbols.iterator
+      occ <- occurrences.get(info.symbol).iterator
+      range <- occ.range.iterator
+    } yield {
+      val pos = Position.Range(
+        input,
+        range.startLine,
+        range.startCharacter,
+        range.endLine,
+        range.endCharacter,
+      )
+      val detail = pos.lineContent
+      val name =
+        if (info.kind.isConstructor) Symbol(info.symbol).owner.displayName
+        else info.displayName
+      info.symbol -> new DocumentSymbol(
+        name,
+        info.kind.toLsp,
+        range.toLsp,
+        // TODO: handle selection range. This is missing in the upstream
+        // SemanticDB proto definitions.  We should fix this by adding it to
+        // semanticdb.proto in this repo, and move Mtags to using the
+        // protobuf-java bindings instead of the upstream
+        // org.scalameta:semanticdb_2.13 bindings.
+        range.toLsp,
+        detail,
+        new util.ArrayList[DocumentSymbol](),
+      )
+    }).toMap
+    val isChild = mutable.Set.empty[String]
+    for {
+      (sym, child) <- symbols.iterator
+      owner <- symbols.get(Symbol(sym).owner.value).iterator
+    } {
+      isChild.add(sym)
+      owner.getChildren().add(child)
+    }
+
+    (for {
+      (sym, root) <- symbols.iterator
+      if !isChild.contains(sym)
+    } yield compressPackages(root)).toSeq
+  }
+
+  // By default, we generate a symbol hierarchy where each part of the package
+  // name (`com.example.foo`) would be a separate DocumentSymbol, which is
+  // tedious to manually expand. This function compresses those symbols into one
+  // node in the hierarchy, which is what most users expect. However, we still
+  // handle the trickier case where Scala allows defining multiple packages in
+  // the same source file.
+  private def compressPackages(sym: DocumentSymbol): DocumentSymbol = {
+    if (
+      sym.getKind() == SymbolKind.Module &&
+      sym.getChildren().size() == 1
+    ) {
+      val child = sym.getChildren().get(0)
+      if (child.getKind() == SymbolKind.Module) {
+        val newName = s"${sym.getName()}.${child.getName()}"
+        child.setName(newName)
+        return compressPackages(child)
+      }
+    }
+
+    sym
+  }
+
+  private def scalaDocumentSymbols(path: AbsolutePath): Seq[DocumentSymbol] = {
     val result = for {
       tree <- trees.get(path)
     } yield {
@@ -35,14 +133,7 @@ final class DocumentSymbolProvider(
       }
       new SymbolTraverser().symbols(tree).asScala
     }
-    val symbols = result.getOrElse(Nil).toSeq
-
-    if (supportsHierarchicalDocumentSymbols) {
-      Left(symbols.asJava)
-    } else {
-      val infos = symbols.toSymbolInformation(path.toURI.toString())
-      Right(infos.asJava)
-    }
+    result.getOrElse(Nil).toSeq
   }
 
   private class SymbolTraverser(implicit dialect: Dialect)
