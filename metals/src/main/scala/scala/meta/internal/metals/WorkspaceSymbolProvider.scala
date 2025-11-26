@@ -308,7 +308,6 @@ final class WorkspaceSymbolProvider(
       if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
       if matchesAll || query.matches(symbol.symbol)
     } yield {
-      println(symbol)
       path.isWorkspaceSource(workspace)
       visitor.visitWorkspaceSymbol(
         path.toNIO,

@@ -113,20 +113,21 @@ class WorkspaceSearchVisitor(
       owner.replace('/', '.'),
     )
 
-    val absolutePath = AbsolutePath(path)
-    val isFromWorkspace = absolutePath.isWorkspaceSource(workspace)
+//    val absolutePath = AbsolutePath(path)
+//    val isFromWorkspace = absolutePath.isWorkspaceSource(workspace)
 
-    if (isFromWorkspace) {
+//    if (isFromWorkspace) {
       fromWorkspace.add(symbolInfo)
-      1
-    } else {
-      if (fromWorkspace.isEmpty || query.isClasspath) {
-        fromClasspath.add(symbolInfo)
-        1
-      } else {
-        0
-      }
-    }
+//      1
+//    } else {
+//      if (fromWorkspace.isEmpty || query.isClasspath) {
+//        fromClasspath.add(symbolInfo)
+//        1
+//      } else {
+//        0
+//      }
+//    }
+    1
   }
   override def visitClassfile(pkg: String, filename: String): Int = {
     if (fromWorkspace.isEmpty || query.isClasspath) {

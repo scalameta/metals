@@ -230,11 +230,6 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           val gsym = inverseSemanticdbSymbol(symbol)
           if (isAccessible(gsym)) gsym :: Nil
           else Nil
-        case SymbolSearchCandidate.Dependency(symbol, path)
-            if !compiler.isOutlinedFile(path) =>
-          val gsym = inverseSemanticdbSymbol(symbol)
-          if (isAccessible(gsym)) gsym :: Nil
-          else Nil
         case _ =>
           Nil
       }
