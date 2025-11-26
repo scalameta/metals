@@ -76,8 +76,6 @@ format.
 - `.github/ISSUE_TEMPLATE/bug_report.yml` - update `Version of Metals`
 - `./bin/test-release.sh` - remove any unsupported Scala versions and add newly
   supported ones. This will be needed later to test the new release.
-- `.github/workflows/mtags-auto-release.yml` - update `metals_version` and
-  `metals_ref`
 
 ### Open a PR with release notes
 
