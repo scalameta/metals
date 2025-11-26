@@ -1300,7 +1300,7 @@ class MetalsGlobal(
       visit: Member => Boolean
   ): Unit = {
     val context = doLocateContext(pos)
-    
+
     val visitor = new CompilerSearchVisitor(
       context,
       implicitClassSymbol => {
@@ -1337,7 +1337,7 @@ class MetalsGlobal(
                     CompletionFuzzy.matchesSubCharacters(query, methodName)
                   if (
                     matchesQuery &&
-                      extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
+                    extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
                   ) {
                     // Filter out methods inherited from AnyVal
                     val isInheritedFromAnyVal =
@@ -1371,8 +1371,13 @@ class MetalsGlobal(
         true
       }
     )
-    
-    search.search("", buildTargetIdentifier, ju.Optional.of(m.pc.ToplevelMemberKind.IMPLICIT_CLASS), visitor)
+
+    search.search(
+      "",
+      buildTargetIdentifier,
+      ju.Optional.of(m.pc.ToplevelMemberKind.IMPLICIT_CLASS),
+      visitor
+    )
 
   }
 }

@@ -290,7 +290,7 @@ final class WorkspaceSymbolProvider(
         path,
         symbol.symbol,
         symbol.kind,
-        symbol.range
+        symbol.range,
       )
   }
 
@@ -301,7 +301,7 @@ final class WorkspaceSymbolProvider(
   ): Int = {
     // Special handling for empty query to match all symbols
     val matchesAll = query.query.isEmpty
-    
+
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
@@ -309,13 +309,13 @@ final class WorkspaceSymbolProvider(
       if matchesAll || query.matches(symbol.symbol)
     } yield {
       println(symbol)
-        path.isWorkspaceSource(workspace)
-        visitor.visitWorkspaceSymbol(
-          path.toNIO,
-          symbol.symbol,
-          symbol.kind.toLsp,
-          symbol.range.toLsp
-        )
+      path.isWorkspaceSource(workspace)
+      visitor.visitWorkspaceSymbol(
+        path.toNIO,
+        symbol.symbol,
+        symbol.kind.toLsp,
+        symbol.range.toLsp,
+      )
     }
     all.length
   }
@@ -374,7 +374,7 @@ final class WorkspaceSymbolProvider(
           path,
           symbol.symbol,
           symbol.kind,
-          symbol.range
+          symbol.range,
         )
         loopSearch(count + added)
       }

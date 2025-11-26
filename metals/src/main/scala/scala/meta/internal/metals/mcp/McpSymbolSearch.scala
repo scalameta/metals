@@ -161,7 +161,7 @@ private[mcp] class McpSearchVisitor(
       path: Path,
       symbol: String,
       kind: SymbolKind,
-      range: lsp4j.Range
+      range: lsp4j.Range,
   ): Int = {
     lazy val symbolType =
       kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))
