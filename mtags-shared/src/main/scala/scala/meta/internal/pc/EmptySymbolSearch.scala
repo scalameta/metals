@@ -9,6 +9,7 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 
 import org.eclipse.lsp4j.Location
 
@@ -16,6 +17,7 @@ object EmptySymbolSearch extends SymbolSearch {
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     SymbolSearch.Result.COMPLETE

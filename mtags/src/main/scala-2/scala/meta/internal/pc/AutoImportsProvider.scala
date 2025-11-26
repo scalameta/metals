@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import java.util.Optional
+import java.{util => ju}
 
 import scala.collection.mutable
 
@@ -54,8 +55,8 @@ final class AutoImportsProvider(
     compiler.searchOutline(visit, name)
 
     val visitor =
-      new CompilerSearchVisitor(context, visit)
-    search.search(name, buildTargetIdentifier, visitor)
+      new CompilerSearchVisitor(context, sym => visit(sym))
+    search.search(name, buildTargetIdentifier, ju.Optional.empty(), visitor)
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
       case (_: Import) :: _ => true

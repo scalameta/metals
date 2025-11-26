@@ -102,6 +102,7 @@ class MetalsSymbolSearch(
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     def search(query: WorkspaceSymbolQuery) =
@@ -109,6 +110,7 @@ class MetalsSymbolSearch(
         query,
         visitor,
         Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+        kind,
       )
 
     val wQuery = WorkspaceSymbolQuery.exact(query)

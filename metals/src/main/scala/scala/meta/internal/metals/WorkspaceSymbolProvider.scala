@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -16,6 +17,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
@@ -102,9 +104,10 @@ final class WorkspaceSymbolProvider(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
+      kind: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): (SymbolSearch.Result, Int) = {
     val workspaceCount = workspaceSearch(query, visitor, target)
-    val typeCount = workspaceToplevelSearch(query, visitor)
+    val typeCount = workspaceToplevelSearch(query, visitor, kind)
     val (res, inDepsCount) = inDependencies.search(query, visitor)
     (res, workspaceCount + inDepsCount + typeCount)
   }
@@ -295,12 +298,18 @@ final class WorkspaceSymbolProvider(
   private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
+      kindFilter: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): Int = {
+    // Special handling for empty query to match all symbols
+    val matchesAll = query.query.isEmpty
+    
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
-      if query.matches(symbol.symbol)
+      if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
+      if matchesAll || query.matches(symbol.symbol)
     } yield {
+      println(symbol)
         val isFromWorkspace = path.isWorkspaceSource(workspace)
         visitor.visitSymbol(
           path.toNIO,
@@ -362,12 +371,13 @@ final class WorkspaceSymbolProvider(
       ) count
       else {
         val (path, symbol) = allSymbols.next()
+        // Regular workspace search symbols don't have toplevel kinds, default to TYPE
         val added = visitor.visitSymbol(
           path,
           symbol.symbol,
           symbol.kind,
           symbol.range,
-          true,  // workspaceSearch is for workspace sources
+          true,
         )
         loopSearch(count + added)
       }

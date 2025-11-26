@@ -50,6 +50,7 @@ public interface SymbolSearch {
      */
     Result search(String query,
                   String buildTargetIdentifier,
+                  Optional<ToplevelMemberKind> kind,
                   SymbolSearchVisitor visitor);
     Result searchMethods(String query,
                   String buildTargetIdentifier,

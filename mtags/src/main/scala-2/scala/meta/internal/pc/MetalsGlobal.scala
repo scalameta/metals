@@ -243,7 +243,7 @@ class MetalsGlobal(
         visitMember
       )
       searchOutline(visitMember, query)
-      search.search(query, buildTargetIdentifier, visitor)
+      search.search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
     }
   }
 
@@ -1300,78 +1300,79 @@ class MetalsGlobal(
       visit: Member => Boolean
   ): Unit = {
     val context = doLocateContext(pos)
-    val implicitClassSymbols =
-      search.queryTopLevelMembers(
-        (m.pc.ToplevelMemberKind.IMPLICIT_CLASS :: Nil).asJava
-      )
+    
+    val visitor = new CompilerSearchVisitor(
+      context,
+      implicitClassSymbol => {
+        if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
+          // Get the primary constructor parameter type
+          val constructorParamTypeOpt = for {
+            ctor <-
+              implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
+            paramType = ctor.tpe
+          } yield paramType
 
-    implicitClassSymbols.asScala.foreach { classSymbolStr =>
-      val implicitClassSymbol = inverseSemanticdbSymbol(classSymbolStr)
+          constructorParamTypeOpt match {
+            case Some(paramType) =>
+              // We assume that classes with type parameter could be matched with any type
+              val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
+                paramType.typeSymbol.isAbstractType
 
-      if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
-        // Get the primary constructor parameter type
-        val constructorParamTypeOpt = for {
-          ctor <-
-            implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
-          paramType = ctor.tpe
-        } yield paramType
-
-        constructorParamTypeOpt match {
-          case Some(paramType) =>
-            // We assume that classes with type parameter could be matched with any type
-            val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
-              paramType.typeSymbol.isAbstractType
-
-            val matches =
-              if (isTypeParameter) {
-                true
-              } else {
-                try {
-                  targetType <:< paramType || targetType.widen <:< paramType
-                } catch {
-                  case NonFatal(_) => false
+              val matches =
+                if (isTypeParameter) {
+                  true
+                } else {
+                  try {
+                    targetType <:< paramType || targetType.widen <:< paramType
+                  } catch {
+                    case NonFatal(_) => false
+                  }
                 }
-              }
 
-            if (matches) {
-              // Add (visit) all public accessible methods from the implicit class that match the query
-              implicitClassSymbol.tpe.members.foreach { extensionMethod =>
-                val methodName = extensionMethod.name.decoded
-                val matchesQuery =
-                  CompletionFuzzy.matchesSubCharacters(query, methodName)
-                if (
-                  matchesQuery &&
-                  extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
-                ) {
-                  // Filter out methods inherited from AnyVal
-                  val isInheritedFromAnyVal =
-                    extensionMethod.owner == definitions.AnyValClass ||
-                      extensionMethod.name == nme.equals_ ||
-                      extensionMethod.name == nme.hashCode_ ||
-                      extensionMethod.name == nme.toString_
+              if (matches) {
+                // Add (visit) all public accessible methods from the implicit class that match the query
+                implicitClassSymbol.tpe.members.foreach { extensionMethod =>
+                  val methodName = extensionMethod.name.decoded
+                  val matchesQuery =
+                    CompletionFuzzy.matchesSubCharacters(query, methodName)
+                  if (
+                    matchesQuery &&
+                      extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
+                  ) {
+                    // Filter out methods inherited from AnyVal
+                    val isInheritedFromAnyVal =
+                      extensionMethod.owner == definitions.AnyValClass ||
+                        extensionMethod.name == nme.equals_ ||
+                        extensionMethod.name == nme.hashCode_ ||
+                        extensionMethod.name == nme.toString_
 
-                  if (!isInheritedFromAnyVal) {
-                    val isAccessible =
-                      context.isAccessible(
-                        extensionMethod,
-                        extensionMethod.owner.thisType
-                      )
-
-                    if (isAccessible) {
-                      visit(
-                        new WorkspaceImplicitMember(
+                    if (!isInheritedFromAnyVal) {
+                      val isAccessible =
+                        context.isAccessible(
                           extensionMethod,
-                          implicitClassSymbol
+                          extensionMethod.owner.thisType
                         )
-                      )
+
+                      if (isAccessible) {
+                        visit(
+                          new WorkspaceImplicitMember(
+                            extensionMethod,
+                            implicitClassSymbol
+                          )
+                        )
+                      }
                     }
                   }
                 }
               }
-            }
-          case None =>
+            case None =>
+          }
         }
+        true
       }
-    }
+    )
+    
+    search.search("", buildTargetIdentifier, ju.Optional.of(m.pc.ToplevelMemberKind.IMPLICIT_CLASS), visitor)
+
   }
 }

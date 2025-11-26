@@ -2,16 +2,10 @@ package bench
 
 import java.net.URI
 import java.util.Optional
-import java.{util => ju}
-
+import java.util as ju
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolSearchVisitor
-
+import scala.meta.pc.{ContentType, ParentSymbols, SymbolDocumentation, SymbolSearch, SymbolSearchVisitor, ToplevelMemberKind}
 import org.eclipse.lsp4j.Location
 
 /**
@@ -45,6 +39,7 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
