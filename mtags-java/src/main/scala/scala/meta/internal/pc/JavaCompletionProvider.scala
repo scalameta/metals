@@ -29,7 +29,6 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class JavaCompletionProvider(
@@ -315,35 +314,6 @@ class JavaCompletionProvider(
       case _ => None
     }
 
-  private def autoImportPosition(
-      task: JavacTask,
-      root: CompilationUnitTree
-  ): Position = {
-    val sourcePositions = Trees.instance(task).getSourcePositions()
-    val text = root.getSourceFile.getCharContent(true)
-
-    val imports = root.getImports.asScala
-    if (imports.nonEmpty) {
-      val lastImport = imports.last
-      val endPos = compiler.offsetToPosition(
-        sourcePositions.getEndPosition(root, lastImport).toInt,
-        text.toString
-      )
-      return new Position(endPos.getLine + 1, 0)
-    }
-
-    val packageName = root.getPackageName
-    if (packageName != null) {
-      val endPos = compiler.offsetToPosition(
-        sourcePositions.getEndPosition(root, packageName).toInt,
-        text.toString
-      )
-      return new Position(endPos.getLine + 2, 0)
-    }
-
-    new Position(0, 0)
-  }
-
   private def completeSymbolSearch(
       task: JavacTask,
       root: CompilationUnitTree
@@ -356,7 +326,7 @@ class JavaCompletionProvider(
         val simpleName = element.getSimpleName.toString
         if (CompletionFuzzy.matches(identifier, simpleName)) {
           val item = completionItem(element)
-          val pos = autoImportPosition(task, root)
+          val pos = AutoImports.autoImportPosition(compiler, task, root)
           val className = element.toString
           val importText = s"import $className;\n"
           val edit = new TextEdit(new Range(pos, pos), importText)
