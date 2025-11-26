@@ -72,18 +72,7 @@ public interface SymbolSearch {
     Result searchMethods(String query,
                   String buildTargetIdentifier,
                   SymbolSearchVisitor visitor);
-    
-    /**
-     * Returns toplevel members of a specific kind from the workspace and dependencies.
-     * Returns symbols that can be resolved in the presentation compiler.
-     * 
-     * @param kind the kind of toplevel members to query (e.g., IMPLICIT_CLASS for implicit classes)
-     * @return list of symbols matching the kind (e.g., "io/circe/syntax/EncoderOps#")
-     */
-    default List<String> queryTopLevelMembers(List<ToplevelMemberKind> kind) {
-        return java.util.Collections.emptyList();
-    }
-    
+
     enum Result {
         COMPLETE,
         INCOMPLETE

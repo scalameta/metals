@@ -5,7 +5,14 @@ import java.util.Optional
 import java.util as ju
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.pc.{ContentType, ParentSymbols, SymbolDocumentation, SymbolSearch, SymbolSearchVisitor, ToplevelMemberKind}
+import scala.meta.pc.{
+  ContentType,
+  ParentSymbols,
+  SymbolDocumentation,
+  SymbolSearch,
+  SymbolSearchVisitor,
+  ToplevelMemberKind,
+}
 import org.eclipse.lsp4j.Location
 
 /**
@@ -39,10 +46,17 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result =
+    classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
+    search(query, buildTargetIdentifier, visitor)
   }
 
   override def searchMethods(
