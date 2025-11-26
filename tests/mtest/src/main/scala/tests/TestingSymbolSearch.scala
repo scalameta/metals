@@ -2,7 +2,8 @@ package tests
 
 import java.net.URI
 import java.util.Optional
-import java.util as ju
+import java.{util => ju}
+
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.Docstrings
 import scala.meta.internal.metals.WorkspaceSymbolInformation
@@ -11,10 +12,16 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb as s
-import scala.meta.pc.{ContentType, ParentSymbols, SymbolDocumentation, SymbolSearch, SymbolSearchVisitor, ToplevelMemberKind}
+import scala.meta.internal.{semanticdb => s}
+import scala.meta.pc.ContentType
+import scala.meta.pc.ParentSymbols
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
+import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 import scala.meta.pc.reports.EmptyReportContext
 import scala.meta.pc.reports.ReportContext
+
 import org.eclipse.lsp4j.Location
 
 /**

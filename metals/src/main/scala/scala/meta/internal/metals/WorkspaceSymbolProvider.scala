@@ -309,7 +309,7 @@ final class WorkspaceSymbolProvider(
       if matchesAll || query.matches(symbol.symbol)
     } yield {
       println(symbol)
-        val isFromWorkspace = path.isWorkspaceSource(workspace)
+        path.isWorkspaceSource(workspace)
         visitor.visitWorkspaceSymbol(
           path.toNIO,
           symbol.symbol,

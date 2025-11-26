@@ -8,7 +8,6 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.io.AbsolutePath
 import scala.meta.pc._
 
