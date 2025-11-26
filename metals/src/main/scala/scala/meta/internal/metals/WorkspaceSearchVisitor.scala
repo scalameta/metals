@@ -18,6 +18,7 @@ import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.MetalsEnrichments._
 
 /**
  * A symbol search visitor for `workspace/symbol`.
@@ -99,12 +100,11 @@ class WorkspaceSearchVisitor(
     defs.sortBy(_._1)(resultOrdering).headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
-  override def visitSymbol(
+  override def visitWorkspaceSymbol(
       path: Path,
       symbol: String,
       kind: SymbolKind,
       range: l.Range,
-      isFromWorkspace: Boolean,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
     val symbolInfo = new l.SymbolInformation(
@@ -113,6 +113,9 @@ class WorkspaceSearchVisitor(
       new l.Location(path.toUri.toString, range),
       owner.replace('/', '.'),
     )
+
+    val absolutePath = AbsolutePath(path)
+    val isFromWorkspace = absolutePath.isWorkspaceSource(workspace)
 
     if (isFromWorkspace) {
       fromWorkspace.add(symbolInfo)

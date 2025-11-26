@@ -286,12 +286,11 @@ final class WorkspaceSymbolProvider(
       symbol <- symbols
       if Fuzzy.matches(query, symbol.symbol)
     }
-      visitor.visitSymbol(
+      visitor.visitWorkspaceSymbol(
         path,
         symbol.symbol,
         symbol.kind,
-        symbol.range,
-        true,
+        symbol.range
       )
   }
 
@@ -311,12 +310,11 @@ final class WorkspaceSymbolProvider(
     } yield {
       println(symbol)
         val isFromWorkspace = path.isWorkspaceSource(workspace)
-        visitor.visitSymbol(
+        visitor.visitWorkspaceSymbol(
           path.toNIO,
           symbol.symbol,
           symbol.kind.toLsp,
-          symbol.range.toLsp,
-          isFromWorkspace,
+          symbol.range.toLsp
         )
     }
     all.length
@@ -372,12 +370,11 @@ final class WorkspaceSymbolProvider(
       else {
         val (path, symbol) = allSymbols.next()
         // Regular workspace search symbols don't have toplevel kinds, default to TYPE
-        val added = visitor.visitSymbol(
+        val added = visitor.visitWorkspaceSymbol(
           path,
           symbol.symbol,
           symbol.kind,
-          symbol.range,
-          true,
+          symbol.range
         )
         loopSearch(count + added)
       }

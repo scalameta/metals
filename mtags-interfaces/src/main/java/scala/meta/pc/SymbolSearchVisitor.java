@@ -38,7 +38,7 @@ public abstract class SymbolSearchVisitor {
      * @param isFromWorkspace true if the symbol is from workspace sources, false if from classpath/dependencies.
      * @return the number of produced results from this classfile.
      */
-    abstract public int visitSymbol(Path path, String symbol, SymbolKind kind, Range range, boolean isFromWorkspace);
+    abstract public int visitWorkspaceSymbol(Path path, String symbol, SymbolKind kind, Range range);
 
     /**
      * @return returns true if the search has been cancelled, false otherwise.

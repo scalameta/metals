@@ -157,12 +157,11 @@ private[mcp] class McpSearchVisitor(
     } else 0
   }
 
-  override def visitSymbol(
+  override def visitWorkspaceSymbol(
       path: Path,
       symbol: String,
       kind: SymbolKind,
-      range: lsp4j.Range,
-      isFromWorkspace: Boolean,
+      range: lsp4j.Range
   ): Int = {
     lazy val symbolType =
       kindToTypeString(kind).getOrElse(SymbolType.Unknown(kind.toString))

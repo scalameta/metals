@@ -177,19 +177,13 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
     def visitClassfile(pkg: String, filename: String): Int = {
       visit(SymbolSearchCandidate.Classfile(pkg, filename))
     }
-    def visitSymbol(
+    def visitWorkspaceSymbol(
         path: Path,
         symbol: String,
         kind: l.SymbolKind,
         range: l.Range,
-        isFromWorkspace: Boolean
     ): Int = {
-      val candidate = if (isFromWorkspace) {
-        SymbolSearchCandidate.Workspace(symbol, path)
-      } else {
-        SymbolSearchCandidate.Dependency(symbol, path)
-      }
-      visit(candidate)
+      visit(SymbolSearchCandidate.Workspace(symbol, path))
     }
 
     def shouldVisitPackage(pkg: String): Boolean =
