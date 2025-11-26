@@ -49,7 +49,6 @@ class BaseJavaCompletionSuite extends BaseJavaPCSuite {
       assertSingleItem: Boolean = true,
       filter: String => Boolean = _ => true,
       command: Option[String] = None,
-      compat: Map[String, String] = Map.empty,
       itemIndex: Int = 0,
       filename: String = "A.java",
       filterItem: CompletionItem => Boolean = _ => true,
@@ -70,7 +69,7 @@ class BaseJavaCompletionSuite extends BaseJavaPCSuite {
       val obtained = TextEdits.applyEdits(code, item)
       assertNoDiff(
         obtained,
-        getExpected(expected, compat, scalaVersion = "2.13.12"),
+        expected,
       )
       if (filterText.nonEmpty) {
         assertNoDiff(item.getFilterText, filterText, "Invalid filter text")

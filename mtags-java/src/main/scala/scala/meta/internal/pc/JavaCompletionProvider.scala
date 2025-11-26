@@ -274,7 +274,14 @@ class JavaCompletionProvider(
     if (isCompletionSnippetsEnabled)
       item.setInsertTextFormat(InsertTextFormat.Snippet)
 
-    item.setInsertText(insertText)
+    val start = inferIdentStart(params.offset(), params.text())
+    val end = params.offset()
+    val range = new Range(
+      compiler.offsetToPosition(start, params.text()),
+      compiler.offsetToPosition(end, params.text())
+    )
+    val textEdit = new TextEdit(range, insertText)
+    item.setTextEdit(Either.forLeft(textEdit))
 
     val kind = completionKind(element.getKind)
     kind.foreach(item.setKind)
@@ -349,16 +356,6 @@ class JavaCompletionProvider(
         val simpleName = element.getSimpleName.toString
         if (CompletionFuzzy.matches(identifier, simpleName)) {
           val item = completionItem(element)
-
-          val start = inferIdentStart(params.offset(), params.text())
-          val end = params.offset()
-          val range = new Range(
-            compiler.offsetToPosition(start, params.text()),
-            compiler.offsetToPosition(end, params.text())
-          )
-          val textEdit = new TextEdit(range, simpleName)
-          item.setTextEdit(Either.forLeft(textEdit))
-
           val pos = autoImportPosition(task, root)
           val className = element.toString
           val importText = s"import $className;\n"
