@@ -359,8 +359,10 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
               CompilerRange.FROM_POINT_WITH_TEXT_SEARCH);
       if (sym.getKind() == ElementKind.ENUM_CONSTANT) {
         TreePath typeTreePath = nodes.get(node.getInitializer());
-        Element typeSym = trees.getElement(typeTreePath);
-        if (typeSym != null) emitSymbolOccurrence(typeSym, range, Role.REFERENCE);
+        if (typeTreePath != null) {
+          Element typeSym = trees.getElement(typeTreePath);
+          if (typeSym != null) emitSymbolOccurrence(typeSym, range, Role.REFERENCE);
+        }
       }
     }
   }
@@ -375,7 +377,7 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
         // exclude `this.` references but include `this(` and `super(` references
         if (((sym.getKind() == ElementKind.CONSTRUCTOR) == isThis) || (isSuper)) {
           TreePath parentPath = treePath.getParentPath();
-          Element parentSym = trees.getElement(parentPath);
+          Element parentSym = parentPath != null ? trees.getElement(parentPath) : null;
           if (parentSym == null || parentSym.getKind() != null) {
             emitSymbolOccurrence(
                 sym, node, sym.getSimpleName(), Role.REFERENCE, CompilerRange.FROM_START_TO_END);
@@ -408,11 +410,12 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
       Element sym = trees.getElement(treePath);
       if (sym != null) {
         TreePath parentPath = treePath.getParentPath();
-        Element parentSym = trees.getElement(parentPath);
+        Element parentSym = parentPath != null ? trees.getElement(parentPath) : null;
 
         if (parentSym == null || parentSym.getKind() != ElementKind.ENUM_CONSTANT) {
           TreePath identifierTreePath = nodes.get(node.getIdentifier());
-          Element identifierSym = trees.getElement(identifierTreePath);
+          Element identifierSym =
+              identifierTreePath != null ? trees.getElement(identifierTreePath) : null;
           // Simplest case, e.g. `new String()`
           if (identifierSym != null) {
             emitSymbolOccurrence(
