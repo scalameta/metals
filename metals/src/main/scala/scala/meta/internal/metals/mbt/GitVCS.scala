@@ -25,7 +25,8 @@ object GitVCS {
     val result = mutable.ArrayBuffer.empty[GitFileStatus]
     val logger = ProcessLogger { line =>
       line.trim() match {
-        case s"${status} ${filepath}" =>
+        case s"${status} ${filepathUntrimmed}" =>
+          val filepath = filepathUntrimmed.trim()
           if (isRelevantPath(filepath)) {
             result.append(
               GitFileStatus(
