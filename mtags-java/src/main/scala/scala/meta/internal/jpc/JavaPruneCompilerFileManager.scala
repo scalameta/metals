@@ -49,7 +49,7 @@ class PruneCompilerFileManager(
         super.inferBinaryName(location, file)
     }
   } catch {
-    case _: ClosedFileSystemException =>
+    case _: ClosedFileSystemException | _: ju.ConcurrentModificationException =>
       // Happens for cancelled tasks
       ""
     case NonFatal(e) =>
@@ -85,7 +85,7 @@ class PruneCompilerFileManager(
         super.list(location, packageName, kinds, recurse)
     }
   } catch {
-    case _: ClosedFileSystemException =>
+    case _: ClosedFileSystemException | _: ju.ConcurrentModificationException =>
       // Happens for cancelled tasks
       ju.Collections.emptyList()
     case NonFatal(e) =>
