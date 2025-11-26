@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mbt
 import java.io.BufferedOutputStream
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -225,6 +226,19 @@ class MbtV2WorkspaceSymbolSearch(
       scribe.error(s"Error indexing file $file", e)
   }
 
+  private def toSemanticdbCompilationUnit(
+      doc: IndexedDocument
+  ): Option[SemanticdbCompilationUnit] =
+    try {
+      Some(doc.toSemanticdbCompilationUnit(buffers))
+    } catch {
+      case _: NoSuchFileException =>
+        // If the file is deleted, remove it from the index to prevent future
+        // requests from throwing the same exception.
+        documents.remove(doc.file)
+        None
+    }
+
   override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
     documentsByPackage.get(pkg) match {
       case None =>
@@ -234,7 +248,8 @@ class MbtV2WorkspaceSymbolSearch(
           path <- paths.asScala.iterator
           doc <- documents.get(AbsolutePath(path)).toList.iterator
           if doc.language.isJava
-        } yield doc.toSemanticdbCompilationUnit(buffers)
+          cu <- toSemanticdbCompilationUnit(doc).iterator
+        } yield cu
         ArrayBuffer.from(result).asJava
     }
   }
@@ -276,7 +291,12 @@ class MbtV2WorkspaceSymbolSearch(
       doc <- documents.get(path).toList.iterator
       if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
     } {
-      result.add(path)
+      if (path.exists) {
+        result.add(path)
+      } else {
+        // Clean up removed files
+        documents.remove(path)
+      }
     }
     result.asScala
   }
