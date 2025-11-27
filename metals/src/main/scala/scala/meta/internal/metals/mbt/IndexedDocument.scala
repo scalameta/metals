@@ -7,6 +7,7 @@ import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.jsemanticdb.Semanticdb.Language.JAVA
+import scala.meta.internal.jsemanticdb.Semanticdb.Language.SCALA
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.Fuzzy
@@ -67,7 +68,7 @@ case class IndexedDocument(
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
       .setBloomFilterVersion(
         if (language.isJava) Mbt.IndexedDocument.BloomFilterVersion.V3
-        else Mbt.IndexedDocument.BloomFilterVersion.V1
+        else Mbt.IndexedDocument.BloomFilterVersion.V4
       )
   }
 }
@@ -202,6 +203,7 @@ object IndexedDocument {
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
       case JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
+      case SCALA => Mbt.IndexedDocument.BloomFilterVersion.V4
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }
