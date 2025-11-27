@@ -25,19 +25,19 @@ object AutoImports {
         imp.getQualifiedIdentifier.toString < newImportName
       }
 
-      val endPos = importsAfter.headOption match {
+      val (endPos, lineOffset) = importsAfter.headOption match {
         case Some(_) if importsBefore.nonEmpty =>
-          sourcePositions.getEndPosition(root, importsBefore.last).toInt
+          (sourcePositions.getEndPosition(root, importsBefore.last).toInt, 1)
 
         case Some(_) =>
-          sourcePositions.getEndPosition(root, importsAfter.head).toInt
+          (sourcePositions.getEndPosition(root, importsAfter.head).toInt, 0)
 
         case None =>
-          sourcePositions.getEndPosition(root, imports.last).toInt
+          (sourcePositions.getEndPosition(root, imports.last).toInt, 1)
       }
 
       val pos = compiler.offsetToPosition(endPos, text.toString)
-      new Position(pos.getLine + 1, 0)
+      new Position(pos.getLine + lineOffset, 0)
     } else {
       val packageName = root.getPackageName
       if (packageName != null) {
