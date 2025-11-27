@@ -13,6 +13,7 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
+import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
@@ -63,6 +64,8 @@ case class UserConfiguration(
     fallbackScalaVersion: Option[String] = None,
     fallbackClasspath: FallbackClasspathConfig =
       FallbackClasspathConfig.default,
+    fallbackSourcepath: FallbackSourcepathConfig =
+      FallbackSourcepathConfig.default,
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
     javaFormatter: Option[JavaFormatterConfig] = None,
@@ -154,6 +157,7 @@ case class UserConfiguration(
         listField("excludedPackages", excludedPackages),
         optStringField("fallbackScalaVersion", fallbackScalaVersion),
         listField("fallbackClasspath", Some(fallbackClasspath.values)),
+        optStringField("fallbackSourcepath", Some(fallbackSourcepath.value)),
         Some("testUserInterface" -> testUserInterface.toString()),
         javaFormatConfig.map(value =>
           "javaFormat" -> List(
@@ -427,8 +431,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit parameter at usage sites",
-        """|When this option is enabled, each method that has implicit arguments has them 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each method that has implicit arguments has them
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -437,8 +441,8 @@ object UserConfiguration {
         "false",
         "false",
         "Should display implicit conversion at usage sites",
-        """|When this option is enabled, each place where an implicit method or class is used has it 
-           |displayed either as additional decorations if they are supported by the editor or 
+        """|When this option is enabled, each place where an implicit method or class is used has it
+           |displayed either as additional decorations if they are supported by the editor or
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -485,7 +489,7 @@ object UserConfiguration {
         BuildInfo.scala3,
         BuildInfo.scala3,
         "Default fallback Scala version",
-        """|The Scala compiler version that is used as the default or fallback in case a file 
+        """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
            |This applies to standalone Scala files, worksheets, and Ammonite scripts.
         """.stripMargin,
@@ -560,8 +564,8 @@ object UserConfiguration {
         "off",
         "all",
         "Import build when changes detected without prompting",
-        """|Automatically import builds rather than prompting the user to choose. "initial" will 
-           |only automatically import a build when a project is first opened, "all" will automate 
+        """|Automatically import builds rather than prompting the user to choose. "initial" will
+           |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
       ),
       UserConfigurationOption(
@@ -613,7 +617,7 @@ object UserConfiguration {
         "true",
         "true",
         "Use presentation compiler source path",
-        """|If enabled, Metals will set the presentation compiler source path. This will enable 
+        """|If enabled, Metals will set the presentation compiler source path. This will enable
            |the compiler to find types that have not been built yet.
            |""".stripMargin,
       ),
@@ -902,6 +906,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(FallbackClasspathConfig.default)
+    val fallbackSourcepath = getParsedKey(
+      "fallback-sourcepath",
+      value =>
+        FallbackSourcepathConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(FallbackSourcepathConfig.default)
     val disableTestCodeLenses = {
       val isTestExplorerEnabled = clientConfiguration.isTestExplorerProvider()
       getStringKey("test-user-interface").map(_.toLowerCase()) match {
@@ -1024,6 +1036,7 @@ object UserConfiguration {
           excludedPackages,
           defaultScalaVersion,
           fallbackClasspath,
+          fallbackSourcepath,
           disableTestCodeLenses,
           javaFormatConfig,
           javaFormatter,

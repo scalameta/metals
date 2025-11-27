@@ -61,6 +61,13 @@ class CompilerConfiguration(
     scalaVersionSelector,
   )
 
+  /**
+   * Returns true if the fallback Scala presentation compiler should use full source path mode.
+   * This is controlled by the FULL_SOURCEPATH_FALLBACK_SCALA feature flag.
+   */
+  def shouldUseFullSourcepathForFallback: Boolean =
+    userConfig().fallbackSourcepath.enabled
+
   sealed trait MtagsPresentationCompiler {
     def await: PresentationCompiler
     def shutdown(): Unit
@@ -90,7 +97,7 @@ class CompilerConfiguration(
     private val mtagsBinaries =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
-    val standalone: PresentationCompiler =
+    val standalone: PresentationCompiler = {
       fromMtags(
         mtagsBinaries,
         options = Nil,
@@ -98,7 +105,11 @@ class CompilerConfiguration(
         "default",
         symbolSearch,
         referenceCounter,
+        overrideSourcePathMode =
+          if (shouldUseFullSourcepathForFallback) Some(SourcePathMode.MBT)
+          else None,
       )
+    }
 
     def shutdown(): Unit = standalone.shutdown()
     def await: PresentationCompiler = standalone
@@ -261,7 +272,7 @@ class CompilerConfiguration(
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
 
-      scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
+      // scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
       val fallbackScalaLib =
         if (!buildTargets.hasScalaLibrary(scalaTarget.id)) {
           scribe.warn(
@@ -354,6 +365,7 @@ class CompilerConfiguration(
       pc: PresentationCompiler,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
+      overrideSourcePathMode: Option[SourcePathMode] = None,
   ): PresentationCompiler =
     pc.withSearch(search)
       .withExecutorService(ec)
@@ -382,8 +394,9 @@ class CompilerConfiguration(
             hoverContentType = config.hoverContentType(),
             emitDiagnostics = userConfig().presentationCompilerDiagnostics,
             workspaceRoot = workspace.toNIO,
-            sourcePathMode =
-              getSourcePathMode(config.initialConfig.compilers.sourcePathMode),
+            sourcePathMode = overrideSourcePathMode.getOrElse(
+              getSourcePathMode(config.initialConfig.compilers.sourcePathMode)
+            ),
           )
       }
 
@@ -408,6 +421,7 @@ class CompilerConfiguration(
       symbolSearch: SymbolSearch,
       referenceCounter: CompletionItemPriority,
       sourcePath: Supplier[ju.List[Path]] = () => Nil.asJava,
+      overrideSourcePathMode: Option[SourcePathMode] = None,
   ): PresentationCompiler = {
     val pc = mtags match {
       case MtagsBinaries.BuildIn => new ScalaPresentationCompiler()
@@ -416,7 +430,7 @@ class CompilerConfiguration(
     }
 
     val filteredOptions = plugins.filterSupportedOptions(options)
-    configure(pc, symbolSearch, referenceCounter)
+    configure(pc, symbolSearch, referenceCounter, overrideSourcePathMode)
       .newInstance(
         name,
         classpathSeq.asJava,

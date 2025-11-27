@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt
 
+import java.nio.file.Path
 import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
@@ -68,6 +69,8 @@ class LazyMbtWorkspaceSymbolSearch(
   ): Iterable[AbsolutePath] = delegate.possibleReferences(params)
   override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] =
     delegate.listPackage(pkg)
+  override def listAllPackages(): ju.Map[String, ju.Set[Path]] =
+    delegate.listAllPackages()
   override def onReindex(): IndexingStats =
     delegate.onReindex()
   override def onDidChange(file: AbsolutePath): Unit =

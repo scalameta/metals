@@ -124,6 +124,10 @@ final class MbtWorkspaceSymbolProvider(
     }
   }
 
+  override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {
+    ju.Collections.emptyMap()
+  }
+
   private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
 
   private val db = new LMDB(gitWorkspace)

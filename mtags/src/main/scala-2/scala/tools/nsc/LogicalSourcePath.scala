@@ -4,7 +4,10 @@ package scala.tools.nsc
 
 import java.io.File
 import java.net.URL
+import java.nio.file.Path
+import java.{util => ju}
 
+import scala.jdk.CollectionConverters._
 import scala.reflect.io.AbstractFile
 import scala.tools.nsc.classpath._
 import scala.tools.nsc.reporters.ConsoleReporter
@@ -110,8 +113,9 @@ trait LogicalPackage {
   /**
    * Pretty print the package tree.
    */
-  def prettyPrint(): String =
-    prettyPrintWith().toString()
+  def prettyPrint(): String = {
+    prettyPrintWith().toString().stripTrailing().stripIndent()
+  }
 
   private def prettyPrintWith(
       indent: Int = 0,
@@ -154,6 +158,18 @@ class ParsedLogicalPackage(
   private val subpackages =
     mutable.LinkedHashMap.empty[String, ParsedLogicalPackage]
   private val directSources = mutable.ListBuffer.empty[String]
+
+  def fullName: String = {
+    if (parent.isEmpty || parent.get.name.isEmpty) name
+    else s"${parent.get.fullName}.$name"
+  }
+
+  def removeEmptyPackages(): Unit = {
+    subpackages.values.foreach(_.removeEmptyPackages())
+    if (subpackages.isEmpty && directSources.isEmpty) {
+      parent.foreach(_.subpackages.remove(name))
+    }
+  }
 
   /**
    * Return the existing member package, or create a new one and add it to this package.
@@ -198,6 +214,14 @@ class ParsedLogicalPackage(
  * A helper object to parse sourcepaths and extract logical packages.
  */
 object ParsedLogicalPackage {
+  val disallowedPackages: Set[String] = Set("scala", "scala.test", "_empty_")
+  // should be configurable as a user setting
+  val excludedPaths: Set[String] = Set(
+    "/experimental/",
+    "caching/oss/universe/"
+  )
+  val validExtensions: Set[String] = Set(".scala", ".java")
+
   def collectLogicalPackages(settings: Settings): LogicalPackage = {
     // scalastyle:off indentation (turning it off because an error is reported otherwise. A likely bug in scalastyle)
     //
@@ -221,6 +245,41 @@ object ParsedLogicalPackage {
     new global.Run
 
     global.rootPackage
+  }
+
+  def fromMbtIndex(packages: ju.Map[String, ju.Set[Path]]): LogicalPackage = {
+    val root = new ParsedLogicalPackage("", None)
+
+    def isSupported(path: Path): Boolean = {
+      val filename = path.getFileName.toString
+      (!excludedPaths.exists(path.toString.contains) && validExtensions.exists(
+        filename.endsWith
+      ))
+    }
+
+    def enterNestedPackage(pkg: String) = {
+      val parts = pkg.split('/')
+      var current = root
+      for (part <- parts if !part.isEmpty) {
+        current = current.enterPackage(part)
+      }
+      current
+    }
+
+    for ((pkg, paths) <- packages.asScala) {
+      val p = enterNestedPackage(pkg)
+      // we don't enter anything in the empty package, which is special and generally not useful (it is not)
+      // visible from other packages. Similarly, the scala package is special and we don't want to enter any
+      // symbols into it, since they might hide standard library symbols, such as scala.Option.
+      if (p.name.nonEmpty && !disallowedPackages.contains(p.fullName)) {
+        for (path <- paths.asScala if isSupported(path)) {
+          p.enterSource(path.toString)
+        }
+      }
+    }
+
+    root.removeEmptyPackages()
+    root
   }
 
   class OutlineParseCompiler(currentSettings: Settings, reporter: Reporter)

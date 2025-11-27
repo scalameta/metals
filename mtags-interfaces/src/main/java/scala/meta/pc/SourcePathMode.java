@@ -10,4 +10,14 @@ public enum SourcePathMode {
    * possible).
    */
   PRUNED,
+
+  /**
+   * Use the full source path from the MBT-based symbol index. Used for the fallback Scala
+   * presentation compiler.
+   */
+  MBT;
+
+  public boolean shouldPrune() {
+    return this == PRUNED || this == MBT;
+  }
 }

@@ -1,9 +1,12 @@
 package scala.meta.internal.pc
 
-import java.io.File
-
+import scala.collection.mutable
 import scala.reflect.internal.Flags
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.transform.Transform
+
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * A simple Transform component that removes method and field bodies for sources that are
@@ -23,18 +26,20 @@ trait PruneLateSources extends Transform {
   private def mkTripleQMark(): Tree =
     gen.mkNullaryCall(definitions.Predef_???, Nil)
 
-  lazy val sourcePathFiles: Set[String] = {
-    val sourcePath = settings.sourcepath.value
-    sourcePath.split(File.pathSeparatorChar).toSet
-  }
+  /** Files that were loaded from the source path and that need to be pruned. */
+  val loadedFromSource: mutable.HashSet[AbstractFile]
+
+  lazy val logger: Logger = LoggerFactory.getLogger("MetalsGlobal")
 
   def newTransformer(unit: CompilationUnit): Transformer =
     new PruneLateSourcesTransformer
 
   class PruneLateSourcesTransformer extends Transformer {
     override def transformUnit(unit: CompilationUnit): Unit = {
-      if (sourcePathFiles.contains(unit.source.file.path))
+      if (loadedFromSource.contains(unit.source.file)) {
+        logger.debug(s"Pruning late sources: ${unit.source.file.path}")
         super.transformUnit(unit)
+      }
     }
 
     /** The tree is an empty type tree or is an inferred type tree that replaced a missing type annotation. */

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt
 
+import java.nio.file.Path
 import java.{util => ju}
 
 import scala.meta.io.AbsolutePath
@@ -20,4 +21,6 @@ object EmptyMbtWorkspaceSymbolSearch extends MbtWorkspaceSymbolSearch {
   def onDidDelete(file: AbsolutePath): Unit = ()
   def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit = ()
   override def close(): Unit = ()
+  override def listAllPackages(): ju.Map[String, ju.Set[Path]] =
+    ju.Collections.emptyMap()
 }

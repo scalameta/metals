@@ -42,6 +42,7 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.mtags.MtagsEnrichments
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -878,6 +879,23 @@ object MetalsEnrichments
       textDocument.occurrences
         .find(o => o.role.isDefinition && o.symbol == symbol)
         .map { occ => occ.toLocation(uri) }
+    }
+
+    /**
+     * Identify packages based on top level symbols. You'd think filtering for packages would
+     * work, but we get a package for each part of `com.foo.bar`. Instead, we enter only owners
+     * of top level symbols.
+     *
+     * @return The set of packages defined by top-level symbols in this document
+     */
+    def semanticdbPackages: Seq[String] = {
+      // map(info => Symbol(info.symbol)).filter(_.isToplevel)
+      val packages = for {
+        info <- textDocument.symbols.iterator
+        sym = Symbol(info.symbol)
+        if sym.isToplevel
+      } yield sym.owner.value
+      packages.toSeq
     }
   }
 

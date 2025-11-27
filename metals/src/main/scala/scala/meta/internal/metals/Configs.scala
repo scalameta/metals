@@ -424,6 +424,45 @@ object Configs {
     }
   }
 
+  final case class FallbackSourcepathConfig(val value: String) {
+    require(List("all-sources", "none").contains(value), value)
+    def isAllSources: Boolean =
+      value == "all-sources"
+    def isNone: Boolean =
+      value == "none"
+
+    def enabled: Boolean =
+      isAllSources
+  }
+
+  object FallbackSourcepathConfig {
+    def default: FallbackSourcepathConfig = FallbackSourcepathConfig("none")
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, FallbackSourcepathConfig] = {
+      value match {
+        case Some("all-sources") =>
+          Right(FallbackSourcepathConfig("all-sources"))
+        case Some("none") =>
+          Right(FallbackSourcepathConfig("none"))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for fallbackSourcepath. Valid values are \"all-sources\" and \"none\""
+          )
+        case None =>
+          val isEnabled = featureFlags
+            .readBoolean(FeatureFlag.FULL_SOURCEPATH_FALLBACK_SCALA)
+            .orElse(false)
+          if (isEnabled) {
+            Right(FallbackSourcepathConfig("all-sources"))
+          } else {
+            Right(FallbackSourcepathConfig.default)
+          }
+      }
+    }
+  }
+
   object TelemetryConfig {
     def default: TelemetryConfig =
       // NOTE: by default, Metals confusingly does not send telemetry even when

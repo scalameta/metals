@@ -4,6 +4,7 @@ import java.nio.file.Path
 import java.util
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.language.implicitConversions
@@ -11,6 +12,7 @@ import scala.reflect.internal.util.Position
 import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
+import scala.reflect.io.AbstractFile
 import scala.tools.nsc.LogicalPackage
 import scala.tools.nsc.MetalsJavaPlatform
 import scala.tools.nsc.Mode
@@ -18,6 +20,7 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
+import scala.tools.nsc.symtab.BrowsingLoaders
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
@@ -28,7 +31,6 @@ import scala.meta.internal.semanticdb.scalac.SemanticdbOps
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
@@ -84,7 +86,35 @@ class MetalsGlobal(
 
   object PruneLateSourcesComponent extends PruneLateSources {
     val global: compiler.type = compiler
+
+    val loadedFromSource: mutable.HashSet[AbstractFile] = mutable.HashSet.empty
   }
+
+  @nowarn("msg=early initializers are deprecated")
+  override lazy val loaders: SymbolLoadersInInteractive = new {
+    val global: MetalsGlobal.this.type = MetalsGlobal.this
+    val platform: MetalsGlobal.this.platform.type = MetalsGlobal.this.platform
+  } with BrowsingLoaders {
+    override protected def compileLate(srcfile: AbstractFile): Unit = {
+      PruneLateSourcesComponent.loadedFromSource.add(srcfile)
+      super.compileLate(srcfile)
+    }
+
+    // harden around "inconsistent class/module pair" errors, see PLAT-146503
+    override def enterClassAndModule(
+        root: Symbol,
+        name: TermName,
+        getCompleter: (ClassSymbol, ModuleSymbol) => SymbolLoader
+    ): Unit = {
+      try {
+        super.enterClassAndModule(root, name, getCompleter)
+      } catch {
+        case e: AssertionError =>
+          logger.debug(s"Error entering class and module: ${e.getMessage}")
+      }
+    }
+  }
+
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {
 
@@ -123,7 +153,7 @@ class MetalsGlobal(
   // Register the pruning phase with the compiler
   override protected def computeInternalPhases(): Unit = {
     super.computeInternalPhases()
-    if (metalsConfig.sourcePathMode() == SourcePathMode.PRUNED) {
+    if (metalsConfig.sourcePathMode().shouldPrune()) {
       logger.debug(s"[$buildTargetIdentifier] using pruned search path")
       phasesSet += PruneLateSourcesComponent
     }
@@ -156,24 +186,6 @@ class MetalsGlobal(
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
     symbol.toSemantic
-  }
-
-  def printPretty(pos: sourcecode.Text[Position]): Unit = {
-    if (pos.value == null || pos.value == NoPosition) {
-      println(pos.value.toString())
-    } else {
-      import scala.meta.internal.metals.PositionSyntax._
-      val input = scala.meta.Input.String(new String(pos.value.source.content))
-      val (start, end) =
-        if (pos.value.isRange) {
-          (pos.value.start, pos.value.end)
-        } else {
-          (pos.value.point, pos.value.point)
-        }
-      val range =
-        scala.meta.Position.Range(input, start, end)
-      println(range.formatMessage("info", pos.source))
-    }
   }
 
   def pretty(pos: Position): String = {

@@ -1,5 +1,6 @@
 package tests.j
 
+import java.nio.file.Path
 import java.{util => ju}
 
 import scala.collection.mutable
@@ -41,5 +42,9 @@ class TestingSemanticdbFileManager(
       }
       .asJava
       .widen
+  }
+
+  override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {
+    ju.Collections.emptyMap()
   }
 }

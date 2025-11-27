@@ -19,6 +19,7 @@ import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
 
 import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jpc.EmptySemanticdbFileManager
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
@@ -43,6 +44,7 @@ import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SourcePathMode
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
@@ -73,7 +75,8 @@ case class ScalaPresentationCompiler(
     folderPath: Option[Path] = None,
     reportsLevel: ReportLevel = ReportLevel.Info,
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
-    sourcePath: ju.function.Supplier[ju.List[Path]] = () => Nil.asJava
+    sourcePath: ju.function.Supplier[ju.List[Path]] = () => Nil.asJava,
+    semanticdbFileManager: SemanticdbFileManager = EmptySemanticdbFileManager
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec
@@ -121,6 +124,11 @@ case class ScalaPresentationCompiler(
       priority: CompletionItemPriority
   ): PresentationCompiler =
     copy(completionItemPriority = priority)
+
+  override def withSemanticdbFileManager(
+      semanticdbFileManager: SemanticdbFileManager
+  ): PresentationCompiler =
+    copy(semanticdbFileManager = semanticdbFileManager)
 
   override def supportedCodeActions(): util.List[String] = List(
     CodeActionId.ConvertToNamedArguments,
@@ -633,7 +641,15 @@ case class ScalaPresentationCompiler(
       s"[$buildTargetIdentifier] collect logical packages",
       thresholdMillis = 1000
     ) {
-      ParsedLogicalPackage.collectLogicalPackages(settings)
+      if (config.sourcePathMode() == SourcePathMode.MBT) {
+        logger.info(
+          s"[$buildTargetIdentifier] using mbt index to collect logical packages"
+        )
+        ParsedLogicalPackage.fromMbtIndex(
+          semanticdbFileManager.listAllPackages()
+        )
+      } else
+        ParsedLogicalPackage.collectLogicalPackages(settings)
     }
 
     if (reportsLevel.isVerbose)

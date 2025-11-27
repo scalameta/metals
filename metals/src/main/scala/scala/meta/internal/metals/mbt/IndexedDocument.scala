@@ -104,8 +104,6 @@ object IndexedDocument {
       .setDefinitionRange(range.toJRange)
       .build()
 
-    val semanticdbPackages = sdoc.occurrences.iterator
-      .filter(_.symbol.endsWith("/"))
     val definitions =
       sdoc.occurrences.view.filter(_.role.isDefinition).map(_.symbol)
     val references =
@@ -114,7 +112,7 @@ object IndexedDocument {
       file = file,
       oid = OID.fromText(input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_FILE,
-      semanticdbPackages.map(_.symbol).toSeq,
+      sdoc.semanticdbPackages,
       bloomFilter = bloomFilterMBT(definitions, references),
       language = file.toJLanguage,
       symbols = symbols.toSeq,
@@ -141,11 +139,15 @@ object IndexedDocument {
       params: OnDidChangeSymbolsParams
   ): IndexedDocument = {
 
-    val semanticdbPackages =
-      params.symbols.map(_.symbol).filter(_.endsWith("/")) match {
-        case Nil => List(Symbol.EmptyPackage.value)
-        case pkgs => pkgs.toList
-      }
+    import scala.meta.internal.mtags.Symbol
+
+    val toplevels =
+      params.symbols.map(info => Symbol(info.symbol)).filter(_.isToplevel)
+    val semanticdbPackages = toplevels.map(_.owner).toSet match {
+      case s if s.isEmpty => List(Symbol.EmptyPackage.value)
+      case s => s.map(_.value).toList
+    }
+
     IndexedDocument(
       file = params.path,
       oid = OID.fromText(params.input.text),

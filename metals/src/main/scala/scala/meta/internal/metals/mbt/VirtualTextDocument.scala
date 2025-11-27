@@ -23,7 +23,7 @@ final case class VirtualTextDocument(
     with SemanticdbCompilationUnit {
 
   def pkg: String = packages.headOption.getOrElse("")
-  override def packageSymbol(): String = pkg
+  override def packageSymbols(): ju.List[String] = packages.asJava
   override def uri(): URI = _uri
   override def toplevelSymbols(): ju.List[String] = _toplevelSymbols.asJava
   override def binaryName(): String = {

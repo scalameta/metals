@@ -253,6 +253,12 @@ class MbtV2WorkspaceSymbolSearch(
         ArrayBuffer.from(result).asJava
     }
   }
+  override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {
+    documentsByPackage
+      .mapValues(set => ju.Collections.unmodifiableSet(set))
+      .toMap
+      .asJava
+  }
 
   override def possibleReferences(
       params: MbtPossibleReferencesParams
