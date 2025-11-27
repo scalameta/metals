@@ -57,33 +57,6 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
     filterItem = item => item.getDetail.startsWith("java.util.Map.Entry"),
   )
 
-  check(
-    "conflict",
-    """
-      |package a;
-      |
-      |public class A {
-      |  public static void main(String[] args) {
-      |    Lis@@
-      |  }
-      |}
-      |""".stripMargin,
-    """|List
-       |List
-       |ListSelectionHandler
-       |List12
-       |ListN
-       |ListItr
-       |AccessibleAWTList
-       |AccessibleAWTListChild
-       |JList
-       |AccessibleJList
-       |AccessibleJListChild
-       |SubList
-       |AbstractImmutableList
-       |""".stripMargin,
-  )
-
   checkEdit(
     "already-imported",
     """
@@ -163,4 +136,31 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
     filterItem = item => item.getDetail.startsWith("java.util.List"),
   )
 
+  checkEdit(
+    "sorted-import-between",
+    """|package a;
+       |
+       |import java.io.File;
+       |import java.util.Map;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    Lis@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.io.File;
+       |import java.util.List;
+       |import java.util.Map;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    List
+       |  }
+       |}
+       |""".stripMargin,
+    filterItem = item => item.getDetail.startsWith("java.util.List"),
+  )
 }

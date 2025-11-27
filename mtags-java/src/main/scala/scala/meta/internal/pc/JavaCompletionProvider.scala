@@ -62,13 +62,15 @@ class JavaCompletionProvider(
         val items = n.getLeaf.getKind match {
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
           case IDENTIFIER =>
-            val scope = completeIdentifier(task, n)
-            val scopeLabels = scope.map(_.getLabel)
-            val symbols = completeSymbolSearch(task, scanner.root)
-              .filterNot(i => scopeLabels.contains(i.getLabel))
-            val sorted = (scope ++ symbols).distinct
-              .sortBy(item => identifierScore(item.getLabel)) ++ keywords(n)
-            sorted
+            val scopeCompletions = completeIdentifier(task, n)
+            val scopeLabels = scopeCompletions.map(_.getLabel).toSet
+            val outOfScopeCompletions =
+              completeWithAutoImport(task, scanner.root)
+                .filterNot(i => scopeLabels.contains(i.getLabel))
+
+            (scopeCompletions ++ outOfScopeCompletions).sortBy(item =>
+              identifierScore(item.getLabel)
+            ) ++ keywords(n)
           case _ => keywords(n)
         }
         new CompletionList(items.asJava)
@@ -314,7 +316,7 @@ class JavaCompletionProvider(
       case _ => None
     }
 
-  private def completeSymbolSearch(
+  private def completeWithAutoImport(
       task: JavacTask,
       root: CompilationUnitTree
   ): List[CompletionItem] = {
