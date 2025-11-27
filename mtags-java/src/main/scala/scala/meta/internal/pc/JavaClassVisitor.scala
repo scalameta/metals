@@ -1,12 +1,15 @@
 package scala.meta.internal.pc
 
+import java.nio.file.Path
 import javax.lang.model.element.Element
 import javax.lang.model.util.Elements
+
 import scala.jdk.CollectionConverters._
+
 import scala.meta.pc.SymbolSearchVisitor
-import java.nio.file.Path
-import org.eclipse.lsp4j.SymbolKind
+
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.SymbolKind
 
 sealed trait ScopeElement {
   def element: Element
