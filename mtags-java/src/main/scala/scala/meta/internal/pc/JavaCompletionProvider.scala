@@ -68,9 +68,9 @@ class JavaCompletionProvider(
               completeWithAutoImport(task, scanner.root)
                 .filterNot(i => scopeLabels.contains(i.getLabel))
 
-            (scopeCompletions ++ outOfScopeCompletions).sortBy(item =>
-              identifierScore(item.getLabel)
-            ) ++ keywords(n)
+            ((scopeCompletions ++ outOfScopeCompletions)
+              .sortBy(item => identifierScore(item.getLabel))
+              .distinct ++ keywords(n))
           case _ => keywords(n)
         }
         new CompletionList(items.asJava)
