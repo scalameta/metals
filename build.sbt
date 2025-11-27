@@ -311,6 +311,27 @@ lazy val interfaces = project
     ),
   )
 
+lazy val turbine = project
+  .in(file("vendor/turbine"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "turbine",
+    Compile / packageSrc / publishArtifact := true,
+    autoScalaLibrary := false,
+    crossPaths := false,
+    // Must set Java home to fork on compile and see errors in sbt compile
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    libraryDependencies ++= List(
+      "org.slf4j" % "slf4j-api" % "1.7.36",
+      V.guava,
+      "com.google.auto.value" % "auto-value" % "1.11.1",
+      "com.google.auto.value" % "auto-value-annotations" % "1.11.1",
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+    ),
+    (Compile / PB.targets) :=
+      Seq(PB.gens.java(V.protobuf) -> (Compile / sourceManaged).value),
+  )
 lazy val jsemanticdb = project
   .in(file("jsemanticdb"))
   .settings(sharedSettings)
@@ -544,7 +565,7 @@ lazy val `mtags-java` = project
     Compile / javacOptions ++= List("-Xlint:deprecation"),
   )
   .configure(JavaPcSettings.settings(sharedSettings))
-  .dependsOn(interfaces, mtagsShared, `semanticdb-javac`)
+  .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
 
 lazy val metals = project
   .settings(
