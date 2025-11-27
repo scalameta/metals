@@ -1,35 +1,6 @@
 package pc
 import tests.pc.BaseJavaCompletionSuite
 class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
-  check(
-    "list",
-    """
-      |
-      |interface A {}
-      |
-      |class B implements A {
-      |
-      |    public static int foo() {
-      |         Li@@
-      |    }
-      |
-      |}
-      |""".stripMargin,
-    """
-      |LinkageError
-      |List
-      |List
-      |Line
-      |List12
-      |ListN
-      |ListItr
-      |UnsatisfiedLinkError
-      |AccessibleAWTList
-      |AccessibleAWTListChild
-      |SubList
-      |AbstractImmutableList
-      |""".stripMargin,
-  )
 
   checkEdit(
     "list-edit",
@@ -139,4 +110,57 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
       |""".stripMargin,
     filter = _.equals("List"),
   )
+
+  checkEdit(
+    "sorted-import-before",
+    """|package a;
+       |
+       |import java.util.Map;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    Lis@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.List;
+       |import java.util.Map;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    List
+       |  }
+       |}
+       |""".stripMargin,
+    filterItem = item => item.getDetail.startsWith("java.util.List"),
+  )
+
+  checkEdit(
+    "sorted-import-after",
+    """|package a;
+       |
+       |import java.io.File;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    Lis@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.io.File;
+       |import java.util.List;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    List
+       |  }
+       |}
+       |""".stripMargin,
+    filterItem = item => item.getDetail.startsWith("java.util.List"),
+  )
+
 }

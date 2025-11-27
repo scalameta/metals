@@ -63,9 +63,9 @@ class JavaCompletionProvider(
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
           case IDENTIFIER =>
             val scope = completeIdentifier(task, n)
-            val scopeLabels = scope.map(_.getLabel).toSet
+            val scopeLabels = scope.map(_.getLabel)
             val symbols = completeSymbolSearch(task, scanner.root)
-              .filterNot(i => scopeLabels(i.getLabel))
+              .filterNot(i => scopeLabels.contains(i.getLabel))
             val sorted = (scope ++ symbols).distinct
               .sortBy(item => identifierScore(item.getLabel)) ++ keywords(n)
             sorted
@@ -326,8 +326,9 @@ class JavaCompletionProvider(
         val simpleName = element.getSimpleName.toString
         if (CompletionFuzzy.matches(identifier, simpleName)) {
           val item = completionItem(element)
-          val pos = AutoImports.autoImportPosition(compiler, task, root)
           val className = element.toString
+          val pos =
+            AutoImports.autoImportPosition(compiler, task, root, className)
           val importText = s"import $className;\n"
           val edit = new TextEdit(new Range(pos, pos), importText)
           item.setAdditionalTextEdits(List(edit).asJava)

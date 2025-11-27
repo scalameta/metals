@@ -12,31 +12,43 @@ object AutoImports {
   def autoImportPosition(
       compiler: JavaMetalsGlobal,
       task: JavacTask,
-      root: CompilationUnitTree
+      root: CompilationUnitTree,
+      newImportName: String
   ): Position = {
 
     val sourcePositions = Trees.instance(task).getSourcePositions()
     val text = root.getSourceFile.getCharContent(true)
+    val imports = root.getImports.asScala.toList
 
-    val imports = root.getImports.asScala
     if (imports.nonEmpty) {
-      val lastImport = imports.last
-      val endPos = compiler.offsetToPosition(
-        sourcePositions.getEndPosition(root, lastImport).toInt,
-        text.toString
-      )
-      return new Position(endPos.getLine + 1, 0)
-    }
+      val (importsBefore, importsAfter) = imports.span { imp =>
+        imp.getQualifiedIdentifier.toString < newImportName
+      }
 
-    val packageName = root.getPackageName
-    if (packageName != null) {
-      val endPos = compiler.offsetToPosition(
-        sourcePositions.getEndPosition(root, packageName).toInt,
-        text.toString
-      )
-      return new Position(endPos.getLine + 2, 0)
-    }
+      val endPos = importsAfter.headOption match {
+        case Some(_) if importsBefore.nonEmpty =>
+          sourcePositions.getEndPosition(root, importsBefore.last).toInt
 
-    new Position(0, 0)
+        case Some(_) =>
+          sourcePositions.getEndPosition(root, importsAfter.head).toInt
+
+        case None =>
+          sourcePositions.getEndPosition(root, imports.last).toInt
+      }
+
+      val pos = compiler.offsetToPosition(endPos, text.toString)
+      new Position(pos.getLine + 1, 0)
+    } else {
+      val packageName = root.getPackageName
+      if (packageName != null) {
+        val endPos = compiler.offsetToPosition(
+          sourcePositions.getEndPosition(root, packageName).toInt,
+          text.toString
+        )
+        new Position(endPos.getLine + 2, 0)
+      } else {
+        new Position(0, 0)
+      }
+    }
   }
 }
