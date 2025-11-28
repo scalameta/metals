@@ -11,6 +11,7 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 
 import org.eclipse.lsp4j.Location
 
@@ -46,8 +47,16 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
       query: String,
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
-  ): SymbolSearch.Result = {
+  ): SymbolSearch.Result =
     classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    search(query, buildTargetIdentifier, visitor)
   }
 
   override def searchMethods(

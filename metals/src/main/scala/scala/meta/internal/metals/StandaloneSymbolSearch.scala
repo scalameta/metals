@@ -16,6 +16,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearch.Result
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 
 import org.eclipse.lsp4j.Location
 
@@ -113,10 +114,19 @@ class StandaloneSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): Result = {
+    search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
+      visitor: SymbolSearchVisitor,
+  ): Result = {
     val (res, _) =
       classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
     workspaceFallback
-      .map(_.search(query, buildTargetIdentifier, visitor))
+      .map(_.search(query, buildTargetIdentifier, kind, visitor))
       .getOrElse(res)
   }
 

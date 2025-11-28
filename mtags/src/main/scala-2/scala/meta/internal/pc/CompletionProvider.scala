@@ -216,10 +216,12 @@ class CompletionProvider(
               )
             ) "($0)"
             else ""
-          val (short, edits) = ShortenedNames.synthesize(
+          val implicitClassSymbol = m.definingClassSymbol
+
+          val (_, edits) = ShortenedNames.synthesize(
             TypeRef(
-              ThisType(m.sym.owner),
-              m.sym,
+              ThisType(implicitClassSymbol.owner),
+              implicitClassSymbol,
               Nil
             ),
             pos,
@@ -227,7 +229,7 @@ class CompletionProvider(
             impPos
           )
           val edit: l.TextEdit = textEdit(
-            short + suffix,
+            ident + suffix,
             editRange
           )
           item.setTextEdit(edit)
@@ -434,6 +436,12 @@ class CompletionProvider(
         typedTreeAt(pos) match {
           case Select(qualifier, _)
               if qualifier.tpe != null && !qualifier.tpe.isError =>
+            findImplicitExtensionsForType(
+              query,
+              qualifier.tpe,
+              pos,
+              visit
+            )
             workspaceExtensionMethods(query, pos, visit, qualifier.tpe)
           case _ => SymbolSearch.Result.COMPLETE
         }
@@ -458,7 +466,7 @@ class CompletionProvider(
           ownerConstructor.info.paramss match {
             case List(List(param))
                 if selectType <:< boundedWildcardType(param.info, typeParams) =>
-              visit(new WorkspaceImplicitMember(sym))
+              visit(new WorkspaceImplicitMember(sym, sym.owner))
             case _ => false
           }
         } else false

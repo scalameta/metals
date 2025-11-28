@@ -106,15 +106,27 @@ class WorkspaceSearchVisitor(
       range: l.Range,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
-    fromWorkspace.add(
-      new l.SymbolInformation(
-        desc.name.value,
-        kind,
-        new l.Location(path.toUri.toString, range),
-        owner.replace('/', '.'),
-      )
+    val symbolInfo = new l.SymbolInformation(
+      desc.name.value,
+      kind,
+      new l.Location(path.toUri.toString, range),
+      owner.replace('/', '.'),
     )
-    1
+
+    val absolutePath = AbsolutePath(path)
+    val isFromWorkspace = absolutePath.isWorkspaceSource(workspace)
+
+    if (isFromWorkspace) {
+      fromWorkspace.add(symbolInfo)
+      1
+    } else {
+      if (fromWorkspace.isEmpty || query.isClasspath) {
+        fromClasspath.add(symbolInfo)
+        1
+      } else {
+        0
+      }
+    }
   }
   override def visitClassfile(pkg: String, filename: String): Int = {
     if (fromWorkspace.isEmpty || query.isClasspath) {

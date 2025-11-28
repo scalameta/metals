@@ -18,6 +18,7 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc.ToplevelMemberKind
 import scala.meta.pc.reports.EmptyReportContext
 import scala.meta.pc.reports.ReportContext
 
@@ -86,6 +87,15 @@ class TestingSymbolSearch(
   override def search(
       textQuery: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    search(textQuery, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      textQuery: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
