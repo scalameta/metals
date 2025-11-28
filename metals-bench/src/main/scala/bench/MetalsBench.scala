@@ -100,14 +100,16 @@ class MetalsBench {
       .filter(_.toNIO.getFileName.toString.endsWith(".jar"))
   )
 
+  lazy val flamegraphs = new Flamegraphs(s"metals-bench")
+
   @Setup
   def setup(): Unit = {
-    Flamegraphs.setup()
+    flamegraphs.setup()
   }
 
   @TearDown
   def tearDown(): Unit = {
-    Flamegraphs.tearDown()
+    flamegraphs.tearDown()
   }
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))

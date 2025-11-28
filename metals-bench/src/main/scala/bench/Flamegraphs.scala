@@ -13,27 +13,29 @@ import one.convert.JfrToFlame
 import one.convert.JfrToHeatmap
 import one.profiler.AsyncProfiler
 
-case class JfrDir(dir: String) {
-  def jfrProfile: Path = Paths.get(dir, "profile.jfr")
+case class JfrDir(dir: String, id: String) {
+  def name: String = if (id.isEmpty) "profile" else s"profile-$id"
+  def jfrProfile: Path = Paths.get(dir, s"$name.jfr")
   def collapsed: AbsolutePath = AbsolutePath(
-    Paths.get(dir, "profile.collapsed.txt")
+    Paths.get(dir, s"$name.collapsed.txt")
   )
   def flamegraph: AbsolutePath = AbsolutePath(
-    Paths.get(dir, "profile.flamegraph.html")
+    Paths.get(dir, s"$name.flamegraph.html")
   )
   def heatmap: AbsolutePath = AbsolutePath(
-    Paths.get(dir, "profile.heatmap.html")
+    Paths.get(dir, s"$name.heatmap.html")
   )
 }
 object JfrDir {
-  lazy val fromProperties: Option[JfrDir] =
-    Option(System.getProperty("metals.jfr.dir")).map(JfrDir)
+  def fromProperties(id: String = ""): Option[JfrDir] =
+    Option(System.getProperty("metals.jfr.dir")).map(dir => JfrDir(dir, id))
 }
 
-object Flamegraphs {
+class Flamegraphs(id: String = "") {
   val profiler: AsyncProfiler = AsyncProfiler.getInstance()
+  private def dir = JfrDir.fromProperties(id)
   def setup(): Unit = {
-    JfrDir.fromProperties.foreach { jfrDir =>
+    dir.foreach { jfrDir =>
       val options = Buffer.empty[String]
       options += "start"
       options += "jfr"
@@ -45,8 +47,11 @@ object Flamegraphs {
     }
   }
 
-  def tearDown(include: String = "", reverse: Boolean = false): Unit = {
-    JfrDir.fromProperties.foreach { jfrDir =>
+  def tearDown(
+      include: String = "",
+      reverse: Boolean = false,
+  ): Unit = {
+    dir.foreach { jfrDir =>
       val options = Buffer.empty[String]
       options += "stop"
       options += s"file=${jfrDir.jfrProfile}"

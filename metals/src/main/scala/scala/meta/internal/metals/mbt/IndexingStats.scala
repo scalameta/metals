@@ -12,7 +12,7 @@ final case class IndexingStats(
   // Only use this for testing purposes. In production code, use Future.map
   // instead.
   def awaitBackgroundJobs(
-      duration: Duration = Duration("2s")
+      duration: Duration = Duration("5s")
   ): IndexingStats = {
     Await.result(backgroundJobs, duration)
     this.copy(backgroundJobs = Future.unit)

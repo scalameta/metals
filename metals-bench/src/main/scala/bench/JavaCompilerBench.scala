@@ -50,10 +50,11 @@ class JavaCompilerBench {
     ArrayBuffer.empty[Input.VirtualFile]
   var linesOfCode: Long = 0
   var sout = new StringWriter()
+  lazy val flamegraphs = new Flamegraphs(s"javac-compiler-bench")
 
   @Setup
   def setup(): Unit = {
-    Flamegraphs.setup()
+    flamegraphs.setup()
     sout.close()
     sout = new StringWriter()
     library = Library.springbootStarterWeb
@@ -77,7 +78,7 @@ class JavaCompilerBench {
 
   @TearDown
   def teardown(): Unit = {
-    Flamegraphs.tearDown()
+    flamegraphs.tearDown()
     tmp.deleteRecursively()
   }
 
