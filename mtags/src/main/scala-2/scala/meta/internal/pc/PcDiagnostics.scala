@@ -136,14 +136,9 @@ trait PcDiagnostics {
           for (r <- waitLoadedTypeResponses(unit.source)) {
             r.raise(ex)
           }
-          //          serviceParsedEntered()
-
-          //          lastException = Some(ex)
-
-          reporter.error(
-            unit.body.pos,
-            "Presentation compiler crashed while type checking this file: %s"
-              .format(ex.toString())
+          logger.warn(
+            s"[${unit.source}] Presentation compiler crashed while type checking this file:",
+            ex
           )
       }
     }
