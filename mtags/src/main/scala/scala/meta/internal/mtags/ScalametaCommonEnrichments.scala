@@ -400,10 +400,10 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
 
     def readTextOpt: Option[String] = {
-      if (path.exists) {
-        Option(path.readText)
-      } else {
-        None
+      try {
+        Some(path.readText)
+      } catch {
+        case NonFatal(_) => None
       }
     }
 
