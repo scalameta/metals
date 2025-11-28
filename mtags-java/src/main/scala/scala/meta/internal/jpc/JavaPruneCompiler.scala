@@ -5,9 +5,7 @@ import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentSkipListMap
-import javax.tools.JavaCompiler
 import javax.tools.JavaFileObject
-import javax.tools.ToolProvider
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -16,6 +14,8 @@ import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc
 
 import com.sun.source.util.JavacTask
+import com.sun.tools.javac.api.JavacTool
+import com.sun.tools.javac.util.Context
 import net.jpountz.xxhash.StreamingXXHash64
 import net.jpountz.xxhash.XXHashFactory
 import org.slf4j.Logger
@@ -51,7 +51,7 @@ class JavaPruneCompiler(
   private lazy val headerCompiler =
     embedded.javaHeaderCompilerPluginJarPath()
 
-  val compiler: JavaCompiler = ToolProvider.getSystemJavaCompiler()
+  val compiler: JavacTool = JavacTool.create()
   private val standardFileManager =
     compiler.getStandardFileManager(null, null, StandardCharsets.UTF_8)
   val fileManager = new PruneCompilerFileManager(
@@ -222,6 +222,16 @@ class JavaPruneCompiler(
     batchCompileTask(List(params), classpath, extraOptions)
   }
 
+  private def hotContext(): Context = {
+    val context = new Context()
+    // Pre-register shared Names first (before any other component requests it)
+    SharedNames.preRegister(context)
+    // Pre-register SafeAttr to handle additional exceptions during attribution
+    SafeAttr.preRegister(context)
+    // PruneTodo.preRegister(context)
+    context
+  }
+
   def batchCompileTask(
       params: List[pc.VirtualFileParams],
       classpath: Seq[Path] = Nil,
@@ -246,7 +256,8 @@ class JavaPruneCompiler(
             store,
             options.asJava,
             null,
-            files.map(_.source).asJava
+            files.map(_.source).asJava,
+            hotContext()
           )
         catch {
           case e: RuntimeException

@@ -248,11 +248,13 @@ val sharedJavaOptions = Seq(
   "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
   "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
 )
 
 val sharedScalacOptions = List(
@@ -561,6 +563,8 @@ lazy val `semanticdb-javac` = project
 lazy val `mtags-java` = project
   .settings(
     libraryDependencies ++= pprintDebuggingDependency,
+    Compile / javaOptions ++= toolchainJavaOptions,
+    Compile / javacOptions ++= toolchainJavaOptions,
     Compile / javacOptions ++= sharedJavaOptions.map(o => s"-J$o"),
     Compile / javacOptions ++= List("-Xlint:deprecation"),
   )
@@ -800,6 +804,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
       Nil
     }
   },
+  Test / javaOptions ++= toolchainJavaOptions,
   Test / javaOptions ++= sharedJavaOptions,
   Test / javaOptions ++= Seq(
     "-Dmetals.telemetry=disabled", "-Dmetals.env=testing", "-Xmx16G",
