@@ -142,13 +142,14 @@ final class FoldingRangeExtractor(
           range.setStartCharacter(first.pos.startColumn)
           range.setEndCharacter(last.pos.endColumn)
 
-          if (isLineComment(last)) {
-            if (range.getStartLine < range.getEndLine) { // one line comment should not be folded
+          if (range.getStartLine < range.getEndLine) { // one line comment should not be folded
+            if (isLineComment(last)) {
               ranges.addAsIs(Comment, range)
+            } else {
+              ranges.add(Comment, range)
             }
-          } else {
-            ranges.add(Comment, range)
           }
+
         case _ =>
       }
     }
