@@ -460,7 +460,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % "0.12.1",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.1",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",
