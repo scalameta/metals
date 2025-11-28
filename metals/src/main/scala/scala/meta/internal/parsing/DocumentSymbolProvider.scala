@@ -59,14 +59,13 @@ final class DocumentSymbolProvider(
       info <- doc.symbols.iterator
       occ <- occurrences.get(info.symbol).iterator
       range <- occ.range.iterator
+      pos <- range.toMeta(input).orElse {
+        scribe.warn(
+          s"document-symbol: range is undefined for symbol ${info.symbol}. info=${info} occ=${occ}"
+        )
+        None
+      }
     } yield {
-      val pos = Position.Range(
-        input,
-        range.startLine,
-        range.startCharacter,
-        range.endLine,
-        range.endCharacter,
-      )
       val detail = pos.lineContent
       val name =
         if (info.kind.isConstructor) Symbol(info.symbol).owner.displayName
