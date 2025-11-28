@@ -94,6 +94,9 @@ public class SemanticdbTrees {
       return Semanticdb.AnnotationTree.newBuilder().build();
     }
     Element annotationSym = trees.getElement(annotationTreePath);
+    if (annotationSym == null) {
+      return Semanticdb.AnnotationTree.newBuilder().build();
+    }
 
     Semanticdb.Type type = typeVisitor.semanticdbType(annotationSym.asType());
     return annotationTree(type, params);
@@ -107,7 +110,13 @@ public class SemanticdbTrees {
   private Semanticdb.Tree annotationParameter(ExpressionTree expr) {
     if (expr instanceof MemberSelectTree) {
       TreePath expressionTreePath = nodes.get(expr);
+      if (expressionTreePath == null) {
+        return tree(idTree(SemanticdbSymbols.NONE));
+      }
       Element expressionSym = trees.getElement(expressionTreePath);
+      if (expressionSym == null) {
+        return tree(idTree(SemanticdbSymbols.NONE));
+      }
       return tree(
           selectTree(
               tree(idTree(globals.semanticdbSymbol(expressionSym.getEnclosingElement(), locals))),
@@ -151,7 +160,13 @@ public class SemanticdbTrees {
       return tree(annotationBuilder((AnnotationTree) expr));
     } else if (expr instanceof IdentifierTree) {
       TreePath expressionTreePath = nodes.get(expr);
+      if (expressionTreePath == null) {
+        return tree(idTree(SemanticdbSymbols.NONE));
+      }
       Element expressionSym = trees.getElement(expressionTreePath);
+      if (expressionSym == null) {
+        return tree(idTree(SemanticdbSymbols.NONE));
+      }
       return tree(idTree(globals.semanticdbSymbol(expressionSym, locals)));
     } else if (expr instanceof BinaryTree) {
       BinaryTree binExpr = (BinaryTree) expr;

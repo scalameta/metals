@@ -534,7 +534,13 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
   private Optional<Semanticdb.SymbolOccurrence> semanticdbOccurrence(
       Element sym, Optional<Semanticdb.Range> range, Role role) {
     if (range.isPresent()) {
-      String ssym = semanticdbSymbol(sym);
+      String ssym;
+      try {
+        ssym = semanticdbSymbol(sym);
+      } catch (NullPointerException e) {
+        // Can happen when symbol resolution fails for incomplete/synthetic types
+        return Optional.empty();
+      }
       if (!ssym.equals(SemanticdbSymbols.NONE)) {
         Semanticdb.SymbolOccurrence occ = symbolOccurrence(ssym, range.get(), role);
         return Optional.of(occ);
@@ -626,8 +632,12 @@ public class SemanticdbVisitor extends TreePathScanner<Void, Void> {
           // find all elements of super class
           if (superElement instanceof TypeElement) {
             boolean methodFound = false;
-            List<? extends Element> enclosedElements =
-                ((TypeElement) superElement).getEnclosedElements();
+            List<? extends Element> enclosedElements;
+            try {
+              enclosedElements = ((TypeElement) superElement).getEnclosedElements();
+            } catch (NullPointerException e) {
+              continue;
+            }
             for (Element enclosedElement : enclosedElements) {
               // check the element is a method
               if (enclosedElement instanceof ExecutableElement) {
