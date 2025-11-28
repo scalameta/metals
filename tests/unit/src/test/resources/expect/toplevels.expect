@@ -11,6 +11,7 @@ example/ImplicitClasses.scala -> example/ImplicitClasses.
 example/ImplicitConversions.scala -> example/ImplicitConversions#
 example/Imports.scala -> example/Imports#
 example/JavaAnnotation.java -> example/JavaAnnotation#
+example/JavaAnonymousClasses.java -> example/JavaAnonymousClasses#
 example/JavaClass.java -> example/JavaClass#
 example/JavaEnum.java -> example/JavaEnum#
 example/JavaEnum2.java -> example/JavaEnum2#
@@ -30,6 +31,7 @@ example/MethodOverload.scala -> example/MethodOverload#
 example/Miscellaneous.scala -> example/Miscellaneous#
 example/NamedArguments.scala -> example/NamedArguments.
 example/NamedArguments.scala -> example/User#
+example/NotNull.java -> example/NotNull#
 example/PatternMatching.scala -> example/PatternMatching#
 example/ReflectiveInvocation.scala -> example/ReflectiveInvocation#
 example/Scalalib.scala -> example/Scalalib#

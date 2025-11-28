@@ -110,10 +110,23 @@ class JavacMtags(
   private val _names = new ju.LinkedHashSet[String]()
   private var parseTask = Option.empty[ParseTask]
   private val logger = LoggerFactory.getLogger(getClass)
+  private var isInsideLocalScope: Boolean = false
 
   def language: Language = Language.JAVA
   def identifiers(): Seq[String] =
     _names.asScala.iterator.toIndexedSeq
+
+  override def addSignature(
+      signature: s.Scala.Descriptor,
+      definition: Position,
+      kind: s.SymbolInformation.Kind,
+      properties: Int
+  ): String = {
+    if (isInsideLocalScope) {
+      return ""
+    }
+    super.addSignature(signature, definition, kind, properties)
+  }
 
   override def indexRoot(): Unit = try {
     val context = new Context()
@@ -317,7 +330,9 @@ class JavacMtags(
             case _ =>
           }
         }
-        super.visitBlock(node, p)
+        isInsideLocalScope = true
+        try super.visitBlock(node, p)
+        finally isInsideLocalScope = false
       }
     }
 
@@ -673,7 +688,9 @@ class JavacMtags(
         return r;
         r;
       } else {
-        super.visitVariable(node, p)
+        isInsideLocalScope = true
+        try super.visitVariable(node, p)
+        finally isInsideLocalScope = false
       }
     }
     override def visitAnnotation(node: AnnotationTree, p: Unit): TreePath = {

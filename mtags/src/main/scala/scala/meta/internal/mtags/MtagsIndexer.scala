@@ -151,7 +151,8 @@ trait MtagsIndexer {
         pkg(qual)
         currentOwner = symbol(Descriptor.Package(name))
     }
-  private def addSignature(
+
+  protected def addSignature(
       signature: Descriptor,
       definition: Position,
       kind: s.SymbolInformation.Kind,
