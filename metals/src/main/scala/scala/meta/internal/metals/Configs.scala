@@ -388,25 +388,44 @@ object Configs {
   }
 
   final case class FallbackClasspathConfig(val values: List[String]) {
-    require(values.forall(List("all-3rdparty").contains), values)
+    values.foreach(value =>
+      require(
+        FallbackClasspathConfig.isValid(value),
+        s"invalid value $value for fallbackClasspath. Valid values are \"all-3rdparty\" and \"guessed\"",
+      )
+    )
     def isAll3rdparty: Boolean =
       values.contains("all-3rdparty")
+    def isGuessed: Boolean =
+      values.contains("guessed")
   }
 
   object FallbackClasspathConfig {
+    // We may want to support richer settings here in the future. For
+    // example, defining dependencies inline like
+    // "dependency:com.google:guava:VERSION" or "file://path/to/some.jar".
+    def isValid(value: String): Boolean =
+      value == "all-3rdparty" || value == "guessed"
     def all3rdparty: FallbackClasspathConfig =
       FallbackClasspathConfig(List("all-3rdparty"))
+    def guessed: FallbackClasspathConfig =
+      FallbackClasspathConfig(List("guessed"))
+
     def default: FallbackClasspathConfig = FallbackClasspathConfig(Nil)
     def fromConfigOrFeatureFlag(
         values: Option[List[String]],
         featureFlags: FeatureFlagProvider,
     ): Either[String, FallbackClasspathConfig] = {
       values match {
-        case Some(ok @ (List("all-3rdparty") | Nil)) =>
-          // We may want to support richer settings here in the future. For
-          // example, defining dependencies inline like
-          // "dependency:com.google:guava:VERSION" or "file://path/to/some.jar".
-          Right(FallbackClasspathConfig(ok))
+        case Some(ok) =>
+          val invalid = ok.filterNot(FallbackClasspathConfig.isValid)
+          if (invalid.nonEmpty) {
+            Left(
+              s"invalid config value '$invalid' for fallbackClasspath. Valid values are \"all-3rdparty\""
+            )
+          } else {
+            Right(FallbackClasspathConfig(ok))
+          }
         case Some(invalid) =>
           Left(
             s"invalid config value '$invalid' for fallbackClasspath. Valid values are \"all-3rdparty\""

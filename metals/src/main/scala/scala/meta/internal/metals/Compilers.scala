@@ -128,6 +128,7 @@ class Compilers(
     semanticdbFileManager,
     featureFlags,
   )
+  def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 
   import compilerConfiguration._
 

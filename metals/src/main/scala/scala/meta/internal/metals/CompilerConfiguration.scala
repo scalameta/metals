@@ -56,8 +56,9 @@ class CompilerConfiguration(
 
   private val plugins = new CompilerPlugins()
   val fallbackClasspaths = new FallbackClasspaths(
+    workspace,
     buildTargets,
-    userConfig,
+    () => userConfig().fallbackClasspath,
     scalaVersionSelector,
   )
 

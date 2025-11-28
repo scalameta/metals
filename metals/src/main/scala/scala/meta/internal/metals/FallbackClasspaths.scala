@@ -1,9 +1,27 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
+
+import scala.util.Try
+
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Configs.FallbackClasspathConfig
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.MavenDependencyModule
+
+trait BaseFallbackClasspaths {
+  def javaCompilerClasspath(): Seq[Path]
+  def scalaCompilerClasspath(): Seq[Path]
+}
+object EmptyFallbackClasspaths extends BaseFallbackClasspaths {
+  override def javaCompilerClasspath(): Seq[Path] = Nil
+  override def scalaCompilerClasspath(): Seq[Path] = Nil
+}
 
 /**
  * Infers the classpath to use for the fallback compiler.
@@ -20,15 +38,17 @@ import ch.epfl.scala.bsp4j.MavenDependencyModule
  *   include it if it matches the user's configured `fallbackScalaVersion`.
  */
 class FallbackClasspaths(
-    buildTargets: BuildTargets,
-    userConfig: () => UserConfiguration,
-    scalaVersionSelector: ScalaVersionSelector,
-) {
+    workspace: AbsolutePath,
+    buildTargets: BuildTargets = BuildTargets.empty,
+    fallbackClasspathsConfig: () => FallbackClasspathConfig = () =>
+      FallbackClasspathConfig.default,
+    scalaVersionSelector: ScalaVersionSelector = ScalaVersionSelector.default,
+) extends BaseFallbackClasspaths {
   private def fallbackCompilerClasspath(
       includeBuildTarget: BuildTargetIdentifier => Boolean,
       includeModule: MavenDependencyModule => Boolean,
   ): Seq[Path] = {
-    if (userConfig().fallbackClasspath.isAll3rdparty) {
+    if (fallbackClasspathsConfig().isAll3rdparty) {
       Seq.from(
         buildTargets
           .allDependencyModuleArtifacts(includeBuildTarget, includeModule)
@@ -67,7 +87,11 @@ class FallbackClasspaths(
         buildTargets.javaTarget(id).isDefined,
       module => inferScalaBinaryVersion(module) == scalaBinaryVersion,
     )
-    result
+    if (result.isEmpty) {
+      guessClasspath()
+    } else {
+      result
+    }
   }
   private def fallbackScalaBinaryVersion(): String = {
     val scalaVersion =
@@ -87,5 +111,47 @@ class FallbackClasspaths(
           .exists(_.scalaBinaryVersion == scalaBinaryVerion),
       _ => true,
     )
+  }
+
+  private def guessClasspath(): Seq[Path] = {
+    if (!fallbackClasspathsConfig().isGuessed) {
+      return Nil
+    }
+
+    val bazelbsp = workspace.resolve(".bazelbsp/artifacts")
+    val bloop = workspace.resolve(".bloop")
+
+    if (bazelbsp.isDirectory) {
+      FileIO
+        .listAllFilesRecursively(bazelbsp)
+        .iterator
+        .filter(_.isFile)
+        .filter(_.extension == "jar")
+        .filter(file =>
+          file.toString.contains("third_party") ||
+            file.toString.contains("2.12") ||
+            file.toString.contains("2.13") ||
+            file.toString.contains("shaded")
+        )
+        .filterNot(_.filename.endsWith("-sources.jar"))
+        .map(_.toNIO)
+        .toSeq
+    } else if (bloop.isDirectory) {
+      (for {
+        file <- bloop.list.toSeq.iterator
+        if file.isFile && file.extension == "json"
+        text <- file.readTextOpt.iterator
+        json <- Try(ujson.read(text)).toOption.iterator
+        project <- json.objOpt.flatMap(_.get("project")).iterator
+        classpathEntry <- project.objOpt.flatMap(_.get("classpath")).iterator
+        entries <- classpathEntry.arrOpt.iterator
+        entry <- entries.iterator.flatMap(_.strOpt.iterator)
+        if entry.endsWith(".jar")
+      } yield Paths.get(entry)).distinct
+        .filter(path => Files.exists(path))
+        .toSeq
+    } else {
+      Nil
+    }
   }
 }

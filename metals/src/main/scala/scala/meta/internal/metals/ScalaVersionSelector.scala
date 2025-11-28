@@ -4,6 +4,12 @@ import scala.meta._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
+object ScalaVersionSelector {
+  def default: ScalaVersionSelector = new ScalaVersionSelector(
+    () => UserConfiguration.default,
+    BuildTargets.empty,
+  )
+}
 
 class ScalaVersionSelector(
     userConfig: () => UserConfiguration,
