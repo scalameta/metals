@@ -252,6 +252,7 @@ final class BuildTargets private (
   def inverseSources(
       source: AbsolutePath
   ): Option[BuildTargetIdentifier] = {
+
     val buildTargets = sourceBuildTargets(source)
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
