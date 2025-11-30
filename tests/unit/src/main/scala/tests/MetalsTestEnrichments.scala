@@ -1,5 +1,6 @@
 package tests
 
+import java.nio.charset.MalformedInputException
 import java.nio.file.Files
 
 import scala.collection.mutable.ArrayBuffer
@@ -64,7 +65,12 @@ object MetalsTestEnrichments {
     }
 
   implicit class XtensionTestAbsolutePath(path: AbsolutePath) {
-    def text: String = Files.readAllLines(path.toNIO).asScala.mkString("\n")
+    def text: String = try Files.readAllLines(path.toNIO).asScala.mkString("\n")
+    catch {
+      case _: MalformedInputException =>
+        scribe.error(s"Malformed input exception reading ${path}")
+        ""
+    }
   }
 
   implicit class XtensionTestClasspath(classpath: Classpath) {
