@@ -277,6 +277,18 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val CompileTarget = new ParametrizedCommand[b.BuildTargetIdentifier](
+    "compile-target",
+    "CompileTarget",
+    """|Compile the currently open file.
+       |
+       |Can be used as an explicit command in order
+       |to force compilation to start and finish e.g. before executing a codeLens.
+       |Returns CompileResult with field 'statusCode' being 1 for success, 2 for errors or 3 for compile cancelled.
+       |""".stripMargin,
+    "BuildTargetIdentifier",
+  )
+
   val CancelCompile = new Command(
     "compile-cancel",
     "Cancel compilation",
@@ -748,6 +760,7 @@ object ServerCommands {
       CancelCompile,
       CascadeCompile,
       CleanCompile,
+      CompileTarget,
       CopyWorksheetOutput,
       DiscoverMainClasses,
       DiscoverTestSuites,

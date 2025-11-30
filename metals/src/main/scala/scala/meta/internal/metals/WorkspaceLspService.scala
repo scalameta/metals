@@ -993,6 +993,13 @@ class WorkspaceLspService(
           _.cleanCompile(),
           ServerCommands.CleanCompile.title,
         ).asJavaObject
+      case ServerCommands.CompileTarget(target) =>
+        onCurrentFolder(
+          _.compileTarget(target),
+          ServerCommands.CompileTarget.title,
+          () =>
+            null, // shouldn't happen, but json null is fine as a default here
+        ).liftToLspError.asJavaObject
       case ServerCommands.CancelCompile() =>
         foreachSeqIncludeFallback(_.cancelCompile(), ignoreValue = true)
       case ServerCommands.PresentationCompilerRestart() =>

@@ -1517,6 +1517,9 @@ abstract class MetalsLspService(
 
   def cleanCompile(): Future[Unit] = compilations.recompileAll()
 
+  def compileTarget(target: b.BuildTargetIdentifier): Future[b.CompileResult] =
+    compilations.compileTarget(target)
+
   def cancelCompile(): Future[Unit] = Future {
     // We keep this in here to provide a way for clients that aren't work done progress cancel providers
     // to be able to cancel a long-running worksheet evaluation by canceling compilation.
