@@ -84,10 +84,15 @@ final class RunTestCodeLens(
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
     val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val targetIds = buildTargets
+      .inverseSourcesAll(path)
+      .flatMap(buildTargets.allInverseDependencies)
+      .distinct
     val lenses = for {
-      buildTargetId <- buildTargets.inverseSources(path)
+      buildTargetId <- targetIds
       if canActuallyCompile(buildTargetId, diagnostics)
       buildTarget <- buildTargets.info(buildTargetId)
+      if buildTarget.getCapabilities().getCanDebug()
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
       )
@@ -116,7 +121,7 @@ final class RunTestCodeLens(
         )
       syntheticLenses ++ regularLenses
     }
-    lenses.getOrElse(Future.successful(Nil))
+    Future.sequence(lenses).map(_.flatten)
   }
 
   /**
