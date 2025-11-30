@@ -24,7 +24,7 @@ class JunitTestFinder {
       symbol.kind == SymbolInformation.Kind.METHOD && symbol.annotations
         .exists(_.tpe match {
           case TypeRef(_, annotationSymbol, _) =>
-            annotationSymbol == junitAnnotationSymbol
+            junitAnnotationSymbols.contains(annotationSymbol)
           case _ => false
         })
 
@@ -54,5 +54,8 @@ class JunitTestFinder {
 }
 
 object JunitTestFinder {
-  val junitAnnotationSymbol = "org/junit/Test#"
+  val junit4AnnotationSymbol = "org/junit/Test#"
+  val junit5AnnotationSymbol = "org/junit/jupiter/api/Test#"
+  val junitAnnotationSymbols: Set[String] =
+    Set(junit4AnnotationSymbol, junit5AnnotationSymbol)
 }
