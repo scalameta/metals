@@ -50,4 +50,7 @@ public enum FeatureFlag {
 
   /** If enabled, uses the MBT-based reference provider. */
   MBT_REFERENCE_PROVIDER,
+
+  /** If enabled, uses the interactive semanticdb. */
+  INTERACTIVE_SEMANTICDB,
 }

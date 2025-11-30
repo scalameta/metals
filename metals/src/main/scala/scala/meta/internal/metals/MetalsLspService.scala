@@ -433,6 +433,7 @@ abstract class MetalsLspService(
         () => semanticDBIndexer,
         buffers,
         scalaCli,
+        featureFlags,
       )
     )
   }

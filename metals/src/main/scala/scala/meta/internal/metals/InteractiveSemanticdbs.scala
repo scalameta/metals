@@ -6,6 +6,8 @@ import java.util.Collections
 import scala.util.Success
 import scala.util.Try
 
+import scala.meta.infra.FeatureFlag
+import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.MD5
@@ -33,12 +35,17 @@ final class InteractiveSemanticdbs(
     semanticdbIndexer: () => SemanticdbIndexer,
     buffers: Buffers,
     scalaCliServers: => ScalaCliServers,
+    featureFlags: FeatureFlagProvider,
 ) extends Cancelable
     with Semanticdbs {
 
   private val textDocumentCache = Collections.synchronizedMap(
     new java.util.HashMap[AbsolutePath, s.TextDocument]()
   )
+
+  private lazy val isInteractiveSemanticdbEnabled: Boolean =
+    "true" == System.getProperty("metals.interactive.semanticdb", "false") ||
+      featureFlags.readBoolean(FeatureFlag.INTERACTIVE_SEMANTICDB).orElse(false)
 
   def reset(): Unit = {
     textDocumentCache.clear()
@@ -68,7 +75,8 @@ final class InteractiveSemanticdbs(
       }
     def shouldTryCalculateInteractiveSemanticdb = {
       source.isLocalFileSystem(workspace) && (
-        unsavedContents.isDefined ||
+        isInteractiveSemanticdbEnabled ||
+          unsavedContents.isDefined ||
           source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
           source.isMill || // mill files
