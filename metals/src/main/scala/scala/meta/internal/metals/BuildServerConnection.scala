@@ -29,6 +29,8 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.logging.JvmRunEnvironmentNotSupported
+import scala.meta.internal.metals.logging.LogOnce
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
@@ -298,9 +300,7 @@ class BuildServerConnection private (
           ),
         ).asScala
       } else {
-        scribe.warn(
-          s"${conn.displayName} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
-        )
+        LogOnce.warn(JvmRunEnvironmentNotSupported(conn.displayName))
         Future.successful(empty)
       }
     }

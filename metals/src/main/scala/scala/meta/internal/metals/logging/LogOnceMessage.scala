@@ -8,3 +8,8 @@ abstract class LogOnceMessage(val message: String) {
 
 case class TracingIsEnabled(head: String)
     extends LogOnceMessage(s"tracing is enabled: $head")
+
+case class JvmRunEnvironmentNotSupported(connection: String)
+    extends LogOnceMessage(
+      s"${connection} does not support `buildTarget/jvmRunEnvironment`, unable to fetch run environment."
+    )
