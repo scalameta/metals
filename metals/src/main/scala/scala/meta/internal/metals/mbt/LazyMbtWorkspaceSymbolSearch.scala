@@ -3,14 +3,10 @@ package scala.meta.internal.metals.mbt
 import java.nio.file.Path
 import java.{util => ju}
 
-import scala.concurrent.ExecutionContext
-
 import scala.meta.infra.MonitoringClient
-import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
@@ -30,13 +26,11 @@ class LazyMbtWorkspaceSymbolSearch(
     config: () => WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
     buffers: Buffers,
-    time: Time,
     metrics: MonitoringClient,
     timerProvider: TimerProvider,
     mtags: () => Mtags,
-    progress: BaseWorkDoneProgress,
-)(implicit ec: ExecutionContext)
-    extends MbtWorkspaceSymbolSearch {
+    mbt2: MbtV2WorkspaceSymbolSearch,
+) extends MbtWorkspaceSymbolSearch {
   private lazy val mbt1 = new MbtWorkspaceSymbolProvider(
     gitWorkspace = workspace,
     config = config,
@@ -45,15 +39,6 @@ class LazyMbtWorkspaceSymbolSearch(
     metrics = metrics,
     buffers = buffers,
     timerProvider = timerProvider,
-  )
-  private lazy val mbt2 = new MbtV2WorkspaceSymbolSearch(
-    workspace = workspace,
-    config = config,
-    buffers = buffers,
-    time = time,
-    metrics = metrics,
-    mtags = mtags,
-    progress = progress,
   )
   private def delegate: MbtWorkspaceSymbolSearch =
     if (config().isMBT1) {

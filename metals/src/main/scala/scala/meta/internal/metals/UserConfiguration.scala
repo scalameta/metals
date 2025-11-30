@@ -12,6 +12,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
+import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
@@ -83,6 +84,8 @@ case class UserConfiguration(
     useSourcePath: Boolean = true,
     workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig.default,
+    definitionProviders: DefinitionProviderConfig =
+      DefinitionProviderConfig.default,
     definitionIndexStrategy: DefinitionIndexStrategy =
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
@@ -218,6 +221,12 @@ case class UserConfiguration(
           (
             "workspaceSymbolProvider",
             workspaceSymbolProvider.value,
+          )
+        ),
+        Some(
+          (
+            "definitionProviders",
+            definitionProviders.values.asJava,
           )
         ),
         Some(
@@ -985,6 +994,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(DefinitionIndexStrategy.default)
+    val definitionProviders = getParsedArrayKey(
+      "definition-providers",
+      value =>
+        DefinitionProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(DefinitionProviderConfig.default)
     val javaOutlineProvider = getParsedKey(
       "java-outline-provider",
       value =>
@@ -1053,6 +1070,7 @@ object UserConfiguration {
           preferredBuildServer,
           useSourcePath,
           workspaceSymbolProvider,
+          definitionProviders,
           definitionIndexStrategy,
           javaOutlineProvider,
           compilerProgress,

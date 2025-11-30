@@ -39,6 +39,9 @@ public enum FeatureFlag {
    */
   CLASSPATH_DEFINITION_INDEX,
 
+  /** If enabled, uses the MBT-based definition provider. */
+  MBT_DEFINITION_PROVIDER,
+
   /** If enabled, uses the javac-based outline provider. */
   JAVAC_OUTLINE_PROVIDER,
 

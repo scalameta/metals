@@ -260,6 +260,36 @@ class MbtV2WorkspaceSymbolSearch(
       .asJava
   }
 
+  def definition(symbol: String): List[l.Location] = {
+    val result = (for {
+      file <- documentsByPackage
+        .getOrElse(
+          Symbol(symbol).enclosingPackage.value,
+          new ju.concurrent.ConcurrentSkipListSet[Path](),
+        )
+        .asScala
+        .iterator
+      doc <- documents.get(AbsolutePath(file)).iterator
+      sym <- doc.symbols.iterator
+      if sym.getSymbol() == symbol
+    } yield {
+      new l.Location(
+        file.toUri().toString(),
+        new l.Range(
+          new l.Position(
+            sym.getDefinitionRange().getStartLine(),
+            sym.getDefinitionRange().getStartCharacter(),
+          ),
+          new l.Position(
+            sym.getDefinitionRange().getEndLine(),
+            sym.getDefinitionRange().getEndCharacter(),
+          ),
+        ),
+      )
+    }).toList
+    result
+  }
+
   override def possibleReferences(
       params: MbtPossibleReferencesParams
   ): Iterable[AbsolutePath] = {

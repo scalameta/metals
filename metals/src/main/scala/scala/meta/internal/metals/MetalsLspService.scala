@@ -49,6 +49,7 @@ import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.LazyMbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
+import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -292,6 +293,16 @@ abstract class MetalsLspService(
       connectionBspStatus,
     )
 
+  private val mbt2 = new MbtV2WorkspaceSymbolSearch(
+    workspace = folder,
+    config = () => userConfig.workspaceSymbolProvider,
+    buffers = buffers,
+    time = time,
+    metrics = metrics,
+    mtags = () => mtags,
+    progress = workDoneProgress,
+  )
+
   override val mbtSymbolSearch: MbtWorkspaceSymbolSearch =
     cancelables.registerCloseable(
       new LazyMbtWorkspaceSymbolSearch(
@@ -299,11 +310,10 @@ abstract class MetalsLspService(
         config = () => userConfig.workspaceSymbolProvider,
         statistics = () => clientConfig.initialConfig.statistics,
         buffers = buffers,
-        time = time,
         metrics = metrics,
         timerProvider = timerProvider,
         mtags = () => mtags,
-        progress = workDoneProgress,
+        mbt2 = mbt2,
       )
     )
   val workspaceSymbols: WorkspaceSymbolProvider =
@@ -442,6 +452,8 @@ abstract class MetalsLspService(
     symbolDocs,
     workspaceSymbols,
     definitionProvider,
+    mbt2,
+    () => userConfig,
     () => mtags,
   )
 

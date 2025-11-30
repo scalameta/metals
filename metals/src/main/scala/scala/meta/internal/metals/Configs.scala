@@ -230,6 +230,48 @@ object Configs {
     }
   }
 
+  final case class DefinitionProviderConfig(val values: List[String]) {
+    values.foreach(value =>
+      require(
+        DefinitionProviderConfig.isValid(value),
+        s"invalid value $value for definition providers. Valid values are \"mbt\"",
+      )
+    )
+    def isMBT: Boolean =
+      values.contains("mbt")
+  }
+
+  object DefinitionProviderConfig {
+    def isValid(value: String): Boolean =
+      value == "mbt"
+    def default: DefinitionProviderConfig = DefinitionProviderConfig(Nil)
+    def fromConfigOrFeatureFlag(
+        values: Option[List[String]],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, DefinitionProviderConfig] = {
+      values match {
+        case Some(ok) =>
+          val invalid = ok.filterNot(DefinitionProviderConfig.isValid)
+          if (invalid.nonEmpty) {
+            Left(
+              s"invalid config value '$invalid' for definition providers. Valid values are \"mbt\""
+            )
+          } else {
+            Right(DefinitionProviderConfig(ok))
+          }
+        case None =>
+          val isMBTEnabled = featureFlags
+            .readBoolean(FeatureFlag.MBT_DEFINITION_PROVIDER)
+            .orElse(false)
+          if (isMBTEnabled) {
+            Right(DefinitionProviderConfig(List("mbt")))
+          } else {
+            Right(DefinitionProviderConfig.default)
+          }
+      }
+    }
+  }
+
   final case class RangeFormattingProviders(val values: List[String]) {
     values.foreach(value =>
       require(

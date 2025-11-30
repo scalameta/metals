@@ -409,6 +409,7 @@ class UserConfigurationSuite extends BaseSuite {
   "buildOnFocus": true,
   "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
+  "definitionProviders": [],
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
   "compilerProgress": "disabled",
