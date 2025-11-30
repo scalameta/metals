@@ -17,7 +17,7 @@ import scala.meta.io.AbsolutePath
  */
 final class GitBlob(
     val path: String,
-    val oidBytes: Array[Byte],
+    var oidBytes: Array[Byte],
     var textBytes: Array[Byte] = null,
     var semanticdb: TextDocument = null,
     var bloomFilter: StringBloomFilter = null,
