@@ -232,7 +232,7 @@ class ProjectMetalsLspService(
   protected def isMillBuildFile(path: AbsolutePath): Boolean = {
     buildTools.isMill && {
       val filename = path.toNIO.getFileName.toString
-      filename == "build.mill" || filename == "build.mill.scala" || filename == "build.sc"
+      filename == "build.mill" || filename == "build.mill.yaml" || filename == "build.mill.scala" || filename == "build.sc"
     }
   }
 

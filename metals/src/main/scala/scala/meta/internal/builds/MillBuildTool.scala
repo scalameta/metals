@@ -26,11 +26,15 @@ case class MillBuildTool(
     lazy val buildFile = workspace.resolve("build.mill")
     lazy val buildFile1 = workspace.resolve("build.mill.scala")
     lazy val buildFile2 = workspace.resolve("build.sc")
+    lazy val buildFileYaml = workspace.resolve("build.mill.yaml")
     lazy val millPath = workspace.resolve("mill")
 
     lazy val versionFromBuildfiles = LazyList(buildFile, buildFile1, buildFile2)
       .find(_.isFile)
       .flatMap(readMillVersionYamlFrontmatter(_))
+
+    lazy val versionFromYamlFile =
+      if (buildFileYaml.isFile) readMillVersionYaml(buildFileYaml) else None
 
     def readMillVersion(path: AbsolutePath) =
       Files
@@ -40,22 +44,28 @@ case class MillBuildTool(
         .map(_.trim)
         .getOrElse(version)
 
-    val read = if (millVersionPath.isFile) {
-      readMillVersion(millVersionPath)
-    } else if (altMillVersionPath.isFile) {
-      readMillVersion(altMillVersionPath)
-    } else if (versionFromBuildfiles.isDefined) {
-      versionFromBuildfiles.get
-    } else if (millPath.isFile) {
-      Files
-        .readAllLines(millPath.toNIO)
-        .asScala
-        .find(_.startsWith("DEFAULT_MILL_VERSION"))
-        .map(line => line.dropWhile(!_.isDigit).trim)
+    val read =
+      Option
+        .when(millVersionPath.isFile)(
+          readMillVersion(millVersionPath)
+        )
+        .orElse(
+          Option.when(altMillVersionPath.isFile)(
+            readMillVersion(altMillVersionPath)
+          )
+        )
+        .orElse(versionFromBuildfiles)
+        .orElse(versionFromYamlFile)
+        .orElse(
+          if (millPath.isFile)
+            Files
+              .readAllLines(millPath.toNIO)
+              .asScala
+              .find(_.startsWith("DEFAULT_MILL_VERSION"))
+              .map(line => line.dropWhile(!_.isDigit).trim)
+          else None
+        )
         .getOrElse(version)
-    } else {
-      version
-    }
 
     read
       .stripSuffix("-native")
@@ -63,7 +73,22 @@ case class MillBuildTool(
 
   }
 
-  private val yamlMillVersionPattern = "//[|] +mill-version: +([^ ]+) *$".r
+  private val yamlMillVersionPattern = "mill-version: +([^ ]+) *$".r
+  private val yamlHeaderMillVersionPattern = s"//[|] +$yamlMillVersionPattern".r
+
+  private def readMillVersionYaml(
+      file: AbsolutePath
+  ): Option[String] =
+    file match {
+      case f if f.isFile =>
+        Files
+          .readAllLines(f.toNIO)
+          .asScala
+          .collectFirst { case yamlMillVersionPattern(version) =>
+            version
+          }
+      case _ => None
+    }
 
   private def readMillVersionYamlFrontmatter(
       file: AbsolutePath
@@ -74,7 +99,7 @@ case class MillBuildTool(
           .readAllLines(f.toNIO)
           .asScala
           .takeWhile(_.startsWith("//|"))
-          .collectFirst { case yamlMillVersionPattern(version) =>
+          .collectFirst { case yamlHeaderMillVersionPattern(version) =>
             version
           }
       case _ => None
