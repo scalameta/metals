@@ -299,14 +299,14 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       kindFilter: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): Int = {
-    val excludedPackages = excludedPackageHandler()
+//    val excludedPackages = excludedPackageHandler()
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
       if query.isClasspath
       if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
       if query.matches(symbol.symbol)
-      if !excludedPackages.isExcludedPackage(symbol.symbol)
+//      if !excludedPackages.isExcludedPackage(symbol.symbol)
     } yield {
       visitor.visitWorkspaceSymbol(
         path.toNIO,
