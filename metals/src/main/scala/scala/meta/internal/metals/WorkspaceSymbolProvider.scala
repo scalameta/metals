@@ -308,7 +308,6 @@ final class WorkspaceSymbolProvider(
       if query.matches(symbol.symbol)
       if !excludedPackages.isExcludedPackage(symbol.symbol)
     } yield {
-      path.isWorkspaceSource(workspace)
       visitor.visitWorkspaceSymbol(
         path.toNIO,
         symbol.symbol,
