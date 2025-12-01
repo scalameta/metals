@@ -97,6 +97,31 @@ public class SourceTypeBoundClass implements TypeBoundClass {
     this.decl = decl;
   }
 
+  // TURBINE-DIFF START
+  public static final SourceTypeBoundClass EMPTY =
+      new SourceTypeBoundClass(
+          ImmutableList.of(),
+          ImmutableList.of(),
+          null,
+          ImmutableMap.of(),
+          0,
+          ImmutableList.of(),
+          ImmutableList.of(),
+          ImmutableList.of(),
+          null,
+          TurbineTyKind.CLASS,
+          ImmutableMap.of(),
+          ImmutableMap.of(),
+          null,
+          null,
+          null,
+          null,
+          ImmutableList.of(),
+          null,
+          Tree.TyDecl.EMPTY);
+
+  // TURBINE-DIFF END
+
   @Override
   public @Nullable ClassSymbol superclass() {
     if (superClassType == null) {

@@ -470,6 +470,11 @@ public class TypeBinder {
     if (type.tyKind().equals(Type.TyKind.ERROR_TY)) {
       return type;
     }
+    // TURBINE-DIFF START
+    if (type instanceof Type.TyVar) {
+      return type;
+    }
+    // TURBINE-DIFF END
     HeaderBoundClass info = env.getNonNull(((Type.ClassTy) type).sym());
     boolean isInterface;
     switch (info.kind()) {

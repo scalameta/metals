@@ -25,6 +25,7 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.turbine.binder.bound.AnnotationMetadata;
 import com.google.turbine.binder.bound.EnumConstantValue;
 import com.google.turbine.binder.bound.ModuleInfo.ExportInfo;
 import com.google.turbine.binder.bound.ModuleInfo.OpenInfo;
@@ -517,6 +518,11 @@ public class Lower {
       ClassSymbol sym) {
     TypeBoundClass info = env.get(sym);
     if (info == null) {
+      // TURBINE-DIFF START
+      if (sym == ClassSymbol.ERROR) {
+        return;
+      }
+      // TURBINE-DIFF END
       throw TurbineError.format(source, ErrorKind.CLASS_FILE_NOT_FOUND, sym);
     }
     ClassSymbol owner = info.owner();
@@ -663,8 +669,16 @@ public class Lower {
    * and {@code null} if it should not be retained in bytecode.
    */
   private @Nullable RuntimeVisibility getVisibility(ClassSymbol sym) {
-    RetentionPolicy retention =
-        requireNonNull(env.getNonNull(sym).annotationMetadata()).retention();
+    // TURBINE-DIFF START
+    if (env.get(sym) == null) {
+      return null;
+    }
+    AnnotationMetadata annotationMetadata = env.getNonNull(sym).annotationMetadata();
+    if (annotationMetadata == null) {
+      return null;
+    }
+    RetentionPolicy retention = annotationMetadata.retention();
+    // TURBINE-DIFF END
     switch (retention) {
       case CLASS:
         return RuntimeVisibility.INVISIBLE;
@@ -886,6 +900,11 @@ public class Lower {
           break;
         case VOID_TY:
           break;
+        // TURBINE-DIFF START
+        case ERROR_TY:
+          lowerClassTypeTypeAnnotations(ClassTy.OBJECT, path);
+          break;
+        // TURBINE-DIFF END
         default:
           throw new AssertionError(type.tyKind());
       }

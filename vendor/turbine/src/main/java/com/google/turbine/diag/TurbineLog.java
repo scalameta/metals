@@ -41,6 +41,18 @@ public class TurbineLog {
     }
   }
 
+  // TURBINE-DIFF START
+  public int errorCount() {
+    int count = 0;
+    for (TurbineDiagnostic error : diagnostics) {
+      if (error.severity().equals(Diagnostic.Kind.ERROR)) {
+        count++;
+      }
+    }
+    return count;
+    // TURBINE-DIFF END
+  }
+
   public boolean anyErrors() {
     for (TurbineDiagnostic error : diagnostics) {
       if (error.severity().equals(Diagnostic.Kind.ERROR)) {

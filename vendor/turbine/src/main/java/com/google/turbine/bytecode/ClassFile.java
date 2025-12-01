@@ -32,6 +32,7 @@ import org.jspecify.annotations.Nullable;
 /** A JVMS §4.1 ClassFile. */
 public class ClassFile {
 
+  public byte[] bytes;
   private final int access;
   private final int majorVersion;
   private final String name;

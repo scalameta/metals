@@ -326,7 +326,6 @@ lazy val turbine = project
     crossVersion := CrossVersion.disabled,
     Compile / fullClasspath := Nil,
     libraryDependencies ++= List(
-      "org.slf4j" % "slf4j-api" % "1.7.36",
       V.guava,
       "com.google.auto.value" % "auto-value" % "1.11.1",
       "com.google.auto.value" % "auto-value-annotations" % "1.11.1",

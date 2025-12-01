@@ -58,7 +58,6 @@ import com.google.turbine.binder.sym.ModuleSymbol;
 import com.google.turbine.diag.SourceFile;
 import com.google.turbine.diag.TurbineDiagnostic;
 import com.google.turbine.diag.TurbineError;
-import com.google.turbine.diag.TurbineError.ErrorKind;
 import com.google.turbine.diag.TurbineLog;
 import com.google.turbine.model.Const;
 import com.google.turbine.model.TurbineFlag;
@@ -69,6 +68,7 @@ import com.google.turbine.type.Type;
 import java.time.Duration;
 import java.util.Optional;
 import javax.annotation.processing.Processor;
+import javax.tools.Diagnostic;
 import org.jspecify.annotations.Nullable;
 
 /** The entry point for analysis. */
@@ -140,7 +140,7 @@ public final class Binder {
       Optional<String> moduleVersion) {
     ImmutableList<PreprocessedCompUnit> preProcessedUnits = CompUnitPreprocessor.preprocess(units);
 
-    SimpleEnv<ClassSymbol, SourceBoundClass> ienv = bindSourceBoundClasses(preProcessedUnits);
+    SimpleEnv<ClassSymbol, SourceBoundClass> ienv = bindSourceBoundClasses(log, preProcessedUnits);
 
     ImmutableSet<ClassSymbol> syms = ienv.asMap().keySet();
 
@@ -214,14 +214,23 @@ public final class Binder {
 
   /** Records enclosing declarations of member classes, and group classes by compilation unit. */
   static SimpleEnv<ClassSymbol, SourceBoundClass> bindSourceBoundClasses(
-      ImmutableList<PreprocessedCompUnit> units) {
+      TurbineLog log, ImmutableList<PreprocessedCompUnit> units) {
     SimpleEnv.Builder<ClassSymbol, SourceBoundClass> envBuilder = SimpleEnv.builder();
     for (PreprocessedCompUnit unit : units) {
       for (SourceBoundClass type : unit.types()) {
         SourceBoundClass prev = envBuilder.put(type.sym(), type);
         if (prev != null) {
-          throw TurbineError.format(
-              unit.source(), type.decl().position(), ErrorKind.DUPLICATE_DECLARATION, type.sym());
+          // TURBINE-DIFF START
+          log.diagnostic(
+              Diagnostic.Kind.ERROR,
+              "Duplicate declaration of "
+                  + type.sym().binaryName()
+                  + " in "
+                  + unit.source().path());
+          // throw TurbineError.format(
+          //     unit.source(), type.decl().position(), ErrorKind.DUPLICATE_DECLARATION,
+          // type.sym());
+          // TURBINE-DIFF END
         }
       }
     }
@@ -416,7 +425,11 @@ public final class Binder {
                   // fields initializers are allowed to reference the field being initialized,
                   // but if they do they aren't constants
                   return null;
+                  // TURBINE-DIFF START
+                } catch (TurbineError e) {
+                  return null;
                 }
+                // TURBINE-DIFF END
               }
             });
       }
@@ -432,8 +445,18 @@ public final class Binder {
     SimpleEnv.Builder<ClassSymbol, SourceTypeBoundClass> builder = SimpleEnv.builder();
     for (ClassSymbol sym : syms) {
       SourceTypeBoundClass base = env.getNonNull(sym);
-      builder.put(
-          sym, new ConstBinder(constenv, sym, baseEnv, base, log.withSource(base.source())).bind());
+      try {
+        builder.put(
+            sym,
+            new ConstBinder(constenv, sym, baseEnv, base, log.withSource(base.source())).bind());
+        // TURBINE-DIFF START
+      } catch (TurbineError e) {
+        log.diagnostic(
+            Diagnostic.Kind.ERROR,
+            "Error binding constant for class " + sym.binaryName() + " in " + base.source().path());
+        builder.put(sym, SourceTypeBoundClass.EMPTY);
+        // TURBINE-DIFF END
+      }
     }
     return builder.build();
   }

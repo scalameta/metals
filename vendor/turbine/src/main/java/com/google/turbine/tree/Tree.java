@@ -100,6 +100,9 @@ public abstract class Tree {
       this.value = value;
     }
 
+    // TURBINE-DIFF START
+    public static final Ident EMPTY = new Ident(0, "EMPTY"); // TURBINE-DIFF END
+
     @Override
     public Kind kind() {
       return Kind.IDENT;
@@ -967,6 +970,22 @@ public abstract class Tree {
       this.tykind = tykind;
       this.javadoc = javadoc;
     }
+
+    // TURBINE-DIFF START
+    public static final TyDecl EMPTY =
+        new TyDecl(
+            0,
+            ImmutableSet.of(),
+            ImmutableList.of(),
+            Ident.EMPTY,
+            ImmutableList.of(),
+            Optional.empty(),
+            ImmutableList.of(),
+            ImmutableList.of(),
+            ImmutableList.of(),
+            ImmutableList.of(),
+            TurbineTyKind.CLASS,
+            null); // TURBINE-DIFF END
 
     @Override
     public Kind kind() {

@@ -243,7 +243,16 @@ public class JimageClassBinder {
       return new Env<ClassSymbol, BytecodeBoundClass>() {
         @Override
         public @Nullable BytecodeBoundClass get(ClassSymbol sym) {
-          return initPackage(sym.packageName()) ? env.get(sym) : null;
+          // TURBINE-DIFF START
+          if (sym == null) {
+            return null;
+          }
+          String packageName = sym.packageName();
+          if (packageName == null) {
+            return null;
+          }
+          return initPackage(packageName) ? env.get(sym) : null;
+          // TURBINE-DIFF END
         }
       };
     }

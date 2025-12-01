@@ -503,7 +503,9 @@ public class Processing {
       return new AutoValue_Processing_ProcessorInfo(processors, loader, options, sourceVersion);
     }
 
-    static ProcessorInfo empty() {
+    // TURBINE-DIFF START
+    public static ProcessorInfo empty() {
+      // TURBINE-DIFF END
       return create(
           /* processors= */ ImmutableList.of(),
           /* loader= */ null,

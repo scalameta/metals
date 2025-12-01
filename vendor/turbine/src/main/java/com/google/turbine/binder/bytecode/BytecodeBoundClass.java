@@ -92,6 +92,9 @@ public class BytecodeBoundClass implements TypeBoundClass {
   private final ClassSymbol sym;
   private final Env<ClassSymbol, BytecodeBoundClass> env;
   private final Supplier<ClassFile> classFile;
+  // TURBINE-DIFF START
+  private final Supplier<byte[]> bytes;
+  // TURBINE-DIFF END
   private final @Nullable String jarFile;
 
   public BytecodeBoundClass(
@@ -101,6 +104,9 @@ public class BytecodeBoundClass implements TypeBoundClass {
       @Nullable String jarFile) {
     this.sym = sym;
     this.env = env;
+    // TURBINE-DIFF START
+    this.bytes = bytes;
+    // TURBINE-DIFF END
     this.jarFile = jarFile;
     this.classFile =
         Suppliers.memoize(
@@ -853,6 +859,12 @@ public class BytecodeBoundClass implements TypeBoundClass {
       return transitiveJar;
     }
     return jarFile;
+  }
+
+  // TURBINE-DIFF START
+  public byte[] bytes() {
+    return bytes.get();
+    // TURBINE-DIFF END
   }
 
   /** The class file the symbol was loaded from. */

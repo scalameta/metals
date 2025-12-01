@@ -68,6 +68,10 @@ public class LowerSignature {
         return Sig.VOID;
       case WILD_TY:
         return wildTy((WildTy) ty);
+      // TURBINE-DIFF START
+      case ERROR_TY:
+        return classTySig(ClassTy.OBJECT);
+      // TURBINE-DIFF END
       default:
         throw new AssertionError(ty.tyKind());
     }
@@ -197,11 +201,24 @@ public class LowerSignature {
     if (!classNeedsSig(info)) {
       return null;
     }
+    // TURBINE-DIFF START
+    if (!(info.superClassType() instanceof Type.ErrorTy)) {
+      return null;
+    }
     ImmutableList<Sig.TyParamSig> typarams = tyParamSig(info.typeParameterTypes(), env);
-    ClassTySig xtnd = classTySig((ClassTy) info.superClassType());
+    Type superClassType = info.superClassType();
+    if (superClassType == null || !(superClassType instanceof ClassTy)) {
+      return null;
+    }
+    // TURBINE-DIFF END
+    ClassTySig xtnd = classTySig((ClassTy) superClassType);
     ImmutableList.Builder<ClassTySig> impl = ImmutableList.builder();
     for (Type i : info.interfaceTypes()) {
-      impl.add(classTySig((ClassTy) i));
+      // TURBINE-DIFF START
+      if (i.tyKind() == TyKind.CLASS_TY) {
+        impl.add(classTySig((ClassTy) i));
+      }
+      // TURBINE-DIFF END
     }
     ClassSig sig = new ClassSig(typarams, xtnd, impl.build());
     return SigWriter.classSig(sig);
@@ -247,6 +264,10 @@ public class LowerSignature {
         return needsSig(((ArrayTy) ty).elementType());
       case TY_VAR:
         return true;
+      // TURBINE-DIFF START
+      case ERROR_TY:
+        return needsSig(ClassTy.OBJECT);
+      // TURBINE-DIFF END
       default:
         throw new AssertionError(ty.tyKind());
     }
@@ -299,6 +320,11 @@ public class LowerSignature {
   }
 
   String objectType(ClassSymbol sym) {
+    // TURBINE-DIFF START
+    if (sym == null) {
+      return "L" + ClassSymbol.OBJECT.binaryName() + ";";
+    }
+    // TURBINE-DIFF END
     return "L" + descriptor(sym) + ";";
   }
 }

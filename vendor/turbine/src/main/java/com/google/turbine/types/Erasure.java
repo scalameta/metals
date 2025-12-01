@@ -48,7 +48,10 @@ public final class Erasure {
         return erasureMethodTy((Type.MethodTy) ty, tenv);
       case PRIM_TY:
       case VOID_TY:
+      // TURBINE-DIFF START
       case ERROR_TY:
+        return ClassTy.OBJECT;
+      // TURBINE-DIFF END
       case NONE_TY:
         return ty;
     }

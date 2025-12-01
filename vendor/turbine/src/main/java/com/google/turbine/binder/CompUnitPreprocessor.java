@@ -24,8 +24,6 @@ import com.google.common.collect.Iterables;
 import com.google.turbine.binder.bound.SourceBoundClass;
 import com.google.turbine.binder.sym.ClassSymbol;
 import com.google.turbine.diag.SourceFile;
-import com.google.turbine.diag.TurbineError;
-import com.google.turbine.diag.TurbineError.ErrorKind;
 import com.google.turbine.model.TurbineFlag;
 import com.google.turbine.model.TurbineTyKind;
 import com.google.turbine.tree.Tree;
@@ -151,8 +149,11 @@ public final class CompUnitPreprocessor {
         Tree.TyDecl decl = (Tree.TyDecl) member;
         ClassSymbol sym = new ClassSymbol(owner.binaryName() + '$' + decl.name());
         if (!seen.add(decl.name().value())) {
-          throw TurbineError.format(
-              source, member.position(), ErrorKind.DUPLICATE_DECLARATION, sym);
+          // TURBINE-DIFF START
+          continue;
+          // throw TurbineError.format(
+          //     source, member.position(), ErrorKind.DUPLICATE_DECLARATION, sym);
+          // TURBINE-DIFF END
         }
         result.put(decl.name().value(), sym);
 

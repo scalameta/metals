@@ -16,7 +16,6 @@
 
 package com.google.turbine.binder;
 
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.turbine.binder.bound.ModuleInfo;
@@ -209,15 +208,21 @@ public class ModuleBinder {
     LookupKey key = new LookupKey(simpleNames);
     LookupResult result = scope.lookup(key);
     if (result == null) {
-      throw error(
-          ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(Joiner.on('/').join(simpleNames)));
+      // TURBINE-DIFF START
+      return ClassSymbol.ERROR;
+      // throw error(
+      //     ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(Joiner.on('/').join(simpleNames)));
+      // TURBINE-DIFF END
     }
     ClassSymbol sym = (ClassSymbol) result.sym();
     for (Tree.Ident name : result.remaining()) {
       ClassSymbol next = Resolve.resolve(env, /* origin= */ null, sym, name);
       if (next == null) {
-        throw error(
-            ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(sym.binaryName() + '$' + name));
+        // TURBINE-DIFF START
+        return ClassSymbol.ERROR;
+        // throw error(
+        //     ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(sym.binaryName() + '$' + name));
+        // TURBINE-DIFF END
       }
       sym = next;
     }

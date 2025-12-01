@@ -18,7 +18,6 @@ package com.google.turbine.types;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Verify;
 import com.google.common.collect.ImmutableList;
 import com.google.turbine.binder.bound.TypeBoundClass;
 import com.google.turbine.binder.env.Env;
@@ -210,8 +209,13 @@ public class Canonicalize {
       return ClassTy.create(ImmutableList.of(ty));
     }
     ImmutableList.Builder<ClassTy.SimpleClassTy> simples = ImmutableList.builder();
+    // TURBINE-DIFF START
+    ClassSymbol owner = getInfo(ty.sym()).owner();
+    if (owner == null) {
+      return ClassTy.create(ImmutableList.of(ty));
+    }
+    // TURBINE-DIFF END
     // this inner class is known to have an owner
-    ClassSymbol owner = requireNonNull(getInfo(ty.sym()).owner());
     if (owner.equals(base.sym())) {
       // if the canonical prefix is the owner the next symbol in the qualified name,
       // the type is already in canonical form
@@ -251,7 +255,14 @@ public class Canonicalize {
       return;
     }
     // otherwise, it is an instantiated generic type
-    Verify.verify(symbols.size() == simpleType.targs().size());
+
+    // TURBINE-DIFF START
+    // Verify.verify(symbols.size() == simpleType.targs().size());
+    if (symbols.size() != simpleType.targs().size()) {
+      return;
+    }
+    // TURBINE-DIFF END
+
     Iterator<Type> typeArguments = simpleType.targs().iterator();
     for (TyVarSymbol sym : symbols) {
       Type argument = typeArguments.next();
