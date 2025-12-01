@@ -299,14 +299,12 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       kindFilter: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): Int = {
-    // Special handling for empty query to match all symbols
-    val matchesAll = query.query.isEmpty
-
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
+      if query.isClasspath
       if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
-      if matchesAll || query.matches(symbol.symbol)
+      if query.matches(symbol.symbol)
     } yield {
       path.isWorkspaceSource(workspace)
       visitor.visitWorkspaceSymbol(
