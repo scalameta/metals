@@ -1342,7 +1342,8 @@ class MetalsGlobal(
                       extensionMethod.owner == definitions.AnyValClass ||
                         extensionMethod.name == nme.equals_ ||
                         extensionMethod.name == nme.hashCode_ ||
-                        extensionMethod.name == nme.toString_
+                        extensionMethod.name == nme.toString_ ||
+                        extensionMethod.name == nme.getClass_
 
                     if (!isInheritedFromAnyVal) {
                       val isAccessible =
