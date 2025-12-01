@@ -147,6 +147,8 @@ class MbtV2WorkspaceSymbolSearch(
         } catch {
           case NonFatal(e) =>
             scribe.error(s"mbt-v2: error indexing file ${file}", e)
+          case _: StackOverflowError =>
+            scribe.error(s"mbt-v2: stack overflow indexing file ${file}")
         }
       }
       updateDocumentsKeys(documents)
