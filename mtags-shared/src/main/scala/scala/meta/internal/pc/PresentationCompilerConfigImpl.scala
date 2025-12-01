@@ -29,7 +29,9 @@ case class PresentationCompilerConfigImpl(
     isCompletionItemResolve: Boolean = true,
     _isStripMarginOnTypeFormattingEnabled: () => Boolean = () => true,
     timeoutDelay: Long = 20,
-    timeoutUnit: TimeUnit = TimeUnit.SECONDS,
+    timeoutUnit: TimeUnit =
+      if (sys.props.contains("metals.debug")) TimeUnit.MINUTES
+      else TimeUnit.SECONDS,
     semanticdbCompilerOptions: util.List[String] =
       PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
     override val hoverContentType: ContentType = ContentType.MARKDOWN,

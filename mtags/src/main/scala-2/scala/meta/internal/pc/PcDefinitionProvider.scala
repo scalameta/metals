@@ -1,8 +1,10 @@
 package scala.meta.internal.pc
 
+import java.net.URI
 import java.{util => ju}
 
 import scala.jdk.CollectionConverters._
+import scala.reflect.internal.util.Position
 
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
@@ -126,17 +128,24 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
   ): List[Location] = {
     if (
       symbol.pos != null &&
-      symbol.pos.isDefined &&
-      symbol.pos.source.eq(unit.source)
+      symbol.pos.isDefined
     ) {
-      val focused = symbol.pos.focus
-      val actualName = symbol.decodedName.stripSuffix("_=").trim
-      val namePos =
-        if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
-        else focused.withEnd(focused.start + actualName.length())
-      val adjusted = namePos.adjust(unit.source.content)._1
-      List(new Location(params.uri().toString(), adjusted.toLsp))
-
+      if (symbol.pos.source.eq(unit.source)) {
+        val focused = symbol.pos.focus
+        val actualName = symbol.decodedName.stripSuffix("_=").trim
+        val namePos =
+          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
+          else focused.withEnd(focused.start + actualName.length())
+        val adjusted = namePos.adjust(unit.source.content)._1
+        List(new Location(params.uri().toString(), adjusted.toLsp))
+      } else {
+        val path = URI.create(symbol.pos.source.file.path)
+        val uri =
+          if (path.getScheme() == null) s"file://$path" else path.toString()
+        List(
+          new Location(uri, findNamePos(symbol).toLsp)
+        )
+      }
     } else {
       symbol.alternatives
         .map(semanticdbSymbol)
@@ -146,6 +155,39 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             search.definition(sym, params.uri()).asScala
           } else Nil
         }
+    }
+  }
+
+  def findNamePos(symbol: Symbol): Position = {
+    val pos0 = symbol.pos
+    val name =
+      if (symbol.isAccessor) symbol.getterName.decode else symbol.name.decode
+    val source = symbol.pos.source
+
+    val start =
+      if (source.content(pos0.point) == '`') pos0.point + 1 else pos0.point
+    val targetName =
+      source.content.slice(start, start + name.length).mkString
+    // double check that we identified the exact name
+    if (targetName == name.toString) {
+      Position.range(source, start, start, start + name.length)
+    } else {
+      logger.warn(
+        s"Could not locate symbol ${symbol} around position ${pos0.focus}}"
+      )
+      // scan right, starting with pos.start
+      var i = pos0.start
+      while (i < pos0.end && source.content(i) != name.charAt(0)) {
+        i += 1
+      }
+
+      val start = i
+      val end = i + name.length
+      if (source.content.slice(start, end).mkString == name.toString) {
+        Position.range(source, start, start, end)
+      } else {
+        pos0.focus
+      }
     }
   }
 

@@ -37,7 +37,6 @@ trait PruneLateSources extends Transform {
   class PruneLateSourcesTransformer extends Transformer {
     override def transformUnit(unit: CompilationUnit): Unit = {
       if (loadedFromSource.contains(unit.source.file)) {
-        logger.debug(s"Pruning late sources: ${unit.source.file.path}")
         super.transformUnit(unit)
       }
     }
