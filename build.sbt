@@ -168,6 +168,7 @@ commands ++= Seq(
     }
     "interfaces/publishLocal" ::
       "jsemanticdb/publishLocal" ::
+      "turbine/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
