@@ -3,7 +3,9 @@ package tests.mbt
 class MbtImplementationSuite
     extends BaseMbtReferenceSuite("mbt-implementation") {
 
-  testLSP("basic") {
+  // FIXME: this test fails about ~10% of runs
+  // reproduce by adding `.tag(tests.Rerun(10))`
+  testLSP("basic".flaky) {
     cleanWorkspace()
     val a = "a/src/main/scala/a/Animal.java"
     val b = "b/src/main/scala/b/Bat.java"
