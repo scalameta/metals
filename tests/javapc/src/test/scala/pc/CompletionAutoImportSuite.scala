@@ -82,6 +82,7 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
       |}
       |""".stripMargin,
     filter = _.equals("List"),
+    filterItem = item => item.getDetail.startsWith("java.util.List"),
   )
 
   checkEdit(
@@ -162,5 +163,31 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
        |}
        |""".stripMargin,
     filterItem = item => item.getDetail.startsWith("java.util.List"),
+  )
+
+  checkEdit(
+    "conflicting-import-simple-name",
+    """|package a;
+       |
+       |import java.awt.List;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    Lis@@.of(1);
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.awt.List;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    java.util.List.of(1);
+       |  }
+       |}
+       |""".stripMargin,
+    filterItem = item => item.getDetail.startsWith("java.util.List"),
+    assertSingleItem = false,
   )
 }

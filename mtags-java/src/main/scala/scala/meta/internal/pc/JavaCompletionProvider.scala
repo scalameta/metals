@@ -63,10 +63,10 @@ class JavaCompletionProvider(
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
           case IDENTIFIER =>
             val scopeCompletions = completeIdentifier(task, n)
-            val scopeLabels = scopeCompletions.map(_.getLabel).toSet
+            val scopeKeys = scopeCompletions.map(_.getDetail).toSet
             val outOfScopeCompletions =
               completeWithAutoImport(task, scanner.root)
-                .filterNot(i => scopeLabels.contains(i.getLabel))
+                .filterNot(item => scopeKeys.contains(item.getDetail))
 
             ((scopeCompletions ++ outOfScopeCompletions)
               .sortBy(item => identifierScore(item.getLabel))
@@ -258,6 +258,15 @@ class JavaCompletionProvider(
     i + 1
   }
 
+  private def identifierEditRange(): Range = {
+    val start = inferIdentStart(params.offset(), params.text())
+    val end = params.offset()
+    new Range(
+      compiler.offsetToPosition(start, params.text()),
+      compiler.offsetToPosition(end, params.text())
+    )
+  }
+
   private def completionItem(element: Element): CompletionItem = {
     val simpleName = element.getSimpleName.toString
 
@@ -275,13 +284,7 @@ class JavaCompletionProvider(
     if (isCompletionSnippetsEnabled)
       item.setInsertTextFormat(InsertTextFormat.Snippet)
 
-    val start = inferIdentStart(params.offset(), params.text())
-    val end = params.offset()
-    val range = new Range(
-      compiler.offsetToPosition(start, params.text()),
-      compiler.offsetToPosition(end, params.text())
-    )
-    val textEdit = new TextEdit(range, insertText)
+    val textEdit = new TextEdit(identifierEditRange(), insertText)
     item.setTextEdit(Either.forLeft(textEdit))
 
     val kind = completionKind(element.getKind)
@@ -329,11 +332,18 @@ class JavaCompletionProvider(
         if (CompletionFuzzy.matches(identifier, simpleName)) {
           val item = completionItem(element)
           val className = element.toString
-          val pos =
-            AutoImports.autoImportPosition(compiler, task, root, className)
-          val importText = s"import $className;\n"
-          val edit = new TextEdit(new Range(pos, pos), importText)
-          item.setAdditionalTextEdits(List(edit).asJava)
+          val edits = AutoImports.computeAutoImportEdits(
+            compiler,
+            task,
+            root,
+            className,
+            identifierEditRange()
+          )
+
+          edits.identifierEdit.foreach(textEdit =>
+            item.setTextEdit(Either.forLeft(textEdit))
+          )
+          item.setAdditionalTextEdits(edits.importTextEdits.asJava)
 
           result += item
           true

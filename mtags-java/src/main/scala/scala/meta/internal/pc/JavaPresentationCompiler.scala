@@ -133,7 +133,14 @@ case class JavaPresentationCompiler(
       params: OffsetParams,
       isExtension: lang.Boolean
   ): CompletableFuture[util.List[AutoImportsResult]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaAutoImportsProvider(
+        javaCompiler,
+        params,
+        name,
+        buildTargetIdentifier
+      ).autoImports().asJava
+    )
 
   override def implementAbstractMembers(
       params: OffsetParams
