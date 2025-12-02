@@ -1,6 +1,7 @@
 package scala.meta.internal.pc
 
 import scala.annotation.nowarn
+import scala.reflect.internal.Phase
 import scala.reflect.internal.Reporter.ERROR
 import scala.reflect.internal.Reporter.INFO
 import scala.reflect.internal.Reporter.WARNING
@@ -109,6 +110,9 @@ trait PcDiagnostics {
             parseAndEnter(unit)
             unit.status = PartiallyChecked
             currentTyperRun.typeCheck(unit)
+            if (compiler.metalsConfig.shouldRunRefchecks) {
+              refChecks(unit)
+            }
             unit.lastBody = unit.body
             unit.status = currentRunId
           } else
@@ -155,6 +159,60 @@ trait PcDiagnostics {
 
     // wind down
     informIDE("Everything is now up to date")
+  }
+
+  private def refChecks(unit: RichCompilationUnit): Unit = {
+    if (!unit.problems.exists(_.severityLevel == ERROR.id)) {
+      logger.debug(s"Applying refchecks phase to ${unit.source}")
+      val oldBody = unit.body
+      try {
+        applyPhase(currentTyperRun.refchecksPhase, unit)
+        filterProblems(unit)
+      } finally {
+        // refchecks performs tree transformations, for example replacing case class
+        // appply calls with `new` calls, if the apply is synthetic. Rather than fixing
+        // all the places in the code where we assume trees are not transformed, we restore
+        // the original body, since we only care about diagnostics
+        unit.body = oldBody
+      }
+    }
+  }
+
+  /**
+   * Filter out problems that are expected due to how the presentation compiler works.
+   *
+   * For example, we don't want to show problems that are caused by macros that have not been expanded.
+   *
+   * @note This is needed because 2.12.20 doesn't have the `ArrayBuffer.filterInPlace` method.
+   */
+  private def filterProblems(unit: RichCompilationUnit): Unit = {
+    var removed = 0
+    for (
+      (p, i) <- unit.problems.toList.zipWithIndex
+      if p.msg.contains("macro has not been expanded")
+    ) {
+      unit.problems.remove(i - removed)
+      removed += 1
+    }
+  }
+
+  /**
+   * Apply a phase to a compilation unit
+   */
+  private def applyPhase(phase: Phase, unit: CompilationUnit): Unit = {
+    val oldGlobalPhase = this.globalPhase
+    try {
+      enteringPhase(phase) {
+        // this departs from the standard presentation compiler implementation by setting
+        // the global phase to the phase we want to apply. This is necessary because the
+        // refhecks phase asserts that silencing type errors is allowed only after typer
+        // and the condition is checked on `globalPhase`, not `phase`
+        this.globalPhase = phase
+        phase.asInstanceOf[GlobalPhase] applyPhase unit
+      }
+    } finally {
+      this.globalPhase = oldGlobalPhase
+    }
   }
 
   private def ensureUpToDate(unit: RichCompilationUnit) =

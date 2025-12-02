@@ -217,4 +217,133 @@ class PCDiagnosticsWithSourcePath
       )
     } yield ()
   }
+
+  test("abstract-inherited-member") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Service.scala
+           |package a
+           |
+           |trait Service {
+           |  def execute(): String
+           |}
+           |
+           |class ConcreteService extends Service
+           |
+           |object Main {
+           |  val service = new ConcreteService()
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Service.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Service.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Service.scala:7:1: error: class ConcreteService needs to be abstract.
+           |Missing implementation for member of trait Service:
+           |  def execute(): String = ???
+           |
+           |class ConcreteService extends Service
+           |^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("bad-override") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Service.scala
+           |package a
+           |
+           |trait Service {
+           |  def execute(in: String): String = ???
+           |}
+           |
+           |class ConcreteService extends Service {
+           |  override def execute(in: Int): String = in.toString
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  val service = new ConcreteService()
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Service.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Service.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Service.scala:8:16: error: method execute overrides nothing.
+           |Note: the super classes of class ConcreteService contain the following, non final members named execute:
+           |def execute(in: String): String
+           |  override def execute(in: Int): String = in.toString
+           |               ^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("overrides-with-warnings") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {
+           |    "scalacOptions": ["-Wunused"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Service.scala
+           |package a
+           |import scala.collection.mutable.ListBuffer
+           |
+           |trait Service {
+           |  def execute(in: String): String
+           |}
+           |
+           |class ConcreteService extends Service {
+           |  def foo() {
+           |    val unused = 1
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Service.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Service.scala")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Service.scala:2:33: warning: Unused import
+           |import scala.collection.mutable.ListBuffer
+           |                                ^^^^^^^^^^
+           |a/src/main/scala/a/Service.scala:8:1: error: class ConcreteService needs to be abstract.
+           |Missing implementation for member of trait Service:
+           |  def execute(in: String): String = ???
+           |
+           |> class ConcreteService extends Service {
+           |>   def foo() {
+           |>     val unused = 1
+           |>   }
+           |> }
+           |a/src/main/scala/a/Service.scala:10:9: warning: local val unused in method foo is never used
+           |    val unused = 1
+           |        ^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }

@@ -38,7 +38,8 @@ case class PresentationCompilerConfigImpl(
     override val emitDiagnostics: Boolean = false,
     override val workspaceRoot: Path =
       Paths.get(System.getProperty("user.dir")),
-    override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED
+    override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED,
+    override val shouldRunRefchecks: Boolean = false
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

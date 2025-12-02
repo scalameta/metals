@@ -10,6 +10,7 @@ import scala.util.Try
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
@@ -91,7 +92,10 @@ case class UserConfiguration(
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
-    referenceProvider: ReferenceProviderConfig = ReferenceProviderConfig.default,
+    referenceProvider: ReferenceProviderConfig =
+      ReferenceProviderConfig.default,
+    additionalPcChecks: AdditionalPcChecksConfig =
+      AdditionalPcChecksConfig.default,
 ) {
 
   override def toString(): String = {
@@ -252,6 +256,10 @@ case class UserConfiguration(
             "referenceProvider",
             referenceProvider.value,
           )
+        ),
+        listField(
+          "additionalPcChecks",
+          Some(additionalPcChecks.values),
         ),
       ).flatten
     )
@@ -640,6 +648,17 @@ object UserConfiguration {
            |- "mbt": A new BSP-free solution that indexes sources from the git repository.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "additional-pc-checks",
+        "`[]`",
+        """["refchecks"]""",
+        "Additional Presentation Compiler Checks",
+        """|A list of additional compiler phases to run in the presentation compiler.
+           |Valid values are "refchecks". When "refchecks" is included, the
+           |presentation compiler will run the RefChecks phase for additional
+           |type checking diagnostics.
+           |""".stripMargin,
+      ),
     )
 
   def fromJson(
@@ -1026,6 +1045,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(ReferenceProviderConfig.default)
+    val additionalPcChecks = getParsedArrayKey(
+      "additional-pc-checks",
+      values =>
+        AdditionalPcChecksConfig.fromConfigOrFeatureFlag(
+          values,
+          featureFlags,
+        ),
+    ).getOrElse(AdditionalPcChecksConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -1075,6 +1102,7 @@ object UserConfiguration {
           javaOutlineProvider,
           compilerProgress,
           referenceProvider,
+          additionalPcChecks,
         )
       )
     } else {

@@ -56,4 +56,7 @@ public enum FeatureFlag {
 
   /** If enabled, uses the interactive semanticdb. */
   INTERACTIVE_SEMANTICDB,
+
+  /** If enabled, runs the RefChecks phase in the presentation compiler. */
+  RUN_PC_REFCHECKS,
 }

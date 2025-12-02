@@ -547,6 +547,48 @@ object Configs {
       isAllEnabled || value.contains("feature-flags")
   }
 
+  final case class AdditionalPcChecksConfig(val values: List[String]) {
+    values.foreach(value =>
+      require(
+        AdditionalPcChecksConfig.isValid(value),
+        s"invalid value $value for additionalPcChecks. Valid values are \"refchecks\"",
+      )
+    )
+    def isRefchecks: Boolean =
+      values.contains("refchecks")
+  }
+
+  object AdditionalPcChecksConfig {
+    def isValid(value: String): Boolean =
+      value == "refchecks"
+    def default: AdditionalPcChecksConfig = AdditionalPcChecksConfig(Nil)
+    def fromConfigOrFeatureFlag(
+        values: Option[List[String]],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, AdditionalPcChecksConfig] = {
+      values match {
+        case Some(ok) =>
+          val invalid = ok.filterNot(AdditionalPcChecksConfig.isValid)
+          if (invalid.nonEmpty) {
+            Left(
+              s"invalid config value '$invalid' for additionalPcChecks. Valid values are \"refchecks\""
+            )
+          } else {
+            Right(AdditionalPcChecksConfig(ok))
+          }
+        case None =>
+          val isRefchecksEnabled = featureFlags
+            .readBoolean(FeatureFlag.RUN_PC_REFCHECKS)
+            .orElse(false)
+          if (isRefchecksEnabled) {
+            Right(AdditionalPcChecksConfig(List("refchecks")))
+          } else {
+            Right(AdditionalPcChecksConfig.default)
+          }
+      }
+    }
+  }
+
   object SourcePathConfig {
 
     def fromConfigOrFeatureFlag(

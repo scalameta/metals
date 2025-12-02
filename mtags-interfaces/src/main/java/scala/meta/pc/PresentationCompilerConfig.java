@@ -117,4 +117,8 @@ public interface PresentationCompilerConfig {
   default SourcePathMode sourcePathMode() {
     return SourcePathMode.PRUNED;
   }
+
+  default boolean shouldRunRefchecks() {
+    return false;
+  }
 }

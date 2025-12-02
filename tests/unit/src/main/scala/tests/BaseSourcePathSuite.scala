@@ -1,4 +1,6 @@
 package tests
+
+import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.CompilersConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
@@ -17,6 +19,7 @@ trait BaseSourcePathSuite extends BaseLspSuite {
       fallbackClasspath = FallbackClasspathConfig.all3rdparty,
       fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
     )
 
   override def serverConfig: MetalsServerConfig =

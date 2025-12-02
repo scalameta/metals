@@ -2,17 +2,20 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
+
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = true,
+      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
     )
 
   override protected def initializationOptions: Option[InitializationOptions] =
@@ -397,6 +400,101 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
        |}
        |""".stripMargin,
   )
+
+  test("case-class-separate-reference-special") {
+    cleanWorkspace()
+    for {
+      _ <- initialize("""|/metals.json
+                         |{
+                         |  "a": {}
+                         |}
+                         |/a/src/main/scala/a/Main.scala
+                         |case class Main(name: String)
+                         |object F {
+                         |  val ma = Main("a")
+                         |}
+                         |/a/src/main/scala/a/Other.scala
+                         |object Other {
+                         |  val mb = new Main("b")
+                         |}
+                         |""".stripMargin)
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Other.scala")
+      // _ = assertNoDiagnostics()
+      // _ <- server.assertReferencesSubquery(
+      //   "a/src/main/scala/a/Main.scala",
+      //   "case class Ma@@in",
+      //   """|a/src/main/scala/a/Main.scala:1:12: reference
+      //      |case class Main(name: String)
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Main.scala:3:12: reference
+      //      |  val ma = Main("a")
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Other.scala:2:16: reference
+      //      |  val mb = new Main("b")
+      //      |               ^^^^
+      //      |""".stripMargin,
+      // )
+      // _ <- server.assertReferencesSubquery(
+      //   "a/src/main/scala/a/Other.scala",
+      //   "new Ma@@in",
+      //   """|a/src/main/scala/a/Main.scala:1:12: reference
+      //      |case class Main(name: String)
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Main.scala:3:12: reference
+      //      |  val ma = Main("a")
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Other.scala:2:16: reference
+      //      |  val mb = new Main("b")
+      //      |               ^^^^
+      //      |""".stripMargin,
+      // )
+      _ <- assertCheck(
+        "a/src/main/scala/a/Main.scala",
+        """|case class Main(name: String)
+           |object F {
+           |  val ma = Ma@@in("a")
+           |}""".stripMargin,
+        Map(
+          "a/src/main/scala/a/Main.scala" ->
+            """|case class <<Main>>(name: String)
+               |object F {
+               |  val ma = <<Main>>("a")
+               |}""".stripMargin,
+          "a/src/main/scala/a/Other.scala" ->
+            """|object Other {
+               |  val mb = new <<Main>>("b")
+               |}
+               |""".stripMargin,
+        ),
+        Map(
+          "a/src/main/scala/a/Main.scala" ->
+            """|case class Main(name: String)
+               |object F {
+               |  val ma = Main("a")
+               |}""".stripMargin,
+          "a/src/main/scala/a/Other.scala" ->
+            """|object Other {
+               |  val mb = new Main("b")
+               |}""".stripMargin,
+        ),
+      )
+      // _ <- server.assertReferencesSubquery(
+      //   "a/src/main/scala/a/Main.scala",
+      //   "val ma = Ma@@in",
+      //   """|a/src/main/scala/a/Main.scala:1:12: reference
+      //      |case class Main(name: String)
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Main.scala:3:12: reference
+      //      |  val ma = Main("a")
+      //      |           ^^^^
+      //      |a/src/main/scala/a/Other.scala:2:16: reference
+      //      |  val mb = new Main("b")
+      //      |               ^^^^
+      //      |""".stripMargin,
+      // )
+    } yield ()
+  }
 
   check(
     "synthetic-object-reference",

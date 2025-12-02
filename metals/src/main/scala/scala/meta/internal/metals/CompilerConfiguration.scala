@@ -69,6 +69,9 @@ class CompilerConfiguration(
   def shouldUseFullSourcepathForFallback: Boolean =
     userConfig().fallbackSourcepath.enabled
 
+  def shouldRunRefchecks: Boolean =
+    userConfig().additionalPcChecks.isRefchecks
+
   sealed trait MtagsPresentationCompiler {
     def await: PresentationCompiler
     def shutdown(): Unit
@@ -398,6 +401,7 @@ class CompilerConfiguration(
             sourcePathMode = overrideSourcePathMode.getOrElse(
               getSourcePathMode(config.initialConfig.compilers.sourcePathMode)
             ),
+            shouldRunRefchecks = shouldRunRefchecks,
           )
       }
 

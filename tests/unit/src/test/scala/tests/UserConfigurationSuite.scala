@@ -8,6 +8,7 @@ import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
@@ -338,6 +339,7 @@ class UserConfigurationSuite extends BaseSuite {
       automaticImportBuild = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
       defaultBspToBuildTool = true,
+      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
     )
 
     val json = nonDefault.toString()
@@ -413,7 +415,10 @@ class UserConfigurationSuite extends BaseSuite {
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
   "compilerProgress": "disabled",
-  "referenceProvider": "bsp"
+  "referenceProvider": "bsp",
+  "additionalPcChecks": [
+    "refchecks"
+  ]
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
