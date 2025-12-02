@@ -22,6 +22,24 @@ class JavaClassVisitor(elements: Elements, visitMember: Element => Boolean)
     extends SymbolSearchVisitor {
   private def toDotPackage(pkg: String) =
     pkg.replace("/", ".").stripSuffix(".")
+
+  private def semanticdbSymbolToFullName(symbol: String): Option[String] = {
+    // Expect global type symbols like "a/b/C#" or "a/b/C."
+    val end = symbol.indexWhere(c => c == '#' || c == '.')
+    val stop = if (end == -1) symbol.length else end
+    if (stop <= 0) None
+    else {
+      val ownerAndName = symbol.substring(0, stop)
+      val lastSlash = ownerAndName.lastIndexOf('/')
+      if (lastSlash <= 0 || lastSlash + 1 >= ownerAndName.length) None
+      else {
+        val pkg = ownerAndName.substring(0, lastSlash).replace('/', '.')
+        val name = ownerAndName.substring(lastSlash + 1)
+        Some(if (pkg.isEmpty) name else s"$pkg.$name")
+      }
+    }
+  }
+
   override def shouldVisitPackage(pkg: String): Boolean = {
     elements.getPackageElement(toDotPackage(pkg)) != null
   }
@@ -64,8 +82,13 @@ class JavaClassVisitor(elements: Elements, visitMember: Element => Boolean)
       kind: SymbolKind,
       range: Range
   ): Int = {
-    // pprint.log(path)
-    0
+    semanticdbSymbolToFullName(symbol) match {
+      case Some(fullName) =>
+        val elem = elements.getTypeElement(fullName)
+        if (elem != null && visitMember(elem)) 1 else 0
+      case None =>
+        0
+    }
   }
 
   override def isCancelled(): Boolean = false

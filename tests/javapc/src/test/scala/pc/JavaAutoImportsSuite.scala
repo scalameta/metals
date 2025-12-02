@@ -59,4 +59,50 @@ class JavaAutoImportsSuite extends BaseJavaAutoImportsSuite {
       |}
       |""".stripMargin,
   )
+
+  check(
+    "workspace-local-class",
+    """
+      |package a;
+      |
+      |class LocalType {}
+      |
+      |class A {
+      |  void foo() {
+      |    <<LocalType>> value = null;
+      |  }
+      |}
+      |""".stripMargin,
+    """
+      |a
+      |""".stripMargin,
+    filename = "A.java",
+  )
+
+  checkEdit(
+    "conflicting-import-simple-name",
+    """
+      |package a;
+      |
+      |import java.awt.List;
+      |
+      |class A {
+      |  void foo() {
+      |    <<List>>.of(1);
+      |  }
+      |}
+      |""".stripMargin,
+    """
+      |package a;
+      |
+      |import java.awt.List;
+      |
+      |class A {
+      |  void foo() {
+      |    java.util.List.of(1);
+      |  }
+      |}
+      |""".stripMargin,
+    filename = "A.java",
+  )
 }

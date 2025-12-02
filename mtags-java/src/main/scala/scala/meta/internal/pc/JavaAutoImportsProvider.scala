@@ -73,19 +73,19 @@ class JavaAutoImportsProvider(
    */
   private def extractPackageName(fullName: String): String = {
     val lastDot = fullName.lastIndexOf('.')
-    if (lastDot > 0) {
-      fullName.substring(0, lastDot)
-    } else {
-      ""
-    }
+    if (lastDot > 0) fullName.substring(0, lastDot) else ""
   }
 
   private def computeIdentifierRange(): Range = {
-    val end = params.offset()
-    val start = end - name.length
+    val text = params.text()
+    val length = text.length
+
+    val start = math.max(0, math.min(params.offset(), length))
+    val end = math.min(start + name.length, length)
+
     new Range(
-      compiler.offsetToPosition(start, params.text()),
-      compiler.offsetToPosition(end, params.text())
+      compiler.offsetToPosition(start, text),
+      compiler.offsetToPosition(end, text)
     )
   }
 }

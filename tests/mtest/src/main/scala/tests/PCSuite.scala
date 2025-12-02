@@ -101,13 +101,14 @@ trait PCSuite {
       filename: String = "test.scala"
   ): (String, String, Int) = {
     val targetRegex = "<<(.+)>>".r
-    val target = targetRegex.findAllMatchIn(code).toList match {
+    val targetMatch = targetRegex.findAllMatchIn(code).toList match {
       case Nil => fail("Missing <<target>>")
-      case t :: Nil => t.group(1)
+      case t :: Nil => t
       case _ => fail("Multiple <<targets>> found")
     }
+    val target = targetMatch.group(1)
     val code2 = code.replace("<<", "").replace(">>", "")
-    val offset = code.indexOf("<<") + target.length()
+    val offset = targetMatch.start
 
     addSourceToIndex(filename, code2)
 
