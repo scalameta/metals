@@ -1,13 +1,13 @@
 package scala.meta.internal.pc
 
+import scala.jdk.CollectionConverters._
+
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.util.JavacTask
 import com.sun.source.util.Trees
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-
-import scala.jdk.CollectionConverters._
 
 object AutoImports {
 
@@ -67,10 +67,13 @@ object AutoImports {
       identifierRange: Range
   ): AutoImportEdits = {
     val simpleName = className.split('.').lastOption.getOrElse(className)
-    val isImported = isSimpleNameAlreadyImported(root, simpleName, className)
+    val imported = existingSingleImports(root, simpleName)
+    val conflictingImports = imported - className
 
-    if (isImported) {
+    if (conflictingImports.nonEmpty) {
       AutoImportEdits(Some(new TextEdit(identifierRange, className)), Nil)
+    } else if (imported.contains(className)) {
+      AutoImportEdits(None, Nil)
     } else {
       val pos = autoImportPosition(compiler, task, root, className)
       val importText = s"import $className;\n"
@@ -79,20 +82,19 @@ object AutoImports {
     }
   }
 
-  def isSimpleNameAlreadyImported(
+  def existingSingleImports(
       root: CompilationUnitTree,
-      simpleName: String,
-      className: String
-  ): Boolean = {
-    root.getImports.asScala
+      simpleName: String
+  ): Set[String] = {
+    root.getImports.asScala.iterator
       .map(_.getQualifiedIdentifier.toString)
       .filterNot(_.endsWith(".*"))
-      .filter { qualified =>
+      .flatMap { qualified =>
         val lastDot = qualified.lastIndexOf('.')
         val simple =
           if (lastDot >= 0) qualified.substring(lastDot + 1) else qualified
-        simple == simpleName && className != qualified
+        if (simple == simpleName) Some(qualified) else None
       }
-      .nonEmpty
+      .toSet
   }
 }

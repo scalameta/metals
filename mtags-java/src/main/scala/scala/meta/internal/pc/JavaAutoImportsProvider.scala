@@ -4,12 +4,13 @@ import java.util.Optional
 
 import scala.jdk.CollectionConverters._
 
+import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.OffsetParams
+
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.util.JavacTask
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
-import scala.meta.pc.AutoImportsResult
-import scala.meta.pc.OffsetParams
 
 /**
  * Provider for auto-imports in Java files.

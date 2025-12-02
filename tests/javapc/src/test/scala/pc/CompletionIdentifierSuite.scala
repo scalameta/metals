@@ -92,6 +92,7 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |""".stripMargin,
     """
       |List
+      |List
       |ListSelectionHandler
       |List12
       |ListN
@@ -122,6 +123,7 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
     """
       |ListResourceBundle
       |ListIterator
+      |List
       |List
       |ListSelectionHandler
       |List12
