@@ -1301,8 +1301,8 @@ class Compilers(
           if (path.isScalaFilename) loadCompiler(value)
           else if (path.isJavaFilename && forceScala)
             loadCompiler(value)
-              .orElse(Some(loadJavaCompiler(value)))
-          else if (path.isJavaFilename) Some(loadJavaCompiler(value))
+              .orElse(loadJavaCompiler(value))
+          else if (path.isJavaFilename) loadJavaCompiler(value)
           else None
       }
     }
@@ -1390,19 +1390,21 @@ class Compilers(
 
   private def loadJavaCompiler(
       targetId: BuildTargetIdentifier
-  ): PresentationCompiler = {
-    jcache
-      .computeIfAbsent(
-        PresentationCompilerKey.JavaBuildTarget(targetId),
-        { _ =>
-          workDoneProgress.trackBlocking(
-            s"${config.icons().sync}Loading presentation compiler"
-          ) {
-            JavaLazyCompiler(targetId, search, completionItemPriority())
-          }
-        },
-      )
-      .await
+  ): Option[PresentationCompiler] = {
+    buildTargets.javaTarget(targetId).map { javaTarget =>
+      jcache
+        .computeIfAbsent(
+          PresentationCompilerKey.JavaBuildTarget(targetId),
+          { _ =>
+            workDoneProgress.trackBlocking(
+              s"${config.icons().sync}Loading presentation compiler"
+            ) {
+              JavaLazyCompiler(javaTarget, search, completionItemPriority())
+            }
+          },
+        )
+        .await
+    }
   }
 
   private def loadCompiler(

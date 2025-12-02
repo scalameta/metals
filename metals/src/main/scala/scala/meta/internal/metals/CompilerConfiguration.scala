@@ -14,6 +14,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.metals.Configs.SourcePathConfig
@@ -334,23 +335,27 @@ class CompilerConfiguration(
   }
 
   case class JavaLazyCompiler(
-      targetId: BuildTargetIdentifier,
+      javaTarget: JavaTarget,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
 
-    def buildTargetId: BuildTargetIdentifier = targetId
+    def buildTargetId: BuildTargetIdentifier = javaTarget.id
 
     protected def newCompiler(
         classpath: Seq[Path],
         srcFiles: Supplier[ju.List[Path]] = () => Nil.asJava,
     ): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
+      val shouldUseOpts = featureFlags
+        .readBoolean(FeatureFlag.BUILD_SERVER_JAVAC_OPTIONS)
+        .orElse(false)
+      val options = if (shouldUseOpts) javaTarget.options else Nil
       configure(pc, search, completionItemPriority)
         .newInstance(
-          targetId.getUri(),
+          buildTargetId.getUri(),
           classpath.asJava,
-          log.asJava,
+          options.asJava,
           srcFiles,
         )
     }

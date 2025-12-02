@@ -59,4 +59,10 @@ public enum FeatureFlag {
 
   /** If enabled, runs the RefChecks phase in the presentation compiler. */
   RUN_PC_REFCHECKS,
+
+  /**
+   * If enabled, the Javac presentation compiler will use the javac options sent by the build
+   * server.
+   */
+  BUILD_SERVER_JAVAC_OPTIONS,
 }
