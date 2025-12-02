@@ -272,7 +272,7 @@ lazy val mtagsShared = project
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
-      "org.lz4" % "lz4-java" % "1.8.0",
+      "org.lz4" % "lz4-java" % "1.8.1",
       "com.google.protobuf" % "protobuf-java" % "4.33.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
@@ -337,7 +337,7 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
-    "org.lz4" % "lz4-java" % "1.8.0",
+    "org.lz4" % "lz4-java" % "1.8.1",
   ),
   libraryDependencies ++= {
     crossSetting(
