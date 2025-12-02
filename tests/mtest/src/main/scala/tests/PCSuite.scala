@@ -96,6 +96,24 @@ trait PCSuite {
     }
   }
 
+  def autoImportsParams(
+      code: String,
+      filename: String = "test.scala"
+  ): (String, String, Int) = {
+    val targetRegex = "<<(.+)>>".r
+    val target = targetRegex.findAllMatchIn(code).toList match {
+      case Nil => fail("Missing <<target>>")
+      case t :: Nil => t.group(1)
+      case _ => fail("Multiple <<targets>> found")
+    }
+    val code2 = code.replace("<<", "").replace(">>", "")
+    val offset = code.indexOf("<<") + target.length()
+
+    addSourceToIndex(filename, code2)
+
+    (code2, target, offset)
+  }
+
   private def addSourceToIndex(filename: String, code2: String): Unit = {
     val file = tmp.resolve(filename)
     Files.createDirectories(file.toNIO.getParent)

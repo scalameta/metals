@@ -324,34 +324,38 @@ class JavaCompletionProvider(
       root: CompilationUnitTree
   ): List[CompletionItem] = {
     val identifier = extractIdentifier
-    val result = List.newBuilder[CompletionItem]
-    val visitor = new JavaClassVisitor(
-      task.getElements,
-      element => {
-        val simpleName = element.getSimpleName.toString
-        if (CompletionFuzzy.matches(identifier, simpleName)) {
-          val item = completionItem(element)
-          val className = element.toString
-          val edits = AutoImports.computeAutoImportEdits(
-            compiler,
-            task,
-            root,
-            className,
-            identifierEditRange()
-          )
+    if (identifier.isEmpty) {
+      Nil
+    } else {
+      val result = List.newBuilder[CompletionItem]
+      val visitor = new JavaClassVisitor(
+        task.getElements,
+        element => {
+          val simpleName = element.getSimpleName.toString
+          if (CompletionFuzzy.matches(identifier, simpleName)) {
+            val item = completionItem(element)
+            val className = element.toString
+            val edits = AutoImports.computeAutoImportEdits(
+              compiler,
+              task,
+              root,
+              className,
+              identifierEditRange()
+            )
 
-          edits.identifierEdit.foreach(textEdit =>
-            item.setTextEdit(Either.forLeft(textEdit))
-          )
-          item.setAdditionalTextEdits(edits.importTextEdits.asJava)
+            edits.identifierEdit.foreach(textEdit =>
+              item.setTextEdit(Either.forLeft(textEdit))
+            )
+            item.setAdditionalTextEdits(edits.importTextEdits.asJava)
 
-          result += item
-          true
-        } else false
-      }
-    )
-    compiler.search.search(identifier, buildTargetIdentifier, visitor)
-    result.result()
+            result += item
+            true
+          } else false
+        }
+      )
+      compiler.search.search(identifier, buildTargetIdentifier, visitor)
+      result.result()
+    }
   }
 
 }

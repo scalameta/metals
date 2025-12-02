@@ -37,16 +37,21 @@ class JavaAutoImportsProvider(
           val fullName = element.toString
           val packageName = extractPackageName(fullName)
 
-          val pos =
-            AutoImports.autoImportPosition(compiler, task, root, fullName)
+          val identifierRange = computeIdentifierRange()
+          val edits = AutoImports.computeAutoImportEdits(
+            compiler,
+            task,
+            root,
+            fullName,
+            identifierRange
+          )
 
-          val importText = s"import $fullName;\n"
-
-          val edit = new TextEdit(new Range(pos, pos), importText)
+          val allEdits =
+            edits.identifierEdit.toList ++ edits.importTextEdits
 
           results += new AutoImportsResultImpl(
             packageName,
-            List(edit).asJava,
+            allEdits.asJava,
             Optional.of(fullName)
           )
 
@@ -73,6 +78,15 @@ class JavaAutoImportsProvider(
     } else {
       ""
     }
+  }
+
+  private def computeIdentifierRange(): Range = {
+    val end = params.offset()
+    val start = end - name.length
+    new Range(
+      compiler.offsetToPosition(start, params.text()),
+      compiler.offsetToPosition(end, params.text())
+    )
   }
 }
 
