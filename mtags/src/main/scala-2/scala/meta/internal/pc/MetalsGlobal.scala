@@ -1337,13 +1337,19 @@ class MetalsGlobal(
                     matchesQuery &&
                     extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
                   ) {
-                    // Filter out methods inherited from AnyVal
+                    // Filter out methods inherited from AnyVal, Any, and Object
                     val isInheritedFromAnyVal =
                       extensionMethod.owner == definitions.AnyValClass ||
+                        extensionMethod.owner == definitions.AnyClass ||
+                        extensionMethod.owner == definitions.ObjectClass ||
                         extensionMethod.name == nme.equals_ ||
                         extensionMethod.name == nme.hashCode_ ||
                         extensionMethod.name == nme.toString_ ||
-                        extensionMethod.name == nme.getClass_
+                        extensionMethod.name == nme.getClass_ ||
+                        methodName == "asInstanceOf" ||
+                        methodName == "isInstanceOf" ||
+                        methodName == "$asInstanceOf" ||
+                        methodName == "$isInstanceOf"
 
                     if (!isInheritedFromAnyVal) {
                       val isAccessible =
