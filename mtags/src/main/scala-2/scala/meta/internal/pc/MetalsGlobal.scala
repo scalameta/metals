@@ -20,7 +20,6 @@ import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.GlobalProxy
 import scala.tools.nsc.interactive.InteractiveAnalyzer
-import scala.tools.nsc.symtab.BrowsingLoaders
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
@@ -94,26 +93,7 @@ class MetalsGlobal(
   override lazy val loaders: SymbolLoadersInInteractive = new {
     val global: MetalsGlobal.this.type = MetalsGlobal.this
     val platform: MetalsGlobal.this.platform.type = MetalsGlobal.this.platform
-  } with BrowsingLoaders {
-    override protected def compileLate(srcfile: AbstractFile): Unit = {
-      PruneLateSourcesComponent.loadedFromSource.add(srcfile)
-      super.compileLate(srcfile)
-    }
-
-    // harden around "inconsistent class/module pair" errors, see PLAT-146503
-    override def enterClassAndModule(
-        root: Symbol,
-        name: TermName,
-        getCompleter: (ClassSymbol, ModuleSymbol) => SymbolLoader
-    ): Unit = {
-      try {
-        super.enterClassAndModule(root, name, getCompleter)
-      } catch {
-        case e: AssertionError =>
-          logger.debug(s"Error entering class and module: ${e.getMessage}")
-      }
-    }
-  }
+  } with m.internal.pc.classpath.MetalsBrowsingLoaders
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
       extends InteractiveAnalyzer {

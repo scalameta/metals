@@ -653,7 +653,7 @@ case class ScalaPresentationCompiler(
     }
 
     if (reportsLevel.isVerbose)
-      logger.debug(
+      logger.trace(
         s"[$buildTargetIdentifier] source path: ${rootSrcPackage.prettyPrint()}"
       )
     if (

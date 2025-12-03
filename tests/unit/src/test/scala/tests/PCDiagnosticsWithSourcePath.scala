@@ -34,6 +34,46 @@ class PCDiagnosticsWithSourcePath
     } yield ()
   }
 
+  test("cross-file-reference-with change") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/Person.scala
+           |package a
+           |
+           |case class MultilineString(text: String)
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  val multilineString = List(
+           |    MultilineString("Hello, world!"),
+           |    MultilineString("Hello, world! again")
+           |  )
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Main.scala")
+      _ <- server.didChange("a/src/main/scala/a/Main.scala")(
+        _.replace(
+          "object Main {",
+          "// comment\nobject Main {",
+        )
+      )
+      _ <- server.didSave("a/src/main/scala/a/Main.scala")
+      // no server.didFocus on purpose here, because that would trigger a second diagnostics run
+      // which clears spurious errors. didSave completes only after refreshDiagnostics, so we are
+      // guaranteed to have the error we want to test for.
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   // this tests that the presentation compiler is able to load sources
   // that don't follow the standard directory structure (package != path)
   test("cross-file-reference-non-matching-path") {

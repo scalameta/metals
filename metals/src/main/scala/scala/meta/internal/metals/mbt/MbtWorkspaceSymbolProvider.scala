@@ -315,7 +315,7 @@ final class MbtWorkspaceSymbolProvider(
       resultCount.incrementAndGet()
     }
     if (isStatisticsEnabled) {
-      scribe.info(
+      scribe.trace(
         s"workspace/symbol query '${params.getQuery}' matched ${resultCount.get()} results in ${timer}, sourced from ${rankedOIDs.length} candidate files"
       )
     }
