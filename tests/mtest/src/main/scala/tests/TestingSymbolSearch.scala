@@ -100,7 +100,7 @@ class TestingSymbolSearch(
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)
-    if (!kind.isPresent)
+    if (!kind.isPresent || kind.get() != ToplevelMemberKind.IMPLICIT_CLASS)
       classpath.search(query, visitor)._1
     else SymbolSearch.Result.COMPLETE
   }
