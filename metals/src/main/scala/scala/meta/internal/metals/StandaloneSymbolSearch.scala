@@ -117,7 +117,7 @@ class StandaloneSymbolSearch(
     search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
   }
 
-  def search(
+  override def search(
       query: String,
       buildTargetIdentifier: String,
       kind: ju.Optional[ToplevelMemberKind],

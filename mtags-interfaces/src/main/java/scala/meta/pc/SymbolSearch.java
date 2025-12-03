@@ -64,10 +64,13 @@ public interface SymbolSearch {
      * all possible search results for this query, or Result.INCOMPLETE if there
      * may appear more search results by refining the search query.
      */
-    Result search(String query,
+    default Result search(String query,
                   String buildTargetIdentifier,
                   Optional<ToplevelMemberKind> kind,
-                  SymbolSearchVisitor visitor);
+                  SymbolSearchVisitor visitor) {
+        // Default implementation ignores the kind filter and delegates to the simpler overload
+        return search(query, buildTargetIdentifier, visitor);
+    }
     
     Result searchMethods(String query,
                   String buildTargetIdentifier,
