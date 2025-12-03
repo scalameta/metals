@@ -61,7 +61,7 @@ case class BazelBuildTool(
     workspace.list.find(_.filename.endsWith(".bazelproject")) match {
       // project view cannot be empty, so we need to create a fallback
       case Some(path) if path.readText.trim.isEmpty =>
-        path.writeText(BazelBuildTool.fallbackProjectView(projectRoot))
+        path.writeText(BazelBuildTool.fallbackProjectView)
       case _ =>
     }
   }
@@ -103,19 +103,18 @@ object BazelBuildTool {
       .filter(_.isFile)
       .orElse(dir.list.find(_.filename.endsWith(".bazelproject")))
 
-  def fallbackProjectView(projectRoot: AbsolutePath): String = {
+  def enabledRules(projectRoot: AbsolutePath): List[String] = {
     val scalaRules = getScalaRulesName(projectRoot)
+    List(scalaRules, "rules_java", "rules_jvm")
+  }
+
+  def fallbackProjectView: String = {
     s"""|targets:
         |    //...
         |
         |build_manual_targets: false
         |
         |derive_targets_from_directories: false
-        |
-        |enabled_rules:
-        |    $scalaRules
-        |    rules_java
-        |    rules_jvm
         |
         |""".stripMargin
   }
@@ -132,19 +131,14 @@ object BazelBuildTool {
     existingProjectView(projectRoot) match {
       // if project view is empty nothing will work, since no targets are specified
       case Some(projectView) if projectView.readText.trim().isEmpty =>
-        projectView.writeText(fallbackProjectView(projectRoot))
+        projectView.writeText(fallbackProjectView)
         List("-p", projectView.toRelative(projectRoot).toString())
       case Some(projectView) =>
         List("-p", projectView.toRelative(projectRoot).toString())
       case None =>
-        val scalaRules = getScalaRulesName(projectRoot)
         List(
           "-t",
           "//...",
-          "-enabled-rules",
-          scalaRules,
-          "rules_java",
-          "rules_jvm",
         )
     }
   }
