@@ -1352,6 +1352,7 @@ class MetalsGlobal(
                         methodName == "$isInstanceOf"
 
                     if (!isInheritedFromAnyVal) {
+                      println(s"adding method $methodName from $implicitClassSymbol")
                       val isAccessible =
                         context.isAccessible(
                           extensionMethod,
