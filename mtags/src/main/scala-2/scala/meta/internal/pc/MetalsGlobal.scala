@@ -1299,11 +1299,13 @@ class MetalsGlobal(
       pos: Position,
       visit: Member => Boolean
   ): Unit = {
+    println(s"ENTER findImplicitExtensionsForType query=$query targetType=$targetType")
     val context = doLocateContext(pos)
 
     val visitor = new CompilerSearchVisitor(
       context,
       implicitClassSymbol => {
+        println(s"VISITOR CALLED with implicitClassSymbol=$implicitClassSymbol")
         if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
           val constructorParamTypeOpt = for {
             ctor <-
@@ -1380,6 +1382,7 @@ class MetalsGlobal(
       }
     )
 
+    println("--test-search calling search.search with IMPLICIT_CLASS")
     search.search(
       "",
       buildTargetIdentifier,

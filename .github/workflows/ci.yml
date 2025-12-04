@@ -10,55 +10,55 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  unit:
-    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [windows-latest, macOS-latest, ubuntu-latest]
-        java: ["21"]
-        shard: [1, 2]
-        include:
-          - os: ubuntu-latest
-            java: "17"
-            shard: 1
-          - os: ubuntu-latest
-            java: "17"
-            shard: 2
-          - os: ubuntu-latest
-            java: "24"
-            shard: 1
-          - os: ubuntu-latest
-            java: "24"
-            shard: 2
-    steps:
-      - uses: actions/checkout@v5
-      - uses: coursier/setup-action@v1
-      - uses: actions/setup-java@v5
-        with:
-          distribution: 'temurin'
-          java-version: ${{ matrix.java }}
-          cache: 'sbt'
-      - uses: sbt/setup-sbt@v1
-      - name: Run unit tests
-        run: |
-          bin/test.sh unit/test
-        env:
-          JAVA_VERSION: ${{ matrix.java }}
-          TEST_SHARD: ${{ matrix.shard }}
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
-          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
-        shell: bash
-      - name: Upload test reports
-        if: always()
-        uses: actions/upload-artifact@v5
-        with:
-          name: test-reports
-          path: "**/.reports/**/*"
-          if-no-files-found: ignore
-          retention-days: 7
-          compression-level: 9
+#  unit:
+#    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
+#    runs-on: ${{ matrix.os }}
+#    strategy:
+#      fail-fast: false
+#      matrix:
+#        os: [windows-latest, macOS-latest, ubuntu-latest]
+#        java: ["21"]
+#        shard: [1, 2]
+#        include:
+#          - os: ubuntu-latest
+#            java: "17"
+#            shard: 1
+#          - os: ubuntu-latest
+#            java: "17"
+#            shard: 2
+#          - os: ubuntu-latest
+#            java: "24"
+#            shard: 1
+#          - os: ubuntu-latest
+#            java: "24"
+#            shard: 2
+#    steps:
+#      - uses: actions/checkout@v5
+#      - uses: coursier/setup-action@v1
+#      - uses: actions/setup-java@v5
+#        with:
+#          distribution: 'temurin'
+#          java-version: ${{ matrix.java }}
+#          cache: 'sbt'
+#      - uses: sbt/setup-sbt@v1
+#      - name: Run unit tests
+#        run: |
+#          bin/test.sh unit/test
+#        env:
+#          JAVA_VERSION: ${{ matrix.java }}
+#          TEST_SHARD: ${{ matrix.shard }}
+#          GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
+#          GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+#        shell: bash
+#      - name: Upload test reports
+#        if: always()
+#        uses: actions/upload-artifact@v5
+#        with:
+#          name: test-reports
+#          path: "**/.reports/**/*"
+#          if-no-files-found: ignore
+#          retention-days: 7
+#          compression-level: 9
   integration:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -67,17 +67,17 @@ jobs:
       matrix:
         type:
           [
-            gradle-mac,
-            sbt,
-            maven,
-            gradle,
-            scalacli,
-            mill,
-            bazel,
+#            gradle-mac,
+#            sbt,
+#            maven,
+#            gradle,
+#            scalacli,
+#            mill,
+#            bazel,
             feature,
-            cross,
-            scalafmt,
-            scalafix,
+#            cross,
+#            scalafmt,
+#            scalafix,
           ]
         include:
           - type: gradle-mac

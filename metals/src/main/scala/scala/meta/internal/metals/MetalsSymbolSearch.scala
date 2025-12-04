@@ -112,6 +112,7 @@ class MetalsSymbolSearch(
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
+    println(s"MetalsSymbolSearch.search query='$query' kind=${if (kind.isPresent) kind.get else "NONE"}")
     def search(query: WorkspaceSymbolQuery) =
       wsp.search(
         query,
