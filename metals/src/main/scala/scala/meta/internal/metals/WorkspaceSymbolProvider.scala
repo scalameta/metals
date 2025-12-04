@@ -372,7 +372,6 @@ final class WorkspaceSymbolProvider(
       ) count
       else {
         val (path, symbol) = allSymbols.next()
-        // Regular workspace search symbols don't have toplevel kinds, default to TYPE
         val added = visitor.visitWorkspaceSymbol(
           path,
           symbol.symbol,
