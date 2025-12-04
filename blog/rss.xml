@@ -4792,7 +4792,7 @@ Java you are using. Will always support JDK 8 and higher.</li>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="automatic-imports-setting">Automatic imports setting<a href="http://scalameta.org/metals/blog/2024/04/15/thalium#automatic-imports-setting" class="hash-link" aria-label="Direct link to Automatic imports setting" title="Direct link to Automatic imports setting" translate="no">​</a></h2>
 <p>Thanks to <a href="http://github.com/keirlawson" target="_blank" rel="noopener noreferrer" class="">keirlawson</a> it's now possible to make
 Metals automatically import any workspace. This takes a shape of a new setting
-<code>metals.autoImportBuild</code> which has three options:</p>
+<code>metals.autoImportBuilds</code> which has three options:</p>
 <ul>
 <li class=""><code>off</code> - users will always be asked whether they want to import their workspace
 either initially or after changes.</li>
