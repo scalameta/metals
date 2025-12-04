@@ -429,7 +429,7 @@ class BazelLspSuite
     val bazelVersion821 = "8.2.1"
     for {
       _ <- initialize(
-        BazelModuleLayout(moduleWorkspaceLayout, "3.3.6", bazelVersion821)
+        BazelModuleLayout(moduleWorkspaceLayout, V.scala3, bazelVersion821)
       )
       _ = assert(bazelBspConfig.exists)
 

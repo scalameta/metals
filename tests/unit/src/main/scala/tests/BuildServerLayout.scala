@@ -218,7 +218,7 @@ object BazelModuleLayout extends BuildToolLayout {
   ): String =
     s"""|
         |bazel_dep(name = "bazel_skylib", version = "1.8.1")
-        |bazel_dep(name = "rules_scala", version = "7.0.0")
+        |bazel_dep(name = "rules_scala", version = "7.1.5")
         |bazel_dep(name = "rules_java", version = "8.15.1")
         |bazel_dep(name = "rules_python", version = "1.5.3")
         |
