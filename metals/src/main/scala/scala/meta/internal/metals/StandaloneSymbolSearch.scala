@@ -123,8 +123,11 @@ class StandaloneSymbolSearch(
       kind: ju.Optional[ToplevelMemberKind],
       visitor: SymbolSearchVisitor,
   ): Result = {
-    val (res, _) =
-      classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    val (res, _) = {
+      if (kind.isPresent) (Result.COMPLETE, _)
+      else
+        classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    }
     workspaceFallback
       .map(_.search(query, buildTargetIdentifier, kind, visitor))
       .getOrElse(res)
