@@ -90,7 +90,7 @@ class JavaAutoImportsProvider(
   }
 }
 
-class AutoImportsResultImpl(
+private class AutoImportsResultImpl(
     packageNameValue: String,
     editsValue: java.util.List[TextEdit],
     symbolValue: Optional[String]

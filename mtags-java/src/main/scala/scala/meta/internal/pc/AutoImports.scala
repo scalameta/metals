@@ -37,7 +37,7 @@ object AutoImports {
           (sourcePositions.getEndPosition(root, importsBefore.last).toInt, 1)
 
         case Some(_) =>
-          (sourcePositions.getEndPosition(root, importsAfter.head).toInt, 0)
+          (sourcePositions.getStartPosition(root, importsAfter.head).toInt, 0)
 
         case None =>
           (sourcePositions.getEndPosition(root, imports.last).toInt, 1)

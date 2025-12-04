@@ -11,13 +11,6 @@ import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SymbolKind
 
-sealed trait ScopeElement {
-  def element: Element
-}
-case class SimpleElement(element: Element) extends ScopeElement
-
-case class ImportableElement(element: Element) extends ScopeElement
-
 class JavaClassVisitor(elements: Elements, visitMember: Element => Boolean)
     extends SymbolSearchVisitor {
   private def toDotPackage(pkg: String) =
@@ -31,7 +24,7 @@ class JavaClassVisitor(elements: Elements, visitMember: Element => Boolean)
     else {
       val ownerAndName = symbol.substring(0, stop)
       val lastSlash = ownerAndName.lastIndexOf('/')
-      if (lastSlash <= 0 || lastSlash + 1 >= ownerAndName.length) None
+      if (lastSlash < 0 || lastSlash + 1 >= ownerAndName.length) None
       else {
         val pkg = ownerAndName.substring(0, lastSlash).replace('/', '.')
         val name = ownerAndName.substring(lastSlash + 1)
@@ -73,7 +66,7 @@ class JavaClassVisitor(elements: Elements, visitMember: Element => Boolean)
       selfCount + innerCount
     }
 
-    if (current != null) visit(current) else 0
+    visit(current)
   }
 
   override def visitWorkspaceSymbol(
