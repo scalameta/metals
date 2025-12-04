@@ -272,7 +272,7 @@ lazy val mtagsShared = project
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
-      "org.lz4" % "lz4-java" % "1.8.0",
+      "org.lz4" % "lz4-java" % "1.8.1",
       "com.google.protobuf" % "protobuf-java" % "4.33.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
@@ -337,7 +337,7 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
-    "org.lz4" % "lz4-java" % "1.8.0",
+    "org.lz4" % "lz4-java" % "1.8.1",
   ),
   libraryDependencies ++= {
     crossSetting(
@@ -413,7 +413,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.14.0",
+      "org.flywaydb" % "flyway-core" % "11.14.1",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
