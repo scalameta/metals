@@ -1299,7 +1299,9 @@ class MetalsGlobal(
       pos: Position,
       visit: Member => Boolean
   ): Unit = {
-    println(s"ENTER findImplicitExtensionsForType query=$query targetType=$targetType")
+    println(
+      s"ENTER findImplicitExtensionsForType query=$query targetType=$targetType"
+    )
     val context = doLocateContext(pos)
 
     val visitor = new CompilerSearchVisitor(

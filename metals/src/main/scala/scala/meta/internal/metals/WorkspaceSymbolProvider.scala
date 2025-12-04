@@ -304,12 +304,17 @@ final class WorkspaceSymbolProvider(
       visitor: SymbolSearchVisitor,
       kindFilter: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): Int = {
-    println(s"workspaceToplevelSearch query='${query.query}' kindFilter=${if (kindFilter.isPresent) kindFilter.get else "NONE"} topLevelMembers.size=${topLevelMembers.size}")
+    println(
+      s"workspaceToplevelSearch query='${query.query}' kindFilter=${if (kindFilter.isPresent) kindFilter.get else "NONE"} topLevelMembers.size=${topLevelMembers.size}"
+    )
     val excludedPackages = excludedPackageHandler()
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
-      _ = if (symbol.symbol.contains("Box")) println(s"  checking Box: ${symbol.symbol} kind=${symbol.kind} passes filter=${!kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava}")
+      _ = if (symbol.symbol.contains("Box"))
+        println(
+          s"  checking Box: ${symbol.symbol} kind=${symbol.kind} passes filter=${!kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava}"
+        )
       if query.isClasspath
       if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
       if query.matches(symbol.symbol)
