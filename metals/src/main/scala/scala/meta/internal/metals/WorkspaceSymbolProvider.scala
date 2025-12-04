@@ -107,9 +107,11 @@ final class WorkspaceSymbolProvider(
       kind: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): (SymbolSearch.Result, Int) = {
     if (kind.isPresent) {
+      println("just workspaceToplevelSearch")
       val typeCount = workspaceToplevelSearch(query, visitor, kind)
       (SymbolSearch.Result.COMPLETE, typeCount)
     } else {
+      println("standard flow")
       val workspaceCount = workspaceSearch(query, visitor, target)
       val typeCount = workspaceToplevelSearch(query, visitor, kind)
       val (res, inDepsCount) = inDependencies.search(query, visitor)
