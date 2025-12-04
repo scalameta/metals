@@ -124,7 +124,7 @@ class StandaloneSymbolSearch(
       visitor: SymbolSearchVisitor,
   ): Result = {
     val (res, _) = {
-      if (kind.isPresent) (Result.COMPLETE, _)
+      if (kind.isPresent) (Result.COMPLETE, 0)
       else
         classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
     }
