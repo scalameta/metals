@@ -190,4 +190,30 @@ class CompletionAutoImportSuite extends BaseJavaCompletionSuite {
     filterItem = item => item.getDetail.startsWith("java.util.List"),
     assertSingleItem = false,
   )
+
+  checkEdit(
+    "wildcard-already-imported",
+    """|package a;
+       |
+       |import java.util.*;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    ArrayLis@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.*;
+       |
+       |public class A {
+       |  public static void main(String[] args) {
+       |    ArrayList
+       |  }
+       |}
+       |""".stripMargin,
+    itemIndex = 0,
+    assertSingleItem = false,
+  )
 }

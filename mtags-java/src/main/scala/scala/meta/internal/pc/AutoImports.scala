@@ -68,11 +68,14 @@ object AutoImports {
   ): AutoImportEdits = {
     val simpleName = className.split('.').lastOption.getOrElse(className)
     val imported = existingSingleImports(root, simpleName)
+    val wildcardImported = getWildcardImportPackages(root)
     val conflictingImports = imported - className
 
     if (conflictingImports.nonEmpty) {
       AutoImportEdits(Some(new TextEdit(identifierRange, className)), Nil)
     } else if (imported.contains(className)) {
+      AutoImportEdits(None, Nil)
+    } else if (isCoveredByWildcardImport(className, wildcardImported)) {
       AutoImportEdits(None, Nil)
     } else {
       val pos = autoImportPosition(compiler, task, root, className)
@@ -82,6 +85,42 @@ object AutoImports {
     }
   }
 
+  /**
+   * Check if a fully-qualified class name is covered by a wildcard import.
+   * Example: className "java.util.List" is covered by wildcard import "java.util.*"
+   */
+  def isCoveredByWildcardImport(
+      className: String,
+      wildcardImported: Set[String]
+  ): Boolean = {
+    val lastDot = className.lastIndexOf('.')
+
+    if (lastDot < 0) {
+      false
+    } else {
+      val packageName = className.substring(0, lastDot)
+      wildcardImported.contains(packageName)
+    }
+  }
+
+  /**
+   * Extract all package names that have wildcard imports.
+   * Example: "import java.util.*;" returns Set("java.util")
+   */
+  private def getWildcardImportPackages(
+      root: CompilationUnitTree
+  ): Set[String] = {
+    root.getImports.asScala.iterator
+      .map(_.getQualifiedIdentifier.toString)
+      .filter(_.endsWith(".*"))
+      .map(_.stripSuffix(".*"))
+      .toSet
+  }
+
+  /**
+   * Extract all fully-qualified class names that have single imports.
+   * Example: "import java.util.List;" returns Set("java.util.List")
+   */
   def existingSingleImports(
       root: CompilationUnitTree,
       simpleName: String

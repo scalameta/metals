@@ -105,4 +105,83 @@ class JavaAutoImportsSuite extends BaseJavaAutoImportsSuite {
       |""".stripMargin,
     filename = "A.java",
   )
+
+  checkEdit(
+    "wildcard-already-imported",
+    """|package a;
+       |
+       |import java.util.*;
+       |
+       |class A {
+       |  void foo() {
+       |    <<List>>.of(1);
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.*;
+       |
+       |class A {
+       |  void foo() {
+       |    List.of(1);
+       |  }
+       |}
+       |""".stripMargin,
+    filename = "A.java",
+  )
+
+  checkEdit(
+    "wildcard-multiple-packages",
+    """|package a;
+       |
+       |import java.io.*;
+       |import java.util.*;
+       |
+       |class A {
+       |  void foo() {
+       |    <<Map>> map;
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.io.*;
+       |import java.util.*;
+       |
+       |class A {
+       |  void foo() {
+       |    Map map;
+       |  }
+       |}
+       |""".stripMargin,
+    filename = "A.java",
+  )
+
+  checkEdit(
+    "wildcard-with-explicit-import",
+    """|package a;
+       |
+       |import java.util.*;
+       |import java.util.concurrent.ConcurrentHashMap;
+       |
+       |class A {
+       |  void foo() {
+       |    <<List>> list;
+       |  }
+       |}
+       |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.*;
+       |import java.util.concurrent.ConcurrentHashMap;
+       |
+       |class A {
+       |  void foo() {
+       |    List list;
+       |  }
+       |}
+       |""".stripMargin,
+    filename = "A.java",
+  )
 }
