@@ -377,13 +377,10 @@ abstract class BaseWorksheetLspSuite(
       _ = assertNoDiff(
         max,
         getExpected(
-          s"""|getMaximumSize(): Dimension (implicit)
-              |isMaximumSizeSet(): Boolean (implicit)
-              |max(that: Double): Double
+          s"""|max(that: Double): Double
               |max(that: Float): Float
               |max(that: Int): Int
               |max(that: Long): Long
-              |setMaximumSize(maximumSize: Dimension): Unit (implicit)
               |""".stripMargin,
           Map(
             "3" ->
