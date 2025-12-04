@@ -106,10 +106,15 @@ final class WorkspaceSymbolProvider(
       target: Option[BuildTargetIdentifier],
       kind: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
   ): (SymbolSearch.Result, Int) = {
-    val workspaceCount = workspaceSearch(query, visitor, target)
-    val typeCount = workspaceToplevelSearch(query, visitor, kind)
-    val (res, inDepsCount) = inDependencies.search(query, visitor)
-    (res, workspaceCount + inDepsCount + typeCount)
+    if (kind.isPresent) {
+      val typeCount = workspaceToplevelSearch(query, visitor, kind)
+      (SymbolSearch.Result.COMPLETE, typeCount)
+    } else {
+      val workspaceCount = workspaceSearch(query, visitor, target)
+      val typeCount = workspaceToplevelSearch(query, visitor, kind)
+      val (res, inDepsCount) = inDependencies.search(query, visitor)
+      (res, workspaceCount + inDepsCount + typeCount)
+    }
   }
 
   def searchMethods(
