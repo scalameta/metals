@@ -11,6 +11,7 @@ import scala.tools.nsc.interactive.Global
 import scala.tools.nsc.interactive.Problem
 import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.ControlThrowable
+import scala.util.control.NonFatal
 
 import scala.meta.internal.{semanticdb => s}
 
@@ -167,8 +168,13 @@ trait PcDiagnostics {
       val oldBody = unit.body
       try {
         applyPhase(currentTyperRun.refchecksPhase, unit)
-        filterProblems(unit)
+      } catch {
+        case NonFatal(ex) =>
+          // we might get assertion errors because we're not running super-accessors before refchecks
+          logger.debug(s"[${unit.source}]: Exception during refchecks", ex)
       } finally {
+        filterProblems(unit)
+
         // refchecks performs tree transformations, for example replacing case class
         // appply calls with `new` calls, if the apply is synthetic. Rather than fixing
         // all the places in the code where we assume trees are not transformed, we restore
