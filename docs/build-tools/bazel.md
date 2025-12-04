@@ -20,7 +20,7 @@ The first time you open Metals in a new Bazel workspace you will be prompted to
 import the build. Select "Import Build" to start the automatic installation.
 This will create all the needed files, this includes:
 
-- `projectview.bazel`
+- `projectview.bazelproject`
 
 This file contains the default settings configured so that Metals can work with
 Bazel without a hitch. By default it will work for all targets in the workspace,
