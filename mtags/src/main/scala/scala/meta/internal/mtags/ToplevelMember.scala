@@ -2,7 +2,7 @@ package scala.meta.internal.mtags
 
 import scala.meta.internal.semanticdb.Range
 import scala.meta.internal.semanticdb.SymbolInformation
-import scala.meta.pc.ToplevelMemberKind
+import scala.meta.pc.MemberKind
 
 /**
  * Represents a toplevel member in a source file such as `type A = String` in a package or package object.
@@ -39,12 +39,12 @@ object ToplevelMember {
         )
     }
 
-    def fromJava(javaKind: ToplevelMemberKind): Kind = javaKind match {
-      case ToplevelMemberKind.TYPE => Type
-      case ToplevelMemberKind.IMPLICIT_CLASS => ImplicitClass
+    def fromJava(javaKind: MemberKind): Kind = javaKind match {
+      case MemberKind.TOPLEVEL_TYPE => Type
+      case MemberKind.TOPLEVEL_IMPLICIT_CLASS => ImplicitClass
       case _ =>
         throw new IllegalArgumentException(
-          s"Unsupported ToplevelMemberKind: $javaKind"
+          s"Unsupported MemberKind: $javaKind"
         )
     }
 
@@ -60,9 +60,9 @@ object ToplevelMember {
         case ImplicitClass => org.eclipse.lsp4j.SymbolKind.Class
       }
 
-      def toJava: ToplevelMemberKind = kind match {
-        case Type => ToplevelMemberKind.TYPE
-        case ImplicitClass => ToplevelMemberKind.IMPLICIT_CLASS
+      def toJava: MemberKind = kind match {
+        case Type => MemberKind.TOPLEVEL_TYPE
+        case ImplicitClass => MemberKind.TOPLEVEL_IMPLICIT_CLASS
       }
     }
   }

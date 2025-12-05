@@ -2,22 +2,14 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file.Path
-import java.{util => ju}
-
+import java.util as ju
 import scala.collection.concurrent.TrieMap
-
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
+import scala.meta.pc.{ContentType, MemberKind, ParentSymbols, SymbolDocumentation, SymbolSearch, SymbolSearchVisitor}
 import scala.meta.pc.SymbolSearch.Result
-import scala.meta.pc.SymbolSearchVisitor
-import MemberKind
-
 import org.eclipse.lsp4j.Location
 
 class StandaloneSymbolSearch(
@@ -120,7 +112,7 @@ class StandaloneSymbolSearch(
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      kind: ju.Optional[ToplevelMemberKind],
+      kind: ju.Optional[MemberKind],
       visitor: SymbolSearchVisitor,
   ): Result = {
     val (res, _) = {

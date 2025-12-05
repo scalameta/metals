@@ -66,7 +66,7 @@ public interface SymbolSearch {
      */
     default Result search(String query,
                   String buildTargetIdentifier,
-                  Optional<ToplevelMemberKind> kind,
+                  Optional<MemberKind> kind,
                   SymbolSearchVisitor visitor) {
         // Default implementation ignores the kind filter and delegates to the simpler overload
         return search(query, buildTargetIdentifier, visitor);

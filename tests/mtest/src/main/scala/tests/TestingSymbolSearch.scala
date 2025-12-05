@@ -94,12 +94,12 @@ class TestingSymbolSearch(
   override def search(
       textQuery: String,
       buildTargetIdentifier: String,
-      kind: ju.Optional[ToplevelMemberKind],
+      kind: ju.Optional[MemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)
-    if (!kind.isPresent || kind.get() != ToplevelMemberKind.IMPLICIT_CLASS)
+    if (!kind.isPresent || kind.get() != MemberKind.TOPLEVEL_IMPLICIT_CLASS)
       classpath.search(query, visitor)._1
     else SymbolSearch.Result.COMPLETE
   }

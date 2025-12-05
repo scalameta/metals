@@ -1383,7 +1383,7 @@ class MetalsGlobal(
     search.search(
       "",
       buildTargetIdentifier,
-      ju.Optional.of(m.pc.ToplevelMemberKind.IMPLICIT_CLASS),
+      ju.Optional.of(m.pc.MemberKind.TOPLEVEL_IMPLICIT_CLASS),
       visitor
     )
 

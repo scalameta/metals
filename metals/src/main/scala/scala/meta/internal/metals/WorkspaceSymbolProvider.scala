@@ -17,7 +17,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.ToplevelMemberKind
+import scala.meta.pc.MemberKind
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
@@ -104,7 +104,7 @@ final class WorkspaceSymbolProvider(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
-      kind: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
+      kind: ju.Optional[MemberKind] = ju.Optional.empty(),
   ): (SymbolSearch.Result, Int) = {
     if (kind.isPresent) {
       val typeCount = workspaceToplevelSearch(query, visitor, kind)
@@ -302,7 +302,7 @@ final class WorkspaceSymbolProvider(
   private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      kindFilter: ju.Optional[ToplevelMemberKind] = ju.Optional.empty(),
+      kindFilter: ju.Optional[MemberKind] = ju.Optional.empty(),
   ): Int = {
     val excludedPackages = excludedPackageHandler()
     val all = for {

@@ -51,7 +51,7 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
   override def search(
       query: String,
       buildTargetIdentifier: String,
-      kind: ju.Optional[ToplevelMemberKind],
+      kind: ju.Optional[MemberKind],
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
     search(query, buildTargetIdentifier, visitor)
