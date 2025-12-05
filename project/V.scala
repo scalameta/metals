@@ -61,7 +61,7 @@ object V {
 
   val mdoc = "2.7.2"
 
-  val munit = "1.2.0"
+  val munit = "1.2.1"
 
   val pprint = "0.7.3"
 

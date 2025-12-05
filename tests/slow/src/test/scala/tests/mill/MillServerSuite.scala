@@ -473,7 +473,7 @@ class MillServerSuite
           |
           |  object test extends ScalaTests with TestModule.Munit {
           |    def mvnDeps = Seq(
-          |      mvn"org.scalameta::munit::1.2.0"
+          |      mvn"org.scalameta::munit::1.2.1"
           |    )
           |
           |    def forkEnv = super.forkEnv() ++ Map("DOGGIES" -> "tests")
