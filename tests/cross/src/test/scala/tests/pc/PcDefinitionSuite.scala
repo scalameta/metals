@@ -673,4 +673,17 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
        |}
        |""".stripMargin
   )
+
+  check(
+    "cross-file-import-definition",
+    """|package a {
+       |  trait <<Foo>>
+       |}
+       |package b {
+       |  import a.F@@oo
+       |  object Config extends Foo {
+       |  }
+       |}
+       |""".stripMargin
+  )
 }

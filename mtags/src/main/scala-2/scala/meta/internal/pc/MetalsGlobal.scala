@@ -756,7 +756,11 @@ class MetalsGlobal(
     def selector(pos: Position): Option[Symbol] =
       for {
         sel <- imp.selectors.reverseIterator.find(_.namePos <= pos.start)
-      } yield imp.expr.symbol.info.member(sel.name)
+      } yield {
+        val info = imp.expr.symbol.info
+        // imports are usually term names, but in case there is no term, try the type name
+        info.member(sel.name).orElse(info.member(sel.name.toTypeName))
+      }
   }
   implicit class XtensionPositionMetals(pos: Position) {
     // Same as `Position.includes` except handles an off-by-one bug when other.point > pos.end
