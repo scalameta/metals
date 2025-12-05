@@ -1323,6 +1323,19 @@ class MetalsGlobal(
   }
 
   /**
+   * Extract the type of the first constructor parameter from an implicit class.
+   * Returns None if the constructor parameter type cannot be found.
+   */
+  private def extractImplicitClassConstructorParamType(
+      implicitClassSymbol: Symbol
+  ): Option[Type] = {
+    for {
+      ctor <- implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
+      paramType = ctor.tpe
+    } yield paramType
+  }
+
+  /**
    * Find implicit class extension methods available for a specific type using indexed topLevel data.
    */
   def findImplicitExtensionsForType(
@@ -1337,13 +1350,7 @@ class MetalsGlobal(
       context,
       implicitClassSymbol => {
         if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
-          val constructorParamTypeOpt = for {
-            ctor <-
-              implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
-            paramType = ctor.tpe
-          } yield paramType
-
-          constructorParamTypeOpt match {
+          extractImplicitClassConstructorParamType(implicitClassSymbol) match {
             case Some(paramType) =>
               val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
                 paramType.typeSymbol.isAbstractType
