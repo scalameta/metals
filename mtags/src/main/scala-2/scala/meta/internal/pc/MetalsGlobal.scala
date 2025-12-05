@@ -1362,6 +1362,7 @@ class MetalsGlobal(
                   if (
                     CompletionFuzzy.matchesSubCharacters(query, methodName) &&
                     extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor &&
+                    !extensionMethod.isSetter &&
                     !isInheritedFromAnyValOrObject(
                       extensionMethod,
                       methodName

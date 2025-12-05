@@ -531,7 +531,6 @@ class CompletionExtensionMethodSuite extends BaseCompletionSuite {
            |testOps(b: Int): String (implicit)
            |testVal: Int (implicit)
            |testVar: Int (implicit)
-           |testVar_=(x$1: Int): Unit (implicit)
            |""".stripMargin
     ),
     filter = _.contains("(implicit)")
