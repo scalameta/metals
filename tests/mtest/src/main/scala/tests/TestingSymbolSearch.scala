@@ -13,7 +13,8 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.pc.{ContentType, MemberKind}
+import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch

@@ -15,9 +15,9 @@ import scala.meta.internal.mtags.ToplevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.MemberKind
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.MemberKind
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
@@ -302,7 +302,7 @@ final class WorkspaceSymbolProvider(
   private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
-      kindFilter: ju.Optional[MemberKind] = ju.Optional.empty(),
+      kindFilter: ju.Optional[MemberKind],
   ): Int = {
     val excludedPackages = excludedPackageHandler()
     val all = for {

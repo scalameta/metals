@@ -2,14 +2,22 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file.Path
-import java.util as ju
+import java.{util => ju}
+
 import scala.collection.concurrent.TrieMap
-import scala.meta.internal.metals.MetalsEnrichments.*
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.{ContentType, MemberKind, ParentSymbols, SymbolDocumentation, SymbolSearch, SymbolSearchVisitor}
+import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
+import scala.meta.pc.ParentSymbols
+import scala.meta.pc.SymbolDocumentation
+import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearch.Result
+import scala.meta.pc.SymbolSearchVisitor
+
 import org.eclipse.lsp4j.Location
 
 class StandaloneSymbolSearch(

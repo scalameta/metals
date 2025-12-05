@@ -6,11 +6,13 @@ import java.{util => ju}
 
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
-import scala.meta.pc.{ContentType, MemberKind}
+import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
+
 import org.eclipse.lsp4j.Location
 
 /**
