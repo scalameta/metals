@@ -435,28 +435,24 @@ class Compilers(
             compiler
               .complete(offsetParams)
               .asScala
-              .map { list =>
-                val allItems = list.getItems.asScala.toSeq
-                val filteredItems =
-                  if (compiler.isJava) {
-                    allItems.filter(item =>
-                      Option(item.getAdditionalTextEdits())
-                        .forall(_.isEmpty)
-                    )
-                  } else allItems
-
-                filteredItems.map(
-                  toDebugCompletionItem(
-                    _,
-                    adjustStart,
-                    Position.Range(
-                      input.copy(value = modified),
-                      insertStart,
-                      rangeEnd,
-                    ),
+              .map(list =>
+                list.getItems.asScala.toSeq
+                  .filter(item =>
+                    Option(item.getAdditionalTextEdits())
+                      .forall(_.isEmpty)
                   )
-                )
-              }
+                  .map(
+                    toDebugCompletionItem(
+                      _,
+                      adjustStart,
+                      Position.Range(
+                        input.copy(value = modified),
+                        insertStart,
+                        rangeEnd,
+                      ),
+                    )
+                  )
+              )
           case None =>
             scribe.debug(s"$breakpointPosition was not found in $path ")
             Future.successful(Nil)
