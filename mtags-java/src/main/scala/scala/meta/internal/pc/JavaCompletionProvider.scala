@@ -27,11 +27,15 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 class JavaCompletionProvider(
     compiler: JavaMetalsGlobal,
     params: OffsetParams,
-    isCompletionSnippetsEnabled: Boolean
+    isCompletionSnippetsEnabled: Boolean,
+    buildTargetIdentifier: String
 ) {
 
   lazy val identifier = extractIdentifier.toLowerCase
@@ -57,7 +61,14 @@ class JavaCompletionProvider(
       case Some(n) =>
         val items = n.getLeaf.getKind match {
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
-          case IDENTIFIER => completeIdentifier(task, n).distinct ++ keywords(n)
+          case IDENTIFIER =>
+            val scopeCompletions = completeIdentifier(task, n)
+            val outOfScopeCompletions =
+              completeWithAutoImport(task, scanner.root)
+
+            ((scopeCompletions ++ outOfScopeCompletions)
+              .sortBy(item => identifierScore(item.getLabel))
+              .distinct ++ keywords(n))
           case _ => keywords(n)
         }
         new CompletionList(items.asJava)
@@ -66,8 +77,12 @@ class JavaCompletionProvider(
   }
 
   private def identifierScore(element: Element): Int = {
-    val name = element.getSimpleName().toString().toLowerCase()
-    name.indexOf(identifier) match {
+    identifierScore(element.getSimpleName().toString())
+  }
+
+  private def identifierScore(name: String): Int = {
+    val lower = name.toLowerCase()
+    lower.indexOf(identifier) match {
       case 0 => 0
       case -1 => 2
       case _ => 1
@@ -241,6 +256,15 @@ class JavaCompletionProvider(
     i + 1
   }
 
+  private def identifierEditRange(): Range = {
+    val start = inferIdentStart(params.offset(), params.text())
+    val end = params.offset()
+    new Range(
+      compiler.offsetToPosition(start, params.text()),
+      compiler.offsetToPosition(end, params.text())
+    )
+  }
+
   private def completionItem(element: Element): CompletionItem = {
     val simpleName = element.getSimpleName.toString
 
@@ -258,7 +282,8 @@ class JavaCompletionProvider(
     if (isCompletionSnippetsEnabled)
       item.setInsertTextFormat(InsertTextFormat.Snippet)
 
-    item.setInsertText(insertText)
+    val textEdit = new TextEdit(identifierEditRange(), insertText)
+    item.setTextEdit(Either.forLeft(textEdit))
 
     val kind = completionKind(element.getKind)
     kind.foreach(item.setKind)
@@ -291,5 +316,45 @@ class JavaCompletionProvider(
       case ElementKind.METHOD => Some(CompletionItemKind.Method)
       case _ => None
     }
+
+  private def completeWithAutoImport(
+      task: JavacTask,
+      root: CompilationUnitTree
+  ): List[CompletionItem] = {
+    val identifier = extractIdentifier
+    if (identifier.isEmpty) {
+      Nil
+    } else {
+      val result = List.newBuilder[CompletionItem]
+      val visitor = new JavaClassVisitor(
+        task.getElements,
+        element => {
+          val simpleName = element.getSimpleName.toString
+          if (CompletionFuzzy.matches(identifier, simpleName)) {
+            val item = completionItem(element)
+            val className = element.toString
+            val edits = AutoImports.computeAutoImportEdits(
+              compiler,
+              task,
+              root,
+              className,
+              identifierEditRange()
+            )
+
+            if (!edits.isEmpty) {
+              edits.identifierEdit.foreach(textEdit =>
+                item.setTextEdit(Either.forLeft(textEdit))
+              )
+              item.setAdditionalTextEdits(edits.importTextEdits.asJava)
+              result += item
+              true
+            } else false
+          } else false
+        }
+      )
+      compiler.search.search(identifier, buildTargetIdentifier, visitor)
+      result.result()
+    }
+  }
 
 }

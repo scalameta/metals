@@ -55,7 +55,8 @@ case class JavaPresentationCompiler(
       new JavaCompletionProvider(
         javaCompiler,
         params,
-        config.isCompletionSnippetsEnabled
+        config.isCompletionSnippetsEnabled,
+        buildTargetIdentifier
       ).completions()
     )
 
@@ -132,7 +133,14 @@ case class JavaPresentationCompiler(
       params: OffsetParams,
       isExtension: lang.Boolean
   ): CompletableFuture[util.List[AutoImportsResult]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    CompletableFuture.completedFuture(
+      new JavaAutoImportsProvider(
+        javaCompiler,
+        params,
+        name,
+        buildTargetIdentifier
+      ).autoImports().asJava
+    )
 
   override def implementAbstractMembers(
       params: OffsetParams
@@ -218,6 +226,8 @@ case class JavaPresentationCompiler(
   override def isLoaded: Boolean = true
 
   override def scalaVersion(): String = "java"
+
+  override def isJava(): Boolean = true
 
   override def prepareRename(
       params: OffsetParams

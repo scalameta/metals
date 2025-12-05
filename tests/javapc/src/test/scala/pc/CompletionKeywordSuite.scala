@@ -91,7 +91,8 @@ class CompletionKeywordSuite extends BaseJavaCompletionSuite {
       |
       |}
       |""".stripMargin,
-    "",
+    """|extObjectInputStream
+       |""".stripMargin,
   )
 
   check(

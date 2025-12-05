@@ -437,6 +437,10 @@ class Compilers(
               .asScala
               .map(list =>
                 list.getItems.asScala.toSeq
+                  .filter(item =>
+                    Option(item.getAdditionalTextEdits())
+                      .forall(_.isEmpty)
+                  )
                   .map(
                     toDebugCompletionItem(
                       _,
