@@ -161,6 +161,7 @@ class MillServerSuite
         s"""|
             |/build.mill
             |//| mill-version: ${V.millVersion}
+            |//| mill-jvm-version: system
             |//// SNIPPET:BUILD
             |package build
             |import mill.*, javalib.*
@@ -259,10 +260,9 @@ class MillServerSuite
   test(s"presentation-compiler") {
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
     writeLayout(
-      s"""
-         |/.mill-version
-         |$supportedBspVersion
-         |/build.sc
+      s"""/build.mill
+         |//| mill-version: $supportedBspVersion
+         |//| mill-jvm-version: system
          |import mill._, scalalib._
          |object foo extends ScalaModule {
          |  def scalaVersion = "${V.scala213}"
@@ -311,7 +311,9 @@ class MillServerSuite
 
   checkJavaHomeUpdate(
     "mill-java-home-update".flaky,
-    fileContent => s"""|/build.sc
+    fileContent => s"""|/build.mill
+                       |//| mill-version: ${V.millVersion}
+                       |//| mill-jvm-version: system
                        |import mill._, scalalib._
                        |object a extends ScalaModule {
                        |  def scalaVersion = "${V.scala213}"
@@ -324,9 +326,9 @@ class MillServerSuite
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
     writeLayout(
       s"""
-         |/.mill-version
-         |$supportedBspVersion
          |/build.mill
+         |//| mill-jvm-version: system
+         |//| mill-version: $supportedBspVersion
          |package build
          |import mill.*
          |import scalalib.*
@@ -386,7 +388,9 @@ class MillServerSuite
     }
     for {
       _ <- initialize(
-        s"""|/build.sc
+        s"""|/build.mill
+            |//| mill-version: ${V.millVersion}
+            |//| mill-jvm-version: system
             |import mill._, scalalib._
             |object foo extends ScalaModule {
             |  def scalaVersion = "${V.scala213}"
@@ -427,6 +431,7 @@ class MillServerSuite
       s"""
          |/build.mill
          |//| mill-version: ${V.millVersion}
+         |//| mill-jvm-version: system
          |package build
          |import mill.*, scalalib.*
          |
@@ -463,6 +468,7 @@ class MillServerSuite
     writeLayout(
       s"""|/build.mill
           |//| mill-version: ${V.millVersion}
+          |//| mill-jvm-version: system
           |package build
           |import mill.*, scalalib.*
           |
@@ -536,7 +542,9 @@ class MillServerSuite
 
     for {
       _ <- initialize(
-        s"""|/build.sc
+        s"""|/build.mill
+            |//| mill-version: ${V.millVersion}
+            |//| mill-jvm-version: system
             |import mill._, scalalib._
             |object foo extends ScalaModule {
             |  def scalaVersion = "${V.scala213}"

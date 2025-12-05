@@ -85,9 +85,9 @@ object MillBuildLayout extends BuildToolLayout {
         case _ => ""
       }
 
-    s"""|/.mill-version
-        |$millVersion
-        |/build.mill
+    s"""|/build.mill
+        |//| mill-jvm-version: system
+        |//| mill-version: $millVersion
         |package build
         |import mill.*, scalalib.*
         |
