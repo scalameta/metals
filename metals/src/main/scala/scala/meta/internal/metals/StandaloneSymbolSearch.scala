@@ -16,7 +16,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearch.Result
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.ToplevelMemberKind
+import MemberKind
 
 import org.eclipse.lsp4j.Location
 

@@ -13,12 +13,11 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.pc.ContentType
+import scala.meta.pc.{ContentType, MemberKind}
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.ToplevelMemberKind
 import scala.meta.pc.reports.EmptyReportContext
 import scala.meta.pc.reports.ReportContext
 

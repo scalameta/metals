@@ -1334,12 +1334,12 @@ class MetalsGlobal(
 
           constructorParamTypeOpt match {
             case Some(paramType) =>
-              // We assume that classes with type parameter could be matched with any type
               val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
                 paramType.typeSymbol.isAbstractType
 
               val isTypeCompatible =
                 if (isTypeParameter) {
+                  // We assume that classes with type parameter could be matched with any type
                   true
                 } else {
                   try {
