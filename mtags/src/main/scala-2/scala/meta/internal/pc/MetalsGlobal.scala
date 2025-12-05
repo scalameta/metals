@@ -1312,6 +1312,17 @@ class MetalsGlobal(
   }
 
   /**
+   * Check if targetType is compatible with paramType by checking subtyping relationships.
+   */
+  private def isTypeCompatible(targetType: Type, paramType: Type): Boolean = {
+    try {
+      targetType <:< paramType || targetType.widen <:< paramType
+    } catch {
+      case NonFatal(_) => false
+    }
+  }
+
+  /**
    * Find implicit class extension methods available for a specific type using indexed topLevel data.
    */
   def findImplicitExtensionsForType(
@@ -1337,19 +1348,8 @@ class MetalsGlobal(
               val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
                 paramType.typeSymbol.isAbstractType
 
-              val isTypeCompatible =
-                if (isTypeParameter) {
-                  // We assume that classes with type parameter could be matched with any type
-                  true
-                } else {
-                  try {
-                    targetType <:< paramType || targetType.widen <:< paramType
-                  } catch {
-                    case NonFatal(_) => false
-                  }
-                }
-
-              if (isTypeCompatible) {
+              // We assume that classes with type parameter could be matched with any type
+              if (isTypeParameter || isTypeCompatible(targetType, paramType)) {
                 implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                   val methodName = extensionMethod.name.decoded
                   if (
