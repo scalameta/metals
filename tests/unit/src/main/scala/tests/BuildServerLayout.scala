@@ -149,9 +149,9 @@ object BazelBuildLayout extends BuildToolLayout {
         |# See https://github.com/bazelbuild/rules_scala/releases for up to date version information.
         |http_archive(
         |    name = "io_bazel_rules_scala",
-        |    sha256 = "9a23058a36183a556a9ba7229b4f204d3e68c8c6eb7b28260521016b38ef4e00",
-        |    strip_prefix = "rules_scala-6.4.0",
-        |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v6.4.0/rules_scala-v6.4.0.tar.gz",
+        |    sha256 = "f8085332d5862f889454b44b69cc8d6c654184495099afdf3aff79c0a98215ae",
+        |    strip_prefix = "rules_scala-7.1.5",
+        |    url = "https://github.com/bazelbuild/rules_scala/releases/download/v7.1.5/rules_scala-v7.1.5.tar.gz",
         |)
         |
         |load("@io_bazel_rules_scala//:scala_config.bzl", "scala_config")
@@ -218,7 +218,7 @@ object BazelModuleLayout extends BuildToolLayout {
   ): String =
     s"""|
         |bazel_dep(name = "bazel_skylib", version = "1.8.1")
-        |bazel_dep(name = "rules_scala", version = "7.0.0")
+        |bazel_dep(name = "rules_scala", version = "7.1.5")
         |bazel_dep(name = "rules_java", version = "8.15.1")
         |bazel_dep(name = "rules_python", version = "1.5.3")
         |

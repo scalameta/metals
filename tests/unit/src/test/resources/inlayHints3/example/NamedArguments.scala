@@ -5,7 +5,7 @@ case class User(
       // assert default values have occurrences
       Map.toString
     }
-)
+)/*: Product<<scala/Product#>>*//*: Serializable<<java/io/Serializable#>>*/
 object NamedArguments {
   final val susan/*: "Susan"*/ = "Susan"
   val user1/*: User<<(2:11)>>*/ =

@@ -927,15 +927,9 @@ abstract class BaseWorksheetLspSuite(
       cleanWorkspace()
       val path = "a/src/main/scala/foo/Main.worksheet.sc"
       val expectedActions =
-        if (SemVer.isLaterVersion("3.7.0", scalaVersion))
-          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-              |${CreateNewSymbol.title("Future")}
-              |""".stripMargin
-        else
-          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-              |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
-              |${CreateNewSymbol.title("Future")}
-              |""".stripMargin
+        s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+            |${CreateNewSymbol.title("Future")}
+            |""".stripMargin
       for {
         _ <- initialize(
           s"""

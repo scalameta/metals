@@ -16,10 +16,10 @@ class Scalalib {
         Float,
         Char,
     )
-  ](null)
+  ](/*elems = */null)
   lst.isInstanceOf[Any]
   lst.asInstanceOf[Any]
-  println(lst.##)
+  println(/*x = */lst.##)
   lst ne lst
   lst eq lst
   lst == lst

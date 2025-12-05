@@ -9,4 +9,4 @@ given intOrd: Ord[Int] with
 
 given Ord[String] with
   def compare(x: String, y: String)/*: Int<<scala/Int#>>*/ =
-    /*augmentString<<scala/Predef.augmentString().>>(*/x/*)*/.compare(y)
+    /*augmentString<<scala/Predef.augmentString().>>(*/x/*)*/.compare(/*that = */y)

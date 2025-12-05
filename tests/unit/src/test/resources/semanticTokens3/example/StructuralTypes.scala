@@ -17,4 +17,4 @@
   } = <<new>>/*keyword*/:
     <<def>>/*keyword*/ <<scalameta>>/*method,definition*/ = <<"4.0">>/*string*/
   <<V>>/*variable,readonly*/.<<scalameta>>/*method*/
-<<end>>/*keyword*/ StructuralTypes
+<<end>>/*keyword*/ <<StructuralTypes>>/*class,definition*/
