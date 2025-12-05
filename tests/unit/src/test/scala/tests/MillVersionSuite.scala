@@ -48,6 +48,13 @@ class MillVersionSuite extends BaseSuite {
   )
 
   check(
+    """|build.mill.yaml
+       |mill-version: 1.1.0-RC2
+       |""".stripMargin,
+    "1.1.0-RC2",
+  )
+
+  check(
     """|mill
        |#!/usr/bin/env sh
        |

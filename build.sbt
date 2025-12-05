@@ -9,7 +9,7 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.4-SNAPSHOT"
+def localSnapshotVersion = "1.6.5-SNAPSHOT"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -272,8 +272,8 @@ lazy val mtagsShared = project
     crossVersion := CrossVersion.full,
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
-      "org.lz4" % "lz4-java" % "1.8.0",
-      "com.google.protobuf" % "protobuf-java" % "4.32.1",
+      "org.lz4" % "lz4-java" % "1.8.1",
+      "com.google.protobuf" % "protobuf-java" % "4.33.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -337,7 +337,7 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
-    "org.lz4" % "lz4-java" % "1.8.0",
+    "org.lz4" % "lz4-java" % "1.8.1",
   ),
   libraryDependencies ++= {
     crossSetting(
@@ -404,7 +404,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.16.0",
+      "org.scalameta" %% "metaconfig-core" % "0.17.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -413,7 +413,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.14.0",
+      "org.flywaydb" % "flyway-core" % "11.18.0",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -444,7 +444,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.3.2",
+      "com.lihaoyi" %% "ujson" % "4.4.1",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -460,7 +460,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % "0.12.1",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.1",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",
@@ -801,7 +801,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.16.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.17.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

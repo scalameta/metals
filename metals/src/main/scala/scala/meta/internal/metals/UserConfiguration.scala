@@ -495,7 +495,7 @@ object UserConfiguration {
            |about incremental compilation in Zinc.""".stripMargin,
       ),
       UserConfigurationOption(
-        "auto-import-build",
+        "auto-import-builds",
         "off",
         "all",
         "Import build when changes detected without prompting",

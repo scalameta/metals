@@ -13,7 +13,7 @@ object V {
 
   val scala3ForSBT2 = "3.7.2"
 
-  val latestScala3Next = "3.8.0-RC1"
+  val latestScala3Next = "3.8.0-RC2"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.18"
@@ -31,7 +31,7 @@ object V {
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M19"
+  val coursier = "2.1.25-M20"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
@@ -59,7 +59,7 @@ object V {
 
   val mill = "1.0.6"
 
-  val mdoc = "2.7.2"
+  val mdoc = "2.8.0"
 
   val munit = "1.2.0"
 
