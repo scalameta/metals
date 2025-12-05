@@ -20,13 +20,15 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import tests.BaseBazelServerSuite
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
 import tests.BazelModuleLayout
 import tests.BazelServerInitializer
 
 class BazelLspSuite
-    extends BaseImportSuite("bazel-import", BazelServerInitializer) {
+    extends BaseImportSuite("bazel-import", BazelServerInitializer)
+    with BaseBazelServerSuite {
   val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
   val bazelVersion = "6.4.0"
@@ -36,6 +38,11 @@ class BazelLspSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
+
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    cleanBazelServer()
+  }
 
   val importMessage: String =
     GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
