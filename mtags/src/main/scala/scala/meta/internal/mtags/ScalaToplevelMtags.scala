@@ -425,6 +425,9 @@ class ScalaToplevelMtags(
         case COLON if dialect.allowSignificantIndentation =>
           (expectTemplate, nextIsNL()) match {
             case (Some(expect), true) if needToParseBody(expect) =>
+              if (expect.isImplicit) {
+                addTopLevelImplicitClass()
+              }
               val next = expect.startIndentedRegion(
                 currRegion,
                 isImplicitClass = expect.isImplicit
@@ -465,6 +468,9 @@ class ScalaToplevelMtags(
                 scanner.mtagsNextToken()
                 loop(indent.notAfterNewline, currRegion, expectTemplate)
               } else {
+                if (expect.isImplicit) {
+                  addTopLevelImplicitClass()
+                }
                 val next =
                   expect.startInBraceRegion(
                     currRegion,
@@ -808,7 +814,13 @@ class ScalaToplevelMtags(
         val typeSymbol = symbol(Descriptor.Type(ident.name))
         if (owner.endsWith("/package.") || owner.endsWith("$package.")) {
           addToplevelMembers(
-            List(ToplevelMember(typeSymbol, ident.pos.toRange, Kind.TYPE))
+            List(
+              ToplevelMember(
+                typeSymbol,
+                ident.pos.toRange,
+                ToplevelMember.Kind.Type
+              )
+            )
           )
         }
         if (emitTermMember) {
@@ -1179,6 +1191,38 @@ class ScalaToplevelMtags(
     }
     if (isUnapply) resultList.filterNot(_.name.charAt(0).isUpper)
     else resultList
+  }
+
+  /**
+   * Adds an implicit class to the toplevel members if it's not a noisy implicit class.
+   * Filters out implicit classes that introduce a lot of methods which aren't usually useful.
+   */
+  private def addTopLevelImplicitClass(): Unit = {
+    if (!isNoisyImplicitClass(currentOwner)) {
+      addToplevelMembers(
+        ToplevelMember(
+          currentOwner,
+          newPosition.toRange,
+          ToplevelMember.Kind.ImplicitClass
+        ) :: Nil
+      )
+    }
+  }
+
+  /**
+   * Checks if the given owner represents a noisy implicit class.
+   * Noisy implicit classes are those that introduce many methods which aren't usually useful.
+   */
+  private def isNoisyImplicitClass(ownerSymbol: String): Boolean = {
+    ownerSymbol.startsWith(
+      "scala/collection/convert/StreamExtensions"
+    ) ||
+    ownerSymbol.startsWith(
+      "scala/reflect/api/Internals"
+    ) ||
+    ownerSymbol.startsWith(
+      "scala/Predef"
+    )
   }
 
   private def isNewline: Boolean =

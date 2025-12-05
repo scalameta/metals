@@ -243,7 +243,7 @@ class MetalsGlobal(
         visitMember
       )
       searchOutline(visitMember, query)
-      search.search(query, buildTargetIdentifier, visitor)
+      search.search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
     }
   }
 
@@ -1288,5 +1288,112 @@ class MetalsGlobal(
           }
       }
     }
+  }
+
+  /**
+   * Check if a method is inherited from AnyVal, Any, or Object.
+   * These methods should be filtered out from implicit extension method completions.
+   */
+  private def isInheritedFromAnyValOrObject(
+      extensionMethod: Symbol,
+      methodName: String
+  ): Boolean = {
+    extensionMethod.owner == definitions.AnyValClass ||
+    extensionMethod.owner == definitions.AnyClass ||
+    extensionMethod.owner == definitions.ObjectClass ||
+    extensionMethod.name == nme.equals_ ||
+    extensionMethod.name == nme.hashCode_ ||
+    extensionMethod.name == nme.toString_ ||
+    extensionMethod.name == nme.getClass_ ||
+    methodName == "asInstanceOf" ||
+    methodName == "isInstanceOf" ||
+    methodName == "$asInstanceOf" ||
+    methodName == "$isInstanceOf"
+  }
+
+  /**
+   * Check if targetType is compatible with paramType by checking subtyping relationships.
+   */
+  private def isTypeCompatible(targetType: Type, paramType: Type): Boolean = {
+    try {
+      targetType <:< paramType || targetType.widen <:< paramType
+    } catch {
+      case NonFatal(_) => false
+    }
+  }
+
+  /**
+   * Extract the type of the first constructor parameter from an implicit class.
+   * Returns None if the constructor parameter type cannot be found.
+   */
+  private def extractImplicitClassConstructorParamType(
+      implicitClassSymbol: Symbol
+  ): Option[Type] = {
+    for {
+      ctor <- implicitClassSymbol.primaryConstructor.paramss.flatten.headOption
+      paramType = ctor.tpe
+    } yield paramType
+  }
+
+  /**
+   * Find implicit class extension methods available for a specific type using indexed topLevel data.
+   */
+  def findImplicitExtensionsForType(
+      query: String,
+      targetType: Type,
+      pos: Position,
+      visit: Member => Boolean
+  ): Unit = {
+    val context = doLocateContext(pos)
+
+    val visitor = new CompilerSearchVisitor(
+      context,
+      implicitClassSymbol => {
+        if (implicitClassSymbol != NoSymbol && implicitClassSymbol.exists) {
+          extractImplicitClassConstructorParamType(implicitClassSymbol) match {
+            case Some(paramType) =>
+              val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
+                paramType.typeSymbol.isAbstractType
+
+              // We assume that classes with type parameter could be matched with any type
+              if (isTypeParameter || isTypeCompatible(targetType, paramType)) {
+                implicitClassSymbol.tpe.members.foreach { extensionMethod =>
+                  val methodName = extensionMethod.name.decoded
+                  if (
+                    CompletionFuzzy.matchesSubCharacters(query, methodName) &&
+                    extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor &&
+                    !extensionMethod.isSetter &&
+                    !isInheritedFromAnyValOrObject(
+                      extensionMethod,
+                      methodName
+                    ) &&
+                    context.isAccessible(
+                      extensionMethod,
+                      extensionMethod.owner.thisType
+                    )
+                  ) {
+                    visit(
+                      new WorkspaceImplicitMember(
+                        extensionMethod,
+                        implicitClassSymbol
+                      )
+                    )
+                  }
+                }
+              }
+            case None =>
+          }
+        }
+        true
+      }
+    )
+
+    search.search(
+      "",
+      buildTargetIdentifier,
+      ju.Optional.of(m.pc.MemberKind.TOPLEVEL_IMPLICIT_CLASS),
+      visitor
+    )
+
   }
 }
