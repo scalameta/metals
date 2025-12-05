@@ -1291,6 +1291,27 @@ class MetalsGlobal(
   }
 
   /**
+   * Check if a method is inherited from AnyVal, Any, or Object.
+   * These methods should be filtered out from implicit extension method completions.
+   */
+  private def isInheritedFromAnyValOrObject(
+      extensionMethod: Symbol,
+      methodName: String
+  ): Boolean = {
+    extensionMethod.owner == definitions.AnyValClass ||
+    extensionMethod.owner == definitions.AnyClass ||
+    extensionMethod.owner == definitions.ObjectClass ||
+    extensionMethod.name == nme.equals_ ||
+    extensionMethod.name == nme.hashCode_ ||
+    extensionMethod.name == nme.toString_ ||
+    extensionMethod.name == nme.getClass_ ||
+    methodName == "asInstanceOf" ||
+    methodName == "isInstanceOf" ||
+    methodName == "$asInstanceOf" ||
+    methodName == "$isInstanceOf"
+  }
+
+  /**
    * Find implicit class extension methods available for a specific type using indexed topLevel data.
    */
   def findImplicitExtensionsForType(
@@ -1317,7 +1338,7 @@ class MetalsGlobal(
               val isTypeParameter = paramType.typeSymbol.isTypeParameter ||
                 paramType.typeSymbol.isAbstractType
 
-              val matches =
+              val isTypeCompatible =
                 if (isTypeParameter) {
                   true
                 } else {
@@ -1328,45 +1349,27 @@ class MetalsGlobal(
                   }
                 }
 
-              if (matches) {
+              if (isTypeCompatible) {
                 implicitClassSymbol.tpe.members.foreach { extensionMethod =>
                   val methodName = extensionMethod.name.decoded
-                  val matchesQuery =
-                    CompletionFuzzy.matchesSubCharacters(query, methodName)
                   if (
-                    matchesQuery &&
-                    extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor
+                    CompletionFuzzy.matchesSubCharacters(query, methodName) &&
+                    extensionMethod.isMethod && extensionMethod.isPublic && !extensionMethod.isConstructor &&
+                    !isInheritedFromAnyValOrObject(
+                      extensionMethod,
+                      methodName
+                    ) &&
+                    context.isAccessible(
+                      extensionMethod,
+                      extensionMethod.owner.thisType
+                    )
                   ) {
-                    // Filter out methods inherited from AnyVal, Any, and Object
-                    val isInheritedFromAnyVal =
-                      extensionMethod.owner == definitions.AnyValClass ||
-                        extensionMethod.owner == definitions.AnyClass ||
-                        extensionMethod.owner == definitions.ObjectClass ||
-                        extensionMethod.name == nme.equals_ ||
-                        extensionMethod.name == nme.hashCode_ ||
-                        extensionMethod.name == nme.toString_ ||
-                        extensionMethod.name == nme.getClass_ ||
-                        methodName == "asInstanceOf" ||
-                        methodName == "isInstanceOf" ||
-                        methodName == "$asInstanceOf" ||
-                        methodName == "$isInstanceOf"
-
-                    if (!isInheritedFromAnyVal) {
-                      val isAccessible =
-                        context.isAccessible(
-                          extensionMethod,
-                          extensionMethod.owner.thisType
-                        )
-
-                      if (isAccessible) {
-                        visit(
-                          new WorkspaceImplicitMember(
-                            extensionMethod,
-                            implicitClassSymbol
-                          )
-                        )
-                      }
-                    }
+                    visit(
+                      new WorkspaceImplicitMember(
+                        extensionMethod,
+                        implicitClassSymbol
+                      )
+                    )
                   }
                 }
               }

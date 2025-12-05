@@ -4,7 +4,6 @@ import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolKind;
 
 import java.nio.file.Path;
-import java.util.Optional;
 
 /**
  * Consumer of symbol search results.
