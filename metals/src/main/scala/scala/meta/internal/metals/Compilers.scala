@@ -438,7 +438,7 @@ class Compilers(
               .map { list =>
                 val allItems = list.getItems.asScala.toSeq
                 val filteredItems =
-                  if (compiler.scalaVersion() == "java") {
+                  if (compiler.isJava) {
                     allItems.filter(item =>
                       Option(item.getAdditionalTextEdits())
                         .forall(_.isEmpty)

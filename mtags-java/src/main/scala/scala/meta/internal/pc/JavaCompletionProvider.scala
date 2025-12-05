@@ -63,10 +63,8 @@ class JavaCompletionProvider(
           case MEMBER_SELECT => completeMemberSelect(task, n).distinct
           case IDENTIFIER =>
             val scopeCompletions = completeIdentifier(task, n)
-            val scopeKeys = scopeCompletions.map(_.getDetail).toSet
             val outOfScopeCompletions =
               completeWithAutoImport(task, scanner.root)
-                .filterNot(item => scopeKeys.contains(item.getDetail))
 
             ((scopeCompletions ++ outOfScopeCompletions)
               .sortBy(item => identifierScore(item.getLabel))
@@ -343,13 +341,14 @@ class JavaCompletionProvider(
               identifierEditRange()
             )
 
-            edits.identifierEdit.foreach(textEdit =>
-              item.setTextEdit(Either.forLeft(textEdit))
-            )
-            item.setAdditionalTextEdits(edits.importTextEdits.asJava)
-
-            result += item
-            true
+            if (!edits.isEmpty) {
+              edits.identifierEdit.foreach(textEdit =>
+                item.setTextEdit(Either.forLeft(textEdit))
+              )
+              item.setAdditionalTextEdits(edits.importTextEdits.asJava)
+              result += item
+              true
+            } else false
           } else false
         }
       )

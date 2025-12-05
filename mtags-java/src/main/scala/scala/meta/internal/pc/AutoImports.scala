@@ -14,7 +14,9 @@ object AutoImports {
   case class AutoImportEdits(
       identifierEdit: Option[TextEdit],
       importTextEdits: List[TextEdit]
-  )
+  ) {
+    def isEmpty: Boolean = identifierEdit.isEmpty && importTextEdits.isEmpty
+  }
 
   def autoImportPosition(
       compiler: JavaMetalsGlobal,

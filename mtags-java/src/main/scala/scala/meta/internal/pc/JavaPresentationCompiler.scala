@@ -227,6 +227,8 @@ case class JavaPresentationCompiler(
 
   override def scalaVersion(): String = "java"
 
+  override def isJava(): Boolean = true
+
   override def prepareRename(
       params: OffsetParams
   ): CompletableFuture[Optional[lsp4j.Range]] =
