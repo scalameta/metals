@@ -94,7 +94,13 @@ abstract class MetalsBrowsingLoaders extends BrowsingLoaders {
     }
 
     val source = getSourceFile(src) // this uses the current encoding
-    val body = new syntaxAnalyzer.OutlineParser(source).parse()
+    val body = new syntaxAnalyzer.OutlineParser(source) {
+      // needed for deprecation warnings that are emitted by the scanner, and that
+      // go by default to global.currentUnit, which may be different from the unit
+      // we are parsing here
+      override val unit: CompilationUnit = new CompilationUnit(this.source)
+    }.parse()
+
     val browser = new BrowserTraverser
     browser.traverse(body)
     if (browser.entered == 0)

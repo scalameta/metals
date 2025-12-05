@@ -132,12 +132,6 @@ trait PcDiagnostics {
             e
           )
         case ex: Throwable =>
-          println(
-            "[%s]: exception during background compile: ".format(
-              unit.source
-            ) + ex
-          )
-          ex.printStackTrace()
           for (r <- waitLoadedTypeResponses(unit.source)) {
             r.raise(ex)
           }
