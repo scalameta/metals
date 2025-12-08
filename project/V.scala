@@ -31,7 +31,7 @@ object V {
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M20"
+  val coursier = "2.1.25-M21"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
