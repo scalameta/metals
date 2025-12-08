@@ -55,6 +55,7 @@ class MbtV2WorkspaceSymbolSearch(
     metrics: MonitoringClient = new NoopMonitoringClient(),
     mtags: () => Mtags = () => Mtags.testingSingleton,
     progress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
+    onIndexingDone: () => Unit = () => (),
 )(implicit val ec: ExecutionContext)
     extends MbtWorkspaceSymbolSearch {
 
@@ -157,6 +158,7 @@ class MbtV2WorkspaceSymbolSearch(
       val end = new l.WorkDoneProgressEnd()
       end.setMessage(s"done in $timer")
       progress.endProgress(token)
+      onIndexingDone()
     }
 
     // Step 4: Write the index to disk. It's technically fine to move writing
@@ -497,6 +499,10 @@ class MbtV2WorkspaceSymbolSearch(
   ): ParArray[AbsolutePath] = {
     val newValue = ParArray.fromSpecific(documentsIndex.keysIterator)
     documentsKeys = newValue
+    // update the document keys is the last step when indexing, as it prepares
+    // the parallel array for the next workspace symbol search, it's the right moment
+    // to notify others that the indexing is done.
+    onIndexingDone()
     newValue
   }
 

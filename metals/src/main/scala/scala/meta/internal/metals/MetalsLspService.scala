@@ -301,6 +301,7 @@ abstract class MetalsLspService(
     metrics = metrics,
     mtags = () => mtags,
     progress = workDoneProgress,
+    onIndexingDone = restartFallbackCompilers,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolSearch =
