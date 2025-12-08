@@ -59,7 +59,7 @@ object V {
 
   val mill = "1.0.6"
 
-  val mdoc = "2.8.0"
+  val mdoc = "2.8.1"
 
   val munit = "1.2.0"
 
