@@ -7,6 +7,7 @@ import java.{util => ju}
 import scala.meta.internal.metals.ClasspathSearch
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -46,8 +47,16 @@ class ClasspathOnlySymbolSearch(classpath: ClasspathSearch)
       query: String,
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
-  ): SymbolSearch.Result = {
+  ): SymbolSearch.Result =
     classpath.search(WorkspaceSymbolQuery.exact(query), visitor)._1
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[MemberKind],
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    search(query, buildTargetIdentifier, visitor)
   }
 
   override def searchMethods(
