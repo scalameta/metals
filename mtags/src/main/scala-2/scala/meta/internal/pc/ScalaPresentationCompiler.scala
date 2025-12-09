@@ -642,9 +642,6 @@ case class ScalaPresentationCompiler(
       thresholdMillis = 1000
     ) {
       if (config.sourcePathMode() == SourcePathMode.MBT) {
-        logger.info(
-          s"[$buildTargetIdentifier] using mbt index to collect logical packages"
-        )
         ParsedLogicalPackage.fromMbtIndex(
           semanticdbFileManager.listAllPackages()
         )
@@ -652,6 +649,11 @@ case class ScalaPresentationCompiler(
         ParsedLogicalPackage.collectLogicalPackages(settings)
     }
 
+    if (rootSrcPackage.packages.isEmpty && rootSrcPackage.sources.isEmpty) {
+      logger.warn(
+        s"[$buildTargetIdentifier] no logical packages found in source path (mode: ${config.sourcePathMode()})"
+      )
+    }
     if (reportsLevel.isVerbose)
       logger.trace(
         s"[$buildTargetIdentifier] source path: ${rootSrcPackage.prettyPrint()}"
