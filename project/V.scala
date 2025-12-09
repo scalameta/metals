@@ -5,7 +5,7 @@ object V {
 
   val scala211 = "2.11.12"
 
-  val scala212 = "2.12.20"
+  val scala212 = "2.12.21"
 
   val scala213 = "2.13.18"
 
@@ -16,7 +16,7 @@ object V {
   val latestScala3Next = "3.8.0-RC2"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val sbtScala = "2.12.18"
+  val sbtScala = "2.12.20"
 
   val sbtMill = "2.13.15"
 
@@ -181,9 +181,9 @@ object V {
   def nonDeprecatedScala2Versions = Seq(
     scala213,
     scala212,
+    "2.12.20",
     "2.12.19",
     "2.12.18",
-    "2.12.17",
     "2.13.15",
     "2.13.16",
     "2.13.17",
@@ -191,12 +191,12 @@ object V {
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.17"
+    val sbtScalaVersion = "2.12.18"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
-    "1.8.0"
+    "1.9.0"
   }
 
   def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
