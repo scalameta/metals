@@ -2,7 +2,7 @@ package example
 
 class SQLQueries {
     implicit class SQLStringContext(sc: StringContext) {
-        def sql(args: Any*): String = sc.s(args: _*)
+        def sql(args: Any*): String = sc.s(/*args = */args: _*)
     }
 
     val createTableQuery/*: String<<scala/Predef.String#>>*/ = sql"""
