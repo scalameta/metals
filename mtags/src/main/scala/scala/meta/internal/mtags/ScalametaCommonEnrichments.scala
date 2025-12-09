@@ -342,6 +342,11 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
   }
 
   implicit class XtensionAbsolutePath(path: AbsolutePath) {
+    def isJar: Boolean = {
+      val filename = path.toNIO.getFileName.toString
+      filename.endsWith(".jar") || filename.endsWith(".srcjar")
+    }
+
     def isEmptyDirectory: Boolean = {
       path.isDirectory &&
       !path.list.exists(_ => true)
@@ -377,6 +382,14 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
 
     def listRecursive: Generator[AbsolutePath] = {
       if (path.isDirectory) Files.walk(path.toNIO).asScala.map(AbsolutePath(_))
+      else if (path.isFile) Generator(path)
+      else Generator()
+    }
+
+    def listRecursiveOrJar: Generator[AbsolutePath] = {
+      if (path.isDirectory) Files.walk(path.toNIO).asScala.map(AbsolutePath(_))
+      else if (path.isJar)
+        FileIO.withJarFileSystem(path, create = false)(_.listRecursive)
       else if (path.isFile) Generator(path)
       else Generator()
     }
@@ -417,6 +430,12 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         case Some(sourceItem) =>
           if (sourceItem.isScalaOrJava) {
             sourceItem.toNIO.getFileName().toString()
+          } else if (sourceItem.isJar) {
+            if (isScalaOrJava) {
+              path.toNIO.getFileName().toString()
+            } else {
+              path.toURI.toString
+            }
           } else {
             path.toRelative(sourceItem).toURI(false).toString
           }

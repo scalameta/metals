@@ -434,7 +434,13 @@ class MbtV2WorkspaceSymbolSearch(
     for (pkg <- pkgs) {
       val files = documentsByPackage.getOrElseUpdate(
         pkg,
-        new ju.concurrent.ConcurrentSkipListSet[Path](),
+        new ju.concurrent.ConcurrentSkipListSet[Path](
+          new ju.Comparator[Path]() {
+            override def compare(o1: Path, o2: Path): Int = {
+              o1.toString.compareTo(o2.toString)
+            }
+          }
+        ),
       )
       files.add(file.toNIO)
     }

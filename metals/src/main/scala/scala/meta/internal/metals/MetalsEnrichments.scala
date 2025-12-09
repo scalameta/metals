@@ -394,7 +394,8 @@ object MetalsEnrichments
       path.getFileName.toString.endsWith(".semanticdb")
   }
 
-  implicit class XtensionAbsolutePathBuffers(path: AbsolutePath) {
+  implicit class XtensionAbsolutePathBuffers(path: AbsolutePath)
+      extends XtensionAbsolutePath(path) {
 
     def isBazelRelatedPath: Boolean = {
       val filename = path.toNIO.getFileName.toString
@@ -603,11 +604,6 @@ object MetalsEnrichments
 
     def toTextDocumentIdentifier: TextDocumentIdentifier = {
       new TextDocumentIdentifier(path.toURI.toString)
-    }
-
-    def isJar: Boolean = {
-      val filename = path.toNIO.getFileName.toString
-      filename.endsWith(".jar") || filename.endsWith(".srcjar")
     }
 
     /**

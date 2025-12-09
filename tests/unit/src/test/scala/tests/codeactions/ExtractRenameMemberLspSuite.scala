@@ -7,7 +7,6 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.codeactions.ExtractRenameMember
 import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.mtags.MtagsEnrichments.XtensionAbsolutePath
 import scala.meta.internal.mtags.MtagsEnrichments.XtensionMetaPosition
 import scala.meta.io.AbsolutePath
 

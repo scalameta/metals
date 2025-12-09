@@ -382,7 +382,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     val sourcesToIndex = mutable.ArrayBuffer.empty[SourceToIndex]
     for {
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
-      source <- sourceItem.listRecursive
+      source <- sourceItem.listRecursiveOrJar
       if source.isScalaOrJava
     } {
       targets.asScala.foreach { target =>

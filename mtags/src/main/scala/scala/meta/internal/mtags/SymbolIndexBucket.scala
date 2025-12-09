@@ -182,7 +182,14 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       toplevel: String
   ): Unit = {
-    if (source.isAmmoniteScript || !isTrivialToplevelSymbol(path, toplevel)) {
+    val extension = if (source.isJava) "java" else "scala"
+    if (
+      source.isAmmoniteScript || !isTrivialToplevelSymbol(
+        path,
+        toplevel,
+        extension
+      )
+    ) {
       toplevels.updateWith(toplevel) {
         case Some(acc) => Some(acc + source)
         case None => Some(Set(source))
