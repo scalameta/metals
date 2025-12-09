@@ -263,6 +263,10 @@ val sharedJavaOptions = Seq(
   "--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
   "--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
   "--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+  // Ensure that all JVM-internal logging goes to stderr to avoid breaking the
+  // LSP protocol
+  "-XX:+DisplayVMOutputToStderr", "-Xlog:disable",
+  "-Xlog:all=warning,gc=warning:stderr",
 )
 
 val sharedScalacOptions = List(
