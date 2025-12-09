@@ -286,13 +286,27 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       def update(
           content: String
       ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
-        val adjustLspData = AdjustedLspData.create(fromScala)
+        val wrappedFilePath =
+          generatedPath.toNIO.toString.stripSuffix(".scala") + ".sc.scala"
+
+        val originalUri = sourceItem.getUri
+
+        def adjustUri(uri: String): String = {
+          val normalizedUri = uri.toAbsolutePath.toNIO.toString
+          if (normalizedUri == wrappedFilePath) {
+            originalUri
+          } else {
+            uri
+          }
+        }
+
+        val adjustLspData =
+          AdjustedLspData.create(fromScala, adjustUri = adjustUri)
         val updatedContent =
           sourceItem.getTopWrapper + content + sourceItem.getBottomWrapper
         (
           Input.VirtualFile(
-            generatedPath.toNIO.toString
-              .stripSuffix(".scala") + ".sc.scala",
+            wrappedFilePath,
             updatedContent,
           ),
           toScala,
