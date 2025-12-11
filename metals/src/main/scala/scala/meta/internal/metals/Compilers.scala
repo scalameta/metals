@@ -269,6 +269,63 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
+  /**
+   * Compile a file with the -explain flag to get detailed error explanations.
+   * This creates a temporary presentation compiler with the -explain option.
+   */
+  def compileWithExplain(path: AbsolutePath): Future[List[Diagnostic]] = {
+    buildTargets.inverseSources(path) match {
+      case Some(targetId) =>
+        buildTargets.scalaTarget(targetId) match {
+          case Some(scalaTarget)
+              if ScalaVersions.isScala3Version(scalaTarget.scalaVersion) =>
+            compileWithExplainForTarget(path, scalaTarget)
+          case Some(_) =>
+            // -explain is only available for Scala 3
+            Future.successful(Nil)
+          case None =>
+            Future.successful(Nil)
+        }
+      case None =>
+        Future.successful(Nil)
+    }
+  }
+
+  private def compileWithExplainForTarget(
+      path: AbsolutePath,
+      scalaTarget: ScalaTarget,
+  ): Future[List[Diagnostic]] = {
+    val scalaVersion = scalaTarget.scalaVersion
+    mtagsResolver.resolve(scalaVersion) match {
+      case Some(mtags) =>
+        val explainCompiler = ScalaLazyCompiler(
+          scalaTarget,
+          mtags,
+          search,
+          completionItemPriority(),
+          additionalOptions = Seq("-explain"),
+        )
+
+        val input = path.toInputFromBuffers(buffers)
+        val params = Compilers.DidChangeCompilerFileParams(
+          path.toNIO.toUri(),
+          input.value,
+          shouldReturnDiagnostics = true,
+        )
+        explainCompiler.await
+          .didChange(params)
+          .asScala
+          .map(_.asScala.toList)
+          .andThen { case _ =>
+            // Clean up the temporary compiler
+            explainCompiler.shutdown()
+          }
+
+      case None =>
+        Future.successful(Nil)
+    }
+  }
+
   def didChange(
       path: AbsolutePath,
       shouldReturnDiagnostics: Boolean,

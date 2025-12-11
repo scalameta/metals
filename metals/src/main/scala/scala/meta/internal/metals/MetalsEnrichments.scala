@@ -988,7 +988,10 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLsp: l.Diagnostic = {
+    def toLsp(
+        path: AbsolutePath,
+        isVirtualDocumentSupported: Boolean,
+    ): l.Diagnostic = {
       val ld = new l.Diagnostic(
         diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
@@ -996,10 +999,19 @@ object MetalsEnrichments
         else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
+      val explainUrl = FileDecoderProvider.createExplainURI(
+        path,
+        diag.getRange.toLsp.getStart.getLine(),
+        diag.getRange.toLsp.getStart.getCharacter(),
+      )
 
-      Option(diag.getCode()).foreach { code =>
-        ld.setCode(diag.getCode())
-      }
+      if (isVirtualDocumentSupported)
+        Option(diag.getCode()).foreach { code =>
+          ld.setCode("Explain the error")
+          ld.setCodeDescription(
+            new l.DiagnosticCodeDescription(explainUrl.toString())
+          )
+        }
 
       Option(diag.getTags()).foreach { tags =>
         val converted = tags.asScala.flatMap {

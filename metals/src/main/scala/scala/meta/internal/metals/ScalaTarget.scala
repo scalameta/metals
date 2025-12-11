@@ -32,6 +32,16 @@ case class ScalaTarget(
 
   def isSbt = sbtVersion.isDefined
 
+  /**
+   * Checks if the Scala version supports the explain diagnostic feature.
+   * Previous versions would not forward explanation from the presentation compiler.
+   */
+  def supportExplainDiagnostic: Boolean =
+    SemVer.isCompatibleVersion(
+      "3.8.1-RC1-bin-20260105-f08de70-NIGHTLY",
+      scalaVersion,
+    )
+
   def dialect(path: AbsolutePath): Dialect =
     if (info.isSbtBuild && path.isSbt) Sbt
     else scalaDialect
