@@ -8,18 +8,21 @@ import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
 final class CodeActionProvider(
     compilers: Compilers,
+    workspace: AbsolutePath,
     buffers: Buffers,
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
     trees: Trees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
+    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
 
   private val extractMemberAction =
@@ -31,6 +34,13 @@ final class CodeActionProvider(
     new SourceAddMissingImports(compilers, buildTargets, diagnostics),
     new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
+    new ExplainDiagnostic(
+      compilers,
+      workspace,
+      languageClient,
+      clientConfig,
+      buildTargets,
+    ),
     new StringActions(trees),
     new RemoveInfixRefactor(trees),
     extractMemberAction,
