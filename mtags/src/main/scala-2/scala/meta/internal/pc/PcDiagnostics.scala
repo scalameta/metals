@@ -161,6 +161,7 @@ trait PcDiagnostics {
       logger.debug(s"Applying refchecks phase to ${unit.source}")
       val oldBody = unit.body
       try {
+        applyPhase(currentTyperRun.phaseNamed("superaccessors"), unit)
         applyPhase(currentTyperRun.refchecksPhase, unit)
       } catch {
         case NonFatal(ex) =>
