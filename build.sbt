@@ -790,6 +790,11 @@ lazy val bench = project
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     buildInfoPackage := "bench",
+    libraryDependencies ++= List(
+      "org.scalameta" %% "semanticdb-scalac" % V.semanticdb(
+        scalaVersion.value
+      ) cross CrossVersion.full
+    ),
     Jmh / bspEnabled := false,
   )
   .dependsOn(unit)
