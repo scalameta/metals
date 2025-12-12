@@ -51,7 +51,7 @@ class ScalafixLlmRuleProvider(
         |//> using publish.organization "com.github.metals"
         |//> using publish.name "$ruleName"
         |//> using publish.version "0.1.0-SNAPSHOT"
-        |//> using test.resourceDir ./resources
+        |//> using resourceDir ./resources
         |
         |$ruleImplementation
         |
