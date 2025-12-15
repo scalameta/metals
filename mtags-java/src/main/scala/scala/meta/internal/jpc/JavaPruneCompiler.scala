@@ -90,39 +90,54 @@ class JavaPruneCompiler(
       // Critical! This enables our custom prune file manager
       "-sourcepath",
       "",
-      "-proc:none",
-      // javac internal packages
-      "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.resources=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
-      // com.sun.source public APIs (sometimes need explicit exports)
-      "--add-exports=jdk.compiler/com.sun.source.doctree=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.source.tree=ALL-UNNAMED",
-      "--add-exports=jdk.compiler/com.sun.source.util=ALL-UNNAMED",
-      // java.base internal utilities
-      "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED",
-      "--add-exports=java.base/jdk.internal.reflect=ALL-UNNAMED",
-      "--add-exports=java.base/jdk.internal.loader=ALL-UNNAMED",
-      "--add-exports=java.base/sun.security.util=ALL-UNNAMED",
-      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
-      // javadoc tools
-      "--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED",
-      "--add-exports=jdk.javadoc/com.sun.tools.javadoc.main=ALL-UNNAMED"
+      "-proc:none"
     )
+    val processedExtraOptions = processExtraOptions(extraOptions, files)
+    val sourceVersion = processedExtraOptions.zipWithIndex
+      .findLast { case (option, _) => "-source" == option }
+      .flatMap { case (_, index) => processedExtraOptions.lift(index + 1) }
+    val targetVersion = processedExtraOptions.zipWithIndex
+      .findLast { case (option, _) => "-target" == option }
+      .flatMap { case (_, index) => processedExtraOptions.lift(index + 1) }
+    val exportOptions = (sourceVersion, targetVersion) match {
+      case (Some(version), _) if version == "8" => Nil
+      case (_, Some(version)) if version == "8" => Nil
+      case _ =>
+        List(
+          // javac internal packages
+          "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.resources=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+          // com.sun.source public APIs (sometimes need explicit exports)
+          "--add-exports=jdk.compiler/com.sun.source.doctree=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.source.tree=ALL-UNNAMED",
+          "--add-exports=jdk.compiler/com.sun.source.util=ALL-UNNAMED",
+          // java.base internal utilities
+          "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED",
+          "--add-exports=java.base/jdk.internal.reflect=ALL-UNNAMED",
+          "--add-exports=java.base/jdk.internal.loader=ALL-UNNAMED",
+          "--add-exports=java.base/sun.security.util=ALL-UNNAMED",
+          "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+          // javadoc tools
+          "--add-exports=jdk.javadoc/jdk.javadoc.internal.tool=ALL-UNNAMED",
+          "--add-exports=jdk.javadoc/com.sun.tools.javadoc.main=ALL-UNNAMED"
+        )
+    }
+    options ++= exportOptions
     if (finalClasspath.nonEmpty) {
       options += "-classpath"
       options += finalClasspath.mkString(File.pathSeparator)
     }
-    options ++= processExtraOptions(extraOptions, files)
+    options ++= processedExtraOptions
     // Add --patch-module option if we're compiling sources from the JDK.
     for {
       file <- files
