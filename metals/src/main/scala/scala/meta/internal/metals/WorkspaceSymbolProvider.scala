@@ -5,6 +5,8 @@ import java.nio.file.Path
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
@@ -267,7 +269,27 @@ final class WorkspaceSymbolProvider(
         SymbolDefinitionOrdering.fromOptPath(fileInFocus),
       )
     search(query, visitor, None)
-    visitor.allResults()
+    val results = visitor.allMutableResults()
+    rankResults(results)
+    results.toSeq
+  }
+
+  private def rankResults(
+      results: mutable.Buffer[l.SymbolInformation]
+  ): Unit = {
+    results.asJava.sort((a, b) =>
+      if (
+        a.getLocation().getUri().endsWith(".proto") &&
+        b.getLocation().getUri().endsWith(".proto")
+      ) {
+        // Special case for Proto files so that results from `DIR/latest.proto`
+        // ranks higher than ambiguous results from
+        // `DIR/version_history/vX.proto`.
+        a.getLocation().getUri().compareTo(b.getLocation().getUri())
+      } else {
+        0
+      }
+    )
   }
 
   class PreferredScalaVersionOrdering(preferredScalaVersions: Set[String])

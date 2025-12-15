@@ -41,6 +41,9 @@ class WorkspaceSearchVisitor(
   private val fromClasspath = new ConcurrentLinkedQueue[l.SymbolInformation]()
   private val bufferedClasspath = new ConcurrentLinkedQueue[(String, String)]()
   def allResults(): Seq[l.SymbolInformation] = {
+    allMutableResults().toSeq
+  }
+  def allMutableResults(): mutable.Buffer[l.SymbolInformation] = {
     if (fromWorkspace.isEmpty) {
       bufferedClasspath.forEach { case (pkg, name) =>
         expandClassfile(pkg, name)
@@ -52,7 +55,7 @@ class WorkspaceSearchVisitor(
     val sortedFromClasspath =
       fromClasspath.asScala.toBuffer.sorted(byNameLength)
 
-    val result = Seq.newBuilder[l.SymbolInformation]
+    val result = mutable.Buffer.empty[l.SymbolInformation]
     result ++= sortedFromWorkspace
     result ++= sortedFromClasspath
 
@@ -75,7 +78,7 @@ class WorkspaceSearchVisitor(
         ),
       )
     }
-    result.result()
+    result
   }
   private val byNameLength = Ordering.by[l.SymbolInformation, Int](info =>
     if (info.getName() == null) Int.MaxValue else info.getName().length()
