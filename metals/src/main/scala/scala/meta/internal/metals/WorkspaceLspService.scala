@@ -834,7 +834,7 @@ class WorkspaceLspService(
         }
         uri match {
           case Some(u) =>
-            (for {
+            val connectFuture = (for {
               _ <- getServiceFor(u).sync(u)
               // NOTE(olafurpg): Trigger a "Connect to build server" here so
               // that this command returns only once we have successfully
@@ -846,6 +846,13 @@ class WorkspaceLspService(
                 ServerCommands.ConnectBuildServer.toExecuteCommandParams()
               ).asScala
             } yield ()).asJavaObject
+
+            if (Testing.isEnabled) connectFuture
+            // In non-testing mode, return immediately from the command to work
+            // around arbitrary timeouts in the LSP client. For example, the
+            // Helix LSP client reports an error if the sync takes more than 30
+            // seconds to run.
+            else Future.unit.asJavaObject
           case None =>
             scribe.warn(
               s"file-sync: failed to infer a URI from the provided params ($params). To fix this problem, edit the file you want to sync and try again."
