@@ -11,6 +11,7 @@ import scala.meta.pc.ContentType
 import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 import scala.meta.pc.SourcePathMode
 
 case class PresentationCompilerConfigImpl(
@@ -42,7 +43,9 @@ case class PresentationCompilerConfigImpl(
     override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED,
     override val shouldRunRefchecks: Boolean = false,
     override val javacServicesOverrides: JavacServicesOverridesConfig =
-      JavacServicesOverridesConfig.EMPTY
+      JavacServicesOverridesConfig.EMPTY,
+    override val scalaImportsPlacement: ScalaImportsPlacement =
+      ScalaImportsPlacement.APPEND_LAST
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

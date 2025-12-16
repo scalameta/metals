@@ -18,6 +18,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 
 import coursierapi.Dependency
 import coursierapi.Fetch
@@ -82,7 +83,8 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
 
   protected def config: PresentationCompilerConfig =
     PresentationCompilerConfigImpl().copy(
-      snippetAutoIndent = false
+      snippetAutoIndent = false,
+      scalaImportsPlacement = ScalaImportsPlacement.SMART
     )
 
   protected def extraDependencies(scalaVersion: String): Seq[Dependency] =

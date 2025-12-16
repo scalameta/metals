@@ -46,6 +46,14 @@ public interface PresentationCompilerConfig {
     Unicode
   }
 
+  /** Strategy for placing Scala imports when auto-importing symbols. */
+  enum ScalaImportsPlacement {
+    /** Append imports at the end of the import block. */
+    APPEND_LAST,
+    /** Place imports intelligently based on prefix matching and alphabetical order. */
+    SMART
+  }
+
   /** Returns true if the <code>CompletionItem.detail</code> field should be populated. */
   boolean isCompletionItemDetailEnabled();
 
@@ -124,5 +132,10 @@ public interface PresentationCompilerConfig {
 
   default JavacServicesOverridesConfig javacServicesOverrides() {
     return JavacServicesOverridesConfig.EMPTY;
+  }
+
+  /** Returns the Scala import placement strategy. */
+  default ScalaImportsPlacement scalaImportsPlacement() {
+    return ScalaImportsPlacement.APPEND_LAST;
   }
 }

@@ -408,6 +408,7 @@ class CompilerConfiguration(
             ),
             shouldRunRefchecks = shouldRunRefchecks,
             javacServicesOverrides = userConfig().javacServicesOverrides,
+            scalaImportsPlacement = userConfig().scalaImportsPlacement,
           )
       }
 

@@ -677,6 +677,37 @@ object Configs {
     }
   }
 
+  object ScalaImportsPlacementConfig {
+    import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
+    def appendLast: ScalaImportsPlacement = ScalaImportsPlacement.APPEND_LAST
+    def smart: ScalaImportsPlacement = ScalaImportsPlacement.SMART
+    def default: ScalaImportsPlacement = appendLast
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, ScalaImportsPlacement] = {
+      value match {
+        case Some("append-last") =>
+          Right(ScalaImportsPlacement.APPEND_LAST)
+        case Some("smart") =>
+          Right(ScalaImportsPlacement.SMART)
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for scalaImportsPlacement. Valid values are \"append-last\" and \"smart\""
+          )
+        case None =>
+          val isSmartEnabled = featureFlags
+            .readBoolean(FeatureFlag.SMART_SCALA_IMPORT_PLACEMENT)
+            .orElse(false)
+          if (isSmartEnabled) {
+            Right(ScalaImportsPlacement.SMART)
+          } else {
+            Right(default)
+          }
+      }
+    }
+  }
+
   object SourcePathConfig {
 
     def fromConfigOrFeatureFlag(

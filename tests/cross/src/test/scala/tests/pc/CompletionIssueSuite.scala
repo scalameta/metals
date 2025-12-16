@@ -108,6 +108,8 @@ class CompletionIssueSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
+  // Note: With intelligent import placement, Norway is added to the existing
+  // grouped import {Sweden, USA} alphabetically, becoming {Norway, Sweden, USA}
   checkEdit(
     "issue-783",
     """
@@ -131,10 +133,10 @@ class CompletionIssueSuite extends BaseCompletionSuite {
       |}""".stripMargin,
     """|package all
        |import all.World.Countries.{
+       |  Norway,
        |  Sweden,
        |  USA
        |}
-       |import all.World.Countries.Norway
        |
        |object World {
        |  object Countries{

@@ -20,12 +20,14 @@ import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
+import scala.meta.internal.metals.Configs.ScalaImportsPlacementConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
+import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
@@ -101,6 +103,8 @@ case class UserConfiguration(
       ReferenceProviderConfig.default,
     additionalPcChecks: AdditionalPcChecksConfig =
       AdditionalPcChecksConfig.default,
+    scalaImportsPlacement: ScalaImportsPlacement =
+      ScalaImportsPlacementConfig.default,
 ) {
 
   override def toString(): String = {
@@ -273,6 +277,12 @@ case class UserConfiguration(
         listField(
           "additionalPcChecks",
           Some(additionalPcChecks.values),
+        ),
+        Some(
+          (
+            "scalaImportsPlacement",
+            scalaImportsPlacement.name().toLowerCase().replace("_", "-"),
+          )
         ),
       ).flatten
     )
@@ -1081,6 +1091,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(AdditionalPcChecksConfig.default)
+    val scalaImportsPlacement = getParsedKey(
+      "scala-imports-placement",
+      value =>
+        ScalaImportsPlacementConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(ScalaImportsPlacementConfig.default)
 
     if (errors.isEmpty) {
       Right(
@@ -1134,6 +1152,7 @@ object UserConfiguration {
           compilerProgress,
           referenceProvider,
           additionalPcChecks,
+          scalaImportsPlacement,
         )
       )
     } else {

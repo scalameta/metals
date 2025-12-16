@@ -32,6 +32,14 @@ trait Signatures { compiler: MetalsGlobal =>
 
   object ShortenedNames {
 
+    import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
+
+    /**
+     * Check if intelligent import placement should be used based on config.
+     */
+    def useIntelligentImportPlacement: Boolean =
+      metalsConfig.scalaImportsPlacement() == ScalaImportsPlacement.SMART
+
     /**
      * Pretty-prints a type at a given position/context with optional auto-imports.
      *
@@ -70,12 +78,28 @@ trait Signatures { compiler: MetalsGlobal =>
     )(implicit queryInfo: PcQueryContext): (String, List[l.TextEdit]) = {
       if (scope.symbolIsInScope(sym)) (Identifier(sym.name), Nil)
       else if (!scope.nameIsInScope(sym.name)) {
-        val startPos = pos.withPoint(importPosition.offset).focus
+        val fqn = sym.fullNameSyntax
         val indent = " " * importPosition.indent
-        val edit = new l.TextEdit(
-          startPos.toLsp,
-          s"${indent}import ${sym.fullNameSyntax}\n"
-        )
+        val text = pos.source.content.mkString
+
+        val edit = importPosition.importRange match {
+          case Some((rangeStart, rangeEnd)) if useIntelligentImportPlacement =>
+            // Use intelligent import placement
+            val organizer =
+              new ScalaImportOrganizer(text, rangeStart, rangeEnd, indent)
+            organizer.textEdit(fqn).getOrElse {
+              // Fallback: import already exists or couldn't be placed
+              val startPos = pos.withPoint(importPosition.offset).focus
+              new l.TextEdit(startPos.toLsp, s"${indent}import $fqn\n")
+            }
+          case _ =>
+            // No existing imports or feature disabled, use default position
+            // Note: We don't add topPadding here because multiple symbols may
+            // be processed independently, and padding should only be added once.
+            // The caller is responsible for combining edits appropriately.
+            val startPos = pos.withPoint(importPosition.offset).focus
+            new l.TextEdit(startPos.toLsp, s"${indent}import $fqn\n")
+        }
         (Identifier(sym.name), edit :: Nil)
       } else {
         // HACK(olafur): we're using a type pretty-printer to pretty-print term objects here.
@@ -217,13 +241,80 @@ trait Signatures { compiler: MetalsGlobal =>
         pos: Position,
         autoImportPosition: AutoImportPosition
     ): List[l.TextEdit] = {
-      autoImports(
-        pos,
-        compiler.doLocateImportContext(pos, Some(autoImportPosition)),
-        autoImportPosition.offset,
-        autoImportPosition.indent,
-        autoImportPosition.padTop
+      val context =
+        compiler.doLocateImportContext(pos, Some(autoImportPosition))
+      val isRootSymbol = Set[Symbol](
+        rootMirror.RootClass,
+        rootMirror.RootPackage
       )
+
+      // Collect symbols that need to be imported
+      val toImport = mutable.Map.empty[Symbol, List[ShortName]]
+      for {
+        (name, sym) <- history.iterator
+        owner = sym.owner
+        if !isRootSymbol(owner) && owner != NoSymbol
+        if !context.lookupSymbol(name, _ => true).isSuccess
+      } {
+        toImport(owner) = sym :: toImport.getOrElse(owner, Nil)
+      }
+
+      if (toImport.isEmpty) return Nil
+
+      val indent = " " * autoImportPosition.indent
+      val text = pos.source.content.mkString
+
+      // For single, simple imports with existing imports, use intelligent placement
+      autoImportPosition.importRange match {
+        case Some((rangeStart, rangeEnd))
+            if ShortenedNames.useIntelligentImportPlacement &&
+              toImport.size == 1 && toImport.head._2.size == 1 && !toImport.head._2.head.isRename =>
+          val (owner, names) = toImport.head
+          val scope = new ShortenedNames(context)
+          val fqn = s"${scope.fullname(owner)}.${names.head.asImport}"
+          val organizer =
+            new ScalaImportOrganizer(text, rangeStart, rangeEnd, indent)
+          organizer.textEdit(fqn) match {
+            case Some(edit) => List(edit)
+            case None =>
+              // Fallback to default behavior
+              autoImportsDefault(pos, context, autoImportPosition, toImport)
+          }
+        case _ =>
+          // Use default behavior for complex cases or when feature is disabled
+          autoImportsDefault(pos, context, autoImportPosition, toImport)
+      }
+    }
+
+    // Default import generation (appends at the end of imports)
+    private def autoImportsDefault(
+        pos: Position,
+        context: Context,
+        autoImportPosition: AutoImportPosition,
+        toImport: mutable.Map[Symbol, List[ShortName]]
+    ): List[l.TextEdit] = {
+      val indent = " " * autoImportPosition.indent
+      val topPadding =
+        if (autoImportPosition.padTop) "\n"
+        else ""
+      val scope = new ShortenedNames(context)
+      val formatted = toImport.toSeq
+        .sortBy { case (owner, _) =>
+          owner.fullName
+        }
+        .map { case (owner, names) =>
+          val isGroup =
+            names.lengthCompare(1) > 0 ||
+              names.exists(_.isRename)
+          val importNames = names.map(_.asImport).sorted
+          val name =
+            if (isGroup) importNames.mkString("{", ", ", "}")
+            else importNames.mkString
+          s"${indent}import ${scope.fullname(owner)}.${name}"
+        }
+        .mkString(topPadding, "\n", "\n")
+      val startPos = pos.withPoint(autoImportPosition.offset).focus
+      new l.TextEdit(startPos.toLsp, formatted) :: Nil
     }
 
     // Returns the list of text edits to insert imports for symbols that got shortened.

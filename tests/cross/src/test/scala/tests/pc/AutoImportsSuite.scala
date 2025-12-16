@@ -256,6 +256,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // Note: Simple imports are appended after existing imports
   checkEdit(
     "multiple-packages-existing-imports",
     """|package a
@@ -293,6 +294,387 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |
        |object A {
        |  import scala.concurrent.ExecutionContext.global
+       |}
+       |""".stripMargin
+  )
+
+  // Tests for intelligent import placement (appended within section)
+  checkEdit(
+    "intelligent-placement-append",
+    """|package a
+       |
+       |import java.util.concurrent.TimeUnit
+       |import scala.collection.mutable.Set
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.concurrent.TimeUnit
+       |import scala.collection.mutable.Set
+       |import scala.collection.mutable.ListBuffer
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // ===== GROUPED IMPORTS: SINGLE-LINE =====
+
+  // Test inserting FIRST in single-line group: {A, B} -> {NewFirst, A, B}
+  checkEdit(
+    "grouped-single-line-first",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer, Set}
+       |
+       |object A {
+       |  val l = <<ArrayBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer, Buffer, Set}
+       |
+       |object A {
+       |  val l = ArrayBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Test inserting MIDDLE in single-line group: {A, C} -> {A, B, C}
+  checkEdit(
+    "grouped-single-line-middle",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Test inserting LAST in single-line group: {A, B} -> {A, B, C}
+  checkEdit(
+    "grouped-single-line-last",
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer, Buffer}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer, Buffer, ListBuffer}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // ===== GROUPED IMPORTS: MULTILINE =====
+
+  // Test inserting FIRST in multiline group
+  checkEdit(
+    "grouped-multiline-first",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = <<ArrayBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = ArrayBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Test inserting MIDDLE in multiline group
+  checkEdit(
+    "grouped-multiline-middle",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer,
+       |  ListBuffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Test inserting LAST in multiline group (handles comma insertion)
+  checkEdit(
+    "grouped-multiline-last",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  ListBuffer
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // ===== BLANK-LINE SEPARATED SECTIONS =====
+
+  // Test picking the java section when importing java.* (appends to section)
+  checkEdit(
+    "section-java",
+    """|package a
+       |
+       |import java.util.concurrent.TimeUnit
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.Buffer
+       |
+       |object A {
+       |  val uuid = <<UUID>>.randomUUID()
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.concurrent.TimeUnit
+       |import java.util.UUID
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.Buffer
+       |
+       |object A {
+       |  val uuid = UUID.randomUUID()
+       |}
+       |""".stripMargin
+  )
+
+  // Test picking the scala section when importing scala.* (appends to section)
+  checkEdit(
+    "section-scala",
+    """|package a
+       |
+       |import java.util.UUID
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.Buffer
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.UUID
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.Buffer
+       |import scala.collection.mutable.ListBuffer
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Test with sections and grouped imports - add to existing group
+  checkEdit(
+    "section-with-grouped",
+    """|package a
+       |
+       |import java.util.{List, Map}
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.{Buffer, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import java.util.{List, Map}
+       |
+       |import scala.concurrent.Future
+       |import scala.collection.mutable.{Buffer, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Bug: javax import should NOT be placed after scala imports
+  // When no matching section exists, it should be placed in a sensible location
+  checkEdit(
+    "different-toplevel-package",
+    """|package a
+       |
+       |import scala.jdk.CollectionConverters._
+       |import scala.util.Failure
+       |import scala.util.Success
+       |import scala.util.control.NonFatal
+       |
+       |object A {
+       |  val x = <<ObjectName>>("test:type=Test")
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import javax.management.ObjectName
+       |import scala.jdk.CollectionConverters._
+       |import scala.util.Failure
+       |import scala.util.Success
+       |import scala.util.control.NonFatal
+       |
+       |object A {
+       |  val x = ObjectName("test:type=Test")
+       |}
+       |""".stripMargin
+  )
+
+  // Bug: scala.* should be placed alphabetically (after org.*), not at the top
+  checkEdit(
+    "no-prefix-match-alphabetical",
+    """|package a
+       |
+       |import com.example.Util
+       |import java.util.UUID
+       |import org.apache.logging.Logger
+       |
+       |object A {
+       |  val r = <<Random>>.nextInt()
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import com.example.Util
+       |import java.util.UUID
+       |import org.apache.logging.Logger
+       |import scala.util.Random
+       |
+       |object A {
+       |  val r = Random.nextInt()
+       |}
+       |""".stripMargin
+  )
+
+  // Bug: java.util.UUID should be placed near java.util.Random, not at the end
+  checkEdit(
+    "same-prefix-different-section",
+    """|package a
+       |
+       |import com.example.Util
+       |import com.example.client.{
+       |  ClientA,
+       |  ClientB,
+       |  ClientC
+       |}
+       |import java.util.Random
+       |import org.apache.logging.Logger
+       |
+       |object A {
+       |  val uuid = <<UUID>>.randomUUID()
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import com.example.Util
+       |import com.example.client.{
+       |  ClientA,
+       |  ClientB,
+       |  ClientC
+       |}
+       |import java.util.Random
+       |import java.util.UUID
+       |import org.apache.logging.Logger
+       |
+       |object A {
+       |  val uuid = UUID.randomUUID()
+       |}
+       |""".stripMargin
+  )
+
+  // ===== GROUPED IMPORTS: EDGE CASES =====
+
+  // Test with trailing comma style (common in some codebases)
+  checkEdit(
+    "grouped-multiline-trailing-comma",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer,
+       |  Set,
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer,
+       |  ListBuffer,
+       |  Set,
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
        |}
        |""".stripMargin
   )

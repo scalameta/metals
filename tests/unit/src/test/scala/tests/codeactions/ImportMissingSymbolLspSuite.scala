@@ -104,6 +104,7 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
   )
 
+  // Note: When importing multiple symbols, each is added relative to existing imports
   check(
     "multi-across-lines-non-ambiguous",
     """|package a
@@ -233,6 +234,7 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
   )
 
+  // Import added after existing import
   check(
     "i5567",
     """package p {

@@ -47,15 +47,23 @@ trait AutoImports { this: MetalsGlobal =>
             if pkg.symbol != rootMirror.EmptyPackage ||
               pkg.stats.headOption.exists(_.isInstanceOf[Import])
           } yield {
-            val lastImportOpt = pkg.stats
-              .takeWhile(_.isInstanceOf[Import])
-              .lastOption
+            val imports = pkg.stats.takeWhile(_.isInstanceOf[Import])
+            val lastImportOpt = imports.lastOption
             val padTop = lastImportOpt.isEmpty
             val lastImportOrPkg = lastImportOpt.getOrElse(pkg.pid)
+
+            // Calculate the import range for intelligent placement
+            val importRange = if (imports.nonEmpty) {
+              Some((imports.head.pos.start, imports.last.pos.end))
+            } else {
+              None
+            }
+
             new AutoImportPosition(
               pos.source.lineToOffset(lastImportOrPkg.pos.focusEnd.line),
               text,
-              padTop
+              padTop,
+              importRange
             )
           }
 

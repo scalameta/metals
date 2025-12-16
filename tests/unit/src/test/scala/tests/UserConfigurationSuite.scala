@@ -23,6 +23,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 
 import munit.Location
 import org.eclipse.lsp4j.InitializeParams
@@ -345,6 +346,7 @@ class UserConfigurationSuite extends BaseSuite {
       scalaCliEnabled = true,
       defaultBspToBuildTool = true,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
+      scalaImportsPlacement = ScalaImportsPlacement.SMART,
     )
 
     val json = nonDefault.toString()
@@ -431,7 +433,8 @@ class UserConfigurationSuite extends BaseSuite {
   "referenceProvider": "bsp",
   "additionalPcChecks": [
     "refchecks"
-  ]
+  ],
+  "scalaImportsPlacement": "smart"
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)

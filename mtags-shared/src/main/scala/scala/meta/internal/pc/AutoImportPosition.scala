@@ -9,15 +9,31 @@ import scala.annotation.tailrec
  * @param indent the indentation at which to place the import.
  * @param padTop whether the import needs to be padded on top
  *               in the case that it is the first one after the package def
+ * @param importRange optional range of existing imports for intelligent placement.
+ *                    First element is start offset, second is end offset.
  */
 case class AutoImportPosition(
     offset: Int,
     indent: Int,
-    padTop: Boolean
+    padTop: Boolean,
+    importRange: Option[(Int, Int)] = None
 ) {
 
   def this(offset: Int, text: String, padTop: Boolean) =
-    this(offset, AutoImportPosition.inferIndent(offset, text), padTop)
+    this(offset, AutoImportPosition.inferIndent(offset, text), padTop, None)
+
+  def this(
+      offset: Int,
+      text: String,
+      padTop: Boolean,
+      importRange: Option[(Int, Int)]
+  ) =
+    this(
+      offset,
+      AutoImportPosition.inferIndent(offset, text),
+      padTop,
+      importRange
+    )
 }
 
 object AutoImportPosition {

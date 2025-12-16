@@ -74,4 +74,10 @@ public enum FeatureFlag {
   JAVAC_OVERRIDE_ATTR,
   JAVAC_OVERRIDE_TYPE_ENTER,
   JAVAC_OVERRIDE_ENTER,
+
+  /**
+   * If enabled, Scala imports are placed intelligently based on prefix matching and alphabetical
+   * order, rather than simply appending to the end of the import block.
+   */
+  SMART_SCALA_IMPORT_PLACEMENT,
 }
