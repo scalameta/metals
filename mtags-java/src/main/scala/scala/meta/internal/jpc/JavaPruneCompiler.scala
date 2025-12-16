@@ -16,6 +16,7 @@ import scala.meta.pc
 import com.sun.source.util.JavacTask
 import com.sun.tools.javac.api.JavacTool
 import com.sun.tools.javac.util.Context
+import com.sun.tools.javac.util.Names
 import net.jpountz.xxhash.StreamingXXHash64
 import net.jpountz.xxhash.XXHashFactory
 import org.slf4j.Logger
@@ -40,7 +41,8 @@ class JavaPruneCompiler(
     val reportsLevel: ReportLevel,
     val semanticdbFileManager: pc.SemanticdbFileManager,
     embedded: pc.EmbeddedClient,
-    progressBars: pc.ProgressBars
+    progressBars: pc.ProgressBars,
+    servicesOverrides: pc.JavacServicesOverridesConfig
 ) extends Closeable {
 
   private val isDebugEnabled = reportsLevel == ReportLevel.Debug
@@ -237,14 +239,51 @@ class JavaPruneCompiler(
     batchCompileTask(List(params), classpath, extraOptions)
   }
 
+  /**
+   * Creates a new context with minimal pre-registration.
+   * Only SharedNames is registered before getTask() - following NetBeans' pattern
+   * where most custom components are registered AFTER getTask() when the
+   * classpath is already configured.
+   */
   private def hotContext(): Context = {
     val context = new Context()
-    // Pre-register shared Names first (before any other component requests it)
-    SharedNames.preRegister(context)
-    // Pre-register SafeAttr to handle additional exceptions during attribution
-    SafeAttr.preRegister(context)
-    // PruneTodo.preRegister(context)
+    try {
+      // Only register SharedNames before getTask() - this is safe because
+      // Names doesn't depend on classpath configuration
+      if (servicesOverrides.names()) {
+        context.put(Names.namesKey, JavaPruneCompiler.sharedNames)
+      }
+    } catch {
+      case _: IllegalAccessError =>
+        logger.warn(
+          "Failed to pre-register SharedNames. To fix this problem, make sure you include all the required --add-exports VM options. The full list is defined in META-INF/metals-required-vm-options.txt"
+        )
+    }
     context
+  }
+
+  /**
+   * Registers custom compiler components AFTER getTask() has been called.
+   * This follows NetBeans' pattern where components like NBAttr are registered
+   * after the compiler is initialized with the classpath.
+   */
+  private def postRegisterComponents(context: Context): Unit = {
+    try {
+      if (servicesOverrides.attr()) {
+        SafeAttr.preRegister(context)
+      }
+      if (servicesOverrides.typeEnter()) {
+        SafeTypeEnter.preRegister(context)
+      }
+      if (servicesOverrides.enter()) {
+        SafeEnter.preRegister(context)
+      }
+    } catch {
+      case _: IllegalAccessError =>
+        logger.warn(
+          "Failed to pre-register safe compiler components. To fix this problem, make sure you include all the required --add-exports VM options. The full list is defined in META-INF/metals-required-vm-options.txt"
+        )
+    }
   }
 
   def batchCompileTask(
@@ -263,6 +302,7 @@ class JavaPruneCompiler(
     val store = new JavaCompileTaskListener()
     val options = compileOptions(files, classpath, extraOptions)
     cache.getTask(options, files.map(_.source)) {
+      val context = hotContext()
       val task =
         try
           compiler.getTask(
@@ -272,7 +312,7 @@ class JavaPruneCompiler(
             options.asJava,
             null,
             files.map(_.source).asJava,
-            hotContext()
+            context
           )
         catch {
           case e: RuntimeException
@@ -285,6 +325,8 @@ class JavaPruneCompiler(
             // which is what happens when we throw this exception.
             throw new DuplicatePatchModuleException(e)
         }
+      // Register custom components AFTER getTask() when classpath is configured
+      postRegisterComponents(context)
       // Log reported diagnostics *before* we even parse. These are usually high-signal
       store.diagnostics.iterator.foreach { diagnostic =>
         logger.warn(
@@ -364,4 +406,10 @@ class JavaPruneCompiler(
     options.result()
   }
 
+}
+
+object JavaPruneCompiler {
+  val sharedNames: Names = new Names(new Context()) {
+    override def dispose(): Unit = ()
+  }
 }

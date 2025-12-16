@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.ContentType
+import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.meta.pc.SourcePathMode
@@ -39,7 +40,9 @@ case class PresentationCompilerConfigImpl(
     override val workspaceRoot: Path =
       Paths.get(System.getProperty("user.dir")),
     override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED,
-    override val shouldRunRefchecks: Boolean = false
+    override val shouldRunRefchecks: Boolean = false,
+    override val javacServicesOverrides: JavacServicesOverridesConfig =
+      JavacServicesOverridesConfig.EMPTY
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

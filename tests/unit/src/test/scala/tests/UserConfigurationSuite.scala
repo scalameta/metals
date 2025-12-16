@@ -11,6 +11,7 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
+import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
@@ -333,6 +334,8 @@ class UserConfigurationSuite extends BaseSuite {
       fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
       testUserInterface = TestUserInterfaceKind.TestExplorer,
       javaFormatConfig = Some(JavaFormatConfig(fakePath, Some("profile"))),
+      javacServicesOverrides =
+        JavacServicesOverrides.default.copy(names = false),
       scalafixRulesDependencies = List("rule1", "rule2"),
       customProjectRoot = Some("customs"),
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
@@ -418,6 +421,12 @@ class UserConfigurationSuite extends BaseSuite {
   "definitionProviders": [],
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
+  "javacServicesOverrides": {
+    "names": false,
+    "attr": true,
+    "typeEnter": true,
+    "enter": true
+  },
   "compilerProgress": "disabled",
   "referenceProvider": "bsp",
   "additionalPcChecks": [

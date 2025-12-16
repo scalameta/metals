@@ -17,6 +17,7 @@ import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
+import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
@@ -93,6 +94,8 @@ case class UserConfiguration(
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
+    javacServicesOverrides: JavacServicesOverrides =
+      JavacServicesOverrides.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
     referenceProvider: ReferenceProviderConfig =
       ReferenceProviderConfig.default,
@@ -247,6 +250,12 @@ case class UserConfiguration(
           (
             "javaOutlineProvider",
             javaOutlineProvider.value,
+          )
+        ),
+        Some(
+          (
+            "javacServicesOverrides",
+            javacServicesOverrides,
           )
         ),
         Some(
@@ -1035,6 +1044,19 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaOutlineProviderConfig.default)
+    val javacServicesOverrides =
+      getKey(
+        "javac-services-overrides",
+        json,
+        { element =>
+          JavacServicesOverrides.fromJson(element) match {
+            case Right(ok) => Some(ok)
+            case Left(error) =>
+              errors += s"json error: $error"
+              None
+          }
+        },
+      ).getOrElse(JavacServicesOverrides.defaultFromFeatureFlags(featureFlags))
     val compilerProgress = getParsedKey(
       "compiler-progress",
       value =>
@@ -1108,6 +1130,7 @@ object UserConfiguration {
           definitionProviders,
           definitionIndexStrategy,
           javaOutlineProvider,
+          javacServicesOverrides,
           compilerProgress,
           referenceProvider,
           additionalPcChecks,

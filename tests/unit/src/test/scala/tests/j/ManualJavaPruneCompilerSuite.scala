@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.ProgressBars
 
 import org.slf4j.LoggerFactory
@@ -33,6 +34,7 @@ class ManualJavaPruneCompilerSuite extends munit.FunSuite {
       semanticdbFileManager = mbt,
       embedded = embedded,
       progressBars = ProgressBars.EMPTY,
+      servicesOverrides = JavacServicesOverridesConfig.EMPTY,
     )
 
     val path = root.resolve(

@@ -121,4 +121,8 @@ public interface PresentationCompilerConfig {
   default boolean shouldRunRefchecks() {
     return false;
   }
+
+  default JavacServicesOverridesConfig javacServicesOverrides() {
+    return JavacServicesOverridesConfig.EMPTY;
+  }
 }

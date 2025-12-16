@@ -68,4 +68,10 @@ public enum FeatureFlag {
    * server.
    */
   BUILD_SERVER_JAVAC_OPTIONS,
+
+  /** If enabled, mtags-java will override the following services inside the Java compiler. */
+  JAVAC_OVERRIDE_NAMES,
+  JAVAC_OVERRIDE_ATTR,
+  JAVAC_OVERRIDE_TYPE_ENTER,
+  JAVAC_OVERRIDE_ENTER,
 }

@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.util.Properties
 
 import scala.annotation.nowarn
+import scala.collection.mutable.Buffer
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
@@ -14,6 +15,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.meta.pc.SourcePathMode
 
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
@@ -390,6 +392,84 @@ object Configs {
           } else {
             Right(JavaOutlineProviderConfig.default)
           }
+      }
+    }
+  }
+
+  case class JavacServicesOverrides(
+      names: Boolean,
+      attr: Boolean,
+      typeEnter: Boolean,
+      enter: Boolean,
+  ) extends scala.meta.pc.JavacServicesOverridesConfig
+
+  object JavacServicesOverrides {
+    def default: JavacServicesOverrides =
+      JavacServicesOverrides(
+        names = true,
+        attr = true,
+        typeEnter = true,
+        enter = true,
+      )
+
+    def defaultFromFeatureFlags(
+        featureFlags: FeatureFlagProvider
+    ): JavacServicesOverrides =
+      JavacServicesOverrides(
+        names = featureFlags
+          .readBoolean(FeatureFlag.JAVAC_OVERRIDE_NAMES)
+          .orElse(default.names),
+        attr = featureFlags
+          .readBoolean(FeatureFlag.JAVAC_OVERRIDE_ATTR)
+          .orElse(default.attr),
+        typeEnter = featureFlags
+          .readBoolean(FeatureFlag.JAVAC_OVERRIDE_TYPE_ENTER)
+          .orElse(default.typeEnter),
+        enter = featureFlags
+          .readBoolean(FeatureFlag.JAVAC_OVERRIDE_ENTER)
+          .orElse(default.enter),
+      )
+
+    def fromJson(
+        element: JsonElement
+    ): Either[String, JavacServicesOverrides] = {
+      if (!element.isJsonObject()) {
+        Left(
+          s"invalid config value '$element' for javacServicesOverrides. Valid values are an object"
+        )
+      }
+      val obj = element.getAsJsonObject()
+      val errors = Buffer.empty[String]
+      def requireBoolean(
+          value: JsonElement,
+          name: String,
+          defaultValue: Boolean,
+      ): Boolean = {
+        if (value == null || value.isJsonNull()) {
+          defaultValue
+        } else if (
+          value.isJsonPrimitive() &&
+          value.getAsJsonPrimitive().isBoolean()
+        ) {
+          value.getAsJsonPrimitive().getAsBoolean()
+        } else {
+          errors.append(
+            s"invalid config value for key '$name': $value. Valid values are \"true\" and \"false\""
+          )
+          false
+        }
+      }
+      val result = JavacServicesOverrides(
+        names = requireBoolean(obj.get("names"), "names", default.names),
+        attr = requireBoolean(obj.get("attr"), "attr", default.attr),
+        typeEnter =
+          requireBoolean(obj.get("typeEnter"), "typeEnter", default.typeEnter),
+        enter = requireBoolean(obj.get("enter"), "enter", default.enter),
+      )
+      if (errors.nonEmpty) {
+        Left(errors.mkString("\n"))
+      } else {
+        Right(result)
       }
     }
   }

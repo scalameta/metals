@@ -407,6 +407,7 @@ class CompilerConfiguration(
               getSourcePathMode(config.initialConfig.compilers.sourcePathMode)
             ),
             shouldRunRefchecks = shouldRunRefchecks,
+            javacServicesOverrides = userConfig().javacServicesOverrides,
           )
       }
 

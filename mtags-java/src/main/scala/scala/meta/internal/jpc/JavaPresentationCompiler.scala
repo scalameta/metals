@@ -402,7 +402,8 @@ case class JavaPresentationCompiler(
           reportsLevel,
           semanticdbFileManager,
           embedded,
-          progressBars
+          progressBars,
+          config.javacServicesOverrides
         )
           .compileOptions(
             PruneJavaFile.simple(lastParams) :: Nil,

@@ -55,7 +55,8 @@ class JavaMetalsCompiler(
     reportsLevel,
     semanticdbFileManager,
     embedded,
-    progressBars
+    progressBars,
+    metalsConfig.javacServicesOverrides()
   )
 
   def doSearch(query: String): Seq[String] = {
