@@ -56,9 +56,10 @@ class MetalsSymbolSearch(
   def definition(symbol: String, source: URI): ju.List[Location] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     val result = defn.fromSymbol(symbol, sourcePath)
+
     if (
       result.isEmpty() &&
-      userConfig().definitionProviders.isMBT
+      userConfig().isMbtDefinitionProviderEnabled
     ) {
       return mbt.definition(symbol).asJava
     }

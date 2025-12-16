@@ -71,8 +71,10 @@ class ReportsSuite extends BaseSuite {
 
   test("get-name-summary-and-buildTarget") {
     val report = exampleReport("test_error")
-    val report2 =
-      exampleReport("test_error2", Some(URI.create("file://file.scala")))
+    val report2 = exampleReport(
+      "test_error2",
+      Some(URI.create("file://file.scala")),
+    )
     reportsProvider.incognito.create(report)
     reportsProvider.incognito.create(report2)
     val reports = reportsProvider.incognito

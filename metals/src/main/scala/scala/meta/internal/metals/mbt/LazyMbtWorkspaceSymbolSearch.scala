@@ -1,16 +1,10 @@
 package scala.meta.internal.metals.mbt
 
-import java.nio.file.Path
-import java.{util => ju}
-
 import scala.meta.infra.MonitoringClient
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.SemanticdbCompilationUnit
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -25,9 +19,7 @@ class LazyMbtWorkspaceSymbolSearch(
     workspace: AbsolutePath,
     config: () => WorkspaceSymbolProviderConfig,
     statistics: () => StatisticsConfig,
-    buffers: Buffers,
     metrics: MonitoringClient,
-    timerProvider: TimerProvider,
     mtags: () => Mtags,
     mbt2: MbtV2WorkspaceSymbolSearch,
 ) extends MbtWorkspaceSymbolSearch {
@@ -37,8 +29,6 @@ class LazyMbtWorkspaceSymbolSearch(
     statistics = statistics,
     mtags = mtags,
     metrics = metrics,
-    buffers = buffers,
-    timerProvider = timerProvider,
   )
   private def delegate: MbtWorkspaceSymbolSearch =
     if (config().isMBT1) {
@@ -52,10 +42,6 @@ class LazyMbtWorkspaceSymbolSearch(
   override def possibleReferences(
       params: MbtPossibleReferencesParams
   ): Iterable[AbsolutePath] = delegate.possibleReferences(params)
-  override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] =
-    delegate.listPackage(pkg)
-  override def listAllPackages(): ju.Map[String, ju.Set[Path]] =
-    delegate.listAllPackages()
   override def onReindex(): IndexingStats =
     delegate.onReindex()
   override def onDidChange(file: AbsolutePath): Unit =

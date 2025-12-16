@@ -19,7 +19,6 @@ import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.jpc.EmptySemanticdbFileManager
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.EmptyReportContext
@@ -76,7 +75,7 @@ case class ScalaPresentationCompiler(
     reportsLevel: ReportLevel = ReportLevel.Info,
     completionItemPriority: CompletionItemPriority = (_: String) => 0,
     sourcePath: ju.function.Supplier[ju.List[Path]] = () => Nil.asJava,
-    semanticdbFileManager: SemanticdbFileManager = EmptySemanticdbFileManager
+    semanticdbFileManager: SemanticdbFileManager = SemanticdbFileManager.EMPTY
 ) extends PresentationCompiler {
 
   implicit val executionContext: ExecutionContextExecutor = ec

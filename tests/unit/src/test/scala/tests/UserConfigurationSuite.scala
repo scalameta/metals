@@ -423,6 +423,7 @@ class UserConfigurationSuite extends BaseSuite {
   "definitionProviders": [],
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
+  "javaSymbolLoader": "javac-sourcepath",
   "javacServicesOverrides": {
     "names": false,
     "attr": true,

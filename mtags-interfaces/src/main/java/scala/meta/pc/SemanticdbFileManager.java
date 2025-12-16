@@ -1,12 +1,14 @@
 package scala.meta.pc;
 
 import java.nio.file.Path;
-import java.util.List;
+import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
 
 public interface SemanticdbFileManager {
-  List<SemanticdbCompilationUnit> listPackage(String pkg);
+  default Map<String, Set<Path>> listAllPackages() {
+    return Collections.emptyMap();
+  }
 
-  Map<String, Set<Path>> listAllPackages();
+  public static final SemanticdbFileManager EMPTY = new SemanticdbFileManager() {};
 }

@@ -39,6 +39,7 @@ import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
 import scala.meta.pc.HoverSignature
+import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.ProgressBars
@@ -103,6 +104,7 @@ class Compilers(
     worksheetProvider: WorksheetProvider,
     completionItemPriority: () => CompletionItemPriority,
     semanticdbFileManager: SemanticdbFileManager,
+    javaFileManagerFactory: JavaFileManagerFactory,
     progressBars: ProgressBars,
     timerProvider: TimerProvider,
     featureFlags: FeatureFlagProvider,
@@ -126,6 +128,7 @@ class Compilers(
     mtagsResolver,
     sourceMapper,
     semanticdbFileManager,
+    javaFileManagerFactory,
     featureFlags,
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths

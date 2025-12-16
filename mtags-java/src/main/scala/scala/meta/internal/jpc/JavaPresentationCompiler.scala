@@ -33,6 +33,7 @@ import scala.meta.pc.DefinitionResult
 import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
+import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -41,7 +42,6 @@ import scala.meta.pc.ProgressBars
 import scala.meta.pc.RangeParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
-import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -67,7 +67,8 @@ case class JavaPresentationCompiler(
     sh: Option[ScheduledExecutorService] = None,
     config: PresentationCompilerConfig = PresentationCompilerConfigImpl(),
     workspace: Option[Path] = None,
-    semanticdbFileManager: SemanticdbFileManager = EmptySemanticdbFileManager,
+    javaFileManagerFactory: JavaFileManagerFactory =
+      JavaFileManagerFactory.EMPTY,
     logger: Logger = LoggerFactory.getLogger("mtags"),
     reportsLevel: ReportLevel = ReportLevel.Info,
     progressBars: ProgressBars = ProgressBars.EMPTY
@@ -85,7 +86,7 @@ case class JavaPresentationCompiler(
           reportsLevel,
           search,
           embedded,
-          semanticdbFileManager,
+          javaFileManagerFactory,
           config,
           classpath,
           options,
@@ -327,10 +328,10 @@ case class JavaPresentationCompiler(
   ): PresentationCompiler =
     copy(embedded = embedded)
 
-  override def withSemanticdbFileManager(
-      semanticdbFileManager: SemanticdbFileManager
+  override def withJavaFileManagerFactory(
+      javaFileManagerFactory: JavaFileManagerFactory
   ): PresentationCompiler =
-    copy(semanticdbFileManager = semanticdbFileManager)
+    copy(javaFileManagerFactory = javaFileManagerFactory)
 
   override def withExecutorService(
       executorService: ExecutorService
@@ -400,7 +401,7 @@ case class JavaPresentationCompiler(
         new JavaPruneCompiler(
           logger,
           reportsLevel,
-          semanticdbFileManager,
+          javaFileManagerFactory,
           embedded,
           progressBars,
           config.javacServicesOverrides

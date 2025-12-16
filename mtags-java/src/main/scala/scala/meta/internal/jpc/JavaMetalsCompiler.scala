@@ -21,12 +21,12 @@ import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc.EmbeddedClient
+import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.ProgressBars
 import scala.meta.pc.RangeParams
-import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 
@@ -42,7 +42,7 @@ class JavaMetalsCompiler(
     val reportsLevel: ReportLevel,
     val search: SymbolSearch,
     val embedded: EmbeddedClient,
-    val semanticdbFileManager: SemanticdbFileManager,
+    val javaFileManagerFactory: JavaFileManagerFactory,
     val metalsConfig: PresentationCompilerConfig,
     val classpath: Seq[Path],
     val options: List[String],
@@ -53,7 +53,7 @@ class JavaMetalsCompiler(
   private lazy val prune = new JavaPruneCompiler(
     logger,
     reportsLevel,
-    semanticdbFileManager,
+    javaFileManagerFactory,
     embedded,
     progressBars,
     metalsConfig.javacServicesOverrides()

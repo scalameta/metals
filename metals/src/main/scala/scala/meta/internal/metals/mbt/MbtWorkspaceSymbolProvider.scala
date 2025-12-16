@@ -16,8 +16,6 @@ import scala.meta.dialects
 import scala.meta.infra
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
-import scala.meta.internal.jsemanticdb.Semanticdb
-import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CancelTokens
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
@@ -28,7 +26,6 @@ import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
@@ -37,7 +34,6 @@ import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
-import scala.meta.pc.SemanticdbCompilationUnit
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
@@ -78,50 +74,12 @@ final class MbtWorkspaceSymbolProvider(
     statistics: () => StatisticsConfig = () => StatisticsConfig.default,
     mtags: () => Mtags = () => Mtags.testingSingleton,
     metrics: infra.MonitoringClient = new NoopMonitoringClient(),
-    buffers: Buffers = Buffers(),
-    timerProvider: TimerProvider = TimerProvider.empty,
 ) extends MbtWorkspaceSymbolSearch
     with Cancelable
     with SemanticdbFileManager {
 
   override def close(): Unit = {
     db.close()
-  }
-
-  def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
-    timerProvider.timedThunk(
-      s"SemanticdbFileManager.listPackage $pkg (index size ${index.size})",
-      thresholdMillis = 200,
-    ) {
-      db.readTransaction[ju.List[SemanticdbCompilationUnit]](
-        tableName,
-        "listPackage",
-        ju.Collections.emptyList(),
-      ) { (env, db, txn, _) =>
-        val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
-        val result = new ConcurrentLinkedQueue[SemanticdbCompilationUnit]()
-        index.foreach { f =>
-          if (
-            f.language == Semanticdb.Language.JAVA &&
-            f.semanticdbPackage == pkg
-          ) {
-            val doc = this.readTextDocument(keyBuffer, db, txn, f)
-            if (doc.uri.nonEmpty && f.path.exists) {
-              val text = AbsolutePath(f.path).toInputFromBuffers(buffers).text
-              result.add(
-                VirtualTextDocument.fromDocument(
-                  f.language.toPCLanguage,
-                  List(f.semanticdbPackage),
-                  f.toplevelSymbols,
-                  doc.copy(text = text),
-                )
-              )
-            }
-          }
-        }
-        new ju.ArrayList(result)
-      }
-    }
   }
 
   override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {

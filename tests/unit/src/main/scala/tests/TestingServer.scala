@@ -389,11 +389,10 @@ final case class TestingServer(
     }
   }
 
-  def assertReferencesSubquery(
+  def referencesSubquery(
       filename: String,
       subquery: String,
-      expected: String,
-  )(implicit loc: munit.Location): Future[Unit] = {
+  ): Future[List[l.Location]] = {
     val path = toPath(filename)
     val pos = subqueryPosition(path, subquery)
     val params = new l.ReferenceParams(
@@ -401,10 +400,17 @@ final case class TestingServer(
       pos.toLspStartPosition,
       new l.ReferenceContext( /* includeDeclaration = */ true),
     )
+    server.references(params).asScala.map(_.asScala.toList)
+  }
+  def assertReferencesSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      locations <- server.references(params).asScala
+      locations <- referencesSubquery(filename, subquery)
     } yield {
-      assertLocations(locations.asScala.toList, "reference", expected)
+      assertLocations(locations, "reference", expected)
     }
   }
 

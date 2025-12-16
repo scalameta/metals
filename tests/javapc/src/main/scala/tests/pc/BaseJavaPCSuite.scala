@@ -8,7 +8,6 @@ import scala.jdk.CollectionConverters._
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.io.InputStreamIO
-import scala.meta.internal.jpc.EmptySemanticdbFileManager
 import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
@@ -64,7 +63,6 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
       .withLogger(LoggerFactory.getLogger("java.metals"))
       // TODO: we need a real instance of the embedded client here.
       .withEmbeddedClient(new TestingEmbeddedClient(tmp))
-      .withSemanticdbFileManager(EmptySemanticdbFileManager)
       .newInstance("", myclasspath.asJava, Nil.asJava, () => Nil.asJava)
       .asInstanceOf[JavaPresentationCompiler]
   }

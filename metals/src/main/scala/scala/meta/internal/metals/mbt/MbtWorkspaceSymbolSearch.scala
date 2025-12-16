@@ -5,7 +5,6 @@ import java.io.Closeable
 import scala.jdk.CollectionConverters._
 
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -21,7 +20,7 @@ case class MbtPossibleReferencesParams(
     implementations: collection.Seq[String] = Nil,
 )
 
-trait MbtWorkspaceSymbolSearch extends SemanticdbFileManager with Closeable {
+trait MbtWorkspaceSymbolSearch extends Closeable {
 
   /**
    * Index the entire repository. Normally, this is only called once in the lifetime

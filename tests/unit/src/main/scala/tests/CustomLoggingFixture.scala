@@ -13,6 +13,9 @@ class CustomLoggingFixture(fn: scribe.Logger => scribe.Logger)
 
 object CustomLoggingFixture {
   def defaults(): CustomLoggingFixture = new CustomLoggingFixture(identity)
+  def showDebug(): CustomLoggingFixture = new CustomLoggingFixture(fn =>
+    fn.clearHandlers().withHandler(minimumLevel = Some(scribe.Level.Debug))
+  )
   def showWarnings(): CustomLoggingFixture = new CustomLoggingFixture(fn =>
     fn.clearHandlers().withHandler(minimumLevel = Some(scribe.Level.Warn))
   )

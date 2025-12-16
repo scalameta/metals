@@ -38,6 +38,7 @@ object SourceJavaFileObject {
   // to other Metals APIs, it's a small standalone Java file that can only call
   // `JavaFileObject` APIs.
   def makeOriginalURI(originalURI: String): String = s"originaluri-$originalURI"
+  def isOriginalURI(uri: String): Boolean = uri.startsWith("originaluri-")
 
   def makeRelativeURI(uri: URI): URI = {
     // parent `javax.tools.SimpleJavaObject` fails if URI doesn't have path

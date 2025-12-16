@@ -2,13 +2,15 @@ package scala.meta.pc;
 
 import java.net.URI;
 import java.util.List;
+import javax.tools.JavaFileObject;
 
-public interface SemanticdbCompilationUnit {
+public interface SemanticdbCompilationUnit extends JavaFileObject {
+
   Language language();
 
-  List<String> packageSymbols();
-
   String binaryName();
+
+  List<String> packageSymbols();
 
   List<String> toplevelSymbols();
 

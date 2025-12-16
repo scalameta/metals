@@ -4,7 +4,6 @@ import scala.tools.nsc.ParsedLogicalPackage
 
 import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
 
 import munit.AnyFixture
 import tests.CustomLoggingFixture
@@ -19,7 +18,7 @@ class MbtLogicalPackageProviderSuite extends munit.FunSuite {
       CustomLoggingFixture.showWarnings(),
     )
 
-  def newProvider(): MbtWorkspaceSymbolSearch =
+  def newProvider(): MbtV2WorkspaceSymbolSearch =
     new MbtV2WorkspaceSymbolSearch(
       workspace(),
       config = () => Configs.WorkspaceSymbolProviderConfig.mbt2,

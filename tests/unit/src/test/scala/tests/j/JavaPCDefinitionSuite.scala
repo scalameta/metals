@@ -65,29 +65,34 @@ class JavaPCDefinitionSuite extends BaseJavaPCSuite("java-pc-definition") {
 
   testLSP("cross-file-sourcepath") {
     cleanWorkspace()
+    val a = "a/src/main/java/a/Example.java"
     for {
       _ <- initialize(
-        """|
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
-           |/whatever/Foo.java
-           |package whatever;
-           |public class Foo {
-           |  public static String alice = "Alice";
-           |}
-           |/a/src/main/java/a/Example.java
-           |package a;
-           |
-           |public class Example {
-           |  public static String name = whatever.Foo.alice;
-           |}
-           |""".stripMargin
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/whatever/Foo.java
+            |package whatever;
+            |public class Foo {
+            |  public static String alice = "Alice";
+            |}
+            |/$a
+            |package a;
+            |
+            |public class Example {
+            |  public static String name = whatever.Foo.alice;
+            |}
+            |""".stripMargin
       )
-      _ <- server.didOpen("a/src/main/java/a/Example.java")
+      _ <- server.didOpen(a)
+      _ = assertNoDiagnostics()
+      decodeURI =
+        s"metalsDecode:${server.toPath(a).toURI}.semanticdb-detailed"
+      _ <- server.executeDecodeFileCommand(decodeURI)
       _ <- server.assertDefinition(
-        "a/src/main/java/a/Example.java",
+        a,
         "whatever.Foo.ali@@ce",
         """|whatever/Foo.java:3:24: definition
            |  public static String alice = "Alice";

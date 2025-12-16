@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mbt
 import scala.collection.View
 
 import scala.meta.Dialect
+import scala.meta.inputs.Input
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.jsemanticdb.Semanticdb
@@ -34,7 +35,7 @@ case class IndexedDocument(
     bloomFilter: StringBloomFilter,
 ) {
   def toSemanticdbCompilationUnit(
-      buffers: Buffers
+      input: Input.VirtualFile
   ): SemanticdbCompilationUnit = {
     val toplevelSymbols = symbols.collect {
       case info if Symbol(info.getSymbol()).isToplevel => info.getSymbol()
@@ -43,7 +44,7 @@ case class IndexedDocument(
     VirtualTextDocument(
       SourceJavaFileObject.makeRelativeURI(file.toURI),
       language.toPCLanguage,
-      file.toInputFromBuffers(buffers).text,
+      input.text,
       semanticdbPackages,
       toplevelSymbols,
     )

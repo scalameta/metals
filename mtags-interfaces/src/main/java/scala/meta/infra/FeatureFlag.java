@@ -69,6 +69,9 @@ public enum FeatureFlag {
    */
   BUILD_SERVER_JAVAC_OPTIONS,
 
+  /** If enabled, uses the Turbine classpath as the 1st party symbol loader. */
+  JAVA_TURBINE_SYMBOL_LOADER,
+
   /** If enabled, mtags-java will override the following services inside the Java compiler. */
   JAVAC_OVERRIDE_NAMES,
   JAVAC_OVERRIDE_ATTR,

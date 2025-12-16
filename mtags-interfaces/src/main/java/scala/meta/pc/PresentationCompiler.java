@@ -269,9 +269,15 @@ public abstract class PresentationCompiler {
   public abstract PresentationCompiler withWorkspace(Path workspace);
 
   /**
-   * Provide SemanticdbFileManager for features like listing all files that define a symbol in a
-   * given package.
+   * Initialize a new JavaFileManager for the presentation compiler.
+   *
+   * <p>Only relevant for Java presentation compiler, not Scala.
    */
+  public PresentationCompiler withJavaFileManagerFactory(
+      JavaFileManagerFactory javaFileManagerFactory) {
+    return this;
+  }
+
   public PresentationCompiler withSemanticdbFileManager(
       SemanticdbFileManager semanticdbFileManager) {
     return this;

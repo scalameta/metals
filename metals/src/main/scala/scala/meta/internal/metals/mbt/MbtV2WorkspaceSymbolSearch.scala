@@ -3,13 +3,15 @@ package scala.meta.internal.metals.mbt
 import java.io.BufferedOutputStream
 import java.net.URI
 import java.nio.file.Files
-import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.{util => ju}
+import javax.tools.JavaFileManager
+import javax.tools.StandardJavaFileManager
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable.ArrayBuffer
@@ -24,15 +26,19 @@ import scala.util.control.NonFatal
 import scala.meta.dialects
 import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
+import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.FingerprintedCharSequence
+import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
@@ -40,7 +46,8 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.SemanticdbCompilationUnit
+import scala.meta.pc.JavaFileManagerFactory
+import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -49,15 +56,21 @@ import org.eclipse.{lsp4j => l}
 class MbtV2WorkspaceSymbolSearch(
     val workspace: AbsolutePath,
     config: () => WorkspaceSymbolProviderConfig = () =>
-      WorkspaceSymbolProviderConfig.default,
+      WorkspaceSymbolProviderConfig.mbt2,
     buffers: Buffers = Buffers(),
     time: Time = Time.system,
     metrics: MonitoringClient = new NoopMonitoringClient(),
     mtags: () => Mtags = () => Mtags.testingSingleton,
     progress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
     onIndexingDone: () => Unit = () => (),
-)(implicit val ec: ExecutionContext)
-    extends MbtWorkspaceSymbolSearch {
+    javaSymbolLoader: () => JavaSymbolLoaderConfig = () =>
+      JavaSymbolLoaderConfig.default,
+)(implicit
+    val ec: ExecutionContext = ExecutionContext.Implicits.global,
+    val rc: ReportContext = LoggerReportContext,
+) extends MbtWorkspaceSymbolSearch
+    with SemanticdbFileManager
+    with JavaFileManagerFactory {
 
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
@@ -72,6 +85,11 @@ class MbtV2WorkspaceSymbolSearch(
   // - onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
   private lazy val documents: TrieMap[AbsolutePath, IndexedDocument] =
     readIndex()
+  def readInitialIndexForTestingPurposes(): Unit = {
+    // Just trigger the lazy val initialization without doing other expensive
+    // work that is not necessary for tests or benchmarks.
+    documents.size
+  }
   // `documentsKeys` is effectively `documents.keys.par` but without the
   // overhead to copy the keys into a parallel collection at query time.  Make
   // sure to call updateDocumentsKeys() when you add or remove a document.
@@ -80,7 +98,7 @@ class MbtV2WorkspaceSymbolSearch(
   // Maps SemanticDB package symbol (for example, "scala/collection/") to all
   // the files that directly belong to that package. This index powers repo-wide
   // -sourcepath imports for JavaPruneCompilerFileManager. It's important to manually
-  private val documentsByPackage =
+  private val documentsByPackage: TrieMap[String, ConcurrentSkipListSet[Path]] =
     TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
 
   override def onReindex(): IndexingStats = try {
@@ -181,12 +199,18 @@ class MbtV2WorkspaceSymbolSearch(
     IndexingStats(
       files.length,
       toIndex.length,
-      backgroundJobs = Future {
-        // We intentionally exclude `git status` from the metrics because this command
-        // can take a very long time to run in large repos and it's not something we
-        // can optimize.
-        synchronizeWithGitStatus()
-      },
+      backgroundJobs = Future
+        .sequence(
+          Seq(
+            Future {
+              // We intentionally exclude `git status` from the metrics because this command
+              // can take a very long time to run in large repos and it's not something we
+              // can optimize.
+              synchronizeWithGitStatus()
+            }
+          )
+        )
+        .ignoreValue,
     )
   }
 
@@ -230,33 +254,44 @@ class MbtV2WorkspaceSymbolSearch(
       scribe.error(s"Error indexing file $file", e)
   }
 
-  private def toSemanticdbCompilationUnit(
-      doc: IndexedDocument
-  ): Option[SemanticdbCompilationUnit] =
-    try {
-      Some(doc.toSemanticdbCompilationUnit(buffers))
-    } catch {
-      case _: NoSuchFileException =>
-        // If the file is deleted, remove it from the index to prevent future
-        // requests from throwing the same exception.
-        documents.remove(doc.file)
-        None
-    }
+  private def toInput(
+      file: AbsolutePath
+  ): Option[Input.VirtualFile] = try {
+    Some(file.toInputFromBuffers(buffers))
+  } catch {
+    case _: java.nio.file.NoSuchFileException =>
+      onDidDelete(file)
+      None
+  }
 
-  override def listPackage(pkg: String): ju.List[SemanticdbCompilationUnit] = {
-    documentsByPackage.get(pkg) match {
-      case None =>
-        ju.Collections.emptyList()
-      case Some(paths) =>
-        val result = for {
-          path <- paths.asScala.iterator
-          doc <- documents.get(AbsolutePath(path)).toList.iterator
-          if doc.language.isJava
-          cu <- toSemanticdbCompilationUnit(doc).iterator
-        } yield cu
-        ArrayBuffer.from(result).asJava
+  override def createFileManager(
+      standardFileManager: StandardJavaFileManager
+  ): JavaFileManager = {
+    if (javaSymbolLoader().isJavacSourcepath) {
+      new JavacSourcepathFileManager(
+        standardFileManager,
+        (pkg) => {
+          documentsByPackage.get(pkg) match {
+            case None =>
+              ju.Collections.emptyList()
+            case Some(paths) =>
+              val result = for {
+                path <- paths.asScala.iterator
+                doc <- documents.get(AbsolutePath(path)).toList.iterator
+                if doc.language.isJava
+                input <- toInput(doc.file)
+              } yield doc.toSemanticdbCompilationUnit(input)
+              ArrayBuffer.from(result).asJava
+          }
+        },
+      )
+    } else {
+      throw new NotImplementedError(
+        s"${javaSymbolLoader().value} Java symbol loader is not supported yet"
+      )
     }
   }
+
   override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {
     documentsByPackage
       .mapValues(set => ju.Collections.unmodifiableSet(set))

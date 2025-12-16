@@ -8,6 +8,7 @@ codebase.
 To run tests, use the following command:
 
 ```bash
+source .envrc
 coursier launch sbt -- --client SBT_PROJECT/testOnly TEST_CLASS "-- *TEST_NAME_GLOB"
 ```
 
@@ -17,6 +18,7 @@ coursier launch sbt -- --client SBT_PROJECT/testOnly TEST_CLASS "-- *TEST_NAME_G
 ### Example
 
 ```bash
+source .envrc
 coursier launch sbt -- --client javapc/testOnly pc.CompletionIdentifierSuite "-- *private-member"
 ```
 
@@ -37,3 +39,5 @@ Then run:
 ```
 ./bin/scalafmt --diff --diff-branch databricks
 ```
+
+source .envrc

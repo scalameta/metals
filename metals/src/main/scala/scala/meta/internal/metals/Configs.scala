@@ -239,10 +239,10 @@ object Configs {
         s"invalid value $value for definition providers. Valid values are \"mbt\"",
       )
     )
-    def isMBT: Boolean =
-      values.contains("mbt")
     def isProtobuf: Boolean =
       values.contains("protobuf")
+    def isMBT(javaSymbolLoader: JavaSymbolLoaderConfig): Boolean =
+      values.contains("mbt") || javaSymbolLoader.isTurbineClasspath
   }
 
   object DefinitionProviderConfig {
@@ -474,6 +474,47 @@ object Configs {
     }
   }
 
+  case class JavaSymbolLoaderConfig(val value: String) {
+    require(
+      List("turbine-classpath", "javac-sourcepath").contains(value),
+      value,
+    )
+    def isTurbineClasspath: Boolean =
+      value == "turbine-classpath"
+    def isJavacSourcepath: Boolean =
+      value == "javac-sourcepath"
+  }
+
+  object JavaSymbolLoaderConfig {
+    def turbineClasspath: JavaSymbolLoaderConfig =
+      JavaSymbolLoaderConfig("turbine-classpath")
+    def javacSourcepath: JavaSymbolLoaderConfig =
+      JavaSymbolLoaderConfig("javac-sourcepath")
+    def default: JavaSymbolLoaderConfig = javacSourcepath
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, JavaSymbolLoaderConfig] = {
+      value match {
+        case Some(ok @ ("turbine-classpath" | "javac-sourcepath")) =>
+          Right(JavaSymbolLoaderConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for javaSymbolLoader. Valid values are \"turbine-classpath\" and \"javac-sourcepath\""
+          )
+        case None =>
+          val isTurbineClasspathEnabled = featureFlags
+            .readBoolean(FeatureFlag.JAVA_TURBINE_SYMBOL_LOADER)
+            .orElse(false)
+          if (isTurbineClasspathEnabled) {
+            Right(JavaSymbolLoaderConfig.turbineClasspath)
+          } else {
+            Right(JavaSymbolLoaderConfig.default)
+          }
+      }
+    }
+  }
+
   final case class CompilerProgressConfig(val value: String) {
     require(List("enabled", "disabled").contains(value), value)
     def isEnabled: Boolean =
@@ -556,10 +597,6 @@ object Configs {
           } else {
             Right(FallbackClasspathConfig(ok))
           }
-        case Some(invalid) =>
-          Left(
-            s"invalid config value '$invalid' for fallbackClasspath. Valid values are \"all-3rdparty\""
-          )
         case None =>
           val isAll3rdpartyEnabled = featureFlags
             .readBoolean(FeatureFlag.FALLBACK_CLASSPATH_ALL_3RD_PARTY)

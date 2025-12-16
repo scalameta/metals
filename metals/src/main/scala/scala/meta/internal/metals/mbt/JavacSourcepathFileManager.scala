@@ -1,4 +1,4 @@
-package scala.meta.internal.jpc
+package scala.meta.internal.metals.mbt
 
 import java.lang
 import java.nio.file.ClosedFileSystemException
@@ -12,14 +12,14 @@ import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
 import scala.meta.pc.SemanticdbCompilationUnit
-import scala.meta.pc.SemanticdbFileManager
 
-import org.slf4j.Logger
+trait PackageListing {
+  def listPackage(packageName: String): ju.List[SemanticdbCompilationUnit]
+}
 
-class PruneCompilerFileManager(
+class JavacSourcepathFileManager(
     delegate: JavaFileManager,
-    semanticdbFileManager: SemanticdbFileManager,
-    logger: Logger
+    packageListing: PackageListing,
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
 
   private val isClosed = new AtomicBoolean(false)
@@ -37,7 +37,7 @@ class PruneCompilerFileManager(
   // Convert SourceFile -> Fully Qualified Name ("java.io.File")
   override def inferBinaryName(
       location: JavaFileManager.Location,
-      file: JavaFileObject
+      file: JavaFileObject,
   ): String = try {
     file match {
       case s: SemanticdbCompilationUnit =>
@@ -55,9 +55,9 @@ class PruneCompilerFileManager(
     case NonFatal(e) =>
       val fallback =
         file.toUri().toString().stripSuffix(".java").stripPrefix("file://")
-      logger.error(
+      scribe.error(
         s"PruneCompilerFileManager: failed to infer binary name for '${file.toUri()}'. Falling back to '${fallback}' to let compilation continue.",
-        e
+        e,
       )
       fallback
   }
@@ -67,13 +67,13 @@ class PruneCompilerFileManager(
       location: JavaFileManager.Location,
       packageName: String,
       kinds: ju.Set[JavaFileObject.Kind],
-      recurse: Boolean
+      recurse: Boolean,
   ): lang.Iterable[JavaFileObject] = try {
     location.getName() match {
       case "SOURCE_PATH" =>
         val pkgSymbol = packageName.replace('.', '/') + '/'
         val result =
-          semanticdbFileManager.listPackage(pkgSymbol).asScala.map {
+          packageListing.listPackage(pkgSymbol).asScala.map {
             case j: JavaFileObject => j: JavaFileObject
             case els =>
               throw new IllegalArgumentException(
@@ -89,9 +89,9 @@ class PruneCompilerFileManager(
       // Happens for cancelled tasks
       ju.Collections.emptyList()
     case NonFatal(e) =>
-      logger.error(
+      scribe.error(
         s"PruneCompilerFileManager: failed to list files for package '$packageName' at location '$location'. Returning an empty list to let compilation continue.",
-        e
+        e,
       )
       ju.Collections.emptyList()
   }

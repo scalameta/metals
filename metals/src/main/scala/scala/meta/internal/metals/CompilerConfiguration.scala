@@ -25,6 +25,7 @@ import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
+import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.ProgressBars
 import scala.meta.pc.SemanticdbFileManager
@@ -52,6 +53,7 @@ class CompilerConfiguration(
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     semanticdbFileManager: SemanticdbFileManager,
+    javaFileManagerFactory: JavaFileManagerFactory,
     featureFlags: FeatureFlagProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
@@ -383,6 +385,7 @@ class CompilerConfiguration(
       .withWorkspace(workspace.toNIO)
       .withScheduledExecutorService(sh)
       .withSemanticdbFileManager(semanticdbFileManager)
+      .withJavaFileManagerFactory(javaFileManagerFactory)
       .withEmbeddedClient(embedded)
       .withProgressBars(
         if (userConfig().compilerProgress.isDisabled) ProgressBars.EMPTY

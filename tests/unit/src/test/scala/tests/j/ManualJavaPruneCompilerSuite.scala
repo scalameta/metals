@@ -29,9 +29,9 @@ class ManualJavaPruneCompilerSuite extends munit.FunSuite {
     )
     mbt.onReindex().backgroundJobs.asJava.get()
     val pruneCompiler = new JavaPruneCompiler(
-      LoggerFactory.getLogger(classOf[ManualJavaPruneCompilerSuite]),
-      ReportLevel.Debug,
-      semanticdbFileManager = mbt,
+      logger = LoggerFactory.getLogger(classOf[ManualJavaPruneCompilerSuite]),
+      reportsLevel = ReportLevel.Debug,
+      javaFileManagerFactory = mbt,
       embedded = embedded,
       progressBars = ProgressBars.EMPTY,
       servicesOverrides = JavacServicesOverridesConfig.EMPTY,

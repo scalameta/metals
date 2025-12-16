@@ -17,6 +17,7 @@ import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
+import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
@@ -96,6 +97,7 @@ case class UserConfiguration(
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
+    javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
     javacServicesOverrides: JavacServicesOverrides =
       JavacServicesOverrides.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
@@ -106,6 +108,9 @@ case class UserConfiguration(
     scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacementConfig.default,
 ) {
+
+  def isMbtDefinitionProviderEnabled: Boolean =
+    definitionProviders.isMBT(javaSymbolLoader)
 
   override def toString(): String = {
     def mapField[K, T](
@@ -254,6 +259,12 @@ case class UserConfiguration(
           (
             "javaOutlineProvider",
             javaOutlineProvider.value,
+          )
+        ),
+        Some(
+          (
+            "javaSymbolLoader",
+            javaSymbolLoader.value,
           )
         ),
         Some(
@@ -1040,9 +1051,9 @@ object UserConfiguration {
     ).getOrElse(DefinitionIndexStrategy.default)
     val definitionProviders = getParsedArrayKey(
       "definition-providers",
-      value =>
+      values =>
         DefinitionProviderConfig.fromConfigOrFeatureFlag(
-          value,
+          values,
           featureFlags,
         ),
     ).getOrElse(DefinitionProviderConfig.default)
@@ -1054,6 +1065,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaOutlineProviderConfig.default)
+    val javaSymbolLoader = getParsedKey(
+      "java-symbol-loader",
+      value =>
+        JavaSymbolLoaderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(JavaSymbolLoaderConfig.default)
     val javacServicesOverrides =
       getKey(
         "javac-services-overrides",
@@ -1148,6 +1167,7 @@ object UserConfiguration {
           definitionProviders,
           definitionIndexStrategy,
           javaOutlineProvider,
+          javaSymbolLoader,
           javacServicesOverrides,
           compilerProgress,
           referenceProvider,

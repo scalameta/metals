@@ -818,8 +818,9 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / javaOptions ++= toolchainJavaOptions,
   Test / javaOptions ++= sharedJavaOptions,
   Test / javaOptions ++= Seq(
-    "-Dmetals.telemetry=disabled", "-Dmetals.env=testing", "-Xmx16G",
-    "-XX:+HeapDumpOnOutOfMemoryError", "-XX:+ExitOnOutOfMemoryError",
+    "-XX:-OmitStackTraceInFastThrow", "-Dmetals.telemetry=disabled",
+    "-Dmetals.env=testing", "-Xmx16G", "-XX:+HeapDumpOnOutOfMemoryError",
+    "-XX:+ExitOnOutOfMemoryError",
   ),
 )
 

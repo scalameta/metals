@@ -23,7 +23,8 @@ class JavaSemanticdbProvider(
 ) {
 
   def textDocumentBytes(params: VirtualFileParams): Array[Byte] = {
-    textDocument(params, None).toByteArray()
+    val result = textDocument(params, None).toByteArray()
+    result
   }
   def batchTextDocumentBytes(
       params: List[VirtualFileParams]

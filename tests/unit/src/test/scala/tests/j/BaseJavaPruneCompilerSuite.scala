@@ -8,12 +8,13 @@ import scala.meta.internal.jpc.JavaMetalsCompiler
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CompilerVirtualFileParams
+import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.ProgressBars
@@ -56,9 +57,12 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       )
     }
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
-    val semanticdbFileManager =
-      new TestingSemanticdbFileManager(tmp(), Mtags.testingSingleton, languages)
+    val mbt = new MbtV2WorkspaceSymbolSearch(
+      workspace = tmp(),
+      javaSymbolLoader = () => JavaSymbolLoaderConfig.javacSourcepath,
+    )
     val dir = FileLayout.fromString(layout, root = tmp())
+    mbt.onReindex().awaitBackgroundJobs()
     val uri = dir.resolve(mainPath).toNIO.toUri
     val text = dir.resolve(mainPath).toInputFromBuffers(Buffers()).text
     val input =
@@ -69,7 +73,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       reportsLevel = ReportLevel.Info,
       search = EmptySymbolSearch,
       embedded = embedded,
-      semanticdbFileManager = semanticdbFileManager,
+      javaFileManagerFactory = mbt,
       metalsConfig = PresentationCompilerConfigImpl(),
       classpath = Nil,
       options = Nil,
