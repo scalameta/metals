@@ -459,6 +459,65 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("inspect-java-arraylist-methods (Issue #7932)") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      path = server.toPath("a/src/main/scala/Main.scala")
+      result <- server.headServer.queryEngine.inspect(
+        "java.util.ArrayList",
+        path,
+      )
+      _ = assertNoDiff(
+        result.show,
+        """|class ArrayList
+           |	 - add(x$1: _$1): Boolean
+           |	 - add(x$1: Int, x$2: _$1): Unit
+           |	 - addAll(x$1: Collection[_ <: _$1]): Boolean
+           |	 - addAll(x$1: Int, x$2: Collection[_ <: _$1]): Boolean
+           |	 - clear(): Unit
+           |	 - contains(x$1: Object): Boolean
+           |	 - ensureCapacity(x$1: Int): Unit
+           |	 - forEach(x$1: Consumer[_ >: _$1 <: Object]): Unit
+           |	 - get(x$1: Int): _$1
+           |	 - indexOf(x$1: Object): Int
+           |	 - isEmpty(): Boolean
+           |	 - iterator(): Iterator[_$1]
+           |	 - lastIndexOf(x$1: Object): Int
+           |	 - listIterator(): ListIterator[_$1]
+           |	 - listIterator(x$1: Int): ListIterator[_$1]
+           |	 - remove(x$1: Int): _$1
+           |	 - remove(x$1: Object): Boolean
+           |	 - removeAll(x$1: Collection[_ <: Object]): Boolean
+           |	 - removeIf(x$1: Predicate[_ >: _$1 <: Object]): Boolean
+           |	 - replaceAll(x$1: UnaryOperator[_$1]): Unit
+           |	 - retainAll(x$1: Collection[_ <: Object]): Boolean
+           |	 - set(x$1: Int, x$2: _$1): _$1
+           |	 - size(): Int
+           |	 - sort(x$1: Comparator[_ >: _$1 <: Object]): Unit
+           |	 - spliterator(): Spliterator[_$1]
+           |	 - subList(x$1: Int, x$2: Int): List[_$1]
+           |	 - toArray(): Array[Object]
+           |	 - toArray[T <: Object](x$1: Array[T with Object]): Array[T with Object]
+           |	 - trimToSize(): Unit
+           |	 - clone(): Object
+           |	 - containsAll(x$1: Collection[_ <: Object]): Boolean
+           |	 - parallelStream(): Stream[_$1]
+           |	 - stream(): Stream[_$1]
+           |	 - toArray[T <: Object](x$1: IntFunction[Array[T with Object]]): Array[T with Object]
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("docstrings") {
     cleanWorkspace()
     for {

@@ -72,8 +72,9 @@ private class McpInspectProvider(
 
   private def inspect(): Future[Option[SymbolInspectResult]] = {
     for {
-      completions <- getCompletions()
-      signatures <- getSignatures()
+      typeParamCount <- getTypeParameterCount()
+      completions <- getCompletions(typeParamCount)
+      signatures <- getSignatures(typeParamCount)
     } yield {
       symbol.symbolType match {
         case SymbolType.Package =>
@@ -113,7 +114,17 @@ private class McpInspectProvider(
     }
   }
 
-  private def getCompletions() = {
+  private def getTypeParameterCount(): Future[Int] = {
+    if (desc.isType) {
+      compilers
+        .info(buildTarget, symbol.symbol)
+        .map(_.map(_.typeParameters.size).getOrElse(0))
+    } else {
+      Future.successful(0)
+    }
+  }
+
+  private def getCompletions(typeParamCount: Int) = {
     def isInteresting(completion: CompletionItem): Boolean = {
       !McpQueryEngine.uninterestingCompletions(completion.getLabel())
     }
@@ -125,7 +136,8 @@ private class McpInspectProvider(
     }
 
     if (desc.isType || desc.isTerm || desc.isPackage) {
-      val compilerParams = makeCompilerOffsetParams(forSignature = false)
+      val compilerParams =
+        makeCompilerOffsetParams(forSignature = false, typeParamCount)
       scribe.debug(
         s"querying for completions for ${symbol.symbol}:\n${compilerParams.text}"
       )
@@ -156,9 +168,10 @@ private class McpInspectProvider(
     }
   }
 
-  private def getSignatures(): Future[List[String]] = {
+  private def getSignatures(typeParamCount: Int): Future[List[String]] = {
     if (desc.isMethod || desc.isType) {
-      val compilerParams = makeCompilerOffsetParams(forSignature = true)
+      val compilerParams =
+        makeCompilerOffsetParams(forSignature = true, typeParamCount)
       scribe.debug(
         s"querying for signatures for ${symbol.symbol}:\n${compilerParams.text}"
       )
@@ -180,10 +193,20 @@ private class McpInspectProvider(
     }
   }
 
-  private def makeCompilerOffsetParams(forSignature: Boolean) = {
+  private def makeCompilerOffsetParams(
+      forSignature: Boolean,
+      typeParamCount: Int,
+  ) = {
     val isType = symbol.symbol.desc.isType
-    val completionTpe =
+    val baseType =
       buildPathDependentType(partsForSyntheticDefs.length, partForCompletion)
+    /* Add wildcards for types with type parameters (e.g., ArrayList -> ArrayList[_]) */
+    val completionTpe =
+      if (typeParamCount > 0) {
+        val wildcards = List.fill(typeParamCount)("_").mkString("[", ", ", "]")
+        s"$baseType$wildcards"
+      } else baseType
+
     val completionOrSignature =
       if (forSignature)
         if (isType) s"new $completionTpe()" else s"$completionTpe()"

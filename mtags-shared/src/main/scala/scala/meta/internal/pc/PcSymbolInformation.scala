@@ -18,7 +18,8 @@ case class PcSymbolInformation(
     properties: List[PcSymbolProperty],
     recursiveParents: List[String],
     annotations: List[String],
-    memberDefsAnnotations: List[String]
+    memberDefsAnnotations: List[String],
+    typeParameters: List[String] = Nil
 ) {
   def asJava: PcSymbolInformationJava =
     PcSymbolInformationJava(
@@ -32,7 +33,8 @@ case class PcSymbolInformation(
       properties.asJava,
       recursiveParents.asJava,
       annotations.asJava,
-      memberDefsAnnotations.asJava
+      memberDefsAnnotations.asJava,
+      typeParameters.asJava
     )
 }
 
@@ -47,7 +49,8 @@ case class PcSymbolInformationJava(
     properties: ju.List[PcSymbolProperty],
     override val recursiveParents: ju.List[String],
     override val annotations: ju.List[String],
-    override val memberDefsAnnotations: ju.List[String]
+    override val memberDefsAnnotations: ju.List[String],
+    override val typeParameters: ju.List[String]
 ) extends IPcSymbolInformation
 
 object PcSymbolInformation {
@@ -64,6 +67,7 @@ object PcSymbolInformation {
       info.properties().asScala.toList,
       info.recursiveParents().asScala.toList,
       info.annotations().asScala.toList,
-      info.memberDefsAnnotations().asScala.toList
+      info.memberDefsAnnotations().asScala.toList,
+      info.typeParameters().asScala.toList
     )
 }

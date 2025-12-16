@@ -68,4 +68,36 @@ class InfoSuite extends BasePCSuite {
       "scala/collection/Iterable#"
     )
   }
+
+  test("java-arraylist-type-params") {
+    val info = getInfo("java/util/ArrayList#")
+    assertEquals(info.typeParameters().size(), 1)
+    assertEquals(info.typeParameters().get(0), "java/util/ArrayList#[E]")
+  }
+
+  test("java-string-no-type-params") {
+    val info = getInfo("java/lang/String#")
+    assertEquals(info.kind(), PcSymbolKind.CLASS)
+    assertEquals(
+      info.typeParameters().size(),
+      0
+    )
+  }
+
+  test("scala-list-type-params") {
+    val info = getInfo("scala/collection/immutable/List#")
+    assertEquals(info.typeParameters().size(), 1)
+    assertEquals(
+      info.typeParameters().get(0),
+      "scala/collection/immutable/List#[A]"
+    )
+  }
+
+  test("scala-predef-object-no-type-params") {
+    val info = getInfo("scala/Predef.")
+    assertEquals(
+      info.typeParameters().size(),
+      0
+    )
+  }
 }
