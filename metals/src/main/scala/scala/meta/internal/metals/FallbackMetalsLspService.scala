@@ -78,11 +78,14 @@ class FallbackMetalsLspService(
   override val indexer: Indexer = Indexer(this)
 
   def buildData(): Seq[BuildTool] =
-    scalaCli.lastImportedBuilds.map {
-      case (lastImportedBuild, buildTargetsData) =>
-        Indexer
-          .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
-    }
+    if (userConfig.scalaCliEnabled)
+      scalaCli.lastImportedBuilds.map {
+        case (lastImportedBuild, buildTargetsData) =>
+          Indexer
+            .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
+      }
+    else
+      Nil
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath

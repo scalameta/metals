@@ -313,6 +313,7 @@ class UserConfigurationSuite extends BaseSuite {
       bloopVersion = Some("1.2.3"),
       bloopJvmProperties = Some(List("a", "b", "c")),
       ammoniteJvmProperties = Some(List("aa", "bb", "cc")),
+      ammoniteEnabled = true,
       superMethodLensesEnabled = true,
       inlayHintsOptions = InlayHintsOptions(
         Map(
@@ -338,6 +339,7 @@ class UserConfigurationSuite extends BaseSuite {
       verboseCompilation = true,
       automaticImportBuild = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
+      scalaCliEnabled = true,
       defaultBspToBuildTool = true,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
     )
@@ -370,6 +372,7 @@ class UserConfigurationSuite extends BaseSuite {
     "bb",
     "cc"
   ],
+  "ammoniteEnabled": true,
   "superMethodLensesEnabled": true,
   "inlayHintsOptions": {
     "HintsInPatternMatch": "true",
@@ -404,6 +407,7 @@ class UserConfigurationSuite extends BaseSuite {
   "verboseCompilation": true,
   "autoImportBuilds": "all",
   "scalaCliLauncher": "scala-cli",
+  "scalaCliEnabled": true,
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
   "buildChangedAction": "none",

@@ -55,6 +55,7 @@ case class UserConfiguration(
     bloopVersion: Option[String] = None,
     bloopJvmProperties: Option[List[String]] = None,
     ammoniteJvmProperties: Option[List[String]] = None,
+    ammoniteEnabled: Boolean = false,
     superMethodLensesEnabled: Boolean = false,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
@@ -76,6 +77,7 @@ case class UserConfiguration(
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
     scalaCliLauncher: Option[String] = None,
+    scalaCliEnabled: Boolean = false,
     defaultBspToBuildTool: Boolean = false,
     presentationCompilerDiagnostics: Boolean = true,
     buildChangedAction: BuildChangedAction = BuildChangedAction.default,
@@ -142,6 +144,7 @@ case class UserConfiguration(
         optStringField("bloopVersion", bloopVersion),
         listField("bloopJvmProperties", bloopJvmProperties),
         listField("ammoniteJvmProperties", ammoniteJvmProperties),
+        Some(("ammoniteEnabled", ammoniteEnabled)),
         Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
         mapField("inlayHintsOptions", inlayHintsOptions.options),
         Some(
@@ -186,6 +189,7 @@ case class UserConfiguration(
             automaticImportBuild.toString().toLowerCase()
         ),
         optStringField("scalaCliLauncher", scalaCliLauncher),
+        Some(("scalaCliEnabled", scalaCliEnabled)),
         Some(
           (
             "defaultBspToBuildTool",
@@ -870,6 +874,7 @@ object UserConfiguration {
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
     val ammoniteProperties = getStringListKey("ammonite-jvm-properties")
+    val ammoniteEnabled = getBooleanKey("ammonite-enabled").getOrElse(false)
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
@@ -981,6 +986,7 @@ object UserConfiguration {
       }
 
     val scalaCliLauncher = getStringKey("scala-cli-launcher")
+    val scalaCliEnabled = getBooleanKey("scala-cli-enabled").getOrElse(false)
     val defaultBspToBuildTool =
       getBooleanKey("default-bsp-to-build-tool").getOrElse(false)
 
@@ -1071,6 +1077,7 @@ object UserConfiguration {
           bloopVersion,
           bloopJvmProperties,
           ammoniteProperties,
+          ammoniteEnabled,
           superMethodLensesEnabled,
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
@@ -1089,6 +1096,7 @@ object UserConfiguration {
           verboseCompilation,
           autoImportBuilds,
           scalaCliLauncher,
+          scalaCliEnabled,
           defaultBspToBuildTool,
           presentationCompilerDiagnostics,
           buildChangedAction,

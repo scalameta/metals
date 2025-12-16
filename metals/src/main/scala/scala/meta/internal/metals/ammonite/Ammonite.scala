@@ -216,6 +216,9 @@ final class Ammonite(
   def reload(): Future[Unit] = stop().flatMap(_ => start())
 
   def start(doc: Option[AbsolutePath] = None): Future[Unit] = {
+    if (!userConfig().ammoniteEnabled) {
+      Future.unit
+    }
 
     disconnectOldBuildServer().onComplete {
       case Failure(e) =>

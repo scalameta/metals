@@ -129,6 +129,9 @@ class ScalaCliServers(
   def paths: Iterable[AbsolutePath] = servers.map(_.path)
 
   def start(path: AbsolutePath): Future[Unit] = {
+    if (!userConfig().scalaCliEnabled) {
+      Future.unit
+    }
     val customWorkspace =
       if (path.isDirectory) None
       else

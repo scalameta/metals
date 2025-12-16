@@ -568,25 +568,34 @@ class ProjectMetalsLspService(
     })
   }
 
-  def buildData(): Seq[Indexer.BuildTool] =
-    Seq(
-      Indexer.BuildTool(
-        "main",
-        mainBuildTargetsData,
-        ImportedBuild.fromList(
-          bspSession.map(_.lastImportedBuild).getOrElse(Nil)
-        ),
+  def buildData(): Seq[Indexer.BuildTool] = {
+    val result = Seq.newBuilder[Indexer.BuildTool]
+
+    result += Indexer.BuildTool(
+      "main",
+      mainBuildTargetsData,
+      ImportedBuild.fromList(
+        bspSession.map(_.lastImportedBuild).getOrElse(Nil)
       ),
-      Indexer.BuildTool(
+    )
+
+    if (userConfig.ammoniteEnabled) {
+      result += Indexer.BuildTool(
         "ammonite",
         ammonite.buildTargetsData,
         ammonite.lastImportedBuild,
-      ),
-    ) ++ scalaCli.lastImportedBuilds.map {
-      case (lastImportedBuild, buildTargetsData) =>
-        Indexer
-          .BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
+      )
     }
+
+    if (userConfig.scalaCliEnabled) {
+      result ++= scalaCli.lastImportedBuilds.map {
+        case (lastImportedBuild, buildTargetsData) =>
+          Indexer.BuildTool("scala-cli", buildTargetsData, lastImportedBuild)
+      }
+    }
+    result.result()
+
+  }
 
   def resetWorkspace(): Future[Unit] = {
     for {
