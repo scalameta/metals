@@ -33,12 +33,15 @@ class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
        |com/example/User#
        |com/example/User#name().
        |com/example/User#getName().
+       |com/example/User#withName().
        |com/example/User#zip_code().
        |com/example/User#zipCode().
        |com/example/User#getZipCode().
+       |com/example/User#withZipCode().
        |com/example/User#uncompressed_bytes().
        |com/example/User#uncompressedBytes().
        |com/example/User#getUncompressedBytes().
+       |com/example/User#withUncompressedBytes().
        |com/example/User#house_data.
        |com/example/User#HouseDataCase#
        |com/example/User#house_data.duplex().
@@ -48,6 +51,7 @@ class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
        |com/example/User#House#
        |com/example/User#House#rooms().
        |com/example/User#House#getRooms().
+       |com/example/User#House#withRooms().
        |""".stripMargin,
   )
 
@@ -74,6 +78,7 @@ class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
        |Payment#payment_method.CASH_AMOUNT#
        |Payment#description().
        |Payment#getDescription().
+       |Payment#withDescription().
        |""".stripMargin,
   )
 

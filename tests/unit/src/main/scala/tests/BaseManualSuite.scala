@@ -72,7 +72,8 @@ abstract class BaseManualSuite extends munit.FunSuite {
           bspGlobalDirectories = bspGlobalDirectories,
           sh = sh,
           time = Time.system,
-          initializationOptions = TestingServer.TestDefault,
+          initializationOptions = TestingServer.TestDefault
+            .copy(isVirtualDocumentSupported = Some(true)),
           mtagsResolver = new TestMtagsResolver(checkCoursier = true),
           onStartCompilation = () => (),
         )(ex)

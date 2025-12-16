@@ -1616,10 +1616,12 @@ final case class TestingServer(
       substringQuery: String,
       expected: String,
       redactLineNumbers: Boolean = false,
+      includeLocation: Location => Boolean = _ => true,
   )(implicit loc: munit.Location): Future[List[Location]] = {
     for {
-      locs <- definitionSubstringQuery(filename, substringQuery)
+      unfilteredLocations <- definitionSubstringQuery(filename, substringQuery)
     } yield {
+      val locs = unfilteredLocations.filter(includeLocation)
       val workspaceURI = workspace.toURI.toString()
       val messages = locs.map(loc => {
         val abspath = AbsolutePath(Paths.get(URI.create(loc.getUri())))

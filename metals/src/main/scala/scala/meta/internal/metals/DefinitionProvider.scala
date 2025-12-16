@@ -5,10 +5,13 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
+import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
@@ -60,6 +63,8 @@ final class DefinitionProvider(
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
+    definitionProviders: () => DefinitionProviderConfig,
+    mbt: MbtV2WorkspaceSymbolSearch,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
@@ -154,8 +159,59 @@ final class DefinitionProvider(
       }
     } yield {
       reportBuilder.build().foreach(rc.unsanitized.create(_))
-      result
+      enhanceWithProtobufDefinition(result)
     }
+  }
+
+  private def enhanceWithProtobufDefinition(
+      result: DefinitionResult
+  ): DefinitionResult = try {
+    if (!definitionProviders().isProtobuf) {
+      return result
+    }
+    val protoLocation: Option[Location] = (for {
+      path <- result.definition.iterator
+      source <- path
+        .toInputFromBuffers(buffers)
+        .text
+        .linesIterator
+        .takeWhile(line => line.startsWith("//") || line.startsWith(" //"))
+        .collectFirst {
+          case s"// source: $source" => source
+          case s" // testing-only-source: $source" => source // For testing
+        }
+        .iterator
+      protoDoc <- mbt.document(workspace.resolve(source)).iterator
+      sym = Symbol(result.symbol.stripSuffix("apply()."))
+      symSuffix = sym.value.stripPrefix(sym.enclosingPackage.value)
+      symSuffixes =
+        if (symSuffix.endsWith("."))
+          Set(
+            symSuffix,
+            symSuffix.stripSuffix(".") + "#", // Treat objects as classes
+            symSuffix.stripSuffix(".") + "().", // Treat fields as methods
+          )
+        else Set(symSuffix)
+      protoPackage = protoDoc.semanticdbPackages.headOption.getOrElse("")
+      protoSym <- protoDoc.symbols.iterator
+      if symSuffixes.contains(
+        protoSym.getSymbol().stripPrefix(protoPackage)
+      )
+    } yield new Location(
+      protoDoc.file.toURI.toString(),
+      protoSym.getDefinitionRange().toLspRange,
+    )).headOption
+
+    protoLocation.fold(result)(loc =>
+      result.copy(locations = (loc +: result.locations.asScala).asJava)
+    )
+  } catch {
+    case NonFatal(e) =>
+      scribe.warn(
+        s"failed to enhance with protobuf definition for '${result.symbol}'",
+        e,
+      )
+      result
   }
 
   def definition(

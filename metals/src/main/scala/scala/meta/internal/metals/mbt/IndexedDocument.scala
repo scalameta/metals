@@ -6,8 +6,7 @@ import scala.meta.Dialect
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.jsemanticdb.Semanticdb
-import scala.meta.internal.jsemanticdb.Semanticdb.Language.JAVA
-import scala.meta.internal.jsemanticdb.Semanticdb.Language.SCALA
+import scala.meta.internal.jsemanticdb.Semanticdb.Language
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.Fuzzy
@@ -204,8 +203,9 @@ object IndexedDocument {
   // that language.
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
-      case JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
-      case SCALA => Mbt.IndexedDocument.BloomFilterVersion.V4
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
+      case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V4
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V5
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }

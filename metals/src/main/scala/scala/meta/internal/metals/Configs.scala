@@ -239,11 +239,13 @@ object Configs {
     )
     def isMBT: Boolean =
       values.contains("mbt")
+    def isProtobuf: Boolean =
+      values.contains("protobuf")
   }
 
   object DefinitionProviderConfig {
     def isValid(value: String): Boolean =
-      value == "mbt"
+      value == "mbt" || value == "protobuf"
     def default: DefinitionProviderConfig = DefinitionProviderConfig(Nil)
     def fromConfigOrFeatureFlag(
         values: Option[List[String]],
@@ -260,14 +262,20 @@ object Configs {
             Right(DefinitionProviderConfig(ok))
           }
         case None =>
-          val isMBTEnabled = featureFlags
-            .readBoolean(FeatureFlag.MBT_DEFINITION_PROVIDER)
-            .orElse(false)
-          if (isMBTEnabled) {
-            Right(DefinitionProviderConfig(List("mbt")))
-          } else {
-            Right(DefinitionProviderConfig.default)
+          val providers = List.newBuilder[String]
+          if (
+            featureFlags.readBooleanOrFalse(FeatureFlag.MBT_DEFINITION_PROVIDER)
+          ) {
+            providers += "mbt"
           }
+          if (
+            featureFlags.readBooleanOrFalse(
+              FeatureFlag.PROTOBUF_DEFINITION_PROVIDER
+            )
+          ) {
+            providers += "protobuf"
+          }
+          Right(DefinitionProviderConfig(providers.result()))
       }
     }
   }

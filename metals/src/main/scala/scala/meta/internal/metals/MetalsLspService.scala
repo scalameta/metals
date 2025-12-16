@@ -344,6 +344,8 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
+    () => userConfig.definitionProviders,
+    mbt2,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(

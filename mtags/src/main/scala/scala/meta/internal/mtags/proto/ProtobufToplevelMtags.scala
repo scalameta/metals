@@ -544,6 +544,10 @@ object ProtobufToplevelMtags {
     result.toString()
   }
   def toCamelCaseVariations(snakeCase: String): List[String] = {
-    List(toCamelCase(snakeCase), toCamelCase("get_" + snakeCase))
+    List(
+      toCamelCase(snakeCase),
+      toCamelCase("get_" + snakeCase),
+      toCamelCase("with_" + snakeCase)
+    )
   }
 }

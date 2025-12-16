@@ -2,10 +2,7 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
-import scala.meta.internal.metals.Configs.FallbackClasspathConfig
-import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
-import scala.meta.internal.metals.ServerCommands.SyncFile
+import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.UserConfiguration
 
 // Uncomment to run this test manually locally
@@ -16,21 +13,13 @@ class ManualSuite extends BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      definitionIndexStrategy = DefinitionIndexStrategy.classpath,
-      fallbackClasspath = FallbackClasspathConfig.all3rdparty,
-      fallbackScalaVersion = Some("2.12.20"),
+      definitionProviders = DefinitionProviderConfig(List("protobuf"))
     )
 
   inDirectory(
-    universe,
-    onSetup = { workspace =>
-      // Clear the bazelbsp directory so that we get errors in the file during startup
-      workspace.resolve(".bazelbsp").deleteRecursively
-    },
-    // removeCache = true,
-  ).test("sync-file-lsp-command") { case (server, client) =>
-    val path =
-      "experimental/iulian.dragos/class-indexer/src/ClassIndexer.scala"
+    universe
+  ).test("protobuf-defn") { case (server, client) =>
+    val path = "example/Example.scala"
     for {
       _ <- server.didOpenAndFocus(path)
       // _ <- server.assertDefinition(
@@ -42,10 +31,10 @@ class ManualSuite extends BaseManualSuite {
       //      |""".stripMargin,
       // )
       // _ <- server.didFocus(path)
-      _ = assert((client.workspaceDiagnostics).nonEmpty)
-      _ <- server.executeCommandUnsafe(SyncFile.id, Seq())
-      // _ <- server.executeCommandUnsafe(ConnectBuildServer.id, Seq())
+      // _ = assert((client.workspaceDiagnostics).nonEmpty)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.definitionSubstringQuery(path, "  Ses@@sion,")
+      // _ <- server.executeCommandUnsafe(ConnectBuildServer.id, Seq())
     } yield ()
   }
 }

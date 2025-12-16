@@ -264,6 +264,9 @@ class MbtV2WorkspaceSymbolSearch(
       .asJava
   }
 
+  def document(file: AbsolutePath): Option[IndexedDocument] = {
+    documents.get(file)
+  }
   def definition(symbol: String): List[l.Location] = {
     val result = (for {
       file <- documentsByPackage

@@ -42,6 +42,9 @@ public enum FeatureFlag {
   /** If enabled, uses the MBT-based definition provider. */
   MBT_DEFINITION_PROVIDER,
 
+  /** If enabled, makes a best-effort to additionally return definitions to *.proto files. */
+  PROTOBUF_DEFINITION_PROVIDER,
+
   /** If enabled, uses the javac-based outline provider. */
   JAVAC_OUTLINE_PROVIDER,
 
