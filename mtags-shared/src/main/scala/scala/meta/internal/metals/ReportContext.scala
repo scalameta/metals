@@ -177,10 +177,11 @@ class StdReporter(
     val time = TimeFormatter.getTime()
     val buildTargetPart =
       resolveBuildTarget(report.path)
-        .map(_.replaceAll(":", "_"))
-        .map("~" ++ _ ++ "~")
+        .map(_.replaceAll("[^a-zA-Z0-9]", "_"))
+        .map(part => s"_${part}_")
         .getOrElse("")
-    val filename = s"r_${report.name}${buildTargetPart}_${time}.md"
+        .takeRight(20)
+    val filename = s"r_${report.name}_${buildTargetPart}_${time}.md"
     reportsDir.resolve(date).resolve(filename)
   }
 

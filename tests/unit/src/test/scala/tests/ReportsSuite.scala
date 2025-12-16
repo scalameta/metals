@@ -87,8 +87,8 @@ class ReportsSuite extends BaseSuite {
     assertEquals(
       reports,
       List(
-        report.name -> (None, Some(report.shortSummary)),
-        report2.name -> (Some("build-target"), Some(report2.shortSummary)),
+        "test_error2__build_target_" -> (None, Some(report2.shortSummary)),
+        "test_error_" -> (None, Some(report.shortSummary)),
       ),
     )
   }
