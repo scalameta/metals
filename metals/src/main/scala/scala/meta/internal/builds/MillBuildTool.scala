@@ -138,9 +138,15 @@ case class MillBuildTool(
 
     userConfig().millScript match {
       case Some(script) => script :: cmd
-      case None => embeddedMillWrapper(workspace).toString() :: fullcmd
+      case None =>
+        if (workspace.resolve("mill.bat").isFile && Properties.isWin)
+          workspace.resolve("mill.bat").toString() :: fullcmd
+        else if (workspace.resolve("mill").isFile && !Properties.isWin)
+          workspace.resolve("mill").toString() :: fullcmd
+        else {
+          embeddedMillWrapper(workspace).toString() :: fullcmd
+        }
     }
-
   }
 
   private def bloopImportArgs(millVersion: String) = {
