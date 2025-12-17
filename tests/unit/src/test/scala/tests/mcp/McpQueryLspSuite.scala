@@ -459,6 +459,33 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("inspect-java-generic-type (Issue #7932)") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      path = server.toPath("a/src/main/scala/Main.scala")
+      result <- server.headServer.queryEngine.inspect(
+        "java.util.function.Consumer",
+        path,
+      )
+      _ = assertNoDiff(
+        result.show,
+        """|trait Consumer
+           |	 - accept(x$1: _$1): Unit
+           |	 - andThen(x$1: Consumer[_ >: _$1 <: Object]): Consumer[_$1]
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("docstrings") {
     cleanWorkspace()
     for {
