@@ -154,9 +154,9 @@ object SemanticTokensProvider {
   ): ((List[Integer], List[Node], Line), Boolean, Option[SQLToken]) = tk match {
     case Token.Interpolation.Id(id) if acceptedSQLInterpolations(id) =>
       (handleToken(tk, nodesIterator, isScala3, delta), true, None)
-    case Token.Interpolation.Part(value) if isSQLInterpolator =>
+    case part @ Token.Interpolation.Part(_) if isSQLInterpolator =>
       val buffer = ListBuffer.empty[Integer]
-      val sqlTokens = SQLTokenizer.tokenize(value, lastSQLToken)
+      val sqlTokens = SQLTokenizer.tokenize(part.text, lastSQLToken)
 
       val (delta0, lastToken0) =
         sqlTokens.foldLeft((delta, Option.empty[SQLToken])) {

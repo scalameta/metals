@@ -35,7 +35,8 @@ object SQLTokenizer {
   )
 
   private val operators =
-    Set("=", "<", ">", "<=", ">=", "<>", "!=", "+", "-", "*", "/", "%")
+    Set("=", "<", ">", "<=", ">=", "<>", "!=", "+", "-", "*", "/", "%", "->>",
+      "::", "$")
 
   def tokenize(
       text: String,
@@ -106,7 +107,12 @@ object SQLTokenizer {
       @scala.annotation.tailrec
       def loop(chars: List[Char]): Option[(ListBuffer[SQLToken], List[Char])] =
         chars match {
-          case ch :: tail if ch.isLetter || ch == '_' =>
+          case ch :: tail
+              if tokenBuilder.isEmpty && (ch.isLetter || ch == '_') =>
+            tokenBuilder.addOne(ch)
+            loop(tail)
+          case ch :: tail
+              if tokenBuilder.nonEmpty && (ch.isLetter || ch == '_' || ch.isDigit) =>
             tokenBuilder.addOne(ch)
             loop(tail)
           case '(' :: _ if tokenBuilder.nonEmpty =>
@@ -202,8 +208,11 @@ object SQLTokenizer {
       val (tokenBuffer, chars) = tokenBufferAndChars
 
       chars match {
-        case ch1 :: ch2 :: tail if operators(ch1.toString + ch2.toString) =>
-          tokenBuffer += Operator(ch1.toString + ch2.toString)
+        case ch1 :: ch2 :: ch3 :: tail if operators(s"$ch1$ch2$ch3") =>
+          tokenBuffer += Operator(s"$ch1$ch2$ch3")
+          Some((tokenBuffer, tail))
+        case ch1 :: ch2 :: tail if operators(s"$ch1$ch2") =>
+          tokenBuffer += Operator(s"$ch1$ch2")
           Some((tokenBuffer, tail))
         case ch :: tail if operators(ch.toString) =>
           tokenBuffer += Operator(ch.toString)
