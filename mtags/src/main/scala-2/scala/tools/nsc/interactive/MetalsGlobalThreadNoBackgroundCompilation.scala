@@ -2,6 +2,8 @@ package scala.tools.nsc.interactive
 
 import scala.meta.internal.pc.InterruptException
 
+import org.slf4j
+
 /**
  * A version of [[MetalsGlobalThread]] that does not do backgroundCompilation. In case the user
  * wants to see error diagnostics from the presentation compiler, we run compilation explicitly
@@ -13,6 +15,11 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
 ) extends Thread(
       "Scala Presentation Compiler w/o backgroundCompile[" + name + "]"
     ) {
+
+  lazy val logger: slf4j.Logger =
+    org.slf4j.LoggerFactory.getLogger(
+      classOf[MetalsGlobalThreadNoBackgroundCompilation]
+    )
 
   /**
    * The presentation compiler loop.
@@ -38,7 +45,7 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
         compiler.debugLog("exiting presentation compiler")
         compiler.log.close()
 
-        compiler.debugLog(s"Shutting down PC for $name")
+        logger.debug(s"Shutting down PC for $name")
         // make sure we don't keep around stale instances
         compiler = null
       case ex: Throwable =>
@@ -48,7 +55,10 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
           // + scalac deviation
           case InterruptException() =>
             Thread.interrupted()
+            logger.debug(s"Interrupted PC for $name")
+
           case _: ThreadDeath =>
+            logger.debug(s"ThreadDeath PC for $name")
             compiler = null
           // - scalac deviation
           case _: FreshRunReq =>

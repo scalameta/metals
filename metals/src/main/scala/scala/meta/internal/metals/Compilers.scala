@@ -223,6 +223,10 @@ class Compilers(
   override def cancel(): Unit = {
     Cancelable.cancelEach(cache.values)(_.shutdown())
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
+    // important not to leak presentation compilers, they come with
+    // a background thread that holds a reference to the compiler
+    // without a proper shutdown, the thread and MetalsGlobal stay around
+    cache.values.foreach(_.shutdown())
     cache.clear()
     worksheetsCache.clear()
     worksheetsDigests.clear()
@@ -409,10 +413,10 @@ class Compilers(
     for {
       language <- List(s.Language.SCALA, s.Language.JAVA)
       compiler <- Option(
-        jcache.remove(PresentationCompilerKey.Default(language))
+        jcache.get(PresentationCompilerKey.Default(language))
       )
     } {
-      compiler.await.shutdown()
+      compiler.await.restart()
     }
   }
 

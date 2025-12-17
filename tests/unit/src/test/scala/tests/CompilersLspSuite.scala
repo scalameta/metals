@@ -1,5 +1,6 @@
 package tests
 
+import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsServerConfig
@@ -161,5 +162,47 @@ class CompilersLspSuite
            |""".stripMargin,
       )
     } yield ()
+  }
+
+  test("fallback-compiler-restart-no-leak") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """
+          |/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |class A {
+          |  def callMeMaybe() = 42
+          |}
+          |/b/src/main/scala/b/B.scala
+          |package b
+          |import a.A
+          |object B {
+          |  def foobar() = new A().callMeMaybe()
+          |}
+        """.stripMargin
+      )
+      _ <- server.didOpen("b/src/main/scala/b/B.scala")
+      _ <- server.didFocus("b/src/main/scala/b/B.scala")
+      _ = assertNoDiagnostics()
+      _ = server.fullServer
+        .getServiceFor(server.toPath("b/src/main/scala/b/B.scala"))
+        .restartFallbackCompilers()
+      count = countCompilerThreads("Metals/default")
+      _ = assert(count < 2, s"Leaking presentation compiler threads: $count")
+    } yield ()
+  }
+
+  private def countCompilerThreads(id: String): Int = {
+    val threads = Thread.getAllStackTraces().keySet.asScala
+    threads.count(
+      _.getName.contains(
+        s"Scala Presentation Compiler w/o backgroundCompile[$id]"
+      )
+    )
   }
 }
