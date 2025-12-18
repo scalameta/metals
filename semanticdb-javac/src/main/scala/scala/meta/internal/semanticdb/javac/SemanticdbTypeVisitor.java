@@ -124,6 +124,13 @@ class SemanticdbTypeVisitor extends SimpleTypeVisitor8<Semanticdb.Type, Void> {
     return typeRef(primitiveSymbol(t.getKind()));
   }
 
+  @Override
+  public Semanticdb.Type visitUnknown(TypeMirror t, Void unused) {
+    // Gracefully handle unknown types (e.g., Type$UnknownType) by returning UNRESOLVED_TYPE_REF
+    // instead of throwing an exception
+    return UNRESOLVED_TYPE_REF;
+  }
+
   public String primitiveSymbol(TypeKind kind) {
     switch (kind) {
       case BOOLEAN:
