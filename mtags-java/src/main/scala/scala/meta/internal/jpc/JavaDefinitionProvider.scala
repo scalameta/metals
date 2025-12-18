@@ -29,12 +29,12 @@ trait DefinitionProcessor {
 }
 object NoopDefinitionProcessor extends DefinitionProcessor {
   def transformElement(element: Element): Option[Element] =
-    Some(element)
+    Option(element)
 }
 object TypeDefinitionProcessor extends DefinitionProcessor {
   def transformElement(element: Element): Option[Element] =
     // Instead of returning the resolved element, return the element of its type.
-    processType(element.asType())
+    Option(element).flatMap(e => processType(e.asType()))
   private def processType(tpe: TypeMirror): Option[Element] =
     tpe match {
       case d: DeclaredType => Some(d.asElement())
