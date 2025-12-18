@@ -19,6 +19,8 @@ class JavaAutoImportProvider(
     }
     for {
       fqn <- compiler.doSearch(query).iterator
+      // Only suggest imports for exact matches
+      if fqn.endsWith(s".$toImportName")
       edit = new JavaAutoImportEditor(params.text(), fqn).textEdit()
       pkg = fqn.split('.').dropRight(1).mkString(".")
     } yield AutoImportsResultImpl(pkg, List(edit).asJava)

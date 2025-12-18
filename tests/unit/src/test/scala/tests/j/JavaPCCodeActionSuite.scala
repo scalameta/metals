@@ -51,8 +51,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
     } yield ()
   }
 
-  // NOTE(olafurpg): this is the current behavior, but I think it's better to
-  // restrict this to exact matches.  Use completions if you want fuzzy search.
+  // Non-exact matches should not suggest imports - use completions for fuzzy search
   testLSP("non-exact") {
     cleanWorkspace()
     val path = "a/src/main/java/a/Example.java"
@@ -82,6 +81,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
            |                ^^^^^^^^^^^^^^^
            |""".stripMargin,
       )
+      // No code actions should be suggested for non-exact matches
       _ <- server.assertCodeAction(
         path,
         s"""|package a;
@@ -90,9 +90,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |  public static <<SimpleFileVisit>> visitor = null;
             |}
             |""".stripMargin,
-        // NOTE: it will insert the non-type name, but the label has the typo
-        s"""|${ImportMissingSymbol.title("SimpleFileVisit", "java.nio.file")}
-            |""".stripMargin,
+        "", // No suggestions for non-exact matches
         Nil,
       )
     } yield ()
