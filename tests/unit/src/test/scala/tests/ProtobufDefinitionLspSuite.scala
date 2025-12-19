@@ -11,7 +11,7 @@ class ProtobufDefinitionLspSuite
     with BaseSourcePathSuite {
   override def initializeGitRepo: Boolean = true
   override def userConfig: UserConfiguration = super.userConfig.copy(
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
     definitionProviders = DefinitionProviderConfig(List("protobuf")),
   )
 

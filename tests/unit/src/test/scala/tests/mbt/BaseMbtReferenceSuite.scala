@@ -8,7 +8,7 @@ abstract class BaseMbtReferenceSuite(name: String)
     extends tests.BaseLspSuite(name) {
   override def userConfig: UserConfiguration = super.userConfig.copy(
     referenceProvider = ReferenceProviderConfig.mbt,
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
   )
 
   override def initializeGitRepo: Boolean = true

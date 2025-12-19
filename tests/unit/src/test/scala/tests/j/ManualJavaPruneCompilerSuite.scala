@@ -11,7 +11,7 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.ProgressBars
@@ -23,9 +23,9 @@ class ManualJavaPruneCompilerSuite extends munit.FunSuite {
   test("trino") {
     val root = AbsolutePath(System.getProperty("user.home")).resolve("trino")
     val embedded = new Embedded(root)
-    val mbt = new MbtV2WorkspaceSymbolSearch(
+    val mbt = new MbtWorkspaceSymbolProvider(
       root,
-      config = () => WorkspaceSymbolProviderConfig.mbt2,
+      config = () => WorkspaceSymbolProviderConfig.mbt,
     )
     mbt.onReindex().backgroundJobs.asJava.get()
     val pruneCompiler = new JavaPruneCompiler(

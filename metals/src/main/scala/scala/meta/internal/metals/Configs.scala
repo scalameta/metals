@@ -11,7 +11,6 @@ import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.mbt.LMDB
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
@@ -139,18 +138,15 @@ object Configs {
   object WorkspaceSymbolProviderConfig {
     def mbt: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig("mbt")
-    def mbt2: WorkspaceSymbolProviderConfig =
-      WorkspaceSymbolProviderConfig("mbt-v2")
     def bsp: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig("bsp")
-    def default: WorkspaceSymbolProviderConfig = bsp
+    def default: WorkspaceSymbolProviderConfig =
+      bsp
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
     ): Either[String, WorkspaceSymbolProviderConfig] = {
       value match {
-        case Some("mbt") if !LMDB.isSupportedOrWarn() =>
-          Right(WorkspaceSymbolProviderConfig.bsp)
         case Some(ok @ ("bsp" | "mbt" | "mbt-v2")) =>
           Right(WorkspaceSymbolProviderConfig(ok))
         case Some(invalid) =>
@@ -164,12 +160,12 @@ object Configs {
             .readBoolean(FeatureFlag.MBT_V2_SYMBOL_INDEX)
             .orElse(false)
           if (isMbtV2Enabled) {
-            Right(WorkspaceSymbolProviderConfig.mbt2)
+            Right(WorkspaceSymbolProviderConfig.mbt)
           } else {
             val isMbtEnabled = featureFlags
               .readBoolean(FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
               .orElse(false)
-            if (isMbtEnabled && LMDB.isSupportedOrWarn()) {
+            if (isMbtEnabled) {
               Right(WorkspaceSymbolProviderConfig.mbt)
             } else {
               Right(WorkspaceSymbolProviderConfig.default)
@@ -188,10 +184,6 @@ object Configs {
 
     def isMBT: Boolean =
       value.startsWith("mbt")
-    def isMBT1: Boolean =
-      value == "mbt" // New BSP-free workspace/symbol implementation
-    def isMBT2: Boolean =
-      value == "mbt-v2"
     def isBSP: Boolean =
       value == "bsp" // The classic BSP-based workspace/symbol implementation
   }

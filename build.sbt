@@ -558,8 +558,6 @@ lazy val metals = project
       V.guava,
       "org.slf4j" % "slf4j-api" % "1.7.36",
       "org.scalameta" %% "metaconfig-core" % "0.14.0",
-      // For MBT persistent cache
-      "org.lmdbjava" % "lmdbjava" % "0.9.1",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching

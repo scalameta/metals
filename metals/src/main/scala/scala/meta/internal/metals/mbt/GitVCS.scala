@@ -24,7 +24,7 @@ object GitVCS {
   def status(
       workspace: AbsolutePath,
       isRelevantPath: String => Boolean =
-        MbtWorkspaceSymbolSearch.isRelevantPath,
+        MbtWorkspaceSymbolProvider.isRelevantPath,
   ): mutable.ArrayBuffer[GitFileStatus] = {
     val result = mutable.ArrayBuffer.empty[GitFileStatus]
     val logger = ProcessLogger { line =>
@@ -61,7 +61,7 @@ object GitVCS {
   def lsFilesStage(
       workspace: AbsolutePath,
       isRelevantPath: GitBlob => Boolean = blob =>
-        MbtWorkspaceSymbolSearch.isRelevantPath(blob.path),
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
   ): ParArray[GitBlob] = try {
     lsFilesStageUnsafe(workspace, isRelevantPath)
   } catch {

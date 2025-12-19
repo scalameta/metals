@@ -14,7 +14,7 @@ class MbtManualSuite extends tests.BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt2
+      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt
     )
   override def defaultMetalsServerConfig: MetalsServerConfig =
     super.defaultMetalsServerConfig.copy(

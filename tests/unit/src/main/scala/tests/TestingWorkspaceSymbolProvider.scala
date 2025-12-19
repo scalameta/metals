@@ -6,7 +6,7 @@ import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceSymbolProvider
-import scala.meta.internal.metals.mbt.EmptyMbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -26,7 +26,7 @@ object TestingWorkspaceSymbolProvider {
       userConfig = () => UserConfiguration.default,
       excludedPackageHandler = () => ExcludedPackagesHandler.default,
       bucketSize = bucketSize,
-      mbtWorkspaceSymbolProvider = EmptyMbtWorkspaceSymbolSearch,
+      mbtWorkspaceSymbolProvider = MbtWorkspaceSymbolProvider.forTesting(),
       mtags = () => Mtags.testingSingleton,
     )(EmptyReportContext)
   }

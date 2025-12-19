@@ -19,7 +19,7 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
     presentationCompilerDiagnostics = true,
     buildOnChange = false,
     buildOnFocus = false,
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
   )
   override def initializeGitRepo: Boolean = true
 

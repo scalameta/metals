@@ -11,7 +11,7 @@ import scala.meta.infra.MonitoringClient
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.clients.language.DelegatingLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
@@ -33,7 +33,7 @@ trait IndexProviders {
   def definitionIndex: OnDemandSymbolIndex
   def referencesProvider: ReferenceProvider
   def workspaceSymbols: WorkspaceSymbolProvider
-  def mbtSymbolSearch: MbtWorkspaceSymbolSearch
+  def mbtSymbolSearch: MbtWorkspaceSymbolProvider
   def mtags: Mtags
   def buildTargets: BuildTargets
   def semanticDBIndexer: SemanticdbIndexer

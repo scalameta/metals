@@ -47,10 +47,8 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
-import scala.meta.internal.metals.mbt.LazyMbtWorkspaceSymbolSearch
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
-import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -296,7 +294,7 @@ abstract class MetalsLspService(
   private val sleeper: Sleeper =
     new Sleeper.ScheduledExecutorServiceSleeper(sh)
 
-  private val mbt2 = new MbtV2WorkspaceSymbolSearch(
+  private val mbt2 = new MbtWorkspaceSymbolProvider(
     workspace = folder,
     config = () => userConfig.workspaceSymbolProvider,
     buffers = buffers,
@@ -311,17 +309,7 @@ abstract class MetalsLspService(
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
   )
 
-  override val mbtSymbolSearch: MbtWorkspaceSymbolSearch =
-    cancelables.registerCloseable(
-      new LazyMbtWorkspaceSymbolSearch(
-        workspace = folder,
-        config = () => userConfig.workspaceSymbolProvider,
-        statistics = () => clientConfig.initialConfig.statistics,
-        metrics = metrics,
-        mtags = () => mtags,
-        mbt2 = mbt2,
-      )
-    )
+  override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2
   val workspaceSymbols: WorkspaceSymbolProvider =
     new WorkspaceSymbolProvider(
       folder,

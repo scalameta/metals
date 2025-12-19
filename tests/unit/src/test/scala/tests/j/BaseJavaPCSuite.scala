@@ -72,7 +72,7 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
       javaSymbolLoader = resolvedJavaSymbolLoader,
       javaTurbineRecompileDelay = turbineRecompileDelayConfig,
     )

@@ -14,7 +14,7 @@ import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ReportLevel
-import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.ProgressBars
@@ -57,7 +57,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       )
     }
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
-    val mbt = new MbtV2WorkspaceSymbolSearch(
+    val mbt = new MbtWorkspaceSymbolProvider(
       workspace = tmp(),
       javaSymbolLoader = () => JavaSymbolLoaderConfig.javacSourcepath,
     )

@@ -1,541 +1,720 @@
 package scala.meta.internal.metals.mbt
 
+import java.io.BufferedOutputStream
 import java.net.URI
-import java.nio.ByteBuffer
-import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.concurrent.ConcurrentLinkedQueue
+import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
+import java.util.concurrent.ConcurrentSkipListSet
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicInteger
 import java.{util => ju}
+import javax.tools.JavaFileManager
+import javax.tools.StandardJavaFileManager
 
-import scala.collection.mutable
-import scala.collection.parallel.CollectionConverters._
+import scala.collection.concurrent.TrieMap
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable.HashSet
+import scala.collection.parallel.mutable.ParArray
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
+import scala.util.Random
 import scala.util.Using
+import scala.util.control.NonFatal
 
 import scala.meta.dialects
-import scala.meta.infra
+import scala.meta.infra.Event
+import scala.meta.infra.MonitoringClient
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
-import scala.meta.internal.metals.CancelTokens
-import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.jmbt.Mbt
+import scala.meta.internal.jpc.SourceJavaFileObject
+import scala.meta.internal.metals.BaseFallbackClasspaths
+import scala.meta.internal.metals.BaseWorkDoneProgress
+import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.Fuzzy
-import scala.meta.internal.metals.Memory
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.EmptyFallbackClasspaths
+import scala.meta.internal.metals.EmptyWorkDoneProgress
+import scala.meta.internal.metals.FingerprintedCharSequence
+import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.StringBloomFilter
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.semanticdb.Scala.DescriptorParser
-import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
-import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.CancelToken
+import scala.meta.pc
+import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import com.google.turbine.diag.SourceFile
 import org.eclipse.{lsp4j => l}
-import org.lmdbjava.Env
 
-/**
- * MbtWorkspaceSymbolProvider is an LSP workspace/symbol implementation that
- * indexes all the Scala/Java files in the provided git repo using the mtags
- * "toplevel" indexers.
- *
- * Importantly, this indexer does *not* depend on BSP, it indexes all
- * *.{scala,java} files that are checked into the git repo. This index does
- * nothing if the workspace is not a git repo, but we could totally add support
- * to index git-free folders if someone wants to take a stab at implementing it.
- *
- * Simplified, this class implements the strategy documented
- * [here](https://scalameta.org/metals/blog/2019/01/22/bloom-filters/#fuzzy-symbol-search)
- * but it stores the TextDocument payloads in an LMDB database instead of
- * keeping them in-memory like we do with WorkspaceSymbolsIndex.
- *
- * This implementation is designed to perform fast even in large repos. For
- * example, it takes ~2.5s to index all of akka/akka on a cold cache with a
- * well-specced Linux computer. It takes ~0.3s to load the the akka/akka index
- * on a hot cache, and incremental updates are processed at ~300-600k loc/s
- * depending on a variety of factors like coding style, split between
- * Java/Scala, etc.
- *
- * NOTE: this class will get replaced with MbtV2WorkspaceSymbolSearch since it
- * was too complicated to retrofit incremental index updates to this array-based
- * LMDB index.
- */
-final class MbtWorkspaceSymbolProvider(
-    val gitWorkspace: AbsolutePath,
+case class MbtWorkspaceSymbolSearchParams(
+    query: String,
+    buildTargetIdentifier: String,
+)
+
+case class MbtPossibleReferencesParams(
+    references: collection.Seq[String] = Nil,
+    implementations: collection.Seq[String] = Nil,
+)
+
+object MbtWorkspaceSymbolProvider {
+  def isRelevantPath(file: String): Boolean = {
+    file.endsWith(".java") ||
+    file.endsWith(".proto") ||
+    file.endsWith(".scala")
+  }
+  def forTesting(): MbtWorkspaceSymbolProvider = {
+    val tmp = Files.createTempDirectory("mbt-workspace-symbol-provider")
+    tmp.toFile().deleteOnExit()
+    new MbtWorkspaceSymbolProvider(AbsolutePath(tmp))
+  }
+}
+
+class MbtWorkspaceSymbolProvider(
+    val workspace: AbsolutePath,
     config: () => WorkspaceSymbolProviderConfig = () =>
-      WorkspaceSymbolProviderConfig.default,
-    statistics: () => StatisticsConfig = () => StatisticsConfig.default,
+      WorkspaceSymbolProviderConfig.mbt,
+    buffers: Buffers = Buffers(),
+    time: Time = Time.system,
+    metrics: MonitoringClient = new NoopMonitoringClient(),
     mtags: () => Mtags = () => Mtags.testingSingleton,
-    metrics: infra.MonitoringClient = new NoopMonitoringClient(),
-) extends MbtWorkspaceSymbolSearch
-    with Cancelable
-    with SemanticdbFileManager {
+    progress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
+    onIndexingDone: () => Unit = () => (),
+    javaSymbolLoader: () => JavaSymbolLoaderConfig = () =>
+      JavaSymbolLoaderConfig.default,
+    fallbackClasspaths: () => BaseFallbackClasspaths = () =>
+      EmptyFallbackClasspaths,
+    sleeper: Sleeper = Sleeper.TestingSleeper,
+    turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
+      TurbineRecompileDelayConfig.fromConfig(None),
+)(implicit
+    val ec: ExecutionContext = ExecutionContext.Implicits.global,
+    val rc: ReportContext = LoggerReportContext,
+) extends SemanticdbFileManager
+    with JavaFileManagerFactory {
 
-  override def close(): Unit = {
-    db.close()
+  private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
+  private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
+  private val turbineCompiler = new TurbineCompiler[AbsolutePath](
+    () => documentsKeys,
+    file =>
+      if (!file.toLanguage.isJava) None
+      else toInput(file).map(input => new SourceFile(input.path, input.text)),
+    () => fallbackClasspaths().javaCompilerClasspath(),
+    progress,
+    // We don't need to re-compile the workspace super regularly because we can
+    // load recently changed files from the sourcepath.
+    turbineRecompileDelay().duration,
+    sleeper = sleeper,
+    onIndexingDone = onIndexingDone,
+  )
+
+  // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
+  // in MetalsLspService.onUserConfigUpdate
+  def recompileTurbineClasspath(): Future[Unit] = {
+    turbineCompiler.compileNow().ignoreValue
+  }
+
+  def close(): Unit = {}
+
+  // The source of truth for what files belong to the workspace, and their attached indexed data.
+  // DO NOT update this map directly since have a couple derivative collections.
+  // Instead, use the following methods to update the index:
+  // - onDidChange(file: AbsolutePath): Unit
+  // - onDidDelete(file: AbsolutePath): Unit
+  // - onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
+  private lazy val documents: TrieMap[AbsolutePath, IndexedDocument] =
+    readIndex()
+  def readInitialIndexForTestingPurposes(): Unit = {
+    // Just trigger the lazy val initialization without doing other expensive
+    // work that is not necessary for tests or benchmarks.
+    documents.size
+  }
+  // `documentsKeys` is effectively `documents.keys.par` but without the
+  // overhead to copy the keys into a parallel collection at query time.  Make
+  // sure to call updateDocumentsKeys() when you add or remove a document.
+  @volatile private var documentsKeys = ParArray.empty[AbsolutePath]
+
+  // Maps SemanticDB package symbol (for example, "scala/collection/") to all
+  // the files that directly belong to that package. This index powers repo-wide
+  // -sourcepath imports for JavaPruneCompilerFileManager. It's important to manually
+  private val documentsByPackage: TrieMap[String, ConcurrentSkipListSet[Path]] =
+    TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
+
+  def onReindex(): IndexingStats = try {
+    if (isIndexing.compareAndSet(false, true)) {
+      onReindexInternal()
+    } else {
+      scribe.warn(
+        "mbt-v2: already indexing workspace symbols, skipping reindex"
+      )
+      IndexingStats.empty
+    }
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"mbt-v2: error reindexing workspace symbols", e)
+      IndexingStats.empty
+  } finally {
+    isIndexing.set(false)
+  }
+
+  private def onReindexInternal(): IndexingStats = {
+    if (!config().isMBT) {
+      scribe.warn(s"mbt-v2: config is not mbt-v2, skipping reindex")
+      return IndexingStats.empty
+    }
+
+    val timer = new Timer(time)
+    // Step 1: list all files in HEAD and include OIDs.
+    val files = GitVCS.lsFilesStage(workspace)
+    if (files.isEmpty) {
+      // A more detailed error message is logged if GitVCS.lsFilesStage fails.
+      return IndexingStats.empty
+    }
+
+    // Step 2: filter down what files in the git repo are missing results in the
+    // index.
+    val toIndex = ParArray.fromSpecific(for {
+      file <- files
+      path = workspace.resolve(file.path)
+      isCached = documents.get(path).exists(_.oid == file.oid)
+      if !isCached
+    } yield path)
+    if (toIndex.nonEmpty) {
+      scribe.info(s"mbt-v2: indexing ${toIndex.length} files")
+    }
+
+    val (task, token) = progress.startProgress(
+      message = "Indexing workspace symbols",
+      withProgress = true,
+      showTimer = true,
+      onCancel = None,
+    )
+    try {
+      task.maybeProgress.foreach(_.update(0, toIndex.length))
+
+      val indexedFilesCount = new AtomicInteger()
+      // Step 3: The actual indexing, happens in parallel. Treat these as regular
+      // didChange events for each individual file.
+      toIndex.foreach { file =>
+        try {
+          onDidChangeInternal(file, updateDocumentKeys = false)
+          val count = indexedFilesCount.incrementAndGet()
+          if (count % 50 == 0) {
+            task.maybeProgress.foreach(_.update(count, toIndex.length))
+          }
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(s"mbt-v2: error indexing file ${file}", e)
+          case _: StackOverflowError =>
+            scribe.error(s"mbt-v2: stack overflow indexing file ${file}")
+        }
+      }
+      updateDocumentsKeys(documents)
+    } finally {
+
+      val end = new l.WorkDoneProgressEnd()
+      end.setMessage(s"done in $timer")
+      progress.endProgress(token)
+      onIndexingDone()
+    }
+
+    // Step 4: Write the index to disk. It's technically fine to move writing
+    // the index to a background job.  Might be worth doing someday.
+    writeIndex()
+
+    // Step 5: record metrics.
+    // This metric includes everything to create an up-todate index including
+    // - File I/O to read the index from disk
+    // - Running `git ls-files --stage`
+    // - Parsing and indexing all changed files
+    // - File I/O to write the index to disk.
+    metrics.recordEvent(
+      Event.duration("mbt2_index_workspace_symbol", timer.elapsed)
+    )
+    scribe.info(
+      f"time: mbt-v2 loaded index for ${documents.size} files in ${timer}"
+    )
+
+    IndexingStats(
+      files.length,
+      toIndex.length,
+      backgroundJobs = Future
+        .sequence(
+          Seq(
+            Future {
+              // We intentionally exclude `git status` from the metrics because this command
+              // can take a very long time to run in large repos and it's not something we
+              // can optimize.
+              synchronizeWithGitStatus()
+            },
+            if (javaSymbolLoader().isTurbineClasspath) {
+              turbineCompiler.compileNow()
+            } else {
+              Future.unit
+            },
+          )
+        )
+        .ignoreValue,
+    )
+  }
+
+  private def synchronizeWithGitStatus(): Unit = {
+    GitVCS
+      .status(workspace)
+      .foreach(file => this.onDidChange(file.file))
+  }
+
+  def onDidChangeSymbols(
+      params: OnDidChangeSymbolsParams
+  ): Future[Unit] = {
+    val indexedDoc = IndexedDocument.fromOnDidChangeParams(params)
+    putDocument(params.path, indexedDoc, updateDocumentKeys = true)
+  }
+  def onDidDelete(file: AbsolutePath): Future[Unit] = {
+    documents.remove(file) match {
+      case None => Future.unit
+      case Some(doc) =>
+        updateDocumentsKeys(documents)
+        // Remove from package index
+        for {
+          pkg <- doc.semanticdbPackages
+          files <- documentsByPackage.get(pkg)
+        } {
+          files.remove(file.toNIO)
+        }
+        // If Java file, treat deletion as a change to an empty file.
+        // This adds an empty source to SOURCE_PATH so javac won't find the class.
+        // We also track deleted binary names to exclude from CLASS_PATH.
+        if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
+          val binaryNames = doc.symbols
+            .map(_.getSymbol())
+            .filter(sym => Symbol(sym).isToplevel)
+            .map(sym => sym.stripSuffix("#").stripSuffix("."))
+            .toSeq
+          // Track deleted binary names for CLASS_PATH exclusion
+          turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+          // Add empty file to SOURCE_PATH so javac parses it and doesn't find the class
+          doc.semanticdbPackages.headOption match {
+            case Some(pkg) =>
+              val packageName = pkg.stripSuffix("/").replace("/", ".")
+              val emptyCompilationUnit = VirtualTextDocument(
+                SourceJavaFileObject.makeRelativeURI(file.toURI),
+                pc.Language.JAVA,
+                "", // Empty content - class is no longer defined
+                doc.semanticdbPackages,
+                Nil, // No toplevel symbols
+              )
+              turbineCompiler
+                .onDidChange(packageName, emptyCompilationUnit)
+                .map(_ => ())
+            case None =>
+              Future.unit
+          }
+        } else {
+          Future.unit
+        }
+    }
+  }
+  def onDidChange(file: AbsolutePath): Future[Unit] = {
+    onDidChangeInternal(file, updateDocumentKeys = true)
+  }
+
+  private def onDidChangeInternal(
+      file: AbsolutePath,
+      updateDocumentKeys: Boolean,
+  ): Future[Unit] = try {
+    val mdoc =
+      IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
+    putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
+  } catch {
+    case _: UnexpectedInputEndException =>
+      scribe.debug(s"${file}: syntax error")
+      Future.unit
+    case NonFatal(e) =>
+      scribe.error(s"Error indexing file $file", e)
+      Future.unit
+  }
+
+  private def toInput(
+      file: AbsolutePath
+  ): Option[Input.VirtualFile] = try {
+    Some(file.toInputFromBuffers(buffers))
+  } catch {
+    case _: java.nio.file.NoSuchFileException =>
+      onDidDelete(file)
+      None
+  }
+
+  override def createFileManager(
+      standardFileManager: StandardJavaFileManager
+  ): JavaFileManager = {
+    if (javaSymbolLoader().isJavacSourcepath) {
+      new JavacSourcepathFileManager(
+        standardFileManager,
+        (pkg) => {
+          documentsByPackage.get(pkg) match {
+            case None =>
+              ju.Collections.emptyList()
+            case Some(paths) =>
+              val result = for {
+                path <- paths.asScala.iterator
+                doc <- documents.get(AbsolutePath(path)).toList.iterator
+                if doc.language.isJava
+                input <- toInput(doc.file)
+              } yield doc.toSemanticdbCompilationUnit(input)
+              ArrayBuffer.from(result).asJava
+          }
+        },
+      )
+    } else if (javaSymbolLoader().isTurbineClasspath) {
+      turbineCompiler.createFileManager(standardFileManager)
+    } else {
+      throw new IllegalArgumentException(
+        s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"
+      )
+    }
   }
 
   override def listAllPackages(): ju.Map[String, ju.Set[Path]] = {
-    ju.Collections.emptyMap()
+    documentsByPackage
+      .mapValues(set => ju.Collections.unmodifiableSet(set))
+      .toMap
+      .asJava
   }
 
-  private val isStatisticsEnabled: Boolean = statistics().isWorkspaceSymbol
+  def document(file: AbsolutePath): Option[IndexedDocument] = {
+    documents.get(file)
+  }
 
-  private val db = new LMDB(gitWorkspace)
-  // The workspace symbol index is, simplified, a list of bloom filters, where
-  // each bloom filter represents the set of symbols that are defined in a
-  // single file. This could technically be a Map[Path, StringBloomFilter] but
-  // it's an array since it's cleaner to process it in parallel like that.
-  @volatile
-  private var index = mutable.ArrayBuffer.empty[OIDIndex]
+  def definition(symbol: String): List[l.Location] = {
+    val result = (for {
+      file <- documentsByPackage
+        .getOrElse(
+          Symbol(symbol).enclosingPackage.value,
+          new ju.concurrent.ConcurrentSkipListSet[Path](),
+        )
+        .asScala
+        .iterator
+      doc <- documents.get(AbsolutePath(file)).iterator
+      sym <- doc.symbols.iterator
+      if sym.getSymbol() == symbol
+    } yield {
+      new l.Location(
+        file.toUri().toString(),
+        new l.Range(
+          new l.Position(
+            sym.getDefinitionRange().getStartLine(),
+            sym.getDefinitionRange().getStartCharacter(),
+          ),
+          new l.Position(
+            sym.getDefinitionRange().getEndLine(),
+            sym.getDefinitionRange().getEndCharacter(),
+          ),
+        ),
+      )
+    }).toList
+    result
+  }
 
-  // The maximum number of symbol results to return. Users only look at the top
-  // 20 results, nobody scrolls down the list, so we could probably cut this
-  // down even further.  We need an upper limit to keep latency down. For
-  // example, the query "Suite" could match all test suites in the repo
-  // returning thousands of results.
-  private val maxResults = 300
-  // The LMDB table name.
-  private val tableName = "workspaceSymbols"
-  // Bump up this version if we make a change to how indexing happens. For
-  // example, if we start indexing Java methods, then we can bump up this
-  // version to invalidate the cache for old payloads. TODO: implement the logic
-  // to remove old payloads if you bump this version.
-  private val dbVersion = 1
-  // The "workspaceSymbols" includes SemanticDB TextDocument payloads under this
-  // subkey.  We could have technically used different tables, but then we
-  // couldn't reuse the same `openDbi` call.
-  private val tableSemanticdbSubkey = 1
-  // The "workspaceSymbols" includes serialized bloom filters under this subkey.
-  private val tableBloomFilterSubkey = 2
+  def possibleReferences(
+      params: MbtPossibleReferencesParams
+  ): Iterable[AbsolutePath] = {
+    val queries = HashSet.empty[String]
+    params.implementations.foreach { symbol =>
+      val sym = Symbol(symbol)
+      if (sym.isMethod) {
+        queries += s"${sym.displayName}():"
+      } else if (sym.isType) {
+        queries += s"${sym.displayName}:"
+      } else {
+        scribe.warn(
+          s"mbt-v2: unexpected implementation symbol for possibleReferences: ${symbol}"
+        )
+      }
+    }
+    params.references.foreach { ref =>
+      val sym = Symbol(ref)
+      if (sym.isGlobal) {
+        if (sym.isConstructor) {
+          queries += s"${sym.owner.displayName}."
+        } else if (sym.isMethod) {
+          queries += s"${sym.displayName}()."
+        } else {
+          queries += s"${sym.displayName}."
+          queries += s"${sym.displayName}:"
+        }
+      }
+    }
+    val fingerprints =
+      queries.iterator.map(FingerprintedCharSequence.fuzzyReference).toBuffer
+    val result = new ju.concurrent.ConcurrentLinkedDeque[AbsolutePath]()
+    for {
+      path <- documentsKeys.toList
+      doc <- documents.get(path).toList.iterator
+      if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
+    } {
+      if (path.exists) {
+        result.add(path)
+      } else {
+        // Clean up removed files
+        documents.remove(path)
+      }
+    }
+    result.asScala
+  }
 
-  override def workspaceSymbolSearch(
+  // Convenience method to avoid dealing with the visitor-based query API
+  // (including concurrency).  Mostly useful for testing. In production, use the
+  // visitor-based API.
+  final def queryWorkspaceSymbol(
+      query: String
+  ): List[l.SymbolInformation] = {
+    val visitor = new SimpleCollectingSymbolSearchVisitor()
+    workspaceSymbolSearch(
+      new MbtWorkspaceSymbolSearchParams(query, ""),
+      visitor,
+    )
+    visitor.results.asScala.toList
+  }
+
+  def workspaceSymbolSearch(
       params: MbtWorkspaceSymbolSearchParams,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    if (!config().isMBT1) {
-      scribe.error(
-        "invalid state, MbtWorkspaceSymbolProvider.search cannot be used when config.isMBT1 is false"
+    if (!config().isMBT) {
+      scribe.warn(
+        s"mbt-v2: config is not mbt-v2, skipping workspace symbol search"
       )
-      return SymbolSearch.Result.INCOMPLETE
+      return SymbolSearch.Result.COMPLETE
     }
-    this.onQueryWorkspaceSymbol(
-      new l.WorkspaceSymbolParams(params.query),
-      CancelTokens.empty,
-      visitor = (
-          doc: s.TextDocument,
-          info: s.SymbolInformation,
-          occ: s.SymbolOccurrence,
-      ) => {
-        if (!doc.uri.startsWith("file://")) {
-          throw new IllegalArgumentException(s"invalid uri: ${doc.uri}")
-        }
-        val path = Paths.get(URI.create(doc.uri))
-        visitor.visitWorkspaceSymbol(
-          path,
-          info.symbol,
-          info.kind.toLsp,
-          occ.range.getOrElse(s.Range()).toLsp,
-        )
-        if (visitor.isCancelled()) Stop else Continue
-      },
-    )
-    SymbolSearch.Result.COMPLETE
-  }
 
-  def queryWorkspaceSymbol(
-      query: String,
-      token: CancelToken = CancelTokens.empty,
-  ): List[l.SymbolInformation] = {
-    queryWorkspaceSymbol(new l.WorkspaceSymbolParams(query), token)
-  }
-
-  def queryWorkspaceSymbol(
-      params: l.WorkspaceSymbolParams,
-      token: CancelToken,
-  ): List[l.SymbolInformation] = {
-    val result = new ConcurrentLinkedQueue[l.SymbolInformation]()
-    onQueryWorkspaceSymbol(
-      params,
-      token,
-      visitor = (
-          doc: s.TextDocument,
-          info: s.SymbolInformation,
-          symbol: s.SymbolOccurrence,
-      ) => {
-        val (desc, owner) = DescriptorParser(info.symbol)
-        result.add(
-          new l.SymbolInformation(
-            desc.name.value,
-            info.kind.toLsp,
-            new l.Location(
-              doc.uri,
-              symbol.range.fold(new l.Range())(r => r.toLsp),
-            ),
-            owner.replace('/', '.'),
-          )
-        )
-        if (result.size >= maxResults) Stop
-        else Continue
-      },
-    )
-    result.asScala.toList
-  }
-  private def onQueryWorkspaceSymbol(
-      params: l.WorkspaceSymbolParams,
-      token: CancelToken,
-      visitor: MbtSymbolSearchVisitor,
-  ): Unit = {
-    if (!config().isMBT1) {
-      scribe.error(
-        "invalid state, MbtWorkspaceSymbolProvider.workspaceSymbol cannot be used when config.isMBT1 is false"
+    if (params.buildTargetIdentifier.nonEmpty) {
+      throw new UnsupportedOperationException(
+        s"mbt-v2: build target identifier is not supported yet. Got: '${params.buildTargetIdentifier}'"
       )
-      return
-    }
-    db.readTransaction[Unit](
-      tableName,
-      s"query(${params.getQuery})",
-      (),
-    ) { (env, db, txn, _) =>
-      workspaceSymbolUnsafe(params, env, db, txn, token, visitor)
-    }
-  }
-
-  private case class Match(file: OIDIndex, isExact: Boolean)
-  private def workspaceSymbolUnsafe(
-      params: l.WorkspaceSymbolParams,
-      env: Env[ByteBuffer],
-      db: org.lmdbjava.Dbi[ByteBuffer],
-      txn: org.lmdbjava.Txn[ByteBuffer],
-      token: CancelToken,
-      visitor: MbtSymbolSearchVisitor,
-  ): Unit = {
-    val timer = new Timer(Time.system)
-    if (index.isEmpty) {
-      scribe.error(s"workspace/symbol index is empty")
-      return
-    }
-    val query = WorkspaceSymbolQuery.fuzzy(params.getQuery)
-    val exactQuery =
-      WorkspaceSymbolQuery.exactDescriptorPart(params.getQuery)
-    val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
-    if (token.isCanceled()) {
-      return
     }
 
-    val oids = new ConcurrentLinkedQueue[Match]()
-    index.par
-      .foreach { f =>
-        val isFuzzyMatch = query.matches(f.documentSymbols)
-        if (isFuzzyMatch) {
-          oids.add(Match(f, exactQuery.matches(f.documentSymbols)))
-        }
-      }
+    val maxResults = 300
+    val fuzzyQuery = WorkspaceSymbolQuery.fuzzy(params.query)
+    val exactQuery = WorkspaceSymbolQuery.exactDescriptorPart(params.query)
+    val resultCount = new AtomicInteger(0)
+    val remainingFilesCount = new AtomicInteger(documentsKeys.length)
 
-    val rankedOIDs = mutable.ArrayBuffer.empty[Match].addAll(oids.asScala)
-    // Boost results where the symbol name is an exact match. Without this, the
-    // query "InputStream" may return results like `createInputStream` at the
-    // top. NOTE: we don't have a guarantee yet they're at the top because we
-    // need to do this sort one more time at the end but it's only relevant if
-    // we get >300 exact matches, at which point it won't help much anyways.
-    rankedOIDs.sortInPlaceBy(m => if (m.isExact) 0 else 1)
-    val cursor = db.openCursor(txn)
-    val semanticdbs = mutable.ArrayBuffer.empty[TextDocument]
-    semanticdbs.appendAll(
-      rankedOIDs.iterator.map(o => readTextDocument(keyBuffer, db, txn, o.file))
-    )
-    if (token.isCanceled()) {
-      return
-    }
-    cursor.close()
-    txn.close()
-    val result =
-      new ju.concurrent.atomic.AtomicReference[MbtSymbolSearchResult](Continue)
-    val resultCount = new ju.concurrent.atomic.AtomicInteger(0)
+    // Step 1: filter out what files are *likely* to contain a match, per bloom
+    // filter tests.
+    val exactMatches =
+      new ju.concurrent.ConcurrentLinkedQueue[IndexedDocument]()
+    val fuzzyMatches =
+      new ju.concurrent.ConcurrentLinkedQueue[IndexedDocument]()
     for {
-      doc <- semanticdbs.par
-      if result.get() == Continue
-      symbol <- doc.occurrences
-      if query.matches(symbol.symbol)
+      path <- documentsKeys
+      if !visitor.isCancelled() && resultCount.get() < maxResults
+      _ = remainingFilesCount.decrementAndGet()
+      doc <- documents.get(path).toList.iterator
+      if fuzzyQuery.matches(doc.bloomFilter)
     } {
-      // TODO: optimize this naive lookup
-      val info = doc.symbols
-        .find(_.symbol == symbol.symbol)
-        .getOrElse(s.SymbolInformation())
-      result.compareAndSet(Continue, visitor.onMatch(doc, info, symbol))
-      resultCount.incrementAndGet()
-    }
-    if (isStatisticsEnabled) {
-      scribe.trace(
-        s"workspace/symbol query '${params.getQuery}' matched ${resultCount.get()} results in ${timer}, sourced from ${rankedOIDs.length} candidate files"
-      )
-    }
-  }
-
-  // NOTE(olafurpg):`onDidChange` is not supported with mbt-v1. I gave up trying
-  // because it was too complicated to implement it the array-based index and
-  // LMDB backend.  In mbt-v2, this is much much simpler to implement because
-  // it's using the same TrieMap[AbsolutePath, IndexedDocument] shape as all the
-  // other indexers in Metals.
-  def onDidChange(file: AbsolutePath): Future[Unit] = Future.unit
-  def onDidDelete(file: AbsolutePath): Future[Unit] = Future.unit
-  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Future[Unit] =
-    Future.unit
-
-  override def onReindex(): IndexingStats = {
-    if (!config().isMBT1) {
-      return IndexingStats.empty
-    }
-    // Stage 0: discover the files that need to be indexed
-    scribe.debug("workspace/symbol indexing started")
-    val timer = new Timer(Time.system)
-    val files =
-      // TODO: avoid copy here
-      mutable.ArrayBuffer.from(GitVCS.lsFilesStage(gitWorkspace).iterator)
-    if (files.isEmpty) {
-      // An error is logged if GitVCS.lsFilesStage fails.
-      scribe.warn("workspace/symbol indexing found no files to index")
-      return IndexingStats.empty
-    }
-    if (isStatisticsEnabled) {
-      scribe.info(
-        f"time: workspace/symbol discovered ${files.length}%,d files in ${timer}"
-      )
-    }
-
-    val missingKeys =
-      db.writeTransaction(
-        tableName,
-        "missingKeys",
-        mutable.ArrayBuffer.empty[Int],
-      ) { (env, db, txn, use) =>
-        // Step 1: open the database
-        val keyBuffer = ByteBuffer.allocateDirect(env.getMaxKeySize())
-        val valueBuffer = ByteBuffer.allocateDirect(8 * 1024 * 1024)
-        val cursor = db.openCursor(txn)
-
-        // Step 2: discover the files that need to be indexed
-        val missingKeys =
-          readCacheAndReturnMissingKeys(keyBuffer, files, db, txn)
-        val cachedFilesCount = files.length - missingKeys.length
-
-        // Step 3: read the text contents of the missing files into memory
-        readGitFiles(files, missingKeys, use)
-        if (isStatisticsEnabled) {
-          scribe.info(
-            s"time: workspace/symbol read ${missingKeys.length} cold files and ${cachedFilesCount} hot files in ${timer}"
-          )
-        }
-
-        // Step 4: index the missing files
-        indexMissingFiles(mtags(), files, missingKeys)
-
-        // Step 5: write the indexed files to the database
-        missingKeys.foreach { index =>
-          val file = files(index)
-          keyBuffer
-            .clear()
-            .putInt(dbVersion)
-            .putInt(tableSemanticdbSubkey)
-            .put(file.oidBytes)
-            .flip()
-          valueBuffer.clear().put(file.semanticdb.toByteArray).flip()
-          cursor.put(keyBuffer, valueBuffer)
-
-          keyBuffer
-            .clear()
-            .putInt(dbVersion)
-            .putInt(tableBloomFilterSubkey)
-            .put(file.oidBytes)
-            .flip()
-          valueBuffer.clear().put(file.bloomFilter.toBytes).flip()
-          cursor.put(keyBuffer, valueBuffer)
-          missingKeys
-        }
-        txn.commit()
-        missingKeys
-      }
-
-    // Step 6: assemble the in-memory index. Only the bloom filters, file
-    // paths (for debugging) and OIDs are needed.
-    val newIndex =
-      mutable.ArrayBuffer.from(files.iterator.map(_.toOIDIndex(gitWorkspace)))
-    newIndex.sortInPlace()(Ordering.by[OIDIndex, Path](_.path))
-    index = newIndex
-    files.clear()
-
-    metrics.recordEvent(
-      infra.Event.duration("mbt_index_workspace_symbol", timer.elapsed)
-    )
-
-    // Step 7: print logs
-    if (statistics().isMemory) {
-      Memory.logMemory(List(("workspace/symbol index", index)))
-    }
-    val elapsed = timer.elapsedNanos.toDouble / 1_000_000_000
-
-    if (isStatisticsEnabled && missingKeys.length > 0) {
-      val linesPerSecond =
-        if (elapsed > 0) mtags().totalLinesOfCode / elapsed else 0
-      scribe.info(
-        f"time: workspace/symbol indexed ${missingKeys.length} files (${linesPerSecond.toInt}%,d loc/s) in ${timer}"
-      )
-    }
-    IndexingStats(
-      totalFiles = index.length,
-      updatedFiles = missingKeys.length,
-    )
-  }
-
-  private def readCacheAndReturnMissingKeys(
-      keyBuffer: ByteBuffer,
-      files: mutable.ArrayBuffer[GitBlob],
-      db: org.lmdbjava.Dbi[ByteBuffer],
-      txn: org.lmdbjava.Txn[ByteBuffer],
-  ): mutable.ArrayBuffer[Int] = {
-    val missingKeys = mutable.ArrayBuffer.empty[Int]
-    files.iterator.zipWithIndex.foreach { case (file, index) =>
-      keyBuffer
-        .clear()
-        .putInt(dbVersion)
-        .putInt(tableBloomFilterSubkey)
-        .put(file.oidBytes)
-        .flip()
-      val valueFromDb = db.get(txn, keyBuffer)
-      if (valueFromDb != null) {
-        val bloomFilterBytes = new Array[Byte](valueFromDb.remaining())
-        valueFromDb.get(bloomFilterBytes)
-        file.bloomFilter = StringBloomFilter.fromBytes(bloomFilterBytes)
-
-        // TODO: remove me, we should not hold onto the SemanticDBs in memory here
-        // We're only doing it temporarily to compute the toplevel package name and toplevel
-        keyBuffer
-          .clear()
-          .putInt(dbVersion)
-          .putInt(tableSemanticdbSubkey)
-          .put(file.oidBytes)
-          .flip()
-        val semanticdbFromDb = db.get(txn, keyBuffer)
-        if (semanticdbFromDb != null) {
-          val semanticdbBytes = new Array[Byte](semanticdbFromDb.remaining())
-          semanticdbFromDb.get(semanticdbBytes)
-          file.semanticdb = TextDocument.parseFrom(semanticdbBytes)
-        }
+      if (exactQuery.matches(doc.bloomFilter)) {
+        exactMatches.add(doc)
       } else {
-        missingKeys.append(index)
+        fuzzyMatches.add(doc)
       }
-
     }
-    missingKeys
-  }
 
-  private def indexMissingFiles(
-      mtags: Mtags,
-      files: mutable.ArrayBuffer[GitBlob],
-      missingKeys: mutable.ArrayBuffer[Int],
-  ): Unit = {
-    if (missingKeys.isEmpty) {
-      return
-    }
-    missingKeys.par.foreach { index =>
-      val file = files(index)
-      val result = Try {
-        val input =
-          Input.VirtualFile(
-            gitWorkspace.resolve(file.path).toURI.toString(),
-            new String(file.textBytes, StandardCharsets.UTF_8),
-          )
-        // No need to hold on the text contents after we have read them
-        file.textBytes = null
-        mtags.indexMBT(
-          file.toJLanguage,
-          input,
-          dialects.Scala213,
-          includeReferences = false,
+    // Step 2: brute-force fuzzy search through all the symbols in the documents
+    // with potential matches.
+    val candidates = ParArray.fromSpecific(
+      Iterator(
+        exactMatches.asScala.iterator,
+        fuzzyMatches.asScala.iterator,
+      ).flatten
+    )
+    for {
+      doc <- candidates
+      if !visitor.isCancelled() && resultCount.get() < maxResults
+      info <- doc.symbols
+      if fuzzyQuery.matches(info.getSymbol())
+    } {
+      resultCount.addAndGet(
+        visitor.visitWorkspaceSymbol(
+          doc.file.toNIO,
+          info.getSymbol,
+          info.getKind.toLsp,
+          info.getDefinitionRange().toLspRange,
         )
-      }.recover {
-        case _: UnexpectedInputEndException =>
-          scribe.error(s"${file.path}: syntax error")
-          TextDocument()
-        case e =>
-          scribe.error(
-            s"Error while indexing workspace symbol for file '${file.path}'",
-            e,
-          )
-          TextDocument()
-      }
-      file.semanticdb = result.get
-      file.bloomFilter =
-        Fuzzy.bloomFilterSymbolStrings(result.get.occurrences.map(_.symbol))
-    }
-  }
-
-  private def readGitFiles(
-      files: mutable.ArrayBuffer[GitBlob],
-      missingKeys: mutable.ArrayBuffer[Int],
-      use: Using.Manager,
-  ): Unit = {
-    if (missingKeys.isEmpty) {
-      return
-    }
-    val oids =
-      missingKeys.map(i => files(i).oid).mkString("\n")
-    // NOTE: we read *all* Scala/Java files in the repo into memory here. This
-    // is not an inherent requirement, it's just convenient. It's only ~1gb of
-    // ram, and we only hold it temporarily. The final index only needs ~256mb
-    // of ram. We should make sure Metals has enough -Xmx to do this instead of
-    // trying to make the indexing pipeline work with <<1gb of ram.
-    val reader = use(GitCat.batch(stdin = oids, cwd = gitWorkspace)).toArray
-    if (reader.length != missingKeys.length) {
-      throw new RuntimeException(
-        s"Oid mismatch: ${reader.length} != ${missingKeys.length}"
       )
     }
-    reader.iterator.zip(missingKeys.iterator).foreach {
-      case (GitBlobBytes(oid, bytes), index) =>
-        val file = files(index)
-        if (file.oid != oid) {
-          throw new RuntimeException(
-            s"Oid mismatch: ${file.oid} != ${oid} (for file path ${file.path})"
-          )
-        }
-        file.textBytes = bytes
-    }
-  }
 
-  private def readTextDocument(
-      keyBuffer: ByteBuffer,
-      db: org.lmdbjava.Dbi[ByteBuffer],
-      txn: org.lmdbjava.Txn[ByteBuffer],
-      file: OIDIndex,
-  ): TextDocument = {
-    keyBuffer
-      .clear()
-      .putInt(dbVersion)
-      .putInt(tableSemanticdbSubkey)
-      .put(file.oid)
-      .flip()
-    val value = db.get(txn, keyBuffer)
-    if (value != null) {
-      val bytes = new Array[Byte](value.remaining())
-      value.get(bytes)
-      TextDocument.parseFrom(bytes)
+    if (remainingFilesCount.get() > 0) {
+      SymbolSearch.Result.INCOMPLETE
     } else {
-      scribe.error(s"TextDocument not found for file ${file.path}")
-      TextDocument()
+      SymbolSearch.Result.COMPLETE
     }
   }
 
-  override def cancel(): Unit = {
-    db.close()
+  private def putDocument(
+      file: AbsolutePath,
+      doc: IndexedDocument,
+      updateDocumentKeys: Boolean,
+  ): Future[Unit] = {
+    val old = documents.put(file, doc)
+    if (old == None && updateDocumentKeys) {
+      updateDocumentsKeys(documents)
+    }
+    addDocumentToPackages(doc.semanticdbPackages, file)
+    if (
+      updateDocumentKeys &&
+      doc.language.isJava &&
+      javaSymbolLoader().isTurbineClasspath
+    ) {
+      doc.semanticdbPackages.headOption match {
+        case Some(pkg) =>
+          val input = file.toInputFromBuffers(buffers)
+          val packageName = pkg.stripSuffix("/").replace("/", ".")
+          val compilationUnit = doc.toSemanticdbCompilationUnit(input)
+          turbineCompiler.onDidChange(packageName, compilationUnit).ignoreValue
+        case None =>
+          Future.unit
+      }
+    } else {
+      Future.unit
+    }
   }
+
+  private def addDocumentToPackages(
+      pkgs: Seq[String],
+      file: AbsolutePath,
+  ): Unit = {
+    for (pkg <- pkgs) {
+      val files = documentsByPackage.getOrElseUpdate(
+        pkg,
+        new ju.concurrent.ConcurrentSkipListSet[Path](
+          new ju.Comparator[Path]() {
+            override def compare(o1: Path, o2: Path): Int = {
+              o1.toString.compareTo(o2.toString)
+            }
+          }
+        ),
+      )
+      files.add(file.toNIO)
+    }
+  }
+
+  // Dumps the current in-memory index to .metals/index.mbt. This overwrites the
+  // old index, which effectively works like basic garbage collection. We don't
+  // need 100% cache hits so it's fine to re-index all the changed files every
+  // time you checkout between two git commits. We just want to avoid 1) re-indexing
+  // 100k files on startup and 2) having an index that grows unbounded.
+  private def writeIndex(): Unit = try {
+    indexFile.parent.createDirectories()
+    val tmp = workspace
+      // We create the tmp file under .metals/ because atomic moves can fail on
+      // Linux if /tmp is on a different mount than the workspace.
+      .resolve(Directories.outDir)
+      // Use a random number there are multiple Metals servers indexing the same
+      // workspace at the same time, which should be rare, but can happen.
+      .resolve(s"index.mbt.${new Random().nextInt()}.tmp")
+    tmp.deleteIfExists()
+    tmp.parent.createDirectories()
+    val bufferedOutputStream = new BufferedOutputStream(
+      Files.newOutputStream(
+        tmp.toNIO,
+        StandardOpenOption.CREATE_NEW,
+        StandardOpenOption.TRUNCATE_EXISTING,
+        StandardOpenOption.WRITE,
+      )
+    )
+    tmp.toFile.deleteOnExit()
+    Using(bufferedOutputStream) { out =>
+      documents.foreach { case (path, doc) =>
+        if (!path.exists) {
+          this.documents.remove(path)
+        } else {
+          // Append one document at a time to the output stream to avoid holding
+          // a full copy of the binary payload in memory.  This is the main
+          // reason why index.mbt uses protobuf instead of JSON, it's not
+          // because Protobuf is super fast or super compact.
+          doc.toIndexProto().writeTo(out)
+        }
+      }
+    }
+    try {
+      Files.move(tmp.toNIO, indexFile.toNIO, StandardCopyOption.ATOMIC_MOVE)
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(
+          s"mbt-v2: failed to move '${tmp}' to '${indexFile}' atomically, trying non-atomic move.",
+          e,
+        )
+        // Fallback to non-atomic move.
+        Files.move(tmp.toNIO, indexFile.toNIO)
+    }
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"mbt-v2:Error writing index file ${indexFile}", e)
+  }
+
+  private def updateDocumentsKeys(
+      documentsIndex: TrieMap[AbsolutePath, IndexedDocument]
+  ): ParArray[AbsolutePath] = {
+    val newValue = ParArray.fromSpecific(documentsIndex.keysIterator)
+    documentsKeys = newValue
+    // update the document keys is the last step when indexing, as it prepares
+    // the parallel array for the next workspace symbol search, it's the right moment
+    // to notify others that the indexing is done.
+    onIndexingDone()
+    newValue
+  }
+
+  // Reads .metals/index.mbt, which is a serialized Mbt.Index protobuf payload,
+  // into memory and converts it into TrieMap[AbsolutePath, IndexedDocument].
+  // For a very large repo (>100k Scala/Java files), this file still only takes
+  // ~500mb of ram.
+  private def readIndex(): TrieMap[AbsolutePath, IndexedDocument] = try {
+    val result = TrieMap.empty[AbsolutePath, IndexedDocument]
+    if (indexFile.exists) {
+      val timer = new Timer(time)
+      val index = Mbt.Index.parseFrom(indexFile.readAllBytes)
+      for {
+        doc <- index.getDocumentsList().asScala.iterator
+        // Don't load old and incompatible versions of indexed files
+        if IndexedDocument.matchesCurrentVersion(doc)
+      } {
+        try {
+          val path = AbsolutePath.fromAbsoluteUri(URI.create(doc.getUri()))
+          addDocumentToPackages(
+            doc.getSemanticdbPackageList().asScala.toList,
+            path,
+          )
+          result.put(path, IndexedDocument.fromProto(path, doc))
+        } catch {
+          case NonFatal(e) =>
+            scribe.error(s"Error reading index file ${doc.getUri()}", e)
+        }
+      }
+      scribe.info(
+        s"mbt-v2: read index for ${result.size} files in ${timer}"
+      )
+    }
+    updateDocumentsKeys(result)
+    result
+  } catch {
+    case NonFatal(e) =>
+      scribe.error(s"Error reading repo-wide symbol index at '${indexFile}'", e)
+      TrieMap.empty[AbsolutePath, IndexedDocument]
+  }
+
 }

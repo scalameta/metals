@@ -7,7 +7,7 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
@@ -26,7 +26,7 @@ class MetalsSymbolSearch(
     docs: Docstrings,
     wsp: WorkspaceSymbolProvider,
     defn: DefinitionProvider,
-    mbt: MbtV2WorkspaceSymbolSearch,
+    mbt: MbtWorkspaceSymbolProvider,
     userConfig: () => UserConfiguration,
     mtags: () => Mtags,
 ) extends SymbolSearch {

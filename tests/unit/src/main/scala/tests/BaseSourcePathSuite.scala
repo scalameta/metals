@@ -18,7 +18,7 @@ trait BaseSourcePathSuite extends BaseLspSuite {
       buildOnFocus = false,
       fallbackClasspath = FallbackClasspathConfig.all3rdparty,
       fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt2,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
     )
 

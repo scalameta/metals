@@ -2,11 +2,11 @@ package tests.mbt
 
 import java.nio.file.Files
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.Configs
-import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
-import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 
 import munit.AnyFixture
@@ -16,7 +16,7 @@ import tests.CustomLoggingFixture
 import tests.FileLayout
 import tests.TemporaryDirectoryFixture
 
-class MbtWorkspaceSymbolProviderSuite extends munit.FunSuite {
+class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
   case class Query(value: String, expected: String)
   val workspace = new TemporaryDirectoryFixture()
   override def munitFixtures: Seq[AnyFixture[_]] =
@@ -25,6 +25,7 @@ class MbtWorkspaceSymbolProviderSuite extends munit.FunSuite {
       CustomLoggingFixture.showWarnings(),
     )
 
+  override def munitExecutionContext: ExecutionContext = ExecutionContext.global
   def formatSymbols(symbols: List[l.SymbolInformation]): String = {
     symbols
       .sortBy(s => s.getName() + s.getContainerName())
@@ -34,10 +35,8 @@ class MbtWorkspaceSymbolProviderSuite extends munit.FunSuite {
   def newProvider(): MbtWorkspaceSymbolProvider =
     new MbtWorkspaceSymbolProvider(
       workspace(),
-      () => Configs.WorkspaceSymbolProviderConfig.mbt,
-      () => StatisticsConfig.workspaceSymbol,
-      () => Mtags.testingSingleton,
-    )
+      config = () => Configs.WorkspaceSymbolProviderConfig.mbt,
+    )(munitExecutionContext)
 
   test("multi-language") {
     FileLayout.fromString(
@@ -52,6 +51,7 @@ object Hello {
 /com/Greeting.java
 package com;
 public class Greeting {
+  enum Day { WORKDAY, WEEKEND }
   public static String greet(User user) {
     return "Hello, " + user.name + "!";
   }
@@ -71,7 +71,7 @@ message User {
     workspace.executeCommand("git init -b main")
     workspace.gitCommitAllChanges()
     assertEquals(
-      provider.onReindex(),
+      provider.onReindex().awaitBackgroundJobs(),
       IndexingStats(totalFiles = 3, updatedFiles = 3),
     )
     assertNoDiff(
@@ -86,6 +86,8 @@ message User {
         |Class Greeting com.
         |""".stripMargin,
     )
+    val List(workday) = provider.queryWorkspaceSymbol("WORK")
+    assert(clue(workday.getLocation().getRange().getStart().getLine()) > 0)
     assertNoDiff(
       formatSymbols(provider.queryWorkspaceSymbol("User")),
       """
@@ -116,7 +118,7 @@ object Hello2 {
     )
     workspace.gitCommitAllChanges()
     assertEquals(
-      provider.onReindex(),
+      provider.onReindex().awaitBackgroundJobs(),
       IndexingStats(totalFiles = 4, updatedFiles = 2),
     )
     assertNoDiff(
@@ -128,7 +130,7 @@ object Hello2 {
         |""".stripMargin,
     )
     assertEquals(
-      provider.onReindex(),
+      provider.onReindex().awaitBackgroundJobs(),
       IndexingStats(totalFiles = 4, updatedFiles = 0),
     )
 
@@ -136,7 +138,7 @@ object Hello2 {
     Files.delete(workspace().resolve("com/Hello.scala").toNIO)
     workspace.gitCommitAllChanges()
     assertEquals(
-      provider.onReindex(),
+      provider.onReindex().awaitBackgroundJobs(),
       IndexingStats(totalFiles = 3, updatedFiles = 0),
     )
     // Nothing to re-index, we only removed a file
@@ -156,11 +158,9 @@ object Hello2 {
   ): Unit = {
     test(dir) {
       val provider = new MbtWorkspaceSymbolProvider(
-        AbsolutePath(dir.name),
-        () => Configs.WorkspaceSymbolProviderConfig.mbt,
-        () => StatisticsConfig.default,
-        () => Mtags.testingSingleton,
-      )
+        workspace = AbsolutePath(dir.name),
+        config = () => Configs.WorkspaceSymbolProviderConfig.mbt,
+      )(munitExecutionContext)
       provider.onReindex()
       val result =
         formatSymbols(provider.queryWorkspaceSymbol(query))

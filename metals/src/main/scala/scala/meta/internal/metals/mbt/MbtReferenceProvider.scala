@@ -31,7 +31,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
 class MbtReferenceProvider(
-    mbt: MbtWorkspaceSymbolSearch,
+    mbt: MbtWorkspaceSymbolProvider,
     compilers: Compilers,
     buffers: Buffers,
     time: Time,

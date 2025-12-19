@@ -11,7 +11,7 @@ class TurbineManualSuite extends tests.BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt2,
+      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt,
       javaSymbolLoader = Configs.JavaSymbolLoaderConfig.turbineClasspath,
       referenceProvider = Configs.ReferenceProviderConfig.mbt,
     )

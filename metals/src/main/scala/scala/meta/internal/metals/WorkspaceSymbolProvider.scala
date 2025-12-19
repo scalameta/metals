@@ -9,7 +9,7 @@ import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearchParams
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
@@ -37,7 +37,7 @@ final class WorkspaceSymbolProvider(
     bucketSize: Int = CompressedPackageIndex.DefaultBucketSize,
     classpathSearchIndexer: ClasspathSearch.Indexer =
       ClasspathSearch.Indexer.default,
-    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolSearch,
+    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider,
     mtags: () => Mtags,
 )(implicit rc: ReportContext) {
   val MaxWorkspaceMatchesForShortQuery = 100

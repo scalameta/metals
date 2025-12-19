@@ -11,7 +11,7 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.mbt.MbtV2WorkspaceSymbolSearch
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
@@ -64,7 +64,7 @@ final class DefinitionProvider(
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     definitionProviders: () => DefinitionProviderConfig,
-    mbt: MbtV2WorkspaceSymbolSearch,
+    mbt: MbtWorkspaceSymbolProvider,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
