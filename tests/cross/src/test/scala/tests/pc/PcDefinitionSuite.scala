@@ -250,6 +250,55 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "overloaded-method",
+    """|
+       |object Main {
+       |  def <<foo>>(x: Int): Unit = ()
+       |  def foo(x: String): Unit = ()
+       |  fo@@o(1)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "wrong-overloaded-method",
+    """|
+       |object Main {
+       |  def <<foo>>(x: Int): Unit = ()
+       |  def <<foo>>(x: List[File]): Unit = ()
+       |  fo@@o("abc")
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "wrong-overloaded-method-2",
+    """|
+       |class Base {
+       |  def <<foo>>(x: Int, y: String) = ???
+       |}
+       |object Main extends Base {
+       |  def <<foo>>(x: List[File], y: String): Unit = ()
+       |  fo@@o(new Object)
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "wrong-overloaded-apply",
+    """|
+       |case class <<Base>>(x: Int, y: String)
+       |object <<Base>> {
+       |  def <<apply>>(x: Int): Base = new Base(x, "")
+       |  def <<apply>>(y: String, x: Int): Base = new Base(x, y)
+       |}
+       |object Main {
+       |  Ba@@se("", "")
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "named-arg-local",
     """|
        |object Main {

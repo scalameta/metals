@@ -92,12 +92,20 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
               if !findTypeDef
                 && qual.pos.sameRange(tree.pos)
                 && qual.hasExistingSymbol =>
-            if (symbol.isCaseApplyOrUnapply) // no symbol to navigate to
-              List(symbol.owner.companionClass)
-            else
-              List(symbol, qual.symbol)
+
+            symbol.alternatives.flatMap { sym =>
+              if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
+                List(sym.owner.companionClass)
+              else
+                List(sym, qual.symbol)
+            }.distinct
+
           case _ =>
-            List(symbol)
+            // in case of errors, if the compiler didn't manage to resolve
+            // an overloaded symbol, all alternatives are given here so we
+            // can still navigate to something meaningful
+            // `.reverse` in order to keep the source order of overloads
+            symbol.alternatives.reverse
         }
         val sourceBasedDefs = DefinitionResultImpl(
           semanticdbSymbol(symbol),
