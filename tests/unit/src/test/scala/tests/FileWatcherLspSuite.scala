@@ -16,8 +16,8 @@ class FileWatcherLspSuite extends BaseLspSuite("file-watcher") {
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
 
-  // Ignored because we disabled the Metals file watcher https://github.com/REDACTED_ORG/metals/pull/59
-  // in favor of relying on LSP file watcher events, which are not sent in the test below.
+  // Ignored because this test relies on the Metals file watcher
+  // which is disabled in favor of LSP file watcher events that are not sent in this test.
   test("basic".ignore, withoutVirtualDocs = true, maxRetry = 3) {
     cleanCompileCache("a")
     cleanCompileCache("b")

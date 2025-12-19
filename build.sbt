@@ -71,24 +71,6 @@ inThisBuild(
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
     packageSrc / publishArtifact := sys.env.contains("CI"),
-    publishTo := Some(
-      "GitHub Package Registry (REDACTED_ORG/metals)".at(
-        "https://maven.pkg.github.com/REDACTED_ORG/metals"
-      )
-    ),
-    credentials ++= {
-      val githubToken = System.getenv("GITHUB_TOKEN")
-      if (githubToken == null) Seq.empty
-      else
-        Seq(
-          Credentials(
-            "GitHub Package Registry",
-            "maven.pkg.github.com",
-            "_",
-            githubToken,
-          )
-        )
-    },
     PB.protocVersion := V.protobuf,
   )
 )
@@ -174,30 +156,6 @@ commands ++= Seq(
       "mtags-java/publishLocal" ::
       publishMtags
   },
-  Command.command(
-    "quick-publish-gh-packages",
-    "Publish Databricks versions to Github Package registry",
-    """
-      |This command publishes Metals for Scala 2.12.18, 2.13.12 and 2.13.16 to
-      |Github Package Registry. To use them, add an additional repository to your
-      |Metals settings pointing to:
-      |  https://<user:token_with_read_packages@maven.pkg.github.com/REDACTED_ORG/metals
-      |
-      |The username should be your emu user and the token should have packages read access
-      |""".stripMargin,
-  ) { s =>
-    val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
-      runMtagsPublishGhPackages(st, v)
-    }
-    "interfaces/publish" ::
-      s"++${V.scala213} metals/publish" ::
-      "mtags-java/publish" ::
-      publishMtags
-  },
-
-  //  Command.command("cross-test-2-11") { s =>
-//    crossTestDyn(s, V.scala211)
-//  },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },

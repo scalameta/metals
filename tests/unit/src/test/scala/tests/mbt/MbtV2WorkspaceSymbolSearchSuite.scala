@@ -176,7 +176,7 @@ object Hello2 {
 
   // Use this helper to manually test the indexer against a real-world codebase
   manuallyTestWorkspace(
-    "/home/REDACTED_USER/universe".ignore,
+    "/tmp/test-project".ignore,
     query = "Example",
     assertResultIncludes = "Object Example",
   )

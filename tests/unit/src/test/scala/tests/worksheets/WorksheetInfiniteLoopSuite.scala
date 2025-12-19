@@ -29,7 +29,7 @@ class WorksheetInfiniteLoopSuite
       worksheetTimeout = 8
     )
 
-  // Databricks: ignore for now, no support for worksheets
+  // Ignored: worksheet support not available in this configuration
   test("infinite-loop".ignore, maxRetry = 3) {
     for {
       _ <- initialize(

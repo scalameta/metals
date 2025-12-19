@@ -2,7 +2,7 @@ package tests
 
 class SingleFileSuite extends BaseCompletionLspSuite("workspaceFolderSuite") {
 
-  // DATABRICKS: the test hangs indefinitely
+  // Ignored: test hangs indefinitely
   test("basic".ignore) {
     cleanWorkspace()
     val newFileContent =

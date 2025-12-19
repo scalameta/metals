@@ -3,7 +3,7 @@ package tests
 import scala.meta.internal.metals.ServerCommands
 
 class FingerprintsLspSuite extends BaseLspSuite("fingerprints") {
-  // DATABRICKS: the test hangs indefinitely
+  // Ignored: test hangs indefinitely
   test("break".ignore, maxRetry = 3) {
     cleanWorkspace()
     for {

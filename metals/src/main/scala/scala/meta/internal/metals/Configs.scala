@@ -659,9 +659,6 @@ object Configs {
       // MonitoringClient interfaces. A more accurate name for "enabled" would
       // be "enabled-if-instrumented" or something like that but it's still
       // confusing.
-      // Databricks-only: our internal forks always instruments metals so the
-      // "enabled" setting does in fact mean telemetry is enabled by default unless
-      // you set -Dmetals.telemetry=disabled.
       new TelemetryConfig(System.getProperty("metals.telemetry", "enabled"))
   }
 

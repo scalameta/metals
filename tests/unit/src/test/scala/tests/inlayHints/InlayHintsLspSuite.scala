@@ -237,7 +237,7 @@ class InlayHintsLspSuite
     dependencies = List("org.typelevel::cats-effect:2.4.0"),
   )
 
-  // Databricks: ignore for now, no support for worksheets
+  // Ignored: worksheet support not available in this configuration
   test("worksheet".ignore) {
     for {
       _ <- initialize(
