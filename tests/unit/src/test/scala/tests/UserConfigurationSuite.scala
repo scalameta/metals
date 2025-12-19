@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
@@ -340,6 +341,7 @@ class UserConfigurationSuite extends BaseSuite {
       scalafixRulesDependencies = List("rule1", "rule2"),
       customProjectRoot = Some("customs"),
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
+      javaTurbineRecompileDelay = TurbineRecompileDelayConfig.testing,
       verboseCompilation = true,
       automaticImportBuild = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
@@ -424,6 +426,7 @@ class UserConfigurationSuite extends BaseSuite {
   "definitionIndexStrategy": "sources",
   "javaOutlineProvider": "qdox",
   "javaSymbolLoader": "javac-sourcepath",
+  "javaTurbineRecompileDelay": "100 milliseconds",
   "javacServicesOverrides": {
     "names": false,
     "attr": true,

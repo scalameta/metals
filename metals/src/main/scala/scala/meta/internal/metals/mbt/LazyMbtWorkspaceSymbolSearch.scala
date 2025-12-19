@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import scala.concurrent.Future
+
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.StatisticsConfig
@@ -44,11 +46,13 @@ class LazyMbtWorkspaceSymbolSearch(
   ): Iterable[AbsolutePath] = delegate.possibleReferences(params)
   override def onReindex(): IndexingStats =
     delegate.onReindex()
-  override def onDidChange(file: AbsolutePath): Unit =
+  override def onDidChange(file: AbsolutePath): Future[Unit] =
     delegate.onDidChange(file)
-  override def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit =
+  override def onDidChangeSymbols(
+      params: OnDidChangeSymbolsParams
+  ): Future[Unit] =
     delegate.onDidChangeSymbols(params)
-  override def onDidDelete(file: AbsolutePath): Unit =
+  override def onDidDelete(file: AbsolutePath): Future[Unit] =
     delegate.onDidDelete(file)
   override def workspaceSymbolSearch(
       params: MbtWorkspaceSymbolSearchParams,

@@ -2,6 +2,7 @@ package scala.meta.internal.metals.mbt
 
 import java.io.Closeable
 
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 
 import scala.meta.io.AbsolutePath
@@ -28,9 +29,9 @@ trait MbtWorkspaceSymbolSearch extends Closeable {
    * settings, etc.
    */
   def onReindex(): IndexingStats
-  def onDidChange(file: AbsolutePath): Unit
-  def onDidDelete(file: AbsolutePath): Unit
-  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
+  def onDidChange(file: AbsolutePath): Future[Unit]
+  def onDidDelete(file: AbsolutePath): Future[Unit]
+  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Future[Unit]
 
   def possibleReferences(
       params: MbtPossibleReferencesParams

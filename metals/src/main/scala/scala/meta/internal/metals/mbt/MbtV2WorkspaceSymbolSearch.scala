@@ -29,16 +29,21 @@ import scala.meta.infra.MonitoringClient
 import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.jmbt.Mbt
+import scala.meta.internal.jpc.SourceJavaFileObject
+import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.EmptyFallbackClasspaths
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
@@ -46,11 +51,13 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import com.google.turbine.diag.SourceFile
 import org.eclipse.{lsp4j => l}
 
 class MbtV2WorkspaceSymbolSearch(
@@ -65,6 +72,11 @@ class MbtV2WorkspaceSymbolSearch(
     onIndexingDone: () => Unit = () => (),
     javaSymbolLoader: () => JavaSymbolLoaderConfig = () =>
       JavaSymbolLoaderConfig.default,
+    fallbackClasspaths: () => BaseFallbackClasspaths = () =>
+      EmptyFallbackClasspaths,
+    sleeper: Sleeper = Sleeper.TestingSleeper,
+    turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
+      TurbineRecompileDelayConfig.fromConfig(None),
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
@@ -74,6 +86,25 @@ class MbtV2WorkspaceSymbolSearch(
 
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
+  private val turbineCompiler = new TurbineCompiler[AbsolutePath](
+    () => documentsKeys,
+    file =>
+      if (!file.toLanguage.isJava) None
+      else toInput(file).map(input => new SourceFile(input.path, input.text)),
+    () => fallbackClasspaths().javaCompilerClasspath(),
+    progress,
+    // We don't need to re-compile the workspace super regularly because we can
+    // load recently changed files from the sourcepath.
+    turbineRecompileDelay().duration,
+    sleeper = sleeper,
+    onIndexingDone = onIndexingDone,
+  )
+
+  // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
+  // in MetalsLspService.onUserConfigUpdate
+  def recompileTurbineClasspath(): Future[Unit] = {
+    turbineCompiler.compileNow().ignoreValue
+  }
 
   override def close(): Unit = {}
 
@@ -207,7 +238,12 @@ class MbtV2WorkspaceSymbolSearch(
               // can take a very long time to run in large repos and it's not something we
               // can optimize.
               synchronizeWithGitStatus()
-            }
+            },
+            if (javaSymbolLoader().isTurbineClasspath) {
+              turbineCompiler.compileNow()
+            } else {
+              Future.unit
+            },
           )
         )
         .ignoreValue,
@@ -222,36 +258,73 @@ class MbtV2WorkspaceSymbolSearch(
 
   def onDidChangeSymbols(
       params: OnDidChangeSymbolsParams
-  ): Unit = {
+  ): Future[Unit] = {
     val indexedDoc = IndexedDocument.fromOnDidChangeParams(params)
     putDocument(params.path, indexedDoc, updateDocumentKeys = true)
   }
-  def onDidDelete(file: AbsolutePath): Unit = {
-    for {
-      doc <- documents.remove(file)
-      _ = updateDocumentsKeys(documents)
-      pkg <- doc.semanticdbPackages
-      files <- documentsByPackage.get(pkg)
-    } {
-      files.remove(file.toNIO)
+  def onDidDelete(file: AbsolutePath): Future[Unit] = {
+    documents.remove(file) match {
+      case None => Future.unit
+      case Some(doc) =>
+        updateDocumentsKeys(documents)
+        // Remove from package index
+        for {
+          pkg <- doc.semanticdbPackages
+          files <- documentsByPackage.get(pkg)
+        } {
+          files.remove(file.toNIO)
+        }
+        // If Java file, treat deletion as a change to an empty file.
+        // This adds an empty source to SOURCE_PATH so javac won't find the class.
+        // We also track deleted binary names to exclude from CLASS_PATH.
+        if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
+          val binaryNames = doc.symbols
+            .map(_.getSymbol())
+            .filter(sym => Symbol(sym).isToplevel)
+            .map(sym => sym.stripSuffix("#").stripSuffix("."))
+            .toSeq
+          // Track deleted binary names for CLASS_PATH exclusion
+          turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+          // Add empty file to SOURCE_PATH so javac parses it and doesn't find the class
+          doc.semanticdbPackages.headOption match {
+            case Some(pkg) =>
+              val packageName = pkg.stripSuffix("/").replace("/", ".")
+              val emptyCompilationUnit = VirtualTextDocument(
+                SourceJavaFileObject.makeRelativeURI(file.toURI),
+                pc.Language.JAVA,
+                "", // Empty content - class is no longer defined
+                doc.semanticdbPackages,
+                Nil, // No toplevel symbols
+              )
+              turbineCompiler
+                .onDidChange(packageName, emptyCompilationUnit)
+                .map(_ => ())
+            case None =>
+              Future.unit
+          }
+        } else {
+          Future.unit
+        }
     }
   }
-  def onDidChange(file: AbsolutePath): Unit = {
+  def onDidChange(file: AbsolutePath): Future[Unit] = {
     onDidChangeInternal(file, updateDocumentKeys = true)
   }
 
   private def onDidChangeInternal(
       file: AbsolutePath,
       updateDocumentKeys: Boolean,
-  ): Unit = try {
+  ): Future[Unit] = try {
     val mdoc =
       IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
     putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
   } catch {
     case _: UnexpectedInputEndException =>
       scribe.debug(s"${file}: syntax error")
+      Future.unit
     case NonFatal(e) =>
       scribe.error(s"Error indexing file $file", e)
+      Future.unit
   }
 
   private def toInput(
@@ -285,9 +358,11 @@ class MbtV2WorkspaceSymbolSearch(
           }
         },
       )
+    } else if (javaSymbolLoader().isTurbineClasspath) {
+      turbineCompiler.createFileManager(standardFileManager)
     } else {
-      throw new NotImplementedError(
-        s"${javaSymbolLoader().value} Java symbol loader is not supported yet"
+      throw new IllegalArgumentException(
+        s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"
       )
     }
   }
@@ -457,12 +532,29 @@ class MbtV2WorkspaceSymbolSearch(
       file: AbsolutePath,
       doc: IndexedDocument,
       updateDocumentKeys: Boolean,
-  ): Unit = {
+  ): Future[Unit] = {
     val old = documents.put(file, doc)
     if (old == None && updateDocumentKeys) {
       updateDocumentsKeys(documents)
     }
     addDocumentToPackages(doc.semanticdbPackages, file)
+    if (
+      updateDocumentKeys &&
+      doc.language.isJava &&
+      javaSymbolLoader().isTurbineClasspath
+    ) {
+      doc.semanticdbPackages.headOption match {
+        case Some(pkg) =>
+          val input = file.toInputFromBuffers(buffers)
+          val packageName = pkg.stripSuffix("/").replace("/", ".")
+          val compilationUnit = doc.toSemanticdbCompilationUnit(input)
+          turbineCompiler.onDidChange(packageName, compilationUnit).ignoreValue
+        case None =>
+          Future.unit
+      }
+    } else {
+      Future.unit
+    }
   }
 
   private def addDocumentToPackages(

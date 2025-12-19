@@ -862,8 +862,8 @@ public class BytecodeBoundClass implements TypeBoundClass {
   }
 
   // TURBINE-DIFF START
-  public byte[] bytes() {
-    return bytes.get();
+  public Supplier<byte[]> bytes() {
+    return bytes;
     // TURBINE-DIFF END
   }
 

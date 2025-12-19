@@ -293,6 +293,9 @@ abstract class MetalsLspService(
       connectionBspStatus,
     )
 
+  private val sleeper: Sleeper =
+    new Sleeper.ScheduledExecutorServiceSleeper(sh)
+
   private val mbt2 = new MbtV2WorkspaceSymbolSearch(
     workspace = folder,
     config = () => userConfig.workspaceSymbolProvider,
@@ -302,6 +305,10 @@ abstract class MetalsLspService(
     mtags = () => mtags,
     progress = workDoneProgress,
     onIndexingDone = restartFallbackCompilers,
+    javaSymbolLoader = () => userConfig.javaSymbolLoader,
+    fallbackClasspaths = () => compilers.fallbackClasspaths,
+    sleeper = sleeper,
+    turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolSearch =
@@ -791,6 +798,15 @@ abstract class MetalsLspService(
       Future(mbtSymbolSearch.onReindex())
     }
 
+    if (
+      newConfig.javaSymbolLoader.isTurbineClasspath &&
+      old.javaSymbolLoader != newConfig.javaSymbolLoader
+    ) {
+      Future {
+        mbt2.recompileTurbineClasspath()
+      }
+    }
+
     if (old.javaOutlineProvider != newConfig.javaOutlineProvider) {
       mtags = new Mtags(
         mtags.config.copy(useQdox = newConfig.javaOutlineProvider.isQdox)
@@ -1090,7 +1106,7 @@ abstract class MetalsLspService(
     Future
       .sequence(
         List(
-          Future(indexer.reindexWorkspaceSources(paths)),
+          Future(indexer.reindexWorkspaceSources(paths).job).flatten,
 
           // under testing, this future is never completed. instead of hanging,
           // proceed by compiling on save, as is the default in the upstream OSS project
@@ -1135,9 +1151,9 @@ abstract class MetalsLspService(
             },
           Future {
             diagnostics.didDelete(path)
-            mbtSymbolSearch.onDidDelete(path)
             testProvider.onFileDelete(path)
-          },
+            mbtSymbolSearch.onDidDelete(path)
+          }.flatten,
         )
       )
       .ignoreValue

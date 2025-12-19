@@ -22,6 +22,7 @@ import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.ScalaImportsPlacementConfig
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -98,6 +99,8 @@ case class UserConfiguration(
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
     javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
+    javaTurbineRecompileDelay: TurbineRecompileDelayConfig =
+      TurbineRecompileDelayConfig.default,
     javacServicesOverrides: JavacServicesOverrides =
       JavacServicesOverrides.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
@@ -265,6 +268,12 @@ case class UserConfiguration(
           (
             "javaSymbolLoader",
             javaSymbolLoader.value,
+          )
+        ),
+        Some(
+          (
+            "javaTurbineRecompileDelay",
+            javaTurbineRecompileDelay.duration.toString(),
           )
         ),
         Some(
@@ -1073,6 +1082,9 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaSymbolLoaderConfig.default)
+    val javaTurbineRecompileDelay = TurbineRecompileDelayConfig.fromConfig(
+      getStringKey("java-turbine-recompile-delay")
+    )
     val javacServicesOverrides =
       getKey(
         "javac-services-overrides",
@@ -1168,6 +1180,7 @@ object UserConfiguration {
           definitionIndexStrategy,
           javaOutlineProvider,
           javaSymbolLoader,
+          javaTurbineRecompileDelay,
           javacServicesOverrides,
           compilerProgress,
           referenceProvider,

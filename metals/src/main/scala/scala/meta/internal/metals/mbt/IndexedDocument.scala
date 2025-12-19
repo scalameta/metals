@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import javax.tools.JavaFileObject
+
 import scala.collection.View
 
 import scala.meta.Dialect
@@ -36,7 +38,7 @@ case class IndexedDocument(
 ) {
   def toSemanticdbCompilationUnit(
       input: Input.VirtualFile
-  ): SemanticdbCompilationUnit = {
+  ): SemanticdbCompilationUnit with JavaFileObject = {
     val toplevelSymbols = symbols.collect {
       case info if Symbol(info.getSymbol()).isToplevel => info.getSymbol()
     }

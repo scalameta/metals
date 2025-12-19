@@ -1,4 +1,5 @@
 package scala.meta.internal.metals.mbt
+
 import java.net.URI
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
@@ -9,6 +10,7 @@ import java.{util => ju}
 
 import scala.collection.mutable
 import scala.collection.parallel.CollectionConverters._
+import scala.concurrent.Future
 import scala.util.Try
 import scala.util.Using
 
@@ -284,9 +286,10 @@ final class MbtWorkspaceSymbolProvider(
   // LMDB backend.  In mbt-v2, this is much much simpler to implement because
   // it's using the same TrieMap[AbsolutePath, IndexedDocument] shape as all the
   // other indexers in Metals.
-  def onDidChange(file: AbsolutePath): Unit = ()
-  def onDidDelete(file: AbsolutePath): Unit = ()
-  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit = ()
+  def onDidChange(file: AbsolutePath): Future[Unit] = Future.unit
+  def onDidDelete(file: AbsolutePath): Future[Unit] = Future.unit
+  def onDidChangeSymbols(params: OnDidChangeSymbolsParams): Future[Unit] =
+    Future.unit
 
   override def onReindex(): IndexingStats = {
     if (!config().isMBT1) {

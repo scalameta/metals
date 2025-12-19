@@ -18,6 +18,7 @@ import scala.meta.dialects._
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.metals.Indexer.BackgroundJob
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
@@ -544,124 +545,134 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     usedJars.toSet
   }
 
+  // NOTE: The indexing happens synchronously, the returned value can be awaited
+  // on if you want the Turbine classpath compilation to complete. That
+  // compilation is async because uses BatchedFunction.
   private def indexSourceFile(
       source: AbsolutePath,
       sourceItem: Option[AbsolutePath],
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
-  ): Unit = {
-    try {
-      val sourceToIndex0 =
-        sourceMapper.mappedTo(source).getOrElse(source)
-      if (sourceToIndex0.exists) {
-        val dialect = {
-          val scalaVersion =
-            targetOpt
-              .flatMap(id =>
-                data.iterator
-                  .flatMap(_.buildTargetInfo.get(id).iterator)
-                  .find(_ => true)
-                  .flatMap(_.asScalaBuildTarget)
-              )
-              .map(_.getScalaVersion())
-              .getOrElse(
-                scalaVersionSelector.fallbackScalaVersion(
-                  source.isAmmoniteScript
+  ): BackgroundJob = {
+    val job =
+      try {
+        val sourceToIndex0 =
+          sourceMapper.mappedTo(source).getOrElse(source)
+        if (sourceToIndex0.exists) {
+          val dialect = {
+            val scalaVersion =
+              targetOpt
+                .flatMap(id =>
+                  data.iterator
+                    .flatMap(_.buildTargetInfo.get(id).iterator)
+                    .find(_ => true)
+                    .flatMap(_.asScalaBuildTarget)
                 )
-              )
-          ScalaVersions.dialectForScalaVersion(
-            scalaVersion,
-            includeSource3 = true,
-          )
-        }
-        val reluri = source.toIdeallyRelativeURI(sourceItem)
-        val input = sourceToIndex0.toInput
-        val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        val allSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
-        val references = mutable.Buffer.empty[String]
-        def onDefinition(defn: SemanticdbDefinition): Unit = {
-          val occ = defn.occ
-          val info = defn.info
-          val owner = defn.owner
-          if (occ.role.isReference) {
-            references += occ.symbol
-            return
+                .map(_.getScalaVersion())
+                .getOrElse(
+                  scalaVersionSelector.fallbackScalaVersion(
+                    source.isAmmoniteScript
+                  )
+                )
+            ScalaVersions.dialectForScalaVersion(
+              scalaVersion,
+              includeSource3 = true,
+            )
           }
-
-          allSymbols += WorkspaceSymbolInformation(
-            info.symbol,
-            info.kind,
-            occ.range.fold(
-              new l.Range(new l.Position(0, 0), new l.Position(0, 0))
-            )(_.toLsp),
-          )
-          if (info.isExtension) {
-            occ.range.foreach { range =>
-              methodSymbols += WorkspaceSymbolInformation(
-                info.symbol,
-                info.kind,
-                range.toLsp,
-              )
+          val reluri = source.toIdeallyRelativeURI(sourceItem)
+          val input = sourceToIndex0.toInput
+          val symbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+          val methodSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+          val allSymbols = ArrayBuffer.empty[WorkspaceSymbolInformation]
+          val references = mutable.Buffer.empty[String]
+          def onDefinition(defn: SemanticdbDefinition): Unit = {
+            val occ = defn.occ
+            val info = defn.info
+            val owner = defn.owner
+            if (occ.role.isReference) {
+              references += occ.symbol
+              return
             }
-          } else {
-            if (info.kind.isRelevantKind) {
+
+            allSymbols += WorkspaceSymbolInformation(
+              info.symbol,
+              info.kind,
+              occ.range.fold(
+                new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+              )(_.toLsp),
+            )
+            if (info.isExtension) {
               occ.range.foreach { range =>
-                symbols += WorkspaceSymbolInformation(
+                methodSymbols += WorkspaceSymbolInformation(
                   info.symbol,
                   info.kind,
                   range.toLsp,
                 )
               }
+            } else {
+              if (info.kind.isRelevantKind) {
+                occ.range.foreach { range =>
+                  symbols += WorkspaceSymbolInformation(
+                    info.symbol,
+                    info.kind,
+                    range.toLsp,
+                  )
+                }
+              }
+            }
+            if (
+              sourceItem.isDefined &&
+              !info.symbol.isPackage &&
+              (owner.isPackage || source.isAmmoniteScript)
+            ) {
+              definitionIndex.addToplevelSymbol(
+                reluri,
+                source,
+                info.symbol,
+                dialect,
+              )
             }
           }
-          if (
-            sourceItem.isDefined &&
-            !info.symbol.isPackage &&
-            (owner.isPackage || source.isAmmoniteScript)
-          ) {
-            definitionIndex.addToplevelSymbol(
-              reluri,
-              source,
-              info.symbol,
-              dialect,
-            )
-          }
-        }
 
-        val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
-          indexProviders.mtags,
-          input,
-          dialect,
-          includeMembers = true,
-          collectIdentifiers = true,
-        )(onDefinition)
-
-        optMtags
-          .map(_.allIdentifiers)
-          .filter(_.nonEmpty)
-          .foreach(identifiers =>
-            referencesProvider.addIdentifiers(source, identifiers)
-          )
-        workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
-        mbtSymbolSearch.onDidChangeSymbols(
-          OnDidChangeSymbolsParams(
-            source,
+          val optMtags = SemanticdbDefinition.foreachWithReturnMtags(
+            indexProviders.mtags,
             input,
-            allSymbols,
-            references,
-            methodSymbols.toSeq,
-          )
-        )
+            dialect,
+            includeMembers = true,
+            collectIdentifiers = true,
+          )(onDefinition)
 
-        // Since the `symbols` here are toplevel symbols,
-        // we cannot use `symbols` for expiring the cache for all symbols in the source.
-        symbolDocs.expireSymbolDefinition(sourceToIndex0, dialect)
+          optMtags
+            .map(_.allIdentifiers)
+            .filter(_.nonEmpty)
+            .foreach(identifiers =>
+              referencesProvider.addIdentifiers(source, identifiers)
+            )
+          workspaceSymbols.didChange(source, symbols.toSeq, methodSymbols.toSeq)
+          val future = mbtSymbolSearch.onDidChangeSymbols(
+            OnDidChangeSymbolsParams(
+              source,
+              input,
+              allSymbols,
+              references,
+              methodSymbols.toSeq,
+            )
+          )
+
+          // Since the `symbols` here are toplevel symbols,
+          // we cannot use `symbols` for expiring the cache for all symbols in the source.
+          symbolDocs.expireSymbolDefinition(sourceToIndex0, dialect)
+          future
+        } else {
+          Future.unit
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(source.toString(), e)
+          Future.unit
       }
-    } catch {
-      case NonFatal(e) =>
-        scribe.error(source.toString(), e)
-    }
+
+    BackgroundJob(job)
   }
 
   /**
@@ -705,20 +716,34 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     (toplevels, overrides)
   }
 
+  // NOTE: this is largely a blocking non-async method. It returns a
+  // Future[Unit] to let tests await on the recompilation of the Turbine
+  // classpath for Java source file changes. You can ignore the Future
+  // and rely on the reindexing to be
   def reindexWorkspaceSources(
       paths: Seq[AbsolutePath]
-  ): Unit = {
+  ): BackgroundJob = {
     val data = buildData().map(_.data)
-    for {
+    val futures = for {
       path <- paths.iterator
       if path.isScalaOrJava
-    } {
-      indexSourceFile(path, buildTargets.inverseSourceItem(path), None, data)
+    } yield {
+      indexSourceFile(
+        path,
+        buildTargets.inverseSourceItem(path),
+        None,
+        data,
+      ).job
     }
+    BackgroundJob(Future.sequence(futures.toSeq).ignoreValue)
   }
 }
 
 object Indexer {
+  final case class BackgroundJob(job: Future[Unit])
+  object BackgroundJob {
+    def empty: BackgroundJob = BackgroundJob(Future.unit)
+  }
   final case class BuildTool(
       name: String,
       data: TargetData,
