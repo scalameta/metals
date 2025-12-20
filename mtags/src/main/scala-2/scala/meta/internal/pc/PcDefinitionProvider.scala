@@ -77,8 +77,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
 
       if (
         symbol == null ||
-        symbol == NoSymbol ||
-        symbol.isError
+        symbol == NoSymbol
       ) {
         DefinitionResultImpl.empty
       } else if (symbol.hasPackageFlag) {
@@ -87,30 +86,12 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           ju.Collections.emptyList()
         )
       } else {
-        val allSyms = tree match {
-          case Select(qual, nme.apply)
-              if !findTypeDef
-                && qual.pos.sameRange(tree.pos)
-                && qual.hasExistingSymbol =>
-
-            symbol.alternatives.flatMap { sym =>
-              if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
-                List(sym.owner.companionClass)
-              else
-                List(sym, qual.symbol)
-            }.distinct
-
-          case _ =>
-            // in case of errors, if the compiler didn't manage to resolve
-            // an overloaded symbol, all alternatives are given here so we
-            // can still navigate to something meaningful
-            // `.reverse` in order to keep the source order of overloads
-            symbol.alternatives.reverse
-        }
+        val allSyms = targetSymbols(tree, symbol, findTypeDef)
         val sourceBasedDefs = DefinitionResultImpl(
           semanticdbSymbol(symbol),
           allSyms.flatMap(findSymbolLocations(_, unit)).asJava
         )
+
         if (sourceBasedDefs.locations.isEmpty && symbol.associatedFile.exists) {
           symbol.associatedFile.underlyingSource match {
             case Some(jarFile) if jarFile.name.endsWith(".jar") =>
@@ -130,6 +111,45 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       }
     }
   }
+
+  private def targetSymbols(
+      tree: Tree,
+      symbol: Symbol,
+      findTypeDef: Boolean
+  ): List[Symbol] = {
+    if (symbol.isError) {
+      tree match {
+        // heuristic in case it's a selection and we can find at least some potential matches
+        case Select(qual, name) if symbol.isError =>
+          qual.tpe.member(name).alternatives
+
+        case _ =>
+          Nil
+      }
+    } else {
+      tree match {
+        case Select(qual, nme.apply)
+            if !findTypeDef
+              && qual.pos.sameRange(tree.pos)
+              && qual.hasExistingSymbol =>
+
+          symbol.alternatives.flatMap { sym =>
+            if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
+              List(sym.owner.companionClass)
+            else
+              List(sym, qual.symbol)
+          }.distinct
+
+        case _ =>
+          // in case of some errors, if the compiler didn't manage to resolve
+          // an overloaded symbol, all alternatives are given here so we
+          // can still navigate to something meaningful
+          // `.reverse` in order to keep the source order of overloads
+          symbol.alternatives.reverse
+      }
+    }
+  }
+
   private def findSymbolLocations(
       symbol: Symbol,
       unit: CompilationUnit

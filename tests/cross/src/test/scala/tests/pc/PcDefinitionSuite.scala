@@ -285,6 +285,20 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   )
 
   check(
+    "wrong-overloaded-method-3",
+    """|
+       |class Foo {
+       |  def <<foo>>(x: Int, y: String): Unit = ()
+       |  def <<foo>>(x: List[File], y: String): Unit = ()
+       |}
+       |object Main {
+       |  val foo = new Foo()
+       |  foo.fo@@o(1)
+       |}
+       |""".stripMargin
+  )
+
+  check(
     "wrong-overloaded-apply",
     """|
        |case class <<Base>>(x: Int, y: String)
