@@ -35,7 +35,7 @@ class FlatMapToForComprehensionSuite
     """|object A {
        |  case class Extractable(first: String, second: List[(Int, String)])
        |  val result = for {
-       |    m <- List((1, (2, 3, 4)), (1, (2, 3.1d, 4.1d)))
+       |    m <- List((1, (2, 3, 4)), (1, (2, 3.1, 4.1)))
        |    (j, (k: Int, l, n)) = (m._1, m._2)
        |    (a, (b, c, d)) <- Some(j + 1, (k + 1, l, n))
        |    generatedByMetals <- Some(a + 1, (b + 1, c, a))
