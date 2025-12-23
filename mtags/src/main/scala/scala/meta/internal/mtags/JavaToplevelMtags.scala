@@ -23,7 +23,8 @@ class JavaToplevelMtags(
 
   import JavaToplevelMtags._
 
-  val reader: CharArrayReader = new CharArrayReader(input, dialects.Scala213)
+  val reader: CharArrayReader =
+    new CharArrayReader(input.value.toCharArray(), dialects.Scala213)
 
   override def overrides(): List[(String, List[OverriddenSymbol])] =
     overridden.result
