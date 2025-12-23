@@ -67,7 +67,7 @@ public enum FeatureFlag {
    * If enabled, the Javac presentation compiler will use the javac options sent by the build
    * server.
    */
-  BUILD_SERVER_JAVAC_OPTIONS,
+  JAVAC_OPTIONS,
 
   /** If enabled, uses the Turbine classpath as the 1st party symbol loader. */
   JAVA_TURBINE_SYMBOL_LOADER,

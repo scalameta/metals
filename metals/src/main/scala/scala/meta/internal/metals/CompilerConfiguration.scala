@@ -350,7 +350,7 @@ class CompilerConfiguration(
     ): PresentationCompiler = {
       val pc = JavaPresentationCompiler()
       val shouldUseOpts = featureFlags
-        .readBoolean(FeatureFlag.BUILD_SERVER_JAVAC_OPTIONS)
+        .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
       val options = if (shouldUseOpts) javaTarget.options else Nil
       configure(pc, search, completionItemPriority)
