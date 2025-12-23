@@ -76,12 +76,15 @@ final class TargetData() {
   ): Option[Iterable[BuildTargetIdentifier]] = {
     val valueOrNull = sourceBuildTargetsCache.get(sourceItem)
     if (valueOrNull == null) {
-      val value = sourceItemsToBuildTarget.collectFirst {
-        case (source, buildTargets)
-            if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
-              sourceItem.toNIO.startsWith(source.toNIO) =>
-          buildTargets.asScala
-      }
+      val value = sourceItemsToBuildTarget
+        .collect {
+          case (source, buildTargets)
+              if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
+                sourceItem.toNIO.startsWith(source.toNIO) =>
+            (source, buildTargets.asScala)
+        }
+        .maxByOption { case (source, _) => source.toNIO.getNameCount }
+        .map { case (_, buildTargets) => buildTargets }
       val prevOrNull = sourceBuildTargetsCache.putIfAbsent(sourceItem, value)
       if (prevOrNull == null) value
       else prevOrNull
