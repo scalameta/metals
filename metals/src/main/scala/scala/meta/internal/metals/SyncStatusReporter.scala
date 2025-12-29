@@ -2,6 +2,9 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.meta.internal.bsp.BspStatusState
+import scala.meta.internal.bsp.Disconnected
+import scala.meta.internal.bsp.NoResponse
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
@@ -13,6 +16,21 @@ class SyncStatusReporter(
     buildTargets: BuildTargets,
 ) {
   private val importing = new AtomicReference[Option[Option[String]]](None)
+  private val isBspActive = new AtomicReference[Boolean](false)
+  private val currentFocus = new AtomicReference[Option[String]](None)
+
+  def statusChange(state: BspStatusState): Unit = {
+    scribe.trace(
+      s"SyncStatusReporter: statusChange: ${state.currentState}"
+    )
+    val newState = state.currentState match {
+      case NoResponse | Disconnected => false
+      case _ => true
+    }
+    if (isBspActive.getAndSet(newState) != newState) {
+      currentFocus.get().foreach(didFocus)
+    }
+  }
 
   def onSync(uri: String): Unit = {
     scribe.trace(
@@ -61,8 +79,16 @@ class SyncStatusReporter(
   }
 
   def didFocus(uri: String): Unit = {
+    currentFocus.set(Some(uri))
     val path = uri.toAbsolutePath
-    if (path.isScalaOrJava) {
+    if (!isBspActive.get()) {
+      scribe.trace(
+        s"SyncStatusReporter: didFocus: $uri: bsp is not responsive, hiding status"
+      )
+      languageClient.metalsSyncStatus(
+        MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Hidden)
+      )
+    } else if (path.isScalaOrJava) {
       (buildTargets.inverseSources(path), importing.get()) match {
         case (_, Some(Some(requested))) if requested == uri =>
           scribe.trace(

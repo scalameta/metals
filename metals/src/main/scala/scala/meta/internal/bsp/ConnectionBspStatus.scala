@@ -17,6 +17,7 @@ class ConnectionBspStatus(
     bspStatus: BspStatus,
     folderPath: AbsolutePath,
     icons: Icons,
+    onChange: (BspStatusState) => Unit,
 )(implicit rc: ReportContext) {
   private val status = new AtomicReference[BspStatusState](
     BspStatusState(Disconnected, None, None, shouldShow = false)
@@ -62,6 +63,7 @@ class ConnectionBspStatus(
       errorReports: Set[String] = currentSessionErrors.get(),
   ) = {
     val newServerState = status.updateAndGet(_.changeState(newState))
+    onChange(newServerState)
     if (newServerState.shouldShow) {
       showState(newServerState, errorReports)
     }

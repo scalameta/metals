@@ -282,8 +282,12 @@ abstract class MetalsLspService(
   protected def semanticdbs(): Semanticdbs
 
   protected val connectionBspStatus =
-    new ConnectionBspStatus(bspStatus, folder, clientConfig.icons())
-
+    new ConnectionBspStatus(
+      bspStatus,
+      folder,
+      clientConfig.icons(),
+      syncStatusReporter.statusChange,
+    )
   protected val bspErrorHandler: BspErrorHandler =
     new BspErrorHandler(
       () => bspSession,
