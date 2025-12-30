@@ -168,6 +168,18 @@ class JavaDefinitionSuite extends BaseJavaDefinitionSuite {
   )
 
   check(
+    "static-import-site-import",
+    """|import static java.lang.Math.m@@/*java/lang/Math#max(). Math.java*/ax;
+       |
+       |class A {
+       |    public static void main(String args[]){
+       |      int x = max(1, 2);
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "enum-constant",
     """|enum Color {
        |    <<RED>>, GREEN, BLUE
