@@ -21,6 +21,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.InverseSourcesParams
+import ch.epfl.scala.bsp4j.ScalaPlatform
 import ch.epfl.scala.bsp4j.TextDocumentIdentifier
 
 /**
@@ -34,6 +35,10 @@ final class BuildTargets private (
   private var data: BuildTargets.DataSeq =
     BuildTargets.DataSeq((new TargetData) :: Nil)
   def allWritableData = data.list
+
+  private val activePlatforms: ju.Set[ScalaPlatform] =
+    ConcurrentHashSet.empty[ScalaPlatform]
+  activePlatforms.add(ScalaPlatform.JVM)
 
   val buildTargetsOrder: BuildTargetIdentifier => Int = {
     (t: BuildTargetIdentifier) =>
@@ -93,6 +98,29 @@ final class BuildTargets private (
 
   def allBuildTargetIds: Seq[BuildTargetIdentifier] =
     allBuildTargetIdsInternal.map(_._2).toVector
+
+  def activeBuildTargetIds: Seq[BuildTargetIdentifier] =
+    allBuildTargetIds.filter { id =>
+      scalaTarget(id).forall(t => activePlatforms.contains(t.scalaPlatform))
+    }
+
+  def activatePlatformForTarget(
+      id: BuildTargetIdentifier
+  ): Option[ScalaPlatform] =
+    scalaTarget(id).flatMap { t =>
+      val platform = t.scalaPlatform
+      if (activePlatforms.add(platform)) Some(platform) else None
+    }
+
+  def targetsByPlatform(platform: ScalaPlatform): Seq[BuildTargetIdentifier] =
+    allBuildTargetIds.filter { id =>
+      scalaTarget(id).exists(_.scalaPlatform == platform)
+    }
+
+  def resetActivePlatforms(): Unit = {
+    activePlatforms.clear()
+    activePlatforms.add(ScalaPlatform.JVM)
+  }
 
   def allTargetRoots: Iterator[AbsolutePath] =
     data.fromIterators(_.allTargetRoots)
