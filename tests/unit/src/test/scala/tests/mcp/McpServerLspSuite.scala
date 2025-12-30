@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
+import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.SymbolType
 
@@ -32,7 +33,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |{
            |  "servers": {
            |    "root-metals": {
-           |      "url": "http://localhost:${portToUse}/sse"
+           |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
            |    }
            |  }
            |}

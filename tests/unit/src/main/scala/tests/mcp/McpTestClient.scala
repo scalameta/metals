@@ -8,10 +8,11 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
+import scala.meta.internal.metals.mcp.MetalsMcpServer
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.client.McpClient
-import io.modelcontextprotocol.client.transport.HttpClientSseClientTransport
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
 import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
@@ -20,7 +21,9 @@ import io.modelcontextprotocol.spec.McpSchema.TextContent
 class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext) {
   private val objectMapper = new ObjectMapper()
   private val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
-  private val transport = new HttpClientSseClientTransport.Builder(url)
+  private val transport = HttpClientStreamableHttpTransport
+    .builder(url)
+    .endpoint(MetalsMcpServer.mcpEndpoint)
     .build()
   private val client =
     McpClient.async(transport).requestTimeout(Duration.ofMinutes(5)).build()
