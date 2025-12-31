@@ -224,6 +224,12 @@ object StacktraceAnalyzer {
     val symbolPart =
       if (modulePos > -1) symbolIn.substring(modulePos + 1) else symbolIn
     val symbol = symbolPart.split('.').init.mkString("/")
+    
+    // Filter out invalid symbols that contain invalid characters or are empty
+    if (symbol.isEmpty || symbol.contains("/*") || symbol.contains("*/")) {
+      return Nil
+    }
+    
     /* Symbol containing `$package$` is a toplevel method and we only need to
      * find any method contained in the same file even if overloaded
      */
