@@ -40,7 +40,7 @@ final class AutoImportsProvider(
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
     val isSeen = mutable.Set.empty[String]
-    val symbols = List.newBuilder[Symbol]
+    val symbols = mutable.ListBuffer.empty[Symbol]
 
     def visit(sym: Symbol): Boolean = {
       val id = sym.fullName
@@ -57,6 +57,57 @@ final class AutoImportsProvider(
     val visitor =
       new CompilerSearchVisitor(context, visit)
     search.search(name, buildTargetIdentifier, ju.Optional.empty(), visitor)
+
+    def isStaticallyAccessible(sym: Symbol): Boolean =
+      sym.owner.ownerChain.forall { s =>
+        s.isPackageClass || s.isPackageObjectClass || s.isModule || s.isModuleClass
+      }
+
+    def visitMembersFromImportedQualifiers(): Unit = {
+      val qualifiers = mutable.ListBuffer.empty[Symbol]
+      new Traverser {
+        override def traverse(tree: Tree): Unit = tree match {
+          case Import(expr, _) =>
+            val sym = expr.symbol
+            if (sym != null && sym != NoSymbol) qualifiers += sym
+            super.traverse(tree)
+          case _ =>
+            super.traverse(tree)
+        }
+      }.traverse(unit.body)
+
+      qualifiers.distinct
+        .filter(_ != NoSymbol)
+        .flatMap { owner =>
+          val ownerMembers =
+            if (owner.isModuleOrModuleClass && isStaticallyAccessible(owner))
+              owner.info.members
+            else
+              Nil
+
+          val subModuleMembers = owner.info.members
+            .filter(m => m.isModuleOrModuleClass && isStaticallyAccessible(m))
+            .flatMap(_.info.members)
+
+          ownerMembers ++ subModuleMembers
+        }
+        .filter(m => m.name.decoded == name && m.isPublic)
+        .foreach(visit)
+    }
+    visitMembersFromImportedQualifiers()
+
+    def visitStaticObjectMembers(): Unit = {
+      val currentSymbols = symbols.toList
+      val membersToVisit = currentSymbols.flatMap { sym =>
+        if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
+          sym.info.members.filter { member =>
+            member.name.decoded == name && member.isPublic
+          }
+        } else Nil
+      }
+      membersToVisit.foreach(visit)
+    }
+    visitStaticObjectMembers()
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
       case (_: Import) :: _ => true
@@ -87,7 +138,7 @@ final class AutoImportsProvider(
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
-    val all = symbols.result().collect {
+    val all = symbols.toList.collect {
       case sym
           if isExactMatch(sym, name) && context.isAccessible(
             sym,

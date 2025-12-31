@@ -42,7 +42,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |
        |
-       |object test2 { 
+       |object test2 {
        |  <<importMe>>()
        |}
        |""".stripMargin,
@@ -503,5 +503,40 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
           |object Main{ val obj = ABC }
           |""".stripMargin
     )
+
+  // see: https://github.com/scalameta/metals/issues/8061
+  test("static-object-member".tag(IgnoreScala3)) {
+    val imports = getAutoImports(
+      """|import scala.concurrent.Future
+         |import scala.concurrent.duration._
+         |object A {
+         |  val f: Future[Int] = ???
+         |  <<result>>(f, 1.second)
+         |}
+         |""".stripMargin,
+      "A.scala"
+    )
+    val obtained = imports.map(_.packageName()).mkString("\n")
+    assertNoDiff(
+      obtained,
+      """|scala.concurrent.Await
+         |""".stripMargin
+    )
+  }
+  test("boundary-break".tag(IgnoreScala2)) {
+    val imports = getAutoImports(
+      """|object A {
+         |  <<break>>()
+         |}
+         |""".stripMargin,
+      "A.scala"
+    )
+    val obtained = imports.map(_.packageName()).mkString("\n")
+    assertNoDiff(
+      obtained,
+      """|scala.util.boundary
+         |""".stripMargin
+    )
+  }
 
 }
