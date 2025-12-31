@@ -1185,6 +1185,22 @@ object MetalsEnrichments
         .find(_.startsWith(flag))
         .map(_.stripPrefix(flag))
     }
+
+    /**
+     * Extracts the release version from scalac options.
+     * Supports: -release X, -release:X, --release X
+     */
+    def releaseVersion: Option[String] = {
+      val options = item.getOptions.asScala.toList
+      options.zipWithIndex.collectFirst {
+        case (opt, idx) if opt == "-release" || opt == "--release" =>
+          options.lift(idx + 1)
+        case (opt, _) if opt.startsWith("-release:") =>
+          Some(opt.stripPrefix("-release:"))
+        case (opt, _) if opt.startsWith("--release:") =>
+          Some(opt.stripPrefix("--release:"))
+      }.flatten
+    }
   }
 
   implicit class XtensionChar(ch: Char) {
