@@ -608,6 +608,16 @@ abstract class MetalsLspService(
       trees,
     )
 
+  private def refactorMissingImportsProvider
+      : Option[RefactorMissingImportsProvider] =
+    Some(
+      new RefactorMissingImportsProvider(
+        compilers,
+        buildTargets,
+        buffers,
+      )
+    )
+
   def parseTreesAndPublishDiags(paths: Seq[AbsolutePath]): Future[Unit] = {
     Future
       .traverse(paths.distinct) { path =>
@@ -1428,7 +1438,48 @@ abstract class MetalsLspService(
       oldPath: AbsolutePath,
       newPath: AbsolutePath,
   ): Future[WorkspaceEdit] =
-    packageProvider.willMovePath(oldPath, newPath)
+    packageProvider.willMovePath(oldPath, newPath).flatMap { edit =>
+      enhanceWithMissingImportsFallback(edit, oldPath, newPath)
+    }
+
+  private def enhanceWithMissingImportsFallback(
+      edit: WorkspaceEdit,
+      oldPath: AbsolutePath,
+      newPath: AbsolutePath,
+  ): Future[WorkspaceEdit] = {
+    refactorMissingImportsProvider
+      .map { provider =>
+        val fileUri = oldPath.toURI.toString
+        val currentEdits = Option(edit.getChanges)
+          .flatMap(changes => Option(changes.get(fileUri)))
+          .map(_.asScala.toList)
+          .getOrElse(Nil)
+
+        buffers.get(oldPath) match {
+          case Some(content) if currentEdits.nonEmpty =>
+            val newContent = TextEdits.applyEdits(content, currentEdits)
+            provider
+              .fixMissingImports(newPath, newContent, EmptyCancelToken)
+              .map { importEdits =>
+                if (importEdits.nonEmpty) {
+                  val allEdits = currentEdits ++ importEdits
+                  val newChanges =
+                    Option(edit.getChanges)
+                      .map(_.asScala.toMap)
+                      .getOrElse(Map.empty) +
+                      (fileUri -> allEdits.asJava)
+                  new WorkspaceEdit(newChanges.asJava)
+                } else {
+                  edit
+                }
+              }
+              .recover { case _ => edit }
+          case _ =>
+            Future.successful(edit)
+        }
+      }
+      .getOrElse(Future.successful(edit))
+  }
 
   def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
