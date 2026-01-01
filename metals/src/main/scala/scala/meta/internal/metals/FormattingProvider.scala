@@ -121,7 +121,9 @@ final class FormattingProvider(
     )
     dependencies.foreach { dep =>
       Embedded.downloadDependency(
-        coursierapi.Dependency.of(dep.group, dep.artifact, dep.version)
+        dep.group,
+        dep.artifact,
+        dep.version,
       )
     }
   }
@@ -313,7 +315,13 @@ final class FormattingProvider(
           .mapOptionInside(_.value)
       } else {
         client
-          .showMessageRequest(MissingScalafmtVersion.messageRequest())
+          .showMessageRequest(
+            MissingScalafmtVersion.messageRequest(),
+            defaultTo = () => {
+              client.showMessage(MissingScalafmtVersion.notificationParams())
+              Messages.notNow
+            },
+          )
           .asScala
           .map { item =>
             if (item == MissingScalafmtVersion.changeVersion) {
@@ -333,26 +341,36 @@ final class FormattingProvider(
   ): Future[Option[AbsolutePath]] = {
     if (!tables.dismissedNotifications.CreateScalafmtFile.isDismissed) {
       val params = MissingScalafmtConf.params()
-      client.showMessageRequest(params).asScala.map { item =>
-        if (
-          item == MissingScalafmtConf.createFile || item == MissingScalafmtConf.runDefaults
-        ) {
-          val relative =
-            if (item == MissingScalafmtConf.createFile) defaultScalafmtLocation
-            else Directories.hiddenScalafmt
-          val toWrite = projectRoot.resolve(relative)
-          Files.write(
-            toWrite.toNIO,
-            initialConfig().getBytes(StandardCharsets.UTF_8),
-          )
-          client.showMessage(MissingScalafmtConf.fixedParams(relative))
-          Some(toWrite)
-        } else if (item == Messages.notNow) {
-          tables.dismissedNotifications.CreateScalafmtFile
-            .dismiss(24, TimeUnit.HOURS)
-          None
-        } else None
-      }
+      client
+        .showMessageRequest(
+          params,
+          defaultTo = () => {
+            client.showMessage(MissingScalafmtConf.notificationParams())
+            MissingScalafmtConf.runDefaults
+          },
+        )
+        .asScala
+        .map { item =>
+          if (
+            item == MissingScalafmtConf.createFile || item == MissingScalafmtConf.runDefaults
+          ) {
+            val relative =
+              if (item == MissingScalafmtConf.createFile)
+                defaultScalafmtLocation
+              else Directories.hiddenScalafmt
+            val toWrite = projectRoot.resolve(relative)
+            Files.write(
+              toWrite.toNIO,
+              initialConfig().getBytes(StandardCharsets.UTF_8),
+            )
+            client.showMessage(MissingScalafmtConf.fixedParams(relative))
+            Some(toWrite)
+          } else if (item == Messages.notNow) {
+            tables.dismissedNotifications.CreateScalafmtFile
+              .dismiss(24, TimeUnit.HOURS)
+            None
+          } else None
+        }
     } else Future.successful(None)
   }
 
@@ -498,21 +516,33 @@ final class FormattingProvider(
               s" Directories:\n${rewrite.allDirs.mkString("- ", "\n- ", "")}"
           )
 
-          client.showMessageRequest(params).asScala.map { item =>
-            if (item == UpdateScalafmtConf.letUpdate) {
-              val text = configPath.toInputFromBuffers(buffers).text
-              val updatedText = rewrite.rewrite(text)
-              Files.write(
-                configPath.toNIO,
-                updatedText.getBytes(StandardCharsets.UTF_8),
-              )
-            } else if (item == Messages.notNow) {
-              tables.dismissedNotifications.UpdateScalafmtConf
-                .dismiss(24, TimeUnit.HOURS)
-            } else if (item == Messages.dontShowAgain) {
-              tables.dismissedNotifications.UpdateScalafmtConf.dismissForever()
-            } else ()
-          }
+          client
+            .showMessageRequest(
+              params,
+              defaultTo = () => {
+                client.showMessage(
+                  UpdateScalafmtConf.notificationParams(rewrite.maxDialect)
+                )
+                Messages.notNow
+              },
+            )
+            .asScala
+            .map { item =>
+              if (item == UpdateScalafmtConf.letUpdate) {
+                val text = configPath.toInputFromBuffers(buffers).text
+                val updatedText = rewrite.rewrite(text)
+                Files.write(
+                  configPath.toNIO,
+                  updatedText.getBytes(StandardCharsets.UTF_8),
+                )
+              } else if (item == Messages.notNow) {
+                tables.dismissedNotifications.UpdateScalafmtConf
+                  .dismiss(24, TimeUnit.HOURS)
+              } else if (item == Messages.dontShowAgain) {
+                tables.dismissedNotifications.UpdateScalafmtConf
+                  .dismissForever()
+              } else ()
+            }
         case None => Future.unit
       }
     }

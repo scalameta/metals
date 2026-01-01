@@ -397,7 +397,10 @@ class DebugProvider(
             debuggee,
             resolver,
             dapLogger,
-            gracePeriod = Duration(5, TimeUnit.SECONDS),
+            gracePeriod = Duration(
+              clientConfig.initialConfig.debuggeeGracePeriod,
+              TimeUnit.SECONDS,
+            ),
           )
         handler.uri
       }
@@ -749,7 +752,7 @@ class DebugProvider(
     previousResult match {
       case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
         val target =
-          buildTargets.findByDisplayName(buildTarget).map(_.getId()).toSeq
+          buildTargets.findByDisplayNameOrUri(buildTarget).map(_.getId()).toSeq
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)

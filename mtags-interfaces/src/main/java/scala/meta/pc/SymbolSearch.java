@@ -51,9 +51,31 @@ public interface SymbolSearch {
     Result search(String query,
                   String buildTargetIdentifier,
                   SymbolSearchVisitor visitor);
+    
+    /**
+     * Runs fuzzy symbol search for the given query, optionally filtering by toplevel member kind.
+     *
+     * @param query the text query, for example "ArrDeq" that could match "java.util.ArrayDeque".
+     * @param buildTargetIdentifier the build target where to perform the search. This parameter
+     *                              determines which classpath.
+     * @param kind optional filter for toplevel member kind (e.g., IMPLICIT_CLASS).
+     * @param visitor The visitor that accepts the search results as the come.
+     * @return returns Result.COMPLETE if the search results exhaustively covered
+     * all possible search results for this query, or Result.INCOMPLETE if there
+     * may appear more search results by refining the search query.
+     */
+    default Result search(String query,
+                  String buildTargetIdentifier,
+                  Optional<MemberKind> kind,
+                  SymbolSearchVisitor visitor) {
+        // Default implementation ignores the kind filter and delegates to the simpler overload
+        return search(query, buildTargetIdentifier, visitor);
+    }
+    
     Result searchMethods(String query,
                   String buildTargetIdentifier,
                   SymbolSearchVisitor visitor);
+
     enum Result {
         COMPLETE,
         INCOMPLETE

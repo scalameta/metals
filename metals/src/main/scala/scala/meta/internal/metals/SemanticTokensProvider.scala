@@ -118,25 +118,23 @@ object SemanticTokensProvider {
       }
       val buffer = ListBuffer.empty[Integer]
 
-      tokens.foldLeft((Line(0, 0), nodes, false, Option.empty[SQLToken])) {
-        case ((delta, nodesIterator, isSQLInterpolator, lastSQLToken), tk) =>
+      tokens.foldLeft((Line(0, 0), nodes, List.empty[Interpolator])) {
+        case ((delta, nodesIterator, interpolationStack), tk) =>
           val (
             (toAdd, nodesIterator0, delta0),
-            isSQLInterpolator0,
-            lastSQLToken0,
+            interpolationStack0,
           ) =
             handleTokenWithSQLSupport(
               tk,
               nodesIterator,
               isScala3,
               delta,
-              isSQLInterpolator,
-              lastSQLToken,
+              interpolationStack,
             )
           buffer.addAll(
             toAdd
           )
-          (delta0, nodesIterator0, isSQLInterpolator0, lastSQLToken0)
+          (delta0, nodesIterator0, interpolationStack0)
       }
       buffer.toList
     }
@@ -144,37 +142,56 @@ object SemanticTokensProvider {
 
   private val acceptedSQLInterpolations = Set("sql", "fr", "SQL")
 
+  private sealed trait Interpolator
+  private object Interpolator {
+    case object NonSQL extends Interpolator
+    case class SQL(lastToken: Option[SQLToken] = None) extends Interpolator
+  }
+
   private def handleTokenWithSQLSupport(
       tk: scala.meta.tokens.Token,
       nodesIterator: List[Node],
       isScala3: Boolean,
       delta: Line,
-      isSQLInterpolator: Boolean,
-      lastSQLToken: Option[SQLToken],
-  ): ((List[Integer], List[Node], Line), Boolean, Option[SQLToken]) = tk match {
-    case Token.Interpolation.Id(id) if acceptedSQLInterpolations(id) =>
-      (handleToken(tk, nodesIterator, isScala3, delta), true, None)
-    case Token.Interpolation.Part(value) if isSQLInterpolator =>
-      val buffer = ListBuffer.empty[Integer]
-      val sqlTokens = SQLTokenizer.tokenize(value, lastSQLToken)
+      interpolationStack: List[Interpolator],
+  ): ((List[Integer], List[Node], Line), List[Interpolator]) =
+    (tk, interpolationStack) match {
+      case (Token.Interpolation.Id(id), interpolationStack) =>
+        (
+          handleToken(tk, nodesIterator, isScala3, delta),
+          if (acceptedSQLInterpolations(id))
+            Interpolator.SQL() :: interpolationStack
+          else Interpolator.NonSQL :: interpolationStack,
+        )
+      case (
+            tk: Token.Interpolation.Part,
+            Interpolator.SQL(lastSQLToken) :: interpolationStackTail,
+          ) =>
+        val buffer = ListBuffer.empty[Integer]
+        val sqlTokens = SQLTokenizer.tokenize(tk.text, lastSQLToken)
 
-      val (delta0, lastToken0) =
-        sqlTokens.foldLeft((delta, Option.empty[SQLToken])) {
-          case ((delta, _), tk) =>
-            val (toAdd, delta0) = handleSQLToken(tk, delta)
-            buffer.addAll(toAdd)
-            (delta0, Some(tk))
-        }
-      ((buffer.toList, nodesIterator, delta0), isSQLInterpolator, lastToken0)
-    case Token.Interpolation.End() if isSQLInterpolator =>
-      (handleToken(tk, nodesIterator, isScala3, delta), false, None)
-    case _ =>
-      (
-        handleToken(tk, nodesIterator, isScala3, delta),
-        isSQLInterpolator,
-        lastSQLToken,
-      )
-  }
+        val (delta0, lastToken0) =
+          sqlTokens.foldLeft((delta, Option.empty[SQLToken])) {
+            case ((delta, _), tk) =>
+              val (toAdd, delta0) = handleSQLToken(tk, delta)
+              buffer.addAll(toAdd)
+              (delta0, Some(tk))
+          }
+        (
+          (buffer.toList, nodesIterator, delta0),
+          Interpolator.SQL(lastToken0) :: interpolationStackTail,
+        )
+      case (Token.Interpolation.End(), _ :: interpolationStackTail) =>
+        (
+          handleToken(tk, nodesIterator, isScala3, delta),
+          interpolationStackTail,
+        )
+      case _ =>
+        (
+          handleToken(tk, nodesIterator, isScala3, delta),
+          interpolationStack,
+        )
+    }
 
   private def handleSQLToken(
       tk: SQLToken,

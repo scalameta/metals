@@ -17,12 +17,11 @@ import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.Messages.RequestTimeout
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
-
-import org.eclipse.lsp4j.services.LanguageClient
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 class RequestRegistry(
     initialCancellables: List[Cancelable],
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     requestTimeOutNotification: Option[DismissedNotifications#Notification] =
       None,
 )(implicit
@@ -40,7 +39,14 @@ class RequestRegistry(
       case Some(actionName) if !cancelByDefault =>
         languageClient
           .showMessageRequest(
-            RequestTimeout.params(actionName, duration.toMinutes.toInt)
+            RequestTimeout.params(actionName, duration.toMinutes.toInt),
+            defaultTo = () => {
+              languageClient.showMessage(
+                RequestTimeout
+                  .notificationParams(actionName, duration.toMinutes.toInt)
+              )
+              RequestTimeout.waitAction
+            },
           )
           .asScala
           .map {

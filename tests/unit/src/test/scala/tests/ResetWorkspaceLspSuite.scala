@@ -4,8 +4,6 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 
-import org.eclipse.lsp4j.MessageActionItem
-
 class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
 
   // This restarts Bloop, so we can't really run on Ci, as it will make everything slower
@@ -48,8 +46,7 @@ class ResetWorkspaceLspSuite extends BaseLspSuite(s"reset-workspace") {
           "",
         )
         _ = assert(classFileExists)
-        _ = client.resetWorkspace =
-          new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
+        _ = client.resetWorkspace = Messages.ResetWorkspace.resetWorkspace
         _ <- server.executeCommandUnsafe(
           ServerCommands.ResetWorkspace.id,
           Seq.empty,

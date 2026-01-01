@@ -29,12 +29,13 @@ import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
-import coursierapi.Dependency
+import coursier.Dependency
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixEvaluation
+import scalafix.interfaces.ScalafixException
 import scalafix.interfaces.ScalafixFileEvaluationError
 import scalafix.internal.interfaces.ScalafixCoursier
 import scalafix.internal.interfaces.ScalafixInterfacesClassloader
@@ -65,6 +66,7 @@ case class ScalafixProvider(
   def runRulesOrPrompt(
       file: AbsolutePath,
       rules: List[String],
+      isRepublished: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     lazy val generatedRules =
       ScalafixLlmRuleProvider.generatedRules(workspace).keySet
@@ -84,7 +86,7 @@ case class ScalafixProvider(
         )
 
       }
-      runRules(file, rulesToRun, additionalDeps)
+      runRules(file, rulesToRun, additionalDeps, isRepublished = isRepublished)
     }
   }
 
@@ -92,19 +94,21 @@ case class ScalafixProvider(
       file: AbsolutePath,
       ruleName: String,
       ruleDep: Dependency,
+      isRepublished: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val scalaTarget = buildTargets.inverseSources(file)
     scalaTarget
       .flatMap(buildId => buildTargets.scalaTarget(buildId))
       .map { scalaTarget =>
         val additionalDeps = Map(
-          ruleName -> Dependency.of(ruleDep)
+          ruleName -> ruleDep
         )
         runScalafixRules(
           file,
           scalaTarget,
           List(ruleName),
           additionalDeps,
+          isRepublished = isRepublished,
         )
       }
       .getOrElse(Future.successful(Nil))
@@ -130,12 +134,15 @@ case class ScalafixProvider(
       additionalDeps: Map[String, Dependency] = Map.empty,
       retried: Boolean = false,
       silent: Boolean = false,
+      isRepublished: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val fromDisk = file.toInput
     val inBuffers = file.toInputFromBuffers(buffers)
 
     additionalDeps.foreach { case (ruleName, dep) =>
-      scribe.debug(s"Running rule $ruleName with dep $dep")
+      scribe.debug(
+        s"Running rule $ruleName with dep $dep on $file, the rule is republished: $isRepublished"
+      )
     }
 
     compilations
@@ -149,6 +156,7 @@ case class ScalafixProvider(
             retried || isUnsaved(inBuffers.text, fromDisk.text),
             rules,
             additionalDeps = additionalDeps,
+            isRepublished = isRepublished,
           )
 
         scalafixEvaluation
@@ -415,6 +423,7 @@ case class ScalafixProvider(
       suggestConfigAmend: Boolean = true,
       shouldRetry: Boolean = true,
       additionalDeps: Map[String, Dependency] = Map.empty,
+      isRepublished: Boolean = false,
   ): Future[ScalafixEvaluation] = {
     val isScala3 = ScalaVersions.isScala3Version(scalaTarget.scalaVersion)
     val isSource3 = scalaTarget.scalac.getOptions().contains("-Xsource:3")
@@ -467,6 +476,7 @@ case class ScalafixProvider(
       urlClassLoaderWithExternalRule <- getRuleClassLoader(
         scalafixRulesKey,
         api.getClass.getClassLoader,
+        isRepublished,
       )
     } yield {
       val scalacOptions = {
@@ -612,7 +622,17 @@ case class ScalafixProvider(
           languageClient
             .showMessageRequest(
               Messages.ScalafixConfig
-                .amendRequest(settingLines, scalaVersion, isScalaSource)
+                .amendRequest(settingLines, scalaVersion, isScalaSource),
+              defaultTo = () => {
+                languageClient.showMessage(
+                  Messages.ScalafixConfig.notificationParams(
+                    settingLines,
+                    scalaVersion,
+                    isScalaSource,
+                  )
+                )
+                Messages.ScalafixConfig.ignore
+              },
             )
             .asScala
             .map {
@@ -670,7 +690,14 @@ case class ScalafixProvider(
           val scalafix =
             if (scalaVersion.startsWith("2.11")) scala211Fallback
             else
-              Scalafix.fetchAndClassloadInstance(scalaVersion)
+              try {
+                Scalafix.fetchAndClassloadInstance(scalaVersion)
+              } catch {
+                case e: ScalafixException
+                    if e.getMessage().contains("Failed to fetch") =>
+                  Embedded.downloadScalafix(scalaVersion)
+                  Scalafix.fetchAndClassloadInstance(scalaVersion)
+              }
           scalafix
         }
       },
@@ -682,7 +709,7 @@ case class ScalafixProvider(
     // last version that supports Scala 2.11.12
     val latestSupporting = "0.10.4"
     val jars = ScalafixCoursier.scalafixCliJars(
-      Embedded.repositories.asJava,
+      Embedded.apiRepositories.asJava,
       latestSupporting,
       V.scala211,
     )
@@ -697,7 +724,9 @@ case class ScalafixProvider(
   private def getRuleClassLoader(
       scalfixRulesKey: ScalafixRulesClasspathKey,
       scalafixClassLoader: ClassLoader,
+      isRepublished: Boolean,
   ): Future[URLClassLoader] = Future {
+    if (isRepublished) rulesClassloaderCache.remove(scalfixRulesKey)
     rulesClassloaderCache.getOrElseUpdate(
       scalfixRulesKey, {
         workDoneProgress.trackBlocking(
@@ -708,7 +737,7 @@ case class ScalafixProvider(
             // Scalafix version that supports Scala 2.11 doesn't have the rule built in
             if (scalfixRulesKey.scalaVersion.startsWith("2.11"))
               Some(
-                Dependency.of(
+                Embedded.dependencyOf(
                   "com.github.liancheng",
                   "organize-imports_2.11",
                   "0.6.0",
@@ -720,6 +749,7 @@ case class ScalafixProvider(
             Embedded.rulesClasspath(
               rulesDependencies.toList ++ organizeImportRule
             )
+          scribe.debug(s"Classpath: $paths")
           val classloader = Embedded.toClassLoader(
             Classpath(paths.map(AbsolutePath(_))),
             scalafixClassLoader,
@@ -755,6 +785,7 @@ case class ScalafixProvider(
       rules: List[String],
       additionalRules: (ScalaVersion) => Map[String, Dependency] = _ =>
         Map.empty,
+      isRepublished: Boolean = false,
   ): Future[List[l.TextEdit]] = {
     val result = for {
       buildId <- buildTargets.inverseSources(file)
@@ -765,6 +796,7 @@ case class ScalafixProvider(
         target,
         rules,
         additionalRules(target.scalaVersion),
+        isRepublished = isRepublished,
       )
     }
     result.getOrElse(Future.successful(Nil))
@@ -810,12 +842,17 @@ object ScalafixProvider {
       rules: List[String],
       additionalDeps: Map[String, Dependency],
   ): Set[Dependency] = {
-    val fromSettings =
+    val fromSettings: Seq[Dependency] =
       userConfig.scalafixRulesDependencies.flatMap { dependencyString =>
         Try {
-          Dependency.parse(
+          val classic = coursierapi.Dependency.parse(
             dependencyString,
             coursierapi.ScalaVersion.of(scalaVersion),
+          )
+          Embedded.dependencyOf(
+            classic.getModule().getOrganization(),
+            classic.getModule().getName(),
+            classic.getVersion(),
           )
         } match {
           case Failure(exception) =>
@@ -830,39 +867,39 @@ object ScalafixProvider {
     val allDeps = fromSettings ++ rules.flatMap(builtInRuleDeps.get)
     // only get newest versions for each dependency
     allDeps
-      .sortBy(_.getVersion())
+      .sortBy(_.versionConstraint.asString)
       .reverse
-      .distinctBy(dep => dep.getModule())
+      .distinctBy(dep => dep.module)
       .toSet
   }
 
   // Hygiene rules from https://scalacenter.github.io/scalafix/docs/rules/community-rules.html
   private def builtInRules(binaryVersion: String) = {
-    val scaluzziDep = Dependency.of(
+    val scaluzziDep = Embedded.dependencyOf(
       "com.github.vovapolu",
       s"scaluzzi_$binaryVersion",
       "latest.release",
     )
 
-    val scalafixUnifiedDep = Dependency.of(
+    val scalafixUnifiedDep = Embedded.dependencyOf(
       "com.github.xuwei-k",
       s"scalafix-rules_$binaryVersion",
       "latest.release",
     )
 
-    val scalafixPixivRule = Dependency.of(
+    val scalafixPixivRule = Embedded.dependencyOf(
       "net.pixiv",
       s"scalafix-pixiv-rule_$binaryVersion",
       "latest.release",
     )
 
     val depsList = List(
-      "EmptyCollectionsUnified" -> Dependency.of(
+      "EmptyCollectionsUnified" -> Embedded.dependencyOf(
         "io.github.ghostbuster91.scalafix-unified",
         s"unified_$binaryVersion",
         "latest.release",
       ),
-      "UseNamedParameters" -> Dependency.of(
+      "UseNamedParameters" -> Embedded.dependencyOf(
         "com.github.jatcwang",
         s"scalafix-named-params_$binaryVersion",
         "latest.release",

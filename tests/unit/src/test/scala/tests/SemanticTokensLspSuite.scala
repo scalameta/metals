@@ -290,6 +290,60 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
   )
 
+  check(
+    "doobie-postgresql-cast-operators",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/
+        |    <<jsonb_path_query>>/*function*/(<<entry>>/*variable*/, <<'dateRange'>>/*string*/)<<::>>/*operator*/<<TEXT>>/*keyword*/<<::>>/*operator*/<<DATE>>/*keyword*/ <<as>>/*keyword*/ <<from_date>>/*variable*/
+        |    <<FROM>>/*keyword*/ <<subq0>>/*variable*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-with-dollar-escape",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\">>/*string*/<<SELECT>>/*keyword*/ <<'$$$$.path'>>/*string*/<<::>>/*operator*/<<TEXT>>/*keyword*/ <<FROM>>/*keyword*/ <<t>>/*variable*/<<\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-nested-sql-interpolator",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<NestedSqlInterpolator>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = 
+        |    <<fr>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<t>>/*variable*/ <<WHERE>>/*keyword*/ 
+        |         (<<$$>>/*keyword*/{<<fr>>/*keyword*/<<\">>/*string*/<<age>>/*variable*/ <<=>>/*operator*/ <<20>>/*number*/<<\">>/*string*/})
+        |         <<IS>>/*keyword*/ <<TRUE>>/*keyword*/
+        |<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-with-scala-interpolator",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<NestedSqlInterpolator>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = 
+        |    <<fr>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<t>>/*variable*/ <<WHERE>>/*keyword*/ 
+        |         (<<$$>>/*keyword*/{<<s>>/*keyword*/<<\">>/*string*/<<age = 20>>/*string*/<<\">>/*string*/})
+        |         <<IS>>/*keyword*/ <<TRUE>>/*keyword*/
+        |<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
   test("new-changes") {
     val expected =
       """|<<package>>/*keyword*/ <<a>>/*namespace*/

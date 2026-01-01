@@ -33,7 +33,7 @@ jobs:
             java: "24"
             shard: 2
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: coursier/setup-action@v1
       - uses: actions/setup-java@v5
         with:
@@ -52,7 +52,7 @@ jobs:
         shell: bash
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-reports
           path: "**/.reports/**/*"
@@ -163,7 +163,7 @@ jobs:
             os: ubuntu-latest
             java: "21"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
@@ -181,7 +181,7 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
       - name: Upload test reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-reports
           path: "**/.reports/**/*"

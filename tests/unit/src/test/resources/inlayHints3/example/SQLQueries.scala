@@ -2,7 +2,7 @@ package example
 
 class SQLQueries {
     implicit class SQLStringContext(sc: StringContext) {
-        def sql(args: Any*): String = sc.s(args: _*)
+        def sql(args: Any*): String = sc.s(/*args = */args: _*)
     }
 
     val createTableQuery/*: String<<scala/Predef.String#>>*/ = sql"""
@@ -23,5 +23,10 @@ class SQLQueries {
     val insertQuery/*: String<<scala/Predef.String#>>*/ = sql"""
         INSERT INTO users (id, name, age, created_at)
         VALUES (1, 'John Doe', 25, CURRENT_TIMESTAMP)
+        """
+
+    val nestedInterpolators/*: String<<scala/Predef.String#>>*/ = sql"""
+        SELECT name, age
+        ${s"FROM ${sql"users"} WHERE"} age > 30.5
         """
 }

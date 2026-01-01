@@ -90,8 +90,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     actions =>
       actions.find(_.getTitle == "a.Main").get
   }
-  var importScalaCliScript = new MessageActionItem(ImportScalaScript.dismiss)
-  var resetWorkspace = new MessageActionItem(ResetWorkspace.cancel)
+  var importScalaCliScript = ImportScalaScript.dismiss
+  var resetWorkspace = ResetWorkspace.cancel
   var regenerateAndRestartScalaCliBuildSever = FileOutOfScalaCliBspScope.ignore
   var shouldReloadAfterJavaHomeUpdate = ProjectJavaHomeUpdate.notNow
   var onWorkDoneProgressStart: (String, WorkDoneProgressCancelParams) => Unit =

@@ -7,6 +7,7 @@ import scala.meta.internal.builds.BazelDigest
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DecoderResponse
 import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
@@ -18,16 +19,16 @@ import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-import coursierapi.Dependency
-import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import tests.BaseBazelServerSuite
 import tests.BaseImportSuite
 import tests.BazelBuildLayout
 import tests.BazelModuleLayout
 import tests.BazelServerInitializer
 
 class BazelLspSuite
-    extends BaseImportSuite("bazel-import", BazelServerInitializer) {
+    extends BaseImportSuite("bazel-import", BazelServerInitializer)
+    with BaseBazelServerSuite {
   val buildTool: BazelBuildTool = BazelBuildTool(() => userConfig, workspace)
 
   val bazelVersion = "6.4.0"
@@ -37,6 +38,11 @@ class BazelLspSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = BazelDigest.current(workspace)
+
+  override def afterEach(context: AfterEach): Unit = {
+    super.afterEach(context)
+    cleanBazelServer()
+  }
 
   val importMessage: String =
     GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
@@ -190,8 +196,7 @@ class BazelLspSuite
            |  Compile""".stripMargin
       _ = assertNoDiff(result, expectedTarget)
       _ = server.headServer.connectionProvider.buildServerPromise = Promise()
-      _ = client.resetWorkspace =
-        new MessageActionItem(Messages.ResetWorkspace.resetWorkspace)
+      _ = client.resetWorkspace = Messages.ResetWorkspace.resetWorkspace
       _ <- server.executeCommand(ServerCommands.ResetWorkspace, true)
       _ <- server.server.buildServerPromise.future
       resultAfter <- getTargetInfo(targets.head.bazelEscapedDisplayName)
@@ -307,8 +312,9 @@ class BazelLspSuite
     for {
       _ <- shellRunner
         .runJava(
-          Dependency.of(
-            BazelBuildTool.dependency.getModule(),
+          Embedded.dependencyOf(
+            BazelBuildTool.dependency.module.organization.value,
+            BazelBuildTool.dependency.module.name.value,
             BazelBuildTool.bspVersion,
           ),
           BazelBuildTool.mainClass,
@@ -358,7 +364,7 @@ class BazelLspSuite
       _ <- server.didOpen("Hello.scala")
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView(workspace),
+        BazelBuildTool.fallbackProjectView,
       )
       _ <- server.didChange("Hello.scala") { text =>
         text.replace("def hello: String", "def hello: Int")
@@ -391,7 +397,7 @@ class BazelLspSuite
       )
       _ = assertNoDiff(
         projectview.readText,
-        BazelBuildTool.fallbackProjectView(workspace),
+        BazelBuildTool.fallbackProjectView,
       )
     } yield ()
   }
@@ -430,7 +436,7 @@ class BazelLspSuite
     val bazelVersion821 = "8.2.1"
     for {
       _ <- initialize(
-        BazelModuleLayout(moduleWorkspaceLayout, "3.3.6", bazelVersion821)
+        BazelModuleLayout(moduleWorkspaceLayout, V.scala3, bazelVersion821)
       )
       _ = assert(bazelBspConfig.exists)
 
@@ -448,11 +454,6 @@ class BazelLspSuite
            |allow_manual_targets_sync: false
            |
            |derive_targets_from_directories: false
-           |
-           |enabled_rules:
-           |    rules_scala
-           |    rules_java
-           |    rules_jvm
            |
            |""".stripMargin,
       )

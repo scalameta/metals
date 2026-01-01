@@ -689,6 +689,48 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  test("scala3-next-defs") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.latestScala3Next}" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object O {
+           |  val k: String = "Hello"
+           |  val partialFunction: PartialFunction[Int, String] = {
+           |    case 1 => "One"
+           |    case 2 => "Two"
+           |  }
+           |  val list: List[Int] = List(1, 2, 3)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ = assertNoDiff(
+        server.workspaceDefinitions,
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object O/*L2*/ {
+           |  val k/*L3*/: String/*Predef.scala*/ = "Hello"
+           |  val partialFunction/*L4*/: PartialFunction/*PartialFunction.scala*/[Int/*Int.scala*/, String/*Predef.scala*/] = {
+           |    case 1 => "One"
+           |    case 2 => "Two"
+           |  }
+           |  val list/*L8*/: List/*package.scala*/[Int/*Int.scala*/] = List/*;Factory.scala;package.scala*/(1, 2, 3)
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("go-to-reexported-symbol") {
     val testCase =
       """|package a

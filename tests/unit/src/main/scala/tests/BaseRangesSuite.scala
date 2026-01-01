@@ -23,6 +23,7 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
       additionalLibraryDependencies: List[String] = Nil,
       scalacOptions: List[String] = Nil,
       customMetalsJson: Option[String] = None,
+      additionalEdits: () => Future[Unit] = () => Future.successful(()),
   )(implicit
       loc: Location
   ): Unit = {
@@ -35,7 +36,6 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
     val base = files.map { case (fileName, code) =>
       fileName -> code.replaceAll("(<<|>>|@@)", "")
     }
-
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
     val metalsJson =
       customMetalsJson.getOrElse(
@@ -61,15 +61,17 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))
         )
-        allChecks = for {
-          query <- allReferenceLocations
-        } yield () =>
-          assertCheck(
-            query.filename,
-            query.query.replaceAll("(<<|>>)", ""),
-            expected,
-            base,
-          )
+        _ <- additionalEdits()
+        allChecks =
+          for {
+            query <- allReferenceLocations
+          } yield () =>
+            assertCheck(
+              query.filename,
+              query.query.replaceAll("(<<|>>)", ""),
+              expected,
+              base,
+            )
         _ <- MetalsTestEnrichments.orderly(allChecks)
         _ <- server.shutdown()
       } yield ()

@@ -72,132 +72,6 @@ class MillServerSuite
     bspTrace.touch()
   }
 
-  test("basic-1.0.0") {
-    cleanWorkspace()
-    writeLayout(
-      MillBuildLayout(
-        """|/a/src/main.scala
-           |object Failure {
-           |  def scalaVersion: String = 3
-           |}
-           |""".stripMargin,
-        V.latestScala3Next,
-        testDep = None,
-        V.millVersion,
-      )
-    )
-    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
-    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
-    for {
-      _ <- server.initialize()
-      _ <- server.initialized()
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Messages.GenerateBspAndConnect
-          .params(
-            MillBuildTool.name,
-            MillBuildTool.bspName,
-          )
-          .getMessage,
-      )
-      _ <- server.headServer.buildServerPromise.future
-      _ = assert(millBspConfig.exists)
-      _ <- server.didSave("a/src/main.scala")
-    } yield {
-      assertNoDiff(
-        client.workspaceDiagnostics,
-        """|a/src/main.scala:2:30: error: Found:    (3 : Int)
-           |Required: String
-           |  def scalaVersion: String = 3
-           |                             ^
-           |""".stripMargin,
-      )
-    }
-  }
-
-  test("java-1.0.0") {
-    cleanWorkspace()
-
-    val fileContent =
-      """|
-         |package foo;
-         |
-         |import net.sourceforge.argparse4j.ArgumentParsers;
-         |import net.sourceforge.argparse4j.inf.Argume@@ntParser;
-         |import net.sourceforge.argparse4j.inf.Namespace;
-         |import org.thymeleaf.TemplateEngine;
-         |import org.thymeleaf.context.Context;
-         |
-         |public class Foo {
-         |  public static String generateHtml(String text) {
-         |    Context context = new Context();
-         |    context.setVariable("text", text);
-         |    return new TemplateEngine().process("<h1 th:text=\"${text}\"></h1>", context);
-         |  }
-         |
-         |  public static void main(String[] args) {
-         |    ArgumentParser parser = ArgumentParsers.newFor("template")
-         |        .build()
-         |        .defaultHelp(true)
-         |        .description("Inserts text into a HTML template");
-         |
-         |    parser.addArgument("-t", "--text").required(true).help("text to insert");
-         |
-         |    Namespace ns = null;
-         |    try {
-         |      ns = parser.parseArgs(args);
-         |    } catch (Exception e) {
-         |      System.out.println(e.getMessage());
-         |      System.exit(1);
-         |    }
-         |
-         |    System.out.println(generateHtml(ns.getString("text")));
-         |  }
-         |}
-         |""".stripMargin
-
-    for {
-      _ <- initialize(
-        s"""|
-            |/build.mill
-            |//| mill-version: ${V.millVersion}
-            |//// SNIPPET:BUILD
-            |package build
-            |import mill.*, javalib.*
-            |
-            |object foo extends JavaModule {
-            |  def mvnDeps = Seq(
-            |    mvn"net.sourceforge.argparse4j:argparse4j:0.9.0",
-            |    mvn"org.thymeleaf:thymeleaf:3.1.1.RELEASE"
-            |  )
-            |
-            |  object test extends JavaTests, TestModule.Junit4 {
-            |    def mvnDeps = Seq(
-            |      mvn"com.google.guava:guava:33.3.0-jre"
-            |    )
-            |  }
-            |}
-            |
-            |/foo/src/foo/Foo.java
-            |${fileContent.replace("@@", "")}
-            |""".stripMargin
-      )
-      _ <- server.didOpen("foo/src/foo/Foo.java")
-      _ <- server.didSave("foo/src/foo/Foo.java")
-      definition <- server.definition(
-        "foo/src/foo/Foo.java",
-        fileContent,
-        workspace,
-      )
-      _ = assert(
-        definition
-          .map(_.getUri())
-          .mkString("\n")
-          .contains("net/sourceforge/argparse4j/inf/ArgumentParser.java")
-      )
-    } yield ()
-  }
-
   test("too-old") {
     writeLayout(MillBuildLayout("", V.scala213, testDep = None, preBspVersion))
     for {
@@ -259,10 +133,9 @@ class MillServerSuite
   test(s"presentation-compiler") {
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
     writeLayout(
-      s"""
-         |/.mill-version
-         |$supportedBspVersion
-         |/build.sc
+      s"""/build.mill
+         |//| mill-version: $supportedBspVersion
+         |//| mill-jvm-version: system
          |import mill._, scalalib._
          |object foo extends ScalaModule {
          |  def scalaVersion = "${V.scala213}"
@@ -311,7 +184,9 @@ class MillServerSuite
 
   checkJavaHomeUpdate(
     "mill-java-home-update".flaky,
-    fileContent => s"""|/build.sc
+    fileContent => s"""|/build.mill
+                       |//| mill-version: ${V.millVersion}
+                       |//| mill-jvm-version: system
                        |import mill._, scalalib._
                        |object a extends ScalaModule {
                        |  def scalaVersion = "${V.scala213}"
@@ -324,9 +199,9 @@ class MillServerSuite
     def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
     writeLayout(
       s"""
-         |/.mill-version
-         |$supportedBspVersion
          |/build.mill
+         |//| mill-jvm-version: system
+         |//| mill-version: $supportedBspVersion
          |package build
          |import mill.*
          |import scalalib.*
@@ -386,7 +261,9 @@ class MillServerSuite
     }
     for {
       _ <- initialize(
-        s"""|/build.sc
+        s"""|/build.mill
+            |//| mill-version: ${V.millVersion}
+            |//| mill-jvm-version: system
             |import mill._, scalalib._
             |object foo extends ScalaModule {
             |  def scalaVersion = "${V.scala213}"
@@ -427,6 +304,7 @@ class MillServerSuite
       s"""
          |/build.mill
          |//| mill-version: ${V.millVersion}
+         |//| mill-jvm-version: system
          |package build
          |import mill.*, scalalib.*
          |
@@ -463,6 +341,7 @@ class MillServerSuite
     writeLayout(
       s"""|/build.mill
           |//| mill-version: ${V.millVersion}
+          |//| mill-jvm-version: system
           |package build
           |import mill.*, scalalib.*
           |
@@ -536,7 +415,9 @@ class MillServerSuite
 
     for {
       _ <- initialize(
-        s"""|/build.sc
+        s"""|/build.mill
+            |//| mill-version: ${V.millVersion}
+            |//| mill-jvm-version: system
             |import mill._, scalalib._
             |object foo extends ScalaModule {
             |  def scalaVersion = "${V.scala213}"

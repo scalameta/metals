@@ -743,6 +743,10 @@ object BuildServerConnection {
       enableBestEffortMode: Boolean,
   )
 
+  final case class InitializeBuildData(
+      enabledRules: Array[String]
+  )
+
   /**
    * Run build/initialize handshake
    */
@@ -753,12 +757,28 @@ object BuildServerConnection {
       config: MetalsServerConfig,
       userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
-    val extraParams = BspExtraBuildParams(
-      BuildInfo.javaSemanticdbVersion,
-      BuildInfo.scalametaVersion,
-      BuildInfo.supportedScala2Versions.asJava,
-      config.enableBestEffort || userConfiguration.enableBestEffort,
-    )
+    val isBazel = serverName == BazelBuildTool.bspName
+    val gson = new Gson
+    val (data, dataKind) =
+      if (isBazel)
+        (
+          gson.toJsonTree(
+            InitializeBuildData(BazelBuildTool.enabledRules(workspace).toArray)
+          ),
+          "bazel-data-kind",
+        )
+      else
+        (
+          gson.toJsonTree(
+            BspExtraBuildParams(
+              BuildInfo.javaSemanticdbVersion,
+              BuildInfo.scalametaVersion,
+              BuildInfo.supportedScala2Versions.asJava,
+              config.enableBestEffort || userConfiguration.enableBestEffort,
+            )
+          ),
+          "bloop-data-kind",
+        )
 
     val capabilities = new BuildClientCapabilities(
       List("scala", "java").asJava
@@ -773,9 +793,8 @@ object BuildServerConnection {
         capabilities,
       )
 
-      val gson = new Gson
-      val data = gson.toJsonTree(extraParams)
       params.setData(data)
+      params.setDataKind(dataKind)
       params
     }
     // Block on the `build/initialize` request because it should respond instantly by Bloop

@@ -22,6 +22,7 @@ import scala.meta.internal.metals.doctor.ProblemResolver
 import scala.meta.internal.metals.doctor.SemanticDBDisabled
 import scala.meta.internal.metals.doctor.UnsupportedSbtVersion
 import scala.meta.internal.metals.doctor.UnsupportedScalaVersion
+import scala.meta.internal.metals.doctor.WrongScalaReleaseVersion
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
@@ -200,6 +201,37 @@ class ProblemResolverSuite extends FunSuite {
     "",
     classpath = List("org/scalameta/munit_2.13/1.0.1/"),
   )
+
+  {
+    val metalsJavaVersion = JdkVersion
+      .parse(System.getProperty("java.version"))
+      .map(_.major)
+      .getOrElse(17)
+
+    checkRecommendation(
+      "wrong-scala-release-version",
+      scalaVersion = BuildInfo.scala213,
+      WrongScalaReleaseVersion(metalsJavaVersion.toString, "99").message,
+      scalacOpts = List(
+        "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
+        "-P:semanticdb:sourceroot:/tmp/metals",
+        "-release",
+        "99",
+      ),
+    )
+
+    checkRecommendation(
+      "correct-scala-release-version",
+      scalaVersion = BuildInfo.scala213,
+      "",
+      scalacOpts = List(
+        "-Xplugin:/semanticdb-scalac_2.12.12-4.4.2.jar",
+        "-P:semanticdb:sourceroot:/tmp/metals",
+        "-release",
+        metalsJavaVersion.toString,
+      ),
+    )
+  }
 
   def checkRecommendation(
       name: TestOptions,

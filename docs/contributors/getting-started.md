@@ -254,7 +254,7 @@ sbt
 
 > publishLocal
 
-> ++2.12.20 mtags/publishLocal
+> ++2.12.21 mtags/publishLocal
 ```
 
 You can also do a full cross publish with `sbt +publishLocal`, however this will

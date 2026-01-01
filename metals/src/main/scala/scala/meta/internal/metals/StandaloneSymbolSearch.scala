@@ -11,6 +11,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -113,10 +114,22 @@ class StandaloneSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): Result = {
-    val (res, _) =
-      classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[MemberKind],
+      visitor: SymbolSearchVisitor,
+  ): Result = {
+    val (res, _) = {
+      if (kind.isPresent) (Result.COMPLETE, 0)
+      else
+        classpathSearch.search(WorkspaceSymbolQuery.exact(query), visitor)
+    }
     workspaceFallback
-      .map(_.search(query, buildTargetIdentifier, visitor))
+      .map(_.search(query, buildTargetIdentifier, kind, visitor))
       .getOrElse(res)
   }
 

@@ -32,6 +32,7 @@ import scala.meta.internal.semanticdb.SymbolInformation.{Kind => k}
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
+import scala.meta.tokens.Tokens
 
 import geny.Generator
 import org.eclipse.{lsp4j => l}
@@ -656,6 +657,67 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
         case t: InvariantFailedException =>
           m.parsers.Parsed.Error(Position.None, t.toString(), t)
       }
+
+    def safeParseWithExperimentalFallback[T <: m.Tree](
+        dialect: m.Dialect,
+        tokenized: () => Option[m.Tokens]
+    )(implicit
+        parse: m.parsers.Parse[T]
+    ): m.parsers.Parsed[T] =
+      safeParse(dialect) match {
+        case succ: m.parsers.Parsed.Success[T] => succ
+        case err: m.parsers.Parsed.Error =>
+          if (
+            dialect.allowOpaqueTypes && !dialect.allowCaptureChecking && tokenized()
+              .exists(hasExperimentalImport(_))
+          ) {
+            safeParse(scala.meta.dialects.Scala3Future)
+          } else {
+            err
+          }
+
+      }
+
+    @tailrec
+    private def hasExperimentalImport(
+        tokenized: Tokens,
+        startingAt: Int = 0
+    ): Boolean = {
+      import scala.meta._
+      val firstImportOrDefn = tokenized.indexWhere(
+        {
+          case tokens.Token.KwImport() => true
+          case tokens.Token.KwVar() | tokens.Token.KwVal() |
+              tokens.Token.KwDef() | tokens.Token.KwObject() |
+              tokens.Token.KwClass() | tokens.Token.KwTrait() |
+              tokens.Token.KwEnum() =>
+            true
+          case _ => false
+        },
+        startingAt
+      )
+      val isImport =
+        firstImportOrDefn > -1 && tokenized(firstImportOrDefn)
+          .is[Token.KwImport]
+      if (isImport) {
+        val importLine = tokenized
+          .drop(firstImportOrDefn)
+          .takeWhile {
+            case _: tokens.Token.EOL => false
+            case _ => true
+          }
+          .map(_.syntax)
+          .mkString
+
+        if (importLine.contains("language.experimental.")) {
+          true
+        } else {
+          hasExperimentalImport(tokenized, firstImportOrDefn + 1)
+        }
+      } else {
+        false
+      }
+    }
   }
 
   implicit class XtensionSymbolInformation(info: s.SymbolInformation) {

@@ -9,8 +9,8 @@ class Miscellaneous {
     val _ = 42
   }
   // infix + inferred apply/implicits/tparams
-  (List/*[Int<<scala/Int#>>]*/(1)
-    .map/*[Int<<scala/Int#>>]*/(_ + 1)
-    ++
-      List/*[Int<<scala/Int#>>]*/(3))
+  (List/*[Int<<scala/Int#>>]*/(/*elems = */1)
+    .map/*[Int<<scala/Int#>>]*/(/*f = */_ + 1)/*: List<<scala/collection/immutable/List#>>[Int<<scala/Int#>>]*/
+    ++/*         : [B >: Int<<scala/Int#>>](suffix: IterableOnce<<scala/collection/IterableOnce#>>[B]): List<<scala/collection/immutable/List#>>[B]*/
+      List/*[Int<<scala/Int#>>]*/(/*elems = */3))
 }

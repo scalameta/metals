@@ -110,6 +110,7 @@ trait AdjustLspData {
 case class AdjustedLspData(
     adjustPosition: Position => Position,
     filterOutLocations: Location => Boolean,
+    adjustUri: String => String = identity,
 ) extends AdjustLspData {
 
   override def adjustLocations(
@@ -118,6 +119,7 @@ case class AdjustedLspData(
     locations.asScala.collect {
       case loc if !filterOutLocations(loc) =>
         loc.setRange(adjustRange(loc.getRange()))
+        loc.setUri(adjustUri(loc.getUri()))
         loc
     }.asJava
   }
@@ -168,10 +170,12 @@ object AdjustedLspData {
   def create(
       f: Position => Position,
       filterOutLocations: Location => Boolean = _ => false,
+      adjustUri: String => String = identity,
   ): AdjustLspData =
     AdjustedLspData(
       pos => f(pos),
       filterOutLocations,
+      adjustUri,
     )
 
   val default: AdjustLspData = DefaultAdjustedData

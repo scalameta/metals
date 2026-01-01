@@ -1,7 +1,7 @@
-/*example(Package):27*/package example
+/*example(Package):32*/package example
 
-/*example.SQLQueries(Class):27*/class SQLQueries {
-    /*example.SQLQueries#SQLStringContext(Class):6*/implicit class SQLStringContext(sc: StringContext) {
+/*example.SQLQueries(Class):32*/class SQLQueries {
+    /*example.SQLQueries#SQLStringContext(Class):6*/implicit class SQLStringContext(/*example.SQLQueries#SQLStringContext#sc(Variable):4*/sc: StringContext) {
         /*example.SQLQueries#SQLStringContext#sql(Method):5*/def sql(args: Any*): String = sc.s(args: _*)
     }
 
@@ -23,5 +23,10 @@
     /*example.SQLQueries#insertQuery(Constant):26*/val insertQuery = sql"""
         INSERT INTO users (id, name, age, created_at)
         VALUES (1, 'John Doe', 25, CURRENT_TIMESTAMP)
+        """
+
+    /*example.SQLQueries#nestedInterpolators(Constant):31*/val nestedInterpolators = sql"""
+        SELECT name, age
+        ${s"FROM ${sql"users"} WHERE"} age > 30.5
         """
 }

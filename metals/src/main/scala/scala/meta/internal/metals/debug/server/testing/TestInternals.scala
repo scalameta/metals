@@ -10,7 +10,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.debug.server.Discovered
 
-import coursierapi.Dependency
+import coursier.Dependency
 import org.scalatools.testing.{Framework => OldFramework}
 import sbt.testing.AnnotatedFingerprint
 import sbt.testing.Fingerprint
@@ -31,7 +31,7 @@ object TestInternals {
   private final val testAgentVersion = BuildInfo.sbtVersion
 
   val dependency: Dependency =
-    Dependency.of(sbtOrg, testAgentId, testAgentVersion)
+    Embedded.dependencyOf(sbtOrg, testAgentId, testAgentVersion)
 
   lazy val testAgentFiles: List[Path] = {
     try {

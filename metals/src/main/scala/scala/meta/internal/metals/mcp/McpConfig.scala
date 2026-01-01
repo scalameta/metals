@@ -110,7 +110,10 @@ object McpConfig {
 
     // Add or update the server config
     val serverConfig = new JsonObject()
-    serverConfig.addProperty("url", s"http://localhost:$port/sse")
+    serverConfig.addProperty(
+      "url",
+      s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}",
+    )
     editor.additionalProperties.foreach { case (key, value) =>
       serverConfig.addProperty(key, value)
     }
@@ -144,7 +147,9 @@ object McpConfig {
         editor.serverEntry.getOrElse(s"$projectName-metals")
       )
       url <- serverConfig.getStringOption("url")
-      port <- Try(url.stripSuffix("/sse").split(":").last.toInt).toOption
+      port <- Try(
+        url.stripSuffix(MetalsMcpServer.mcpEndpoint).split(":").last.toInt
+      ).toOption
     } yield port
   }
 
@@ -171,7 +176,7 @@ object VSCodeEditor
       settingsPath = ".vscode/",
       serverField = "servers",
       additionalProperties = List(
-        "type" -> "sse"
+        "type" -> "http"
       ),
     )
 
@@ -190,7 +195,7 @@ object Claude
       settingsPath = "./",
       serverField = "mcpServers",
       additionalProperties = List(
-        "type" -> "sse"
+        "type" -> "http"
       ),
       serverEntry = Some("metals"),
       fileName = Some(".mcp.json"),

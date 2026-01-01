@@ -24,4 +24,8 @@ public interface PcSymbolInformation {
   default List<String> memberDefsAnnotations() {
     return Collections.emptyList();
   }
+
+  default List<String> typeParameters() {
+    return Collections.emptyList();
+  }
 }

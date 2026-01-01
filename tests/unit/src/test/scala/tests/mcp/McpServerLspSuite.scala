@@ -1,8 +1,11 @@
 package tests.mcp
 
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
+import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.SymbolType
 
@@ -30,7 +33,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |{
            |  "servers": {
            |    "root-metals": {
-           |      "url": "http://localhost:${portToUse}/sse"
+           |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
            |    }
            |  }
            |}
@@ -113,6 +116,8 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       input: String,
       expectedMessage: String,
       expectedRules: String,
+      ruleName: String,
+      reverseRule: Option[String => String] = None,
   )(implicit loc: Location): Unit = {
     test(testName) {
       cleanWorkspace()
@@ -173,13 +178,34 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
             .get,
           initial,
         )
-        _ <- client.runScalafixRule("ReplaceJohnWithJohnatan")
+        _ <- client.runScalafixRule(ruleName)
         _ = assertNoDiff(
           server.buffers
             .get(workspace.resolve("a/src/main/scala/com/example/Hello.scala"))
             .get,
           expectedResult,
         )
+        _ <- reverseRule match {
+          case Some(function) =>
+            for {
+              _ <- client.generateScalafixRule(
+                function(input),
+                "Replaces John with Johnatan",
+              )
+              _ = assertNoDiff(
+                server.buffers
+                  .get(
+                    workspace.resolve(
+                      "a/src/main/scala/com/example/Hello.scala"
+                    )
+                  )
+                  .get,
+                initial,
+              )
+            } yield ()
+          case None => Future.successful(())
+        }
+
         _ <- client.shutdown()
       } yield ()
     }
@@ -214,6 +240,13 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
        |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
        |- ReplaceJohnWithJohnatan: Replaces John with Johnatan
        |""".stripMargin,
+    "ReplaceJohnWithJohnatan",
+    Some(input =>
+      input.replace(
+        "val newValue = value.replace(\"John\", \"\\\"Johnatan\\\"\")",
+        "val newValue = value.replace(\"Johnatan\", \"\\\"John\\\"\")",
+      )
+    ),
   )
 
   checkScalafixRule(
@@ -245,6 +278,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
        |- RemoveUnused: Removes unused imports and terms that reported by the compiler under -Wunused
        |- Replacer: Replaces John with Johnatan
        |""".stripMargin,
+    "Replacer",
   )
 
   test("list-scalafix-rules") {

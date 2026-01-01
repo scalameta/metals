@@ -164,7 +164,10 @@ class WorkspaceLspService(
           if !clientConfig.isExecuteClientCommandProvider && !clientConfig
             .isHttpEnabled() =>
         languageClient
-          .showMessageRequest(Messages.StartHttpServer.params())
+          .showMessageRequest(
+            Messages.StartHttpServer.params(),
+            defaultTo = () => { Messages.StartHttpServer.yes },
+          )
           .asScala
           .flatMap { item =>
             if (item == Messages.StartHttpServer.yes) {
@@ -1531,11 +1534,14 @@ class WorkspaceLspService(
       resetAllFolders()
     } else {
       languageClient
-        .showMessageRequest(Messages.ResetWorkspace.params())
+        .showMessageRequest(
+          Messages.ResetWorkspace.params(),
+          defaultTo = () => { Messages.ResetWorkspace.resetWorkspace },
+        )
         .asScala
         .flatMap { response =>
           if (response != null)
-            response.getTitle match {
+            response match {
               case Messages.ResetWorkspace.resetWorkspace => resetAllFolders()
               case _ => Future.unit
             }

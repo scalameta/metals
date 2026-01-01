@@ -58,7 +58,7 @@ class McpConfigSuite extends BaseSuite {
       |  "servers": {
       |    "test-project-metals": {
       |      "url": "http://localhost:1234/sse",
-      |      "type": "sse"
+      |      "type": "http"
       |    }
       |  }
       |}""".stripMargin,
@@ -88,7 +88,7 @@ class McpConfigSuite extends BaseSuite {
       |  "mcpServers": {
       |    "metals": {
       |      "url": "http://localhost:1234/sse",
-      |      "type": "sse"
+      |      "type": "http"
       |    }
       |  }
       |}""".stripMargin,

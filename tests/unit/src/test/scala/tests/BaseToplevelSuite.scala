@@ -39,8 +39,8 @@ abstract class BaseToplevelSuite extends BaseSuite {
             val (doc, overrides, toplevelMembers) =
               Mtags.extendedIndexing(input, dialect, includeMembers)
             val overriddenMap = overrides.toMap
-            val types = toplevelMembers.map {
-              case ToplevelMember(symbol, _, _) =>
+            val types = toplevelMembers.collect {
+              case ToplevelMember(symbol, _, ToplevelMember.Kind.Type) =>
                 s"type $symbol"
             }
             val symbols = doc.symbols.map { symbolInfo =>
