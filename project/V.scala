@@ -13,7 +13,7 @@ object V {
 
   val scala3ForSBT2 = "3.7.2"
 
-  val latestScala3Next = "3.8.0-RC4"
+  val latestScala3Next = "3.8.0-RC5"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.20"
