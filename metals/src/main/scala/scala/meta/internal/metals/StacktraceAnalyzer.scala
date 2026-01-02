@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.io.FileWriter
 
+import scala.annotation.tailrec
 import scala.util.Try
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
@@ -218,18 +219,47 @@ object StacktraceAnalyzer {
    */
   final val catEffectsStacktrace: Regex = """[\w|\$]+ @ (.+)""".r
 
+  private def isSymbolicOperator(s: String): Boolean = {
+    def isOperatorPart(ch: Char): Boolean =
+      (ch: @scala.annotation.switch) match {
+        case '~' | '!' | '@' | '#' | '%' | '^' | '*' | '+' | '-' | '<' | '>' |
+            '?' | ':' | '=' | '&' | '|' | '/' | '\\' =>
+          true
+        case _ =>
+          val tpe = Character.getType(ch)
+          tpe == Character.MATH_SYMBOL.toInt || tpe == Character.OTHER_SYMBOL.toInt
+      }
+
+    @tailrec
+    def iter(idx: Int, nonEmpty: Boolean): Boolean = {
+      val ch = s(idx)
+      if (ch == '_') nonEmpty || idx > 0 && iter(idx - 1, nonEmpty = false)
+      else isOperatorPart(ch) && (idx == 0 || iter(idx - 1, nonEmpty = true))
+    }
+
+    val len = s.length
+    len == 0 || iter(len - 1, nonEmpty = false)
+  }
+
+  private def wrapIfSymbolic(name: String): String = {
+    if (name.isEmpty || name.startsWith("`")) name
+    else if (isSymbolicOperator(name)) s"`$name`"
+    else name
+  }
+
   def toToplevelSymbol(symbolIn: String): List[String] = {
     // remove module name. Module symbols are formatted as `moduleName/symbol`
     val modulePos = symbolIn.indexOf("/")
     val symbolPart =
       if (modulePos > -1) symbolIn.substring(modulePos + 1) else symbolIn
-    val symbol = symbolPart.split('.').init.mkString("/")
-    
-    // Filter out invalid symbols that contain invalid characters or are empty
-    if (symbol.isEmpty || symbol.contains("/*") || symbol.contains("*/")) {
+
+    val parts = symbolPart.split('.').init.map(wrapIfSymbolic)
+    val symbol = parts.mkString("/")
+
+    if (symbol.isEmpty) {
       return Nil
     }
-    
+
     /* Symbol containing `$package$` is a toplevel method and we only need to
      * find any method contained in the same file even if overloaded
      */
