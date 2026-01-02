@@ -1,6 +1,27 @@
 package tests
 
+import org.eclipse.lsp4j.TypeHierarchyItem
+
 class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
+
+  private def formatItem(item: TypeHierarchyItem): String = {
+    val range = item.getRange
+    val selRange = item.getSelectionRange
+    s"""|${item.getName}
+        |  detail: ${item.getDetail}
+        |  kind: ${item.getKind}
+        |  range: ${range.getStart.getLine}:${range.getStart.getCharacter}-${range.getEnd.getLine}:${range.getEnd.getCharacter}
+        |  selectionRange: ${selRange.getStart.getLine}:${selRange.getStart.getCharacter}-${selRange.getEnd.getLine}:${selRange.getEnd.getCharacter}
+        |""".stripMargin
+  }
+
+  private def formatItems(items: List[TypeHierarchyItem]): String =
+    items.map(formatItem).sorted.mkString("\n")
+
+  private def objectLine: Int =
+    if (isJava21) 38
+    else 37
+
   test("prepare-class") {
     for {
       _ <- initialize(
@@ -22,7 +43,16 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
         "class Do@@g",
       )
       _ = item match {
-        case Some(i) => assertEquals(i.getName, "Dog")
+        case Some(i) =>
+          assertNoDiff(
+            formatItem(i),
+            """|Dog
+               |  detail: a
+               |  kind: Class
+               |  range: 3:6-3:9
+               |  selectionRange: 3:6-3:9
+               |""".stripMargin,
+          )
         case None => fail("Expected to find type hierarchy item for Dog")
       }
     } yield ()
@@ -46,7 +76,21 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       )
       _ = assert(item.isDefined)
       supertypes <- server.typeHierarchySupertypes(item.get)
-      _ = assertEquals(supertypes.map(_.getName).toSet, Set("Animal", "Object"))
+      _ = assertNoDiff(
+        formatItems(supertypes),
+        s"""|Animal
+            |  detail: a
+            |  kind: Interface
+            |  range: 2:6-2:12
+            |  selectionRange: 2:6-2:12
+            |
+            |Object
+            |  detail: java.lang
+            |  kind: Class
+            |  range: $objectLine:13-$objectLine:19
+            |  selectionRange: $objectLine:13-$objectLine:19
+            |""".stripMargin,
+      )
     } yield ()
   }
 
@@ -69,7 +113,21 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       )
       _ = assert(item.isDefined)
       subtypes <- server.typeHierarchySubtypes(item.get)
-      _ = assertEquals(subtypes.map(_.getName).toSet, Set("Dog", "Cat"))
+      _ = assertNoDiff(
+        formatItems(subtypes),
+        """|Cat
+           |  detail: a
+           |  kind: Class
+           |  range: 4:6-4:9
+           |  selectionRange: 4:6-4:9
+           |
+           |Dog
+           |  detail: a
+           |  kind: Class
+           |  range: 3:6-3:9
+           |  selectionRange: 3:6-3:9
+           |""".stripMargin,
+      )
     } yield ()
   }
 
@@ -92,9 +150,26 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       )
       _ = assert(item.isDefined)
       supertypes <- server.typeHierarchySupertypes(item.get)
-      _ = assertEquals(
-        supertypes.map(_.getName).toSet,
-        Set("Flyable", "Swimmable", "Object"),
+      _ = assertNoDiff(
+        formatItems(supertypes),
+        s"""|Flyable
+            |  detail: a
+            |  kind: Interface
+            |  range: 2:6-2:13
+            |  selectionRange: 2:6-2:13
+            |
+            |Object
+            |  detail: java.lang
+            |  kind: Class
+            |  range: $objectLine:13-$objectLine:19
+            |  selectionRange: $objectLine:13-$objectLine:19
+            |
+            |Swimmable
+            |  detail: a
+            |  kind: Interface
+            |  range: 3:6-3:15
+            |  selectionRange: 3:6-3:15
+            |""".stripMargin,
       )
     } yield ()
   }

@@ -58,98 +58,130 @@ final class TypeHierarchyProvider(
 
   def supertypes(
       params: TypeHierarchySupertypesParams
-  ): Future[List[TypeHierarchyItem]] = {
-    val symbol =
-      getItemInfo(params.getItem.getData).symbol
-    val path = params.getItem.getUri.toAbsolutePath
-
-    semanticdbs().textDocument(path).documentIncludingStale match {
-      case Some(doc) =>
-        val parentSymbols = doc.symbols
-          .find(_.symbol == symbol)
-          .toList
-          .flatMap { info =>
-            ImplementationProvider
-              .parentsFromSignature(symbol, info.signature, Some(path))
-              .map(_._1)
-          }
-
-        Future.successful(
-          parentSymbols.flatMap { parentSymbol =>
-            doc.occurrences
-              .find(o => o.symbol == parentSymbol && o.role.isDefinition)
-              .flatMap(_.range)
-              .map { range =>
-                itemBuilder.build(
-                  symbol = parentSymbol,
-                  info = doc.symbols.find(_.symbol == parentSymbol),
-                  source = path,
-                  range = range.toLsp,
-                  selectionRange = range.toLsp,
-                )
+  ): Future[List[TypeHierarchyItem]] =
+    getItemInfo(params.getItem.getData) match {
+      case None => Future.successful(Nil)
+      case Some(itemInfo) =>
+        val symbol = itemInfo.symbol
+        val path = params.getItem.getUri.toAbsolutePath
+        semanticdbs().textDocument(path).documentIncludingStale match {
+          case Some(doc) =>
+            val parentSymbols = doc.symbols
+              .find(_.symbol == symbol)
+              .toList
+              .flatMap { info =>
+                ImplementationProvider
+                  .parentsFromSignature(symbol, info.signature, Some(path))
+                  .map(_._1)
               }
-              .orElse {
-                definitionProvider
-                  .fromSymbol(parentSymbol, None)
-                  .asScala
-                  .headOption
-                  .flatMap { location =>
-                    val locPath = location.getUri.toAbsolutePath
-                    semanticdbs()
-                      .textDocument(locPath)
-                      .documentIncludingStale
-                      .map { locDoc =>
-                        itemBuilder.build(
-                          symbol = parentSymbol,
-                          info = locDoc.symbols.find(_.symbol == parentSymbol),
-                          source = locPath,
-                          range = location.getRange,
-                          selectionRange = location.getRange,
-                        )
-                      }
+
+            val (localItems, externalSymbols) = parentSymbols.partitionMap {
+              parentSymbol =>
+                doc.occurrences
+                  .find(o => o.symbol == parentSymbol && o.role.isDefinition)
+                  .flatMap(_.range)
+                  .map { range =>
+                    Left(
+                      itemBuilder.build(
+                        symbol = parentSymbol,
+                        info = doc.symbols.find(_.symbol == parentSymbol),
+                        source = path,
+                        range = range.toLsp,
+                        selectionRange = range.toLsp,
+                      )
+                    )
+                  }
+                  .getOrElse(Right(parentSymbol))
+            }
+
+            val externalLocations = externalSymbols.flatMap { parentSymbol =>
+              definitionProvider
+                .fromSymbol(parentSymbol, None)
+                .asScala
+                .headOption
+                .map(loc => (parentSymbol, loc))
+            }
+
+            val externalItems = externalLocations
+              .groupBy { case (_, loc) => loc.getUri.toAbsolutePath }
+              .toList
+              .flatMap { case (locPath, symbolsWithLocs) =>
+                semanticdbs()
+                  .textDocument(locPath)
+                  .documentIncludingStale
+                  .toList
+                  .flatMap { locDoc =>
+                    symbolsWithLocs.map { case (parentSymbol, location) =>
+                      itemBuilder.build(
+                        symbol = parentSymbol,
+                        info = locDoc.symbols.find(_.symbol == parentSymbol),
+                        source = locPath,
+                        range = location.getRange,
+                        selectionRange = location.getRange,
+                      )
+                    }
                   }
               }
-          }
-        )
-      case None =>
-        Future.successful(Nil)
+
+            Future.successful(localItems ++ externalItems)
+          case None =>
+            Future.successful(Nil)
+        }
     }
-  }
 
   def subtypes(
       params: TypeHierarchySubtypesParams
-  ): Future[List[TypeHierarchyItem]] = {
-    val symbol =
-      getItemInfo(params.getItem.getData).symbol
-    val source = params.getItem.getUri.toAbsolutePath
-
-    implementationProvider
-      .findImplementationsBySymbol(symbol, source)
-      .map { classLocations =>
-        classLocations.flatMap { classLoc =>
-          for {
-            filePath <- classLoc.file
-            absPath = AbsolutePath(filePath)
-            doc <- semanticdbs().textDocument(absPath).documentIncludingStale
-            occ <- doc.occurrences
-              .find(o => o.symbol == classLoc.symbol && o.role.isDefinition)
-            range <- occ.range
-          } yield {
-            itemBuilder.build(
-              symbol = classLoc.symbol,
-              info = doc.symbols.find(_.symbol == classLoc.symbol),
-              source = absPath,
-              range = range.toLsp,
-              selectionRange = range.toLsp,
-            )
+  ): Future[List[TypeHierarchyItem]] =
+    getItemInfo(params.getItem.getData) match {
+      case None => Future.successful(Nil)
+      case Some(itemInfo) =>
+        val symbol = itemInfo.symbol
+        val source = params.getItem.getUri.toAbsolutePath
+        implementationProvider
+          .findImplementationsBySymbol(symbol, source)
+          .map { classLocations =>
+            classLocations
+              .groupBy(_.file)
+              .toList
+              .flatMap { case (filePathOpt, locs) =>
+                for {
+                  filePath <- filePathOpt.toList
+                  absPath = AbsolutePath(filePath)
+                  doc <- semanticdbs()
+                    .textDocument(absPath)
+                    .documentIncludingStale
+                    .toList
+                  classLoc <- locs
+                  occ <- doc.occurrences
+                    .find(o =>
+                      o.symbol == classLoc.symbol && o.role.isDefinition
+                    )
+                  range <- occ.range
+                } yield {
+                  itemBuilder.build(
+                    symbol = classLoc.symbol,
+                    info = doc.symbols.find(_.symbol == classLoc.symbol),
+                    source = absPath,
+                    range = range.toLsp,
+                    selectionRange = range.toLsp,
+                  )
+                }
+              }
           }
-        }
-      }
-  }
+    }
 
-  private def getItemInfo(data: Object): TypeHierarchyItemInfo =
-    data
-      .asInstanceOf[JsonElement]
-      .as[TypeHierarchyItemInfo]
-      .get
+  private def getItemInfo(data: Object): Option[TypeHierarchyItemInfo] =
+    Option(data) match {
+      case None =>
+        scribe.warn("No item data provided for type hierarchy request")
+        None
+      case Some(d) =>
+        d.asInstanceOf[JsonElement]
+          .as[TypeHierarchyItemInfo]
+          .toOption
+          .orElse {
+            scribe.warn(s"Failed to parse TypeHierarchyItemInfo from: $data")
+            None
+          }
+    }
 }
