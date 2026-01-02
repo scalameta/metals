@@ -48,8 +48,9 @@ final class AutoImportsProvider(
         isSeen += id
         symbols += sym
         true
+      } else {
+        false
       }
-      false
     }
 
     compiler.searchOutline(visit, name)
@@ -57,57 +58,46 @@ final class AutoImportsProvider(
     val visitor =
       new CompilerSearchVisitor(context, visit)
     search.search(name, buildTargetIdentifier, ju.Optional.empty(), visitor)
+    // Needed to discover members (methods) of static objects, e.g. Await.result.
+    search.searchMethods(name, buildTargetIdentifier, visitor)
 
     def isStaticallyAccessible(sym: Symbol): Boolean =
       sym.owner.ownerChain.forall { s =>
-        s.isPackageClass || s.isPackageObjectClass || s.isModule || s.isModuleClass
+        s.isPackageClass ||
+        s.isPackageObjectClass ||
+        s.isModule ||
+        s.isModuleClass ||
+        s.isRoot ||
+        s.isEmptyPackageClass
       }
 
-    def visitMembersFromImportedQualifiers(): Unit = {
-      val qualifiers = mutable.ListBuffer.empty[Symbol]
-      new Traverser {
-        override def traverse(tree: Tree): Unit = tree match {
-          case Import(expr, _) =>
-            val sym = expr.symbol
-            if (sym != null && sym != NoSymbol) qualifiers += sym
-            super.traverse(tree)
-          case _ =>
-            super.traverse(tree)
-        }
-      }.traverse(unit.body)
+    def expandStaticOwnersFromFoundSymbols(): Unit = {
+      val queue = mutable.Queue.empty[Symbol]
+      queue ++= symbols
 
-      qualifiers.distinct
-        .filter(_ != NoSymbol)
-        .flatMap { owner =>
-          val ownerMembers =
-            if (owner.isModuleOrModuleClass && isStaticallyAccessible(owner))
-              owner.info.members
-            else
-              Nil
+      def enqueueIfNew(sym: Symbol): Unit =
+        if (sym != null && sym != NoSymbol && visit(sym)) queue.enqueue(sym)
 
-          val subModuleMembers = owner.info.members
-            .filter(m => m.isModuleOrModuleClass && isStaticallyAccessible(m))
-            .flatMap(_.info.members)
-
-          ownerMembers ++ subModuleMembers
-        }
-        .filter(m => m.name.decoded == name && m.isPublic)
-        .foreach(visit)
-    }
-    visitMembersFromImportedQualifiers()
-
-    def visitStaticObjectMembers(): Unit = {
-      val currentSymbols = symbols.toList
-      val membersToVisit = currentSymbols.flatMap { sym =>
-        if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
-          sym.info.members.filter { member =>
-            member.name.decoded == name && member.isPublic
+      while (queue.nonEmpty) {
+        val sym = queue.dequeue()
+        // Search may return the owner (package/object) for a member name.
+        // Expand packages into modules, and modules into matching members.
+        if (sym.isPackageClass || sym.isPackageObjectClass) {
+          sym.info.members.foreach { member =>
+            if (member.isModuleOrModuleClass && isStaticallyAccessible(member))
+              enqueueIfNew(member)
           }
-        } else Nil
+        }
+        if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
+          val moduleClass = if (sym.isModule) sym.moduleClass else sym
+          moduleClass.info.members.foreach { member =>
+            if (member.isPublic && member.name.decoded == name)
+              enqueueIfNew(member)
+          }
+        }
       }
-      membersToVisit.foreach(visit)
     }
-    visitStaticObjectMembers()
+    expandStaticOwnersFromFoundSymbols()
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
       case (_: Import) :: _ => true
@@ -155,19 +145,32 @@ final class AutoImportsProvider(
             // existing symbols in scope, so we just do nothing
             Nil
           case Some(value) =>
-            val (short, edits) = ShortenedNames.synthesize(
-              TypeRef(ThisType(sym.owner), sym, Nil),
-              pos,
-              context,
-              value
-            )
-            val nameEdit = new l.TextEdit(namePos, short)
+            val (short, edits) =
+              if (sym.isMethod) {
+                val (s, es) =
+                  ShortenedNames.synthesize(sym, pos, context, value)
+                val padded =
+                  if (value.padTop)
+                    es.map { edit =>
+                      val text = edit.getNewText
+                      if (text.startsWith("import "))
+                        new l.TextEdit(edit.getRange, "\n" + text)
+                      else edit
+                    }
+                  else es
+                (s, padded)
+              } else {
+                ShortenedNames.synthesize(
+                  TypeRef(ThisType(sym.owner), sym, Nil),
+                  pos,
+                  context,
+                  value
+                )
+              }
 
-            if (short != name && shouldApplyNameEdit) {
-              nameEdit :: edits
-            } else {
-              edits
-            }
+            val nameEdit = new l.TextEdit(namePos, short)
+            if (short != name && shouldApplyNameEdit) nameEdit :: edits
+            else edits
         }
         if (edits.isEmpty) {
           val trees = lastVisitedParentTrees
