@@ -40,7 +40,7 @@ final class AutoImportsProvider(
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
     val isSeen = mutable.Set.empty[String]
-    val symbols = mutable.ListBuffer.empty[Symbol]
+    val symbols = List.newBuilder[Symbol]
 
     def visit(sym: Symbol): Boolean = {
       val id = sym.fullName
@@ -71,9 +71,9 @@ final class AutoImportsProvider(
         s.isEmptyPackageClass
       }
 
-    def expandStaticOwnersFromFoundSymbols(): Unit = {
+    def expandStaticOwnersFromFoundSymbols(foundSymbols: List[Symbol]): Unit = {
       val queue = mutable.Queue.empty[Symbol]
-      queue ++= symbols
+      queue ++= foundSymbols
 
       def enqueueIfNew(sym: Symbol): Unit =
         if (sym != null && sym != NoSymbol && visit(sym)) queue.enqueue(sym)
@@ -87,8 +87,7 @@ final class AutoImportsProvider(
             if (member.isModuleOrModuleClass && isStaticallyAccessible(member))
               enqueueIfNew(member)
           }
-        }
-        if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
+        } else if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
           val moduleClass = if (sym.isModule) sym.moduleClass else sym
           moduleClass.info.members.foreach { member =>
             if (member.isPublic && member.name.decoded == name)
@@ -97,7 +96,7 @@ final class AutoImportsProvider(
         }
       }
     }
-    expandStaticOwnersFromFoundSymbols()
+    expandStaticOwnersFromFoundSymbols(symbols.result())
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
       case (_: Import) :: _ => true
@@ -128,7 +127,7 @@ final class AutoImportsProvider(
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
-    val all = symbols.toList.collect {
+    val all = symbols.result().collect {
       case sym
           if isExactMatch(sym, name) && context.isAccessible(
             sym,
@@ -147,18 +146,7 @@ final class AutoImportsProvider(
           case Some(value) =>
             val (short, edits) =
               if (sym.isMethod) {
-                val (s, es) =
-                  ShortenedNames.synthesize(sym, pos, context, value)
-                val padded =
-                  if (value.padTop)
-                    es.map { edit =>
-                      val text = edit.getNewText
-                      if (text.startsWith("import "))
-                        new l.TextEdit(edit.getRange, "\n" + text)
-                      else edit
-                    }
-                  else es
-                (s, padded)
+                ShortenedNames.synthesize(sym, pos, context, value)
               } else {
                 ShortenedNames.synthesize(
                   TypeRef(ThisType(sym.owner), sym, Nil),
@@ -167,10 +155,13 @@ final class AutoImportsProvider(
                   value
                 )
               }
-
             val nameEdit = new l.TextEdit(namePos, short)
-            if (short != name && shouldApplyNameEdit) nameEdit :: edits
-            else edits
+
+            if (short != name && shouldApplyNameEdit) {
+              nameEdit :: edits
+            } else {
+              edits
+            }
         }
         if (edits.isEmpty) {
           val trees = lastVisitedParentTrees
