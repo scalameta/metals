@@ -460,7 +460,11 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
   ) { obtained =>
     assert(obtained.bspEnvironmentVariables.size == 3)
-    assert(obtained.bspEnvironmentVariables("ARTIFACTORY_HOST") == "my.artifactory.com")
+    assert(
+      obtained.bspEnvironmentVariables(
+        "ARTIFACTORY_HOST"
+      ) == "my.artifactory.com"
+    )
     assert(obtained.bspEnvironmentVariables("ARTIFACTORY_USER") == "user")
     assert(obtained.bspEnvironmentVariables("CUSTOM_TOKEN") == "secret123")
   }

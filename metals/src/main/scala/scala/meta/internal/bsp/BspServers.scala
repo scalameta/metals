@@ -122,7 +122,8 @@ final class BspServers(
           s"Using BSP environment variables: ${bspEnvVariables.keys.mkString(", ")}"
         )
       }
-      val allVariables = variables ++ bspEnvVariables + ("SCALA_CLI_POWER" -> "true")
+      val allVariables =
+        variables ++ bspEnvVariables + ("SCALA_CLI_POWER" -> "true")
 
       scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(
