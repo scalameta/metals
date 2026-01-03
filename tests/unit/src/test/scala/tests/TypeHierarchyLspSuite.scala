@@ -30,7 +30,9 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   test("prepare-class") {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
+        """|/metals.json
+           |{ "a": {} }
+           |/a/src/main/scala/a/Main.scala
            |package a
            |
            |trait Animal
@@ -66,7 +68,9 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   test("supertypes-simple") {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
+        """|/metals.json
+           |{ "a": {} }
+           |/a/src/main/scala/a/Main.scala
            |package a
            |
            |trait Animal
@@ -102,7 +106,9 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   test("subtypes-simple") {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
+        """|/metals.json
+           |{ "a": {} }
+           |/a/src/main/scala/a/Main.scala
            |package a
            |
            |trait Animal
@@ -139,7 +145,9 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   test("multiple-inheritance") {
     for {
       _ <- initialize(
-        """|/a/src/main/scala/a/Main.scala
+        """|/metals.json
+           |{ "a": {} }
+           |/a/src/main/scala/a/Main.scala
            |package a
            |
            |trait Flyable
