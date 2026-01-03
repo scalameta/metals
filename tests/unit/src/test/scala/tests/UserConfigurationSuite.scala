@@ -446,4 +446,43 @@ class UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.targetBuildTool == Some("sbt"))
   }
+
+  checkOK(
+    "bsp-environment-variables",
+    """
+      |{
+      | "bsp-environment-variables": {
+      |   "ARTIFACTORY_HOST": "my.artifactory.com",
+      |   "ARTIFACTORY_USER": "user",
+      |   "CUSTOM_TOKEN": "secret123"
+      | }
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.bspEnvironmentVariables.size == 3)
+    assert(obtained.bspEnvironmentVariables("ARTIFACTORY_HOST") == "my.artifactory.com")
+    assert(obtained.bspEnvironmentVariables("ARTIFACTORY_USER") == "user")
+    assert(obtained.bspEnvironmentVariables("CUSTOM_TOKEN") == "secret123")
+  }
+
+  checkOK(
+    "bsp-environment-variables-empty",
+    """
+      |{
+      | "bsp-environment-variables": {}
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.bspEnvironmentVariables.isEmpty)
+  }
+
+  checkOK(
+    "bsp-environment-variables-unset",
+    """
+      |{
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.bspEnvironmentVariables.isEmpty)
+  }
 }

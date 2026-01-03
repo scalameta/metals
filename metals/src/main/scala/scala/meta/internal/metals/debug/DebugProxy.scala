@@ -48,6 +48,7 @@ import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
+import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugNotificationMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
@@ -75,6 +76,9 @@ private[debug] final class DebugProxy(
   @volatile private var clientAdapter =
     ClientConfigurationAdapter.default(sourceMapper)
   private val frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
+
+  // Buffer to collect test output for duplicating to test explorer
+  private val testOutputBuffer = new StringBuilder()
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -271,17 +275,37 @@ private[debug] final class DebugProxy(
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
+      testOutputBuffer.append(output.getOutput())
       client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
+      testOutputBuffer.append(msgWithoutColorCodes)
       client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) =>
+      testOutputBuffer.append(output.getOutput())
       client.consume(addStackTraceFileLocation(message, output))
     case message @ TestResults(testResult) =>
-      message.setParams(modifyLocationInTests(testResult).toJson)
+      // Send duplicate output to test explorer BEFORE the test result
+      // so the test explorer can associate the output with this test suite
+      if (testOutputBuffer.nonEmpty) {
+        val testOutput = new OutputEventArguments()
+        testOutput.setCategory("console")
+        testOutput.setOutput(testOutputBuffer.toString())
+
+        val outputMessage = new DebugNotificationMessage()
+        outputMessage.setMethod("output")
+        outputMessage.setParams(testOutput.toJson)
+        client.consume(outputMessage)
+
+        // Clear the buffer for the next test
+        testOutputBuffer.clear()
+      }
+
+      val modifiedResult = modifyLocationInTests(testResult)
+      message.setParams(modifiedResult.toJson)
       client.consume(message)
     case message =>
       initialized.trySuccess(())

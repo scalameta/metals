@@ -59,6 +59,7 @@ case class UserConfiguration(
     defaultBspToBuildTool: Boolean = false,
     enableBestEffort: Boolean = false,
     defaultShell: Option[String] = None,
+    bspEnvironmentVariables: Map[String, String] = Map.empty,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
 ) {
@@ -543,6 +544,18 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
+        "bsp-environment-variables",
+        """"{}""",
+        """{ "ARTIFACTORY_HOST": "my.artifactory.com", "ARTIFACTORY_USER": "user" }""",
+        "Environment variables to pass to the BSP server",
+        """|Additional environment variables that will be passed to the BSP server process.
+           |This is useful when your build tool needs access to credentials or custom repository
+           |configurations that are defined via environment variables (e.g., for Coursier credentials,
+           |Artifactory access, or custom Maven repositories).
+           |The value should be an object with string keys and string values.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
         "start-mcp-server",
         "false",
         "true",
@@ -855,6 +868,9 @@ object UserConfiguration {
     val enableBestEffort =
       getBooleanKey("enable-best-effort").getOrElse(false)
 
+    val bspEnvironmentVariables =
+      getStringMap("bsp-environment-variables").getOrElse(Map.empty)
+
     val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
 
     val mcpClient = getStringKey("mcp-client")
@@ -893,6 +909,7 @@ object UserConfiguration {
           defaultBspToBuildTool,
           enableBestEffort,
           defaultShell,
+          bspEnvironmentVariables,
           startMcpServer,
           mcpClient,
         )
