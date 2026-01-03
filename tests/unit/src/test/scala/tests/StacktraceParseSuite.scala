@@ -64,7 +64,11 @@ class StacktraceParseSuite extends BaseSuite {
   testConversion("p1.<*>.method", "p1/`<*>`#")
   testConversion("p1.:::.method", "p1/`:::`#")
 
-  testConversion("p1.*>$.method", "p1/`*>`.")
+  testConversion(
+    "p1.*>$.method",
+    "p1/`*>`#",
+    "p1/`*>`.",
+  )
 
   testConversion("p1.Foo$*>.method", "p1/Foo#", "p1/Foo.")
 
