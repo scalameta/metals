@@ -75,7 +75,7 @@ final class PcInlineValueProviderImpl(
       // Such symbols should not be checked for shadowing since they are
       // locally bound and won't be affected by external shadowing
       symbol.pos.isDefined && rhs.pos.isDefined &&
-      rhs.pos.includes(symbol.pos)
+      symbol.pos.start >= rhs.pos.start && symbol.pos.end <= rhs.pos.end
     }
 
     @tailrec
