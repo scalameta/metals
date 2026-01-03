@@ -108,9 +108,10 @@ class MetalsMcpServer(
     // Create server with configuration
     // Include project name in server info to help LLM distinguish between servers
     // when multiple projects are open in the same workspace
+    val serverName = s"$projectName-metals"
     val asyncServer = McpServer
       .async(servlet)
-      .serverInfo(s"metals-mcp-server-$projectName", "0.1.0")
+      .serverInfo(serverName, "0.1.0")
       .capabilities(capabilities)
       .build()
 
@@ -139,7 +140,7 @@ class MetalsMcpServer(
       LoggingMessageNotification
         .builder()
         .level(LoggingLevel.INFO)
-        .logger(s"metals-mcp-server-$projectName")
+        .logger(serverName)
         .data(s"Server initialized for project: $projectName")
         .build()
     )
