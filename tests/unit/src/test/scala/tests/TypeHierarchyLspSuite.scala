@@ -23,10 +23,6 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   private def formatItems(items: List[TypeHierarchyItem]): String =
     items.map(formatItem).sorted.mkString("\n")
 
-  private def objectLine: Int =
-    if (isJava21) 38
-    else 37
-
   test("prepare-class") {
     for {
       _ <- initialize(
@@ -93,11 +89,11 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
             |  range: 2:6-2:12
             |  selectionRange: 2:6-2:12
             |
-            |Object
-            |  detail: java.lang
+            |AnyRef
+            |  detail: scala
             |  kind: Class
-            |  range: $objectLine:13-$objectLine:19
-            |  selectionRange: $objectLine:13-$objectLine:19
+            |  range: 18:6-18:12
+            |  selectionRange: 18:6-18:12
             |""".stripMargin,
       )
     } yield ()
@@ -165,24 +161,24 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       supertypes <- server.typeHierarchySupertypes(item.get)
       _ = assertNoDiff(
         formatItems(supertypes),
-        s"""|Flyable
-            |  detail: a
-            |  kind: Interface
-            |  range: 2:6-2:13
-            |  selectionRange: 2:6-2:13
-            |
-            |Object
-            |  detail: java.lang
-            |  kind: Class
-            |  range: $objectLine:13-$objectLine:19
-            |  selectionRange: $objectLine:13-$objectLine:19
-            |
-            |Swimmable
-            |  detail: a
-            |  kind: Interface
-            |  range: 3:6-3:15
-            |  selectionRange: 3:6-3:15
-            |""".stripMargin,
+        """|AnyRef
+           |  detail: scala
+           |  kind: Class
+           |  range: 18:6-18:12
+           |  selectionRange: 18:6-18:12
+           |
+           |Flyable
+           |  detail: a
+           |  kind: Interface
+           |  range: 2:6-2:13
+           |  selectionRange: 2:6-2:13
+           |
+           |Swimmable
+           |  detail: a
+           |  kind: Interface
+           |  range: 3:6-3:15
+           |  selectionRange: 3:6-3:15
+           |""".stripMargin,
       )
     } yield ()
   }
