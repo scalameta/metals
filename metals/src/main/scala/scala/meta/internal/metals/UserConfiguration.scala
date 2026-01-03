@@ -154,6 +154,8 @@ case class UserConfiguration(
           enableBestEffort,
         )
       ),
+      optStringField("defaultShell", defaultShell),
+      mapField("bspEnvironmentVariables", bspEnvironmentVariables),
       Some(
         (
           "startMcpServer",
