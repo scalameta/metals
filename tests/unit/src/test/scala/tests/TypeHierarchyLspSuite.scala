@@ -1,8 +1,13 @@
 package tests
 
+import scala.meta.internal.metals.InitializationOptions
+
 import org.eclipse.lsp4j.TypeHierarchyItem
 
 class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
 
   private def formatItem(item: TypeHierarchyItem): String = {
     val range = item.getRange
