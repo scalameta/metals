@@ -244,7 +244,10 @@ object StacktraceAnalyzer {
   private def wrapIfSymbolic(name: String): String = {
     if (name.isEmpty || name.startsWith("`")) name
     else if (isSymbolicOperator(name)) s"`$name`"
-    else name
+    else if (name.endsWith("$") && isSymbolicOperator(name.dropRight(1))) {
+      // Handle symbolic operators that end with $ (object form)
+      s"`${name.dropRight(1)}`$$"
+    } else name
   }
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
