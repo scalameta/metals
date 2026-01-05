@@ -6,6 +6,7 @@ import java.net.URLClassLoader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermission
 import java.util.ServiceLoader
 
 import scala.collection.concurrent.TrieMap
@@ -15,6 +16,7 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.Version
@@ -599,34 +601,117 @@ object Embedded {
    * One potential issue is when we have credential issues
    */
   def fallbackDownload(
-      dependency: Dependency
+      dependency: Dependency,
+      useJarBasedCoursier: Boolean = false,
   ): List[Path] = {
     // This is a fallback so it should be fine to use the global execution context
     implicit val ec: ExecutionContextExecutor = ExecutionContext.global
 
     /* Metals VS Code extension will download coursier for us most of the times */
-    def inVsCodeMetals = {
+    def inVsCodeMetals: Option[Path] = {
       val cs = userHome.resolve(".metals/cs")
       val csExe = userHome.resolve(".metals/cs.exe")
       if (Files.exists(cs)) Some(cs)
       else if (Files.exists(csExe)) Some(csExe)
       else None
     }
-    findInPath("cs")
-      .orElse(findInPath("coursier"))
-      .orElse(inVsCodeMetals) match {
-      case None => Nil
-      case Some(path) =>
+    /* Fallback to embedded coursier-fallback.jar from resources */
+    def fromResourcesJar: List[String] = {
+      val targetDir = userHome.resolve(".metals")
+      val targetJar = targetDir.resolve("coursier-fallback.jar")
+      try {
+        if (!Files.exists(targetJar)) {
+          val stream =
+            this.getClass.getResourceAsStream("/coursier-fallback.jar")
+          if (stream != null) {
+            Files.createDirectories(targetDir)
+            Files.copy(
+              stream,
+              targetJar,
+              java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+            )
+            if (!Properties.isWin) {
+              Files.setPosixFilePermissions(
+                targetJar,
+                Set(
+                  PosixFilePermission.OWNER_READ,
+                  PosixFilePermission.OWNER_WRITE,
+                  PosixFilePermission.OWNER_EXECUTE,
+                ).asJava,
+              )
+            }
+            stream.close()
+          }
+        }
+        if (Files.exists(targetJar)) {
+          if (Properties.isWin) {
+            val javaExec = JdkSources.defaultJavaHome(None).headOption match {
+              case Some(javaPath) =>
+                javaPath.resolve("bin").resolve("java.exe").toString()
+              case None => "java.exe"
+            }
+            List(javaExec, "-jar", targetJar.toString())
+          } else List(targetJar.toString())
+        } else Nil
+      } catch {
+        case NonFatal(e) =>
+          scribe.error(
+            "Failed to extract coursier-fallback.jar from resources",
+            e,
+          )
+          Nil
+      }
+    }
+
+    val coursierPath = if (useJarBasedCoursier) {
+      fromResourcesJar
+    } else {
+      val csPath = findInPath("cs")
+        .orElse(findInPath("coursier"))
+        .orElse(inVsCodeMetals)
+      if (csPath.isDefined) {
+        csPath.map(_.toString()).toList
+      } else {
+        fromResourcesJar
+      }
+    }
+
+    val additionalProperties = List(
+      Properties
+        .propOrNone("coursier.credentials")
+        .map(cred => List("--credential-file", cred))
+        .getOrElse(Nil)
+    ).flatten
+
+    coursierPath match {
+      case Nil => Nil
+      case command =>
         scribe.info(
-          s"Found coursier in path under $path, using it to fetch dependency"
+          s"Running coursier with command ${command.mkString(" ")}, using it to fetch dependency"
         )
         val module = dependency.module
         val depString =
           s"${module.organization.value}:${module.name.value}:${dependency.versionConstraint.asString}"
+        val withJavaHomeAndProps = JdkSources.defaultJavaHome(None) match {
+          case head :: next =>
+            Map("JAVA_HOME" -> head.toString()) ++
+              Properties
+                .propOrNone("coursier.mirrors")
+                .map(mirror => Map("COURSIER_MIRRORS" -> mirror))
+                .getOrElse(Map.empty)
+          case Nil =>
+            Map.empty[String, String]
+        }
         ShellRunner.runSync(
-          List(path.toString(), "fetch", depString),
+          List(
+            command,
+            List("fetch"),
+            additionalProperties,
+            List(depString),
+          ).flatten,
           AbsolutePath(userHome),
           redirectErrorOutput = false,
+          additionalEnv = withJavaHomeAndProps,
         ) match {
           case Some(out) =>
             val lines = out.linesIterator.toList
