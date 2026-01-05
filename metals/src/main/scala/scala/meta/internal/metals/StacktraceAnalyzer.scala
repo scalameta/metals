@@ -220,6 +220,8 @@ object StacktraceAnalyzer {
   final val catEffectsStacktrace: Regex = """[\w|\$]+ @ (.+)""".r
 
   private def isSymbolicOperator(s: String): Boolean = {
+    if (s == null || s.isEmpty) return false
+
     def isOperatorPart(ch: Char): Boolean =
       (ch: @scala.annotation.switch) match {
         case '~' | '!' | '@' | '#' | '%' | '^' | '*' | '+' | '-' | '<' | '>' |
@@ -242,21 +244,38 @@ object StacktraceAnalyzer {
   }
 
   private def wrapIfSymbolic(name: String): String = {
-    if (name.isEmpty || name.startsWith("`")) name
+    if (name == null || name.isEmpty || name.startsWith("`")) name
     else if (isSymbolicOperator(name)) s"`$name`"
-    else if (name.endsWith("$") && isSymbolicOperator(name.dropRight(1))) {
+    else if (
+      name.endsWith("$") && name.length > 1 && isSymbolicOperator(
+        name.dropRight(1)
+      )
+    ) {
       // Handle symbolic operators that end with $ (object form)
       s"`${name.dropRight(1)}`$$"
     } else name
   }
 
   def toToplevelSymbol(symbolIn: String): List[String] = {
-    // remove module name. Module symbols are formatted as `moduleName/symbol`
+    if (symbolIn == null || symbolIn.isEmpty) {
+      return Nil
+    }
+
     val modulePos = symbolIn.indexOf("/")
     val symbolPart =
       if (modulePos > -1) symbolIn.substring(modulePos + 1) else symbolIn
 
-    val parts = symbolPart.split('.').init.map(wrapIfSymbolic)
+    val splitParts = symbolPart.split('.')
+    if (splitParts.isEmpty) {
+      return Nil
+    }
+
+    val parts = if (splitParts.length == 1) {
+      splitParts.map(wrapIfSymbolic)
+    } else {
+      splitParts.init.map(wrapIfSymbolic)
+    }
+
     val symbol = parts.mkString("/")
 
     if (symbol.isEmpty) {
