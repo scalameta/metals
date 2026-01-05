@@ -4,6 +4,14 @@ import scala.meta.internal.metals.StacktraceAnalyzer
 
 class StacktraceParseSuite extends BaseSuite {
 
+  test("empty string") {
+    val obtained = StacktraceAnalyzer.toToplevelSymbol("")
+    assert(obtained.isEmpty)
+  }
+
+  testConversion("Class", "_empty_/Class#")
+  testConversion("Class$", "_empty_/Class.")
+
   // --- CLASS ---
   testConversion("p1.p2.Class.method", "p1/p2/Class#")
   testConversion(
@@ -58,10 +66,38 @@ class StacktraceParseSuite extends BaseSuite {
     "java/util/concurrent/FutureTask#",
   )
 
+  testConversion("*>.method", "_empty_/`*>`#")
+  testConversion("a.*>.method", "a/`*>`#")
+  testConversion("p1.p2.*>.method", "p1/p2/`*>`#")
+  testConversion("p1.<*>.method", "p1/`<*>`#")
+  testConversion("p1.:::.method", "p1/`:::`#")
+
+  testConversion(
+    "p1.*>$.method",
+    "p1/`*>`#",
+    "p1/`*>`.",
+  )
+
+  testConversion("p1.Foo$*>.method", "p1/Foo#", "p1/Foo.")
+
   def testConversion(line: String, expected: String): Unit = {
     test(line) {
       val obtained = StacktraceAnalyzer.toToplevelSymbol(line)
       assert(clue(obtained).contains(clue(expected)))
+    }
+  }
+
+  def testConversion(
+      line: String,
+      expected1: String,
+      expected2: String,
+  ): Unit = {
+    test(line) {
+      val obtained = StacktraceAnalyzer.toToplevelSymbol(line)
+      assert(
+        clue(obtained).contains(clue(expected1)) ||
+          clue(obtained).contains(clue(expected2))
+      )
     }
   }
 
