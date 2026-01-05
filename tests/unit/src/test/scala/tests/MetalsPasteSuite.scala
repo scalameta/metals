@@ -290,7 +290,6 @@ class MetalsPasteSuite
         |}
         |""".stripMargin,
     """|package to
-       |
        |import example.utils.TestObject.testMethod
        |import example.utils.TestObject.testVal
        |
