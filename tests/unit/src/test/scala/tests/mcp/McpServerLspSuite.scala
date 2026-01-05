@@ -32,7 +32,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |/.metals/mcp.json
            |{
            |  "servers": {
-           |    "root-metals": {
+           |    "mcp-server-metals": {
            |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
            |    }
            |  }
@@ -467,11 +467,11 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "root", CursorEditor),
+      McpConfig.readPort(server.workspace, "mcp-server", CursorEditor),
       None,
     )
     assert(
-      McpConfig.readPort(server.workspace, "root", NoClient).isDefined,
+      McpConfig.readPort(server.workspace, "mcp-server", NoClient).isDefined,
       "MCP server port should be defined in the default location",
     )
   }
