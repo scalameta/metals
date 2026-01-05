@@ -225,7 +225,9 @@ object StacktraceAnalyzer {
     def isOperatorPart(ch: Char): Boolean =
       (ch: @scala.annotation.switch) match {
         case '~' | '!' | '@' | '#' | '%' | '^' | '*' | '+' | '-' | '<' | '>' |
-            '?' | ':' | '=' | '&' | '|' | '/' | '\\' =>
+            '?' | ':' | '=' | '&' | '|' | '/' =>
+          true
+        case '\\' =>
           true
         case _ =>
           val tpe = Character.getType(ch)
