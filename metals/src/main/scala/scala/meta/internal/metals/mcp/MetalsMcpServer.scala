@@ -193,6 +193,8 @@ class MetalsMcpServer(
       McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
+    McpConfig.rewriteOldEndpointIfNeeded(projectPath, projectName, client, port)
+
     languageClient.showMessage(
       new MessageParams(
         MessageType.Info,
@@ -1290,7 +1292,7 @@ class MetalsMcpServer(
 }
 
 object MetalsMcpServer {
-  val mcpEndpoint = "/sse"
+  val mcpEndpoint = "/mcp"
 }
 
 object McpMessages {
