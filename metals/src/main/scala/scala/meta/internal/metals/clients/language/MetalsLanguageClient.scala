@@ -145,7 +145,7 @@ object MetalsSyncStatusParams {
   }
   case object Syncing extends Status {
     def name = "syncing"
-    override def text = "$(sync) Syncing"
+    override def text = "$(sync~spin) Syncing"
     override def kind = "warning"
     override def tooltip =
       "Syncing document with build server. Click to see logs."
@@ -153,7 +153,7 @@ object MetalsSyncStatusParams {
   }
   case object Busy extends Status {
     def name = "busy"
-    override def text = "$(sync) Busy"
+    override def text = "$(sync~spin) Busy"
     override def kind = "warning"
     override def tooltip =
       "The build server is busy importing the build. Click to see logs."
