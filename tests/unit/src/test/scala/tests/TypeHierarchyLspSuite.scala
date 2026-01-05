@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.TypeHierarchyItem
 
@@ -12,7 +13,12 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
   private def formatItem(item: TypeHierarchyItem): String = {
     val range = item.getRange
     val selRange = item.getSelectionRange
+    val uri = item.getUri
+    val workspaceUri = workspace.toURI.toString
+    val relativePath = uri.stripPrefix(workspaceUri).stripPrefix("/")
+
     s"""|${item.getName}
+        |  uri: $relativePath
         |  detail: ${item.getDetail}
         |  kind: ${item.getKind}
         |  range: ${range.getStart.getLine}:${range.getStart.getCharacter}-${range.getEnd.getLine}:${range.getEnd.getCharacter}
@@ -50,6 +56,7 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
           assertNoDiff(
             formatItem(i),
             """|Dog
+               |  uri: a/src/main/scala/a/Main.scala
                |  detail: a
                |  kind: Class
                |  range: 3:6-3:9
@@ -84,12 +91,14 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       _ = assertNoDiff(
         formatItems(supertypes),
         s"""|Animal
+            |  uri: a/src/main/scala/a/Main.scala
             |  detail: a
             |  kind: Interface
             |  range: 2:6-2:12
             |  selectionRange: 2:6-2:12
             |
             |AnyRef
+            |  uri: .metals/readonly/dependencies/scala-library-${V.scala213}-sources.jar/scala/AnyRef.scala
             |  detail: scala
             |  kind: Class
             |  range: 18:6-18:12
@@ -123,12 +132,14 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       _ = assertNoDiff(
         formatItems(subtypes),
         """|Cat
+           |  uri: a/src/main/scala/a/Main.scala
            |  detail: a
            |  kind: Class
            |  range: 4:6-4:9
            |  selectionRange: 4:6-4:9
            |
            |Dog
+           |  uri: a/src/main/scala/a/Main.scala
            |  detail: a
            |  kind: Class
            |  range: 3:6-3:9
@@ -161,24 +172,27 @@ class TypeHierarchyLspSuite extends BaseLspSuite("type-hierarchy") {
       supertypes <- server.typeHierarchySupertypes(item.get)
       _ = assertNoDiff(
         formatItems(supertypes),
-        """|AnyRef
-           |  detail: scala
-           |  kind: Class
-           |  range: 18:6-18:12
-           |  selectionRange: 18:6-18:12
-           |
-           |Flyable
-           |  detail: a
-           |  kind: Interface
-           |  range: 2:6-2:13
-           |  selectionRange: 2:6-2:13
-           |
-           |Swimmable
-           |  detail: a
-           |  kind: Interface
-           |  range: 3:6-3:15
-           |  selectionRange: 3:6-3:15
-           |""".stripMargin,
+        s"""|AnyRef
+            |  uri: .metals/readonly/dependencies/scala-library-${V.scala213}-sources.jar/scala/AnyRef.scala
+            |  detail: scala
+            |  kind: Class
+            |  range: 18:6-18:12
+            |  selectionRange: 18:6-18:12
+            |
+            |Flyable
+            |  uri: a/src/main/scala/a/Main.scala
+            |  detail: a
+            |  kind: Interface
+            |  range: 2:6-2:13
+            |  selectionRange: 2:6-2:13
+            |
+            |Swimmable
+            |  uri: a/src/main/scala/a/Main.scala
+            |  detail: a
+            |  kind: Interface
+            |  range: 3:6-3:15
+            |  selectionRange: 3:6-3:15
+            |""".stripMargin,
       )
     } yield ()
   }
