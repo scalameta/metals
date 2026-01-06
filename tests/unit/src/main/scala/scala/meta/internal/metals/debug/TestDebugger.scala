@@ -184,7 +184,7 @@ final class TestDebugger(
   }
 
   override def onOutput(event: OutputEventArguments): Unit = {
-    Debug.printEnclosing()
+
     import org.eclipse.lsp4j.debug.{OutputEventArgumentsCategory => Category}
     event.getCategory match {
       case Category.STDOUT =>
@@ -208,6 +208,8 @@ final class TestDebugger(
           )
         )
           fail(new IllegalStateException(output))
+      case "console" =>
+        output.append(event.getOutput)
       case _ =>
       // ignore
     }
@@ -317,6 +319,7 @@ object TestDebugger {
   )(implicit
       ec: ExecutionContext
   ): TestDebugger = {
+
     def connect(listener: RemoteServer.Listener): Debugger = {
       val socket = new Socket()
       socket.connect(new InetSocketAddress(uri.getHost, uri.getPort), timeout)

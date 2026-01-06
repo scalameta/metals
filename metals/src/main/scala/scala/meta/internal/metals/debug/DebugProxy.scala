@@ -67,6 +67,7 @@ private[debug] final class DebugProxy(
     sourceMapper: SourceMapper,
     compilations: Compilations,
     targets: Seq[BuildTargetIdentifier],
+    dataKind: String,
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -76,9 +77,6 @@ private[debug] final class DebugProxy(
   @volatile private var clientAdapter =
     ClientConfigurationAdapter.default(sourceMapper)
   private val frameIdToFrame: TrieMap[Int, StackFrame] = TrieMap.empty
-
-  // Buffer to collect test output for duplicating to test explorer
-  private val testOutputBuffer = new StringBuilder()
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
@@ -275,35 +273,49 @@ private[debug] final class DebugProxy(
       client.consume(response)
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
-      testOutputBuffer.append(output.getOutput())
       client.consume(addStackTraceFileLocation(message, output))
+
+      val testOutput = new OutputEventArguments()
+      testOutput.setCategory("console")
+      testOutput.setOutput(output.getOutput())
+
+      val outputMessage = new DebugNotificationMessage()
+      outputMessage.setMethod("output")
+      outputMessage.setParams(testOutput.toJson)
+      client.consume(outputMessage)
+
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
-      testOutputBuffer.append(msgWithoutColorCodes)
       client.consume(addStackTraceFileLocation(message, output))
+
+      val testOutput = new OutputEventArguments()
+      testOutput.setCategory("console")
+      testOutput.setOutput(msgWithoutColorCodes)
+
+      val outputMessage = new DebugNotificationMessage()
+      outputMessage.setMethod("output")
+      outputMessage.setParams(testOutput.toJson)
+      client.consume(outputMessage)
     case message @ OutputNotification(output) =>
-      testOutputBuffer.append(output.getOutput())
       client.consume(addStackTraceFileLocation(message, output))
-    case message @ TestResults(testResult) =>
-      // Send duplicate output to test explorer BEFORE the test result
-      // so the test explorer can associate the output with this test suite
-      if (testOutputBuffer.nonEmpty) {
+      // Duplicate output to the "console" category for the Test Explorer.
+      // We filter out "scala-main-class" because those runs already handle output correctly.
+      // We also check if the category is already "console" to avoid infinite loops or double duplication.
+      if (dataKind != "scala-main-class" && output.getCategory() != "console") {
         val testOutput = new OutputEventArguments()
         testOutput.setCategory("console")
-        testOutput.setOutput(testOutputBuffer.toString())
+        testOutput.setOutput(output.getOutput())
 
         val outputMessage = new DebugNotificationMessage()
         outputMessage.setMethod("output")
         outputMessage.setParams(testOutput.toJson)
         client.consume(outputMessage)
-
-        // Clear the buffer for the next test
-        testOutputBuffer.clear()
       }
 
+    case message @ TestResults(testResult) =>
       val modifiedResult = modifyLocationInTests(testResult)
       message.setParams(modifiedResult.toJson)
       client.consume(message)
@@ -403,7 +415,9 @@ private[debug] object DebugProxy {
       sourceMapper: SourceMapper,
       compilations: Compilations,
       targets: Seq[BuildTargetIdentifier],
+      dataKind: String,
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
+
     for {
       server <- connectToServer()
         .map(new SocketEndpoint(_))
@@ -430,6 +444,7 @@ private[debug] object DebugProxy {
       sourceMapper,
       compilations,
       targets,
+      dataKind,
     )
   }
 

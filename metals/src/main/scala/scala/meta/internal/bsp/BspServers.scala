@@ -116,14 +116,8 @@ final class BspServers(
         } else JdkSources.envVariables(userConfig().javaHome)
 
       // Merge user-configured BSP environment variables
-      val bspEnvVariables = userConfig().bspEnvironmentVariables
-      if (bspEnvVariables.nonEmpty) {
-        scribe.info(
-          s"Using BSP environment variables: ${bspEnvVariables.keys.mkString(", ")}"
-        )
-      }
       val allVariables =
-        variables ++ bspEnvVariables + ("SCALA_CLI_POWER" -> "true")
+        variables + ("SCALA_CLI_POWER" -> "true")
 
       scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(

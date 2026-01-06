@@ -37,6 +37,8 @@ final class MessageIdAdapter(next: RemoteEndpoint) extends RemoteEndpoint {
           originalRequestIds += (newId -> originalId)
           request.setId(newId)
         }
+      case notification: org.eclipse.lsp4j.jsonrpc.debug.messages.DebugNotificationMessage =>
+        notification.setId(nextId)
       case _ =>
       // ignore
     }

@@ -423,14 +423,11 @@ class DebugProtocolSuite
       _ <- debugger.configurationDone
       _ <- debugger.shutdown
       output <- debugger.allOutput
-    } yield assertContains(
-      output,
-      """|1 tests, 1 passed
-         |All tests in a.Foo passed
-         |
-         |Welcome Megan Emily Morris
-         |""".stripMargin,
-    )
+    } yield {
+      assertContains(output, "1 tests, 1 passed")
+      assertContains(output, "All tests in a.Foo passed")
+      assertContains(output, "Welcome Megan Emily Morris")
+    }
   }
 
   test("run-unrelated-error") {
@@ -646,5 +643,45 @@ class DebugProtocolSuite
          |  foo - failed at Foo.scala, line 6
          |""".stripMargin,
     )
+  }
+  test("duplicate-output") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("foo") {
+           |    println("Output from test")
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams(
+          "a.Foo"
+        ).toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield {
+      val count = output.split("\n").count(_.contains("Output from test"))
+      assert(
+        count >= 2,
+        s"Expected at least 2 occurrences of 'Output from test', found $count. Output:\n$output",
+      )
+    }
   }
 }
