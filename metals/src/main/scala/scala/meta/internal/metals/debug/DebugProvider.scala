@@ -299,7 +299,6 @@ class DebugProvider(
         sourceMapper,
         compilations,
         targets,
-        parameters.getDataKind,
       )
     }
     val server = new DebugServer(sessionName, uri, proxyFactory)

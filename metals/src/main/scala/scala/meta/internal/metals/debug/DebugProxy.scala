@@ -67,7 +67,6 @@ private[debug] final class DebugProxy(
     sourceMapper: SourceMapper,
     compilations: Compilations,
     targets: Seq[BuildTargetIdentifier],
-    dataKind: String,
 )(implicit ec: ExecutionContext) {
   private val exitStatus = Promise[ExitStatus]()
   @volatile private var outputTerminated = false
@@ -275,45 +274,14 @@ private[debug] final class DebugProxy(
       initialized.trySuccess(())
       client.consume(addStackTraceFileLocation(message, output))
 
-      val testOutput = new OutputEventArguments()
-      testOutput.setCategory("console")
-      testOutput.setOutput(output.getOutput())
-
-      val outputMessage = new DebugNotificationMessage()
-      outputMessage.setMethod("output")
-      outputMessage.setParams(testOutput.toJson)
-      client.consume(outputMessage)
-
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
       output.setOutput(msgWithoutColorCodes)
       message.setParams(output)
       client.consume(addStackTraceFileLocation(message, output))
-
-      val testOutput = new OutputEventArguments()
-      testOutput.setCategory("console")
-      testOutput.setOutput(msgWithoutColorCodes)
-
-      val outputMessage = new DebugNotificationMessage()
-      outputMessage.setMethod("output")
-      outputMessage.setParams(testOutput.toJson)
-      client.consume(outputMessage)
     case message @ OutputNotification(output) =>
       client.consume(addStackTraceFileLocation(message, output))
-      // Duplicate output to the "console" category for the Test Explorer.
-      // We filter out "scala-main-class" because those runs already handle output correctly.
-      // We also check if the category is already "console" to avoid infinite loops or double duplication.
-      if (dataKind != "scala-main-class" && output.getCategory() != "console") {
-        val testOutput = new OutputEventArguments()
-        testOutput.setCategory("console")
-        testOutput.setOutput(output.getOutput())
-
-        val outputMessage = new DebugNotificationMessage()
-        outputMessage.setMethod("output")
-        outputMessage.setParams(testOutput.toJson)
-        client.consume(outputMessage)
-      }
 
     case message @ TestResults(testResult) =>
       val modifiedResult = modifyLocationInTests(testResult)
@@ -415,7 +383,6 @@ private[debug] object DebugProxy {
       sourceMapper: SourceMapper,
       compilations: Compilations,
       targets: Seq[BuildTargetIdentifier],
-      dataKind: String,
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
 
     for {
@@ -444,7 +411,6 @@ private[debug] object DebugProxy {
       sourceMapper,
       compilations,
       targets,
-      dataKind,
     )
   }
 

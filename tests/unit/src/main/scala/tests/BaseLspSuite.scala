@@ -269,6 +269,7 @@ abstract class BaseLspSuite(
             "bsp.trace.json",
             "dap-client.trace.json",
             "dap-server.trace.json",
+            "metals.log",
           ),
         )
         Files.createDirectories(workspace.toNIO)
