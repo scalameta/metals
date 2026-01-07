@@ -2,7 +2,7 @@ name: CI
 on:
   push:
     branches:
-      - main
+      - main-v2
   pull_request:
 
 concurrency:
@@ -13,7 +13,6 @@ jobs:
   unit:
     name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / ${{ matrix.shardCount }}
     runs-on:
-      group: metals-protected-runner-group
       labels: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -57,7 +56,6 @@ jobs:
   integration:
     name: ${{ matrix.name }}
     runs-on:
-      group: metals-protected-runner-group
       labels: ${{ matrix.os }}
     strategy:
       fail-fast: false
