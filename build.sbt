@@ -65,8 +65,9 @@ inThisBuild(
     homepage := Some(url("https://github.com/scalameta/metals")),
     developers := metalsDevs,
     testFrameworks := List(),
-    resolvers ++= Resolver.sonatypeOssRepos("public"),
-    resolvers ++= Resolver.sonatypeOssRepos("snapshot"),
+    // Sonatype OSSRH was sunset on 2025-06-30, use Central Portal
+    resolvers += Resolver.sonatypeCentralSnapshots,
+    versionScheme := Some("early-semver"),
     dependencyOverrides += V.guava,
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),

@@ -3,8 +3,8 @@ on:
   push:
     branches: [main-v2]
     tags: ["**"]
-concurrency:
-  group: release-${{ github.ref }}
+# concurrency:
+#   group: release-${{ github.ref }}
 jobs:
   publish:
     runs-on: warp-ubuntu-latest-x64-4x

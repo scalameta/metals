@@ -12,6 +12,6 @@ addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
 
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 
-resolvers ++= Resolver.sonatypeOssRepos("public")
+resolvers += Resolver.sonatypeCentralSnapshots
 
 libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
