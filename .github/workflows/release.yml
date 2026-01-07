@@ -7,7 +7,7 @@ concurrency:
   group: release-${{ github.ref }}
 jobs:
   publish:
-    runs-on: warp-ubuntu-latest-x64-2x
+    runs-on: warp-ubuntu-latest-x64-4x
     steps:
       - uses: actions/checkout@v6
         with:
