@@ -1173,6 +1173,12 @@ class Compilers(
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
       ).asScala
+        .map { help =>
+          if (help.getActiveParameter != null && help.getActiveParameter < 0) {
+            help.setActiveParameter(null)
+          }
+          help
+        }
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def signatureHelp(
@@ -1181,7 +1187,16 @@ class Compilers(
   ): Future[SignatureHelp] =
     loadCompiler(id)
       .map { pc =>
-        pc.signatureHelp(offsetParams).asScala
+        pc.signatureHelp(offsetParams)
+          .asScala
+          .map { help =>
+            if (
+              help.getActiveParameter != null && help.getActiveParameter < 0
+            ) {
+              help.setActiveParameter(null)
+            }
+            help
+          }
       }
       .getOrElse(Future.successful(new SignatureHelp()))
 
