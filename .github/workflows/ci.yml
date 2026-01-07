@@ -17,7 +17,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [metals-ubuntu-latest]
+        os: [warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci]
         java: ["17"]
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
         shardCount: [8]
@@ -75,46 +75,46 @@ jobs:
 #              bin/test.sh +sbt-metals/publishLocal
 #              bin/test.sh 'slow/testOnly -- tests.sbt.*'
 #            name: Sbt integration
-#            os: metals-ubuntu-latest
+#            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
 #            java: "17"
           - type: bazel
             command: |
               bin/test.sh quick-publish-local
               bin/test.sh 'slow/testOnly -- tests.bazel.*'
             name: Bazel integration
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
 #          - type: feature
 #            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
 #            name: LSP integration tests
-#            os: metals-ubuntu-latest
+#            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
 #            java: "17"
           - type: cross
             command: sbt +cross/test
             name: Scala cross tests
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
           - type: mtags-java
             command: sbt javapc/test
             name: Scala javapc tests
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
           - type: scalafmt
             command: |
               ./bin/scalafmt --test
               sbt javafmtCheckAll
             name: Formatting
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
           - type: MiMa
             command: sbt interfaces/mimaReportBinaryIssues
             name: MiMa
-            os: metals-ubuntu-latest
+            os: warp-ubuntu-latest-x64-2x;snapshot.key=metals-ci
             java: "17"
     steps:
       - uses: actions/checkout@v4
@@ -136,3 +136,8 @@ jobs:
       - name: "test download dependencies"
         run: sbt downloadDependencies
         if: matrix.type == 'cross'
+      - name: Save Snapshot
+        if: github.ref == 'refs/heads/main-v2' && matrix.type == 'cross'
+        uses: WarpBuilds/snapshot-save@v1
+        with:
+          alias: 'metals-ci'
