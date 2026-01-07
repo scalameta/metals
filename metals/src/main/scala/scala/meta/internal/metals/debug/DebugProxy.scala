@@ -48,7 +48,6 @@ import org.eclipse.lsp4j.debug.SetBreakpointsResponse
 import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.StackFrame
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
-import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugNotificationMessage
 import org.eclipse.lsp4j.jsonrpc.debug.messages.DebugResponseMessage
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage

@@ -29,18 +29,18 @@ class GradleRepositoriesTest extends BaseSuite {
     "default",
     Embedded.repositories,
     s"""|  repositories {
-        |    mavenCentral()
         |    ivy {
         |      url "${userHomeString + ".ivy2/local"}"
         |      patternLayout {
         |        artifact "[organisation]/[module]/(scala_[scalaVersion]/)(sbt_[sbtVersion]/)[revision]/[type]s/[artifact](-[classifier]).[ext]"
         |      }
         |    }
-        |    maven {
-        |      url "https://central.sonatype.com/repository/maven-snapshots"
-        |    }
+        |    mavenCentral()
         |    maven {
         |      url "${userHomeString + ".m2/repository"}"
+        |    }
+        |    maven {
+        |      url "https://central.sonatype.com/repository/maven-snapshots"
         |    }
         |  }
         |""".stripMargin,

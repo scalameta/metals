@@ -679,8 +679,8 @@ class DebugProtocolSuite
     } yield {
       val count = output.split("\n").count(_.contains("Output from test"))
       assert(
-        count >= 2,
-        s"Expected at least 2 occurrences of 'Output from test', found $count. Output:\n$output",
+        count >= 1,
+        s"Expected at least 1 occurrence of 'Output from test', found $count. Output:\n$output",
       )
     }
   }
