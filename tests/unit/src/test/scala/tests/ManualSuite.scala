@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.Configs.DefinitionProviderConfig
+import scala.meta.internal.metals.Configs._
 import scala.meta.internal.metals.UserConfiguration
 
 // Uncomment to run this test manually locally
@@ -13,7 +13,9 @@ class ManualSuite extends BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      definitionProviders = DefinitionProviderConfig(List("protobuf"))
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      javaSymbolLoader = JavaSymbolLoaderConfig.turbineClasspath,
+      // definitionProviders = DefinitionProviderConfig(List("protobuf"))
     )
 
   inDirectory(
@@ -32,9 +34,9 @@ class ManualSuite extends BaseManualSuite {
       // )
       // _ <- server.didFocus(path)
       // _ = assert((client.workspaceDiagnostics).nonEmpty)
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ <- server.definitionSubstringQuery(path, "  Ses@@sion,")
-      // _ <- server.executeCommandUnsafe(ConnectBuildServer.id, Seq())
+      _ = assert(
+        !clue(client.workspaceDiagnostics).contains("bad class file")
+      )
     } yield ()
   }
 }

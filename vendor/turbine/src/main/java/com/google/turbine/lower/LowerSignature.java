@@ -202,7 +202,7 @@ public class LowerSignature {
       return null;
     }
     // TURBINE-DIFF START
-    if (!(info.superClassType() instanceof Type.ErrorTy)) {
+    if (info.superClassType() instanceof Type.ErrorTy) {
       return null;
     }
     ImmutableList<Sig.TyParamSig> typarams = tyParamSig(info.typeParameterTypes(), env);
