@@ -119,6 +119,10 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.TypeHierarchyItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -1814,6 +1818,48 @@ final case class TestingServer(
     for {
       result <- fullServer
         .callHierarchyOutgoingCalls(new CallHierarchyOutgoingCallsParams(item))
+        .asScala
+    } yield {
+      result.asScala.toList
+    }
+  }
+
+  def prepareTypeHierarchy(
+      filename: String,
+      query: String,
+  ): Future[Option[TypeHierarchyItem]] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      prepareParams = new TypeHierarchyPrepareParams(
+        params.getTextDocument(),
+        params.getPosition(),
+      )
+      result <- fullServer.prepareTypeHierarchy(prepareParams).asScala
+    } yield {
+      result.asScala.headOption
+    }
+  }
+
+  def typeHierarchySupertypes(
+      item: TypeHierarchyItem
+  ): Future[List[TypeHierarchyItem]] = {
+    item.setData(item.getData.toJsonObject)
+    for {
+      result <- fullServer
+        .typeHierarchySupertypes(new TypeHierarchySupertypesParams(item))
+        .asScala
+    } yield {
+      result.asScala.toList
+    }
+  }
+
+  def typeHierarchySubtypes(
+      item: TypeHierarchyItem
+  ): Future[List[TypeHierarchyItem]] = {
+    item.setData(item.getData.toJsonObject)
+    for {
+      result <- fullServer
+        .typeHierarchySubtypes(new TypeHierarchySubtypesParams(item))
         .asScala
     } yield {
       result.asScala.toList

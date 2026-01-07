@@ -225,6 +225,30 @@ final class ImplementationProvider(
     }
   }
 
+  def findImplementationsBySymbol(
+      symbol: String,
+      source: AbsolutePath,
+  ): Future[List[ClassLocation]] = {
+    val isWorkspaceSymbol = source.isWorkspaceSource(workspace)
+
+    val workspaceInheritanceContext: InheritanceContext =
+      InheritanceContext.fromDefinitions(
+        implementationsInPath.asScala.toMap
+      )
+
+    val inheritanceContext: InheritanceContext =
+      if (isWorkspaceSymbol) workspaceInheritanceContext
+      else
+        workspaceInheritanceContext
+          .toGlobal(
+            compilers,
+            implementationsInDependencySources.asScala.toMap,
+          )
+
+    findImplementation(symbol, inheritanceContext, source.toNIO)
+      .map(_.values.flatten.toList)
+  }
+
   private def symbolLocationsFromContext(
       dealiased: String,
       textDocument: TextDocument,

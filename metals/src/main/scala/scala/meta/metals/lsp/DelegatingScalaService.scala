@@ -125,6 +125,21 @@ class DelegatingScalaService(
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
     underlying.callHierarchyOutgoingCalls(params)
 
+  override def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    underlying.prepareTypeHierarchy(params)
+
+  override def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    underlying.typeHierarchySupertypes(params)
+
+  override def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    underlying.typeHierarchySubtypes(params)
+
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] = underlying.completion(params)

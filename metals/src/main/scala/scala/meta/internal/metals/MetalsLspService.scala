@@ -52,6 +52,7 @@ import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
+import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinderGranularity
@@ -536,6 +537,13 @@ abstract class MetalsLspService(
       trees,
       buildTargets,
       supermethods,
+    )
+
+  protected val typeHierarchyProvider: TypeHierarchyProvider =
+    new TypeHierarchyProvider(
+      semanticdbs,
+      definitionProvider,
+      implementationProvider,
     )
 
   protected val renameProvider: RenameProvider = new RenameProvider(
@@ -1136,6 +1144,27 @@ abstract class MetalsLspService(
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
     CancelTokens.future { token =>
       callHierarchyProvider.outgoingCalls(params, token).map(_.asJava)
+    }
+
+  override def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.prepare(params).map(_.asJava)
+    }
+
+  override def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.supertypes(params).map(_.asJava)
+    }
+
+  override def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.subtypes(params).map(_.asJava)
     }
 
   override def completion(
