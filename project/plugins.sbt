@@ -7,7 +7,6 @@ addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.11.2")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.5.2")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.5.0")
-addSbtPlugin("com.github.sbt" % "sbt-dynver" % "5.1.1")
 // Mima used for mtags-interfaces
 addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.4")
 
