@@ -4,6 +4,8 @@ on:
     branches:
       - main-v2
   pull_request:
+    branches:
+      - main-v2
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -92,7 +94,7 @@ jobs:
           - type: cross
             command: sbt +cross/test
             name: Scala cross tests
-            os: warp-ubuntu-latest-x64-2x
+            os: warp-ubuntu-latest-x64-4x
             java: "17"
           - type: mtags-java
             command: sbt javapc/test
