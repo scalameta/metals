@@ -3,9 +3,6 @@ on:
   push:
     branches:
       - main-v2
-  pull_request:
-    branches:
-      - main-v2
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -19,7 +16,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [warp-ubuntu-latest-x64-2x]
+        os: [warp-ubuntu-latest-x64-4x]
         java: ["17"]
         shard: [1, 2, 3, 4, 5, 6, 7, 8]
         shardCount: [8]
