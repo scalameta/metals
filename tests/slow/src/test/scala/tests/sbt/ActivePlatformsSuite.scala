@@ -2,7 +2,6 @@ package tests.sbt
 
 import scala.meta.internal.metals.{BuildInfo => V}
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import tests.BaseLspSuite
 import tests.BloopImportInitializer
 import tests.SbtBuildLayout
@@ -27,48 +26,45 @@ class ActivePlatformsSuite
         |/jvm/src/main/scala/JvmMain.scala
         |object JvmMain { val x = 1 }
         |/js/src/main/scala/JsMain.scala
-        |object JsMain { val y = 2 }
+        |object JsMain { val y: String = 2 }
         |/native/src/main/scala/NativeMain.scala
-        |object NativeMain { val z = 3 }
+        |object NativeMain { val z: String = 3 }
         |""".stripMargin
 
-  private def getPlatformStatus: String = {
-    val buildTargets = server.server.buildTargets
-    def platforms(ids: Seq[_]): String =
-      ids
-        .flatMap {
-          case id: BuildTargetIdentifier =>
-            buildTargets.scalaTarget(id).map(_.scalaPlatform.toString)
-          case _ => None
-        }
-        .toSet
-        .toList
-        .sorted
-        .mkString(", ")
-    val all = platforms(buildTargets.allBuildTargetIds)
-    val active = platforms(buildTargets.activeBuildTargetIds)
-    s"all: $all; active: $active"
-  }
-
-  test("active-platforms") {
+  test("js-not-compiled-by-default") {
     cleanWorkspace()
     for {
       _ <- initialize(crossProjectLayout)
-      _ = assertNoDiff(getPlatformStatus, "all: JS, JVM, NATIVE; active: JVM")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
 
       _ <- server.didOpen("js/src/main/scala/JsMain.scala")
       _ = assertNoDiff(
-        getPlatformStatus,
-        "all: JS, JVM, NATIVE; active: JS, JVM",
+        client.workspaceDiagnostics,
+        """|js/src/main/scala/JsMain.scala:1:33: error: type mismatch;
+           | found   : Int(2)
+           | required: String
+           |object JsMain { val y: String = 2 }
+           |                                ^
+           |""".stripMargin,
       )
+    } yield ()
+  }
 
-      _ = server.server.buildTargets.resetActivePlatforms()
-      _ = assertNoDiff(getPlatformStatus, "all: JS, JVM, NATIVE; active: JVM")
+  test("native-not-compiled-by-default") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(crossProjectLayout)
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
 
       _ <- server.didOpen("native/src/main/scala/NativeMain.scala")
       _ = assertNoDiff(
-        getPlatformStatus,
-        "all: JS, JVM, NATIVE; active: JVM, NATIVE",
+        client.workspaceDiagnostics,
+        """|native/src/main/scala/NativeMain.scala:1:37: error: type mismatch;
+           | found   : Int(3)
+           | required: String
+           |object NativeMain { val z: String = 3 }
+           |                                    ^
+           |""".stripMargin,
       )
     } yield ()
   }
