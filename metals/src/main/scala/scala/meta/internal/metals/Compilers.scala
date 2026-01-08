@@ -1174,7 +1174,11 @@ class Compilers(
         )
       ).asScala
         .map { help =>
-          if (help.getActiveParameter != null && help.getActiveParameter < 0) {
+          if (
+            ScalaVersions.isScala3Version(pc.scalaVersion()) &&
+            help.getActiveParameter != null &&
+            help.getActiveParameter < 0
+          ) {
             help.setActiveParameter(null)
           }
           help
@@ -1191,7 +1195,9 @@ class Compilers(
           .asScala
           .map { help =>
             if (
-              help.getActiveParameter != null && help.getActiveParameter < 0
+              ScalaVersions.isScala3Version(pc.scalaVersion()) &&
+              help.getActiveParameter != null &&
+              help.getActiveParameter < 0
             ) {
               help.setActiveParameter(null)
             }

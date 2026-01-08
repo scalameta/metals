@@ -80,6 +80,7 @@ import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import munit.Tag
+import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -335,6 +336,12 @@ final case class TestingServer(
   ): Future[b.DebugSessionParams] = {
     executeCommand(ServerCommands.DiscoverMainClasses, params)
       .asInstanceOf[Future[b.DebugSessionParams]]
+  }
+
+  def signatureHelp(
+      params: TextDocumentPositionParams
+  ): Future[SignatureHelp] = {
+    languageServer.getScalaService.signatureHelp(params).asScala
   }
 
   def assertSuperMethodHierarchy(
