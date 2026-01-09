@@ -2,12 +2,7 @@ package bench
 
 import java.net.URI
 
-import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.io.VirtualFile
-import scala.tools.nsc.interactive.Global
-
 import scala.meta.dialects
-import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.IdentifierIndex
@@ -27,7 +22,6 @@ import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.tokenizers.LegacyScanner
-import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
@@ -159,47 +153,10 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def scalacTokenize(): Unit = {
-    val g = global
-    scalaDependencySources.foreach { input =>
-      val unit = new g.CompilationUnit(
-        new BatchSourceFile(new VirtualFile(input.path), input.chars)
-      )
-      val scanner = g.newUnitScanner(unit)
-      scanner.init()
-      while (scanner.token != LegacyToken.EOF) {
-        scanner.nextToken()
-      }
-    }
-  }
-
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
   def scalametaParse(): Unit = {
     scalaDependencySources.foreach { input =>
       import scala.meta._
       Trees.defaultTokenizerDialect(input).parse[Source].get
-    }
-  }
-
-  lazy val global: Global = InteractiveSemanticdb.newCompiler()
-
-  @Benchmark
-  @BenchmarkMode(Array(Mode.SingleShotTime))
-  def scalacParse(): Unit = {
-    val g = global
-    scalaDependencySources.foreach { input =>
-      val unit = new g.CompilationUnit(
-        new BatchSourceFile(new VirtualFile(input.path), input.chars)
-      )
-      val tree = g.newUnitParser(unit).parse()
-      var i = 0
-      new g.Traverser {
-        override def apply[T <: g.Tree](tree: T): T = {
-          i += 1
-          super.apply(tree)
-        }
-      }.traverse(tree)
     }
   }
 

@@ -315,7 +315,7 @@ object ScalacpCopyPaste {
 
   private var nextId = 0
   private def freshSymbol(): String = {
-    val result = Symbols.Local(nextId.toString)
+    val result = Symbols.Local(nextId)
     nextId += 1
     result
   }

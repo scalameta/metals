@@ -25,23 +25,23 @@
 //                ^^^^ reference scala/Unit#
 
        val x = new {
-//         ^ definition local1
-//                 ^ definition local3
+//         ^ definition local3
+//                 ^ definition local1
          val x = 2
 //           ^ definition local2
        }
 
        val y = new Foo {}
-//         ^ definition local4
-//                 ^ definition local5
+//         ^ definition local5
+//                 ^ definition local4
 //                 ^^^ reference example/nested/Foo#
 //                     ^ reference java/lang/Object#`<init>`().
 
        x.x + y.y
-//     ^ reference local1
+//     ^ reference local3
 //       ^ reference local2
 //         ^ reference scala/Int#`+`(+4).
-//           ^ reference local4
+//           ^ reference local5
 //             ^ reference example/nested/Foo#y.
 
        new LocalDeclarations with Foo {

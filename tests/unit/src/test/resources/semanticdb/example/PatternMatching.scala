@@ -38,10 +38,10 @@
 //       ^^^^^^^^^^^^^^^^^^^ definition example/PatternMatching#localDeconstruction().
        val Some(number2) =
 //         ^^^^ reference scala/Some.
-//              ^^^^^^^ definition local4
+//              ^^^^^^^ definition local5
          some
 //       ^^^^ reference example/PatternMatching#some.
        number2
-//     ^^^^^^^ reference local4
+//     ^^^^^^^ reference local5
      }
    }

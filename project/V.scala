@@ -3,14 +3,14 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
-  val scala212 = "2.12.20"
+  val scala212 = "2.12.21"
   val scala213 = "2.13.16"
   val lastPublishedScala3 = "3.3.3"
   val scala3 = "3.3.4"
   val scala3ForSBT2 = "3.6.2"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
-  val sbtScala = "2.12.20"
+  val sbtScala = "2.12.21"
   val ammonite212Version = "2.12.19"
   val ammonite213Version = "2.13.14"
   // Rules need to be manually updated to support
@@ -33,7 +33,7 @@ object V {
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.10.3"
   val jsoup = "1.18.3"
-  val kindProjector = "0.13.3"
+  val kindProjector = "0.13.4"
   val lsp4jV = "0.23.1"
   val mavenBloop = "2.0.1"
   val mill = "0.12.5"
@@ -45,7 +45,7 @@ object V {
   val scalaCli = "1.6.1"
   val scalafix = "0.14.0"
   val scalafmt = "3.7.15"
-  val scalameta = "4.12.3"
+  val scalameta = "4.14.4"
   val scribe = "3.15.2"
   val qdox = "2.2.0"
   val protobuf = "4.31.1"
@@ -158,7 +158,7 @@ object V {
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
-    val sbtScalaVersion = "2.12.20"
+    val sbtScalaVersion = "2.12.21"
     if (!nonDeprecatedScala2Versions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"

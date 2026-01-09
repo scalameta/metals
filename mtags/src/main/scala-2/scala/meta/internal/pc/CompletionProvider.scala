@@ -360,6 +360,10 @@ class CompletionProvider(
               o.label
             case named: NamedArgMember =>
               s"named-${semanticdbSymbol(named.sym)}"
+            case dep: DependecyMember =>
+              s"dep-${dep.label}"
+            case edit: TextEditMember =>
+              s"edit-${edit.filterText}-${edit.label.getOrElse("")}"
             case _ =>
               semanticdbSymbol(head.sym)
           }

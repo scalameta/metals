@@ -28,14 +28,14 @@
 //       ^ definition example/StructuralTypes.V.
 //          ^^^^^^ reference java/lang/Object#
        def scalameta: String
-//         ^^^^^^^^^ definition local2
+//         ^^^^^^^^^ definition local4
 //                    ^^^^^^ reference scala/Predef.String#
      } = new {
-//           ^ definition local3
+//           ^ definition local2
        def scalameta = "4.0"
-//         ^^^^^^^^^ definition local4
+//         ^^^^^^^^^ definition local3
      }
      V.scalameta
 //   ^ reference example/StructuralTypes.V.
-//     ^^^^^^^^^ reference local2
+//     ^^^^^^^^^ reference local4
    }

@@ -25,7 +25,7 @@ object Synthetics {
     import scala.meta.internal.semanticdb._
     def isStop(t: Tree): Boolean =
       t match {
-        case ApplyTree(function, arguments) =>
+        case ApplyTree(function, arguments, _) =>
           isStop(function) || arguments.exists(isStop)
         case SelectTree(_, id) =>
           id.exists(isStop)

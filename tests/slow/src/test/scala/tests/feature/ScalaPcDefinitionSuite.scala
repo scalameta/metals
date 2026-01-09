@@ -345,5 +345,5 @@ abstract class BaseScalaPcDefinitionSuite(scalaVersion: String)
   }
 }
 
-class ScalaPcDefinition212Suite extends BaseScalaPcDefinitionSuite("2.12.20")
+class ScalaPcDefinition212Suite extends BaseScalaPcDefinitionSuite("2.12.21")
 class ScalaPcDefinition213Suite extends BaseScalaPcDefinitionSuite("2.13.16")
