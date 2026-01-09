@@ -140,7 +140,7 @@ final class ImplementationProvider(
         parentImplLocationPairs ++= parentsFromSignature(
           symbolInfo.symbol,
           symbolInfo.signature,
-          Some(workspace.resolve(document.uri)),
+          Some(document.resolveUri(workspace)),
         )
       }
     }

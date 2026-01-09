@@ -1016,6 +1016,16 @@ object MetalsEnrichments
         occ.range.get.encloses(pos, includeLastCharacter)
   }
 
+  implicit class XtensionTextDocument(textDocument: s.TextDocument) {
+    def resolveUri(workspace: AbsolutePath): AbsolutePath = {
+      if (textDocument.uri.startsWith("file://")) {
+        textDocument.uri.toAbsolutePath
+      } else {
+        AbsolutePath(workspace.resolve(textDocument.uri).toNIO)
+      }
+    }
+  }
+
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
     def toLsp: l.Diagnostic = {
       val ld = new l.Diagnostic(
