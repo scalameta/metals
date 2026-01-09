@@ -126,6 +126,14 @@ final class ImplementationProvider(
       new mutable.ListBuffer[(String, ClassLocation)]
     for {
       document <- documents.documents
+      // HACK: The Scala and Java SemanticDB indexers are inconsistent:
+      // - Scala one uses relative paths as URIs ("foo/bar/x.scala")
+      // - Java one uses absolute URIs ("file:///foo/bar/x.java")
+      // This implementation here assumes only the Scala flavor, not absolute URIs.
+      // We skip the Java ones here, and it's not a critical issue because ImplementationProvider
+      // is not even used in Metals v2. We can probably remove the entire file eventually.
+      // Fixes https://github.com/scalameta/metals/issues/8099
+      if !document.uri.contains("://")
       symbolInfo <- document.symbols
     } {
       if (isClassLike(symbolInfo) || symbolInfo.isType) {
