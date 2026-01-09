@@ -3,6 +3,7 @@ package scala.meta.internal.metals.clients.language
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
@@ -27,7 +28,6 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
-import requests.TimeoutException
 
 /**
  * Delegates requests/notifications to the underlying language client according to the user configuration.
