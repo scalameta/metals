@@ -296,7 +296,6 @@ object Configs {
   object RangeFormattingProviders {
     def isValid(value: String): Boolean =
       value == "scalafmt"
-    def none: RangeFormattingProviders = RangeFormattingProviders(Nil)
     def default: RangeFormattingProviders = scalafmt
     def scalafmt: RangeFormattingProviders = RangeFormattingProviders(
       List("scalafmt")

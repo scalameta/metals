@@ -390,9 +390,7 @@ class UserConfigurationSuite extends BaseSuite {
   },
   "enableStripMarginOnTypeFormatting": false,
   "enableIndentOnPaste": true,
-  "rangeFormattingProviders": [
-    "scalafmt"
-  ],
+  "rangeFormattingProviders": [],
   "enableSemanticHighlighting": false,
   "excludedPackages": [
     "excluded"
@@ -420,17 +418,14 @@ class UserConfigurationSuite extends BaseSuite {
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
   "buildChangedAction": "none",
-  "buildOnChange": false,
-  "buildOnFocus": false,
+  "buildOnChange": true,
+  "buildOnFocus": true,
   "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
-  "definitionProviders": [
-    "mbt",
-    "protobuf"
-  ],
-  "definitionIndexStrategy": "classpath",
-  "javaOutlineProvider": "javac",
-  "javaSymbolLoader": "turbine-classpath",
+  "definitionProviders": [],
+  "definitionIndexStrategy": "sources",
+  "javaOutlineProvider": "qdox",
+  "javaSymbolLoader": "javac-sourcepath",
   "javaTurbineRecompileDelay": "100 milliseconds",
   "javacServicesOverrides": {
     "names": false,
@@ -438,8 +433,8 @@ class UserConfigurationSuite extends BaseSuite {
     "typeEnter": true,
     "enter": true
   },
-  "compilerProgress": "enabled",
-  "referenceProvider": "mbt",
+  "compilerProgress": "disabled",
+  "referenceProvider": "bsp",
   "additionalPcChecks": [
     "refchecks"
   ],
