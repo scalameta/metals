@@ -61,7 +61,7 @@ object V {
 
   val mdoc = "2.8.2"
 
-  val modelContextProtocol = "0.17.0"
+  val modelContextProtocol = "0.17.1"
 
   val munit = "1.2.0"
 
