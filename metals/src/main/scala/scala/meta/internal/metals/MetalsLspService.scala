@@ -743,6 +743,14 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.activatePlatformForTarget)
+      .foreach { platform =>
+        buildTargetClasses.rebuildIndex(
+          buildTargets.targetsByPlatform(platform)
+        )
+      }
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -808,6 +816,14 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.activatePlatformForTarget)
+      .foreach { platform =>
+        buildTargetClasses.rebuildIndex(
+          buildTargets.targetsByPlatform(platform)
+        )
+      }
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -1643,6 +1659,7 @@ abstract class MetalsLspService(
     semanticDBIndexer.reset()
     worksheetProvider.reset()
     symbolSearch.reset()
+    buildTargets.resetActivePlatforms()
   }
 
   def fileWatcher: FileWatcher
