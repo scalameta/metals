@@ -58,8 +58,11 @@ abstract class BaseLspSuite(
       // update the tests to use the new defaults.
       buildOnChange = true,
       buildOnFocus = true,
+      scalaImportsPlacement = Configs.ScalaImportsPlacementConfig.appendLast,
+      rangeFormattingProviders = Configs.RangeFormattingProviders.none,
       workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.bsp,
       referenceProvider = Configs.ReferenceProviderConfig.bsp,
+      javaSymbolLoader = Configs.JavaSymbolLoaderConfig.javacSourcepath,
     )
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
