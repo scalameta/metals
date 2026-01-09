@@ -8,6 +8,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Try
+import scala.meta.internal.metals.Testing
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
@@ -18,6 +19,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 abstract class BaseManualSuite extends munit.FunSuite {
+  Testing.enable()
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   private val sh = Executors.newSingleThreadScheduledExecutor()

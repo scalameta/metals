@@ -120,11 +120,15 @@ object MetalsEnrichments
   implicit class XtensionDependencyModule(module: b.DependencyModule) {
     def asMavenDependencyModule: Option[b.MavenDependencyModule] = {
       if (module.getDataKind() == b.DependencyModuleDataKind.MAVEN)
-        decodeJson(
-          module.getData,
-          classOf[b.MavenDependencyModule],
-          Some(gsonMavenDeps),
-        )
+        module.getData match {
+          case m: b.MavenDependencyModule => Some(m)
+          case _ =>
+            decodeJson(
+              module.getData,
+              classOf[b.MavenDependencyModule],
+              Some(gsonMavenDeps),
+            )
+        }
       else
         None
     }

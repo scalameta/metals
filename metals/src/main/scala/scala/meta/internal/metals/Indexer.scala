@@ -11,6 +11,7 @@ import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
@@ -135,6 +136,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         data.addDependencyModules(
           importedBuild.dependencyModules
         )
+        if (indexProviders.userConfig.fallbackClasspath.isMbt) {
+          val build = MbtBuild.fromWorkspace(indexProviders.folder)
+          data.addDependencyModules(build.asBsp)
+        }
 
         // Fallback compilers can possibly use the jars from the build target data, so we trigger a restart
         // here to pick up the newly indexed jar data.
@@ -229,6 +234,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             buildTool.importedBuild.dependencyModules,
             progress,
           )
+        }
+        if (indexProviders.userConfig.fallbackClasspath.isMbt) {
+          val build = MbtBuild.fromWorkspace(indexProviders.folder)
+          indexDependencyModules(build.asBsp, progress)
         }
         usedJars ++= indexDependencySources(
           buildTool.data,

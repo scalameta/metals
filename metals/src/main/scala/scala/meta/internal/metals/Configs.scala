@@ -240,6 +240,10 @@ object Configs {
   }
 
   object DefinitionProviderConfig {
+    def mbt: DefinitionProviderConfig = DefinitionProviderConfig(List("mbt"))
+    def protobuf: DefinitionProviderConfig = DefinitionProviderConfig(
+      List("protobuf")
+    )
     def isValid(value: String): Boolean =
       value == "mbt" || value == "protobuf"
     def default: DefinitionProviderConfig = DefinitionProviderConfig(Nil)
@@ -291,6 +295,9 @@ object Configs {
     def isValid(value: String): Boolean =
       value == "scalafmt"
     def default: RangeFormattingProviders = RangeFormattingProviders(Nil)
+    def scalafmt: RangeFormattingProviders = RangeFormattingProviders(
+      List("scalafmt")
+    )
     def fromConfigOrFeatureFlag(
         values: Option[List[String]],
         featureFlags: FeatureFlagProvider,
@@ -563,6 +570,8 @@ object Configs {
       values.contains("all-3rdparty")
     def isGuessed: Boolean =
       values.contains("guessed")
+    def isMbt: Boolean =
+      values.contains("mbt")
   }
 
   object FallbackClasspathConfig {
@@ -570,13 +579,19 @@ object Configs {
     // example, defining dependencies inline like
     // "dependency:com.google:guava:VERSION" or "file://path/to/some.jar".
     def isValid(value: String): Boolean =
-      value == "all-3rdparty" || value == "guessed"
+      value == "all-3rdparty" ||
+        value == "guessed" ||
+        value == "mbt"
     def all3rdparty: FallbackClasspathConfig =
       FallbackClasspathConfig(List("all-3rdparty"))
     def guessed: FallbackClasspathConfig =
       FallbackClasspathConfig(List("guessed"))
+    def mbt: FallbackClasspathConfig =
+      FallbackClasspathConfig(List("mbt"))
 
-    def default: FallbackClasspathConfig = FallbackClasspathConfig(Nil)
+    def default: FallbackClasspathConfig = FallbackClasspathConfig(
+      all3rdparty.values ++ mbt.values
+    )
     def fromConfigOrFeatureFlag(
         values: Option[List[String]],
         featureFlags: FeatureFlagProvider,
@@ -616,6 +631,9 @@ object Configs {
   }
 
   object FallbackSourcepathConfig {
+    def allSources: FallbackSourcepathConfig = FallbackSourcepathConfig(
+      "all-sources"
+    )
     def default: FallbackSourcepathConfig = FallbackSourcepathConfig("none")
     def fromConfigOrFeatureFlag(
         value: Option[String],

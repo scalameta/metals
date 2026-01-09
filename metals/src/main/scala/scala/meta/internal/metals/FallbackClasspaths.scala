@@ -9,6 +9,7 @@ import scala.util.Try
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -88,7 +89,7 @@ class FallbackClasspaths(
       module => inferScalaBinaryVersion(module) == scalaBinaryVersion,
     )
     if (result.isEmpty) {
-      guessClasspath()
+      guessClasspath() ++ mbtClasspath()
     } else {
       result
     }
@@ -111,6 +112,15 @@ class FallbackClasspaths(
           .exists(_.scalaBinaryVersion == scalaBinaryVerion),
       _ => true,
     )
+  }
+
+  private def mbtClasspath(): Seq[Path] = {
+    if (!fallbackClasspathsConfig().isMbt) {
+      return Nil
+    }
+    val mbtBuildFile = workspace.resolve(".metals/mbt.json")
+    val build = MbtBuild.fromFile(mbtBuildFile.toNIO)
+    build.dependencyModules.asScala.iterator.map(_.jarPath).toSeq
   }
 
   private def guessClasspath(): Seq[Path] = {
