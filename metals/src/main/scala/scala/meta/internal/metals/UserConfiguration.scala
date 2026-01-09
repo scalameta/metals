@@ -86,8 +86,8 @@ case class UserConfiguration(
     defaultBspToBuildTool: Boolean = false,
     presentationCompilerDiagnostics: Boolean = true,
     buildChangedAction: BuildChangedAction = BuildChangedAction.default,
-    buildOnChange: Boolean = true,
-    buildOnFocus: Boolean = true,
+    buildOnChange: Boolean = false,
+    buildOnFocus: Boolean = false,
     preferredBuildServer: Option[String] = None,
     useSourcePath: Boolean = true,
     workspaceSymbolProvider: WorkspaceSymbolProviderConfig =

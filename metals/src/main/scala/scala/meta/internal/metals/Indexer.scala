@@ -11,7 +11,6 @@ import scala.collection.parallel.CollectionConverters._
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.meta.internal.metals.mbt.MbtBuild
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
@@ -22,6 +21,7 @@ import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.Indexer.BackgroundJob
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult

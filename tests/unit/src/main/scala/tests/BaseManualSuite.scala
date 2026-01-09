@@ -8,12 +8,12 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Try
-import scala.meta.internal.metals.Testing
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
+import scala.meta.internal.metals.Testing
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath

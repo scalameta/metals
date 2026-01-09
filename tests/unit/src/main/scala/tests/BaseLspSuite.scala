@@ -53,6 +53,13 @@ abstract class BaseLspSuite(
       presentationCompilerDiagnostics = false,
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
       javaOutlineProvider = Configs.JavaOutlineProviderConfig.javac,
+
+      // Legacy settings that are enabled for tests only.  We  should eventually
+      // update the tests to use the new defaults.
+      buildOnChange = true,
+      buildOnFocus = true,
+      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.bsp,
+      referenceProvider = Configs.ReferenceProviderConfig.bsp,
     )
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default

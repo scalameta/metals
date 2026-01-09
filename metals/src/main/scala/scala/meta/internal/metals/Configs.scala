@@ -141,7 +141,7 @@ object Configs {
     def bsp: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig("bsp")
     def default: WorkspaceSymbolProviderConfig =
-      bsp
+      mbt
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -201,7 +201,7 @@ object Configs {
       DefinitionIndexStrategy("classpath")
     def sources: DefinitionIndexStrategy =
       DefinitionIndexStrategy("sources")
-    def default: DefinitionIndexStrategy = sources
+    def default: DefinitionIndexStrategy = classpath
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -246,7 +246,9 @@ object Configs {
     )
     def isValid(value: String): Boolean =
       value == "mbt" || value == "protobuf"
-    def default: DefinitionProviderConfig = DefinitionProviderConfig(Nil)
+    def default: DefinitionProviderConfig = DefinitionProviderConfig(
+      mbt.values ++ protobuf.values
+    )
     def fromConfigOrFeatureFlag(
         values: Option[List[String]],
         featureFlags: FeatureFlagProvider,
@@ -294,7 +296,7 @@ object Configs {
   object RangeFormattingProviders {
     def isValid(value: String): Boolean =
       value == "scalafmt"
-    def default: RangeFormattingProviders = RangeFormattingProviders(Nil)
+    def default: RangeFormattingProviders = scalafmt
     def scalafmt: RangeFormattingProviders = RangeFormattingProviders(
       List("scalafmt")
     )
@@ -335,7 +337,7 @@ object Configs {
       ReferenceProviderConfig("bsp")
     def mbt: ReferenceProviderConfig =
       ReferenceProviderConfig("mbt")
-    def default: ReferenceProviderConfig = bsp
+    def default: ReferenceProviderConfig = mbt
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -372,7 +374,7 @@ object Configs {
       JavaOutlineProviderConfig("qdox")
     def javac: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig("javac")
-    def default: JavaOutlineProviderConfig = qdox
+    def default: JavaOutlineProviderConfig = javac
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -491,7 +493,7 @@ object Configs {
       JavaSymbolLoaderConfig("turbine-classpath")
     def javacSourcepath: JavaSymbolLoaderConfig =
       JavaSymbolLoaderConfig("javac-sourcepath")
-    def default: JavaSymbolLoaderConfig = javacSourcepath
+    def default: JavaSymbolLoaderConfig = turbineClasspath
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -529,12 +531,7 @@ object Configs {
       CompilerProgressConfig("enabled")
     def disabled: CompilerProgressConfig =
       CompilerProgressConfig("disabled")
-    // NOTE(olafurpg): it's unclear if we ever want to enable it by default.
-    // For now, this setting is incredibly helpful to debug Java PC performance
-    // issues so I want to have the functionality in Metals even if users are
-    // not using it by default. It might be helpful for users to troubleshoot
-    // performance issues on their projects.
-    def default: CompilerProgressConfig = disabled
+    def default: CompilerProgressConfig = enabled
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -590,6 +587,8 @@ object Configs {
       FallbackClasspathConfig(List("mbt"))
 
     def default: FallbackClasspathConfig = FallbackClasspathConfig(
+      // "guessed" is a hack that we don't want to enable by default.  We only
+      // use it for benchmarks/testing purposes.
       all3rdparty.values ++ mbt.values
     )
     def fromConfigOrFeatureFlag(
@@ -634,7 +633,8 @@ object Configs {
     def allSources: FallbackSourcepathConfig = FallbackSourcepathConfig(
       "all-sources"
     )
-    def default: FallbackSourcepathConfig = FallbackSourcepathConfig("none")
+    def none: FallbackSourcepathConfig = FallbackSourcepathConfig("none")
+    def default: FallbackSourcepathConfig = allSources
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
@@ -727,7 +727,7 @@ object Configs {
     import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
     def appendLast: ScalaImportsPlacement = ScalaImportsPlacement.APPEND_LAST
     def smart: ScalaImportsPlacement = ScalaImportsPlacement.SMART
-    def default: ScalaImportsPlacement = appendLast
+    def default: ScalaImportsPlacement = smart
     def fromConfigOrFeatureFlag(
         value: Option[String],
         featureFlags: FeatureFlagProvider,
