@@ -7,7 +7,6 @@
  *
  * INSTALLATION:
  *   curl -fsSL https://bun.sh/install | bash
- *   bun add -g listr2
  *
  * USAGE:
  *   # Download and run directly:
