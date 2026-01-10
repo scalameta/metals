@@ -118,11 +118,8 @@ final class BspServers(
       // Convert credential-related system properties to environment variables
       // This helps BSP servers (like sbt) access custom repository credentials
       val credentialEnvVars = sys.props.collect {
-        case (key, value)
-            if key.startsWith("sbt.boot.credentials") ||
-              key.startsWith("sbt.credentials") ||
-              key.contains("repository.credentials") =>
-          key.toUpperCase.replace(".", "_").replace("-", "_") -> value
+        case (key, value) if key == "coursier.credentials" =>
+          "COURSIER_CREDENTIALS" -> value
       }
 
       val allVariables =
