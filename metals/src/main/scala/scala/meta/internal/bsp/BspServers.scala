@@ -114,12 +114,23 @@ final class BspServers(
           }
           Map.empty[String, String]
         } else JdkSources.envVariables(userConfig().javaHome)
+
+      // Convert credential-related system properties to environment variables
+      // This helps BSP servers (like sbt) access custom repository credentials
+      val credentialEnvVars = sys.props.collect {
+        case (key, value) if key == "coursier.credentials" =>
+          "COURSIER_CREDENTIALS" -> value
+      }
+
+      val allVariables =
+        variables ++ credentialEnvVars + ("SCALA_CLI_POWER" -> "true")
+
       scribe.info(s"Running BSP server $args")
       val proc = SystemProcess.run(
         args,
         projectDirectory,
         redirectErrorOutput = false,
-        variables + ("SCALA_CLI_POWER" -> "true"),
+        allVariables,
         processOut = None,
         processErr = Some(l => scribe.info("BSP server: " + l)),
         discardInput = false,
