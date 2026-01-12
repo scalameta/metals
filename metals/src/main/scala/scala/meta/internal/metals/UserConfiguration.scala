@@ -153,6 +153,7 @@ case class UserConfiguration(
           enableBestEffort,
         )
       ),
+      optStringField("defaultShell", defaultShell),
       Some(
         (
           "startMcpServer",

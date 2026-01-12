@@ -446,4 +446,5 @@ class UserConfigurationSuite extends BaseSuite {
   ) { obtained =>
     assert(obtained.targetBuildTool == Some("sbt"))
   }
+
 }

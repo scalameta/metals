@@ -272,6 +272,7 @@ private[debug] final class DebugProxy(
     case message @ ErrorOutputNotification(output) =>
       initialized.trySuccess(())
       client.consume(addStackTraceFileLocation(message, output))
+
     case message @ OutputNotification(output) if stripColor =>
       val raw = output.getOutput()
       val msgWithoutColorCodes = filterANSIColorCodes(raw)
@@ -280,8 +281,10 @@ private[debug] final class DebugProxy(
       client.consume(addStackTraceFileLocation(message, output))
     case message @ OutputNotification(output) =>
       client.consume(addStackTraceFileLocation(message, output))
+
     case message @ TestResults(testResult) =>
-      message.setParams(modifyLocationInTests(testResult).toJson)
+      val modifiedResult = modifyLocationInTests(testResult)
+      message.setParams(modifiedResult.toJson)
       client.consume(message)
     case message =>
       initialized.trySuccess(())
@@ -380,6 +383,7 @@ private[debug] object DebugProxy {
       compilations: Compilations,
       targets: Seq[BuildTargetIdentifier],
   )(implicit ec: ExecutionContext): Future[DebugProxy] = {
+
     for {
       server <- connectToServer()
         .map(new SocketEndpoint(_))
