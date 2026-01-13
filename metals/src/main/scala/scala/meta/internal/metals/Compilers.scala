@@ -805,7 +805,10 @@ class Compilers(
 
       result.asScala
         .map { edits =>
-          InlineEditsFixups.wrapInterpolationEdits(pos.input.text, adjust.adjustTextEdits(edits))
+          InlineEditsFixups.wrapInterpolationEdits(
+            pos.input.text,
+            adjust.adjustTextEdits(edits),
+          )
         }
     }.getOrElse(Future.successful(Nil.asJava))
 
@@ -851,9 +854,11 @@ class Compilers(
               newText.head != '{' &&
               !isSimpleIdentifier(newText) &&
               e.getRange != null &&
-              e.getRange.toMeta(input).exists(p =>
-                p.start > 0 && originalText.charAt(p.start - 1) == '$'
-              )
+              e.getRange
+                .toMeta(input)
+                .exists(p =>
+                  p.start > 0 && originalText.charAt(p.start - 1) == '$'
+                )
             ) new TextEdit(e.getRange, s"{${newText}}")
             else e
           out.add(wrapped)
@@ -862,7 +867,6 @@ class Compilers(
       }
     }
   }
-
 
   def references(
       params: ReferenceParams,
