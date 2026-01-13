@@ -68,10 +68,7 @@ case class IndexedDocument(
       .setLanguage(language)
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
-      .setBloomFilterVersion(
-        if (language.isJava) Mbt.IndexedDocument.BloomFilterVersion.V3
-        else Mbt.IndexedDocument.BloomFilterVersion.V6
-      )
+      .setBloomFilterVersion(Mbt.IndexedDocument.BloomFilterVersion.V6)
   }
 }
 
@@ -208,7 +205,7 @@ object IndexedDocument {
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
       case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V6
-      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V5
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V6
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }

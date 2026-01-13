@@ -298,6 +298,43 @@ class ProtobufToplevelSuite extends BaseProtobufToplevelSuite {
   )
 
   check(
+    "proto2-service-with-options",
+    """
+     syntax = "proto2";
+     package com.example.api;
+
+     service UserService {
+       option (custom.service_options) = {
+         tags: {
+           name: "User Service",
+           description: "This is an example description.",
+           owner_team: "backend-team",
+         }
+       };
+
+       rpc CreateUser(CreateUserRequest) returns (User) {
+         option (custom.method_options) = {
+           endpoints: {
+             method: "POST",
+             path: "/api/users",
+           },
+           visibility: PUBLIC,
+         };
+       }
+
+       rpc GetUser(GetUserRequest) returns (User);
+     }
+   """,
+    """|com/
+       |com/example/
+       |com/example/api/
+       |com/example/api/UserService#
+       |com/example/api/UserService#CreateUser().
+       |com/example/api/UserService#GetUser().
+       |""".stripMargin,
+  )
+
+  check(
     "builtInTypes",
     """
      message AllTypes {

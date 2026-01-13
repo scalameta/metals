@@ -54,6 +54,7 @@ object ProtobufToken {
   val EXTENSIONS: TokenType = 133
   val EXTEND: TokenType = 134
   val TO: TokenType = 135
+  val OPTION: TokenType = 136
 
   // Built-in scalar types
   val STRING_TYPE: TokenType = 115
@@ -95,6 +96,7 @@ object ProtobufToken {
     "extensions" -> EXTENSIONS,
     "extend" -> EXTEND,
     "to" -> TO,
+    "option" -> OPTION,
     // Built-in scalar types
     "string" -> STRING_TYPE,
     "bool" -> BOOL,

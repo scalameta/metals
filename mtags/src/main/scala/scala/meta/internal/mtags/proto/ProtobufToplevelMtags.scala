@@ -352,6 +352,9 @@ class ProtobufToplevelMtags(
           token = processRpcDeclaration()
           // Restore owner after RPC processing to prevent cascading
           currentOwner = ownerBeforeProcessing
+        } else if (token.tpe == ProtobufToken.OPTION) {
+          // Skip option blocks which may contain nested braces
+          token = skipOptionBlock(token)
         } else {
           token = scanner.nextToken()
         }
@@ -516,6 +519,53 @@ class ProtobufToplevelMtags(
       scanner.nextToken() // Skip semicolon
     } else {
       current
+    }
+  }
+
+  private def skipOptionBlock(token: ProtobufToken): ProtobufToken = {
+    // token is the OPTION token, skip past it
+    var current =
+      if (token.tpe == ProtobufToken.OPTION) scanner.nextToken() else token
+
+    // Skip until we find semicolon (simple option) or handle nested braces
+    while (
+      current.tpe != ProtobufToken.SEMICOLON &&
+      current.tpe != ProtobufToken.EOF &&
+      current.tpe != ProtobufToken.LEFT_BRACE
+    ) {
+      current = scanner.nextToken()
+    }
+
+    current.tpe match {
+      case ProtobufToken.SEMICOLON =>
+        scanner.nextToken() // Skip semicolon
+      case ProtobufToken.LEFT_BRACE =>
+        // Skip balanced braces for option blocks like: option (x) = { ... };
+        var braceCount = 1
+        current = scanner.nextToken()
+        while (braceCount > 0 && current.tpe != ProtobufToken.EOF) {
+          current.tpe match {
+            case ProtobufToken.LEFT_BRACE => braceCount += 1
+            case ProtobufToken.RIGHT_BRACE => braceCount -= 1
+            case _ =>
+          }
+          if (braceCount > 0) {
+            current = scanner.nextToken()
+          }
+        }
+        if (current.tpe == ProtobufToken.RIGHT_BRACE) {
+          current = scanner.nextToken() // Skip closing brace
+          // Skip the trailing semicolon after the option block
+          if (current.tpe == ProtobufToken.SEMICOLON) {
+            scanner.nextToken()
+          } else {
+            current
+          }
+        } else {
+          current
+        }
+      case _ =>
+        current
     }
   }
 
