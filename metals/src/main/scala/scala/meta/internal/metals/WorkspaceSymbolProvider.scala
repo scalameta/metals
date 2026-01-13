@@ -277,19 +277,23 @@ final class WorkspaceSymbolProvider(
   private def rankResults(
       results: mutable.Buffer[l.SymbolInformation]
   ): Unit = {
-    results.asJava.sort((a, b) =>
-      if (
-        a.getLocation().getUri().endsWith(".proto") &&
-        b.getLocation().getUri().endsWith(".proto")
-      ) {
+    results.asJava.sort((a, b) => {
+      val aIsProto = a.getLocation().getUri().endsWith(".proto")
+      val bIsProto = b.getLocation().getUri().endsWith(".proto")
+
+      if (aIsProto && bIsProto) {
         // Special case for Proto files so that results from `DIR/latest.proto`
         // ranks higher than ambiguous results from
         // `DIR/version_history/vX.proto`.
         a.getLocation().getUri().compareTo(b.getLocation().getUri())
+      } else if (aIsProto) {
+        -1 // Proto files come first
+      } else if (bIsProto) {
+        1 // Non-proto files come after proto
       } else {
-        0
+        0 // Both non-proto, preserve relative order
       }
-    )
+    })
   }
 
   class PreferredScalaVersionOrdering(preferredScalaVersions: Set[String])

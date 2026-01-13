@@ -59,3 +59,6 @@ coursier
 index.scip
 
 .tool-versions
+
+# Cursor IDE
+.cursor/
