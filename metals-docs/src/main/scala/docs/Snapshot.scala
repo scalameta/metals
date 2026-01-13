@@ -18,10 +18,12 @@ case class Snapshot(version: String, lastModified: LocalDateTime) {
 object Snapshot {
   private val zdtFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("EEE MMM dd HH:mm:ss zzz uuuu")
-  private val mavenMetadataLastUpdatedFormatter: DateTimeFormatter =
-    DateTimeFormatter.ofPattern("uuuuMMddHHmmss")
+  DateTimeFormatter.ofPattern("uuuuMMddHHmmss")
   private val snapshotOutputFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd MMM uuuu HH:mm")
+  // Maven Central directory listings use this date format: "2024-01-15 10:30"
+  private val mavenCentralDateFormatter: DateTimeFormatter =
+    DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
   private implicit val localDateTimeOrdering: Ordering[LocalDateTime] =
     Ordering.fromLessThan[LocalDateTime]((a, b) => a.compareTo(b) < 0)
 
@@ -30,7 +32,7 @@ object Snapshot {
       binaryVersion: String,
       retry: Int = 5,
   ): Snapshot = {
-    if (System.getenv("CI") != null) {
+    if (System.getenv("CI") == null) {
       try {
         // There is no way to query for snapshots currently
         if (useSnapshot) {
@@ -89,6 +91,30 @@ object Snapshot {
   }
 
   /**
+   * Finds the release date from a Maven Central version directory page.
+   * Maven Central uses a <pre> block format with dates like "2024-01-15 10:30".
+   */
+  private def findReleaseDateFromVersionPage(
+      baseUrl: String,
+      version: String,
+  ): Option[Snapshot] = {
+    Try {
+      val versionUrl = baseUrl + version + "/"
+      val doc = Jsoup.connect(versionUrl).get
+      // Maven Central directory listing has <pre> with content like:
+      // <a href="file.jar">file.jar</a>    2024-01-15 10:30    12345
+      val preContent = doc.select("pre").text()
+      val datePattern = """(\d{4}-\d{2}-\d{2} \d{2}:\d{2})""".r
+      datePattern.findFirstIn(preContent).map { dateStr =>
+        Snapshot(
+          version,
+          LocalDateTime.parse(dateStr, mavenCentralDateFormatter),
+        )
+      }
+    }.toOption.flatten
+  }
+
+  /**
    * Returns the latest published snapshot release, or the current release if.
    */
   private def fetchLatest(
@@ -125,16 +151,12 @@ object Snapshot {
       }
       .toSeq
     if (snapshots.isEmpty) {
-      val doc = Jsoup.connect(url + "maven-metadata.xml").get
-      val latest = doc.select("latest").text().trim
-      val lastUpdated: LocalDateTime =
-        Try(
-          LocalDateTime.parse(
-            doc.select("lastUpdated").text().trim,
-            mavenMetadataLastUpdatedFormatter,
-          )
-        ).getOrElse(LocalDateTime.now())
-      Snapshot(latest, lastUpdated)
+      // Maven Central uses a different HTML format (<pre> instead of tables)
+      // so we fetch directly from the version directory
+      findReleaseDateFromVersionPage(url, docs.BuildInfo.latestReleaseVersion)
+        .getOrElse(
+          Snapshot(docs.BuildInfo.latestReleaseVersion, LocalDateTime.now())
+        )
     } else {
       snapshots.maxBy(_.lastModified)
     }

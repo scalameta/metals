@@ -10,6 +10,7 @@ Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
 def localSnapshotVersion = "1.6.5-SNAPSHOT"
+def latestReleaseVersion = "1.6.4"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -808,6 +809,10 @@ lazy val docs = project
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
     dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.2",
+    buildInfoPackage := "docs",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "latestReleaseVersion" -> latestReleaseVersion
+    ),
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin)
+  .enablePlugins(DocusaurusPlugin, BuildInfoPlugin)
