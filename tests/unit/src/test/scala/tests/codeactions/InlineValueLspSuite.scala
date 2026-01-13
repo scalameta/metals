@@ -129,6 +129,24 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
     fileName = "Main.scala",
   )
 
+  check(
+    "check-interpolates-properly",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = 1 + y
+       |    println(s"$<<x>>$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${1 + y}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
   checkNoAction(
     "check-no-inline-when-not-local",
     """|object Main {
