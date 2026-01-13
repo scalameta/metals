@@ -30,8 +30,7 @@ object SemanticDbSupport {
         .asScala
         .toList
 
-      available
-        .reverse
+      available.reverse
         .collectFirst {
           case version if Version.parse(version).exists(latestVersion >= _) =>
             version
