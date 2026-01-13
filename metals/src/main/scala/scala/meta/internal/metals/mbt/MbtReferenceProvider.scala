@@ -16,13 +16,16 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
+import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
@@ -37,6 +40,7 @@ class MbtReferenceProvider(
     buffers: Buffers,
     time: Time,
     languageClient: MetalsLanguageClient,
+    workDoneProgress: WorkDoneProgress,
 )(implicit ec: ExecutionContext) {
   private val cache = new TextDocumentCache()
 
@@ -53,15 +57,40 @@ class MbtReferenceProvider(
   )
 
   private val groupSize = 100
+
+  /** Returns the length of the common path prefix between two paths. */
+  private def commonPrefixLength(a: AbsolutePath, b: AbsolutePath): Int = {
+    val aStr = a.toString
+    val bStr = b.toString
+    var i = 0
+    val minLen = math.min(aStr.length, bStr.length)
+    while (i < minLen && aStr.charAt(i) == bStr.charAt(i)) {
+      i += 1
+    }
+    i
+  }
   // We timebox the search because the user could do "Find References" on
   // java.lang.String and get matches in ALL files, which is always going to
   // take a long time to compute. We still stream results for clients that
   // support partial results so the user should see results much faster than
   // this timeout.
-  private val timeout: FiniteDuration = 10.seconds
+  private val timeout: FiniteDuration =
+    if (sys.props.contains("metals.debug")) 20.minutes else 20.seconds
   def implementations(
       params: l.TextDocumentPositionParams
-  ): Future[List[l.Location]] = Future {
+  ): Future[List[l.Location]] =
+    workDoneProgress.trackProgressFuture(
+      "Finding implementations",
+      taskProgress =>
+        Future {
+          doImplementations(params, taskProgress)
+        },
+    )
+
+  private def doImplementations(
+      params: l.TextDocumentPositionParams,
+      taskProgress: TaskProgress,
+  ): List[l.Location] = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
     val pos = params.getPosition()
@@ -76,14 +105,36 @@ class MbtReferenceProvider(
     var lastQueryRound = Set.empty[String]
     val result = mutable.ListBuffer.empty[l.Location]
     val isVisitedURI = mutable.Set.empty[String]
+    var visited = 0
+
     def visitDoc(doc: s.TextDocument): Boolean = {
+      visited += 1
+
+      def overridesOrImplements(info: s.SymbolInformation): Boolean = {
+        if (
+          info.language.isScala
+          && (info.kind.isClass || info.kind.isTrait || info.kind.isObject)
+        ) {
+          info.signature match {
+            case s.ClassSignature(_, parents, _, _) =>
+              parents.exists {
+                case TypeRef(_, symbol, _) => isOverridenSymbol(symbol)
+                case _ => false
+              }
+            case _ => false
+          }
+        } else {
+          info.overriddenSymbols.exists(sym => isOverridenSymbol(sym))
+        }
+      }
+
       if (isVisitedURI.contains(doc.uri)) {
         return false
       }
       isVisitedURI += doc.uri
       for {
         info <- doc.symbols.iterator
-        if info.overriddenSymbols.exists(sym => isOverridenSymbol(sym))
+        if overridesOrImplements(info)
         occ <- doc.occurrences.iterator
         if occ.symbol == info.symbol && occ.role.isDefinition
         range <- occ.range.toList
@@ -108,11 +159,17 @@ class MbtReferenceProvider(
         if (sym.isMethod) isVisitedMethodName.contains(sym.displayName)
         else lastQueryRound.contains(s)
       }
-      val candidates = mbt.possibleReferences(
-        MbtPossibleReferencesParams(implementations = toQuery)
-      )
+      val candidates = mbt
+        .possibleReferences(
+          MbtPossibleReferencesParams(implementations = toQuery)
+        )
+        .toSeq
+        .sortBy(c => -commonPrefixLength(path, c))
+      scribe.info(s"Found ${candidates.size} candidate files.")
       lastQueryRound = Set.from(isOverridenSymbol)
       var didMakeProgress = false
+      var processedInRound = 0
+      val totalInRound = candidates.size
       for {
         paths <- candidates.iterator.grouped(groupSize)
         if !timer.hasElapsed(timeout)
@@ -120,6 +177,22 @@ class MbtReferenceProvider(
       } {
         val didVisit = visitDoc(doc)
         didMakeProgress = didMakeProgress || didVisit
+        processedInRound += 1
+        taskProgress.update(
+          processedInRound,
+          totalInRound,
+          Some(s"Processing ${doc.uri.toString.split("/").last}"),
+        )
+      }
+      if (timer.hasElapsed(timeout)) {
+        scribe.warn(
+          s"Time out analyzing candidate files at $visited/${candidates.size}."
+        )
+        taskProgress.update(
+          processedInRound,
+          totalInRound,
+          Some("Time out analyzing candidate files"),
+        )
       }
       if (didMakeProgress) {
         loop(depth = depth + 1)
@@ -150,16 +223,29 @@ class MbtReferenceProvider(
       compilers
         .references(params, EmptyCancelToken, noAdjustRange)
     } else {
-      mbtReferences(timer, params, requestDoc, enclosingOccurrences)
+      workDoneProgress.trackProgressFuture(
+        "Finding references",
+        taskProgress =>
+          Future {
+            doReferences(
+              timer,
+              params,
+              requestDoc,
+              enclosingOccurrences,
+              taskProgress,
+            )
+          },
+      )
     }
   }
 
-  private def mbtReferences(
+  private def doReferences(
       timer: Timer,
       params: ReferenceParams,
       requestDoc: s.TextDocument,
       enclosingOccurrences: Seq[s.SymbolOccurrence],
-  ): Future[List[ReferencesResult]] = Future {
+      taskProgress: TaskProgress,
+  ): List[ReferencesResult] = {
     val token = params.getPartialResultToken()
     val superMethods = for {
       enclosing <- enclosingOccurrences
@@ -212,49 +298,64 @@ class MbtReferenceProvider(
       } else {
         Nil
       }
+    val candidatesList = externalDocumentCandidates.iterator.distinct.toSeq
+    val totalCandidates = candidatesList.size
     scribe.info(
-      s"references: found ${externalDocumentCandidates.size} external document candidates in $timer"
+      s"references: found $totalCandidates external document candidates in $timer"
     )
     val referenceResults = toQuerySymbols.iterator
       .map(occ => occ -> Buffer.empty[l.Location])
       .toMap
-    val externalDocumentDocs = for {
-      candidates <- externalDocumentCandidates.iterator.distinct.grouped(
-        groupSize
-      )
-      if !timer.hasElapsed(timeout)
-      docs = {
-        val docTimer = new Timer(time)
-        val result = cache.index(candidates).documents
-        scribe.info(
-          s"references: indexed ${candidates.length} candidates in $docTimer"
-        )
-        result
+    var processedCandidates = 0
+
+    def processDoc(doc: s.TextDocument): Unit = {
+      for {
+        occ <- doc.occurrences
+        if occ.symbol.isGlobal || doc.eq(requestDoc)
+        range <- occ.range.toList
+        matchSymbol <-
+          if (doc.language.isScala) scalaMatchingOccurrence.get(occ.symbol)
+          else javaMatchingOccurrence.get(occ.symbol)
+        // Exclude definition occurrences for alternate symbols. For example, when
+        // doing find-refs on a class symbol, we want usages of the class
+        // constructor but not definitions of those constructors.
+        if occ.role.isReference || occ.symbol == matchSymbol
+        x <- referenceResults.get(matchSymbol)
+      } {
+        val location = range.toLocation(doc.uri)
+        if (token == null) {
+          x += location
+        } else {
+          languageClient.notifyProgress(
+            new l.ProgressParams(token, JEither.forRight(location))
+          )
+        }
       }
-      doc <- docs
-    } yield doc
+    }
+
+    // Process the request document first
+    processDoc(requestDoc)
+
+    // Process external candidates with progress reporting
     for {
-      doc <- Iterator.single(requestDoc) ++ externalDocumentDocs
-      occ <- doc.occurrences
-      if occ.symbol.isGlobal || doc.eq(requestDoc)
-      range <- occ.range.toList
-      matchSymbol <-
-        if (doc.language.isScala) scalaMatchingOccurrence.get(occ.symbol)
-        else javaMatchingOccurrence.get(occ.symbol)
-      // Exclude definition occurrences for alternate symbols. For example, when
-      // doing find-refs on a class symbol, we want usages of the class
-      // constructor but not definitions of those constructors.
-      if occ.role.isReference || occ.symbol == matchSymbol
-      x <- referenceResults.get(matchSymbol)
+      candidates <- candidatesList.iterator.grouped(groupSize)
+      if !timer.hasElapsed(timeout)
     } {
-      val location = range.toLocation(doc.uri)
-      if (token == null) {
-        x += location
-      } else {
-        languageClient.notifyProgress(
-          new l.ProgressParams(token, JEither.forRight(location))
-        )
-      }
+      val docTimer = new Timer(time)
+      val docs = cache.index(candidates).documents
+      scribe.info(
+        s"references: indexed ${candidates.length} candidates in $docTimer"
+      )
+      docs.foreach(processDoc)
+      processedCandidates += candidates.length
+      taskProgress.update(processedCandidates, totalCandidates)
+    }
+    if (timer.hasElapsed(timeout)) {
+      taskProgress.update(
+        processedCandidates,
+        totalCandidates,
+        Some("Time out analyzing candidate files"),
+      )
     }
     val resultCount = referenceResults.valuesIterator.map(_.size).sum
     scribe.info(

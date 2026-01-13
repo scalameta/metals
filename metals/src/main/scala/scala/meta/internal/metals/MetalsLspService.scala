@@ -510,6 +510,7 @@ abstract class MetalsLspService(
     buffers,
     time,
     languageClient,
+    workDoneProgress,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(

@@ -440,6 +440,12 @@ class MbtWorkspaceSymbolProvider(
         queries += s"${sym.displayName}():"
       } else if (sym.isType) {
         queries += s"${sym.displayName}:"
+        // this is needed for now because the Scala top-level mtags indexer does not emit ':'
+        queries += s"${sym.displayName}#"
+      } else if (sym.isTerm) {
+        queries += s"${sym.displayName}."
+        // Scala vals and vars can be implemented via getters and setters
+        queries += s"${sym.displayName}():"
       } else {
         scribe.warn(
           s"mbt-v2: unexpected implementation symbol for possibleReferences: ${symbol}"

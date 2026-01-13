@@ -447,15 +447,27 @@ class MbtScalaReferenceSuite
       _ <- server.assertReferencesSubquery(
         a,
         "override def col@@or: String = \"yellow\"",
-        """|a/src/main/scala/a/Downstream.scala:8:11: reference
+        """|a/src/main/scala/a/Berry.scala:3:16: reference
+           |  override def color: String = "blue"
+           |               ^^^^^
+           |a/src/main/scala/a/Downstream.scala:8:11: reference
            |    fruit.color
+           |          ^^^^^
+           |a/src/main/scala/a/Downstream.scala:9:11: reference
+           |    apple.color
            |          ^^^^^
            |a/src/main/scala/a/Downstream.scala:10:12: reference
            |    banana.color
            |           ^^^^^
+           |a/src/main/scala/a/Downstream.scala:11:11: reference
+           |    berry.color
+           |          ^^^^^
            |a/src/main/scala/a/Fruit.scala:3:7: reference
            |  def color: String
            |      ^^^^^
+           |a/src/main/scala/a/Fruit.scala:6:16: reference
+           |  override def color: String = "red"
+           |               ^^^^^
            |a/src/main/scala/a/Fruit.scala:9:16: reference
            |  override def color: String = "green"
            |               ^^^^^

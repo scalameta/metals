@@ -80,7 +80,7 @@ class ScalaToplevelMtags(
         curr.token match {
           case IDENTIFIER =>
             // we don't know whether the identifier is a term or a type, so we add both as fuzzy references
-            for (suffix <- List("().", ".", "#")) {
+            for (suffix <- List("().", "():", ".", "#", ":")) {
               visitFuzzyReferenceOccurrence(
                 s.SymbolOccurrence(
                   symbol = s"${curr.strVal}$suffix",
@@ -858,13 +858,26 @@ class ScalaToplevelMtags(
         })
       case DEF =>
         methodIdentifier.foreach(name =>
-          if (shouldEmit)
+          if (shouldEmit) {
             method(
               name.name,
               region.overloads.disambiguator(name.name),
               name.pos,
               extensionProperty
             )
+            if (collectIdentifiers) {
+              import scala.meta.internal.semanticdb.Implicits._
+
+              visitFuzzyReferenceOccurrence(
+                s.SymbolOccurrence(
+                  symbol = s"${name.name}():",
+                  role = s.SymbolOccurrence.Role.REFERENCE,
+                  range = Some(name.pos.toRange)
+                )
+              )
+
+            }
+          }
         )
       case GIVEN =>
         newGivenIdentifier.foreach { name =>

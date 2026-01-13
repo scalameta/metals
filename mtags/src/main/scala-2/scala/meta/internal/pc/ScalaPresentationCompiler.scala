@@ -601,7 +601,7 @@ case class ScalaPresentationCompiler(
           } catch {
             case NonFatal(e) =>
               logger.error(s"error getting text document for ${param.uri()}", e)
-              s.TextDocument.defaultInstance
+              s.TextDocument.defaultInstance.withUri(param.uri().toString())
           }
         }
         s.TextDocuments(docs.toSeq).toByteArray
