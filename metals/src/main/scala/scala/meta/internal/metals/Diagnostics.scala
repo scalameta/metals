@@ -120,23 +120,26 @@ final class Diagnostics(
     // Bazel doesn't clean diagnostics for paths with no errors, so instead we remove everything
     // from previous compilations.
     val isBazel = buildTargets.buildServerOf(target).exists(_.isBazel)
-    if (isBazel) {
-      diagnostics
-        .filter { case (path, _) =>
-          buildTargets.inverseSources(path).exists(target => target == target)
+    diagnostics
+      .filter { case (path, _) =>
+        val belongsToTarget =
+          buildTargets.inverseSources(path).exists(_ == target)
+        belongsToTarget && (isBazel || path.isJava)
+      }
+      .foreach { case (path, queue) =>
+        val updatedQueue = queue.asScala.filter {
+          case DiagnosticWithOrigin(_, diagOriginId) =>
+            diagOriginId == originId
         }
-        .foreach { case (path, queue) =>
-          val updatedQueue = queue.asScala.filter {
-            case DiagnosticWithOrigin(_, diagOriginId) =>
-              diagOriginId == originId
-          }
-          if (updatedQueue.isEmpty) {
-            reset(Seq(path))
-          }
-          diagnostics.remove(path)
-
+        // If the originId is null, we can't be sure if the diagnostics are relevant or not
+        // so we shouldn't clear them. This can happen with some build tools or in tests.
+        if (updatedQueue.isEmpty && originId != null) {
+          reset(Seq(path))
+        } else {
+          queue.clear()
+          updatedQueue.foreach(queue.add)
         }
-    }
+      }
     publishDiagnosticsBuffer()
 
     compileTimer.remove(target)

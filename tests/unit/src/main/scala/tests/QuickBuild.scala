@@ -72,6 +72,7 @@ case class QuickBuild(
     sbtVersion: String,
     sbtAutoImports: Array[String],
     platformJavaHome: String,
+    javacOptions: Array[String],
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -86,6 +87,7 @@ case class QuickBuild(
       sbtVersion,
       orEmpty(sbtAutoImports),
       platformJavaHome,
+      orEmpty(javacOptions),
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -277,7 +279,7 @@ case class QuickBuild(
           None,
         )
       ),
-      java = Some(C.Java(Nil)),
+      java = Some(C.Java(javacOptions.toList)),
       sbt = sbt,
       test = testFrameworks,
       platform = Some(
