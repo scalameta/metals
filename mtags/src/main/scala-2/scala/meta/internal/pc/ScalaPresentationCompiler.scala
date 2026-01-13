@@ -17,6 +17,7 @@ import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
@@ -29,6 +30,7 @@ import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
@@ -571,6 +573,40 @@ case class ScalaPresentationCompiler(
         PcReferencesProvider(pc.compiler(), params).references()
       res.asJava
     }(params.file.toQueryContext)
+  }
+
+  override def batchSemanticdbTextDocuments(
+      params: ju.List[VirtualFileParams]
+  ): CompletableFuture[Array[Byte]] = {
+    if (params.isEmpty()) {
+      CompletableFuture.completedFuture(Array.emptyByteArray)
+    } else {
+      // use the first parameter for query context and cancel token
+      val param = params.get(0)
+      compilerAccess.withInterruptableCompiler(
+        Array.emptyByteArray,
+        param.token()
+      ) { pc =>
+        val provider = new SemanticdbTextDocumentProvider(
+          pc.compiler(),
+          config.semanticdbCompilerOptions().asScala.toList
+        )
+
+        val docs = for (param <- params.asScala) yield {
+          // we overwrite the URI because the provider relativizes the URI to the workspace path
+          try {
+            provider
+              .textDocument(param.uri(), param.text())
+              .withUri(param.uri().toString())
+          } catch {
+            case NonFatal(e) =>
+              logger.error(s"error getting text document for ${param.uri()}", e)
+              s.TextDocument.defaultInstance
+          }
+        }
+        s.TextDocuments(docs.toSeq).toByteArray
+      }(param.toQueryContext)
+    }
   }
 
   override def semanticdbTextDocument(

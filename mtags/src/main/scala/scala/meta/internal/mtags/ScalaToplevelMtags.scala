@@ -21,6 +21,7 @@ import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.tokenizers.LegacyTokenData
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
@@ -73,10 +74,22 @@ class ScalaToplevelMtags(
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Any = {
+      import scala.meta.internal.semanticdb.Implicits._
       curr = scanner.nextToken()
       if (collectIdentifiers)
         curr.token match {
-          case IDENTIFIER => identifiers += curr.strVal
+          case IDENTIFIER =>
+            // we don't know whether the identifier is a term or a type, so we add both as fuzzy references
+            for (suffix <- List("().", ".", "#")) {
+              visitFuzzyReferenceOccurrence(
+                s.SymbolOccurrence(
+                  symbol = s"${curr.strVal}$suffix",
+                  role = s.SymbolOccurrence.Role.REFERENCE,
+                  range = Some(newPosition.toRange)
+                )
+              )
+            }
+            identifiers += curr.strVal
           case _ =>
         }
     }

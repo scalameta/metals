@@ -184,12 +184,12 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
           )
           .index()
       } else if (language == Semanticdb.Language.SCALA) {
-        // References are not supported yet for Scala.
         new ScalaToplevelMtags(
           input,
           includeInnerClasses = true,
           includeMembers = true,
-          dialect
+          dialect,
+          collectIdentifiers = includeReferences
         ).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {
         new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()

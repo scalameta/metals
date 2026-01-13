@@ -19,6 +19,7 @@ import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
@@ -130,106 +131,139 @@ class MbtReferenceProvider(
     result.toList
   }
 
-  def references(params: ReferenceParams): Future[List[ReferencesResult]] =
-    Future {
-      val timer = new Timer(time)
-      val token = params.getPartialResultToken()
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      val queryRange = params.getPosition()
-      val requestDoc = cache.indexSingle(path)
-      val enclosingOccurrences =
-        this.enclosingOccurrences(requestDoc, queryRange)
-      scribe.info(
-        s"references: found ${enclosingOccurrences.length} occurrences"
-      )
-      val superMethods = for {
-        enclosing <- enclosingOccurrences
-        info <- requestDoc.symbols.find(_.symbol == enclosing.symbol).iterator
-        if info.kind.isMethod
-        canBeOverridden = info.displayName != "<init>" && !info.isFinal
-        selfSymbol =
-          if (canBeOverridden)
-            // Search for overrides of this method
-            Iterator.single(info.symbol)
-          else Iterator.empty
-        overridden <- selfSymbol ++ info.overriddenSymbols.iterator
-        if !ignoredSuperSymbols(overridden)
-      } yield overridden
-      val implementationMethods =
-        (findImplementations(
-          timer,
-          // Use maximum half of the timeout for finding implementations
-          timeout.div(2),
-          cache,
-          superMethods,
-        ) ++ superMethods).distinct
-      val toQuerySymbols =
-        if (implementationMethods.nonEmpty) implementationMethods
-        else enclosingOccurrences.map(_.symbol)
-      val matchingOccurrence = (for {
-        symbol <- toQuerySymbols.iterator
-        alternative <- SymbolAlternatives.expand(Symbol(symbol))
-      } yield alternative -> symbol).toMap
-      val enclosingGlobalOccurrences =
-        toQuerySymbols.filter(sym => sym.isGlobal)
-      val externalDocumentCandidates: Iterable[AbsolutePath] =
-        if (enclosingGlobalOccurrences.nonEmpty) {
-          mbt.possibleReferences(
-            MbtPossibleReferencesParams(references = toQuerySymbols)
-          )
-        } else {
-          Nil
-        }
-      scribe.info(
-        s"references: found ${externalDocumentCandidates.size} external document candidates in $timer"
-      )
-      val referenceResults = toQuerySymbols.iterator
-        .map(occ => occ -> Buffer.empty[l.Location])
-        .toMap
-      val externalDocumentDocs = for {
-        candidates <- externalDocumentCandidates.iterator.distinct.grouped(
-          groupSize
-        )
-        if !timer.hasElapsed(timeout)
-        docs = {
-          val docTimer = new Timer(time)
-          val result = cache.index(candidates).documents
-          scribe.info(
-            s"references: indexed ${candidates.length} candidates in $docTimer"
-          )
-          result
-        }
-        doc <- docs
-      } yield doc
-      for {
-        doc <- Iterator.single(requestDoc) ++ externalDocumentDocs
-        occ <- doc.occurrences
-        if occ.symbol.isGlobal || doc.eq(requestDoc)
-        range <- occ.range.toList
-        matchSymbol <- matchingOccurrence.get(occ.symbol)
-        // Exclude definition occurrences for alternate symbols. For example, when
-        // doing find-refs on a class symbol, we want usages of the class
-        // constructor but not definitions of those constructors.
-        if occ.role.isReference || occ.symbol == matchSymbol
-        x <- referenceResults.get(matchSymbol)
-      } {
-        val location = range.toLocation(doc.uri)
-        if (token == null) {
-          x += location
-        } else {
-          languageClient.notifyProgress(
-            new l.ProgressParams(token, JEither.forRight(location))
-          )
-        }
-      }
-      val resultCount = referenceResults.valuesIterator.map(_.size).sum
-      scribe.info(
-        s"references: found $resultCount reference results in $timer"
-      )
-      referenceResults.iterator.map { case (symbol, locations) =>
-        ReferencesResult(symbol, locations.toSeq)
-      }.toList
+  def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
+    val timer = new Timer(time)
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val queryRange = params.getPosition()
+    val requestDoc = cache.indexSingle(path)
+    val enclosingOccurrences =
+      this.enclosingOccurrences(requestDoc, queryRange)
+    scribe.info(
+      s"references: found ${enclosingOccurrences.length} occurrences"
+    )
+
+    // If all symbols are local, use compilers.references directly
+    val allLocal = enclosingOccurrences.forall(_.symbol.isLocal)
+
+    if (allLocal && requestDoc.language.isScala) {
+      scribe.info("references: all local, using compilers.references")
+      compilers
+        .references(params, EmptyCancelToken, noAdjustRange)
+    } else {
+      mbtReferences(timer, params, requestDoc, enclosingOccurrences)
     }
+  }
+
+  private def mbtReferences(
+      timer: Timer,
+      params: ReferenceParams,
+      requestDoc: s.TextDocument,
+      enclosingOccurrences: Seq[s.SymbolOccurrence],
+  ): Future[List[ReferencesResult]] = Future {
+    val token = params.getPartialResultToken()
+    val superMethods = for {
+      enclosing <- enclosingOccurrences
+      info <- requestDoc.symbols.find(_.symbol == enclosing.symbol).iterator
+      if info.kind.isMethod
+      canBeOverridden = info.displayName != "<init>" && !info.isFinal
+      selfSymbol =
+        if (canBeOverridden)
+          // Search for overrides of this method
+          Iterator.single(info.symbol)
+        else Iterator.empty
+      overridden <- selfSymbol ++ info.overriddenSymbols.iterator
+      if !ignoredSuperSymbols(overridden)
+    } yield overridden
+    val implementationMethods =
+      (findImplementations(
+        timer,
+        // Use maximum half of the timeout for finding implementations
+        timeout.div(2),
+        cache,
+        superMethods,
+      ) ++ superMethods).distinct
+    val toQuerySymbols =
+      if (implementationMethods.nonEmpty) implementationMethods
+      else enclosingOccurrences.map(_.symbol)
+    // Expand symbols to include alternatives like companion objects/classes,
+    // apply/copy params, constructor params, etc.
+    val scalaMatchingOccurrence = (for {
+      symbol <- toQuerySymbols.iterator
+      docAlternatives = SymbolAlternatives.referenceAlternatives(
+        symbol,
+        requestDoc,
+      )
+      alternative <- docAlternatives + symbol
+    } yield alternative -> symbol).toMap
+
+    val javaMatchingOccurrence = (for {
+      symbol <- toQuerySymbols.iterator
+      expanded = SymbolAlternatives.expand(Symbol(symbol))
+      alternative <- expanded
+    } yield alternative -> symbol).toMap
+
+    val enclosingGlobalOccurrences =
+      toQuerySymbols.filter(sym => sym.isGlobal)
+    val externalDocumentCandidates: Iterable[AbsolutePath] =
+      if (enclosingGlobalOccurrences.nonEmpty) {
+        mbt.possibleReferences(
+          MbtPossibleReferencesParams(references = toQuerySymbols)
+        )
+      } else {
+        Nil
+      }
+    scribe.info(
+      s"references: found ${externalDocumentCandidates.size} external document candidates in $timer"
+    )
+    val referenceResults = toQuerySymbols.iterator
+      .map(occ => occ -> Buffer.empty[l.Location])
+      .toMap
+    val externalDocumentDocs = for {
+      candidates <- externalDocumentCandidates.iterator.distinct.grouped(
+        groupSize
+      )
+      if !timer.hasElapsed(timeout)
+      docs = {
+        val docTimer = new Timer(time)
+        val result = cache.index(candidates).documents
+        scribe.info(
+          s"references: indexed ${candidates.length} candidates in $docTimer"
+        )
+        result
+      }
+      doc <- docs
+    } yield doc
+    for {
+      doc <- Iterator.single(requestDoc) ++ externalDocumentDocs
+      occ <- doc.occurrences
+      if occ.symbol.isGlobal || doc.eq(requestDoc)
+      range <- occ.range.toList
+      matchSymbol <-
+        if (doc.language.isScala) scalaMatchingOccurrence.get(occ.symbol)
+        else javaMatchingOccurrence.get(occ.symbol)
+      // Exclude definition occurrences for alternate symbols. For example, when
+      // doing find-refs on a class symbol, we want usages of the class
+      // constructor but not definitions of those constructors.
+      if occ.role.isReference || occ.symbol == matchSymbol
+      x <- referenceResults.get(matchSymbol)
+    } {
+      val location = range.toLocation(doc.uri)
+      if (token == null) {
+        x += location
+      } else {
+        languageClient.notifyProgress(
+          new l.ProgressParams(token, JEither.forRight(location))
+        )
+      }
+    }
+    val resultCount = referenceResults.valuesIterator.map(_.size).sum
+    scribe.info(
+      s"references: found $resultCount reference results in $timer"
+    )
+    referenceResults.iterator.map { case (symbol, locations) =>
+      ReferencesResult(symbol, locations.toSeq)
+    }.toList
+  }
 
   private def enclosingOccurrences(
       requestDoc: s.TextDocument,

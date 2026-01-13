@@ -75,6 +75,13 @@ object SemanticdbDefinition {
           dialect,
           collectIdentifiers = collectIdentifiers
         ) {
+          override def visitFuzzyReferenceOccurrence(
+              occ: SymbolOccurrence
+          ): Unit = {
+            if (collectIdentifiers) {
+              fn(SemanticdbDefinition(SymbolInformation(), occ, owner))
+            }
+          }
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,

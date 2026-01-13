@@ -1289,11 +1289,7 @@ abstract class MetalsLspService(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
-      if (
-        userConfig.referenceProvider.isMbt &&
-        // Remove this condition once we have Scala support for MbtReferenceProvider
-        params.getTextDocument().getUri().isJavaFilename
-      ) {
+      if (userConfig.referenceProvider.isMbt) {
         mbtReferenceProvider.references(params).map(getSortedLocations)
       } else {
         referencesProvider.references(params).map(getSortedLocations)

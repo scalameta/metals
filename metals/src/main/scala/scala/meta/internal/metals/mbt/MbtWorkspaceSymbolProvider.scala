@@ -456,6 +456,8 @@ class MbtWorkspaceSymbolProvider(
         } else {
           queries += s"${sym.displayName}."
           queries += s"${sym.displayName}:"
+          // Also search for method references - Java accesses Scala vals as methods
+          queries += s"${sym.displayName}()."
         }
       }
     }

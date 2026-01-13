@@ -19,7 +19,6 @@ import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
@@ -363,51 +362,11 @@ final class ReferenceProvider(
 
     definitionDoc match {
       case Some((defPath, definitionDoc)) =>
-        val name = symbol.desc.name.value
-        val alternatives = new SymbolAlternatives(symbol, name)
-
-        def candidates(check: SymbolInformation => Boolean) = for {
-          info <- definitionDoc.symbols
-          if check(info)
-        } yield info.symbol
-
-        val isCandidate =
-          if (defPath.isJava)
-            candidates { info =>
-              alternatives.isJavaConstructor(info)
-            }.toSet
-          else
-            candidates { info =>
-              alternatives.isVarSetter(info) ||
-              alternatives.isCompanionObject(info) ||
-              alternatives.isCompanionClass(info) ||
-              alternatives.isCopyOrApplyParam(info) ||
-              alternatives.isContructorParam(info)
-            }.toSet
-
-        val nonSyntheticSymbols = for {
-          occ <- definitionDoc.occurrences
-          if isCandidate(occ.symbol) || occ.symbol == symbol
-          if occ.role.isDefinition
-        } yield occ.symbol
-
-        def isSyntheticSymbol = !nonSyntheticSymbols.contains(symbol)
-
-        def additionalAlternativesForSynthetic = for {
-          info <- definitionDoc.symbols
-          if info.symbol != name
-          if {
-            alternatives.isCompanionClass(info) ||
-            alternatives.isFieldParam(info)
-          }
-        } yield info.symbol
-
-        if (defPath.isJava)
-          isCandidate
-        else if (isSyntheticSymbol)
-          isCandidate ++ additionalAlternativesForSynthetic
-        else
-          isCandidate
+        SymbolAlternatives.referenceAlternatives(
+          symbol,
+          definitionDoc,
+          isJava = defPath.isJava,
+        )
       case None => Set.empty
     }
   }
