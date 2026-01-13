@@ -130,7 +130,25 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
   )
 
   check(
-    "check-interpolates-properly",
+    "check-interpolates-string-properly",
+    """|object Main {
+       |  def f(): Unit = {
+       |    val x = "hi"
+       |    println(s"$<<x>>!")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(): Unit = {
+       |    println(s"${"hi"}!")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolates-expression-properly",
     """|object Main {
        |  def f(y: Int): Unit = {
        |    val x = 1 + y
@@ -145,6 +163,42 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
        |}""".stripMargin,
     fileName = "Main.scala",
     filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-no-unneeded-curly-braces",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y
+       |    println(s"$<<x>>$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"$y$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-dollar-sign-variable",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val `$x` = y + 1
+       |    println(s"${<<`$x`>>}$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("$x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y + 1}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("$x"),
   )
 
   checkNoAction(
