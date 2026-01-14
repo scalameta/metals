@@ -150,7 +150,7 @@ object Snapshot {
         }
       }
       .toSeq
-    if (snapshots.isEmpty) {
+    if (snapshots.isEmpty || !useSnapshot) {
       // Maven Central uses a different HTML format (<pre> instead of tables)
       // so we fetch directly from the version directory
       findReleaseDateFromVersionPage(url, docs.BuildInfo.latestReleaseVersion)
