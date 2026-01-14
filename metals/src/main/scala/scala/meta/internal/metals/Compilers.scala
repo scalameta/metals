@@ -805,10 +805,7 @@ class Compilers(
 
       result.asScala
         .map { edits =>
-          InlineEditsFixups.wrapInterpolationEdits(
-            pos.input.text,
-            adjust.adjustTextEdits(edits),
-          )
+          adjust.adjustTextEdits(edits)
         }
     }.getOrElse(Future.successful(Nil.asJava))
 
@@ -829,44 +826,6 @@ class Compilers(
         }
     }
   }.getOrElse(Future.successful(Nil.asJava))
-
-  private object InlineEditsFixups {
-    private def isSimpleIdentifier(s: String): Boolean = {
-      val t = s.trim
-      t.nonEmpty && (t.head.isLetter || t.head == '_') &&
-      t.tail.forall(ch => ch.isLetterOrDigit || ch == '_')
-    }
-
-    def wrapInterpolationEdits(
-        originalText: String,
-        edits: ju.List[TextEdit],
-    ): ju.List[TextEdit] = {
-      if (edits.isEmpty) edits
-      else {
-        val input = scala.meta.inputs.Input.String(originalText)
-        val out = new ju.ArrayList[TextEdit](edits.size())
-        edits.asScala.foreach { e =>
-          val newText = e.getNewText
-          val wrapped =
-            if (
-              newText != null &&
-              newText.nonEmpty &&
-              newText.head != '{' &&
-              !isSimpleIdentifier(newText) &&
-              e.getRange != null &&
-              e.getRange
-                .toMeta(input)
-                .exists(p =>
-                  p.start > 0 && originalText.charAt(p.start - 1) == '$'
-                )
-            ) new TextEdit(e.getRange, s"{${newText}}")
-            else e
-          out.add(wrapped)
-        }
-        out
-      }
-    }
-  }
 
   def references(
       params: ReferenceParams,
