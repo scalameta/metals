@@ -15,10 +15,12 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
+import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.noAdjustRange
@@ -41,6 +43,8 @@ class MbtReferenceProvider(
     time: Time,
     languageClient: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
+    timerProvider: TimerProvider,
+    statistics: StatisticsConfig,
 )(implicit ec: ExecutionContext) {
   private val cache = new TextDocumentCache()
 
@@ -105,11 +109,8 @@ class MbtReferenceProvider(
     var lastQueryRound = Set.empty[String]
     val result = mutable.ListBuffer.empty[l.Location]
     val isVisitedURI = mutable.Set.empty[String]
-    var visited = 0
 
     def visitDoc(doc: s.TextDocument): Boolean = {
-      visited += 1
-
       def overridesOrImplements(info: s.SymbolInformation): Boolean = {
         if (
           info.language.isScala
@@ -132,11 +133,13 @@ class MbtReferenceProvider(
         return false
       }
       isVisitedURI += doc.uri
+      // prebuild occurrences map to avoid iterating over the occurrences more than once
+      lazy val occurrencesForSymbol = doc.occurrences.groupBy(_.symbol)
       for {
         info <- doc.symbols.iterator
         if overridesOrImplements(info)
-        occ <- doc.occurrences.iterator
-        if occ.symbol == info.symbol && occ.role.isDefinition
+        occ <- occurrencesForSymbol(info.symbol).iterator
+        if occ.role.isDefinition
         range <- occ.range.toList
       } {
         if (info.kind.isMethod) {
@@ -159,13 +162,22 @@ class MbtReferenceProvider(
         if (sym.isMethod) isVisitedMethodName.contains(sym.displayName)
         else lastQueryRound.contains(s)
       }
-      val candidates = mbt
-        .possibleReferences(
-          MbtPossibleReferencesParams(implementations = toQuery)
-        )
-        .toSeq
-        .sortBy(c => -commonPrefixLength(path, c))
-      scribe.info(s"Found ${candidates.size} candidate files.")
+      val candidates = timerProvider.timedThunk(
+        "implementation: possibleReferences",
+        onlyIf = statistics.isReferences,
+        thresholdMillis = 500,
+      )(
+        mbt
+          .possibleReferences(
+            MbtPossibleReferencesParams(implementations = toQuery)
+          )
+          .iterator
+          .filterNot(_.filename.endsWith(".proto"))
+          .distinct
+          .toSeq
+          .sortBy(c => -commonPrefixLength(path, c))
+      )
+      scribe.info(s"Found ${candidates.size} candidate files for depth $depth.")
       lastQueryRound = Set.from(isOverridenSymbol)
       var didMakeProgress = false
       var processedInRound = 0
@@ -186,12 +198,7 @@ class MbtReferenceProvider(
       }
       if (timer.hasElapsed(timeout)) {
         scribe.warn(
-          s"Time out analyzing candidate files at $visited/${candidates.size}."
-        )
-        taskProgress.update(
-          processedInRound,
-          totalInRound,
-          Some("Time out analyzing candidate files"),
+          s"Time out analyzing candidate files at $processedInRound/${totalInRound}."
         )
       }
       if (didMakeProgress) {
@@ -292,13 +299,22 @@ class MbtReferenceProvider(
       toQuerySymbols.filter(sym => sym.isGlobal)
     val externalDocumentCandidates: Iterable[AbsolutePath] =
       if (enclosingGlobalOccurrences.nonEmpty) {
-        mbt.possibleReferences(
-          MbtPossibleReferencesParams(references = toQuerySymbols)
+        timerProvider.timedThunk(
+          "references: possibleReferences",
+          onlyIf = statistics.isReferences,
+          thresholdMillis = 500,
+        )(
+          mbt.possibleReferences(
+            MbtPossibleReferencesParams(references = toQuerySymbols)
+          )
         )
       } else {
         Nil
       }
-    val candidatesList = externalDocumentCandidates.iterator.distinct.toSeq
+    val candidatesList = externalDocumentCandidates.iterator
+      .filterNot(_.filename.endsWith(".proto"))
+      .distinct
+      .toSeq
     val totalCandidates = candidatesList.size
     scribe.info(
       s"references: found $totalCandidates external document candidates in $timer"

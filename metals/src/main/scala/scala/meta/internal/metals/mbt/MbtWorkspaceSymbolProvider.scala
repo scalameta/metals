@@ -480,6 +480,9 @@ class MbtWorkspaceSymbolProvider(
       doc <- documents.get(path).toList.iterator
       if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
     } {
+      if (doc.bloomFilter.isFull) {
+        scribe.warn(s"mbt-v2: bloom filter is full for ${path}")
+      }
       if (path.exists) {
         result.add(path)
       } else {
