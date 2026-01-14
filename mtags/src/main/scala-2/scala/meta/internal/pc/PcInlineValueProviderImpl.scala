@@ -58,6 +58,7 @@ final class PcInlineValueProviderImpl(
         rhsSourceString,
         RangeOffset(defPos.start, defPos.end),
         definitionNeedsBrackets(rhsSourceString),
+        definitionNeedsCurlyBraces(rhsSourceString),
         deleteDefinition
       )
 
@@ -153,7 +154,8 @@ final class PcInlineValueProviderImpl(
           Reference(
             ref.pos.toLsp,
             parentPos,
-            referenceNeedsBrackets(parentPos)
+            referenceNeedsBrackets(parentPos),
+            ref.pos.start > 0 && text(ref.pos.start - 1) == '$'
           )
         )
       } else Left(Errors.variablesAreShadowed(conflicts.mkString(", ")))
@@ -194,6 +196,8 @@ final class PcInlineValueProviderImpl(
       case _ => false
     }
   }
+
+  def definitionNeedsCurlyBraces(rhs: String): Boolean = !rhs.trim.parse[Term].toOption.exists(_.is[Term.Name])
 
   case class Occurence(tree: Tree, parent: Option[Tree], pos: Position) {
     def isDefn: Boolean =
