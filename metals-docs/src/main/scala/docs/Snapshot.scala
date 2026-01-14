@@ -32,7 +32,7 @@ object Snapshot {
       binaryVersion: String,
       retry: Int = 5,
   ): Snapshot = {
-    if (System.getenv("CI") == null) {
+    if (System.getenv("CI") != null) {
       try {
         // There is no way to query for snapshots currently
         if (useSnapshot) {
