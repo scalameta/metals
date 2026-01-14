@@ -197,7 +197,8 @@ final class PcInlineValueProviderImpl(
     }
   }
 
-  def definitionNeedsCurlyBraces(rhs: String): Boolean = !rhs.trim.parse[Term].toOption.exists(_.is[Term.Name])
+  def definitionNeedsCurlyBraces(rhs: String): Boolean =
+    !rhs.trim.parse[Term].toOption.exists(_.is[Term.Name])
 
   case class Occurence(tree: Tree, parent: Option[Tree], pos: Position) {
     def isDefn: Boolean =
