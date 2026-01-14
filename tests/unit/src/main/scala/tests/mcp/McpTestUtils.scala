@@ -17,7 +17,11 @@ trait McpTestUtils {
         UserConfiguration(startMcpServer = true).toString
       )
       port <- Future.successful(
-        McpConfig.readPort(server.workspace, "mcp-server", NoClient)
+        McpConfig.readPort(
+          server.server.folder,
+          server.server.getVisibleName,
+          NoClient,
+        )
       )
       _ = assert(port.isDefined, "MCP server port should be defined")
       client = new TestMcpClient(s"http://localhost:${port.get}", port.get)

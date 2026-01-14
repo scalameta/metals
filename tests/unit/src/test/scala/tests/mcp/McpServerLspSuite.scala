@@ -14,14 +14,6 @@ import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
-  // get a new random port that is not in use
-  val portToUse: Int = {
-    val socket = new java.net.ServerSocket(0)
-    val port = socket.getLocalPort()
-    socket.close()
-    port
-  }
-
   test("find-dep") {
     cleanWorkspace()
     for {
@@ -29,14 +21,6 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         s"""
            |/metals.json
            |{"a": {}}
-           |/.metals/mcp.json
-           |{
-           |  "servers": {
-           |    "mcp-server-metals": {
-           |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
-           |    }
-           |  }
-           |}
            |/a/src/main/scala/com/example/Hello.scala
            |package com.example
            |
@@ -45,7 +29,6 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       client <- startMcpServer()
-      _ = assertEquals(client.port, portToUse)
       result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),
@@ -467,11 +450,17 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "mcp-server", CursorEditor),
+      McpConfig.readPort(
+        server.server.folder,
+        server.server.getVisibleName,
+        CursorEditor,
+      ),
       None,
     )
     assert(
-      McpConfig.readPort(server.workspace, "mcp-server", NoClient).isDefined,
+      McpConfig
+        .readPort(server.server.folder, server.server.getVisibleName, NoClient)
+        .isDefined,
       "MCP server port should be defined in the default location",
     )
   }
