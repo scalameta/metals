@@ -11,7 +11,7 @@ object V {
 
   val scala3 = "3.3.7"
 
-  val scala3ForSBT2 = "3.7.2"
+  val scala3ForSBT2 = "3.7.4"
 
   val latestScala3Next = "3.8.0-RC6"
 
@@ -25,7 +25,7 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.0.17"
+  val bloop = "2.0.18"
 
   val bloopConfig = "2.3.3"
 
@@ -83,7 +83,7 @@ object V {
 
   val qdox = "2.2.0"
 
-  val sbt2Version = "2.0.0-RC6"
+  val sbt2Version = "2.0.0-RC8"
 
   val guava = "com.google.guava" % "guava" % "33.5.0-jre"
 
