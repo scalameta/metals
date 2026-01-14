@@ -184,6 +184,42 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
   )
 
   check(
+    "check-interpolation-no-extra-curly-braces",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y + 1
+       |    println(s"${<<x>>}$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y + 1}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-inlining-within-curly-exp",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y - 1
+       |    println(s"${y - <<x>>}")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y - (y - 1)}")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
     "check-interpolation-dollar-sign-variable",
     """|object Main {
        |  def f(y: Int): Unit = {
