@@ -187,20 +187,10 @@ final class DefinitionProvider(
         .iterator
       protoDoc <- mbt.document(workspace.resolve(source)).iterator
       sym = Symbol(result.symbol.stripSuffix("apply()."))
-      symSuffix = sym.value.stripPrefix(sym.enclosingPackage.value)
-      symSuffixes =
-        if (symSuffix.endsWith("."))
-          Set(
-            symSuffix,
-            symSuffix.stripSuffix(".") + "#", // Treat objects as classes
-            symSuffix.stripSuffix(".") + "().", // Treat fields as methods
-          )
-        else Set(symSuffix)
-      protoPackage = protoDoc.semanticdbPackages.headOption.getOrElse("")
+      symSuffix = symbolSuffixAfterPackage(sym)
       protoSym <- protoDoc.symbols.iterator
-      if symSuffixes.contains(
-        protoSym.getSymbol().stripPrefix(protoPackage)
-      )
+      protoSymSuffix = symbolSuffixAfterPackage(Symbol(protoSym.getSymbol()))
+      if symSuffix == protoSymSuffix
     } yield new Location(
       protoDoc.file.toURI.toString(),
       protoSym.getDefinitionRange().toLspRange,
@@ -216,6 +206,29 @@ final class DefinitionProvider(
         e,
       )
       result
+  }
+
+  /**
+   * Extracts the symbol suffix after the package (class/object/enum hierarchy).
+   * This allows comparing symbols across different packages (e.g., when ScalaPB
+   * remaps the proto package to a different Scala package).
+   *
+   * Names are lowercased to handle case differences like `oneof service` in proto
+   * becoming `Service` (capitalized) in generated Scala code.
+   *
+   * For example:
+   * - Scala: "com/example/api/messages/CpdrMessage.CpdrSetting.SyncState#"
+   *   → List("cpdrmessage", "cpdrsetting", "syncstate")
+   * - Proto: "example/messages/CpdrMessage#CpdrSetting#SyncState#"
+   *   → List("cpdrmessage", "cpdrsetting", "syncstate")
+   */
+  private def symbolSuffixAfterPackage(sym: Symbol): List[String] = {
+    val pkg = sym.enclosingPackage
+    def loop(s: Symbol, acc: List[String]): List[String] = {
+      if (s.isNone || s.isRootPackage || s.isEmptyPackage || s == pkg) acc
+      else loop(s.owner, s.displayName.toLowerCase :: acc)
+    }
+    loop(sym, Nil)
   }
 
   def definition(
