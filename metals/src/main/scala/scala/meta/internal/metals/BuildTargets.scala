@@ -331,7 +331,7 @@ final class BuildTargets private (
     )
     val params = new InverseSourcesParams(identifier)
     val connections =
-      data.fromIterators(_.idToConnection.values.toIterator).distinct
+      data.fromIterators(_.targetToConnectionId.values.toIterator).distinct
     val queries = connections.map { connection =>
       connection
         .buildTargetInverseSources(params)
@@ -672,9 +672,7 @@ final class BuildTargets private (
   def buildServerOf(
       id: BuildTargetIdentifier
   ): Option[BuildServerConnection] =
-    data.fromOptions(d =>
-      d.targetToConnectionId.get(id).flatMap(d.idToConnection.get)
-    )
+    data.fromOptions(d => d.targetToConnectionId.get(id))
 
   def addData(data: TargetData): Unit =
     dataLock.synchronized {
