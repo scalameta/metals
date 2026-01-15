@@ -6,7 +6,7 @@ import scala.meta.internal.metals.Configs._
 import scala.meta.internal.metals.UserConfiguration
 
 // Uncomment to run this test manually locally
-// @munit.IgnoreSuite
+@munit.IgnoreSuite
 class ManualSuite extends BaseManualSuite {
   val trino: String =
     Paths.get(System.getProperty("user.home"), "trino").toString()

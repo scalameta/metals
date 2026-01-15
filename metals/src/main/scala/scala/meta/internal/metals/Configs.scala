@@ -772,7 +772,7 @@ object Configs {
         case None =>
           val isPrunedEnabled = featureFlags
             .readBoolean(FeatureFlag.SCALA_SOURCEPATH_PRUNED)
-            .orElse(false)
+            .orElse(true)
           if (isPrunedEnabled) {
             scribe.debug(
               s"Overriding source path mode via Feature Flag to: PRUNED"

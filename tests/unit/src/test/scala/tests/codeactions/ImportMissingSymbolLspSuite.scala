@@ -125,8 +125,8 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     """|package a
        |
-       |import scala.concurrent.Future
        |import java.time.Instant
+       |import scala.concurrent.Future
        |import scala.collection.mutable.ListBuffer
        |
        |object A {
@@ -252,8 +252,8 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     """|package p {
        |
-       |  import scala.collection.mutable
        |  import java.time.Instant
+       |  import scala.collection.mutable
        |
        |  class C {
        |    def f = mutable.Map.empty[Int, Int]
@@ -311,7 +311,7 @@ class ImportMissingSymbolLspSuite
         |}
         |package example.b {
         |
-        |  import _root_.example.a.A
+        |  import example.a.A
         |  object B {
         |    val bar = A.foo
         |  }
