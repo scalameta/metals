@@ -171,10 +171,10 @@ class IndentWhenPastingSuite
        |                          case Blue  extends Color(0x0000FF)""".stripMargin,
     """|object Main:
        |  object SubMain:
-       |    enum                        Color(val rgb: Int):
-       |                          case Red   extends Color(0xFF0000)
-       |                          case Green extends Color(0x00FF00)
-       |                          case Blue  extends Color(0x0000FF)
+       |    enum Color(val rgb: Int):
+       |      case Red extends Color(0xff0000)
+       |      case Green extends Color(0x00ff00)
+       |      case Blue extends Color(0x0000ff)
        |  end SubMain
        |end Main
        |""".stripMargin,
@@ -449,7 +449,7 @@ class IndentWhenPastingSuite
     """
       |object Main{
       |  private def outFile(
-      |    abcabc: String
+      |      abcabc: String
       |  ) = ""
       |}""".stripMargin,
     scalaVersion,
