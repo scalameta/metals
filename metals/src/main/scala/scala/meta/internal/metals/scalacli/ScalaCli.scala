@@ -124,8 +124,8 @@ class ScalaCli(
           if (state.compareAndSet(st, st.copy(importedBuild = build0))) {
             val targets = build0.workspaceBuildTargets.getTargets.asScala
             val connections =
-              targets.iterator.map(_.getId).map((_, st.connection.name)).toList
-            buildTargetsData.resetConnections(List(st.connection), connections)
+              targets.iterator.map(_.getId).map((_, st.connection)).toList
+            buildTargetsData.resetConnections(connections)
 
             for {
               _ <- indexWorkspace()

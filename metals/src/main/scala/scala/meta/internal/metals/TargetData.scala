@@ -71,10 +71,8 @@ final class TargetData(val isAmmonite: Boolean = false) {
   val sourceItemFiles: util.Set[AbsolutePath] =
     ConcurrentHashSet.empty[AbsolutePath]
 
-  val targetToConnectionId: MMap[BuildTargetIdentifier, String] =
-    new mutable.HashMap[BuildTargetIdentifier, String]
-  val idToConnection: MMap[String, BuildServerConnection] =
-    new mutable.HashMap[String, BuildServerConnection]
+  val targetToConnectionId: MMap[BuildTargetIdentifier, BuildServerConnection] =
+    new mutable.HashMap[BuildTargetIdentifier, BuildServerConnection]
 
   def sourceBuildTargets(
       sourceItem: AbsolutePath
@@ -181,7 +179,6 @@ final class TargetData(val isAmmonite: Boolean = false) {
   )(implicit ec: ExecutionContext): Option[Future[List[String]]] = {
     targetToConnectionId
       .get(id)
-      .flatMap(idToConnection.get)
       .zip(jvmTarget(id))
       .map { case (bspConnection, jvmTarget) =>
         val classpath =
@@ -435,13 +432,10 @@ final class TargetData(val isAmmonite: Boolean = false) {
   }
 
   def resetConnections(
-      connections: List[BuildServerConnection],
-      idToConn: List[(BuildTargetIdentifier, String)],
+      idToConn: List[(BuildTargetIdentifier, BuildServerConnection)]
   ): Unit = {
     targetToConnectionId.clear()
-    idToConnection.clear()
     idToConn.foreach { case (id, conn) => targetToConnectionId.put(id, conn) }
-    connections.foreach { conn => idToConnection.put(conn.name, conn) }
   }
 
   def onCreate(source: AbsolutePath): Unit = {
