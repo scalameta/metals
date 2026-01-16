@@ -193,15 +193,6 @@ def lintingOptions(scalaVersion: String) = {
   )
 }
 
-val sharedJavacOptions = List(
-  Compile / javacOptions ++= {
-    if (sys.props("java.version").startsWith("17"))
-      Nil
-    else
-      Seq("--release", "17")
-  }
-)
-
 val sharedJavaOptions = Seq(
   "-Djol.magicFieldOffset=true", "-Djol.tryWithSudo=true",
   "-Djdk.attach.allowAttachSelf", "--add-opens=java.base/java.nio=ALL-UNNAMED",
@@ -244,7 +235,7 @@ val sharedScalacOptions = List(
   }
 )
 
-val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
+val sharedSettings = sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
