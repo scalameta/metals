@@ -48,8 +48,9 @@ final class AutoImportsProvider(
         isSeen += id
         symbols += sym
         true
+      } else {
+        false
       }
-      false
     }
 
     compiler.searchOutline(visit, name)
@@ -57,6 +58,45 @@ final class AutoImportsProvider(
     val visitor =
       new CompilerSearchVisitor(context, visit)
     search.search(name, buildTargetIdentifier, ju.Optional.empty(), visitor)
+    // Needed to discover members (methods) of static objects, e.g. Await.result.
+    search.searchMethods(name, buildTargetIdentifier, visitor)
+
+    def isStaticallyAccessible(sym: Symbol): Boolean =
+      sym.owner.ownerChain.forall { s =>
+        s.isPackageClass ||
+        s.isPackageObjectClass ||
+        s.isModule ||
+        s.isModuleClass ||
+        s.isRoot ||
+        s.isEmptyPackageClass
+      }
+
+    def expandStaticOwnersFromFoundSymbols(foundSymbols: List[Symbol]): Unit = {
+      val queue = mutable.Queue.empty[Symbol]
+      queue ++= foundSymbols
+
+      def enqueueIfNew(sym: Symbol): Unit =
+        if (sym != null && sym != NoSymbol && visit(sym)) queue.enqueue(sym)
+
+      while (queue.nonEmpty) {
+        val sym = queue.dequeue()
+        // Search may return the owner (package/object) for a member name.
+        // Expand packages into modules, and modules into matching members.
+        if (sym.isPackageClass || sym.isPackageObjectClass) {
+          sym.info.members.foreach { member =>
+            if (member.isModuleOrModuleClass && isStaticallyAccessible(member))
+              enqueueIfNew(member)
+          }
+        } else if (sym.isModuleOrModuleClass && isStaticallyAccessible(sym)) {
+          val moduleClass = if (sym.isModule) sym.moduleClass else sym
+          moduleClass.info.members.foreach { member =>
+            if (member.isPublic && member.name.decoded == name)
+              enqueueIfNew(member)
+          }
+        }
+      }
+    }
+    expandStaticOwnersFromFoundSymbols(symbols.result())
 
     def isInImportTree: Boolean = lastVisitedParentTrees match {
       case (_: Import) :: _ => true
@@ -104,12 +144,17 @@ final class AutoImportsProvider(
             // existing symbols in scope, so we just do nothing
             Nil
           case Some(value) =>
-            val (short, edits) = ShortenedNames.synthesize(
-              TypeRef(ThisType(sym.owner), sym, Nil),
-              pos,
-              context,
-              value
-            )
+            val (short, edits) =
+              if (sym.isMethod) {
+                ShortenedNames.synthesize(sym, pos, context, value)
+              } else {
+                ShortenedNames.synthesize(
+                  TypeRef(ThisType(sym.owner), sym, Nil),
+                  pos,
+                  context,
+                  value
+                )
+              }
             val nameEdit = new l.TextEdit(namePos, short)
 
             if (short != name && shouldApplyNameEdit) {

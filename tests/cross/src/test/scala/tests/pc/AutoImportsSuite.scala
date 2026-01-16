@@ -42,7 +42,7 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |
        |
-       |object test2 { 
+       |object test2 {
        |  <<importMe>>()
        |}
        |""".stripMargin,
@@ -503,5 +503,19 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
           |object Main{ val obj = ABC }
           |""".stripMargin
     )
+
+  // see: https://github.com/scalameta/metals/issues/8061
+  checkEdit(
+    "static-object-member",
+    """|object A {
+       |  <<Breaks>>.break()
+       |}
+       |""".stripMargin,
+    """|import scala.util.control.Breaks
+       |object A {
+       |  Breaks.break()
+       |}
+       |""".stripMargin
+  )
 
 }
