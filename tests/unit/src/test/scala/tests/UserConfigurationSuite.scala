@@ -349,6 +349,7 @@ class UserConfigurationSuite extends BaseSuite {
       defaultBspToBuildTool = true,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
       scalaImportsPlacement = ScalaImportsPlacement.SMART,
+      promptBuildImport = true,
     )
 
     val json = nonDefault.toString()
@@ -443,7 +444,8 @@ class UserConfigurationSuite extends BaseSuite {
   "additionalPcChecks": [
     "refchecks"
   ],
-  "scalaImportsPlacement": "smart"
+  "scalaImportsPlacement": "smart",
+  "promptBuildImport": true
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)

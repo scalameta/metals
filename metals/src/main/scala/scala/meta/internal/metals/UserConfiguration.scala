@@ -110,6 +110,7 @@ case class UserConfiguration(
       AdditionalPcChecksConfig.default,
     scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacementConfig.default,
+    promptBuildImport: Boolean = false,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -302,6 +303,12 @@ case class UserConfiguration(
           (
             "scalaImportsPlacement",
             scalaImportsPlacement.name().toLowerCase().replace("_", "-"),
+          )
+        ),
+        Some(
+          (
+            "promptBuildImport",
+            promptBuildImport,
           )
         ),
       ).flatten
@@ -691,6 +698,16 @@ object UserConfiguration {
            |Valid values are "refchecks". When "refchecks" is included, the
            |presentation compiler will run the RefChecks phase for additional
            |type checking diagnostics.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "prompt-build-import",
+        "false",
+        "true",
+        "Prompt Build Import",
+        """|If enabled, Metals will prompt you to import or connect to a build server
+           |when a new workspace is detected. When disabled, you can still manually
+           |trigger import via the "Import build" command.
            |""".stripMargin,
       ),
     )
@@ -1121,6 +1138,8 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(ScalaImportsPlacementConfig.default)
+    val promptBuildImport =
+      getBooleanKey("prompt-build-import").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -1177,6 +1196,7 @@ object UserConfiguration {
           referenceProvider,
           additionalPcChecks,
           scalaImportsPlacement,
+          promptBuildImport,
         )
       )
     } else {

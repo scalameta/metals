@@ -239,7 +239,7 @@ class ConnectionProvider(
       buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
       connect(GenerateBspConfigAndConnect(buildTool), progress)
-    } else if (notification.isDismissed) {
+    } else if (notification.isDismissed || !userConfig.promptBuildImport) {
       Future.successful(BuildChange.None)
     } else {
       scribe.debug("Awaiting user response...")
