@@ -14,6 +14,13 @@ import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
+  val portToUse: Int = {
+    val socket = new java.net.ServerSocket(0)
+    val port = socket.getLocalPort()
+    socket.close()
+    port
+  }
+
   test("find-dep") {
     cleanWorkspace()
     for {
@@ -21,6 +28,14 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         s"""
            |/metals.json
            |{"a": {}}
+           |/.metals/mcp.json
+           |{
+           |  "servers": {
+           |    "root-metals": {
+           |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
+           |    }
+           |  }
+           |}
            |/a/src/main/scala/com/example/Hello.scala
            |package com.example
            |
@@ -29,6 +44,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       client <- startMcpServer()
+      _ = assertEquals(client.port, portToUse)
       result <- client.findDep("org.scala-lan")
       _ = assertNoDiff(
         result.mkString("\n"),

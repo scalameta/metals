@@ -15,6 +15,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
@@ -111,7 +112,7 @@ class MetalsMcpServer(
     val serverName = s"$projectName-metals"
     val asyncServer = McpServer
       .async(servlet)
-      .serverInfo(serverName, "0.1.0")
+      .serverInfo(serverName, BuildInfo.metalsVersion)
       .capabilities(capabilities)
       .build()
 
