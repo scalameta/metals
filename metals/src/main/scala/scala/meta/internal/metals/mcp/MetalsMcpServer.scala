@@ -15,6 +15,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
@@ -106,9 +107,12 @@ class MetalsMcpServer(
       .build();
 
     // Create server with configuration
+    // Include project name in server info to help LLM distinguish between servers
+    // when multiple projects are open in the same workspace
+    val serverName = s"$projectName-metals"
     val asyncServer = McpServer
       .async(servlet)
-      .serverInfo("scala-mcp-server", "0.1.0")
+      .serverInfo(serverName, BuildInfo.metalsVersion)
       .capabilities(capabilities)
       .build()
 
@@ -137,8 +141,8 @@ class MetalsMcpServer(
       LoggingMessageNotification
         .builder()
         .level(LoggingLevel.INFO)
-        .logger("scala-mcp-server")
-        .data("Server initialized")
+        .logger(serverName)
+        .data(s"Server initialized for project: $projectName")
         .build()
     )
 

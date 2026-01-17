@@ -14,7 +14,6 @@ import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
-  // get a new random port that is not in use
   val portToUse: Int = {
     val socket = new java.net.ServerSocket(0)
     val port = socket.getLocalPort()
@@ -467,11 +466,17 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "root", CursorEditor),
+      McpConfig.readPort(
+        server.server.folder,
+        server.server.getVisibleName,
+        CursorEditor,
+      ),
       None,
     )
     assert(
-      McpConfig.readPort(server.workspace, "root", NoClient).isDefined,
+      McpConfig
+        .readPort(server.server.folder, server.server.getVisibleName, NoClient)
+        .isDefined,
       "MCP server port should be defined in the default location",
     )
   }

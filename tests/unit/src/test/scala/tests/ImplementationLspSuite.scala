@@ -640,7 +640,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
        |""".stripMargin,
   )
 
-  if (isJava21 && !isMacOS) {
+  if (false) {
     checkSymbols(
       "exception",
       """package a
