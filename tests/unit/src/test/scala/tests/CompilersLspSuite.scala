@@ -63,4 +63,41 @@ class CompilersLspSuite extends BaseCompletionLspSuite("compilers") {
       )
     } yield ()
   }
+
+  test("cache-eviction") {
+    cleanWorkspace()
+    val numTargets = 35
+    val targets = (1 to numTargets).map(i => s"p$i").toList
+    val metalsJson =
+      targets.map(t => s""""$t": {}""").mkString("{\n", ",\n", "\n}")
+    val fileStruct = targets
+      .map { t =>
+        s"""|/$t/src/main/scala/$t/Main.scala
+            |package $t
+            |object Main {
+            |  val x = 42
+            |}""".stripMargin
+      }
+      .mkString("\n")
+
+    val layout = s"""|/metals.json
+                     |$metalsJson
+                     |$fileStruct
+                     |""".stripMargin
+
+    for {
+      _ <- initialize(layout)
+      _ <- Future.sequence(targets.map { t =>
+        server.didOpen(s"$t/src/main/scala/$t/Main.scala")
+      })
+      _ <- server.server.compilers.load(
+        targets.map(t => server.toPath(s"$t/src/main/scala/$t/Main.scala"))
+      )
+
+      count = server.server.loadedPresentationCompilerCount()
+      _ = {
+        assert(count <= 32, s"Expected count <= 32, got $count")
+      }
+    } yield ()
+  }
 }

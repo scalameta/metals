@@ -3,7 +3,6 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
@@ -43,6 +42,9 @@ import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.RemovalListener
+import com.google.common.cache.RemovalNotification
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -115,18 +117,49 @@ class Compilers(
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
 
+  private val presentationCompilerCache = CacheBuilder
+    .newBuilder()
+    .maximumSize(32)
+    .removalListener(
+      new RemovalListener[PresentationCompilerKey, MtagsPresentationCompiler] {
+        def onRemoval(
+            notification: RemovalNotification[
+              PresentationCompilerKey,
+              MtagsPresentationCompiler,
+            ]
+        ): Unit = {
+          notification.getValue.shutdown()
+        }
+      }
+    )
+    .build[PresentationCompilerKey, MtagsPresentationCompiler]()
+
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
   val jcache: ju.Map[PresentationCompilerKey, MtagsPresentationCompiler] =
-    Collections.synchronizedMap(
-      new java.util.HashMap[PresentationCompilerKey, MtagsPresentationCompiler]
+    presentationCompilerCache.asMap()
+
+  private val presentationCompilerWorksheetsCache = CacheBuilder
+    .newBuilder()
+    .maximumSize(32)
+    .removalListener(
+      new RemovalListener[AbsolutePath, MtagsPresentationCompiler] {
+        def onRemoval(
+            notification: RemovalNotification[
+              AbsolutePath,
+              MtagsPresentationCompiler,
+            ]
+        ): Unit = {
+          notification.getValue.shutdown()
+        }
+      }
     )
+    .build[AbsolutePath, MtagsPresentationCompiler]()
+
   private val jworksheetsCache
       : ju.Map[AbsolutePath, MtagsPresentationCompiler] =
-    Collections.synchronizedMap(
-      new java.util.HashMap[AbsolutePath, MtagsPresentationCompiler]
-    )
+    presentationCompilerWorksheetsCache.asMap()
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
@@ -155,7 +188,6 @@ class Compilers(
               if (presentationCompiler.scalaVersion() == scalaVersion) {
                 lazyPc
               } else {
-                presentationCompiler.shutdown()
                 StandaloneCompiler(
                   scalaVersion,
                   search,
@@ -195,10 +227,8 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
-    Cancelable.cancelEach(cache.values)(_.shutdown())
-    Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
-    cache.clear()
-    worksheetsCache.clear()
+    presentationCompilerCache.invalidateAll()
+    presentationCompilerWorksheetsCache.invalidateAll()
     worksheetsDigests.clear()
     outlineFilesProvider.clear()
   }
@@ -465,7 +495,7 @@ class Compilers(
       params: SemanticTokensParams,
       token: CancelToken,
   ): Future[SemanticTokens] = {
-    val emptyTokens = Collections.emptyList[Integer]();
+    val emptyTokens = ju.Collections.emptyList[Integer]();
     if (!userConfig().enableSemanticHighlighting) {
       Future { new SemanticTokens(emptyTokens) }
     } else {
