@@ -541,6 +541,31 @@ lazy val `mtags-java` = project
   .configure(JavaPcSettings.settings(sharedSettings))
   .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
 
+lazy val `metals-extract` = project
+  .in(file("metals-extract"))
+  .settings(
+    sharedSettings,
+    moduleName := "metals-extract",
+    Compile / run / fork := true,
+    Compile / mainClass := Some("scala.meta.metals.extract.MbtExtract"),
+    libraryDependencies ++= List(
+      // Maven Artifact Resolver (Eclipse Aether) for Maven dependency extraction
+      "org.apache.maven.resolver" % "maven-resolver-api" % "1.9.22",
+      "org.apache.maven.resolver" % "maven-resolver-impl" % "1.9.22",
+      "org.apache.maven.resolver" % "maven-resolver-connector-basic" % "1.9.22",
+      "org.apache.maven.resolver" % "maven-resolver-transport-file" % "1.9.22",
+      "org.apache.maven.resolver" % "maven-resolver-transport-http" % "1.9.22",
+      "org.apache.maven" % "maven-resolver-provider" % "3.9.9",
+      "org.apache.maven" % "maven-model" % "3.9.9",
+      // Gradle Tooling API for Gradle dependency extraction
+      "org.gradle" % "gradle-tooling-api" % "8.5",
+      // JSON parsing for Bazel maven_install.json
+      "com.google.code.gson" % "gson" % "2.11.0",
+    ),
+    // Gradle Tooling API requires the Gradle repository
+    resolvers += "Gradle Releases" at "https://repo.gradle.org/gradle/libs-releases/",
+  )
+
 lazy val metals = project
   .settings(
     sharedSettings,
