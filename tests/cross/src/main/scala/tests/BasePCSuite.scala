@@ -45,15 +45,15 @@ abstract class BasePCSuite extends BaseSuite with PCSuite {
 
   val executorService: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
-  val scalaVersion: String = BuildInfoVersions.scalaVersion
+  def scalaVersion: String = BuildInfoVersions.scalaVersion
 
-  val isNightly: Boolean =
+  lazy val isNightly: Boolean =
     scalaVersion.contains("-bin-") || scalaVersion.contains("NIGHTLY")
 
   val completionItemPriority: CompletionItemPriority = (_: String) => 0
 
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("metals"))
-  val dialect: Dialect =
+  lazy val dialect: Dialect =
     if (scalaVersion.startsWith("3.")) dialects.Scala3 else dialects.Scala213
 
   protected lazy val presentationCompiler: PresentationCompiler = {

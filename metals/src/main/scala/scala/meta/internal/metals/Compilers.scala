@@ -1173,6 +1173,18 @@ class Compilers(
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
       ).asScala
+        .map { help =>
+          if (ScalaVersions.isScala3Version(pc.scalaVersion())) {
+            help.getSignatures.asScala.foreach { signature =>
+              val label = signature.getLabel
+              if (label.contains("[[") && label.contains("]]")) {
+                val newLabel = label.replace("[[", "[").replace("]]", "]")
+                signature.setLabel(newLabel)
+              }
+            }
+          }
+          help
+        }
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def signatureHelp(
@@ -1181,7 +1193,18 @@ class Compilers(
   ): Future[SignatureHelp] =
     loadCompiler(id)
       .map { pc =>
-        pc.signatureHelp(offsetParams).asScala
+        pc.signatureHelp(offsetParams).asScala.map { help =>
+          if (ScalaVersions.isScala3Version(pc.scalaVersion())) {
+            help.getSignatures.asScala.foreach { signature =>
+              val label = signature.getLabel
+              if (label.contains("[[") && label.contains("]]")) {
+                val newLabel = label.replace("[[", "[").replace("]]", "]")
+                signature.setLabel(newLabel)
+              }
+            }
+          }
+          help
+        }
       }
       .getOrElse(Future.successful(new SignatureHelp()))
 
