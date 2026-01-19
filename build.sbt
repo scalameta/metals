@@ -462,7 +462,7 @@ lazy val metals = project
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % V.modelContextProtocol,
       "io.modelcontextprotocol.sdk" % "mcp-json-jackson2" % V.modelContextProtocol,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.1",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.21.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     buildInfoPackage := "scala.meta.internal.metals",
