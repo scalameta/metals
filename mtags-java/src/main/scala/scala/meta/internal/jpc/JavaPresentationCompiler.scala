@@ -4,6 +4,7 @@ import java.lang
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
@@ -268,8 +269,10 @@ case class JavaPresentationCompiler(
   }
 
   override def batchSemanticdbTextDocuments(
-      params: util.List[VirtualFileParams]
+      params: util.List[VirtualFileParams],
+      timeout: Duration
   ): CompletableFuture[Array[Byte]] = {
+    // Note: timeout parameter is ignored in the Java PC implementation
     if (params.isEmpty()) {
       return CompletableFuture.completedFuture(Array.emptyByteArray)
     } else {

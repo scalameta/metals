@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
@@ -1786,6 +1787,7 @@ class Compilers(
   def batchSemanticdbTextDocuments(
       sources: Seq[AbsolutePath],
       cancelToken: CancelToken,
+      timeout: Duration,
   ): Future[s.TextDocuments] = {
     val futures = for {
       (pc, paths) <- sources
@@ -1799,8 +1801,9 @@ class Compilers(
           token = cancelToken,
         ): VirtualFileParams
       }
-      pc.batchSemanticdbTextDocuments(params.asJava).asScala.map { bytes =>
-        s.TextDocuments.parseFrom(bytes).documents
+      pc.batchSemanticdbTextDocuments(params.asJava, timeout).asScala.map {
+        bytes =>
+          s.TextDocuments.parseFrom(bytes).documents
       }
     }
     Future

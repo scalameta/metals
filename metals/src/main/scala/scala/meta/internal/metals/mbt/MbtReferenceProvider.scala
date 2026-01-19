@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import java.time.Duration
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -457,7 +459,12 @@ class MbtReferenceProvider(
       } else {
         val result = Await
           .result(
-            compilers.batchSemanticdbTextDocuments(toIndex, EmptyCancelToken),
+            compilers.batchSemanticdbTextDocuments(
+              toIndex,
+              EmptyCancelToken,
+              // intentionally smaller than the default PC timeout of 20s
+              Duration.ofSeconds(15),
+            ),
             timeout,
           )
           .documents

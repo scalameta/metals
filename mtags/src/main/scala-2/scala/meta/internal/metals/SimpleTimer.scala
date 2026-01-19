@@ -20,7 +20,7 @@ object SimpleTimer {
       onlyIf && (thresholdMillis == 0 ||
         timer.elapsed(TimeUnit.MILLISECONDS) > thresholdMillis)
     ) {
-      logger.debug(s"time: $didWhat in $timer")
+      logger.info(s"time: $didWhat in $timer")
     }
 
     result

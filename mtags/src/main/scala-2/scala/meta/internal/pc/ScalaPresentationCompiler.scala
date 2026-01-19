@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.time.Duration
 import java.util
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
@@ -12,6 +13,7 @@ import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
 import scala.collection.Seq
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
 import scala.reflect.io.VirtualDirectory
@@ -51,6 +53,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
+import com.google.common.base.Stopwatch
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
@@ -586,14 +589,27 @@ case class ScalaPresentationCompiler(
     }(params.file.toQueryContext)
   }
 
+  /**
+   * Batch the semanticdb text documents for the given parameters. This method
+   * may return partial results if the timeout is reached.
+   *
+   * The default timeout is chosen to be smaller than the default PC timeout of 20s,
+   * which is set as wall-clock time at the level of the compiler job queue.
+   *
+   * @param params the list of virtual file parameters
+   * @param timeout the timeout after which partial results may be returned
+   * @return the serialized TextDocuments protobuf
+   */
   override def batchSemanticdbTextDocuments(
-      params: ju.List[VirtualFileParams]
+      params: ju.List[VirtualFileParams],
+      timeout: Duration
   ): CompletableFuture[Array[Byte]] = {
     if (params.isEmpty()) {
       CompletableFuture.completedFuture(Array.emptyByteArray)
     } else {
       // use the first parameter for query context and cancel token
       val param = params.get(0)
+
       compilerAccess.withInterruptableCompiler(
         Array.emptyByteArray,
         param.token()
@@ -603,19 +619,41 @@ case class ScalaPresentationCompiler(
           config.semanticdbCompilerOptions().asScala.toList
         )
 
-        val docs = for (param <- params.asScala) yield {
-          // we overwrite the URI because the provider relativizes the URI to the workspace path
-          try {
-            provider
-              .textDocument(param.uri(), param.text())
-              .withUri(param.uri().toString())
-          } catch {
-            case NonFatal(e) =>
-              logger.error(s"error getting text document for ${param.uri()}", e)
-              s.TextDocument.defaultInstance.withUri(param.uri().toString())
+        val timer = Stopwatch.createStarted()
+        def hasElapsed: Boolean = timer.elapsed().compareTo(timeout) >= 0
+        val docsBuffer = mutable.ListBuffer.empty[s.TextDocument]
+        var timedOut = false
+
+        val paramsIterator = params.asScala.iterator
+        while (paramsIterator.hasNext && !timedOut) {
+          // Check if timeout has been reached before processing next document
+          if (hasElapsed) {
+            timedOut = true
+            logger.info(
+              s"batchSemanticdbTextDocuments: timeout reached after $timer, " +
+                s"returning partial results (${docsBuffer.size}/${params.size()} documents)"
+            )
+          } else {
+            val fileParam = paramsIterator.next()
+            // we overwrite the URI because the provider relativizes the URI to the workspace path
+            try {
+              docsBuffer += provider
+                .textDocument(fileParam.uri(), fileParam.text())
+                .withUri(fileParam.uri().toString())
+            } catch {
+              case NonFatal(e) =>
+                logger.error(
+                  s"error getting text document for ${fileParam.uri()}",
+                  e
+                )
+                docsBuffer += s.TextDocument.defaultInstance.withUri(
+                  fileParam.uri().toString()
+                )
+            }
           }
         }
-        s.TextDocuments(docs.toSeq).toByteArray
+
+        s.TextDocuments(docsBuffer.toSeq).toByteArray
       }(param.toQueryContext)
     }
   }

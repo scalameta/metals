@@ -2,6 +2,7 @@ package scala.meta.pc;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -192,7 +193,15 @@ public abstract class PresentationCompiler {
    */
   public abstract CompletableFuture<byte[]> semanticdbTextDocument(URI filename, String code);
 
-  public CompletableFuture<byte[]> batchSemanticdbTextDocuments(List<VirtualFileParams> params) {
+  /**
+   * Batch the semanticdb text documents for the given parameters. This method may return partial
+   * results if the timeout is reached.
+   *
+   * @param params the list of virtual file parameters
+   * @param timeout the timeout after which partial results may be returned
+   */
+  public CompletableFuture<byte[]> batchSemanticdbTextDocuments(
+      List<VirtualFileParams> params, Duration timeout) {
     return CompletableFuture.completedFuture(new byte[0]);
   }
 

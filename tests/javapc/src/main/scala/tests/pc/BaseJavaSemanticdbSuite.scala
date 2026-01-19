@@ -1,6 +1,7 @@
 package tests.pc
 
 import java.net.URI
+import java.time.Duration
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.jsemanticdb.Semanticdb
@@ -24,7 +25,7 @@ class BaseJavaSemanticdbSuite extends BaseJavaPCSuite {
   ): List[Semanticdb.TextDocument] = {
     val bytes =
       presentationCompiler
-        .batchSemanticdbTextDocuments(params.asJava)
+        .batchSemanticdbTextDocuments(params.asJava, Duration.ofSeconds(15))
         .get()
     Semanticdb.TextDocuments
       .parseFrom(bytes)
