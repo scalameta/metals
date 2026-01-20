@@ -21,9 +21,10 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val zip = AbsolutePath(dir.resolve(name))
     FileIO.withJarFileSystem(zip, create = true, close = true) { root =>
       FileLayout.fromString(
-        """|/foo.scala
-           |case class Hello(i: Int) extends AnyVal {
-           |}""".stripMargin,
+        s"""|/foo.scala
+            |// $name
+            |case class Hello(i: Int) extends AnyVal {
+            |}""".stripMargin,
         root,
       )
     }
