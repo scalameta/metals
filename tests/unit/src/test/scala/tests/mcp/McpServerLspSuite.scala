@@ -14,6 +14,7 @@ import tests.BaseLspSuite
 
 class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
 
+  // get a new random port that is not in use
   val portToUse: Int = {
     val socket = new java.net.ServerSocket(0)
     val port = socket.getLocalPort()
