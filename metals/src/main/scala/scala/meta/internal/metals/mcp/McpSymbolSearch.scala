@@ -20,6 +20,7 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.SymbolKind
 
@@ -71,10 +72,19 @@ class McpSymbolSearch(
       matches,
     )
 
+    // Smart fallback: if no path provided, use first available build target
+    // Exclude build meta-targets (e.g., root-build) as they don't have project dependencies
     val buildTarget =
-      path.flatMap(buildTargets.sourceBuildTargets).flatMap(_.headOption)
+      path
+        .flatMap(buildTargets.sourceBuildTargets)
+        .flatMap(_.headOption)
+        .orElse {
+          buildTargets.allBuildTargetIds
+            .filterNot(McpQueryEngine.isBuildMetaTarget(buildTargets, _))
+            .headOption
+        }
 
-    // use focused document build target
+    // use focused document build target (or fallback)
     workspaceSearchProvider.search(
       wsQuery,
       visitor,
