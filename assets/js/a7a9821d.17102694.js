@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunk=self.webpackChunk||[]).push([["8229"],{82077:function(e){e.exports=JSON.parse('{"metadata":{"permalink":"/metals/blog/page/17","page":17,"postsPerPage":1,"totalPages":80,"totalCount":80,"previousPage":"/metals/blog/page/16","nextPage":"/metals/blog/page/18","blogDescription":"Blog","blogTitle":"Blog"}}')}}]);
