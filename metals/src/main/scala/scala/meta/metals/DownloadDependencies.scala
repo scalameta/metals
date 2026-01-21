@@ -16,6 +16,7 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.testing.TestInternals
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.mtags.CoursierComplete
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.debugadapter.ScalaVersion
@@ -254,6 +255,7 @@ object DownloadDependencies {
 
     (allSupportedScala3Versions ++ BuildInfo.supportedScala2Versions)
       .filter(filterVersions)
+      .filter(scalaVersion => !SemVer.isLaterVersion("3.7.4", scalaVersion))
       .flatMap { scalaVersion =>
         val noExpressionCompiler = Seq("3.6.0", "2.11.12")
         val expressionCompilerJars =

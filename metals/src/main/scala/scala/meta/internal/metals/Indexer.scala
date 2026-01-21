@@ -222,7 +222,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         .foreach(focusedDocumentBuildTarget.set)
     }
 
-    val targets = buildTargets.allBuildTargetIds
+    val targets = buildTargets.activeBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>

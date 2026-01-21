@@ -18,6 +18,8 @@ object McpConfig {
     .setPrettyPrinting()
     .create()
 
+  private val oldEndpoint = "/sse"
+
   def writeConfig(
       port: Int,
       projectName: String,
@@ -26,7 +28,7 @@ object McpConfig {
   ): Unit = {
     val filename = client.fileName.getOrElse("mcp.json")
     val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
-    val serverName = client.serverEntry.getOrElse(s"$projectName-metals")
+    val serverName = client.projectName(projectName)
 
     // Read existing config if it exists
     val config = if (configFile.exists) configFile.readText else "{ }"
@@ -55,6 +57,56 @@ object McpConfig {
           }
       }
     }
+  }
+
+  /**
+   * Check if the config contains the old /sse endpoint for the given project
+   * and rewrite it to use the new /mcp endpoint if needed.
+   */
+  def rewriteOldEndpointIfNeeded(
+      projectPath: AbsolutePath,
+      projectName: String,
+      client: Client,
+      port: Int,
+  ): Unit = {
+    val filename = client.fileName.getOrElse("mcp.json")
+    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
+    if (configFile.exists) {
+      val configContent = configFile.readText
+      rewriteOldEndpoint(configContent, projectName, client, port) match {
+        case Some(newContent) =>
+          configFile.writeText(newContent)
+        case None =>
+      }
+    }
+  }
+
+  /**
+   * If the config contains the old /sse endpoint for metals, rewrite it to use /mcp.
+   * Returns Some(newConfig) if rewriting was needed, None otherwise.
+   */
+  def rewriteOldEndpoint(
+      configInput: String,
+      projectName: String,
+      client: Client,
+      port: Int,
+  ): Option[String] = {
+    Try {
+      val config = JsonParser.parseString(configInput).getAsJsonObject()
+      val serverEntry = client.projectName(projectName)
+
+      if (config.has(client.serverField)) {
+        val mcpServers = config.getAsJsonObject(client.serverField)
+        if (mcpServers.has(serverEntry)) {
+          val serverConfig = mcpServers.getAsJsonObject(serverEntry)
+          val url = serverConfig.get("url").getAsString
+          if (url.endsWith(oldEndpoint)) {
+            val newConfig = createConfig(configInput, port, serverEntry, client)
+            Some(newConfig)
+          } else None
+        } else None
+      } else None
+    }.toOption.flatten
   }
 
   private def removeMetalsEntry(
@@ -147,9 +199,11 @@ object McpConfig {
         editor.serverEntry.getOrElse(s"$projectName-metals")
       )
       url <- serverConfig.getStringOption("url")
-      port <- Try(
-        url.stripSuffix(MetalsMcpServer.mcpEndpoint).split(":").last.toInt
-      ).toOption
+      // Handle both new /mcp and old /sse endpoints
+      normalizedUrl = url
+        .stripSuffix(MetalsMcpServer.mcpEndpoint)
+        .stripSuffix(oldEndpoint)
+      port <- Try(normalizedUrl.split(":").last.toInt).toOption
     } yield port
   }
 
@@ -163,7 +217,10 @@ case class Client(
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
-)
+) {
+  def projectName(project: String): String =
+    serverEntry.getOrElse(s"$project-metals")
+}
 
 object VSCodeEditor
     extends Client(

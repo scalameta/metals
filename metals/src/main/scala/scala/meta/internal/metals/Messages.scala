@@ -347,20 +347,20 @@ object Messages {
     def problemsFixed: MessageParams =
       new MessageParams(
         MessageType.Info,
-        "Build is correctly configured now, navigation will work for all build targets.",
+        "Build is correctly configured now, Metals should work correctly for all build targets.",
       )
 
     def moreInfo: String =
       " Select 'More information' to learn how to fix this problem."
 
     def allProjectsMisconfigured: String =
-      "Navigation will not work for this build due to mis-configuration." + moreInfo
+      "Metals might not work correctly for this build due to mis-configuration." + moreInfo
 
     def singleMisconfiguredProject(name: String): String =
-      s"Navigation will not work in project '$name' due to mis-configuration." + moreInfo
+      s"Metals might not work correctly in project '$name' due to mis-configuration." + moreInfo
 
     def multipleMisconfiguredProjects(count: Int): String =
-      s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
+      s"Metals might not work correctly for $count build targets in this workspace due to mis-configuration. " + moreInfo
 
     def multipleProblemsDetected: String =
       s"Multiple problems detected in your build."

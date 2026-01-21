@@ -51,7 +51,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
@@ -103,7 +103,7 @@ class BazelLspSuite
   test("generate-bsp-config") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
     )
     for {
       _ <- server.initialize()
@@ -149,7 +149,7 @@ class BazelLspSuite
   test("import-reset-build") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
     )
 
     def getTargetInfo(target: String) = {
@@ -217,7 +217,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
       _ <- server.didOpen("Main.scala")
@@ -243,7 +243,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
       _ <- server.didChange("Hello.scala") { _ =>
@@ -298,7 +298,7 @@ class BazelLspSuite
   test("update-bazel-bsp") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
     )
 
     val shellRunner = new ShellRunner(
@@ -325,7 +325,7 @@ class BazelLspSuite
         .future
       _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ <- server.didOpen("Hello.scala")
       _ <- server.didChange("Hello.scala") { text =>
@@ -350,7 +350,7 @@ class BazelLspSuite
   test("update-projectview") {
     cleanWorkspace()
     writeLayout(
-      BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+      BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
     )
 
     val projectview = workspace.resolve("projectview.bazelproject")
@@ -358,7 +358,7 @@ class BazelLspSuite
 
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ = { client.importBuildChanges = ImportBuildChanges.yes }
       _ <- server.didOpen("Hello.scala")
@@ -406,7 +406,7 @@ class BazelLspSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
+        BazelBuildLayout(workspaceLayout, "2.13.12", bazelVersion)
       )
       _ <- server.didOpen("Decode.scala")
       uri = server.toPath("Decode.scala").toURI.toString()

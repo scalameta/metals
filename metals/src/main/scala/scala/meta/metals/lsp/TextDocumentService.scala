@@ -108,6 +108,21 @@ trait TextDocumentService {
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]]
 
+  @JsonRequest("textDocument/prepareTypeHierarchy")
+  def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]]
+
+  @JsonRequest("typeHierarchy/supertypes")
+  def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]]
+
+  @JsonRequest("typeHierarchy/subtypes")
+  def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]]
+
   @JsonRequest("textDocument/completion")
   def completion(params: CompletionParams): CompletableFuture[CompletionList]
 

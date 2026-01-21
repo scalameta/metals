@@ -43,7 +43,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "test-project-metals": {
-      |      "url": "http://localhost:1234/sse"
+      |      "url": "http://localhost:1234/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -57,7 +57,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "servers": {
       |    "test-project-metals": {
-      |      "url": "http://localhost:1234/sse",
+      |      "url": "http://localhost:1234/mcp",
       |      "type": "http"
       |    }
       |  }
@@ -73,7 +73,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "test-project-metals": {
-      |      "url": "http://localhost:1234/sse"
+      |      "url": "http://localhost:1234/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -87,7 +87,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "metals": {
-      |      "url": "http://localhost:1234/sse",
+      |      "url": "http://localhost:1234/mcp",
       |      "type": "http"
       |    }
       |  }
@@ -100,7 +100,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "other-project-metals": {
-      |      "url": "http://localhost:5678/sse"
+      |      "url": "http://localhost:5678/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -109,10 +109,10 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "other-project-metals": {
-      |      "url": "http://localhost:5678/sse"
+      |      "url": "http://localhost:5678/mcp"
       |    },
       |    "test-project-metals": {
-      |      "url": "http://localhost:1234/sse"
+      |      "url": "http://localhost:1234/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -123,7 +123,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "test-project-metals": {
-      |      "url": "http://localhost:5678/sse"
+      |      "url": "http://localhost:5678/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -132,7 +132,7 @@ class McpConfigSuite extends BaseSuite {
     """{
       |  "mcpServers": {
       |    "test-project-metals": {
-      |      "url": "http://localhost:1234/sse"
+      |      "url": "http://localhost:1234/mcp"
       |    }
       |  }
       |}""".stripMargin,
@@ -157,7 +157,7 @@ class McpConfigSuite extends BaseSuite {
       """{
         |  "mcpServers": {
         |    "test-project-metals": {
-        |      "url": "http://localhost:1234/sse"
+        |      "url": "http://localhost:1234/mcp"
         |    }
         |  }
         |}""".stripMargin,
@@ -174,7 +174,7 @@ class McpConfigSuite extends BaseSuite {
       """{
         |  "mcpServers": {
         |    "test-project-metals": {
-        |      "url": "http://localhost:5678/sse"
+        |      "url": "http://localhost:5678/mcp"
         |    }
         |  }
         |}""".stripMargin,
@@ -185,7 +185,7 @@ class McpConfigSuite extends BaseSuite {
     val config = """{
       "mcpServers": {
         "test-project-metals": {
-          "url": "http://localhost:8080/sse"
+          "url": "http://localhost:8080/mcp"
         }
       }
     }"""
@@ -208,7 +208,7 @@ class McpConfigSuite extends BaseSuite {
     val config = """{
       "mcpServers": {
         "other-project-metals": {
-          "url": "http://localhost:8080/sse"
+          "url": "http://localhost:8080/mcp"
         }
       }
     }"""
@@ -246,7 +246,7 @@ class McpConfigSuite extends BaseSuite {
     val config = """{
       "mcpServers": {
         "metals": {
-          "url": "http://localhost:8080/sse"
+          "url": "http://localhost:8080/mcp"
         }
       }
     }"""
@@ -266,10 +266,10 @@ class McpConfigSuite extends BaseSuite {
     val initialConfig = """{
                           |  "mcpServers": {
                           |    "test-project-metals": {
-                          |      "url": "http://localhost:1234/sse"
+                          |      "url": "http://localhost:1234/mcp"
                           |    },
                           |    "other-project-metals": {
-                          |      "url": "http://localhost:5678/sse"
+                          |      "url": "http://localhost:5678/mcp"
                           |    }
                           |  }
                           |}""".stripMargin
@@ -294,7 +294,7 @@ class McpConfigSuite extends BaseSuite {
       """{
         |  "mcpServers": {
         |    "other-project-metals": {
-        |      "url": "http://localhost:5678/sse"
+        |      "url": "http://localhost:5678/mcp"
         |    }
         |  }
         |}""".stripMargin,
@@ -310,7 +310,7 @@ class McpConfigSuite extends BaseSuite {
     val initialConfig = """{
                           |  "mcpServers": {
                           |    "test-project-metals": {
-                          |      "url": "http://localhost:1234/sse"
+                          |      "url": "http://localhost:1234/mcp"
                           |    }
                           |  }
                           |}""".stripMargin
@@ -337,7 +337,7 @@ class McpConfigSuite extends BaseSuite {
     val initialConfig = """{
                           |  "mcpServers": {
                           |    "other-project-metals": {
-                          |      "url": "http://localhost:5678/sse"
+                          |      "url": "http://localhost:5678/mcp"
                           |    }
                           |  }
                           |}""".stripMargin
@@ -401,5 +401,186 @@ class McpConfigSuite extends BaseSuite {
       StandardCharsets.UTF_8,
     )
     assertEquals(remainingContent, invalidConfig)
+  }
+
+  test("rewrites-sse-to-mcp") {
+    val config = """{
+      "mcpServers": {
+        "test-project-metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    val result =
+      McpConfig.rewriteOldEndpoint(config, "test-project", CursorEditor, 8080)
+    assert(result.isDefined)
+    assertNoDiff(
+      result.get,
+      """{
+        |  "mcpServers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:8080/mcp"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("rewrites-sse-to-mcp-additional-properties") {
+    val config = """{
+      "servers": {
+        "test-project-metals": {
+          "url": "http://localhost:8080/sse",
+          "type": "sse"
+        }
+      }
+    }"""
+
+    val result =
+      McpConfig.rewriteOldEndpoint(config, "test-project", VSCodeEditor, 8080)
+    assert(result.isDefined)
+    assertNoDiff(
+      result.get,
+      """{
+        |  "servers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:8080/mcp",
+        |      "type": "http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("does-not-rewrite-already-mcp") {
+    val config = """{
+      "mcpServers": {
+        "test-project-metals": {
+          "url": "http://localhost:8080/mcp"
+        }
+      }
+    }"""
+
+    val result =
+      McpConfig.rewriteOldEndpoint(config, "test-project", CursorEditor, 8080)
+    assertEquals(result, None)
+  }
+
+  test("no-rewrite-no-project") {
+    val config = """{
+      "mcpServers": {
+        "other-project-metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    val result =
+      McpConfig.rewriteOldEndpoint(config, "test-project", CursorEditor, 8080)
+    assertEquals(result, None)
+  }
+
+  test("rewrites-file") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config with old /sse endpoint
+    val initialConfig = """{
+                          |  "mcpServers": {
+                          |    "test-project-metals": {
+                          |      "url": "http://localhost:1234/sse"
+                          |    }
+                          |  }
+                          |}""".stripMargin
+
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      initialConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // Rewrite the config
+    McpConfig.rewriteOldEndpointIfNeeded(
+      projectPath,
+      "test-project",
+      CursorEditor,
+      1234,
+    )
+
+    val newContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      newContent,
+      """{
+        |  "mcpServers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:1234/mcp"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("no-rewrite-needed") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val configFile = projectPath.resolve(".cursor/mcp.json")
+
+    // Create config with new /mcp endpoint
+    val initialConfig = """{
+                          |  "mcpServers": {
+                          |    "test-project-metals": {
+                          |      "url": "http://localhost:1234/mcp"
+                          |    }
+                          |  }
+                          |}""".stripMargin
+
+    Files.createDirectories(configFile.parent.toNIO)
+    Files.write(
+      configFile.toNIO,
+      initialConfig.getBytes(StandardCharsets.UTF_8),
+    )
+
+    // No rewrite needed
+    McpConfig.rewriteOldEndpointIfNeeded(
+      projectPath,
+      "test-project",
+      CursorEditor,
+      1234,
+    )
+
+    val newContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      newContent,
+      """{
+        |  "mcpServers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:1234/mcp"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("getPort - reads port from old /sse endpoint") {
+    val config = """{
+      "mcpServers": {
+        "test-project-metals": {
+          "url": "http://localhost:8080/sse"
+        }
+      }
+    }"""
+
+    assertEquals(
+      McpConfig.getPort(config, "test-project"),
+      Some(8080),
+    )
   }
 }

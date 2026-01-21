@@ -4,7 +4,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mcp.McpConfig
-import scala.meta.internal.metals.mcp.VSCodeEditor
+import scala.meta.internal.metals.mcp.NoClient
 
 import tests.BaseLspSuite
 
@@ -17,7 +17,11 @@ trait McpTestUtils {
         UserConfiguration(startMcpServer = true).toString
       )
       port <- Future.successful(
-        McpConfig.readPort(server.workspace, "root", VSCodeEditor)
+        McpConfig.readPort(
+          server.server.folder,
+          server.server.getVisibleName,
+          NoClient,
+        )
       )
       _ = assert(port.isDefined, "MCP server port should be defined")
       client = new TestMcpClient(s"http://localhost:${port.get}", port.get)

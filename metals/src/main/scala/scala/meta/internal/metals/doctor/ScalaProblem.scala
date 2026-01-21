@@ -118,3 +118,10 @@ case class MissingJdkSources(candidates: List[AbsolutePath])
   override def message: String =
     s"Goto definition for Java classes will not work, please install jdk sources in java home. Searched: $candidateString"
 }
+
+case class WrongScalaReleaseVersion(current: String, needed: String)
+    extends ScalaProblem {
+  override def message: String =
+    s"Metals is currently running on Java $current, but the build definition requires Java $needed due to the `-release` flag. " +
+      s"Please change the Java version used by Metals to at least $needed."
+}

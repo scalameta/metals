@@ -129,6 +129,132 @@ class InlineValueLspSuite extends BaseCodeActionLspSuite("inlineValueRewrite") {
     fileName = "Main.scala",
   )
 
+  check(
+    "check-interpolates-string-properly",
+    """|object Main {
+       |  def f(): Unit = {
+       |    val x = "hi"
+       |    println(s"$<<x>>!")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(): Unit = {
+       |    println(s"${"hi"}!")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolates-expression-properly",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = 1 + y
+       |    println(s"$<<x>>$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${1 + y}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-no-unneeded-curly-braces",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y
+       |    println(s"$<<x>>$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"$y$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-no-extra-curly-braces",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y + 1
+       |    println(s"${<<x>>}$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y + 1}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-inlining-inside-curly-exp-does-not-add-curly",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y - 1
+       |    println(s"${<<x>> - y}")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y - 1 - y}")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-inlining-within-curly-exp-adds-brackets",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val x = y - 1
+       |    println(s"${y - <<x>>}")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y - (y - 1)}")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("x"),
+  )
+
+  check(
+    "check-interpolation-dollar-sign-variable",
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    val `$x` = y + 1
+       |    println(s"${<<`$x`>>}$y")
+       |  }
+       |}""".stripMargin,
+    s"""|${InlineValueCodeAction.title("$x")}""".stripMargin,
+    """|object Main {
+       |  def f(y: Int): Unit = {
+       |    println(s"${y + 1}$y")
+       |  }
+       |}""".stripMargin,
+    fileName = "Main.scala",
+    filterAction = _.getTitle == InlineValueCodeAction.title("$x"),
+  )
+
   checkNoAction(
     "check-no-inline-when-not-local",
     """|object Main {

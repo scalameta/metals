@@ -52,6 +52,7 @@ import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
+import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinderGranularity
@@ -538,6 +539,13 @@ abstract class MetalsLspService(
       supermethods,
     )
 
+  protected val typeHierarchyProvider: TypeHierarchyProvider =
+    new TypeHierarchyProvider(
+      semanticdbs,
+      definitionProvider,
+      implementationProvider,
+    )
+
   protected val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,
     implementationProvider,
@@ -735,6 +743,14 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.activatePlatformForTarget)
+      .foreach { platform =>
+        buildTargetClasses.rebuildIndex(
+          buildTargets.targetsByPlatform(platform)
+        )
+      }
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -800,6 +816,14 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.activatePlatformForTarget)
+      .foreach { platform =>
+        buildTargetClasses.rebuildIndex(
+          buildTargets.targetsByPlatform(platform)
+        )
+      }
     // Don't trigger compilation on didFocus events under cascade compilation
     // because save events already trigger compile in inverse dependencies.
     if (path.isDependencySource(folder)) {
@@ -1136,6 +1160,27 @@ abstract class MetalsLspService(
   ): CompletableFuture[util.List[CallHierarchyOutgoingCall]] =
     CancelTokens.future { token =>
       callHierarchyProvider.outgoingCalls(params, token).map(_.asJava)
+    }
+
+  override def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.prepare(params).map(_.asJava)
+    }
+
+  override def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.supertypes(params).map(_.asJava)
+    }
+
+  override def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.subtypes(params).map(_.asJava)
     }
 
   override def completion(
@@ -1614,6 +1659,7 @@ abstract class MetalsLspService(
     semanticDBIndexer.reset()
     worksheetProvider.reset()
     symbolSearch.reset()
+    buildTargets.resetActivePlatforms()
   }
 
   def fileWatcher: FileWatcher
