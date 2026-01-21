@@ -287,8 +287,22 @@ class MbtWorkspaceSymbolProvider(
       params: OnDidChangeSymbolsParams
   ): Future[Unit] = {
     val indexedDoc = IndexedDocument.fromOnDidChangeParams(params)
-    putDocument(params.path, indexedDoc, updateDocumentKeys = true)
+    putDocument(
+      params.path,
+      indexedDoc,
+      updateDocumentKeys = params.updateDocumentKeys,
+    )
   }
+
+  /**
+   * Update the document keys after batch indexing. Call this after indexing
+   *  multiple files with `updateDocumentKeys = false` to prepare the parallel
+   *  array for workspace symbol search.
+   */
+  def updateDocumentKeys(): Unit = {
+    updateDocumentsKeys(documents)
+  }
+
   def onDidDelete(file: AbsolutePath): Future[Unit] = {
     documents.remove(file) match {
       case None => Future.unit

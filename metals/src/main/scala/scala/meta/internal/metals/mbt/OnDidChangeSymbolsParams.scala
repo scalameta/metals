@@ -10,4 +10,5 @@ case class OnDidChangeSymbolsParams(
     symbols: collection.Seq[WorkspaceSymbolInformation],
     references: collection.Seq[String],
     methodSymbols: collection.Seq[WorkspaceSymbolInformation],
+    updateDocumentKeys: Boolean = true,
 )

@@ -436,9 +436,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           Some(f.sourceItem),
           f.targets.headOption,
           Seq(data),
+          updateDocumentKeys = false,
         )
       )
     } finally threadPool.shutdown()
+    // Update document keys once after all sources have been indexed
+    mbtSymbolSearch.updateDocumentKeys()
   }
 
   private def indexDependencyModules(
@@ -577,6 +580,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       sourceItem: Option[AbsolutePath],
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
+      updateDocumentKeys: Boolean = true,
   ): BackgroundJob = {
     val job =
       try {
@@ -678,6 +682,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
               allSymbols,
               references,
               methodSymbols.toSeq,
+              updateDocumentKeys,
             )
           )
 
