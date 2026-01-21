@@ -11,6 +11,7 @@ import scala.util.Try
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
+import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
@@ -110,6 +111,8 @@ case class UserConfiguration(
       AdditionalPcChecksConfig.default,
     scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacementConfig.default,
+    batchSemanticdbCompilerInstances: BatchSemanticdbConfig =
+      BatchSemanticdbConfig.default,
     promptBuildImport: Boolean = false,
 ) {
 
@@ -303,6 +306,12 @@ case class UserConfiguration(
           (
             "scalaImportsPlacement",
             scalaImportsPlacement.name().toLowerCase().replace("_", "-"),
+          )
+        ),
+        Some(
+          (
+            "batchSemanticdbCompilerInstances",
+            batchSemanticdbCompilerInstances.instances,
           )
         ),
         Some(
@@ -1138,6 +1147,16 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(ScalaImportsPlacementConfig.default)
+    val batchSemanticdbCompilerInstances =
+      BatchSemanticdbConfig.fromConfigOrFeatureFlag(
+        getIntKey("batch-semanticdb-compiler-instances"),
+        featureFlags,
+      ) match {
+        case Right(ok) => ok
+        case Left(error) =>
+          errors += error
+          BatchSemanticdbConfig.default
+      }
     val promptBuildImport =
       getBooleanKey("prompt-build-import").getOrElse(false)
 
@@ -1196,6 +1215,7 @@ object UserConfiguration {
           referenceProvider,
           additionalPcChecks,
           scalaImportsPlacement,
+          batchSemanticdbCompilerInstances,
           promptBuildImport,
         )
       )

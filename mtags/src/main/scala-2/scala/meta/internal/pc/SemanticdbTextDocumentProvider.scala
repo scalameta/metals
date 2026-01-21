@@ -34,7 +34,7 @@ class SemanticdbTextDocumentProvider(
       cursor = None
     )
     SimpleTimer.timedThunk(
-      "semanticdb:testDocument:typeCheck",
+      "semanticdb:textDocument:typeCheck",
       thresholdMillis = 250
     ) {
       typeCheck(unit)

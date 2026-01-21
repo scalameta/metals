@@ -83,4 +83,11 @@ public enum FeatureFlag {
    * order, rather than simply appending to the end of the import block.
    */
   SMART_SCALA_IMPORT_PLACEMENT,
+
+  /**
+   * Number of compiler instances for batch semanticdb processing. The value is a string that is
+   * parsed as an integer. Value "1" means sequential processing (default), values greater than 1
+   * enable parallel processing with that many compiler instances.
+   */
+  BATCH_SEMANTICDB_COMPILER_INSTANCES,
 }

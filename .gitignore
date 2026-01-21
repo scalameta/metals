@@ -62,4 +62,4 @@ index.scip
 
 # Cursor IDE
 .cursor/
-tests/unit/src/test/scala/tests/ManualSuite.scala
+**/*ManualSuite.scala

@@ -138,4 +138,13 @@ public interface PresentationCompilerConfig {
   default ScalaImportsPlacement scalaImportsPlacement() {
     return ScalaImportsPlacement.APPEND_LAST;
   }
+
+  /**
+   * Number of compiler instances for batch semanticdb processing. Value 1 means sequential
+   * processing (default), values greater than 1 enable parallel processing with that many compiler
+   * instances.
+   */
+  default int batchSemanticdbCompilerInstances() {
+    return 1;
+  }
 }

@@ -9,6 +9,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
+import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
@@ -269,6 +270,9 @@ class UserConfigurationSuite extends BaseSuite {
       ): Optional[java.lang.Boolean] = {
         Optional.of(flag == FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
       }
+
+      def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
+        Optional.empty()
     }
 
     // Assert that feature flag overrides when there is no custom setting
@@ -349,6 +353,7 @@ class UserConfigurationSuite extends BaseSuite {
       defaultBspToBuildTool = true,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
       scalaImportsPlacement = ScalaImportsPlacement.SMART,
+      batchSemanticdbCompilerInstances = BatchSemanticdbConfig(4),
       promptBuildImport = true,
     )
 
@@ -445,6 +450,7 @@ class UserConfigurationSuite extends BaseSuite {
     "refchecks"
   ],
   "scalaImportsPlacement": "smart",
+  "batchSemanticdbCompilerInstances": 4,
   "promptBuildImport": true
 }""",
     )

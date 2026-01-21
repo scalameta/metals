@@ -8,4 +8,7 @@ import scala.meta.infra.FeatureFlagProvider
 object NoopFeatureFlagProvider extends FeatureFlagProvider {
   override def readBoolean(flag: FeatureFlag): Optional[java.lang.Boolean] =
     Optional.empty()
+
+  override def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
+    Optional.empty()
 }

@@ -31,6 +31,9 @@ class TestingFeatureFlagProvider extends FeatureFlagProvider {
     TestingInfra.testFlags.append(flag)
     Optional.empty()
   }
+
+  override def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
+    Optional.empty()
 }
 
 class InfraSuite extends BaseLspSuite("infraSuite") {

@@ -850,4 +850,48 @@ object Configs {
       }
     }
   }
+
+  /**
+   * Configuration for batch semanticdb processing.
+   *
+   * @param instances Number of compiler instances to use. Value 1 means sequential
+   *                  processing (default), values > 1 enable parallel processing.
+   */
+  final case class BatchSemanticdbConfig(instances: Int) {
+    require(
+      instances >= 1,
+      s"batchSemanticdbCompilerInstances must be >= 1, got $instances",
+    )
+    def isParallel: Boolean = instances > 1
+  }
+
+  object BatchSemanticdbConfig {
+    def default: BatchSemanticdbConfig = BatchSemanticdbConfig(1)
+
+    def fromConfigOrFeatureFlag(
+        value: Option[Int],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, BatchSemanticdbConfig] = {
+      value match {
+        case Some(n) if n >= 1 => Right(BatchSemanticdbConfig(n))
+        case Some(invalid) =>
+          Left(
+            s"invalid value '$invalid' for batchSemanticdbCompilerInstances: must be >= 1"
+          )
+        case None =>
+          val flagValue = featureFlags
+            .readInt(FeatureFlag.BATCH_SEMANTICDB_COMPILER_INSTANCES, 1)
+          if (flagValue.isPresent()) {
+            val n = flagValue.get()
+            if (n >= 1) Right(BatchSemanticdbConfig(n))
+            else
+              Left(
+                s"invalid feature flag value '$n' for BATCH_SEMANTICDB_COMPILER_INSTANCES: must be >= 1"
+              )
+          } else {
+            Right(default)
+          }
+      }
+    }
+  }
 }
