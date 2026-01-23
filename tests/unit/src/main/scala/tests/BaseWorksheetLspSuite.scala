@@ -8,6 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
@@ -927,9 +928,15 @@ abstract class BaseWorksheetLspSuite(
       cleanWorkspace()
       val path = "a/src/main/scala/foo/Main.worksheet.sc"
       val expectedActions =
-        s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-            |${CreateNewSymbol.title("Future")}
-            |""".stripMargin
+        if (SemVer.isLaterVersion("3.8.1", scalaVersion))
+          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+              |${CreateNewSymbol.title("Future")}
+              |${ExplainDiagnostic.title}
+              |""".stripMargin
+        else
+          s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+              |${CreateNewSymbol.title("Future")}
+              |""".stripMargin
       for {
         _ <- initialize(
           s"""

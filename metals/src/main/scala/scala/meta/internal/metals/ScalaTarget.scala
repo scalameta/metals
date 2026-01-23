@@ -38,7 +38,7 @@ case class ScalaTarget(
    */
   def supportExplainDiagnostic: Boolean =
     SemVer.isCompatibleVersion(
-      "3.8.1-RC1-bin-20260105-f08de70-NIGHTLY",
+      "3.8.2-RC1",
       scalaVersion,
     )
 

@@ -1,30 +1,33 @@
 package tests
 
 import scala.meta.internal.metals.codeactions.ExplainDiagnostic
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite
 
 class Scala3LspSuite extends BaseLspSuite("scala3") {
 
+  val scalaVersion: String = V.latestScala3Next
+
   test("import-capture") {
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.7.2"
-           |  }
-           |}
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |
-           |import language.experimental.captureChecking
-           |import java.io.FileOutputStream
-           |
-           |def usingLogFile[T](op: FileOutputStream^ => T): T =
-           |  ???
-           |
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion"
+            |  }
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |
+            |import language.experimental.captureChecking
+            |import java.io.FileOutputStream
+            |
+            |def usingLogFile[T](op: FileOutputStream^ => T): T =
+            |  ???
+            |
+            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.didSave("a/src/main/scala/a/A.scala")
@@ -36,22 +39,22 @@ class Scala3LspSuite extends BaseLspSuite("scala3") {
   test("import-capture-second") {
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.7.2"
-           |  }
-           |}
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |
-           |import java.io.FileOutputStream
-           |import scala.language.experimental.captureChecking
-           |
-           |def usingLogFile[T](op: FileOutputStream^ => T): T =
-           |  ???
-           |
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion"
+            |  }
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |
+            |import java.io.FileOutputStream
+            |import scala.language.experimental.captureChecking
+            |
+            |def usingLogFile[T](op: FileOutputStream^ => T): T =
+            |  ???
+            |
+            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.didSave("a/src/main/scala/a/A.scala")
@@ -63,24 +66,24 @@ class Scala3LspSuite extends BaseLspSuite("scala3") {
   test("import-capture-wrong") {
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.7.2"
-           |  }
-           |}
-           |/a/src/main/scala/a/A.scala
-           |package a
-           |
-           |import java.io.FileOutputStream
-           |
-           |object O:
-           |  import scala.language.experimental.captureChecking
-           |
-           |  def usingLogFile[T](op: FileOutputStream^ => T): T =
-           |    ???
-           |
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion"
+            |  }
+            |}
+            |/a/src/main/scala/a/A.scala
+            |package a
+            |
+            |import java.io.FileOutputStream
+            |
+            |object O:
+            |  import scala.language.experimental.captureChecking
+            |
+            |  def usingLogFile[T](op: FileOutputStream^ => T): T =
+            |    ???
+            |
+            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- server.didSave("a/src/main/scala/a/A.scala")
@@ -103,19 +106,19 @@ class Scala3LspSuite extends BaseLspSuite("scala3") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.8.1-RC1-bin-20260105-f08de70-NIGHTLY",
-           |    "repositories": [
-           |      "https://repo.scala-lang.org/artifactory/maven-nightlies"
-           |    ]
-           |  }
-           |}
-           |/a/src/main/scala/a/MyValueTrait.scala
-           |package a
-           |trait MyValueTrait extends AnyVal
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion",
+            |    "repositories": [
+            |      "https://repo.scala-lang.org/artifactory/maven-nightlies"
+            |    ]
+            |  }
+            |}
+            |/a/src/main/scala/a/MyValueTrait.scala
+            |package a
+            |trait MyValueTrait extends AnyVal
+            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/MyValueTrait.scala")
       _ <- server.didSave("a/src/main/scala/a/MyValueTrait.scala")
@@ -167,19 +170,19 @@ class Scala3LspSuite extends BaseLspSuite("scala3") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        """|/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "3.8.1-RC1-bin-20260105-f08de70-NIGHTLY",
-           |    "repositories": [
-           |      "https://repo.scala-lang.org/artifactory/maven-nightlies"
-           |    ]
-           |  }
-           |}
-           |/a/src/main/scala/a/MyValueTrait.scala
-           |package a
-           |trait MyValueTrait extends AnyVal
-           |""".stripMargin
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "scalaVersion": "$scalaVersion",
+            |    "repositories": [
+            |      "https://repo.scala-lang.org/artifactory/maven-nightlies"
+            |    ]
+            |  }
+            |}
+            |/a/src/main/scala/a/MyValueTrait.scala
+            |package a
+            |trait MyValueTrait extends AnyVal
+            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/a/MyValueTrait.scala")
       _ <- server.didSave("a/src/main/scala/a/MyValueTrait.scala")

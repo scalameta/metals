@@ -3,13 +3,16 @@ package tests
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 
 abstract class BaseNonCompilingLspSuite(name: String)
     extends BaseCompletionLspSuite(name) {
 
-  val scalaVersionConfig: String
+  def scalaVersion: String
+  def scalaVersionConfig: String = s"\"scalaVersion\": \"${scalaVersion}\""
+
   val saveAfterChanges: Boolean
   val scala3Diagnostics: Boolean
 
@@ -115,10 +118,17 @@ abstract class BaseNonCompilingLspSuite(name: String)
           .assertCodeAction(
             "a/src/main/scala/a/A.scala",
             newText,
-            s"""|${ImportMissingSymbol.title("UniqueObjectOther", "b")}
-                |${SourceAddMissingImports.title}
-                |${CreateNewSymbol.title("UniqueObjectOther")}
-                |""".stripMargin,
+            if (scalaVersion.startsWith("3"))
+              s"""|${ImportMissingSymbol.title("UniqueObjectOther", "b")}
+                  |${SourceAddMissingImports.title}
+                  |${CreateNewSymbol.title("UniqueObjectOther")}
+                  |${ExplainDiagnostic.title}
+                  |""".stripMargin
+            else
+              s"""|${ImportMissingSymbol.title("UniqueObjectOther", "b")}
+                  |${SourceAddMissingImports.title}
+                  |${CreateNewSymbol.title("UniqueObjectOther")}
+                  |""".stripMargin,
             kind = Nil,
           )
       // make sure that the now change UniqueObject is not suggested
@@ -131,8 +141,13 @@ abstract class BaseNonCompilingLspSuite(name: String)
           .assertCodeAction(
             "a/src/main/scala/a/A.scala",
             newText.replace("UniqueObjectOther", "UniqueObject"),
-            s"""|${CreateNewSymbol.title("UniqueObject")}
-                |""".stripMargin,
+            if (scalaVersion.startsWith("3"))
+              s"""|${CreateNewSymbol.title("UniqueObject")}
+                  |${ExplainDiagnostic.title}
+                  |""".stripMargin
+            else
+              s"""|${CreateNewSymbol.title("UniqueObject")}
+                  |""".stripMargin,
             kind = Nil,
           )
     } yield ()
