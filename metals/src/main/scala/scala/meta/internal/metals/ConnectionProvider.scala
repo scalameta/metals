@@ -528,7 +528,7 @@ class ConnectionProvider(
         if (!notification.isDismissed) {
           val messageParams = IncompatibleBloopVersion.params(
             bspServerVersion,
-            BuildInfo.bloopVersion,
+            BloopServers.minimumBloopVersion,
             isChangedInSettings = userConfig.bloopVersion != None,
           )
           languageClient
