@@ -5,7 +5,6 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.metals.BloopServers
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
@@ -31,7 +30,7 @@ class ProblemResolver(
       case Some(bspSession) =>
         bspSession.main.name == BloopServers.name && !SemVer
           .isCompatibleVersion(
-            BuildInfo.bloopVersion,
+            BloopServers.minimumBloopVersion,
             bspSession.main.version,
           )
       case None =>

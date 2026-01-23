@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.doctor
 
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.io.AbsolutePath
@@ -62,7 +63,7 @@ case class SemanticDBDisabled(
 ) extends ScalaProblem {
   override def message: String = {
     if (unsupportedBloopVersion) {
-      s"""|The installed Bloop server version is $bloopVersion while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
+      s"""|The installed Bloop server version is $bloopVersion while Metals requires at least Bloop version ${BloopServers.minimumBloopVersion},
           |To fix this problem please update your Bloop server.""".stripMargin
     } else if (
       ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion)
