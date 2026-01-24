@@ -39,12 +39,9 @@ class ResourceOperations(buffers: Buffers) {
     val options: Option[CreateFileOptions] = Option(operation.getOptions)
 
     val overwrite =
-      options
-        .map(opt => opt.getOverwrite: Boolean)
-        .getOrElse(false)
-    val ignoreIfExists = options
-      .map(opt => opt.getIgnoreIfExists: Boolean)
-      .getOrElse(true.booleanValue())
+      options.flatMap(opt => Option(opt.getOverwrite)).contains(true)
+    val ignoreIfExists =
+      options.flatMap(opt => Option(opt.getIgnoreIfExists)).contains(true)
 
     val path = uri.toAbsolutePath
     val fileExists = path.exists
@@ -63,12 +60,10 @@ class ResourceOperations(buffers: Buffers) {
     val newUri = operation.getNewUri
     val options: Option[RenameFileOptions] = Option(operation.getOptions)
 
-    val overwrite = options
-      .map(opt => opt.getOverwrite: Boolean)
-      .getOrElse(false)
-    val ignoreIfExists = options
-      .map(opt => opt.getOverwrite: Boolean)
-      .getOrElse(false)
+    val overwrite =
+      options.flatMap(opt => Option(opt.getOverwrite)).contains(true)
+    val ignoreIfExists =
+      options.flatMap(opt => Option(opt.getIgnoreIfExists)).contains(true)
 
     val oldPath = oldUri.toAbsolutePath
     val newPath = newUri.toAbsolutePath

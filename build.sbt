@@ -507,6 +507,15 @@ lazy val metals = project
   .dependsOn(mtags, `mtags-java`)
   .enablePlugins(BuildInfoPlugin)
 
+lazy val `metals-mcp` = project
+  .in(file("metals-mcp"))
+  .settings(
+    sharedSettings,
+    moduleName := "metals-mcp",
+    Compile / mainClass := Some("scala.meta.metals.McpMain"),
+  )
+  .dependsOn(metals)
+
 lazy val `sbt-metals` = project
   .settings(
     buildInfoPackage := "scala.meta.internal.sbtmetals",
@@ -779,7 +788,7 @@ lazy val slow = project
       .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
       .value,
   )
-  .dependsOn(unit)
+  .dependsOn(unit, `metals-mcp`)
 
 lazy val bench = project
   .in(file("metals-bench"))
