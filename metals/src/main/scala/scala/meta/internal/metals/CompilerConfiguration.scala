@@ -185,13 +185,14 @@ class CompilerConfiguration(
       search: SymbolSearch,
       referenceCounter: CompletionItemPriority,
       additionalClasspath: Seq[Path] = Nil,
+      additionalOptions: Seq[String] = Nil,
   ) extends LazyCompiler {
 
     def buildTargetId: BuildTargetIdentifier = scalaTarget.id
 
     protected def newCompiler(classpath: Seq[Path]): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
-      val options = enrichWithReleaseOption(scalaTarget)
+      val options = enrichWithReleaseOption(scalaTarget) ++ additionalOptions
       // Best Effort option `-Ybest-effort` is useless for PC,
       // and it may unnecesarily dump semanticdb and tasty files
       val bestEffortOpt = "-Ybest-effort"

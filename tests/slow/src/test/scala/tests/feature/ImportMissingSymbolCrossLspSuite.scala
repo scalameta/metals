@@ -2,6 +2,7 @@ package tests.feature
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
+import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
@@ -265,6 +266,7 @@ class ImportMissingSymbolCrossLspSuite
         |""".stripMargin,
     s"""|${ImportMissingSymbol.title("A", "example.a")}
         |${CreateNewSymbol.title("A")}
+        |${ExplainDiagnostic.title}
         |""".stripMargin,
     s"""|import example.a.A
         |package example.a {
