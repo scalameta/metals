@@ -226,7 +226,7 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
         case Left(error) => throw new RuntimeException(error)
       }
       _ = assertNoDiff(
-        res1.replaceAll("\\d+ms", "x ms"),
+        res1.replaceAll("\\d+\\.?\\d*m?s", "x ms"),
         """|SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
            |SLF4J: Defaulting to no-operation (NOP) logger implementation
            |SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.

@@ -2,6 +2,7 @@ package tests
 
 import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.RelativePath
 
 import tests.BaseLspSuite
 
@@ -136,24 +137,24 @@ class Scala3LspSuite extends BaseLspSuite("scala3") {
       result <- server.executeDecodeFileCommand(code)
       _ = assertNoDiff(
         result.value,
-        """|# Explained Diagnostic
-           |
-           |**Source File**: a/src/main/scala/a/MyValueTrait.scala
-           |**Position**: Line 2, Column 7
-           |
-           |## Detailed Explanation
-           |
-           |```
-           |[presentation compiler] error at line 2
-           |```
-           |
-           |trait MyValueTrait cannot extend AnyVal
-           |
-           |# Explanation (enabled by `-explain`)
-           |
-           |Only classes (not traits) are allowed to extend AnyVal, but traits may extend
-           |Any to become "universal traits" which may only have def members.
-           |Universal traits can be mixed into classes that extend AnyVal.""".stripMargin,
+        s"""|# Explained Diagnostic
+            |
+            |**Source File**: ${RelativePath("a/src/main/scala/a/MyValueTrait.scala").toString}
+            |**Position**: Line 2, Column 7
+            |
+            |## Detailed Explanation
+            |
+            |```
+            |[presentation compiler] error at line 2
+            |```
+            |
+            |trait MyValueTrait cannot extend AnyVal
+            |
+            |# Explanation (enabled by `-explain`)
+            |
+            |Only classes (not traits) are allowed to extend AnyVal, but traits may extend
+            |Any to become "universal traits" which may only have def members.
+            |Universal traits can be mixed into classes that extend AnyVal.""".stripMargin,
       )
       _ <- server.assertCodeAction(
         "a/src/main/scala/a/MyValueTrait.scala",
