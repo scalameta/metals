@@ -1409,6 +1409,9 @@ object MetalsEnrichments
         new l.TextDocumentIdentifier(location.getUri()),
         location.getRange().getStart(),
       )
+
+    def toReferenceParams(includeDeclaration: Boolean): l.ReferenceParams =
+      toTextDocumentPositionParams.toReferenceParams(includeDeclaration)
   }
 
   implicit class XtensionTextDocumentPositionParams(
@@ -1428,6 +1431,16 @@ object MetalsEnrichments
           }
       ).toOption.flatten
         .getOrElse(input.text)
+    }
+
+    def toReferenceParams(includeDeclaration: Boolean): l.ReferenceParams = {
+      val referenceParams = new l.ReferenceParams()
+      referenceParams.setPosition(params.getPosition())
+      referenceParams.setTextDocument(params.getTextDocument())
+      val context = new l.ReferenceContext()
+      context.setIncludeDeclaration(includeDeclaration)
+      referenceParams.setContext(context)
+      referenceParams
     }
   }
 
