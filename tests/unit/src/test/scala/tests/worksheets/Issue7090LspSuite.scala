@@ -1,7 +1,8 @@
 package tests.worksheets
 
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.{BuildInfo => V}
+
 import tests.TestingServer
 
 class Issue7090LspSuite extends tests.BaseWorksheetLspSuite(V.scala213) {
