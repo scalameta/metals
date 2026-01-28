@@ -18,6 +18,7 @@ import scala.meta.pc.ParentSymbols
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.SymbolKind
+import org.scalafmt.dynamic.utils.ReflectUtils.ImplicitAny
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -459,19 +460,12 @@ object McpQueryEngine {
    * Check if a build target is a meta-target (e.g., SBT build definition).
    * Meta-targets like "root-build" don't have project dependencies and should
    * be excluded from smart fallback selection.
-   *
-   * Uses two checks:
-   * 1. Primary: ScalaTarget's sbtVersion when available (more reliable per Metals devs)
-   * 2. Fallback: URI pattern for targets without ScalaTarget entry
    */
   def isBuildMetaTarget(
       buildTargets: BuildTargets,
       id: BuildTargetIdentifier,
   ): Boolean = {
-    val isSbtBuild = buildTargets.scalaTarget(id).exists(_.sbtVersion.isDefined)
-    val uri = id.getUri
-    val uriBuildPattern = uri.contains("-build") || uri.endsWith("root-build")
-    isSbtBuild || uriBuildPattern
+    buildTargets.info(id).exists(_.isSbtBuild)
   }
 
   /**
