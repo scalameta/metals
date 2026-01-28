@@ -658,7 +658,16 @@ class MetalsMcpServer(
           },
           "fileInFocus": {
             "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "The current file in focus for context. If not provided, will use first available build target."
+          },
+          "module": {
+            "type": "string",
+            "description": "Explicit module (build target) name to use for context, e.g. 'core', 'services'. Takes precedence over fileInFocus."
+          },
+          "searchAllTargets": {
+            "type": "boolean",
+            "description": "If true, search all build targets and combine results. Useful for understanding cross-module visibility of project symbols.",
+            "default": false
           }
         },
         "required": ["fqcn"]
@@ -671,7 +680,11 @@ class MetalsMcpServer(
         """|Inspect a chosen Scala symbol.
            |For packages, objects and traits returns list of members.
            |For classes returns list of members and constructors.
-           |For methods returns signatures of all overloaded methods.""".stripMargin
+           |For methods returns signatures of all overloaded methods.
+           |
+           |When no fileInFocus is provided, automatically uses the first available
+           |build target. Use searchAllTargets=true for comprehensive cross-module inspection.
+           |Use 'module' to explicitly specify which build target to use.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -679,9 +692,13 @@ class MetalsMcpServer(
       tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
-        val path = arguments.getFileInFocus
+        val pathOpt = arguments.getFileInFocusOpt
+        val moduleOpt = arguments.getOptNoEmptyString("module")
+        val searchAllTargets = arguments
+          .getOptAs[Boolean]("searchAllTargets")
+          .getOrElse(false)
         queryEngine
-          .inspect(fqcn, path)
+          .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
           .map(result =>
             new CallToolResult(
               createContent(result.show),
@@ -701,6 +718,14 @@ class MetalsMcpServer(
           "fqcn": {
             "type": "string",
             "description": "Fully qualified name of the symbol to get documentation for"
+          },
+          "fileInFocus": {
+            "type": "string",
+            "description": "The current file in focus for context. If not provided, will use first available build target."
+          },
+          "module": {
+            "type": "string",
+            "description": "Explicit module (build target) name to use for context, e.g. 'core', 'services'. Takes precedence over fileInFocus."
           }
         },
         "required": ["fqcn"]
@@ -712,7 +737,11 @@ class MetalsMcpServer(
       .description(
         """|Get documentation for a chosen Scala symbol. Retrieves ScalaDoc comments,
            |parameter descriptions, return types, and usage examples for classes, methods,
-           |functions, and other symbols using their fully qualified name.""".stripMargin
+           |functions, and other symbols using their fully qualified name.
+           |
+           |When no fileInFocus is provided, automatically uses the first available
+           |build target for context, making this tool usable from MCP clients
+           |without editor integration.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -720,8 +749,10 @@ class MetalsMcpServer(
       tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
+        val pathOpt = arguments.getFileInFocusOpt
+        val moduleOpt = arguments.getOptNoEmptyString("module")
         Future {
-          queryEngine.getDocumentation(fqcn) match {
+          queryEngine.getDocumentation(fqcn, pathOpt, moduleOpt) match {
             case Some(result) =>
               new CallToolResult(createContent(result.show), false)
             case None =>
@@ -740,13 +771,17 @@ class MetalsMcpServer(
       {
         "type": "object",
         "properties": {
-          "fqcn": { 
+          "fqcn": {
             "type": "string",
             "description": "Fully qualified name of the symbol to get usages for"
           },
           "fileInFocus": {
             "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "The current file in focus for context. If not provided, will use first available build target."
+          },
+          "module": {
+            "type": "string",
+            "description": "Explicit module (build target) name to use for context, e.g. 'core', 'services'. Takes precedence over fileInFocus."
           }
         },
         "required": ["fqcn"]
@@ -758,7 +793,11 @@ class MetalsMcpServer(
       .description(
         """|Get usages for a chosen Scala symbol. Find all references and usages of classes,
            |methods, variables, and other symbols across the entire project. Returns precise
-           |locations with file paths and line numbers for refactoring and code analysis.""".stripMargin
+           |locations with file paths and line numbers for refactoring and code analysis.
+           |
+           |When no fileInFocus is provided, automatically uses the first available
+           |build target for context, making this tool usable from MCP clients
+           |without editor integration.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -766,9 +805,10 @@ class MetalsMcpServer(
       tool,
       withErrorHandling { (exchange, arguments) =>
         val fqcn = arguments.getFqcn
-        val path = arguments.getFileInFocus
+        val pathOpt = arguments.getFileInFocusOpt
+        val moduleOpt = arguments.getOptNoEmptyString("module")
         Future {
-          val result = queryEngine.getUsages(fqcn, path)
+          val result = queryEngine.getUsages(fqcn, pathOpt, moduleOpt)
           new CallToolResult(createContent(result.show(projectPath)), false)
         }.toMono
       },
