@@ -18,7 +18,6 @@ import scala.meta.pc.ParentSymbols
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.SymbolKind
-import org.scalafmt.dynamic.utils.ReflectUtils.ImplicitAny
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -171,7 +170,7 @@ class McpQueryEngine(
       Future.sequence(results).map { inspectResults =>
         val flattened = inspectResults.flatten
         // Deduplicate results that are identical across targets
-        val deduplicated = flattened.distinctBy(r => (r.path, r.symbolType))
+        val deduplicated = flattened.distinct
         // Collect which targets were searched
         val searchedTargets = targetBuildTargets
           .flatMap(bt => buildTargets.jvmTarget(bt).map(_.displayName))

@@ -20,7 +20,6 @@ import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SymbolSearchVisitor
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.SymbolKind
 
