@@ -59,6 +59,10 @@ case class IndexedDocument(
       .build()
   }
   def toProto(): Mbt.IndexedDocument.Builder = {
+    val bloomFilterVersion = language match {
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
+      case _ => Mbt.IndexedDocument.BloomFilterVersion.V6
+    }
     Mbt.IndexedDocument
       .newBuilder()
       .setUri(file.toURI.toString)
@@ -68,7 +72,7 @@ case class IndexedDocument(
       .setLanguage(language)
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
-      .setBloomFilterVersion(Mbt.IndexedDocument.BloomFilterVersion.V6)
+      .setBloomFilterVersion(bloomFilterVersion)
   }
 }
 
@@ -203,7 +207,7 @@ object IndexedDocument {
   // that language.
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
-      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V6
       case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V6
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
