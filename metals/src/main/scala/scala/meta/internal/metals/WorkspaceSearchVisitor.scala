@@ -106,6 +106,9 @@ class WorkspaceSearchVisitor(
       range: l.Range,
   ): Int = {
     val (desc, owner) = DescriptorParser(symbol)
+    if (desc.name.value.endsWith("$package")) {
+      return 0
+    }
     fromWorkspace.add(
       new l.SymbolInformation(
         desc.name.value,
@@ -139,12 +142,16 @@ class WorkspaceSearchVisitor(
         includeMembers = false,
       ) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
-          val adjustedPath =
-            if (saveClassFileToDisk) path.toFileOnDisk(workspace)
-            else path
-          val uri = adjustedPath.toURI.toString
-          fromClasspath.add(semanticDefn.toLsp(uri))
-          isHit = true
+          val (desc, _) = DescriptorParser(semanticDefn.info.symbol)
+          if (!desc.name.value.endsWith("$package")) {
+
+            val adjustedPath =
+              if (saveClassFileToDisk) path.toFileOnDisk(workspace)
+              else path
+            val uri = adjustedPath.toURI.toString
+            fromClasspath.add(semanticDefn.toLsp(uri))
+            isHit = true
+          }
         }
       }
     }
