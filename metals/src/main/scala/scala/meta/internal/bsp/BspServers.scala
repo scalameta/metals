@@ -199,7 +199,7 @@ final class BspServers(
     visit(mainWorkspace.resolve(Directories.bsp))
     customProjectRoot.map(_.resolve(Directories.bsp)).foreach(visit)
     bspGlobalInstallDirectories.foreach(visit)
-    buf.result()
+    buf.result().distinct
   }
 
   private def digestServerDetails(
