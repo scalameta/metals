@@ -154,9 +154,12 @@ class CompilerConfiguration(
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
     val standalone: PresentationCompiler = {
+      val fallbackOptions =
+        if (ScalaVersions.isScala3Version(scalaVersion)) Nil
+        else List("-Yresolve-term-conflict:package")
       fromMtags(
         mtagsBinaries,
-        options = Nil,
+        options = fallbackOptions,
         classpath ++ Embedded.scalaLibrary(scalaVersion),
         "default",
         symbolSearch,
