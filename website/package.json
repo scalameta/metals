@@ -8,7 +8,7 @@
     "serve": "docusaurus serve"
   },
   "devDependencies": {
-    "@types/node": "^25.0.3"
+    "@types/node": "^25.1.0"
   },
   "dependencies": {
     "@docusaurus/core": "3.9.2",
