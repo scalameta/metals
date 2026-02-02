@@ -468,10 +468,10 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|/metals.json
             |{
             |  "a": {
-            |     "scalaVersion": "${V.scala212}"
+            |     "scalaVersion": "${V.scala213}"
             |  },
             |  "b": {
-            |     "scalaVersion": "${V.scala212}",
+            |     "scalaVersion": "${V.scala213}",
             |     "scalacOptions": ["-Xsource:3"],
             |     "sbtVersion": "1.6.0-RC2"
             |  }
@@ -488,7 +488,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
       _ = assertNoDiff(
         server.textContents(".scalafmt.conf"),
         s"""|version = "${V.scalafmtVersion}"
-            |runner.dialect = scala212
+            |runner.dialect = scala213
             |""".stripMargin,
       )
 
