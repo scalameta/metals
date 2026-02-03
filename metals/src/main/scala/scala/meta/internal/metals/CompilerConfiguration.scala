@@ -408,7 +408,7 @@ class CompilerConfiguration(
   }
 
   case class JavaLazyCompiler(
-      javaTarget: JavaTarget,
+      javaTarget: JvmTarget,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
@@ -423,7 +423,10 @@ class CompilerConfiguration(
       val shouldUseOpts = featureFlags
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
-      val options = if (shouldUseOpts) javaTarget.options else Nil
+      val options = javaTarget match {
+        case j: JavaTarget if shouldUseOpts => j.options
+        case _ => Nil
+      }
       configure(pc, search, completionItemPriority)
         .newInstance(
           buildTargetId.getUri(),

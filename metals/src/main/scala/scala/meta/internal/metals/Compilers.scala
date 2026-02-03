@@ -1449,7 +1449,7 @@ class Compilers(
   private def loadJavaCompiler(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
-    buildTargets.javaTarget(targetId).map { javaTarget =>
+    buildTargets.jvmTarget(targetId).map { javaTarget =>
       jcache
         .computeIfAbsent(
           PresentationCompilerKey.JavaBuildTarget(targetId),
