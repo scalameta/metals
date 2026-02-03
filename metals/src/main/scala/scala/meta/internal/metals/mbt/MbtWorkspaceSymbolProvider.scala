@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mbt
 import java.io.BufferedOutputStream
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -360,6 +361,9 @@ class MbtWorkspaceSymbolProvider(
       IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
     putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
   } catch {
+    case _: NoSuchFileException =>
+      onDidDelete(file)
+      Future.unit
     case _: UnexpectedInputEndException =>
       scribe.debug(s"${file}: syntax error")
       Future.unit
