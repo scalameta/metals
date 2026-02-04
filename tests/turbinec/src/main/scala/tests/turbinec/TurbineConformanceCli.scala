@@ -73,6 +73,7 @@ object TurbineConformanceCli {
       workspace: Path = Paths.get(".").toAbsolutePath.normalize,
       mbtJson: Option[Path] = None,
       scalaVersion: String = "2.13",
+      includeScala: Boolean = true,
       includeTests: Boolean = false,
       showDiffs: Int = 20,
       verbose: Boolean = false,
@@ -193,10 +194,21 @@ object TurbineConformanceCli {
     val buildConfig = BuildConfigJson.read(config.mbtJsonPath)
     buildConfig.flatMap { cfg =>
       val sources =
-        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = false)
+        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = config.includeScala)
       if (sources.isEmpty) {
         return Left("No sources found from sourcepaths/generatedSourceDirs; run export or check paths")
       }
+
+      val (filteredSources, skippedScalaSources) =
+        if (config.includeScala) {
+          val result = filterScalaSources(config, sources)
+          if (result.parseable.isEmpty) {
+            return Left("No sources left after filtering Scala parse failures")
+          }
+          (result.parseable, result.skipped)
+        } else {
+          (sources, Nil)
+        }
 
       val outputDirs = cfg.outputDirPaths
       if (outputDirs.isEmpty) {
@@ -213,11 +225,11 @@ object TurbineConformanceCli {
         log(config, "Warning: classpath is empty after filtering non-existent entries")
       }
 
-      log(config, s"Compiling ${sources.size} sources with Turbine")
+      log(config, s"Compiling ${filteredSources.size} sources with Turbine")
 
       val outDir = Files.createTempDirectory("turbine-conformance")
       val turbineJar = outDir.resolve("turbine.jar")
-      runTurbineCompile(config, sources, classpath, turbineJar) match {
+      runTurbineCompile(config, filteredSources, classpath, turbineJar) match {
         case Left(error) => return Left(error)
         case Right(_) =>
       }
@@ -254,13 +266,39 @@ object TurbineConformanceCli {
         diffCollector.extraClass(name, turbineClasses(name))
       }
       val baselineOnly = baselineClasses.keySet.diff(turbineClasses.keySet)
+      val skippedScalaFileNames = skippedScalaSources.map(_.getFileName.toString).toSet
+      val (baselineOnlySkipped, baselineOnlyMissing) =
+        if (skippedScalaFileNames.nonEmpty) {
+          baselineOnly.partition { name =>
+            baselineClasses
+              .get(name)
+              .flatMap(bytes => classSourceFile(bytes))
+              .exists(skippedScalaFileNames.contains)
+          }
+        } else {
+          (Set.empty[String], baselineOnly)
+        }
+      baselineOnlyMissing.foreach { name =>
+        diffCollector.missingClass(name, baselineClasses(name))
+      }
 
       println(
         s"Missing classes: ${diffCollector.missingClasses}, extra classes: ${diffCollector.extraClasses}, " +
           s"mismatched members: ${diffCollector.mismatchedMembers}"
       )
-      if (baselineOnly.nonEmpty) {
-        println(s"Ignored baseline-only classes: ${baselineOnly.size}")
+      if (baselineOnlySkipped.nonEmpty) {
+        println(s"Ignored baseline-only classes from skipped Scala sources: ${baselineOnlySkipped.size}")
+      }
+      if (baselineOnlyMissing.nonEmpty) {
+        println(s"Baseline-only classes not explained by skipped Scala sources: ${baselineOnlyMissing.size}")
+      }
+
+      val categoryCounts = diffCollector.categoryCounts
+      if (categoryCounts.nonEmpty) {
+        println("Diff summary by category:")
+        categoryCounts.foreach { case (category, count) =>
+          println(s"  $category: $count")
+        }
       }
 
       if (diffCollector.hasDiffs) {
@@ -279,14 +317,20 @@ object TurbineConformanceCli {
     val buildConfig = BuildConfigJson.read(config.mbtJsonPath)
     buildConfig.flatMap { cfg =>
       val sources =
-        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = true)
+        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = config.includeScala)
       if (sources.isEmpty) {
         return Left("No sources found from sourcepaths/generatedSourceDirs; run export or check paths")
       }
-      val filteredSources = filterScalaSources(config, sources)
-      if (filteredSources.isEmpty) {
-        return Left("No sources left after filtering Scala parse failures")
-      }
+      val filteredSources =
+        if (config.includeScala) {
+          val result = filterScalaSources(config, sources)
+          if (result.parseable.isEmpty) {
+            return Left("No sources left after filtering Scala parse failures")
+          }
+          result.parseable
+        } else {
+          sources
+        }
 
       val outputDirs = cfg.outputDirPaths
       if (outputDirs.isEmpty) {
@@ -367,6 +411,8 @@ object TurbineConformanceCli {
           loop(rest, config.copy(scalaVersion = version))
         case "--include-tests" :: rest =>
           loop(rest, config.copy(includeTests = true))
+        case "--no-scala" :: rest =>
+          loop(rest, config.copy(includeScala = false))
         case "--show-diffs" :: count :: rest =>
           Try(count.toInt).toOption match {
             case Some(value) => loop(rest, config.copy(showDiffs = value))
@@ -402,6 +448,7 @@ object TurbineConformanceCli {
               |  --workspace <path>     Spark workspace directory (defaults to .)
               |  --mbt-json <path>      Output/input JSON path (default: <workspace>/.metals/mbt.json)
               |  --scala-version <ver>  Filter Scala dependencies (default: 2.13)
+              |  --no-scala            Exclude Scala sources from Turbine compilation
               |  --include-tests        Include test sources/output dirs
               |  --javac-release <ver>  Override --release for Turbine (e.g., 8, 11, 17)
               |  --turbine-out <path>   Output jar path for compile (default: <workspace>/.metals/turbine-workspace.jar)
@@ -669,9 +716,12 @@ object TurbineConformanceCli {
     out.toSeq
   }
 
-  private def filterScalaSources(config: Config, sources: Seq[Path]): Seq[Path] = {
+  private final case class ScalaFilterResult(parseable: Seq[Path], skipped: Seq[Path])
+
+  private def filterScalaSources(config: Config, sources: Seq[Path]): ScalaFilterResult = {
     var skipped = 0
     val out = mutable.ArrayBuffer.empty[Path]
+    val skippedPaths = mutable.ArrayBuffer.empty[Path]
     val progressFile = config.workspace.resolve(".metals/turbine-parse-current.txt")
     sources.foreach { path =>
       if (path.toString.endsWith(".scala")) {
@@ -683,11 +733,13 @@ object TurbineConformanceCli {
         } catch {
           case e: com.google.turbine.diag.TurbineError =>
             skipped += 1
+            skippedPaths += path
             if (config.verbose) {
               System.err.println(s"Skipping Scala source ${path.toString}: ${e.getMessage}")
             }
           case e: Throwable =>
             skipped += 1
+            skippedPaths += path
             if (config.verbose) {
               System.err.println(s"Skipping Scala source ${path.toString}: ${e.getMessage}")
             }
@@ -700,7 +752,7 @@ object TurbineConformanceCli {
     if (skipped > 0) {
       println(s"Skipped $skipped Scala sources that Turbine could not parse")
     }
-    out.toSeq
+    ScalaFilterResult(out.toSeq, skippedPaths.toSeq)
   }
 
   private def readJarClasses(jar: Path): Map[String, Array[Byte]] = {
@@ -756,6 +808,12 @@ object TurbineConformanceCli {
     BaselineResult(out.toMap, duplicates.toMap)
   }
 
+  private def classSourceFile(bytes: Array[Byte]): Option[String] = {
+    val node = new ClassNode()
+    new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+    Option(node.sourceFile)
+  }
+
   private def filterStableClasses(classes: Map[String, Array[Byte]]): Map[String, Array[Byte]] = {
     val out = new mutable.LinkedHashMap[String, Array[Byte]]()
     classes.foreach { case (name, bytes) =>
@@ -783,13 +841,18 @@ object TurbineConformanceCli {
     var mismatchedMembers: Int = 0
     private var printed: Int = 0
     private val sb = new StringBuilder
+    private val categories = mutable.LinkedHashMap.empty[String, Int]
 
     def hasDiffs: Boolean = missingClasses > 0 || extraClasses > 0 || mismatchedMembers > 0
 
     def output: String = sb.toString
 
+    def categoryCounts: Seq[(String, Int)] =
+      categories.toSeq.sortBy { case (_, count) => -count }
+
     def missingClass(name: String, expected: Array[Byte]): Unit = {
       missingClasses += 1
+      recordCategory("missing-class")
       if (printed < max) {
         printed += 1
         sb.append(s"missing class $name\n")
@@ -799,6 +862,7 @@ object TurbineConformanceCli {
 
     def extraClass(name: String, actual: Array[Byte]): Unit = {
       extraClasses += 1
+      recordCategory("extra-class")
       if (printed < max) {
         printed += 1
         sb.append(s"extra class $name\n")
@@ -808,16 +872,23 @@ object TurbineConformanceCli {
 
     def mismatch(
         className: String,
+        category: String,
         detail: String,
         expected: Array[Byte],
         actual: Array[Byte],
     ): Unit = {
       mismatchedMembers += 1
+      recordCategory(category)
       if (printed < max) {
         printed += 1
         sb.append(s"$detail ($className)\n")
         sb.append(dumpPair("expected", expected, "actual", actual)).append('\n')
       }
+    }
+
+    private def recordCategory(category: String): Unit = {
+      val updated = categories.getOrElse(category, 0) + 1
+      categories.put(category, updated)
     }
   }
 
@@ -838,41 +909,66 @@ object TurbineConformanceCli {
         case Some(a) =>
           val isModuleClass = name.endsWith("$")
           if (e.access != a.access) {
-            diffs.mismatch(name, "class access mismatch", expected(name), actual(name))
+            diffs.mismatch(name, "class-access", "class access mismatch", expected(name), actual(name))
           }
           if (!isModuleClass || e.superName != "java/lang/Object") {
             if (e.superName != a.superName) {
-              diffs.mismatch(name, "class superclass mismatch", expected(name), actual(name))
+              diffs.mismatch(name, "class-superclass", "class superclass mismatch", expected(name), actual(name))
             }
           }
           if (isModuleClass) {
             if (!e.interfaces.forall(a.interfaces.contains)) {
-              diffs.mismatch(name, "class interfaces mismatch", expected(name), actual(name))
+              diffs.mismatch(name, "class-interfaces", "class interfaces mismatch", expected(name), actual(name))
             }
           } else if (e.interfaces != a.interfaces) {
-            diffs.mismatch(name, "class interfaces mismatch", expected(name), actual(name))
+            diffs.mismatch(name, "class-interfaces", "class interfaces mismatch", expected(name), actual(name))
           }
           if (!e.annotations.visible.forall(a.annotations.visible.contains)) {
-            diffs.mismatch(name, "class visible annotations mismatch", expected(name), actual(name))
+            diffs.mismatch(
+              name,
+              "class-annotation-visible",
+              "class visible annotations mismatch",
+              expected(name),
+              actual(name),
+            )
           }
           if (!e.annotations.invisible.forall(a.annotations.invisible.contains)) {
-            diffs.mismatch(name, "class invisible annotations mismatch", expected(name), actual(name))
+            diffs.mismatch(
+              name,
+              "class-annotation-invisible",
+              "class invisible annotations mismatch",
+              expected(name),
+              actual(name),
+            )
           }
 
           e.methods.foreach { case (methodName, methodInfo) =>
             a.methods.get(methodName) match {
               case None =>
-                diffs.mismatch(name, s"missing method $methodName", expected(name), actual(name))
+                diffs.mismatch(name, "missing-method", s"missing method $methodName", expected(name), actual(name))
               case Some(actualMethod) =>
                 if (methodInfo.access != actualMethod.access) {
-                  diffs.mismatch(name, s"method access mismatch: $methodName", expected(name), actual(name))
+                  diffs.mismatch(
+                    name,
+                    "method-access",
+                    s"method access mismatch: $methodName",
+                    expected(name),
+                    actual(name),
+                  )
                 }
                 if (methodInfo.exceptions != actualMethod.exceptions) {
-                  diffs.mismatch(name, s"method exceptions mismatch: $methodName", expected(name), actual(name))
+                  diffs.mismatch(
+                    name,
+                    "method-exceptions",
+                    s"method exceptions mismatch: $methodName",
+                    expected(name),
+                    actual(name),
+                  )
                 }
                 if (!methodInfo.annotations.visible.forall(actualMethod.annotations.visible.contains)) {
                   diffs.mismatch(
                     name,
+                    "method-annotation-visible",
                     s"method visible annotations mismatch: $methodName",
                     expected(name),
                     actual(name),
@@ -881,6 +977,7 @@ object TurbineConformanceCli {
                 if (!methodInfo.annotations.invisible.forall(actualMethod.annotations.invisible.contains)) {
                   diffs.mismatch(
                     name,
+                    "method-annotation-invisible",
                     s"method invisible annotations mismatch: $methodName",
                     expected(name),
                     actual(name),
@@ -892,14 +989,21 @@ object TurbineConformanceCli {
           e.fields.foreach { case (fieldName, fieldInfo) =>
             a.fields.get(fieldName) match {
               case None =>
-                diffs.mismatch(name, s"missing field $fieldName", expected(name), actual(name))
+                diffs.mismatch(name, "missing-field", s"missing field $fieldName", expected(name), actual(name))
               case Some(actualField) =>
                 if (fieldInfo.access != actualField.access) {
-                  diffs.mismatch(name, s"field access mismatch: $fieldName", expected(name), actual(name))
+                  diffs.mismatch(
+                    name,
+                    "field-access",
+                    s"field access mismatch: $fieldName",
+                    expected(name),
+                    actual(name),
+                  )
                 }
                 if (!fieldInfo.annotations.visible.forall(actualField.annotations.visible.contains)) {
                   diffs.mismatch(
                     name,
+                    "field-annotation-visible",
                     s"field visible annotations mismatch: $fieldName",
                     expected(name),
                     actual(name),
@@ -908,6 +1012,7 @@ object TurbineConformanceCli {
                 if (!fieldInfo.annotations.invisible.forall(actualField.annotations.invisible.contains)) {
                   diffs.mismatch(
                     name,
+                    "field-annotation-invisible",
                     s"field invisible annotations mismatch: $fieldName",
                     expected(name),
                     actual(name),

@@ -398,6 +398,11 @@ public final class ScalaStreamLexer implements ScalaLexer {
       }
       if (interpolated && ch == '$') {
         eat();
+        if (ch == '$') {
+          sb.append('$');
+          eat();
+          continue;
+        }
         if (skipInterpolation(start)) {
           continue;
         }
@@ -432,6 +437,11 @@ public final class ScalaStreamLexer implements ScalaLexer {
           quoteCount--;
         }
         eat();
+        if (ch == '$') {
+          sb.append('$');
+          eat();
+          continue;
+        }
         if (skipInterpolation(position)) {
           continue;
         }
@@ -621,7 +631,7 @@ public final class ScalaStreamLexer implements ScalaLexer {
     }
     if (isIdentifierStart(ch)) {
       eat();
-      while (isIdentifierPart(ch)) {
+      while (ch != '$' && isIdentifierPart(ch)) {
         eat();
       }
       return true;
@@ -694,6 +704,10 @@ public final class ScalaStreamLexer implements ScalaLexer {
     while (true) {
       if (interpolated && ch == '$') {
         eat();
+        if (ch == '$') {
+          eat();
+          continue;
+        }
         if (skipInterpolation(start)) {
           continue;
         }
@@ -728,6 +742,11 @@ public final class ScalaStreamLexer implements ScalaLexer {
         quoteCount++;
         eat();
         if (quoteCount == 3) {
+          if (ch == '"') {
+            // Allow escaped quotes in triple-quoted interpolated strings.
+            quoteCount = 2;
+            continue;
+          }
           return;
         }
         continue;

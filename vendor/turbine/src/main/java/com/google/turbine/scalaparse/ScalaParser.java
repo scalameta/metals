@@ -423,6 +423,12 @@ public final class ScalaParser {
       }
       List<String> binders = new ArrayList<>();
       pattern.collectBinders(binders);
+      String patternExplicitType = null;
+      boolean patternHasExplicitType = false;
+      if (pattern instanceof TypedPattern typed) {
+        patternExplicitType = typed.type();
+        patternHasExplicitType = patternExplicitType != null && !patternExplicitType.isEmpty();
+      }
       Map<String, String> binderTypes = new HashMap<>();
       if (rhsInfo != null) {
         pattern.assignTypes(rhsInfo, binderTypes);
@@ -430,7 +436,10 @@ public final class ScalaParser {
       for (String binder : binders) {
         boolean binderExplicit = false;
         String type;
-        if (hasExplicitType && binders.size() == 1) {
+        if (patternHasExplicitType && binders.size() == 1) {
+          type = patternExplicitType;
+          binderExplicit = patternExplicitType != null;
+        } else if (hasExplicitType && binders.size() == 1) {
           type = explicitType;
           binderExplicit = explicitType != null;
         } else {
@@ -627,14 +636,19 @@ public final class ScalaParser {
       next();
       Pattern rhs = parsePattern();
       if (pattern instanceof BinderPattern binder) {
-        return new AliasPattern(binder.name(), rhs);
+        pattern = new AliasPattern(binder.name(), rhs);
+      } else {
+        pattern = rhs;
       }
-      return rhs;
     }
     if (token == COLON) {
       next();
-      parseTypeText(
-          EnumSet.of(COMMA, RPAREN, AT, ARROW, IF, EQUALS, NEWLINE, NEWLINES, SEMI, RBRACE));
+      String explicitType =
+          parseTypeText(
+              EnumSet.of(COMMA, RPAREN, AT, ARROW, IF, EQUALS, NEWLINE, NEWLINES, SEMI, RBRACE));
+      if (explicitType != null && !explicitType.isEmpty()) {
+        pattern = new TypedPattern(pattern, explicitType);
+      }
     }
     return pattern;
   }
@@ -680,6 +694,11 @@ public final class ScalaParser {
     }
     Pattern first = parsePattern();
     if (token != COMMA) {
+      if (token != RPAREN) {
+        // Be tolerant of complex patterns we don't understand yet.
+        skipToMatchingParen();
+        return new WildcardPattern();
+      }
       accept(RPAREN);
       return first;
     }
@@ -689,8 +708,29 @@ public final class ScalaParser {
       next();
       elements.add(parsePattern());
     }
+    if (token != RPAREN) {
+      // Be tolerant of complex patterns we don't understand yet.
+      skipToMatchingParen();
+      return new TuplePattern(ImmutableList.copyOf(elements));
+    }
     accept(RPAREN);
     return new TuplePattern(ImmutableList.copyOf(elements));
+  }
+
+  private void skipToMatchingParen() {
+    int depth = 0;
+    while (token != EOF) {
+      if (token == LPAREN) {
+        depth++;
+      } else if (token == RPAREN) {
+        if (depth == 0) {
+          next();
+          return;
+        }
+        depth = Math.max(0, depth - 1);
+      }
+      next();
+    }
   }
 
   private ImmutableList<Pattern> parsePatternArgs() {
@@ -743,7 +783,12 @@ public final class ScalaParser {
   }
 
   private sealed interface Pattern
-      permits BinderPattern, TuplePattern, ConstructorPattern, WildcardPattern, AliasPattern {
+      permits BinderPattern,
+          TuplePattern,
+          ConstructorPattern,
+          WildcardPattern,
+          AliasPattern,
+          TypedPattern {
     void collectBinders(List<String> out);
 
     void assignTypes(ExprInfo rhs, Map<String, String> out);
@@ -840,6 +885,22 @@ public final class ScalaParser {
         out.putIfAbsent(name, rhsInfo.rawType());
       }
       rhs.assignTypes(rhsInfo, out);
+    }
+  }
+
+  private record TypedPattern(Pattern pattern, String type) implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {
+      pattern.collectBinders(out);
+    }
+
+    @Override
+    public void assignTypes(ExprInfo rhsInfo, Map<String, String> out) {
+      if (type != null && !type.isEmpty()) {
+        pattern.assignTypes(ExprInfo.ofType(type), out);
+      } else {
+        pattern.assignTypes(rhsInfo, out);
+      }
     }
   }
 
