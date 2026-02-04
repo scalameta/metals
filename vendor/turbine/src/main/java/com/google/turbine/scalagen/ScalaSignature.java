@@ -308,9 +308,12 @@ public final class ScalaSignature {
       }
 
       ImmutableList<TySig> typeArgs = parseTypeArgs();
-      String binary = mapKnownClass(raw);
+      String binary = resolveExplicit(raw);
       if (binary == null) {
-        binary = resolveImport(raw);
+        binary = mapKnownClass(raw);
+      }
+      if (binary == null) {
+        binary = resolveWildcard(raw);
       }
       if (binary == null) {
         if (!raw.contains("/") && !pkg.isEmpty()) {
@@ -406,17 +409,24 @@ public final class ScalaSignature {
       }
     }
 
-    private @Nullable String resolveImport(String raw) {
+    private @Nullable String resolveExplicit(String raw) {
       if (scope == null || scope.isEmpty() || raw.contains("/")) {
         return null;
       }
-      String explicit = scope.explicit().get(raw);
-      if (explicit != null) {
-        return explicit;
+      return scope.explicit().get(raw);
+    }
+
+    private @Nullable String resolveWildcard(String raw) {
+      if (scope == null || scope.isEmpty() || raw.contains("/")) {
+        return null;
       }
       ImmutableList<String> wildcards = scope.wildcards();
       for (int i = wildcards.size() - 1; i >= 0; i--) {
-        return wildcards.get(i) + "/" + raw;
+        String prefix = wildcards.get(i);
+        if (prefix.endsWith("$")) {
+          return prefix + raw;
+        }
+        return prefix + "/" + raw;
       }
       return null;
     }

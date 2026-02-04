@@ -39,6 +39,7 @@ import static com.google.turbine.scalaparse.ScalaToken.LBRACE;
 import static com.google.turbine.scalaparse.ScalaToken.LBRACK;
 import static com.google.turbine.scalaparse.ScalaToken.LAZY;
 import static com.google.turbine.scalaparse.ScalaToken.LPAREN;
+import static com.google.turbine.scalaparse.ScalaToken.NEW;
 import static com.google.turbine.scalaparse.ScalaToken.NEWLINE;
 import static com.google.turbine.scalaparse.ScalaToken.NEWLINES;
 import static com.google.turbine.scalaparse.ScalaToken.NULL;
@@ -349,17 +350,20 @@ public final class ScalaParser {
         if (returnType == null) {
           returnType = inferTypeFromExprStart(token, value);
         }
-      }
-      if (token == LBRACE) {
-        String inferred = skipBlockAndInferType();
         if (returnType == null) {
-          returnType = inferred;
+          ExprInfo inferred = parseExprInfo(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
+          if (inferred != null) {
+            returnType = inferred.rawType();
+          }
+        } else if (token == LBRACE) {
+          skipBlock();
+        } else {
+          skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
         }
+      } else if (token == LBRACE) {
+        skipBlock();
       } else {
-        String inferred = skipExprAndInferType(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
-        if (returnType == null) {
-          returnType = inferred;
-        }
+        skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
       }
     } else if (token == LBRACE) {
       hasBody = true;
@@ -390,11 +394,12 @@ public final class ScalaParser {
       ImmutableList<String> modifiers, boolean isVar, @Nullable BlockDepth depth) {
     int start = position;
     next();
+    EnumSet<ScalaToken> patternTypeStops = patternTypeStops(/* allowArrow= */ true);
     List<Pattern> patterns = new ArrayList<>();
-    patterns.add(parsePattern());
+    patterns.add(parsePattern(patternTypeStops));
     while (token == COMMA) {
       next();
-      patterns.add(parsePattern());
+      patterns.add(parsePattern(patternTypeStops));
     }
     String explicitType = null;
     boolean hasExplicitType = false;
@@ -504,6 +509,23 @@ public final class ScalaParser {
     }
     if (token == LPAREN) {
       return parseTupleOrParenExprInfo();
+    }
+    if (token == NEW) {
+      next();
+      if (token.isIdentifier()) {
+        String typeText =
+            parseTypeText(EnumSet.of(LPAREN, LBRACE, NEWLINE, NEWLINES, SEMI, COMMA, RBRACE, EOF));
+        if (token == LPAREN) {
+          skipDelimited(LPAREN, RPAREN);
+        }
+        if (token == LBRACE) {
+          skipDelimited(LBRACE, RBRACE);
+        }
+        if (typeText != null && !typeText.isEmpty()) {
+          return ExprInfo.ofType(typeText);
+        }
+      }
+      return null;
     }
     if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
       boolean backquoted = token == BACKQUOTED_IDENT;
@@ -631,10 +653,14 @@ public final class ScalaParser {
   }
 
   private Pattern parsePattern() {
-    Pattern pattern = parsePatternSimple();
+    return parsePattern(patternTypeStops(/* allowArrow= */ false));
+  }
+
+  private Pattern parsePattern(EnumSet<ScalaToken> typeStops) {
+    Pattern pattern = parsePatternSimple(typeStops);
     if (token == AT) {
       next();
-      Pattern rhs = parsePattern();
+      Pattern rhs = parsePattern(typeStops);
       if (pattern instanceof BinderPattern binder) {
         pattern = new AliasPattern(binder.name(), rhs);
       } else {
@@ -643,9 +669,7 @@ public final class ScalaParser {
     }
     if (token == COLON) {
       next();
-      String explicitType =
-          parseTypeText(
-              EnumSet.of(COMMA, RPAREN, AT, ARROW, IF, EQUALS, NEWLINE, NEWLINES, SEMI, RBRACE));
+      String explicitType = parseTypeText(typeStops);
       if (explicitType != null && !explicitType.isEmpty()) {
         pattern = new TypedPattern(pattern, explicitType);
       }
@@ -653,13 +677,13 @@ public final class ScalaParser {
     return pattern;
   }
 
-  private Pattern parsePatternSimple() {
+  private Pattern parsePatternSimple(EnumSet<ScalaToken> typeStops) {
     if (token == USCORE) {
       next();
       return new WildcardPattern();
     }
     if (token == LPAREN) {
-      return parseTuplePattern();
+      return parseTuplePattern(typeStops);
     }
     if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
       boolean backquoted = token == BACKQUOTED_IDENT;
@@ -676,7 +700,7 @@ public final class ScalaParser {
         next();
       }
       if (token == LPAREN) {
-        return new ConstructorPattern(name, parsePatternArgs());
+        return new ConstructorPattern(name, parsePatternArgs(typeStops));
       }
       if (!qualified && (backquoted || isBinderName(name))) {
         return new BinderPattern(name);
@@ -686,13 +710,13 @@ public final class ScalaParser {
     return new WildcardPattern();
   }
 
-  private Pattern parseTuplePattern() {
+  private Pattern parseTuplePattern(EnumSet<ScalaToken> typeStops) {
     accept(LPAREN);
     if (token == RPAREN) {
       accept(RPAREN);
       return new WildcardPattern();
     }
-    Pattern first = parsePattern();
+    Pattern first = parsePattern(typeStops);
     if (token != COMMA) {
       if (token != RPAREN) {
         // Be tolerant of complex patterns we don't understand yet.
@@ -706,7 +730,7 @@ public final class ScalaParser {
     elements.add(first);
     while (token == COMMA) {
       next();
-      elements.add(parsePattern());
+      elements.add(parsePattern(typeStops));
     }
     if (token != RPAREN) {
       // Be tolerant of complex patterns we don't understand yet.
@@ -733,12 +757,12 @@ public final class ScalaParser {
     }
   }
 
-  private ImmutableList<Pattern> parsePatternArgs() {
+  private ImmutableList<Pattern> parsePatternArgs(EnumSet<ScalaToken> typeStops) {
     accept(LPAREN);
     ImmutableList.Builder<Pattern> args = ImmutableList.builder();
     if (token != RPAREN) {
       while (true) {
-        args.add(parsePattern());
+        args.add(parsePattern(typeStops));
         if (token == COMMA) {
           next();
           continue;
@@ -748,6 +772,15 @@ public final class ScalaParser {
     }
     accept(RPAREN);
     return args.build();
+  }
+
+  private EnumSet<ScalaToken> patternTypeStops(boolean allowArrow) {
+    EnumSet<ScalaToken> stops =
+        EnumSet.of(COMMA, RPAREN, AT, IF, EQUALS, NEWLINE, NEWLINES, SEMI, RBRACE);
+    if (!allowArrow) {
+      stops.add(ARROW);
+    }
+    return stops;
   }
 
   private boolean isTypeLike(String name) {
@@ -1134,6 +1167,10 @@ public final class ScalaParser {
         next();
         continue;
       }
+      if (token == THIS || (token == IDENTIFIER && (peek() == COLON || peek() == ARROW))) {
+        skipSelfType();
+        continue;
+      }
       if (token == IMPORT) {
         ScalaTree.ImportStat imp = parseImport();
         imports.add(imp.text());
@@ -1179,6 +1216,28 @@ public final class ScalaParser {
     accept(RBRACE);
     valueScopes.pop();
     return new TemplateBody(imports.build(), members.build());
+  }
+
+  private void skipSelfType() {
+    int paren = 0;
+    int bracket = 0;
+    int brace = 0;
+    while (token != EOF) {
+      if (paren == 0 && bracket == 0 && brace == 0 && token == ARROW) {
+        next();
+        return;
+      }
+      switch (token) {
+        case LPAREN -> paren++;
+        case RPAREN -> paren = Math.max(0, paren - 1);
+        case LBRACK -> bracket++;
+        case RBRACK -> bracket = Math.max(0, bracket - 1);
+        case LBRACE -> brace++;
+        case RBRACE -> brace = Math.max(0, brace - 1);
+        default -> {}
+      }
+      next();
+    }
   }
 
   private record TemplateBody(ImmutableList<String> imports, ImmutableList<ScalaTree.Defn> members) {}

@@ -118,6 +118,10 @@ public final class ScalaTypeMapper {
       TypeAliasScope aliasScope,
       boolean isReturn,
       Set<String> seenAliases) {
+    String functionBinary = functionTypeBinary(typeText);
+    if (functionBinary != null) {
+      return "L" + functionBinary + ";";
+    }
     if (isVarArgsType(typeText)) {
       return "Lscala/collection/immutable/Seq;";
     }
@@ -143,6 +147,16 @@ public final class ScalaTypeMapper {
           descriptorForParam(arg, currentPackage, typeParams, importScope, aliasScope);
       return "[" + component;
     }
+    if (!raw.contains("/")) {
+      String explicit = resolveExplicit(raw, importScope);
+      if (explicit != null) {
+        return "L" + explicit + ";";
+      }
+      String known = mapKnownClass(raw);
+      if (known != null) {
+        return "L" + known + ";";
+      }
+    }
     String binary = resolveQualified(raw, currentPackage, importScope);
     if (binary == null) {
       binary = mapKnownClass(raw);
@@ -159,6 +173,66 @@ public final class ScalaTypeMapper {
       }
     }
     return "L" + binary + ";";
+  }
+
+  private static @Nullable String functionTypeBinary(@Nullable String typeText) {
+    if (typeText == null) {
+      return null;
+    }
+    String trimmed = typeText.trim();
+    if (trimmed.isEmpty() || !trimmed.contains("=>")) {
+      return null;
+    }
+    List<String> tokens = Arrays.asList(trimmed.split("\\s+"));
+    int arrow = tokens.indexOf("=>");
+    if (arrow <= 0) {
+      return null;
+    }
+    int arity = functionArity(tokens.subList(0, arrow));
+    if (arity < 0 || arity > 22) {
+      return null;
+    }
+    return "scala/Function" + arity;
+  }
+
+  private static int functionArity(List<String> tokens) {
+    if (tokens.isEmpty()) {
+      return 0;
+    }
+    int start = 0;
+    int end = tokens.size();
+    if ("(".equals(tokens.get(0)) && ")".equals(tokens.get(end - 1))) {
+      start++;
+      end = Math.max(start, end - 1);
+    }
+    int depth = 0;
+    int commas = 0;
+    boolean sawType = false;
+    for (int i = start; i < end; i++) {
+      String token = tokens.get(i);
+      switch (token) {
+        case "(":
+        case "[":
+          depth++;
+          break;
+        case ")":
+        case "]":
+          depth = Math.max(0, depth - 1);
+          break;
+        case ",":
+          if (depth == 0) {
+            commas++;
+          }
+          break;
+        default:
+          sawType = true;
+          break;
+      }
+    }
+    if (!sawType) {
+      return 0;
+    }
+    return commas + 1;
   }
 
   private static @Nullable String rawTypeName(@Nullable String typeText) {
@@ -292,9 +366,20 @@ public final class ScalaTypeMapper {
     }
     List<String> wildcards = importScope.wildcards();
     for (int i = wildcards.size() - 1; i >= 0; i--) {
-      return wildcards.get(i) + "/" + raw;
+      String prefix = wildcards.get(i);
+      if (prefix.endsWith("$")) {
+        return prefix + raw;
+      }
+      return prefix + "/" + raw;
     }
     return null;
+  }
+
+  private static @Nullable String resolveExplicit(String raw, ImportScope importScope) {
+    if (importScope == null || importScope.isEmpty() || raw.contains("/")) {
+      return null;
+    }
+    return importScope.explicit().get(raw);
   }
 
   private static boolean isVarArgsType(@Nullable String typeText) {

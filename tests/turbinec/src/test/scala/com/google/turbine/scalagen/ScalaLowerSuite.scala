@@ -287,6 +287,32 @@ class ScalaLowerSuite extends FunSuite {
     assert(!mirror.fields.contains("MODULE$Lfoo/Solo$;"))
   }
 
+  test("app-forwarders") {
+    val source =
+      List(
+        "package foo",
+        "object Main extends App {",
+        "  val x = 1",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/Main$"))
+    assert(module.methods.contains("main([Ljava/lang/String;)V"))
+    assert(module.methods.contains("delayedInit(Lscala/Function0;)V"))
+    assert(module.methods.contains("executionStart()J"))
+    assert((module.methods("main([Ljava/lang/String;)V") & Opcodes.ACC_STATIC) == 0)
+
+    val mirror = readMembers(classes.get("foo/Main"))
+    assert(mirror.methods.contains("main([Ljava/lang/String;)V"))
+    assert(mirror.methods.contains("delayedInit(Lscala/Function0;)V"))
+    assert(mirror.methods.contains("executionStart()J"))
+    assert((mirror.methods("main([Ljava/lang/String;)V") & Opcodes.ACC_STATIC) != 0)
+  }
+
   test("trait-default-methods") {
     val source =
       List(
@@ -308,6 +334,147 @@ class ScalaLowerSuite extends FunSuite {
     assert((cls.methods("concreteDef(I)I") & Opcodes.ACC_ABSTRACT) == 0)
     assert((cls.methods("abstractVal()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) != 0)
     assert((cls.methods("concreteVal()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) == 0)
+  }
+
+  test("trait-forwarders") {
+    val source =
+      List(
+        "package foo",
+        "trait T {",
+        "  def foo(): Int = 1",
+        "  val bar: String = \"x\"",
+        "}",
+        "class C extends T {}",
+        "object O extends T {}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("foo()I"))
+    assert(cls.methods.contains("bar()Ljava/lang/String;"))
+
+    val module = readMembers(classes.get("foo/O$"))
+    assert(module.methods.contains("foo()I"))
+    assert(module.methods.contains("bar()Ljava/lang/String;"))
+
+    val mirror = readMembers(classes.get("foo/O"))
+    assert(mirror.methods.contains("foo()I"))
+    assert((mirror.methods("foo()I") & Opcodes.ACC_STATIC) != 0)
+    assert(mirror.methods.contains("bar()Ljava/lang/String;"))
+    assert((mirror.methods("bar()Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("trait-forwarders-supertrait") {
+    val source =
+      List(
+        "package foo",
+        "trait Base {",
+        "  def foo(): Int = 1",
+        "}",
+        "trait Mid extends Base",
+        "class C extends Mid {}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("foo()I"))
+  }
+
+  test("wildcard-import-object-types") {
+    val source =
+      List(
+        "package foo",
+        "object O {",
+        "  case class Inner(x: Int)",
+        "}",
+        "class ActorRef",
+        "class C {",
+        "  import O._",
+        "  def f(a: ActorRef): Unit = ()",
+        "  def g(i: Inner): Unit = ()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("f(Lfoo/ActorRef;)V"))
+    assert(cls.methods.contains("g(Lfoo/O$Inner;)V"))
+  }
+
+  test("wildcard-import-object-types-over-package") {
+    val source =
+      List(
+        "package foo",
+        "import scala.concurrent.duration._",
+        "object O {",
+        "  case class Inner(x: Int)",
+        "}",
+        "class C {",
+        "  import O._",
+        "  def g(i: Inner): Unit = ()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("g(Lfoo/O$Inner;)V"))
+  }
+
+  test("trait-self-type-members") {
+    val source =
+      List(
+        "package foo",
+        "class Base",
+        "trait T { this: Base =>",
+        "  def self(): Int = 1",
+        "}",
+        "class C extends Base with T {}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("self()I"))
+  }
+
+  test("object-import-object-types") {
+    val source =
+      List(
+        "package foo",
+        "import scala.concurrent.Future",
+        "import scala.concurrent.duration._",
+        "object CommonMapAsync {",
+        "  case class EntityEvent(id: Int)",
+        "}",
+        "object MapAsyncPartitioned extends App {",
+        "  import CommonMapAsync._",
+        "  def processEvent(event: EntityEvent, partition: Int): Future[String] =",
+        "    Future.successful(\"\")",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val mirror = readMembers(classes.get("foo/MapAsyncPartitioned"))
+    assert(
+      mirror.methods.contains("processEvent(Lfoo/CommonMapAsync$EntityEvent;I)Lscala/concurrent/Future;")
+    )
   }
 
   test("trait-inferred-val-concrete") {
@@ -363,6 +530,27 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("ys()Ljava/util/ArrayList;"))
   }
 
+  test("resolves-object-wildcard-imports") {
+    val source =
+      List(
+        "package foo",
+        "object Outer {",
+        "  case class Inner(x: Int)",
+        "}",
+        "object Use {",
+        "  import Outer._",
+        "  def f(i: Inner): Int = i.x",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/Use$"))
+    assert(module.methods.contains("f(Lfoo/Outer$Inner;)I"))
+  }
+
   test("resolves-type-aliases") {
     val source =
       List(
@@ -380,6 +568,46 @@ class ScalaLowerSuite extends FunSuite {
 
     val cls = readMembers(classes.get("foo/C"))
     assert(cls.methods.contains("f(Ljava/util/List;)Ljava/util/List;"))
+  }
+
+  test("infers-new-expression-types") {
+    val source =
+      List(
+        "package foo",
+        "import java.lang.StringBuilder",
+        "import java.util.Random",
+        "class C {",
+        "  val rng = new Random()",
+        "  val bytes = new Array[Byte](1)",
+        "  def builder = new StringBuilder()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("rng()Ljava/util/Random;"))
+    assert(cls.methods.contains("bytes()[B"))
+    assert(cls.methods.contains("builder()Ljava/lang/StringBuilder;"))
+  }
+
+  test("function-type-descriptors") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  val f: Int => String = _ => \"\"",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("f()Lscala/Function1;"))
   }
 
   test("trait-impl-class") {

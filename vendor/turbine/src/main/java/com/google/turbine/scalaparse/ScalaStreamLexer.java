@@ -46,6 +46,7 @@ public final class ScalaStreamLexer implements ScalaLexer {
   private @Nullable SavedToken trailingToken;
 
   private ScalaToken lastToken = ScalaToken.EOF;
+  private ScalaToken prevToken = ScalaToken.EOF;
 
   private final Deque<ScalaToken> sepRegions = new ArrayDeque<>();
 
@@ -239,9 +240,11 @@ public final class ScalaStreamLexer implements ScalaLexer {
       }
       value = null;
       ScalaToken nl = sawBlankLine ? ScalaToken.NEWLINES : ScalaToken.NEWLINE;
+      prevToken = lastToken;
       lastToken = nl;
       return nl;
     }
+    prevToken = lastToken;
     lastToken = token;
     if (trailingToken != null) {
       pending.addLast(trailingToken);
@@ -990,9 +993,15 @@ public final class ScalaStreamLexer implements ScalaLexer {
       }
       default -> {}
     }
+    if ((last == ScalaToken.CLASS || last == ScalaToken.OBJECT) && prevToken == ScalaToken.CASE) {
+      if (!sepRegions.isEmpty() && sepRegions.peek() == ScalaToken.ARROW) {
+        sepRegions.pop();
+      }
+    }
   }
 
   private void applySaved(SavedToken saved) {
+    this.prevToken = this.lastToken;
     this.position = saved.position;
     this.value = saved.value;
     this.lastToken = saved.token;

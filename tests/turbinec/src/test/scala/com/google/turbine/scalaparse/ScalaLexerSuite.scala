@@ -18,6 +18,46 @@ class ScalaLexerSuite extends FunSuite {
     }
   }
 
+  test("extends-without-body") {
+    val tokens = lex("class C extends T\nobject O extends T\n")
+    assertEquals(
+      tokens,
+      List(
+        "CLASS",
+        "IDENTIFIER(C)",
+        "EXTENDS",
+        "IDENTIFIER(T)",
+        "NEWLINE",
+        "OBJECT",
+        "IDENTIFIER(O)",
+        "EXTENDS",
+        "IDENTIFIER(T)",
+        "EOF"
+      )
+    )
+  }
+
+  test("case-class-separator") {
+    val tokens = lex("case class A extends B\ncase class C extends B\n")
+    assertEquals(
+      tokens,
+      List(
+        "CASE",
+        "CLASS",
+        "IDENTIFIER(A)",
+        "EXTENDS",
+        "IDENTIFIER(B)",
+        "NEWLINE",
+        "CASE",
+        "CLASS",
+        "IDENTIFIER(C)",
+        "EXTENDS",
+        "IDENTIFIER(B)",
+        "EOF"
+      )
+    )
+  }
+
   private def lines(text: String): List[String] =
     text.split("\\R").toList
 
