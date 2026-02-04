@@ -219,6 +219,8 @@ public final class ScalaParser {
   }
 
   private ImmutableList<ScalaTree.Defn> parseTopDef() {
+    int startPosition = position;
+    ScalaToken startToken = token;
     ImmutableList<String> modifiers = parseModifiers();
     boolean isCase = false;
     if (token == CASE) {
@@ -249,6 +251,10 @@ public final class ScalaParser {
 
     // Unrecognized, skip expression.
     skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
+    if (token == startToken && position == startPosition && token != EOF) {
+      // Ensure we always make forward progress to avoid infinite loops.
+      next();
+    }
     return ImmutableList.of();
   }
 

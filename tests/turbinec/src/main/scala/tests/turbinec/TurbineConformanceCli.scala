@@ -1,15 +1,19 @@
 package tests.turbinec
 
 import com.google.common.collect.ImmutableList
+import com.google.common.io.MoreFiles
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
+import com.google.turbine.diag.SourceFile
 import com.google.turbine.main.Main
 import com.google.turbine.options.LanguageVersion
 import com.google.turbine.options.TurbineOptions
+import com.google.turbine.scalaparse.ScalaParser
 import java.io.File
 import java.io.FileReader
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -60,6 +64,7 @@ object TurbineConformanceCli {
   private object Command {
     case object Export extends Command { val name = "export" }
     case object Compare extends Command { val name = "compare" }
+    case object Compile extends Command { val name = "compile" }
     case object All extends Command { val name = "all" }
   }
 
@@ -73,8 +78,11 @@ object TurbineConformanceCli {
       verbose: Boolean = false,
       javacRelease: Option[String] = None,
       includeBaselineClasspath: Boolean = true,
+      turbineOut: Option[Path] = None,
   ) {
     def mbtJsonPath: Path = mbtJson.getOrElse(workspace.resolve(".metals/mbt.json"))
+    def turbineOutPath: Path =
+      turbineOut.getOrElse(workspace.resolve(".metals/turbine-workspace.jar"))
   }
 
   private final case class BuildConfig(
@@ -109,6 +117,8 @@ object TurbineConformanceCli {
         runExport(config).map(_ => ())
       case Command.Compare =>
         runCompare(config)
+      case Command.Compile =>
+        runCompile(config)
       case Command.All =>
         runExport(config).flatMap(_ => runCompare(config))
     }
@@ -182,7 +192,8 @@ object TurbineConformanceCli {
   private def runCompare(config: Config): Either[String, Unit] = {
     val buildConfig = BuildConfigJson.read(config.mbtJsonPath)
     buildConfig.flatMap { cfg =>
-      val sources = listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths)
+      val sources =
+        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = false)
       if (sources.isEmpty) {
         return Left("No sources found from sourcepaths/generatedSourceDirs; run export or check paths")
       }
@@ -206,26 +217,9 @@ object TurbineConformanceCli {
 
       val outDir = Files.createTempDirectory("turbine-conformance")
       val turbineJar = outDir.resolve("turbine.jar")
-
-      val options = TurbineOptions.builder()
-      configureBootClasspath(options, config.javacRelease)
-      options.setSources(ImmutableList.copyOf(sources.map(_.toString).asJava))
-      options.setClassPath(ImmutableList.copyOf(classpath.map(_.toString).asJava))
-      options.setOutput(turbineJar.toString)
-
-      try {
-        Main.compile(options.build())
-      } catch {
-        case e: com.google.turbine.diag.TurbineError =>
-          e.diagnostics().asScala.foreach { d =>
-            System.err.println(
-              s"${d.path()}:${d.line()}:${d.column()} (pos=${d.position()}) ${d.message()}"
-            )
-          }
-          return Left("Turbine compilation failed")
-        case e: Throwable =>
-          e.printStackTrace()
-          return Left(s"Turbine compilation failed: ${e.getMessage}")
+      runTurbineCompile(config, sources, classpath, turbineJar) match {
+        case Left(error) => return Left(error)
+        case Right(_) =>
       }
 
       val turbineClasses = filterStableClasses(readJarClasses(turbineJar))
@@ -281,6 +275,73 @@ object TurbineConformanceCli {
     }
   }
 
+  private def runCompile(config: Config): Either[String, Unit] = {
+    val buildConfig = BuildConfigJson.read(config.mbtJsonPath)
+    buildConfig.flatMap { cfg =>
+      val sources =
+        listSources(cfg.sourcepathPaths ++ cfg.generatedSourcePaths, includeScala = true)
+      if (sources.isEmpty) {
+        return Left("No sources found from sourcepaths/generatedSourceDirs; run export or check paths")
+      }
+      val filteredSources = filterScalaSources(config, sources)
+      if (filteredSources.isEmpty) {
+        return Left("No sources left after filtering Scala parse failures")
+      }
+
+      val outputDirs = cfg.outputDirPaths
+      if (outputDirs.isEmpty) {
+        return Left("No outputDirs found in build config; run export")
+      }
+
+      val classpath = distinctPaths(
+        cfg.classpathPaths.filter(Files.exists(_)) ++
+          (if (config.includeBaselineClasspath)
+             outputDirs.filter(Files.exists(_)) ++ detectAssemblyJars(config.workspace)
+           else Nil)
+      )
+      if (classpath.isEmpty) {
+        log(config, "Warning: classpath is empty after filtering non-existent entries")
+      }
+
+      val turbineJar = config.turbineOutPath
+      Files.createDirectories(turbineJar.getParent)
+      log(config, s"Compiling ${filteredSources.size} sources with Turbine")
+
+      runTurbineCompile(config, filteredSources, classpath, turbineJar).map { _ =>
+        println(s"Wrote Turbine output to $turbineJar")
+      }
+    }
+  }
+
+  private def runTurbineCompile(
+      config: Config,
+      sources: Seq[Path],
+      classpath: Seq[Path],
+      output: Path,
+  ): Either[String, Unit] = {
+    val options = TurbineOptions.builder()
+    configureBootClasspath(options, config.javacRelease)
+    options.setSources(ImmutableList.copyOf(sources.map(_.toString).asJava))
+    options.setClassPath(ImmutableList.copyOf(classpath.map(_.toString).asJava))
+    options.setOutput(output.toString)
+
+    try {
+      Main.compile(options.build())
+      Right(())
+    } catch {
+      case e: com.google.turbine.diag.TurbineError =>
+        e.diagnostics().asScala.foreach { d =>
+          System.err.println(
+            s"${d.path()}:${d.line()}:${d.column()} (pos=${d.position()}) ${d.message()}"
+          )
+        }
+        Left("Turbine compilation failed")
+      case e: Throwable =>
+        e.printStackTrace()
+        Left(s"Turbine compilation failed: ${e.getMessage}")
+    }
+  }
+
   private def parseArgs(args: List[String]): Either[String, Option[Config]] = {
     def loop(args: List[String], config: Config): Either[String, Option[Config]] = {
       args match {
@@ -294,6 +355,8 @@ object TurbineConformanceCli {
           loop(rest, config.copy(command = Command.Export))
         case "compare" :: rest =>
           loop(rest, config.copy(command = Command.Compare))
+        case "compile" :: rest =>
+          loop(rest, config.copy(command = Command.Compile))
         case "all" :: rest =>
           loop(rest, config.copy(command = Command.All))
         case "--workspace" :: path :: rest =>
@@ -311,6 +374,8 @@ object TurbineConformanceCli {
           }
         case "--javac-release" :: release :: rest =>
           loop(rest, config.copy(javacRelease = Some(release)))
+        case "--turbine-out" :: path :: rest =>
+          loop(rest, config.copy(turbineOut = Some(Paths.get(path).toAbsolutePath.normalize)))
         case "--include-baseline-classpath" :: rest =>
           loop(rest, config.copy(includeBaselineClasspath = true))
         case "--no-baseline-classpath" :: rest =>
@@ -331,7 +396,7 @@ object TurbineConformanceCli {
     println("""turbinec - Turbine Scala conformance CLI
               |
               |Usage:
-              |  turbinec/run -- [export|compare|all] [options]
+              |  turbinec/run -- [export|compare|compile|all] [options]
               |
               |Options:
               |  --workspace <path>     Spark workspace directory (defaults to .)
@@ -339,6 +404,7 @@ object TurbineConformanceCli {
               |  --scala-version <ver>  Filter Scala dependencies (default: 2.13)
               |  --include-tests        Include test sources/output dirs
               |  --javac-release <ver>  Override --release for Turbine (e.g., 8, 11, 17)
+              |  --turbine-out <path>   Output jar path for compile (default: <workspace>/.metals/turbine-workspace.jar)
               |  --no-baseline-classpath Disable baseline output dirs on Turbine classpath (default: include)
               |  --show-diffs <n>        Max number of detailed diffs to print (default: 20)
               |  --verbose              Enable verbose logging
@@ -347,6 +413,7 @@ object TurbineConformanceCli {
               |Examples:
               |  sbt "turbinec/run -- export --workspace /Users/olafurpg/dev/apache/spark"
               |  sbt "turbinec/run -- compare --workspace /Users/olafurpg/dev/apache/spark"
+              |  sbt "turbinec/run -- compile --workspace /Users/olafurpg/dev/apache/spark"
               |  sbt "turbinec/run -- all --workspace /Users/olafurpg/dev/apache/spark"
               |""".stripMargin)
   }
@@ -580,7 +647,7 @@ object TurbineConformanceCli {
     out.toSeq
   }
 
-  private def listSources(directories: Seq[Path]): Seq[Path] = {
+  private def listSources(directories: Seq[Path], includeScala: Boolean): Seq[Path] = {
     val out = mutable.LinkedHashSet.empty[Path]
     directories.foreach { dir =>
       if (Files.isDirectory(dir)) {
@@ -588,7 +655,9 @@ object TurbineConformanceCli {
         try {
           stream.iterator().asScala.foreach { path =>
             val name = path.toString
-            if (Files.isRegularFile(path) && name.endsWith(".java")) {
+            val isJava = name.endsWith(".java")
+            val isScala = includeScala && name.endsWith(".scala")
+            if (Files.isRegularFile(path) && (isJava || isScala)) {
               out += path.toAbsolutePath.normalize
             }
           }
@@ -596,6 +665,40 @@ object TurbineConformanceCli {
           stream.close()
         }
       }
+    }
+    out.toSeq
+  }
+
+  private def filterScalaSources(config: Config, sources: Seq[Path]): Seq[Path] = {
+    var skipped = 0
+    val out = mutable.ArrayBuffer.empty[Path]
+    val progressFile = config.workspace.resolve(".metals/turbine-parse-current.txt")
+    sources.foreach { path =>
+      if (path.toString.endsWith(".scala")) {
+        try {
+          Files.writeString(progressFile, path.toString, UTF_8)
+          val source = MoreFiles.asCharSource(path, UTF_8).read()
+          ScalaParser.parse(new SourceFile(path.toString, source))
+          out += path
+        } catch {
+          case e: com.google.turbine.diag.TurbineError =>
+            skipped += 1
+            if (config.verbose) {
+              System.err.println(s"Skipping Scala source ${path.toString}: ${e.getMessage}")
+            }
+          case e: Throwable =>
+            skipped += 1
+            if (config.verbose) {
+              System.err.println(s"Skipping Scala source ${path.toString}: ${e.getMessage}")
+            }
+        }
+      } else {
+        out += path
+      }
+    }
+    Files.deleteIfExists(progressFile)
+    if (skipped > 0) {
+      println(s"Skipped $skipped Scala sources that Turbine could not parse")
     }
     out.toSeq
   }
