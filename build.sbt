@@ -967,6 +967,7 @@ lazy val turbinec = project
   .settings(
     testSettings,
     sharedSettings,
+    Compile / mainClass := Some("tests.turbinec.TurbineConformanceCli"),
     libraryDependencies ++= List(
       "org.scalameta" %% "munit" % V.munit,
       "org.ow2.asm" % "asm" % "9.9",
@@ -983,7 +984,7 @@ lazy val turbinec = project
       )
       .value,
   )
-  .dependsOn(mtest, turbine)
+  .dependsOn(mtest, turbine, `metals-extract`)
 
 def isInTestShard(name: String): Boolean = {
   (
