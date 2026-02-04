@@ -20,6 +20,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BspSession
@@ -29,6 +30,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
@@ -64,6 +66,8 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
+import scala.meta.internal.semanticdb.Language
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
@@ -519,6 +523,7 @@ abstract class MetalsLspService(
       mbt2,
       workDoneProgress,
       timerProvider,
+      metrics,
       featureFlags,
       () => mbtBuild,
     )
@@ -531,7 +536,7 @@ abstract class MetalsLspService(
     time,
     languageClient,
     workDoneProgress,
-    timerProvider,
+    metrics,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
@@ -1399,7 +1404,16 @@ abstract class MetalsLspService(
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
-    CancelTokens.future { token => compilers.completions(params, token) }
+    CancelTokens.future { token =>
+      val language = params.getTextDocument.getUri.toAbsolutePathSafe
+        .map(_.toLanguage)
+      metrics.recordEvent(
+        new Event()
+          .withLabel("name", "completion")
+          .withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE))
+      )
+      compilers.completions(params, token)
+    }
 
   override def completionItemResolve(
       item: CompletionItem
@@ -1913,6 +1927,7 @@ abstract class MetalsLspService(
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
     if (source.isScalaFilename || source.isJavaFilename) {
+      val timer = new Timer(time)
       val result =
         timerProvider.timedThunk(
           "definition",
@@ -1926,6 +1941,24 @@ abstract class MetalsLspService(
           // needed to know what classpath to compile the dependency source with.
           interactiveSemanticdbs.didDefinition(source, value)
         case _ =>
+      }
+      result.onComplete {
+        case Success(value) =>
+          metrics.recordEvent(
+            Event
+              .duration("definition", timer.elapsed)
+              .withLanguage(source.toLanguage)
+              .withLabel("symbol", value.symbol)
+              .withLabel("success", (!value.isEmpty).toString)
+          )
+        case Failure(_) =>
+          metrics.recordEvent(
+            Event
+              .duration("definition", timer.elapsed)
+              .withLanguage(source.toLanguage)
+              .withLabel("symbol", Symbols.None)
+              .withLabel("success", "false")
+          )
       }
       result
     } else {

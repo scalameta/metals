@@ -16,7 +16,9 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
@@ -25,6 +27,7 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
+import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metals.mbt.MbtBuild
@@ -110,6 +113,7 @@ class Compilers(
     javaFileManagerFactory: JavaFileManagerFactory,
     progressBars: ProgressBars,
     timerProvider: TimerProvider,
+    metrics: MonitoringClient,
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
@@ -284,22 +288,32 @@ class Compilers(
     val maybeDiagnostics =
       for (pc <- loadCompiler(path); contents <- buffers.get(path))
         yield {
-          timerProvider.timed(
-            s"[${pc.buildTargetId()}] computed diagnostics",
-            onlyIf = serverConfig.statistics.isDiagnostics,
-          ) {
-            pc.didChange(
-              CompilerVirtualFileParams(
-                path.toNIO.toUri,
-                contents,
-                EmptyCancelToken,
-                outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+          timerProvider
+            .withTimer(
+              s"[${pc.buildTargetId()}] computed diagnostics",
+              reportStatus = false,
+              onlyIf = serverConfig.statistics.isDiagnostics,
+            ) {
+              pc.didChange(
+                CompilerVirtualFileParams(
+                  path.toNIO.toUri,
+                  contents,
+                  EmptyCancelToken,
+                  outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+                )
+              ).asScala
+                .map { result =>
+                  result.asScala.toList
+                }
+            }
+            .map { case (timer, result) =>
+              metrics.recordEvent(
+                Event
+                  .duration("diagnostics", timer.elapsed)
+                  .withLanguage(path.toLanguage)
               )
-            ).asScala
-              .map { result =>
-                result.asScala.toList
-              }
-          }
+              result
+            }
         }
 
     maybeDiagnostics.getOrElse(Future.successful(List.empty))
@@ -329,15 +343,25 @@ class Compilers(
               contents,
               token = token,
             )
-            for {
-              reportedDiagnostics <- pc
-                .didChange(params)
-                .asScala
-              _ = diagnostics.publishDiagnosticsNotAdjusted(
-                file,
-                reportedDiagnostics.asScala.toList,
-              )
-            } yield ()
+            timerProvider
+              .withTimer(
+                "computed diagnostics",
+                reportStatus = false,
+                onlyIf = false,
+              ) {
+                pc.didChange(params).asScala
+              }
+              .map { case (timer, reportedDiagnostics) =>
+                diagnostics.publishDiagnosticsNotAdjusted(
+                  file,
+                  reportedDiagnostics.asScala.toList,
+                )
+                metrics.recordEvent(
+                  Event
+                    .duration("diagnostics", timer.elapsed)
+                    .withLanguage(file.toLanguage)
+                )
+              }
           }
           _ <- Future.sequence(futures)
         } yield ()

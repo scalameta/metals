@@ -13,13 +13,16 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.HoverExtParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -34,6 +37,7 @@ import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.pc
+import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
 import scala.meta.internal.tvp.MetalsTreeViewProvider
 import scala.meta.internal.tvp.NoopTreeViewProvider
@@ -48,7 +52,9 @@ import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
+import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j
@@ -878,6 +884,82 @@ class WorkspaceLspService(
       }
       .flatMap(_.map(exec.tupled).getOrElse(onNotFound()))
 
+  private def recordRunDebugEvent(
+      language: Option[Language],
+      testName: Option[String],
+  ): Unit = {
+    val event = new Event()
+      .withLabel("name", "run_debug_session")
+      .withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE))
+    testName.foreach(event.withLabel("testName", _))
+    metrics.recordEvent(event)
+  }
+
+  private def languageFromTargets(
+      targets: Iterable[b.BuildTarget]
+  ): Option[Language] = {
+    val languageIds = targets.iterator.flatMap(_.getLanguageIds.asScala).toList
+    Option.when(languageIds.nonEmpty) {
+      val normalized = languageIds.map(_.toLowerCase)
+      if (normalized.exists(_ == "scala")) Language.SCALA
+      else if (normalized.exists(_ == "java")) Language.JAVA
+      else Language.UNKNOWN_LANGUAGE
+    }
+  }
+
+  private def testNameFromSuites(
+      suites: ju.List[ScalaTestSuiteSelection]
+  ): Option[String] = {
+    if (suites == null || suites.isEmpty) None
+    else {
+      val value = suites.asScala.map { suite =>
+        val tests = Option(suite.tests).map(_.asScala).getOrElse(Nil)
+        if (tests.isEmpty) suite.className
+        else s"${suite.className}(${tests.mkString(", ")})"
+      }
+      Some(value.mkString(";"))
+    }
+  }
+
+  private def testNameFromDebugSession(
+      params: DebugSessionParams
+  ): Option[String] =
+    params.getData match {
+      case json: JsonElement =>
+        params.getDataKind match {
+          case b.TestParamsDataKind.SCALA_TEST_SUITES =>
+            json.as[ju.List[String]].toOption.map(_.asScala.mkString(";"))
+          case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
+            json
+              .as[ScalaTestSuites]
+              .toOption
+              .flatMap(suites => testNameFromSuites(suites.suites))
+          case _ => None
+        }
+      case _ => None
+    }
+
+  private def languageFromMainClass(
+      params: DebugUnresolvedMainClassParams
+  ): Option[Language] = {
+    val byPath = Option(params.mainClass)
+      .filter(value => value.endsWith(".scala") || value.endsWith(".java"))
+      .flatMap(_.toAbsolutePathSafe)
+      .map(_.toLanguage)
+    val byTarget = Option(params.buildTarget)
+      .flatMap(findBuildTargetByDisplayName)
+      .flatMap(target => languageFromTargets(List(target)))
+    byPath.orElse(byTarget)
+  }
+
+  private def findBuildTargetByDisplayName(
+      target: String
+  ): Option[b.BuildTarget] =
+    folderServices.iterator
+      .flatMap(_.findBuildTargetByDisplayName(target))
+      .toSeq
+      .headOption
+
   override def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] =
@@ -1153,6 +1235,10 @@ class WorkspaceLspService(
             )(fallbackService)
           } match {
           case Some(service) =>
+            val supportedTargets = targets.flatMap(service.supportsBuildTarget)
+            val language = languageFromTargets(supportedTargets)
+            val testName = testNameFromDebugSession(params)
+            recordRunDebugEvent(language, testName)
             service.startDebugProvider(params).liftToLspError.asJavaObject
           case None =>
             failedRequest(
@@ -1160,6 +1246,7 @@ class WorkspaceLspService(
             ).asJavaObject
         }
       case ServerCommands.StartMainClass(params) if params.mainClass != null =>
+        recordRunDebugEvent(languageFromMainClass(params), testName = None)
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.mainClassSearch(params))
@@ -1173,12 +1260,21 @@ class WorkspaceLspService(
           Future.successful(service.supportsBuildTarget(params.target))
         )(
           _.isDefined,
-          (service, someTarget) =>
-            service.startTestSuite(someTarget.get, params),
+          (service, someTarget) => {
+            val language = languageFromTargets(List(someTarget.get))
+            val testName = testNameFromSuites(params.requestData.suites)
+            recordRunDebugEvent(language, testName)
+            service.startTestSuite(someTarget.get, params)
+          },
           () => failedRequest(s"Could not find '${params.target}' build target"),
         ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
           if params.testClass != null =>
+        val language =
+          Option(params.buildTarget)
+            .flatMap(findBuildTargetByDisplayName)
+            .flatMap(target => languageFromTargets(List(target)))
+        recordRunDebugEvent(language, Option(params.testClass))
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.testClassSearch(params))
@@ -1186,6 +1282,11 @@ class WorkspaceLspService(
           .liftToLspError
           .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
+        val language =
+          Option(params.buildTarget)
+            .flatMap(findBuildTargetByDisplayName)
+            .flatMap(target => languageFromTargets(List(target)))
+        recordRunDebugEvent(language, testName = None)
         onFirstSatifying(service =>
           Future.successful(
             service.findBuildTargetByDisplayName(params.buildTarget)
@@ -1200,6 +1301,10 @@ class WorkspaceLspService(
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
+        val language = Option(params.path)
+          .flatMap(_.toAbsolutePathSafe)
+          .map(_.toLanguage)
+        recordRunDebugEvent(language, testName = None)
         getServiceFor(params.path)
           .debugDiscovery(params)
           .liftToLspError

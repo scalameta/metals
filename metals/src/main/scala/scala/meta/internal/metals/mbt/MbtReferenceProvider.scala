@@ -12,16 +12,18 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
+import scala.meta.infra.Event
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.TimerProvider
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.noAdjustRange
@@ -44,7 +46,7 @@ class MbtReferenceProvider(
     time: Time,
     languageClient: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
-    timerProvider: TimerProvider,
+    metrics: MonitoringClient,
 )(implicit ec: ExecutionContext) {
   private val cache = new TextDocumentCache()
 
@@ -85,17 +87,27 @@ class MbtReferenceProvider(
   ): Future[List[l.Location]] =
     workDoneProgress.trackProgressFuture(
       "Finding implementations",
-      taskProgress =>
-        timerProvider.timed(
-          "find implementations",
-          metricName = Some("find_implementations"),
-        )(Future(doImplementations(params, taskProgress))),
+      taskProgress => {
+        val timer = new Timer(time)
+        val path = params.getTextDocument.getUri.toAbsolutePath
+        Future(doImplementations(params, taskProgress)).map {
+          case (results, symbol) =>
+            metrics.recordEvent(
+              Event
+                .duration("find_implementations", timer.elapsed)
+                .withLanguage(path.toLanguage)
+                .withLabel("resultCount", results.size.toString)
+                .withOptional("symbol", symbol)
+            )
+            results
+        }
+      },
     )
 
   private def doImplementations(
       params: l.TextDocumentPositionParams,
       taskProgress: TaskProgress,
-  ): List[l.Location] = {
+  ): (List[l.Location], Option[String]) = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
     val pos = params.getPosition()
@@ -105,6 +117,7 @@ class MbtReferenceProvider(
       s"implementations: found ${enclosingOccurrences.length} occurrences"
     )
     val enclosingSymbols = enclosingOccurrences.map(_.symbol)
+    val primarySymbol = enclosingSymbols.headOption
     val isOverridenSymbol = mutable.Set.from(enclosingSymbols)
     val isVisitedMethodName = mutable.Set.empty[String]
     var lastQueryRound = Set.empty[String]
@@ -209,27 +222,23 @@ class MbtReferenceProvider(
       s"implementations: found ${result.size} implementation results in $timer"
     )
 
-    result.toList
+    (result.toList, primarySymbol)
   }
 
   def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
-    timerProvider.timed(
-      "find references",
-      metricName = Some("find_references"),
-    ) {
-      val timer = new Timer(time)
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      val queryRange = params.getPosition()
-      val requestDoc = cache.indexSingle(path)
-      val enclosingOccurrences =
-        this.enclosingOccurrences(requestDoc, queryRange)
-      scribe.info(
-        s"references: found ${enclosingOccurrences.length} occurrences"
-      )
+    val timer = new Timer(time)
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val queryRange = params.getPosition()
+    val requestDoc = cache.indexSingle(path)
+    val enclosingOccurrences = this.enclosingOccurrences(requestDoc, queryRange)
+    scribe.info(
+      s"references: found ${enclosingOccurrences.length} occurrences"
+    )
 
-      // If all symbols are local, use compilers.references directly
-      val allLocal = enclosingOccurrences.forall(_.symbol.isLocal)
+    // If all symbols are local, use compilers.references directly
+    val allLocal = enclosingOccurrences.forall(_.symbol.isLocal)
 
+    val results =
       if (allLocal && requestDoc.language.isScala) {
         scribe.debug("references: all local, using compilers.references")
         compilers
@@ -249,6 +258,18 @@ class MbtReferenceProvider(
             },
         )
       }
+
+    results.map { refs =>
+      val resultCount = refs.iterator.map(_.locations.size).sum
+      val sym = refs.map(_.symbol).headOption
+      metrics.recordEvent(
+        Event
+          .duration("find_references", timer.elapsed)
+          .withLanguage(path.toLanguage)
+          .withOptional("symbol", sym)
+          .withLabel("resultCount", resultCount.toString)
+      )
+      refs
     }
   }
 

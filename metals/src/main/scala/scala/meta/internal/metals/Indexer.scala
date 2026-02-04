@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.dialects._
+import scala.meta.infra.Event
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
@@ -493,6 +494,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
     val isVisited = new ju.HashSet[String]()
+    var cacheHits = 0
+    var cacheMisses = 0
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
@@ -506,7 +509,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         if (path.isJar && path.exists) {
           if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
             usedJars += path
-            addSourceJarSymbols(path)
+            if (addSourceJarSymbols(path)) cacheHits += 1
+            else cacheMisses += 1
           }
         } else if (path.isDirectory) {
           val dialect = buildTargets
@@ -528,6 +532,16 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "index_library_sources_count")
+        .withLabel("cacheHits", cacheHits.toString)
+        .withLabel("cacheMisses", cacheMisses.toString)
+    )
+    if (clientConfig.initialConfig.statistics.isIndex)
+      scribe.info(
+        s"index library sources: cacheHits: $cacheHits, cacheMisses: $cacheMisses"
+      )
     usedJars.toSet
   }
 
@@ -707,8 +721,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
    * Uses H2 cache for symbols
    *
    * @param path JAR path
+   * @return true if symbols were found in cache, false if jar was indexed
    */
-  private def addSourceJarSymbols(path: AbsolutePath): Unit = {
+  private def addSourceJarSymbols(path: AbsolutePath): Boolean = {
     val dialect = ScalaVersions.dialectForDependencyJar(path, buildTargets)
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
@@ -721,10 +736,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
             val (_, overrides) = indexJar(path, dialect)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
+        true
       case None =>
         scribe.debug(s"Indexing source jar $path")
         val (toplevels, overrides) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
+        false
     }
   }
 
