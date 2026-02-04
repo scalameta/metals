@@ -17,6 +17,7 @@
 package com.google.turbine.binder;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
 import com.google.turbine.binder.bound.ModuleInfo;
 import com.google.turbine.binder.bytecode.BytecodeBinder;
@@ -29,7 +30,9 @@ import com.google.turbine.binder.sym.ClassSymbol;
 import com.google.turbine.binder.sym.ModuleSymbol;
 import com.google.turbine.zip.Zip;
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
@@ -37,6 +40,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
+import java.util.stream.Stream;
 import org.jspecify.annotations.Nullable;
 
 /** Sets up an environment for symbols on the classpath. */
@@ -69,10 +73,14 @@ public final class ClassPathBinder {
             Supplier<BytecodeBoundClass> supplier = map.get(sym);
             return supplier == null ? null : supplier.get();
           }
-        };
+    };
     for (Path path : paths) {
       try {
-        bindJar(path, map, modules, env, transitive, resources);
+        if (Files.isDirectory(path)) {
+          bindDirectory(path, map, modules, env, transitive, resources);
+        } else {
+          bindJar(path, map, modules, env, transitive, resources);
+        }
       } catch (IOException e) {
         throw new IOException("error reading " + path, e);
       }
@@ -150,6 +158,50 @@ public final class ClassPathBinder {
       }
       ClassSymbol sym = new ClassSymbol(name.substring(0, name.length() - ".class".length()));
       env.putIfAbsent(sym, BytecodeBoundClass.lazy(sym, ze, benv, path));
+    }
+  }
+
+  private static void bindDirectory(
+      Path root,
+      Map<ClassSymbol, Supplier<BytecodeBoundClass>> env,
+      Map<ModuleSymbol, ModuleInfo> modules,
+      Env<ClassSymbol, BytecodeBoundClass> benv,
+      Map<ClassSymbol, Supplier<BytecodeBoundClass>> transitive,
+      Map<String, Supplier<byte[]>> resources)
+      throws IOException {
+    try (Stream<Path> stream = Files.walk(root)) {
+      for (Path file : (Iterable<Path>) stream::iterator) {
+        if (!Files.isRegularFile(file)) {
+          continue;
+        }
+        String rel = root.relativize(file).toString().replace(File.separatorChar, '/');
+        Supplier<byte[]> bytes = Suppliers.memoize(() -> {
+          try {
+            return Files.readAllBytes(file);
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        });
+        if (rel.startsWith(TRANSITIVE_PREFIX) && rel.endsWith(TRANSITIVE_SUFFIX)) {
+          ClassSymbol sym =
+              new ClassSymbol(
+                  rel.substring(
+                      TRANSITIVE_PREFIX.length(), rel.length() - TRANSITIVE_SUFFIX.length()));
+          transitive.putIfAbsent(sym, BytecodeBoundClass.lazy(sym, bytes, benv, root));
+          continue;
+        }
+        if (!rel.endsWith(".class")) {
+          resources.put(rel, bytes);
+          continue;
+        }
+        if (rel.substring(rel.lastIndexOf('/') + 1).equals("module-info.class")) {
+          ModuleInfo moduleInfo = BytecodeBinder.bindModuleInfo(file.toString(), bytes);
+          modules.put(new ModuleSymbol(moduleInfo.name()), moduleInfo);
+          continue;
+        }
+        ClassSymbol sym = new ClassSymbol(rel.substring(0, rel.length() - ".class".length()));
+        env.putIfAbsent(sym, BytecodeBoundClass.lazy(sym, bytes, benv, root));
+      }
     }
   }
 

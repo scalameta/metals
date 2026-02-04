@@ -967,6 +967,9 @@ lazy val turbinec = project
   .settings(
     testSettings,
     sharedSettings,
+    javaHome := Some(file("/Users/olafurpg/.local/share/mise/installs/java/21.0.2")),
+    Compile / run / fork := true,
+    Compile / run / javaOptions ++= Seq("-Xmx8g"),
     Compile / mainClass := Some("tests.turbinec.TurbineConformanceCli"),
     libraryDependencies ++= List(
       "org.scalameta" %% "munit" % V.munit,

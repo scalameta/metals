@@ -159,6 +159,10 @@ public class TurbineDiagnostic {
     return source != null && source.path() != null ? source.path() : "<>";
   }
 
+  public int position() {
+    return position;
+  }
+
   @SuppressWarnings("nullness") // position != -1 implies source is non-null
   public int line() {
     return position != -1 ? source.lineMap().lineNumber(position) : -1;

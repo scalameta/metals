@@ -306,7 +306,9 @@ public final class ScalaStreamLexer implements ScalaLexer {
     sb.append(first);
     eat();
     if (first == '<' && looksLikeXmlStart(before, ch)) {
-      throw error(position, ErrorKind.UNEXPECTED_INPUT, "XML literal");
+      skipXmlLiteral(position);
+      value = "";
+      return ScalaToken.STRING_LITERAL;
     }
     appendOperatorRest(sb);
     return finishNamed(sb);
@@ -373,13 +375,14 @@ public final class ScalaStreamLexer implements ScalaLexer {
 
   private ScalaToken stringLiteral() {
     int start = position;
+    boolean interpolated = isInterpolatedString();
     eat();
     if (ch == '"') {
       eat();
       if (ch == '"') {
         eat();
         StringBuilder sb = new StringBuilder();
-        readTripleQuotedString(sb);
+        readTripleQuotedString(sb, interpolated);
         value = sb.toString();
         return ScalaToken.STRING_LITERAL;
       }
@@ -392,6 +395,14 @@ public final class ScalaStreamLexer implements ScalaLexer {
         eat();
         value = sb.toString();
         return ScalaToken.STRING_LITERAL;
+      }
+      if (interpolated && ch == '$') {
+        eat();
+        if (skipInterpolation(start)) {
+          continue;
+        }
+        sb.append('$');
+        continue;
       }
       if (ch == '\n' || ch == '\r') {
         throw error(start, ErrorKind.UNTERMINATED_STRING);
@@ -409,16 +420,33 @@ public final class ScalaStreamLexer implements ScalaLexer {
     }
   }
 
-  private void readTripleQuotedString(StringBuilder sb) {
+  private void readTripleQuotedString(StringBuilder sb, boolean interpolated) {
     int quoteCount = 0;
     while (true) {
       if (ch == ASCII_SUB && reader.done()) {
         throw error(position, ErrorKind.UNTERMINATED_STRING);
       }
+      if (interpolated && ch == '$') {
+        while (quoteCount > 0) {
+          sb.append('"');
+          quoteCount--;
+        }
+        eat();
+        if (skipInterpolation(position)) {
+          continue;
+        }
+        sb.append('$');
+        continue;
+      }
       if (ch == '"') {
         quoteCount++;
         eat();
         if (quoteCount == 3) {
+          if (ch == '"') {
+            sb.append('"');
+            quoteCount = 2;
+            continue;
+          }
           return;
         }
         continue;
@@ -430,6 +458,13 @@ public final class ScalaStreamLexer implements ScalaLexer {
       sb.appendCodePoint(ch);
       eat();
     }
+  }
+
+  private boolean isInterpolatedString() {
+    if (lastToken != ScalaToken.IDENTIFIER && lastToken != ScalaToken.BACKQUOTED_IDENT) {
+      return false;
+    }
+    return isIdentifierPart(prevChar);
   }
 
   private char escapeChar() {
@@ -576,6 +611,254 @@ public final class ScalaStreamLexer implements ScalaLexer {
 
   private static boolean isIdentifierPart(int ch) {
     return ch == '$' || Character.isUnicodeIdentifierPart(ch);
+  }
+
+  private boolean skipInterpolation(int start) {
+    if (ch == '{') {
+      eat();
+      skipInterpolationExpr(start);
+      return true;
+    }
+    if (isIdentifierStart(ch)) {
+      eat();
+      while (isIdentifierPart(ch)) {
+        eat();
+      }
+      return true;
+    }
+    return false;
+  }
+
+  private void skipInterpolationExpr(int start) {
+    int depth = 1;
+    while (depth > 0) {
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNTERMINATED_STRING);
+      }
+      if (ch == '"') {
+        boolean interpolatedString = isIdentifierPart(prevChar);
+        skipStringInInterpolation(start, interpolatedString);
+        continue;
+      }
+      if (ch == '\'') {
+        skipCharInInterpolation(start);
+        continue;
+      }
+      if (ch == '{') {
+        depth++;
+        eat();
+        continue;
+      }
+      if (ch == '}') {
+        depth--;
+        eat();
+        continue;
+      }
+      if (ch == '/') {
+        eat();
+        if (ch == '/') {
+          eat();
+          skipLineComment();
+          continue;
+        }
+        if (ch == '*') {
+          eat();
+          skipBlockComment(start);
+          continue;
+        }
+        continue;
+      }
+      if (ch == '<') {
+        int before = prevChar;
+        eat();
+        if (looksLikeXmlStart(before, ch)) {
+          skipXmlLiteral(start);
+        }
+        continue;
+      }
+      eat();
+    }
+  }
+
+  private void skipStringInInterpolation(int start, boolean interpolated) {
+    eat();
+    if (ch == '"') {
+      eat();
+      if (ch == '"') {
+        eat();
+        skipTripleQuotedInInterpolation(start);
+        return;
+      }
+      return;
+    }
+    while (true) {
+      if (interpolated && ch == '$') {
+        eat();
+        if (skipInterpolation(start)) {
+          continue;
+        }
+        continue;
+      }
+      if (ch == '"') {
+        eat();
+        return;
+      }
+      if (ch == '\n' || ch == '\r') {
+        throw error(start, ErrorKind.UNTERMINATED_STRING);
+      }
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNTERMINATED_STRING);
+      }
+      if (ch == '\\') {
+        eat();
+        escapeChar();
+      } else {
+        eat();
+      }
+    }
+  }
+
+  private void skipTripleQuotedInInterpolation(int start) {
+    int quoteCount = 0;
+    while (true) {
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNTERMINATED_STRING);
+      }
+      if (ch == '"') {
+        quoteCount++;
+        eat();
+        if (quoteCount == 3) {
+          return;
+        }
+        continue;
+      }
+      quoteCount = 0;
+      eat();
+    }
+  }
+
+  private void skipCharInInterpolation(int start) {
+    eat();
+    if (ch == '\\') {
+      eat();
+      escapeChar();
+    } else {
+      eat();
+    }
+    if (ch != '\'') {
+      throw error(start, ErrorKind.UNTERMINATED_CHARACTER_LITERAL);
+    }
+    eat();
+  }
+
+  private void skipLineComment() {
+    while (true) {
+      if (ch == '\n' || ch == '\r' || (ch == ASCII_SUB && reader.done())) {
+        return;
+      }
+      eat();
+    }
+  }
+
+  private void skipBlockComment(int start) {
+    while (true) {
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNCLOSED_COMMENT);
+      }
+      if (ch == '*') {
+        eat();
+        if (ch == '/') {
+          eat();
+          return;
+        }
+        continue;
+      }
+      eat();
+    }
+  }
+
+  private void skipXmlLiteral(int start) {
+    int depth = 1;
+    while (true) {
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNEXPECTED_EOF);
+      }
+      if (ch == '{') {
+        eat();
+        if (ch == '{') {
+          eat();
+          continue;
+        }
+        skipInterpolationExpr(start);
+        continue;
+      }
+      if (ch == '"' || ch == '\'') {
+        skipXmlAttributeValue(start, ch);
+        continue;
+      }
+      if (ch == '<') {
+        eat();
+        if (ch == '/' ) {
+          depth = Math.max(0, depth - 1);
+          eat();
+          continue;
+        }
+        if (ch == '!' || ch == '?') {
+          eat();
+          skipUntil('>');
+          continue;
+        }
+        depth++;
+        continue;
+      }
+      if (ch == '/') {
+        eat();
+        if (ch == '>') {
+          depth = Math.max(0, depth - 1);
+          eat();
+          if (depth == 0) {
+            return;
+          }
+          continue;
+        }
+        continue;
+      }
+      if (ch == '>') {
+        eat();
+        if (depth == 0) {
+          return;
+        }
+        continue;
+      }
+      eat();
+    }
+  }
+
+  private void skipXmlAttributeValue(int start, int quote) {
+    eat();
+    while (true) {
+      if (ch == ASCII_SUB && reader.done()) {
+        throw error(start, ErrorKind.UNTERMINATED_STRING);
+      }
+      if (ch == quote) {
+        eat();
+        return;
+      }
+      eat();
+    }
+  }
+
+  private void skipUntil(int terminator) {
+    while (true) {
+      if (ch == ASCII_SUB && reader.done()) {
+        return;
+      }
+      if (ch == terminator) {
+        eat();
+        return;
+      }
+      eat();
+    }
   }
 
   private static boolean isOperatorPart(int ch) {

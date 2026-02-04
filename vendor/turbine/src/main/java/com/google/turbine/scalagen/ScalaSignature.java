@@ -331,6 +331,7 @@ public final class ScalaSignature {
       }
       index++; // skip '['
       ImmutableList.Builder<TySig> args = ImmutableList.builder();
+      int count = 0;
       while (index < tokens.size()) {
         String token = tokens.get(index);
         if ("]".equals(token)) {
@@ -341,7 +342,18 @@ public final class ScalaSignature {
           index++;
           continue;
         }
+        if (count > 512) {
+          // Bail out on runaway type argument lists to avoid OOM.
+          while (index < tokens.size() && !"]".equals(tokens.get(index))) {
+            index++;
+          }
+          if (index < tokens.size()) {
+            index++;
+          }
+          break;
+        }
         args.add(parseTypeArg());
+        count++;
       }
       return args.build();
     }

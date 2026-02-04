@@ -64,23 +64,36 @@ public class LineMap {
 
   /** The zero-indexed column number of the given source position. */
   public int column(int position) {
-    checkArgument(0 <= position && position < source.length(), "%s", position);
+    position = clamp(position);
     // requireNonNull is safe because `lines` covers the whole file length.
     return position - requireNonNull(lines.getEntry(position)).getKey().lowerEndpoint();
   }
 
   /** The one-indexed line number of the given source position. */
   public int lineNumber(int position) {
-    checkArgument(0 <= position && position < source.length(), "%s", position);
+    position = clamp(position);
     // requireNonNull is safe because `lines` covers the whole file length.
     return requireNonNull(lines.get(position));
   }
 
   /** The one-indexed line of the given source position. */
   public String line(int position) {
-    checkArgument(0 <= position && position < source.length(), "%s", position);
+    position = clamp(position);
     // requireNonNull is safe because `lines` covers the whole file length.
     Range<Integer> range = requireNonNull(lines.getEntry(position)).getKey();
     return source.substring(range.lowerEndpoint(), range.upperEndpoint());
+  }
+
+  private int clamp(int position) {
+    if (source.isEmpty()) {
+      return 0;
+    }
+    if (position < 0) {
+      return 0;
+    }
+    if (position >= source.length()) {
+      return source.length() - 1;
+    }
+    return position;
   }
 }

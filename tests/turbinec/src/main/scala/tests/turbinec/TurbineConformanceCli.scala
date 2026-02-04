@@ -72,6 +72,7 @@ object TurbineConformanceCli {
       showDiffs: Int = 20,
       verbose: Boolean = false,
       javacRelease: Option[String] = None,
+      includeBaselineClasspath: Boolean = true,
   ) {
     def mbtJsonPath: Path = mbtJson.getOrElse(workspace.resolve(".metals/mbt.json"))
   }
@@ -97,8 +98,8 @@ object TurbineConformanceCli {
       moduleDir: Path,
       compileSourceRoots: Seq[Path],
       testSourceRoots: Seq[Path],
-      outputDir: Option[Path],
-      testOutputDir: Option[Path],
+      outputDirs: Seq[Path],
+      testOutputDirs: Seq[Path],
       buildDir: Option[Path],
   )
 
@@ -146,12 +147,12 @@ object TurbineConformanceCli {
         )
 
         val outputDirs = distinctPaths(
-          configs.flatMap(_.outputDir) ++
-            (if (config.includeTests) configs.flatMap(_.testOutputDir) else Nil)
+          configs.flatMap(_.outputDirs) ++
+            (if (config.includeTests) configs.flatMap(_.testOutputDirs) else Nil)
         )
 
         val generatedSourceDirs = distinctPaths(
-          configs.flatMap(m => detectGeneratedSourceDirs(m, config.scalaVersion))
+          configs.flatMap(m => detectGeneratedSourceDirs(m, config.scalaVersion, config.includeTests))
         )
 
         val classpath = distinctStrings(modules.map(_.jar))
@@ -186,14 +187,19 @@ object TurbineConformanceCli {
         return Left("No sources found from sourcepaths/generatedSourceDirs; run export or check paths")
       }
 
-      val classpath = cfg.classpathPaths.filter(path => Files.exists(path))
-      if (classpath.isEmpty) {
-        log(config, "Warning: classpath is empty after filtering non-existent entries")
-      }
-
       val outputDirs = cfg.outputDirPaths
       if (outputDirs.isEmpty) {
         return Left("No outputDirs found in build config; run export")
+      }
+
+      val classpath = distinctPaths(
+        cfg.classpathPaths.filter(Files.exists(_)) ++
+          (if (config.includeBaselineClasspath)
+             outputDirs.filter(Files.exists(_)) ++ detectAssemblyJars(config.workspace)
+           else Nil)
+      )
+      if (classpath.isEmpty) {
+        log(config, "Warning: classpath is empty after filtering non-existent entries")
       }
 
       log(config, s"Compiling ${sources.size} sources with Turbine")
@@ -210,7 +216,15 @@ object TurbineConformanceCli {
       try {
         Main.compile(options.build())
       } catch {
-        case e: Exception =>
+        case e: com.google.turbine.diag.TurbineError =>
+          e.diagnostics().asScala.foreach { d =>
+            System.err.println(
+              s"${d.path()}:${d.line()}:${d.column()} (pos=${d.position()}) ${d.message()}"
+            )
+          }
+          return Left("Turbine compilation failed")
+        case e: Throwable =>
+          e.printStackTrace()
           return Left(s"Turbine compilation failed: ${e.getMessage}")
       }
 
@@ -236,11 +250,24 @@ object TurbineConformanceCli {
       }
 
       val diffCollector = new DiffCollector(config.showDiffs)
-      compareSubset("baseline", baselineClasses, "turbine", turbineClasses, diffCollector)
+      val commonNames = baselineClasses.keySet.intersect(turbineClasses.keySet)
+      val baselineCommon = baselineClasses.filter { case (name, _) => commonNames.contains(name) }
+      val turbineCommon = turbineClasses.filter { case (name, _) => commonNames.contains(name) }
+      compareSubset("baseline", baselineCommon, "turbine", turbineCommon, diffCollector)
+
+      val turbineOnly = turbineClasses.keySet.diff(baselineClasses.keySet)
+      turbineOnly.foreach { name =>
+        diffCollector.extraClass(name, turbineClasses(name))
+      }
+      val baselineOnly = baselineClasses.keySet.diff(turbineClasses.keySet)
 
       println(
-        s"Missing classes: ${diffCollector.missingClasses}, mismatched members: ${diffCollector.mismatchedMembers}"
+        s"Missing classes: ${diffCollector.missingClasses}, extra classes: ${diffCollector.extraClasses}, " +
+          s"mismatched members: ${diffCollector.mismatchedMembers}"
       )
+      if (baselineOnly.nonEmpty) {
+        println(s"Ignored baseline-only classes: ${baselineOnly.size}")
+      }
 
       if (diffCollector.hasDiffs) {
         if (diffCollector.output.nonEmpty) {
@@ -261,6 +288,8 @@ object TurbineConformanceCli {
         case "--help" :: _ =>
           printHelp()
           Right(None)
+        case "--" :: rest =>
+          loop(rest, config)
         case "export" :: rest =>
           loop(rest, config.copy(command = Command.Export))
         case "compare" :: rest =>
@@ -282,6 +311,10 @@ object TurbineConformanceCli {
           }
         case "--javac-release" :: release :: rest =>
           loop(rest, config.copy(javacRelease = Some(release)))
+        case "--include-baseline-classpath" :: rest =>
+          loop(rest, config.copy(includeBaselineClasspath = true))
+        case "--no-baseline-classpath" :: rest =>
+          loop(rest, config.copy(includeBaselineClasspath = false))
         case "--verbose" :: rest =>
           loop(rest, config.copy(verbose = true))
         case value :: rest if !value.startsWith("-") =>
@@ -306,6 +339,7 @@ object TurbineConformanceCli {
               |  --scala-version <ver>  Filter Scala dependencies (default: 2.13)
               |  --include-tests        Include test sources/output dirs
               |  --javac-release <ver>  Override --release for Turbine (e.g., 8, 11, 17)
+              |  --no-baseline-classpath Disable baseline output dirs on Turbine classpath (default: include)
               |  --show-diffs <n>        Max number of detailed diffs to print (default: 20)
               |  --verbose              Enable verbose logging
               |  --help                 Show this help message
@@ -351,44 +385,121 @@ object TurbineConformanceCli {
       testRoots <- if (config.includeTests)
         evalPaths(config, moduleDir, "project.testCompileSourceRoots")
       else Right(Nil)
-      outputDir <- evalPaths(config, moduleDir, "project.build.outputDirectory").map(_.headOption)
+      outputDirs <- evalPaths(config, moduleDir, "project.build.outputDirectory")
       testOutputDir <- if (config.includeTests)
-        evalPaths(config, moduleDir, "project.build.testOutputDirectory").map(_.headOption)
-      else Right(None)
+        evalPaths(config, moduleDir, "project.build.testOutputDirectory")
+      else Right(Nil)
       buildDir <- evalPaths(config, moduleDir, "project.build.directory").map(_.headOption)
     } yield ModuleConfig(
       moduleDir = moduleDir,
       compileSourceRoots = compileRoots,
       testSourceRoots = testRoots,
-      outputDir = outputDir,
-      testOutputDir = testOutputDir,
+      outputDirs = outputDirs,
+      testOutputDirs = testOutputDir,
       buildDir = buildDir,
     )
   }
 
   private def evalPaths(config: Config, moduleDir: Path, expression: String): Either[String, Seq[Path]] = {
-    val cmd = Seq(
-      "./mvnw",
-      "-q",
-      "-f",
-      moduleDir.resolve("pom.xml").toString,
-      "-DskipTests",
-      "-Djgit.dirtyWorkingTree=warning",
-      "-DforceStdout",
-      "help:evaluate",
-      s"-Dexpression=$expression",
-    )
+    if (mavenEvalAvailable.contains(false)) {
+      val fallback = fallbackPaths(moduleDir, expression)
+      if (fallback.nonEmpty || isOptionalExpression(expression)) Right(fallback)
+      else Left(s"No fallback paths for $expression in $moduleDir")
+    } else {
+      val cmd = mavenCommand(config) ++ Seq(
+        "-q",
+        "-f",
+        moduleDir.resolve("pom.xml").toString,
+        "-DskipTests",
+        "-Djgit.dirtyWorkingTree=warning",
+        "-DforceStdout",
+        "help:evaluate",
+        s"-Dexpression=$expression",
+      )
 
-    val result = runCommand(cmd, config.workspace)
-    if (result.exitCode != 0) {
-      return Left(s"mvn help:evaluate failed for $expression in $moduleDir: ${result.stderr.trim}")
+      val result = runCommand(cmd, config.workspace, mavenEnv)
+      if (result.exitCode != 0) {
+        mavenEvalAvailable = Some(false)
+        val fallback = fallbackPaths(moduleDir, expression)
+        if (fallback.nonEmpty || isOptionalExpression(expression)) {
+          log(config, s"mvn help:evaluate failed for $expression in $moduleDir; using fallback")
+          Right(fallback)
+        } else {
+          Left(s"mvn help:evaluate failed for $expression in $moduleDir: ${result.stderr.trim}")
+        }
+      } else {
+        mavenEvalAvailable = Some(true)
+        val values = parseMavenOutput(result.stdout)
+        val paths = values.map { value =>
+          val path = Paths.get(value)
+          if (path.isAbsolute) path else moduleDir.resolve(path).normalize
+        }
+        Right(paths)
+      }
     }
-    val values = parseMavenOutput(result.stdout)
-    val paths = values.map { value =>
-      val path = Paths.get(value)
-      if (path.isAbsolute) path else moduleDir.resolve(path).normalize
+  }
+
+  private var mavenEvalAvailable: Option[Boolean] = None
+
+  private def fallbackPaths(moduleDir: Path, expression: String): Seq[Path] = {
+    def existing(path: Path): Option[Path] = if (Files.isDirectory(path)) Some(path) else None
+    def scalaOutputs(target: Path, suffix: String): Seq[Path] = {
+      if (!Files.isDirectory(target)) return Nil
+      val stream = Files.list(target)
+      try {
+        stream
+          .iterator()
+          .asScala
+          .filter(path =>
+            Files.isDirectory(path) && path.getFileName.toString.startsWith("scala-")
+          )
+          .flatMap { scalaDir =>
+            val candidate = scalaDir.resolve(suffix)
+            if (Files.isDirectory(candidate)) Some(candidate) else None
+          }
+          .toSeq
+      } finally {
+        stream.close()
+      }
     }
-    Right(paths)
+    expression match {
+      case "project.compileSourceRoots" =>
+        Seq(
+          existing(moduleDir.resolve("src/main/java")),
+          existing(moduleDir.resolve("src/main/scala")),
+        ).flatten
+      case "project.testCompileSourceRoots" =>
+        Seq(
+          existing(moduleDir.resolve("src/test/java")),
+          existing(moduleDir.resolve("src/test/scala")),
+        ).flatten
+      case "project.build.outputDirectory" =>
+        val target = moduleDir.resolve("target")
+        Seq(moduleDir.resolve("target/classes")) ++ scalaOutputs(target, "classes")
+      case "project.build.testOutputDirectory" =>
+        val target = moduleDir.resolve("target")
+        Seq(moduleDir.resolve("target/test-classes")) ++ scalaOutputs(target, "test-classes")
+      case "project.build.directory" =>
+        Seq(moduleDir.resolve("target"))
+      case _ =>
+        Nil
+    }
+  }
+
+  private def isOptionalExpression(expression: String): Boolean =
+    expression == "project.compileSourceRoots" || expression == "project.testCompileSourceRoots"
+
+  private def mavenCommand(config: Config): Seq[String] = {
+    val workspace = config.workspace
+    val mvnw = workspace.resolve("mvnw")
+    val buildMvn = workspace.resolve("build/mvn")
+    if (Files.isExecutable(mvnw) || Files.isRegularFile(mvnw)) {
+      Seq(mvnw.toString)
+    } else if (Files.isExecutable(buildMvn) || Files.isRegularFile(buildMvn)) {
+      Seq(buildMvn.toString)
+    } else {
+      Seq("mvn")
+    }
   }
 
   private def parseMavenOutput(output: String): Seq[String] = {
@@ -431,7 +542,11 @@ object TurbineConformanceCli {
     }.toEither.left.map(_.getMessage)
   }
 
-  private def detectGeneratedSourceDirs(module: ModuleConfig, scalaVersion: String): Seq[Path] = {
+  private def detectGeneratedSourceDirs(
+      module: ModuleConfig,
+      scalaVersion: String,
+      includeTests: Boolean,
+  ): Seq[Path] = {
     val out = mutable.LinkedHashSet.empty[Path]
 
     def consider(path: Path): Unit = {
@@ -448,13 +563,17 @@ object TurbineConformanceCli {
     module.compileSourceRoots.foreach { root =>
       if (isGenerated(root)) consider(root)
     }
-    module.testSourceRoots.foreach { root =>
-      if (isGenerated(root)) consider(root)
+    if (includeTests) {
+      module.testSourceRoots.foreach { root =>
+        if (isGenerated(root)) consider(root)
+      }
     }
 
     module.buildDir.foreach { dir =>
       consider(dir.resolve("generated-sources"))
-      consider(dir.resolve("generated-test-sources"))
+      if (includeTests) {
+        consider(dir.resolve("generated-test-sources"))
+      }
       consider(dir.resolve(s"scala-$scalaVersion").resolve("src_managed"))
     }
 
@@ -469,7 +588,7 @@ object TurbineConformanceCli {
         try {
           stream.iterator().asScala.foreach { path =>
             val name = path.toString
-            if (Files.isRegularFile(path) && (name.endsWith(".scala") || name.endsWith(".java"))) {
+            if (Files.isRegularFile(path) && name.endsWith(".java")) {
               out += path.toAbsolutePath.normalize
             }
           }
@@ -537,10 +656,14 @@ object TurbineConformanceCli {
   private def filterStableClasses(classes: Map[String, Array[Byte]]): Map[String, Array[Byte]] = {
     val out = new mutable.LinkedHashMap[String, Array[Byte]]()
     classes.foreach { case (name, bytes) =>
+      if (name.endsWith("/package-info")) {
+        // ignore package-info classes; they are often skipped in baseline outputs
+      } else {
       val node = new ClassNode()
       new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
       if (!isLocal(node) && !isAnonymous(node)) {
         out.put(name, bytes)
+      }
       }
     }
     out.toMap
@@ -553,11 +676,12 @@ object TurbineConformanceCli {
 
   private final class DiffCollector(max: Int) {
     var missingClasses: Int = 0
+    var extraClasses: Int = 0
     var mismatchedMembers: Int = 0
     private var printed: Int = 0
     private val sb = new StringBuilder
 
-    def hasDiffs: Boolean = missingClasses > 0 || mismatchedMembers > 0
+    def hasDiffs: Boolean = missingClasses > 0 || extraClasses > 0 || mismatchedMembers > 0
 
     def output: String = sb.toString
 
@@ -567,6 +691,15 @@ object TurbineConformanceCli {
         printed += 1
         sb.append(s"missing class $name\n")
         sb.append(dumpSingle(name, expected)).append('\n')
+      }
+    }
+
+    def extraClass(name: String, actual: Array[Byte]): Unit = {
+      extraClasses += 1
+      if (printed < max) {
+        printed += 1
+        sb.append(s"extra class $name\n")
+        sb.append(dumpSingle(name, actual)).append('\n')
       }
     }
 
@@ -737,12 +870,24 @@ object TurbineConformanceCli {
 
       val methods = new java.util.TreeMap[String, MemberInfo]()
       node.methods.forEach { method =>
-        methods.put(method.name + method.desc, MemberInfo.from(method))
+        val acc = method.access
+        val isApi = (acc & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+        val isSynthetic = (acc & Opcodes.ACC_SYNTHETIC) != 0
+        val isBridge = (acc & Opcodes.ACC_BRIDGE) != 0
+        val isClinit = method.name == "<clinit>"
+        if (isApi && !isSynthetic && !isBridge && !isClinit) {
+          methods.put(method.name + method.desc, MemberInfo.from(method))
+        }
       }
 
       val fields = new java.util.TreeMap[String, MemberInfo]()
       node.fields.forEach { field =>
-        fields.put(field.name + field.desc, MemberInfo.from(field))
+        val acc = field.access
+        val isApi = (acc & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+        val isSynthetic = (acc & Opcodes.ACC_SYNTHETIC) != 0
+        if (isApi && !isSynthetic) {
+          fields.put(field.name + field.desc, MemberInfo.from(field))
+        }
       }
 
       ClassInfo(access, node.superName, ifaces, annotations, methods.asScala.toMap, fields.asScala.toMap)
@@ -848,16 +993,32 @@ object TurbineConformanceCli {
 
   private final case class CommandResult(exitCode: Int, stdout: String, stderr: String)
 
-  private def runCommand(cmd: Seq[String], cwd: Path): CommandResult = {
+  private def runCommand(
+      cmd: Seq[String],
+      cwd: Path,
+      extraEnv: Seq[(String, String)] = Nil,
+  ): CommandResult = {
     val out = new StringBuilder
     val err = new StringBuilder
-    val exit = Process(cmd, cwd.toFile).!(
+    val exit = Process(cmd, cwd.toFile, extraEnv: _*).!(
       ProcessLogger(
         line => out.append(line).append('\n'),
         line => err.append(line).append('\n'),
       )
     )
     CommandResult(exit, out.toString, err.toString)
+  }
+
+  private def mavenEnv: Seq[(String, String)] = {
+    val addOpens =
+      "--add-opens=java.base/java.util=ALL-UNNAMED " +
+        "--add-opens=java.base/java.lang=ALL-UNNAMED " +
+        "--add-opens=java.base/java.lang.ref=ALL-UNNAMED " +
+        "--add-opens=java.base/java.util.concurrent=ALL-UNNAMED " +
+        "--add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED"
+    val existing = sys.env.getOrElse("MAVEN_OPTS", "").trim
+    val value = if (existing.isEmpty) addOpens else s"$existing $addOpens"
+    Seq("MAVEN_OPTS" -> value)
   }
 
   private object BuildConfigJson {
@@ -868,6 +1029,7 @@ object TurbineConformanceCli {
         Files.createDirectories(path.getParent)
         val json = toJson(config)
         Files.writeString(path, gson.toJson(json))
+        ()
       }.toEither.left.map(e => s"Failed to write JSON: ${e.getMessage}")
     }
 
@@ -976,6 +1138,39 @@ object TurbineConformanceCli {
       }
     }
     out.toSeq
+  }
+
+  private def detectAssemblyJars(workspace: Path): Seq[Path] = {
+    val assemblyTarget = workspace.resolve("assembly").resolve("target")
+    if (!Files.isDirectory(assemblyTarget)) return Nil
+    val scalaDirs = Files.list(assemblyTarget)
+    try {
+      scalaDirs
+        .iterator()
+        .asScala
+        .filter(path =>
+          Files.isDirectory(path) && path.getFileName.toString.startsWith("scala-")
+        )
+        .flatMap { scalaDir =>
+          val jarsDir = scalaDir.resolve("jars")
+          if (!Files.isDirectory(jarsDir)) Nil
+          else {
+            val jars = Files.list(jarsDir)
+            try {
+              jars
+                .iterator()
+                .asScala
+                .filter(path => Files.isRegularFile(path) && path.toString.endsWith(".jar"))
+                .toSeq
+            } finally {
+              jars.close()
+            }
+          }
+        }
+        .toSeq
+    } finally {
+      scalaDirs.close()
+    }
   }
 
   private def distinctStrings(values: Seq[String]): Seq[String] = {

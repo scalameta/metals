@@ -32,6 +32,7 @@ import static com.google.turbine.scalaparse.ScalaToken.EXTENDS;
 import static com.google.turbine.scalaparse.ScalaToken.FALSE;
 import static com.google.turbine.scalaparse.ScalaToken.FINAL;
 import static com.google.turbine.scalaparse.ScalaToken.IDENTIFIER;
+import static com.google.turbine.scalaparse.ScalaToken.IF;
 import static com.google.turbine.scalaparse.ScalaToken.IMPLICIT;
 import static com.google.turbine.scalaparse.ScalaToken.IMPORT;
 import static com.google.turbine.scalaparse.ScalaToken.LBRACE;
@@ -624,6 +625,11 @@ public final class ScalaParser {
       }
       return rhs;
     }
+    if (token == COLON) {
+      next();
+      parseTypeText(
+          EnumSet.of(COMMA, RPAREN, AT, ARROW, IF, EQUALS, NEWLINE, NEWLINES, SEMI, RBRACE));
+    }
     return pattern;
   }
 
@@ -983,12 +989,21 @@ public final class ScalaParser {
   }
 
   private TypeParam parseTypeParam() {
+    while (token == AT) {
+      skipAnnotation();
+    }
     String variance = null;
     if (token == IDENTIFIER && ("+".equals(value) || "-".equals(value))) {
       variance = value;
       next();
     }
+    while (token == AT) {
+      skipAnnotation();
+    }
     String name = parseName();
+    if (token == LBRACK) {
+      skipDelimited(LBRACK, RBRACK);
+    }
     String lower = null;
     String upper = null;
     ImmutableList.Builder<String> viewBounds = ImmutableList.builder();
@@ -1020,6 +1035,9 @@ public final class ScalaParser {
   }
 
   private ImmutableList<String> parseParents() {
+    while (token == NEWLINE || token == NEWLINES) {
+      next();
+    }
     if (token != EXTENDS) {
       return ImmutableList.of();
     }
@@ -1122,6 +1140,10 @@ public final class ScalaParser {
   private ImmutableList<String> parseParamModifiers() {
     ImmutableList.Builder<String> mods = ImmutableList.builder();
     while (true) {
+      if (token == AT) {
+        skipAnnotation();
+        continue;
+      }
       String text = token.toString();
       if (isParamModifierToken(token, value)) {
         mods.add(text);
@@ -1138,7 +1160,20 @@ public final class ScalaParser {
 
   private void skipAnnotation() {
     accept(AT);
-    parseTypeText(EnumSet.of(LPAREN, NEWLINE, NEWLINES, SEMI, EOF));
+    if (token.isIdentifier()) {
+      next();
+      while (token == DOT) {
+        next();
+        if (token.isIdentifier()) {
+          next();
+        } else {
+          break;
+        }
+      }
+      if (token == LBRACK) {
+        skipDelimited(LBRACK, RBRACK);
+      }
+    }
     if (token == LPAREN) {
       skipDelimited(LPAREN, RPAREN);
     }
@@ -1387,7 +1422,7 @@ public final class ScalaParser {
   }
 
   private EnumSet<ScalaToken> parentStopTokens() {
-    return EnumSet.of(WITH, LBRACE, NEWLINE, NEWLINES, SEMI, EOF);
+    return EnumSet.of(WITH, LBRACE, RBRACE, NEWLINE, NEWLINES, SEMI, EOF);
   }
 
   private String currentPackageName() {

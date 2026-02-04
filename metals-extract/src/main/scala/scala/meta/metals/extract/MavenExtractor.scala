@@ -26,6 +26,7 @@ import org.eclipse.aether.repository.RemoteRepository
 import org.eclipse.aether.resolution.ArtifactRequest
 import org.eclipse.aether.resolution.ArtifactResult
 import org.eclipse.aether.resolution.DependencyRequest
+import org.eclipse.aether.resolution.DependencyResolutionException
 import org.eclipse.aether.spi.connector.RepositoryConnectorFactory
 import org.eclipse.aether.spi.connector.transport.TransporterFactory
 import org.eclipse.aether.transport.file.FileTransporterFactory
@@ -82,6 +83,10 @@ object MavenExtractor {
       val modules = resolved.flatMap { artifactResult =>
         val artifact = artifactResult.getArtifact
         if (artifact != null && artifact.getFile != null) {
+          if (artifact.getExtension != "jar") {
+            if (verbose) println(s"  Skipping non-jar artifact: ${artifact}")
+            None
+          } else {
           val jarPath = artifact.getFile.getAbsolutePath
 
           // Skip SNAPSHOT versions
@@ -98,6 +103,7 @@ object MavenExtractor {
               jar = jarPath,
               sources = sourcesPath
             ))
+          }
           }
         } else {
           None
@@ -162,18 +168,56 @@ object MavenExtractor {
       }
     }.getOrElse(Map.empty)
 
+    val properties = collectProperties(model, projectDir)
+
     // Get managed dependencies from this model's dependencyManagement
     val localManagedDeps = Option(model.getDependencyManagement)
       .flatMap(dm => Option(dm.getDependencies))
       .map(_.asScala.toSeq)
       .getOrElse(Seq.empty)
 
-    val localManagedVersions: Map[(String, String), String] = localManagedDeps.map { d =>
-      (d.getGroupId, d.getArtifactId) -> d.getVersion
+    val localManagedVersions: Map[(String, String), String] = localManagedDeps.flatMap { d =>
+      val groupId = resolvePropertiesWithMap(d.getGroupId, properties)
+      val artifactId = resolvePropertiesWithMap(d.getArtifactId, properties)
+      val version = Option(d.getVersion).map(v => resolvePropertiesWithMap(v, properties)).getOrElse("")
+      if (groupId.startsWith("$") || artifactId.startsWith("$") || version.isEmpty || version.startsWith("$")) {
+        None
+      } else {
+        Some((groupId, artifactId) -> version)
+      }
     }.toMap
 
+    val bomManagedVersions: Map[(String, String), String] = localManagedDeps.flatMap { d =>
+      val scope = Option(d.getScope).getOrElse("")
+      val packaging = Option(d.getType).getOrElse("jar")
+      if (scope == "import" && packaging == "pom") {
+        val groupId = resolvePropertiesWithMap(d.getGroupId, properties)
+        val artifactId = resolvePropertiesWithMap(d.getArtifactId, properties)
+        val version = Option(d.getVersion).map(v => resolvePropertiesWithMap(v, properties)).getOrElse("")
+        if (groupId.startsWith("$") || artifactId.startsWith("$") || version.isEmpty || version.startsWith("$")) {
+          None
+        } else {
+          val bomPath = m2Repo
+            .resolve(groupId.replace('.', '/'))
+            .resolve(artifactId)
+            .resolve(version)
+            .resolve(s"$artifactId-$version.pom")
+          if (Files.exists(bomPath)) {
+            Try(readPom(bomPath)).toOption.map { bomModel =>
+              collectManagedVersions(bomModel, bomPath.getParent, verbose)
+            }
+          } else {
+            if (verbose) println(s"  Warning: BOM not found at $bomPath")
+            None
+          }
+        }
+      } else {
+        None
+      }
+    }.foldLeft(Map.empty[(String, String), String])(_ ++ _)
+
     // Local versions override parent versions
-    parentManagedVersions ++ localManagedVersions
+    parentManagedVersions ++ bomManagedVersions ++ localManagedVersions
   }
 
   private def collectModuleDependencies(
@@ -296,14 +340,21 @@ object MavenExtractor {
   ): Option[AetherDependency] = {
     // Skip test and provided scope by default
     val scope = Option(mavenDep.getScope).getOrElse("compile")
-    if (scope == "test" || scope == "provided" || scope == "system") {
+    if (scope == "test" || scope == "system") {
+      return None
+    }
+
+    val groupId = resolvePropertiesWithMap(mavenDep.getGroupId, properties)
+    val artifactId = resolvePropertiesWithMap(mavenDep.getArtifactId, properties)
+    if (groupId.startsWith("$") || artifactId.startsWith("$")) {
+      if (verbose) println(s"  Warning: Unresolved property in dependency coordinates: ${mavenDep}")
       return None
     }
 
     val version = Option(mavenDep.getVersion)
-      .orElse(managedVersions.get((mavenDep.getGroupId, mavenDep.getArtifactId)))
+      .orElse(managedVersions.get((groupId, artifactId)))
       .getOrElse {
-        if (verbose) println(s"  Warning: No version for ${mavenDep.getGroupId}:${mavenDep.getArtifactId}")
+        if (verbose) println(s"  Warning: No version for $groupId:$artifactId")
         return None
       }
 
@@ -315,14 +366,23 @@ object MavenExtractor {
       return None
     }
 
-    val classifier = Option(mavenDep.getClassifier).filter(_.nonEmpty)
+    if (groupId.startsWith("org.apache.spark") && resolvedVersion.contains("SNAPSHOT")) {
+      if (verbose) {
+        println(s"  Skipping Spark SNAPSHOT dependency: $groupId:$artifactId:$resolvedVersion")
+      }
+      return None
+    }
+
+    val classifier = Option(mavenDep.getClassifier)
+      .filter(_.nonEmpty)
+      .map(c => resolvePropertiesWithMap(c, properties))
     val packaging = Option(mavenDep.getType).getOrElse("jar")
 
     val artifact = classifier match {
       case Some(c) =>
-        new DefaultArtifact(mavenDep.getGroupId, mavenDep.getArtifactId, c, packaging, resolvedVersion)
+        new DefaultArtifact(groupId, artifactId, c, packaging, resolvedVersion)
       case None =>
-        new DefaultArtifact(mavenDep.getGroupId, mavenDep.getArtifactId, packaging, resolvedVersion)
+        new DefaultArtifact(groupId, artifactId, packaging, resolvedVersion)
     }
 
     Some(new AetherDependency(artifact, scope))
@@ -330,10 +390,18 @@ object MavenExtractor {
 
   private def resolvePropertiesWithMap(value: String, properties: Map[String, String]): String = {
     val propertyPattern = """\$\{([^}]+)\}""".r
-    propertyPattern.replaceAllIn(value, { m =>
-      val propName = m.group(1)
-      properties.getOrElse(propName, s"$${$propName}")
-    })
+    @annotation.tailrec
+    def loop(current: String, depth: Int): String = {
+      if (depth >= 10) current
+      else {
+        val replaced = propertyPattern.replaceAllIn(current, { m =>
+          val propName = m.group(1)
+          java.util.regex.Matcher.quoteReplacement(properties.getOrElse(propName, m.matched))
+        })
+        if (replaced == current) current else loop(replaced, depth + 1)
+      }
+    }
+    loop(value, 0)
   }
 
   private def getRepositories(model: Model): JList[RemoteRepository] = {
@@ -377,6 +445,11 @@ object MavenExtractor {
       val result = system.resolveDependencies(session, dependencyRequest)
       result.getArtifactResults.asScala.toSeq
     } catch {
+      case e: DependencyResolutionException =>
+        if (verbose) {
+          println(s"  Warning: Some dependencies could not be resolved: ${e.getMessage}")
+        }
+        e.getResult.getArtifactResults.asScala.toSeq
       case e: Exception =>
         if (verbose) {
           println(s"  Warning: Some dependencies could not be resolved: ${e.getMessage}")

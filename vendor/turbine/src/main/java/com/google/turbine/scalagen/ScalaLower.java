@@ -18,7 +18,6 @@ package com.google.turbine.scalagen;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableMap.Builder;
 import com.google.turbine.bytecode.ClassFile;
 import com.google.turbine.bytecode.ClassWriter;
 import com.google.turbine.model.TurbineFlag;
@@ -114,7 +113,7 @@ public final class ScalaLower {
       }
     }
 
-    Builder<String, byte[]> out = ImmutableMap.builder();
+    Map<String, byte[]> out = new LinkedHashMap<>();
 
     for (ClassDef cls : classDefs) {
       ClassDef companion = objectsByKey.get(new Key(cls.packageName(), cls.name()));
@@ -128,10 +127,12 @@ public final class ScalaLower {
           companion == null
               ? ScalaTypeMapper.TypeAliasScope.empty()
               : aliasScopes.getOrDefault(companion, ScalaTypeMapper.TypeAliasScope.empty());
-      out.putAll(
-          generateClass(cls, companion, ctorDefaults, scope, aliases, companionAliases, majorVersion));
+      putAllUnique(
+          out,
+          generateClass(
+              cls, companion, ctorDefaults, scope, aliases, companionAliases, majorVersion));
       if (cls.kind() == ClassDef.Kind.TRAIT) {
-        out.putAll(generateTraitImplClass(cls, scope, aliases, majorVersion));
+        putAllUnique(out, generateTraitImplClass(cls, scope, aliases, majorVersion));
       }
     }
 
@@ -145,8 +146,10 @@ public final class ScalaLower {
           importScopes.getOrDefault(obj, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
           aliasScopes.getOrDefault(obj, ScalaTypeMapper.TypeAliasScope.empty());
-      out.putAll(
-          generateObject(obj, extras, scope, aliases, majorVersion, isCaseCompanion, functionArity));
+      putAllUnique(
+          out,
+          generateObject(
+              obj, extras, scope, aliases, majorVersion, isCaseCompanion, functionArity));
     }
 
     for (ClassDef pkgObj : packageObjects) {
@@ -154,10 +157,16 @@ public final class ScalaLower {
           importScopes.getOrDefault(pkgObj, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
           aliasScopes.getOrDefault(pkgObj, ScalaTypeMapper.TypeAliasScope.empty());
-      out.putAll(generatePackageObject(pkgObj, scope, aliases, majorVersion));
+      putAllUnique(out, generatePackageObject(pkgObj, scope, aliases, majorVersion));
     }
 
-    return out.buildOrThrow();
+    return ImmutableMap.copyOf(out);
+  }
+
+  private static void putAllUnique(Map<String, byte[]> target, Map<String, byte[]> source) {
+    for (Map.Entry<String, byte[]> entry : source.entrySet()) {
+      target.putIfAbsent(entry.getKey(), entry.getValue());
+    }
   }
 
   private static ImmutableMap<String, byte[]> generateClass(
