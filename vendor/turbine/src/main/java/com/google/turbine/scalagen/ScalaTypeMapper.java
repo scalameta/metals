@@ -185,7 +185,7 @@ public final class ScalaTypeMapper {
           name.append('/').append(stripBackticks(tokens.get(j + 1)));
           j += 2;
         }
-        return name.toString();
+        return name.toString().replace('.', '/');
       }
     }
     return null;

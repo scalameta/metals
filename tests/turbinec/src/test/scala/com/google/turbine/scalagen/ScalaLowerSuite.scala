@@ -131,9 +131,18 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("copy(ILjava/lang/String;)Lfoo/Box;"))
     assert(cls.methods.contains("productArity()I"))
     assert(cls.methods.contains("productElement(I)Ljava/lang/Object;"))
+    assert(cls.methods.contains("productElementName(I)Ljava/lang/String;"))
+    assert(cls.methods.contains("productElementNames()Lscala/collection/Iterator;"))
     assert(cls.methods.contains("productPrefix()Ljava/lang/String;"))
     assert(cls.methods.contains("productIterator()Lscala/collection/Iterator;"))
+    assert(cls.methods.contains("hashCode()I"))
+    assert(cls.methods.contains("equals(Ljava/lang/Object;)Z"))
+    assert(cls.methods.contains("canEqual(Ljava/lang/Object;)Z"))
     assert(cls.methods.contains("toString()Ljava/lang/String;"))
+    assert(cls.methods.contains("fromProduct(Lscala/Product;)Lfoo/Box;"))
+    assert((cls.methods("fromProduct(Lscala/Product;)Lfoo/Box;") & Opcodes.ACC_STATIC) != 0)
+    assert(cls.methods.contains("_1()I"))
+    assert(cls.methods.contains("_2()Ljava/lang/String;"))
     assert(cls.methods.contains("apply(ILjava/lang/String;)Lfoo/Box;"))
     assert((cls.methods("apply(ILjava/lang/String;)Lfoo/Box;") & Opcodes.ACC_STATIC) != 0)
     assert(cls.methods.contains("unapply(Lfoo/Box;)Lscala/Option;"))
@@ -142,6 +151,59 @@ class ScalaLowerSuite extends FunSuite {
     assert(module.methods.contains("apply(ILjava/lang/String;)Lfoo/Box;"))
     assert((module.methods("apply(ILjava/lang/String;)Lfoo/Box;") & Opcodes.ACC_STATIC) == 0)
     assert(module.methods.contains("unapply(Lfoo/Box;)Lscala/Option;"))
+    assert(module.methods.contains("fromProduct(Lscala/Product;)Lfoo/Box;"))
+    assert((module.methods("fromProduct(Lscala/Product;)Lfoo/Box;") & Opcodes.ACC_STATIC) == 0)
+  }
+
+  test("case-class-default-copy") {
+    val source =
+      List(
+        "package foo",
+        "case class Box(x: Int = 1, y: String = \"\")",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Box"))
+    assert(cls.methods.contains("copy$default$1()I"))
+    assert(cls.methods.contains("copy$default$2()Ljava/lang/String;"))
+  }
+
+  test("case-object-synthetics") {
+    val source =
+      List(
+        "package foo",
+        "case object Solo {}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    assert(classes.containsKey("foo/Solo$"))
+    assert(classes.containsKey("foo/Solo"))
+
+    val module = readMembers(classes.get("foo/Solo$"))
+    assert(module.methods.contains("productArity()I"))
+    assert(module.methods.contains("productElement(I)Ljava/lang/Object;"))
+    assert(module.methods.contains("productElementName(I)Ljava/lang/String;"))
+    assert(module.methods.contains("productElementNames()Lscala/collection/Iterator;"))
+    assert(module.methods.contains("productIterator()Lscala/collection/Iterator;"))
+    assert(module.methods.contains("productPrefix()Ljava/lang/String;"))
+    assert(module.methods.contains("hashCode()I"))
+    assert(module.methods.contains("toString()Ljava/lang/String;"))
+    assert(module.methods.contains("canEqual(Ljava/lang/Object;)Z"))
+    assert(module.methods.contains("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;"))
+
+    val mirror = readMembers(classes.get("foo/Solo"))
+    assert(mirror.methods.contains("productArity()I"))
+    assert((mirror.methods("productArity()I") & Opcodes.ACC_STATIC) != 0)
+    assert(mirror.methods.contains("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;"))
+    assert(
+      (mirror.methods("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;") & Opcodes.ACC_STATIC) != 0
+    )
   }
 
   test("resolves-imports-for-types") {
@@ -191,6 +253,38 @@ class ScalaLowerSuite extends FunSuite {
     assert((cls.methods("pub()I") & Opcodes.ACC_PUBLIC) != 0)
     assert((cls.methods("secret()Ljava/lang/String;") & Opcodes.ACC_PRIVATE) != 0)
     assert((cls.methods("shield()I") & Opcodes.ACC_PROTECTED) != 0)
+  }
+
+  test("object-mirror-class") {
+    val source =
+      List(
+        "package foo",
+        "object Solo {",
+        "  val x: Int = 1",
+        "  var y: String = \"hi\"",
+        "  def bar(z: Int = 2): Int = z",
+        "  private def hidden(): Int = 3",
+        "  protected def prot(): Int = 4",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    assert(classes.containsKey("foo/Solo$"))
+    assert(classes.containsKey("foo/Solo"))
+
+    val mirror = readMembers(classes.get("foo/Solo"))
+    assert(mirror.methods.contains("x()I"))
+    assert(mirror.methods.contains("y()Ljava/lang/String;"))
+    assert(mirror.methods.contains("y_$eq(Ljava/lang/String;)V"))
+    assert(mirror.methods.contains("bar(I)I"))
+    assert(mirror.methods.contains("bar$default$1()I"))
+    assert(!mirror.methods.contains("hidden()I"))
+    assert(!mirror.methods.contains("prot()I"))
+    assert(!mirror.methods.contains("<init>()V"))
+    assert(!mirror.fields.contains("MODULE$Lfoo/Solo$;"))
   }
 
   test("trait-default-methods") {

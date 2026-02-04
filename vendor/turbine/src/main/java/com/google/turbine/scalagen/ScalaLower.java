@@ -19,7 +19,9 @@ package com.google.turbine.scalagen;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.turbine.bytecode.ClassFile;
+import com.google.turbine.bytecode.ClassFile.AnnotationInfo;
 import com.google.turbine.bytecode.ClassWriter;
+import com.google.turbine.model.Const;
 import com.google.turbine.model.TurbineFlag;
 import com.google.turbine.scalaparse.ScalaTree;
 import com.google.turbine.scalaparse.ScalaTree.ClassDef;
@@ -113,6 +115,11 @@ public final class ScalaLower {
       }
     }
 
+    Set<Key> classKeys = new HashSet<>();
+    for (ClassDef cls : classDefs) {
+      classKeys.add(new Key(cls.packageName(), cls.name()));
+    }
+
     Map<String, byte[]> out = new LinkedHashMap<>();
 
     for (ClassDef cls : classDefs) {
@@ -150,6 +157,9 @@ public final class ScalaLower {
           out,
           generateObject(
               obj, extras, scope, aliases, majorVersion, isCaseCompanion, functionArity));
+      if (!classKeys.contains(key)) {
+        putAllUnique(out, generateObjectMirror(obj, scope, aliases, majorVersion));
+      }
     }
 
     for (ClassDef pkgObj : packageObjects) {
@@ -258,7 +268,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             methods,
             /* fields= */ ImmutableList.of(),
-            /* annotations= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -293,6 +303,7 @@ public final class ScalaLower {
     String name = obj.name() + "$";
     String binaryName = binaryName(pkg, name);
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
+    boolean isCaseObject = obj.isCase();
 
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
     fields.add(moduleField(binaryName));
@@ -309,12 +320,20 @@ public final class ScalaLower {
             aliasScope,
             /* staticContext= */ false,
             ClassDef.Kind.CLASS));
+    if (isCaseObject) {
+      methods.addAll(caseObjectInstanceMethods(obj, scope, aliasScope));
+    }
     methods.addAll(extraMethods);
     methods = uniqueMethods(methods);
 
     List<String> interfaces = new ArrayList<>();
+    addInterface(interfaces, "java/io/Serializable");
     if (isCaseCompanion) {
-      interfaces.add("java/io/Serializable");
+      addInterface(interfaces, "scala/deriving/Mirror$Product");
+    }
+    if (isCaseObject) {
+      addInterface(interfaces, "scala/Product");
+      addInterface(interfaces, "scala/deriving/Mirror$Singleton");
     }
     String superName = "java/lang/Object";
     if (caseCompanionFunctionArity >= 0 && caseCompanionFunctionArity <= 22) {
@@ -332,7 +351,46 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             methods,
             fields,
-            /* annotations= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
+            /* innerClasses= */ ImmutableList.of(),
+            /* typeAnnotations= */ ImmutableList.of(),
+            /* module= */ null,
+            /* nestHost= */ null,
+            /* nestMembers= */ ImmutableList.of(),
+            /* record= */ null,
+            /* transitiveJar= */ null);
+
+    return ImmutableMap.of(binaryName, ClassWriter.writeClass(classFile));
+  }
+
+  private static ImmutableMap<String, byte[]> generateObjectMirror(
+      ClassDef obj,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      int majorVersion) {
+    String pkg = obj.packageName();
+    String binaryName = binaryName(pkg, obj.name());
+    int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
+
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    methods.addAll(publicForwarders(obj, scope, aliasScope));
+    if (obj.isCase()) {
+      methods.addAll(caseObjectStaticMethods(obj, scope, aliasScope));
+    }
+    methods = uniqueMethods(methods);
+
+    ClassFile classFile =
+        new ClassFile(
+            access,
+            majorVersion,
+            binaryName,
+            /* signature= */ null,
+            "java/lang/Object",
+            /* interfaces= */ ImmutableList.of(),
+            /* permits= */ ImmutableList.of(),
+            methods,
+            /* fields= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -385,7 +443,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             moduleMethods,
             fields,
-            /* annotations= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -414,7 +472,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             companionMethods,
             /* fields= */ ImmutableList.of(),
-            /* annotations= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -469,7 +527,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             methods,
             /* fields= */ ImmutableList.of(),
-            /* annotations= */ ImmutableList.of(),
+            /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -596,6 +654,20 @@ public final class ScalaLower {
             /* staticContext= */ true,
             ownerKind));
     return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> publicForwarders(
+      ClassDef obj,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.MethodInfo> methods = forwarders(obj, scope, aliasScope, /* isTrait= */ false);
+    List<ClassFile.MethodInfo> publicMethods = new ArrayList<>();
+    for (ClassFile.MethodInfo method : methods) {
+      if ((method.access() & TurbineFlag.ACC_PUBLIC) != 0) {
+        publicMethods.add(method);
+      }
+    }
+    return publicMethods;
   }
 
   private static ClassFile.MethodInfo ctorMethod(
@@ -1176,6 +1248,19 @@ public final class ScalaLower {
             ImmutableList.of(unapplyParams),
             "scala/Option",
             cls.position());
+    ParamList fromProductParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("p", ImmutableList.of(), "scala/Product", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    DefDef fromProduct =
+        syntheticDef(
+            pkg,
+            "fromProduct",
+            ImmutableList.of(fromProductParams),
+            binary,
+            cls.position());
+    DefDef toString =
+        syntheticDef(pkg, "toString", ImmutableList.of(), "String", cls.position());
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     methods.add(
         buildMethod(
@@ -1183,6 +1268,24 @@ public final class ScalaLower {
     methods.add(
         buildMethod(
             unapply,
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            fromProduct,
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            toString,
             pkg,
             typeParams,
             scope,
@@ -1209,6 +1312,17 @@ public final class ScalaLower {
             ImmutableList.of(unapplyParams),
             "scala/Option",
             cls.position());
+    ParamList fromProductParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("p", ImmutableList.of(), "scala/Product", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    DefDef fromProduct =
+        syntheticDef(
+            pkg,
+            "fromProduct",
+            ImmutableList.of(fromProductParams),
+            binary,
+            cls.position());
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     methods.add(
         buildMethod(
@@ -1216,6 +1330,15 @@ public final class ScalaLower {
     methods.add(
         buildMethod(
             unapply,
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ true,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            fromProduct,
             pkg,
             typeParams,
             scope,
@@ -1267,6 +1390,38 @@ public final class ScalaLower {
             aliasScope,
             /* staticContext= */ false,
             cls.kind()));
+    ParamList productElementNameParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("n", ImmutableList.of(), "Int", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productElementName",
+                ImmutableList.of(productElementNameParams),
+                "String",
+                cls.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            cls.kind()));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productElementNames",
+                ImmutableList.of(),
+                "scala/collection/Iterator",
+                cls.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            cls.kind()));
     methods.add(
         buildMethod(
             syntheticDef(pkg, "productPrefix", ImmutableList.of(), "String", cls.position()),
@@ -1292,6 +1447,51 @@ public final class ScalaLower {
             cls.kind()));
     methods.add(
         buildMethod(
+            syntheticDef(pkg, "hashCode", ImmutableList.of(), "Int", cls.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            cls.kind()));
+    ParamList equalsParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("x", ImmutableList.of(), "java/lang/Object", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "equals",
+                ImmutableList.of(equalsParams),
+                "Boolean",
+                cls.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            cls.kind()));
+    ParamList canEqualParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("x", ImmutableList.of(), "java/lang/Object", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "canEqual",
+                ImmutableList.of(canEqualParams),
+                "Boolean",
+                cls.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* staticContext= */ false,
+            cls.kind()));
+    methods.add(
+        buildMethod(
             syntheticDef(pkg, "toString", ImmutableList.of(), "String", cls.position()),
             pkg,
             typeParams,
@@ -1299,7 +1499,214 @@ public final class ScalaLower {
             aliasScope,
             /* staticContext= */ false,
             cls.kind()));
+    methods.addAll(caseClassElementAccessors(cls, scope, aliasScope));
+    methods.addAll(caseClassCopyDefaultGetters(cls, scope, aliasScope));
     return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> caseClassElementAccessors(
+      ClassDef cls, ScalaTypeMapper.ImportScope scope, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    List<Param> params = flattenParams(cls.ctorParams());
+    if (params.isEmpty()) {
+      return methods;
+    }
+    String pkg = cls.packageName();
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    for (int i = 0; i < params.size(); i++) {
+      Param param = params.get(i);
+      String returnType = param.type() == null ? "java/lang/Object" : param.type();
+      methods.add(
+          buildMethod(
+              syntheticDef(pkg, "_" + (i + 1), ImmutableList.of(), returnType, cls.position()),
+              pkg,
+              typeParams,
+              scope,
+              aliasScope,
+              /* staticContext= */ false,
+              cls.kind()));
+    }
+    return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> caseClassCopyDefaultGetters(
+      ClassDef cls, ScalaTypeMapper.ImportScope scope, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    int access = methodAccess(ImmutableList.of(), /* staticContext= */ false, /* isAbstract= */ false, cls.kind());
+    return defaultGettersForParamLists(
+        "copy",
+        cls.ctorParams(),
+        cls.packageName(),
+        typeParams,
+        ImmutableList.of(),
+        scope,
+        aliasScope,
+        access);
+  }
+
+  private static List<ClassFile.MethodInfo> caseObjectInstanceMethods(
+      ClassDef obj, ScalaTypeMapper.ImportScope scope, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    return caseObjectMethods(obj, scope, aliasScope, /* staticContext= */ false);
+  }
+
+  private static List<ClassFile.MethodInfo> caseObjectStaticMethods(
+      ClassDef obj, ScalaTypeMapper.ImportScope scope, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    return caseObjectMethods(obj, scope, aliasScope, /* staticContext= */ true);
+  }
+
+  private static List<ClassFile.MethodInfo> caseObjectMethods(
+      ClassDef obj,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    String pkg = obj.packageName();
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(obj.typeParams());
+    ParamList productElementParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("n", ImmutableList.of(), "Int", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    ParamList productElementNameParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("n", ImmutableList.of(), "Int", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    ParamList canEqualParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("x", ImmutableList.of(), "java/lang/Object", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    ParamList fromProductParams =
+        new ParamList(
+            ImmutableList.of(
+                new Param("p", ImmutableList.of(), "scala/Product", /* hasDefault= */ false, /* defaultUsesParam= */ false)));
+    methods.add(
+        buildMethod(
+            syntheticDef(pkg, "productArity", ImmutableList.of(), "Int", obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productElement",
+                ImmutableList.of(productElementParams),
+                "java/lang/Object",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productElementName",
+                ImmutableList.of(productElementNameParams),
+                "String",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productElementNames",
+                ImmutableList.of(),
+                "scala/collection/Iterator",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(pkg, "productPrefix", ImmutableList.of(), "String", obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "productIterator",
+                ImmutableList.of(),
+                "scala/collection/Iterator",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(pkg, "hashCode", ImmutableList.of(), "Int", obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "canEqual",
+                ImmutableList.of(canEqualParams),
+                "Boolean",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(pkg, "toString", ImmutableList.of(), "String", obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    methods.add(
+        buildMethod(
+            syntheticDef(
+                pkg,
+                "fromProduct",
+                ImmutableList.of(fromProductParams),
+                "scala/deriving/Mirror$Singleton",
+                obj.position()),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            staticContext,
+            ClassDef.Kind.CLASS));
+    return methods;
+  }
+
+  private static List<Param> flattenParams(ImmutableList<ParamList> paramLists) {
+    List<Param> params = new ArrayList<>();
+    for (ParamList list : paramLists) {
+      params.addAll(list.params());
+    }
+    return params;
   }
 
   private static DefDef syntheticDef(
@@ -1625,6 +2032,32 @@ public final class ScalaLower {
       unique.putIfAbsent(method.name() + method.descriptor(), method);
     }
     return new ArrayList<>(unique.values());
+  }
+
+  private static ImmutableList<AnnotationInfo> scalaClassAnnotations() {
+    AnnotationInfo scalaSignature =
+        new AnnotationInfo(
+            "Lscala/reflect/ScalaSignature;",
+            AnnotationInfo.RuntimeVisibility.VISIBLE,
+            ImmutableMap.of(
+                "bytes",
+                new AnnotationInfo.ElementValue.ConstValue(new Const.StringValue(""))));
+    AnnotationInfo scalaLongSignature =
+        new AnnotationInfo(
+            "Lscala/reflect/ScalaLongSignature;",
+            AnnotationInfo.RuntimeVisibility.VISIBLE,
+            ImmutableMap.of(
+                "bytes",
+                new AnnotationInfo.ElementValue.ArrayValue(
+                    ImmutableList.of(
+                        new AnnotationInfo.ElementValue.ConstValue(new Const.StringValue(""))))));
+    return ImmutableList.of(scalaSignature, scalaLongSignature);
+  }
+
+  private static void addInterface(List<String> interfaces, String iface) {
+    if (!interfaces.contains(iface)) {
+      interfaces.add(iface);
+    }
   }
 
   private ScalaLower() {}
