@@ -73,6 +73,7 @@ public final class ScalaLower {
 
     Map<Key, ClassDef> objectsByKey = new HashMap<>();
     Set<Key> caseCompanions = new HashSet<>();
+    Map<Key, Integer> caseCompanionFunctionArity = new HashMap<>();
     for (ClassDef obj : objectDefs) {
       objectsByKey.put(new Key(obj.packageName(), obj.name()), obj);
     }
@@ -88,7 +89,12 @@ public final class ScalaLower {
           ctorDefaultGetters(cls, scope, aliases, /* staticContext= */ false);
       List<ClassFile.MethodInfo> caseCompanionMethods = ImmutableList.of();
       if (cls.isCase()) {
-        caseCompanions.add(new Key(cls.packageName(), cls.name()));
+        int arity = caseCompanionArity(cls);
+        Key key = new Key(cls.packageName(), cls.name());
+        caseCompanions.add(key);
+        if (arity >= 0) {
+          caseCompanionFunctionArity.put(key, arity);
+        }
         caseCompanionMethods = caseClassCompanionMethods(cls, scope, aliases);
       }
       if (!ctorDefaults.isEmpty()) {
@@ -133,11 +139,14 @@ public final class ScalaLower {
       Key key = new Key(obj.packageName(), obj.name());
       List<ClassFile.MethodInfo> extras = companionExtras.getOrDefault(key, ImmutableList.of());
       boolean isCaseCompanion = caseCompanions.contains(key);
+      Integer arity = caseCompanionFunctionArity.get(key);
+      int functionArity = arity == null ? -1 : arity;
       ScalaTypeMapper.ImportScope scope =
           importScopes.getOrDefault(obj, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
           aliasScopes.getOrDefault(obj, ScalaTypeMapper.TypeAliasScope.empty());
-      out.putAll(generateObject(obj, extras, scope, aliases, majorVersion, isCaseCompanion));
+      out.putAll(
+          generateObject(obj, extras, scope, aliases, majorVersion, isCaseCompanion, functionArity));
     }
 
     for (ClassDef pkgObj : packageObjects) {
@@ -259,7 +268,8 @@ public final class ScalaLower {
         ScalaTypeMapper.ImportScope.empty(),
         ScalaTypeMapper.TypeAliasScope.empty(),
         majorVersion,
-        /* isCaseCompanion= */ false);
+        /* isCaseCompanion= */ false,
+        /* caseCompanionFunctionArity= */ -1);
   }
 
   private static ImmutableMap<String, byte[]> generateObject(
@@ -268,7 +278,8 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       int majorVersion,
-      boolean isCaseCompanion) {
+      boolean isCaseCompanion,
+      int caseCompanionFunctionArity) {
     String pkg = obj.packageName();
     String name = obj.name() + "$";
     String binaryName = binaryName(pkg, name);
@@ -296,6 +307,10 @@ public final class ScalaLower {
     if (isCaseCompanion) {
       interfaces.add("java/io/Serializable");
     }
+    String superName = "java/lang/Object";
+    if (caseCompanionFunctionArity >= 0 && caseCompanionFunctionArity <= 22) {
+      superName = "scala/runtime/AbstractFunction" + caseCompanionFunctionArity;
+    }
 
     ClassFile classFile =
         new ClassFile(
@@ -303,7 +318,7 @@ public final class ScalaLower {
             majorVersion,
             binaryName,
             /* signature= */ null,
-            "java/lang/Object",
+            superName,
             /* interfaces= */ interfaces,
             /* permits= */ ImmutableList.of(),
             methods,
@@ -1111,6 +1126,26 @@ public final class ScalaLower {
         ImmutableList.of(),
         ImmutableList.of(),
         cls.position());
+  }
+
+  private static int caseCompanionArity(ClassDef cls) {
+    if (!cls.isCase()) {
+      return -1;
+    }
+    if (!cls.typeParams().isEmpty()) {
+      return -1;
+    }
+    if (!cls.members().isEmpty()) {
+      return -1;
+    }
+    ImmutableList<ParamList> params = cls.ctorParams();
+    if (params == null || params.isEmpty()) {
+      return 0;
+    }
+    if (params.size() != 1) {
+      return -1;
+    }
+    return params.get(0).params().size();
   }
 
   private static List<ClassFile.MethodInfo> caseClassCompanionMethods(

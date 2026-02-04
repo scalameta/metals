@@ -29,6 +29,7 @@ import static com.google.turbine.scalaparse.ScalaToken.DOT;
 import static com.google.turbine.scalaparse.ScalaToken.EOF;
 import static com.google.turbine.scalaparse.ScalaToken.EQUALS;
 import static com.google.turbine.scalaparse.ScalaToken.EXTENDS;
+import static com.google.turbine.scalaparse.ScalaToken.FALSE;
 import static com.google.turbine.scalaparse.ScalaToken.FINAL;
 import static com.google.turbine.scalaparse.ScalaToken.IDENTIFIER;
 import static com.google.turbine.scalaparse.ScalaToken.IMPLICIT;
@@ -39,6 +40,7 @@ import static com.google.turbine.scalaparse.ScalaToken.LAZY;
 import static com.google.turbine.scalaparse.ScalaToken.LPAREN;
 import static com.google.turbine.scalaparse.ScalaToken.NEWLINE;
 import static com.google.turbine.scalaparse.ScalaToken.NEWLINES;
+import static com.google.turbine.scalaparse.ScalaToken.NULL;
 import static com.google.turbine.scalaparse.ScalaToken.OBJECT;
 import static com.google.turbine.scalaparse.ScalaToken.OVERRIDE;
 import static com.google.turbine.scalaparse.ScalaToken.PACKAGE;
@@ -53,7 +55,9 @@ import static com.google.turbine.scalaparse.ScalaToken.SUBTYPE;
 import static com.google.turbine.scalaparse.ScalaToken.SUPERTYPE;
 import static com.google.turbine.scalaparse.ScalaToken.TRAIT;
 import static com.google.turbine.scalaparse.ScalaToken.THIS;
+import static com.google.turbine.scalaparse.ScalaToken.TRUE;
 import static com.google.turbine.scalaparse.ScalaToken.TYPE;
+import static com.google.turbine.scalaparse.ScalaToken.USCORE;
 import static com.google.turbine.scalaparse.ScalaToken.VAL;
 import static com.google.turbine.scalaparse.ScalaToken.VAR;
 import static com.google.turbine.scalaparse.ScalaToken.VIEWBOUND;
@@ -96,6 +100,7 @@ public final class ScalaParser {
   private int peekPosition;
 
   private final Deque<String> packagePrefix = new ArrayDeque<>();
+  private final Deque<Map<String, ExprInfo>> valueScopes = new ArrayDeque<>();
 
   public static ScalaTree.CompUnit parse(String source) {
     return parse(new SourceFile(null, source));
@@ -108,6 +113,7 @@ public final class ScalaParser {
 
   private ScalaParser(ScalaLexer lexer) {
     this.lexer = lexer;
+    this.valueScopes.push(new HashMap<>());
     next();
   }
 
@@ -130,10 +136,8 @@ public final class ScalaParser {
         stats.add(parseImport());
         continue;
       }
-      ScalaTree.Defn defn = parseTopDef();
-      if (defn != null) {
-        stats.add(defn);
-      }
+      ImmutableList<ScalaTree.Defn> defns = parseTopDef();
+      stats.addAll(defns);
     }
     return new ScalaTree.CompUnit(stats.build(), source);
   }
@@ -158,10 +162,8 @@ public final class ScalaParser {
           stats.add(parseImport());
           continue;
         }
-        ScalaTree.Defn defn = parseTopDef();
-        if (defn != null) {
-          stats.add(defn);
-        }
+        ImmutableList<ScalaTree.Defn> defns = parseTopDef();
+        stats.addAll(defns);
       }
       accept(RBRACE);
       for (int i = 0; i < name.size(); i++) {
@@ -215,7 +217,7 @@ public final class ScalaParser {
     return sb.toString().trim();
   }
 
-  private ScalaTree.Defn parseTopDef() {
+  private ImmutableList<ScalaTree.Defn> parseTopDef() {
     ImmutableList<String> modifiers = parseModifiers();
     boolean isCase = false;
     if (token == CASE) {
@@ -223,30 +225,30 @@ public final class ScalaParser {
       next();
     }
     if (token == CLASS) {
-      return parseClass(modifiers, isCase, ClassDef.Kind.CLASS, false);
+      return ImmutableList.of(parseClass(modifiers, isCase, ClassDef.Kind.CLASS, false));
     }
     if (token == TRAIT) {
-      return parseClass(modifiers, isCase, ClassDef.Kind.TRAIT, false);
+      return ImmutableList.of(parseClass(modifiers, isCase, ClassDef.Kind.TRAIT, false));
     }
     if (token == OBJECT) {
-      return parseClass(modifiers, isCase, ClassDef.Kind.OBJECT, false);
+      return ImmutableList.of(parseClass(modifiers, isCase, ClassDef.Kind.OBJECT, false));
     }
     if (token == DEF) {
-      return parseDef(modifiers);
+      return ImmutableList.of(parseDef(modifiers));
     }
     if (token == VAL) {
-      return parseVal(modifiers, false);
+      return parseVals(modifiers, false);
     }
     if (token == VAR) {
-      return parseVal(modifiers, true);
+      return parseVals(modifiers, true);
     }
     if (token == TYPE) {
-      return parseTypeDef(modifiers);
+      return ImmutableList.of(parseTypeDef(modifiers));
     }
 
     // Unrecognized, skip expression.
     skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
-    return null;
+    return ImmutableList.of();
   }
 
   private ScalaTree.Defn parsePackageObject() {
@@ -341,13 +343,27 @@ public final class ScalaParser {
           returnType = inferTypeFromExprStart(token, value);
         }
       }
-      String inferred = skipExprAndInferType(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
-      if (returnType == null) {
-        returnType = inferred;
+      if (token == LBRACE) {
+        String inferred = skipBlockAndInferType();
+        if (returnType == null) {
+          returnType = inferred;
+        }
+      } else {
+        String inferred = skipExprAndInferType(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
+        if (returnType == null) {
+          returnType = inferred;
+        }
       }
     } else if (token == LBRACE) {
       hasBody = true;
-      skipBlock();
+      if (returnType == null) {
+        String inferred = skipBlockAndInferType();
+        if (returnType == null) {
+          returnType = inferred;
+        }
+      } else {
+        skipBlock();
+      }
     }
     ImmutableList<String> adjusted = modifiers;
     if (!hasBody && !modifiers.contains("abstract")) {
@@ -358,42 +374,478 @@ public final class ScalaParser {
         currentPackageName(), name, adjusted, tparams, params, returnType, start);
   }
 
-  private ValDef parseVal(ImmutableList<String> modifiers, boolean isVar) {
+  private ImmutableList<ScalaTree.Defn> parseVals(
+      ImmutableList<String> modifiers, boolean isVar) {
+    return parseVals(modifiers, isVar, /* depth= */ null);
+  }
+
+  private ImmutableList<ScalaTree.Defn> parseVals(
+      ImmutableList<String> modifiers, boolean isVar, @Nullable BlockDepth depth) {
     int start = position;
     next();
-    String name = parseName();
-    String type = null;
+    List<Pattern> patterns = new ArrayList<>();
+    patterns.add(parsePattern());
+    while (token == COMMA) {
+      next();
+      patterns.add(parsePattern());
+    }
+    String explicitType = null;
     boolean hasExplicitType = false;
     if (token == COLON) {
       next();
       hasExplicitType = true;
-      type = parseTypeText(EnumSet.of(EQUALS, COMMA, SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
+      explicitType = parseTypeText(EnumSet.of(EQUALS, COMMA, SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
     }
     boolean hasDefault = false;
+    ExprInfo rhsInfo = null;
     if (token == EQUALS) {
       hasDefault = true;
       next();
-      if (type == null) {
-        type = inferLiteralType(token);
-        if (type == null) {
-          type = inferTypeFromExprStart(token, value);
-        }
-      }
-      String inferred = skipExprAndInferType(EnumSet.of(COMMA, SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
-      if (type == null) {
-        type = inferred;
+      if (depth == null) {
+        rhsInfo = parseExprInfo(EnumSet.of(COMMA, SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
+      } else {
+        rhsInfo = parseExprInfoInBlock(EnumSet.of(COMMA, SEMI, NEWLINE, NEWLINES), depth);
       }
     }
-    // Ignore additional comma-separated bindings for now.
-    return new ValDef(
-        currentPackageName(),
-        name,
-        isVar,
-        modifiers,
-        type,
-        hasExplicitType,
-        hasDefault,
-        start);
+
+    List<ScalaTree.Defn> out = new ArrayList<>();
+    Map<String, ExprInfo> scope = currentValueScope();
+    for (Pattern pattern : patterns) {
+      if (pattern == null) {
+        continue;
+      }
+      List<String> binders = new ArrayList<>();
+      pattern.collectBinders(binders);
+      Map<String, String> binderTypes = new HashMap<>();
+      if (rhsInfo != null) {
+        pattern.assignTypes(rhsInfo, binderTypes);
+      }
+      for (String binder : binders) {
+        boolean binderExplicit = false;
+        String type;
+        if (hasExplicitType && binders.size() == 1) {
+          type = explicitType;
+          binderExplicit = explicitType != null;
+        } else {
+          type = binderTypes.get(binder);
+        }
+        ValDef val =
+            new ValDef(
+                currentPackageName(),
+                binder,
+                isVar,
+                modifiers,
+                type,
+                binderExplicit,
+                hasDefault,
+                start);
+        out.add(val);
+        if (scope != null) {
+          ExprInfo infoForScope = null;
+          if (pattern instanceof BinderPattern && rhsInfo != null) {
+            if (type != null && rhsInfo.rawType() != null && !type.equals(rhsInfo.rawType())) {
+              infoForScope =
+                  new ExprInfo(type, rhsInfo.typeArgs(), rhsInfo.tupleElementTypes());
+            } else {
+              infoForScope = rhsInfo;
+            }
+          } else if (type != null) {
+            infoForScope = ExprInfo.ofType(type);
+          } else if (hasExplicitType && explicitType != null && binders.size() == 1) {
+            infoForScope = ExprInfo.ofType(explicitType);
+          }
+          if (infoForScope != null) {
+            scope.put(binder, infoForScope);
+          }
+        }
+      }
+    }
+
+    return ImmutableList.copyOf(out);
+  }
+
+  private @Nullable ExprInfo parseExprInfo(EnumSet<ScalaToken> stops) {
+    ExprInfo info = parseSimpleExprInfo();
+    if (!stops.contains(token)) {
+      skipExpr(stops);
+    }
+    return info;
+  }
+
+  private @Nullable ExprInfo parseExprInfoInBlock(EnumSet<ScalaToken> stops, BlockDepth depth) {
+    ExprInfo info = parseSimpleExprInfo();
+    if (depth.value > 0 && !stops.contains(token)) {
+      skipExprInBlock(stops, depth);
+    }
+    return info;
+  }
+
+  private @Nullable ExprInfo parseSimpleExprInfo() {
+    if (token.isLiteral() || token == TRUE || token == FALSE || token == NULL) {
+      String type = inferLiteralType(token);
+      next();
+      return type == null ? null : ExprInfo.ofType(type);
+    }
+    if (token == LPAREN) {
+      return parseTupleOrParenExprInfo();
+    }
+    if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
+      boolean backquoted = token == BACKQUOTED_IDENT;
+      String name = value;
+      next();
+      boolean qualified = false;
+      String current = name;
+      String base = name;
+      String lastSegment = name;
+      while (token == DOT) {
+        qualified = true;
+        next();
+        if (!token.isIdentifier()) {
+          break;
+        }
+        base = current;
+        lastSegment = value;
+        current = current + "/" + value;
+        next();
+      }
+      if (token == LPAREN) {
+        if (qualified && "apply".equals(lastSegment) && isTypeLike(base)) {
+          return parseApplyExprInfo(base);
+        }
+        return parseCallExprInfo(current);
+      }
+      if (!qualified) {
+        ExprInfo scoped = lookupValue(name);
+        if (scoped != null) {
+          return scoped;
+        }
+      }
+      if (!backquoted && isTypeLike(current)) {
+        return ExprInfo.ofType(current);
+      }
+      return null;
+    }
+    return null;
+  }
+
+  private ExprInfo parseCallExprInfo(String name) {
+    if (!isTypeLike(name)) {
+      parseCallArgTypes();
+      return null;
+    }
+    List<String> typeArgs = parseCallArgTypes();
+    return new ExprInfo(name, typeArgs, List.of());
+  }
+
+  private ExprInfo parseApplyExprInfo(String resultType) {
+    List<String> typeArgs = parseCallArgTypes();
+    return new ExprInfo(resultType, typeArgs, List.of());
+  }
+
+  private List<String> parseCallArgTypes() {
+    List<String> argTypes = new ArrayList<>();
+    boolean allKnown = true;
+    accept(LPAREN);
+    if (token != RPAREN) {
+      while (true) {
+        ExprInfo arg = parseSimpleExprInfo();
+        String argType = arg == null ? null : arg.rawType();
+        if (argType == null) {
+          allKnown = false;
+        } else {
+          argTypes.add(argType);
+        }
+        if (token != COMMA && token != RPAREN) {
+          skipExpr(EnumSet.of(COMMA, RPAREN));
+        }
+        if (token == COMMA) {
+          next();
+          continue;
+        }
+        break;
+      }
+    }
+    accept(RPAREN);
+    return allKnown ? List.copyOf(argTypes) : List.of();
+  }
+
+  private @Nullable ExprInfo parseTupleOrParenExprInfo() {
+    accept(LPAREN);
+    if (token == RPAREN) {
+      accept(RPAREN);
+      return ExprInfo.ofType("Unit");
+    }
+    ExprInfo first = parseSimpleExprInfo();
+    String firstType = first == null ? null : first.rawType();
+    List<String> elementTypes = new ArrayList<>();
+    boolean allKnown = true;
+    int elementCount = 0;
+    elementCount++;
+    if (firstType == null) {
+      allKnown = false;
+    } else {
+      elementTypes.add(firstType);
+    }
+    if (token != COMMA && token != RPAREN) {
+      skipExpr(EnumSet.of(COMMA, RPAREN));
+    }
+    boolean sawComma = false;
+    while (token == COMMA) {
+      sawComma = true;
+      next();
+      ExprInfo elem = parseSimpleExprInfo();
+      String elemType = elem == null ? null : elem.rawType();
+      elementCount++;
+      if (elemType == null) {
+        allKnown = false;
+      } else {
+        elementTypes.add(elemType);
+      }
+      if (token != COMMA && token != RPAREN) {
+        skipExpr(EnumSet.of(COMMA, RPAREN));
+      }
+    }
+    accept(RPAREN);
+    if (!sawComma) {
+      return first;
+    }
+    String tupleType = "scala/Tuple" + elementCount;
+    List<String> tupleElements = allKnown ? List.copyOf(elementTypes) : List.of();
+    return new ExprInfo(tupleType, List.of(), tupleElements);
+  }
+
+  private Pattern parsePattern() {
+    Pattern pattern = parsePatternSimple();
+    if (token == AT) {
+      next();
+      Pattern rhs = parsePattern();
+      if (pattern instanceof BinderPattern binder) {
+        return new AliasPattern(binder.name(), rhs);
+      }
+      return rhs;
+    }
+    return pattern;
+  }
+
+  private Pattern parsePatternSimple() {
+    if (token == USCORE) {
+      next();
+      return new WildcardPattern();
+    }
+    if (token == LPAREN) {
+      return parseTuplePattern();
+    }
+    if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
+      boolean backquoted = token == BACKQUOTED_IDENT;
+      String name = value;
+      next();
+      boolean qualified = false;
+      while (token == DOT) {
+        qualified = true;
+        next();
+        if (!token.isIdentifier()) {
+          break;
+        }
+        name = name + "/" + value;
+        next();
+      }
+      if (token == LPAREN) {
+        return new ConstructorPattern(name, parsePatternArgs());
+      }
+      if (!qualified && (backquoted || isBinderName(name))) {
+        return new BinderPattern(name);
+      }
+      return new ConstructorPattern(name, ImmutableList.of());
+    }
+    return new WildcardPattern();
+  }
+
+  private Pattern parseTuplePattern() {
+    accept(LPAREN);
+    if (token == RPAREN) {
+      accept(RPAREN);
+      return new WildcardPattern();
+    }
+    Pattern first = parsePattern();
+    if (token != COMMA) {
+      accept(RPAREN);
+      return first;
+    }
+    List<Pattern> elements = new ArrayList<>();
+    elements.add(first);
+    while (token == COMMA) {
+      next();
+      elements.add(parsePattern());
+    }
+    accept(RPAREN);
+    return new TuplePattern(ImmutableList.copyOf(elements));
+  }
+
+  private ImmutableList<Pattern> parsePatternArgs() {
+    accept(LPAREN);
+    ImmutableList.Builder<Pattern> args = ImmutableList.builder();
+    if (token != RPAREN) {
+      while (true) {
+        args.add(parsePattern());
+        if (token == COMMA) {
+          next();
+          continue;
+        }
+        break;
+      }
+    }
+    accept(RPAREN);
+    return args.build();
+  }
+
+  private boolean isTypeLike(String name) {
+    if (name == null || name.isEmpty()) {
+      return false;
+    }
+    int slash = name.lastIndexOf('/');
+    String segment = slash >= 0 ? name.substring(slash + 1) : name;
+    return !segment.isEmpty() && Character.isUpperCase(segment.charAt(0));
+  }
+
+  private boolean isBinderName(String name) {
+    return name != null && !name.isEmpty() && Character.isLowerCase(name.charAt(0));
+  }
+
+  private Map<String, ExprInfo> currentValueScope() {
+    Map<String, ExprInfo> scope = valueScopes.peek();
+    if (scope == null) {
+      scope = new HashMap<>();
+      valueScopes.push(scope);
+    }
+    return scope;
+  }
+
+  private @Nullable ExprInfo lookupValue(String name) {
+    for (Map<String, ExprInfo> scope : valueScopes) {
+      ExprInfo info = scope.get(name);
+      if (info != null) {
+        return info;
+      }
+    }
+    return null;
+  }
+
+  private sealed interface Pattern
+      permits BinderPattern, TuplePattern, ConstructorPattern, WildcardPattern, AliasPattern {
+    void collectBinders(List<String> out);
+
+    void assignTypes(ExprInfo rhs, Map<String, String> out);
+  }
+
+  private record BinderPattern(String name) implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {
+      out.add(name);
+    }
+
+    @Override
+    public void assignTypes(ExprInfo rhs, Map<String, String> out) {
+      if (rhs != null && rhs.rawType() != null) {
+        out.putIfAbsent(name, rhs.rawType());
+      }
+    }
+  }
+
+  private record TuplePattern(ImmutableList<Pattern> elements) implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {
+      for (Pattern element : elements) {
+        element.collectBinders(out);
+      }
+    }
+
+    @Override
+    public void assignTypes(ExprInfo rhs, Map<String, String> out) {
+      if (rhs != null && rhs.tupleElementTypes() != null) {
+        List<String> types = rhs.tupleElementTypes();
+        if (types.size() == elements.size()) {
+          for (int i = 0; i < elements.size(); i++) {
+            String type = types.get(i);
+            if (type != null) {
+              elements.get(i).assignTypes(ExprInfo.ofType(type), out);
+            }
+          }
+          return;
+        }
+      }
+      for (Pattern element : elements) {
+        element.assignTypes(null, out);
+      }
+    }
+  }
+
+  private record ConstructorPattern(String name, ImmutableList<Pattern> args) implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {
+      for (Pattern arg : args) {
+        arg.collectBinders(out);
+      }
+    }
+
+    @Override
+    public void assignTypes(ExprInfo rhs, Map<String, String> out) {
+      if (rhs != null && rhs.typeArgs() != null) {
+        List<String> types = rhs.typeArgs();
+        if (types.size() >= args.size()) {
+          for (int i = 0; i < args.size(); i++) {
+            String type = types.get(i);
+            if (type != null) {
+              args.get(i).assignTypes(ExprInfo.ofType(type), out);
+            }
+          }
+          return;
+        }
+      }
+      for (Pattern arg : args) {
+        arg.assignTypes(null, out);
+      }
+    }
+  }
+
+  private record WildcardPattern() implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {}
+
+    @Override
+    public void assignTypes(ExprInfo rhs, Map<String, String> out) {}
+  }
+
+  private record AliasPattern(String name, Pattern rhs) implements Pattern {
+    @Override
+    public void collectBinders(List<String> out) {
+      out.add(name);
+      rhs.collectBinders(out);
+    }
+
+    @Override
+    public void assignTypes(ExprInfo rhsInfo, Map<String, String> out) {
+      if (rhsInfo != null && rhsInfo.rawType() != null) {
+        out.putIfAbsent(name, rhsInfo.rawType());
+      }
+      rhs.assignTypes(rhsInfo, out);
+    }
+  }
+
+  private record ExprInfo(
+      @Nullable String rawType,
+      List<String> typeArgs,
+      List<String> tupleElementTypes) {
+    static ExprInfo ofType(String rawType) {
+      return new ExprInfo(rawType, List.of(), List.of());
+    }
+  }
+
+  private static final class BlockDepth {
+    int value;
+
+    BlockDepth(int value) {
+      this.value = value;
+    }
   }
 
   private TypeDef parseTypeDef(ImmutableList<String> modifiers) {
@@ -588,6 +1040,7 @@ public final class ScalaParser {
     if (token != LBRACE) {
       return new TemplateBody(ImmutableList.of(), ImmutableList.of());
     }
+    valueScopes.push(new HashMap<>());
     accept(LBRACE);
     ImmutableList.Builder<String> imports = ImmutableList.builder();
     ImmutableList.Builder<ScalaTree.Defn> members = ImmutableList.builder();
@@ -624,11 +1077,11 @@ public final class ScalaParser {
         continue;
       }
       if (token == VAL) {
-        members.add(parseVal(modifiers, false));
+        members.addAll(parseVals(modifiers, false));
         continue;
       }
       if (token == VAR) {
-        members.add(parseVal(modifiers, true));
+        members.addAll(parseVals(modifiers, true));
         continue;
       }
       if (token == TYPE) {
@@ -639,6 +1092,7 @@ public final class ScalaParser {
       skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
     }
     accept(RBRACE);
+    valueScopes.pop();
     return new TemplateBody(imports.build(), members.build());
   }
 
@@ -720,6 +1174,48 @@ public final class ScalaParser {
     }
   }
 
+  private @Nullable String skipBlockAndInferType() {
+    accept(LBRACE);
+    valueScopes.push(new HashMap<>());
+    BlockDepth depth = new BlockDepth(1);
+    String inferred = null;
+    while (depth.value > 0 && token != EOF) {
+      if (depth.value == 1) {
+        if (isSeparator(token)) {
+          next();
+          continue;
+        }
+        if (token == VAL) {
+          parseVals(ImmutableList.of(), false, depth);
+          continue;
+        }
+        if (token == VAR) {
+          parseVals(ImmutableList.of(), true, depth);
+          continue;
+        }
+        ExprInfo expr = parseExprInfoInBlock(EnumSet.of(SEMI, NEWLINE, NEWLINES), depth);
+        if (expr != null && expr.rawType() != null) {
+          inferred = expr.rawType();
+        }
+        if (depth.value == 0) {
+          break;
+        }
+        if (isSeparator(token)) {
+          next();
+        }
+        continue;
+      }
+      if (token == LBRACE) {
+        depth.value++;
+      } else if (token == RBRACE) {
+        depth.value = Math.max(0, depth.value - 1);
+      }
+      next();
+    }
+    valueScopes.pop();
+    return inferred;
+  }
+
   private void skipExpr(EnumSet<ScalaToken> stops) {
     int paren = 0;
     int bracket = 0;
@@ -738,6 +1234,29 @@ public final class ScalaParser {
         default -> {}
       }
       next();
+    }
+  }
+
+  private void skipExprInBlock(EnumSet<ScalaToken> stops, BlockDepth depth) {
+    int paren = 0;
+    int bracket = 0;
+    while (token != EOF) {
+      if (paren == 0 && bracket == 0 && depth.value == 1 && stops.contains(token)) {
+        return;
+      }
+      switch (token) {
+        case LPAREN -> paren++;
+        case RPAREN -> paren = Math.max(0, paren - 1);
+        case LBRACK -> bracket++;
+        case RBRACK -> bracket = Math.max(0, bracket - 1);
+        case LBRACE -> depth.value++;
+        case RBRACE -> depth.value = Math.max(0, depth.value - 1);
+        default -> {}
+      }
+      next();
+      if (depth.value == 0) {
+        return;
+      }
     }
   }
 

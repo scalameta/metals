@@ -240,6 +240,7 @@ public final class ScalaTypeMapper {
       case "Set", "scala/Set", "scala/collection/immutable/Set" ->
           "scala/collection/immutable/Set";
       case "Option", "scala/Option" -> "scala/Option";
+      case "Some", "scala/Some" -> "scala/Some";
       case "Iterator", "scala/collection/Iterator" -> "scala/collection/Iterator";
       default -> null;
     };
