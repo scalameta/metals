@@ -255,6 +255,7 @@ public final class ScalaLower {
               /* isTrait= */ isTrait));
     }
     methods = uniqueMethods(methods);
+    List<ClassFile.FieldInfo> fields = memberFields(cls, scope, aliasScope);
 
     String classSignature = ScalaSignature.classSignature(cls, scope, aliasScope);
     ClassFile classFile =
@@ -267,7 +268,7 @@ public final class ScalaLower {
             interfaces,
             /* permits= */ ImmutableList.of(),
             methods,
-            /* fields= */ ImmutableList.of(),
+            fields,
             /* annotations= */ scalaClassAnnotations(),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
@@ -307,6 +308,8 @@ public final class ScalaLower {
 
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
     fields.add(moduleField(binaryName));
+    fields.addAll(memberFields(obj, scope, aliasScope));
+    fields = uniqueFields(fields);
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     methods.add(defaultConstructor(/* isPublic= */ false));
@@ -417,6 +420,8 @@ public final class ScalaLower {
 
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
     fields.add(moduleField(moduleBinary));
+    fields.addAll(memberFields(pkgObj, scope, aliasScope));
+    fields = uniqueFields(fields);
 
     List<ClassFile.MethodInfo> moduleMethods = new ArrayList<>();
     moduleMethods.add(defaultConstructor(/* isPublic= */ false));
@@ -613,6 +618,82 @@ public final class ScalaLower {
     return methods;
   }
 
+  private static List<ClassFile.FieldInfo> memberFields(
+      ClassDef cls,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (cls.kind() == ClassDef.Kind.TRAIT) {
+      return ImmutableList.of();
+    }
+    List<ClassFile.FieldInfo> fields = new ArrayList<>();
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    for (Defn defn : cls.members()) {
+      if (defn instanceof ValDef val) {
+        if (val.hasDefault()) {
+          fields.add(fieldForVal(val, cls.packageName(), typeParams, scope, aliasScope));
+        }
+      }
+    }
+    for (ParamList list : cls.ctorParams()) {
+      for (Param param : list.params()) {
+        if (param.modifiers().contains("val") || param.modifiers().contains("var") || cls.isCase()) {
+          fields.add(fieldForParam(param, cls.packageName(), typeParams, scope, aliasScope));
+        }
+      }
+    }
+    return uniqueFields(fields);
+  }
+
+  private static ClassFile.FieldInfo fieldForVal(
+      ValDef val,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    int access = fieldAccess(val.isVar(), val.modifiers());
+    String name = encodeName(val.name());
+    String desc = ScalaTypeMapper.descriptorForParam(val.type(), pkg, typeParams, scope, aliasScope);
+    return new ClassFile.FieldInfo(
+        access,
+        name,
+        desc,
+        /* signature= */ null,
+        /* value= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of());
+  }
+
+  private static ClassFile.FieldInfo fieldForParam(
+      Param param,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    boolean isVar = param.modifiers().contains("var");
+    int access = fieldAccess(isVar, param.modifiers());
+    String name = encodeName(param.name());
+    String desc = ScalaTypeMapper.descriptorForParam(param.type(), pkg, typeParams, scope, aliasScope);
+    return new ClassFile.FieldInfo(
+        access,
+        name,
+        desc,
+        /* signature= */ null,
+        /* value= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of());
+  }
+
+  private static int fieldAccess(boolean isVar, ImmutableList<String> modifiers) {
+    int access = TurbineFlag.ACC_PRIVATE;
+    if (!isVar && !modifiers.contains("lazy")) {
+      access |= TurbineFlag.ACC_FINAL;
+    }
+    if (modifiers.contains("lazy")) {
+      access |= TurbineFlag.ACC_VOLATILE;
+    }
+    return access;
+  }
+
   private static List<ClassFile.MethodInfo> forwarders(
       ClassDef obj,
       ScalaTypeMapper.ImportScope scope,
@@ -766,17 +847,14 @@ public final class ScalaLower {
   }
 
   private static boolean isAbstractDef(DefDef def, ClassDef.Kind ownerKind) {
-    return ownerKind == ClassDef.Kind.TRAIT && def.modifiers().contains("abstract");
+    return def.modifiers().contains("abstract");
   }
 
   private static boolean isAbstractVal(ValDef val, ClassDef.Kind ownerKind) {
-    if (ownerKind != ClassDef.Kind.TRAIT) {
-      return false;
-    }
-    if (!val.hasDefault()) {
+    if (val.modifiers().contains("abstract")) {
       return true;
     }
-    return !val.hasExplicitType();
+    return !val.hasDefault();
   }
 
   private static int methodAccess(
@@ -1928,8 +2006,7 @@ public final class ScalaLower {
       if (defn instanceof DefDef def) {
         Set<String> typeParams = new HashSet<>(classTypeParams);
         typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
-        boolean isAbstract = isAbstractDef(def, ownerKind);
-        int access = methodAccess(def.modifiers(), staticContext, isAbstract, ownerKind);
+        int access = methodAccess(def.modifiers(), staticContext, /* isAbstract= */ false, ownerKind);
         methods.addAll(
             defaultGettersForParamLists(
                 def.name(),
@@ -2030,6 +2107,14 @@ public final class ScalaLower {
     Map<String, ClassFile.MethodInfo> unique = new LinkedHashMap<>();
     for (ClassFile.MethodInfo method : methods) {
       unique.putIfAbsent(method.name() + method.descriptor(), method);
+    }
+    return new ArrayList<>(unique.values());
+  }
+
+  private static List<ClassFile.FieldInfo> uniqueFields(List<ClassFile.FieldInfo> fields) {
+    Map<String, ClassFile.FieldInfo> unique = new LinkedHashMap<>();
+    for (ClassFile.FieldInfo field : fields) {
+      unique.putIfAbsent(field.name() + field.descriptor(), field);
     }
     return new ArrayList<>(unique.values());
   }

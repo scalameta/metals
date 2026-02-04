@@ -7,20 +7,20 @@ Bring Turbine Scala lowering conformance to zero diffs against build outputs for
 
 **Current Snapshot (2026-02-04)**
 Akka (`--javac-release 11`)
-- Turbine classes: 8748
+- Turbine classes: 9297
 - Baseline classes: 17336
-- Missing classes: 8780
-- Extra classes: 192
-- Mismatched members: 84138
-- Baseline-only classes not explained by skipped Scala sources: 8780
+- Missing classes: 8238
+- Extra classes: 199
+- Mismatched members: 81286
+- Baseline-only classes not explained by skipped Scala sources: 8238
 
 Spark (`--javac-release 17`)
-- Turbine classes: 13844
+- Turbine classes: 15242
 - Baseline classes: 17718
-- Missing classes: 4353
-- Extra classes: 479
-- Mismatched members: 144887
-- Baseline-only classes not explained by skipped Scala sources: 4353
+- Missing classes: 2958
+- Extra classes: 482
+- Mismatched members: 149478
+- Baseline-only classes not explained by skipped Scala sources: 2958
 
 **Principles**
 - Always keep a reproducible command for each target.

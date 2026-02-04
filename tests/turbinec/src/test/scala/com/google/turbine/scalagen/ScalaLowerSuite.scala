@@ -310,6 +310,42 @@ class ScalaLowerSuite extends FunSuite {
     assert((cls.methods("concreteVal()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) == 0)
   }
 
+  test("trait-inferred-val-concrete") {
+    val source =
+      List(
+        "package foo",
+        "trait T {",
+        "  val concrete = \"ok\"",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/T"))
+    assert((cls.methods("concrete()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) == 0)
+  }
+
+  test("abstract-class-members") {
+    val source =
+      List(
+        "package foo",
+        "abstract class C {",
+        "  def abstractDef(x: Int): Int",
+        "  val abstractVal: String",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert((cls.methods("abstractDef(I)I") & Opcodes.ACC_ABSTRACT) != 0)
+    assert((cls.methods("abstractVal()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) != 0)
+  }
+
   test("resolves-selector-import-renames") {
     val source =
       List(
