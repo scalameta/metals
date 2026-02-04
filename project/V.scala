@@ -57,7 +57,7 @@ object V {
 
   val mavenBloop = "2.0.3"
 
-  val mill = "1.1.0"
+  val mill = "1.1.1"
 
   val mdoc = "2.8.2"
 
