@@ -33,7 +33,6 @@ import com.google.turbine.diag.TurbineLog.TurbineLogWithSource;
 import com.google.turbine.model.TurbineTyKind;
 import com.google.turbine.tree.Tree;
 import com.google.turbine.tree.Tree.ClassTy;
-import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import org.jspecify.annotations.Nullable;
 
@@ -75,21 +74,13 @@ public class HierarchyBinder {
         log.error(decl.xtnds().get().position(), ErrorKind.CYCLIC_HIERARCHY, origin);
       }
     } else {
-      switch (decl.tykind()) {
-        case ENUM:
-          superclass = ClassSymbol.ENUM;
-          break;
-        case INTERFACE:
-        case ANNOTATION:
-        case CLASS:
-          superclass = !origin.equals(ClassSymbol.OBJECT) ? ClassSymbol.OBJECT : null;
-          break;
-        case RECORD:
-          superclass = ClassSymbol.RECORD;
-          break;
-        default:
-          throw new AssertionError(decl.tykind());
-      }
+      superclass =
+          switch (decl.tykind()) {
+            case ENUM -> ClassSymbol.ENUM;
+            case INTERFACE, ANNOTATION, CLASS ->
+                !origin.equals(ClassSymbol.OBJECT) ? ClassSymbol.OBJECT : null;
+            case RECORD -> ClassSymbol.RECORD;
+          };
     }
 
     ImmutableList.Builder<ClassSymbol> interfaces = ImmutableList.builder();
@@ -130,12 +121,9 @@ public class HierarchyBinder {
   private @Nullable ClassSymbol resolveClass(Tree.ClassTy ty) {
     // flatten a left-recursive qualified type name to its component simple names
     // e.g. Foo<Bar>.Baz -> ["Foo", "Bar"]
-    ArrayDeque<Tree.Ident> flat = new ArrayDeque<>();
-    for (Tree.ClassTy curr = ty; curr != null; curr = curr.base().orElse(null)) {
-      flat.addFirst(curr.name());
-    }
+    ImmutableList<Tree.Ident> flat = ty.qualifiedName();
     // Resolve the base symbol in the qualified name.
-    LookupResult result = lookup(ty, new LookupKey(ImmutableList.copyOf(flat)));
+    LookupResult result = lookup(ty, new LookupKey(flat));
     if (result == null) {
       log.error(ty.position(), ErrorKind.CANNOT_RESOLVE, Joiner.on('.').join(flat));
       return null;

@@ -144,16 +144,11 @@ public final class Resolve {
   private static boolean importVisible(
       Env<ClassSymbol, ? extends BoundClass> env, ClassSymbol sym, @Nullable String packagename) {
     TurbineVisibility visibility = TurbineVisibility.fromAccess(env.getNonNull(sym).access());
-    switch (visibility) {
-      case PUBLIC:
-        return true;
-      case PROTECTED:
-      case PACKAGE:
-        return Objects.equals(sym.packageName(), packagename);
-      case PRIVATE:
-        return false;
-    }
-    throw new AssertionError(visibility);
+    return switch (visibility) {
+      case PUBLIC -> true;
+      case PROTECTED, PACKAGE -> Objects.equals(sym.packageName(), packagename);
+      case PRIVATE -> false;
+    };
   }
 
   /**
@@ -216,20 +211,17 @@ public final class Resolve {
 
   private static boolean visible(@Nullable ClassSymbol origin, ClassSymbol owner, int access) {
     TurbineVisibility visibility = TurbineVisibility.fromAccess(access);
-    switch (visibility) {
-      case PUBLIC:
-      case PROTECTED:
-        return true;
-      case PACKAGE:
-        // origin can be null if we aren't in a package scope (e.g. we're processing a module
-        // declaration), in which case package-visible members aren't visible
-        return origin != null && Objects.equals(owner.packageName(), origin.packageName());
-      case PRIVATE:
-        // Private members of lexically enclosing declarations are not handled,
-        // since this visibility check is only used for inherited members.
-        return owner.equals(origin);
-    }
-    throw new AssertionError(visibility);
+    return switch (visibility) {
+      case PUBLIC, PROTECTED -> true;
+      case PACKAGE ->
+          // origin can be null if we aren't in a package scope (e.g. we're processing a module
+          // declaration), in which case package-visible members aren't visible
+          origin != null && Objects.equals(owner.packageName(), origin.packageName());
+      case PRIVATE ->
+          // Private members of lexically enclosing declarations are not handled,
+          // since this visibility check is only used for inherited members.
+          owner.equals(origin);
+    };
   }
 
   private Resolve() {}

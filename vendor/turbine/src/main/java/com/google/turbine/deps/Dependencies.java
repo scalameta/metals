@@ -44,7 +44,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -123,25 +123,20 @@ public final class Dependencies {
 
   private static void addConst(Set<ClassSymbol> closure, Const c) {
     switch (c.kind()) {
-      case ARRAY:
+      case ARRAY -> {
         for (Const e : ((Const.ArrayInitValue) c).elements()) {
           addConst(closure, e);
         }
-        break;
-      case CLASS_LITERAL:
+      }
+      case CLASS_LITERAL -> {
         Type t = ((TurbineClassValue) c).type();
         if (t.tyKind() == Type.TyKind.CLASS_TY) {
           closure.add(((Type.ClassTy) t).sym());
         }
-        break;
-      case ENUM_CONSTANT:
-        closure.add(((EnumConstantValue) c).sym().owner());
-        break;
-      case ANNOTATION:
-        addAnnotation(closure, ((TurbineAnnotationValue) c).info());
-        break;
-      case PRIMITIVE:
-        // continue below
+      }
+      case ENUM_CONSTANT -> closure.add(((EnumConstantValue) c).sym().owner());
+      case ANNOTATION -> addAnnotation(closure, ((TurbineAnnotationValue) c).info());
+      case PRIMITIVE -> {}
     }
   }
 
@@ -201,20 +196,15 @@ public final class Dependencies {
     Set<String> reduced = new HashSet<>(directJars);
     for (String path : depsArtifacts) {
       DepsProto.Dependencies.Builder deps = DepsProto.Dependencies.newBuilder();
-      try (InputStream is = new BufferedInputStream(Files.newInputStream(Paths.get(path)))) {
+      try (InputStream is = new BufferedInputStream(Files.newInputStream(Path.of(path)))) {
         deps.mergeFrom(is);
       } catch (IOException e) {
         throw new IOError(e);
       }
       for (DepsProto.Dependency dep : deps.build().getDependencyList()) {
         switch (dep.getKind()) {
-          case EXPLICIT:
-          case IMPLICIT:
-            reduced.add(dep.getPath());
-            break;
-          case INCOMPLETE:
-          case UNUSED:
-            break;
+          case EXPLICIT, IMPLICIT -> reduced.add(dep.getPath());
+          case INCOMPLETE, UNUSED -> {}
         }
       }
     }

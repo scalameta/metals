@@ -57,10 +57,9 @@ public class SourceFile {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof SourceFile)) {
+    if (!(obj instanceof SourceFile that)) {
       return false;
     }
-    SourceFile that = (SourceFile) obj;
     return Objects.equals(path, that.path) && source.equals(that.source);
   }
 

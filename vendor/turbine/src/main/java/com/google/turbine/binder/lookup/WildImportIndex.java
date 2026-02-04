@@ -48,15 +48,12 @@ public class WildImportIndex implements ImportScope {
     for (final ImportDecl i : imports) {
       if (i.wild()) {
         packageScopes.add(
-            Suppliers.memoize(
-                new Supplier<@Nullable ImportScope>() {
-                  @Override
-                  public @Nullable ImportScope get() {
-                    if (i.stat()) {
-                      return staticOnDemandImport(cpi, i, importResolver);
-                    } else {
-                      return onDemandImport(cpi, i, importResolver);
-                    }
+            Suppliers.<@Nullable ImportScope>memoize(
+                () -> {
+                  if (i.stat()) {
+                    return staticOnDemandImport(cpi, i, importResolver);
+                  } else {
+                    return onDemandImport(cpi, i, importResolver);
                   }
                 }));
       }

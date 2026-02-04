@@ -16,7 +16,6 @@
 
 package com.google.turbine.type;
 
-import static com.google.common.collect.Iterables.getLast;
 import static java.lang.Math.max;
 import static java.util.Objects.requireNonNull;
 
@@ -25,7 +24,6 @@ import com.google.auto.value.extension.memoized.Memoized;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.turbine.binder.sym.ClassSymbol;
 import com.google.turbine.binder.sym.TyVarSymbol;
 import com.google.turbine.model.TurbineConstantTypeKind;
@@ -137,7 +135,7 @@ public interface Type {
 
     /** The class symbol. */
     public ClassSymbol sym() {
-      return getLast(classes()).sym();
+      return classes().get(classes().size() - 1).sym();
     }
 
     @Override
@@ -199,15 +197,14 @@ public interface Type {
     @Memoized
     @Override
     public int hashCode() {
-      return Iterables.getLast(classes()).hashCode();
+      return classes().get(classes().size() - 1).hashCode();
     }
 
     @Override
     public final boolean equals(@Nullable Object obj) {
-      if (!(obj instanceof ClassTy)) {
+      if (!(obj instanceof ClassTy that)) {
         return false;
       }
-      ClassTy that = (ClassTy) obj;
       int i = this.classes().size() - 1;
       int j = that.classes().size() - 1;
       for (; i >= 0 && j >= 0; i--, j--) {

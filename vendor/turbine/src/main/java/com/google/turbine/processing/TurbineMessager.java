@@ -106,10 +106,10 @@ public class TurbineMessager implements Messager {
   private @Nullable SourceFile getSource(Symbol sym) {
     ClassSymbol encl = ModelFactory.enclosingClass(sym);
     TypeBoundClass info = factory.getSymbol(encl);
-    if (!(info instanceof SourceTypeBoundClass)) {
+    if (!(info instanceof SourceTypeBoundClass sourceTypeBoundClass)) {
       return null;
     }
-    return ((SourceTypeBoundClass) info).source();
+    return sourceTypeBoundClass.source();
   }
 
   /**
@@ -117,26 +117,18 @@ public class TurbineMessager implements Messager {
    * compiled from source.
    */
   private int getPosition(Symbol sym) {
-    switch (sym.symKind()) {
-      case CLASS:
-        return classPosition((ClassSymbol) sym);
-      case TY_PARAM:
-        return tyParamPosition((TyVarSymbol) sym);
-      case METHOD:
-        return methodPosition((MethodSymbol) sym);
-      case FIELD:
-        return fieldPosition((FieldSymbol) sym);
-      case PARAMETER:
-        return paramPosition((ParamSymbol) sym);
-      case RECORD_COMPONENT:
-        // javac doesn't seem to provide diagnostic positions for record components, so we don't
-        // either
-        return -1;
-      case MODULE:
-      case PACKAGE:
-        break;
-    }
-    throw new AssertionError(sym.symKind());
+    return switch (sym.symKind()) {
+      case CLASS -> classPosition((ClassSymbol) sym);
+      case TY_PARAM -> tyParamPosition((TyVarSymbol) sym);
+      case METHOD -> methodPosition((MethodSymbol) sym);
+      case FIELD -> fieldPosition((FieldSymbol) sym);
+      case PARAMETER -> paramPosition((ParamSymbol) sym);
+      case RECORD_COMPONENT ->
+          // javac doesn't seem to provide diagnostic positions for record components, so we don't
+          // either
+          -1;
+      case MODULE, PACKAGE -> throw new AssertionError(sym.symKind());
+    };
   }
 
   private int fieldPosition(FieldSymbol sym) {
@@ -171,10 +163,10 @@ public class TurbineMessager implements Messager {
 
   private int classPosition(ClassSymbol owner) {
     TypeBoundClass symbol = factory.getSymbol(owner);
-    if (!(symbol instanceof SourceTypeBoundClass)) {
+    if (!(symbol instanceof SourceTypeBoundClass sourceTypeBoundClass)) {
       return -1;
     }
-    return ((SourceTypeBoundClass) symbol).decl().position();
+    return sourceTypeBoundClass.decl().position();
   }
 
   private int tyParamPosition(TyVarSymbol sym) {
@@ -183,24 +175,23 @@ public class TurbineMessager implements Messager {
     ImmutableMap<TyVarSymbol, TyVarInfo> tyVars;
     ImmutableList<Tree.TyParam> trees;
     switch (owner.symKind()) {
-      case CLASS:
+      case CLASS -> {
         TypeBoundClass cinfo = factory.getSymbol((ClassSymbol) owner);
         if (!(cinfo instanceof SourceTypeBoundClass)) {
           return -1;
         }
         tyVars = cinfo.typeParameterTypes();
         trees = ((SourceTypeBoundClass) cinfo).decl().typarams();
-        break;
-      case METHOD:
+      }
+      case METHOD -> {
         MethodInfo minfo = factory.getMethodInfo((MethodSymbol) owner);
         if (minfo.decl() == null) {
           return -1;
         }
         tyVars = minfo.tyParams();
         trees = minfo.decl().typarams();
-        break;
-      default:
-        throw new AssertionError(owner.symKind());
+      }
+      default -> throw new AssertionError(owner.symKind());
     }
     return trees.get(tyVars.keySet().asList().indexOf(tyVarSymbol)).position();
   }
@@ -221,18 +212,17 @@ public class TurbineMessager implements Messager {
     if (toFind.equals(v)) {
       return t.position();
     }
-    switch (v.kind()) {
-      case ARRAY:
+    return switch (v.kind()) {
+      case ARRAY -> {
         ImmutableList<Tree.Expression> elements =
             t.kind().equals(Tree.Kind.ARRAY_INIT)
                 ? ((Tree.ArrayInit) t).exprs()
                 : ImmutableList.of(t);
-        return locate(toFind, ((Const.ArrayInitValue) v).elements(), elements);
-      case ANNOTATION:
-        return locateInAnnotation(toFind, ((TurbineAnnotationValue) v).info());
-      default:
-        return -1;
-    }
+        yield locate(toFind, ((Const.ArrayInitValue) v).elements(), elements);
+      }
+      case ANNOTATION -> locateInAnnotation(toFind, ((TurbineAnnotationValue) v).info());
+      default -> -1;
+    };
   }
 
   /**

@@ -45,7 +45,7 @@ public class ModuleSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object other) {
-    return other instanceof ModuleSymbol && name.equals(((ModuleSymbol) other).name);
+    return other instanceof ModuleSymbol moduleSymbol && name.equals(moduleSymbol.name);
   }
 
   public static final ModuleSymbol JAVA_BASE = new ModuleSymbol("java.base");

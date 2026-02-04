@@ -52,6 +52,7 @@ public class TurbineClassValue extends Const {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof TurbineClassValue && type().equals(((TurbineClassValue) obj).type());
+    return obj instanceof TurbineClassValue turbineClassValue
+        && type().equals(turbineClassValue.type());
   }
 }

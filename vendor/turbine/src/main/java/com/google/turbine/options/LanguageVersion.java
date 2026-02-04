@@ -77,23 +77,21 @@ public abstract class LanguageVersion {
     while (it.hasNext()) {
       String option = it.next();
       switch (option) {
-        case "-source":
-        case "--source":
+        case "-source", "--source" -> {
           if (!it.hasNext()) {
             throw new IllegalArgumentException(option + " requires an argument");
           }
           sourceVersion = parseVersion(it.next());
           release = OptionalInt.empty();
-          break;
-        case "-target":
-        case "--target":
+        }
+        case "-target", "--target" -> {
           if (!it.hasNext()) {
             throw new IllegalArgumentException(option + " requires an argument");
           }
           targetVersion = parseVersion(it.next());
           release = OptionalInt.empty();
-          break;
-        case "--release":
+        }
+        case "--release" -> {
           if (!it.hasNext()) {
             throw new IllegalArgumentException(option + " requires an argument");
           }
@@ -105,9 +103,8 @@ public abstract class LanguageVersion {
           release = OptionalInt.of(n);
           sourceVersion = n;
           targetVersion = n;
-          break;
-        default:
-          break;
+        }
+        default -> {}
       }
     }
     return create(sourceVersion, targetVersion, release);

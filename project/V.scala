@@ -27,11 +27,13 @@ object V {
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val coursierInterfaces = "1.0.27"
   val debugAdapter = "4.2.2"
+  val errorProne = "2.45.0"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.17.0"
   val gradleBloop = "1.6.2"
   val java8Compat = "1.0.2"
   val javaSemanticdb = "0.10.3"
+  val jspecify = "1.0.0"
   val jsoup = "1.18.3"
   val kindProjector = "0.13.4"
   val lsp4jV = "0.23.1"

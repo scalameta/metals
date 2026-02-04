@@ -50,7 +50,6 @@ import com.google.turbine.types.Erasure;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import javax.lang.model.element.Element;
 import javax.lang.model.element.TypeElement;
 import javax.lang.model.type.ArrayType;
@@ -76,24 +75,20 @@ public class TurbineTypes implements Types {
   }
 
   private static Type asTurbineType(TypeMirror typeMirror) {
-    if (!(typeMirror instanceof TurbineTypeMirror)) {
+    if (!(typeMirror instanceof TurbineTypeMirror turbineTypeMirror)) {
       throw new IllegalArgumentException(typeMirror.toString());
     }
-    return ((TurbineTypeMirror) typeMirror).asTurbineType();
+    return turbineTypeMirror.asTurbineType();
   }
 
   @Override
-  public Element asElement(TypeMirror t) {
-    switch (t.getKind()) {
-      case DECLARED:
-        return ((TurbineDeclaredType) t).asElement();
-      case TYPEVAR:
-        return ((TurbineTypeVariable) t).asElement();
-      case ERROR:
-        return ((TurbineErrorType) t).asElement();
-      default:
-        return null;
-    }
+  public @Nullable Element asElement(TypeMirror t) {
+    return switch (t.getKind()) {
+      case DECLARED -> ((TurbineDeclaredType) t).asElement();
+      case TYPEVAR -> ((TurbineTypeVariable) t).asElement();
+      case ERROR -> ((TurbineErrorType) t).asElement();
+      default -> null;
+    };
   }
 
   @Override
@@ -113,31 +108,24 @@ public class TurbineTypes implements Types {
     if (b.tyKind() == TyKind.ERROR_TY) {
       return true;
     }
-    switch (a.tyKind()) {
-      case PRIM_TY:
-        return b.tyKind() == TyKind.PRIM_TY && ((PrimTy) a).primkind() == ((PrimTy) b).primkind();
-      case VOID_TY:
-        return b.tyKind() == TyKind.VOID_TY;
-      case NONE_TY:
-        return b.tyKind() == TyKind.NONE_TY;
-      case CLASS_TY:
-        return isSameClassType((ClassTy) a, b);
-      case ARRAY_TY:
-        return b.tyKind() == TyKind.ARRAY_TY
-            && isSameType(((ArrayTy) a).elementType(), ((ArrayTy) b).elementType());
-      case TY_VAR:
-        return b.tyKind() == TyKind.TY_VAR && ((TyVar) a).sym().equals(((TyVar) b).sym());
-      case WILD_TY:
-        return isSameWildType((WildTy) a, b);
-      case INTERSECTION_TY:
-        return b.tyKind() == TyKind.INTERSECTION_TY
-            && isSameIntersectionType((IntersectionTy) a, (IntersectionTy) b);
-      case METHOD_TY:
-        return b.tyKind() == TyKind.METHOD_TY && isSameMethodType((MethodTy) a, (MethodTy) b);
-      case ERROR_TY:
-        return true;
-    }
-    throw new AssertionError(a.tyKind());
+    return switch (a.tyKind()) {
+      case PRIM_TY ->
+          b.tyKind() == TyKind.PRIM_TY && ((PrimTy) a).primkind() == ((PrimTy) b).primkind();
+      case VOID_TY -> b.tyKind() == TyKind.VOID_TY;
+      case NONE_TY -> b.tyKind() == TyKind.NONE_TY;
+      case CLASS_TY -> isSameClassType((ClassTy) a, b);
+      case ARRAY_TY ->
+          b.tyKind() == TyKind.ARRAY_TY
+              && isSameType(((ArrayTy) a).elementType(), ((ArrayTy) b).elementType());
+      case TY_VAR -> b.tyKind() == TyKind.TY_VAR && ((TyVar) a).sym().equals(((TyVar) b).sym());
+      case WILD_TY -> isSameWildType((WildTy) a, b);
+      case INTERSECTION_TY ->
+          b.tyKind() == TyKind.INTERSECTION_TY
+              && isSameIntersectionType((IntersectionTy) a, (IntersectionTy) b);
+      case METHOD_TY ->
+          b.tyKind() == TyKind.METHOD_TY && isSameMethodType((MethodTy) a, (MethodTy) b);
+      case ERROR_TY -> true;
+    };
   }
 
   /**
@@ -217,71 +205,63 @@ public class TurbineTypes implements Types {
       return true;
     }
     Type bound = bounds.get(0);
-    switch (bound.tyKind()) {
-      case TY_VAR:
-        return false;
-      case CLASS_TY:
-        return factory.getSymbol(((ClassTy) bound).sym()).kind().equals(TurbineTyKind.INTERFACE);
-      default:
-        throw new AssertionError(bound.tyKind());
-    }
+    return switch (bound.tyKind()) {
+      case TY_VAR -> false;
+      case CLASS_TY ->
+          factory.getSymbol(((ClassTy) bound).sym()).kind().equals(TurbineTyKind.INTERFACE);
+      default -> throw new AssertionError(bound.tyKind());
+    };
   }
 
   private boolean isSameWildType(WildTy a, Type other) {
     switch (other.tyKind()) {
-      case WILD_TY:
-        break;
-      case CLASS_TY:
+      case WILD_TY -> {}
+      case CLASS_TY -> {
         // `? super Object` = Object
         return ((ClassTy) other).sym().equals(ClassSymbol.OBJECT)
             && a.boundKind() == BoundKind.LOWER
             && a.bound().tyKind() == TyKind.CLASS_TY
             && ((ClassTy) a.bound()).sym().equals(ClassSymbol.OBJECT);
-      default:
+      }
+      default -> {
         return false;
+      }
     }
     WildTy b = (WildTy) other;
-    switch (a.boundKind()) {
-      case NONE:
-        switch (b.boundKind()) {
-          case UPPER:
-            // `?` = `? extends Object`
-            return isObjectType(b.bound());
-          case LOWER:
-            return false;
-          case NONE:
-            return true;
-        }
-        break;
-      case UPPER:
-        switch (b.boundKind()) {
-          case UPPER:
-            return isSameType(a.bound(), b.bound());
-          case LOWER:
-            return false;
-          case NONE:
-            // `? extends Object` = `?`
-            return isObjectType(a.bound());
-        }
-        break;
-      case LOWER:
-        return b.boundKind() == BoundKind.LOWER && isSameType(a.bound(), b.bound());
-    }
-    throw new AssertionError(a.boundKind());
+    return switch (a.boundKind()) {
+      case NONE ->
+          switch (b.boundKind()) {
+            case UPPER ->
+                // `?` = `? extends Object`
+                isObjectType(b.bound());
+            case LOWER -> false;
+            case NONE -> true;
+          };
+      case UPPER ->
+          switch (b.boundKind()) {
+            case UPPER -> isSameType(a.bound(), b.bound());
+            case LOWER -> false;
+            case NONE ->
+                // `? extends Object` = `?`
+                isObjectType(a.bound());
+          };
+      case LOWER -> b.boundKind() == BoundKind.LOWER && isSameType(a.bound(), b.bound());
+    };
   }
 
   private boolean isSameClassType(ClassTy a, Type other) {
     switch (other.tyKind()) {
-      case CLASS_TY:
-        break;
-      case WILD_TY:
+      case CLASS_TY -> {}
+      case WILD_TY -> {
         WildTy w = (WildTy) other;
         return a.sym().equals(ClassSymbol.OBJECT)
             && w.boundKind() == BoundKind.LOWER
             && w.bound().tyKind() == TyKind.CLASS_TY
             && ((ClassTy) w.bound()).sym().equals(ClassSymbol.OBJECT);
-      default:
+      }
+      default -> {
         return false;
+      }
     }
     ClassTy b = (ClassTy) other;
     if (!a.sym().equals(b.sym())) {
@@ -344,32 +324,23 @@ public class TurbineTypes implements Types {
       }
       return true;
     }
-    switch (a.tyKind()) {
-      case CLASS_TY:
-        return isClassSubtype((ClassTy) a, b, strict);
-      case PRIM_TY:
-        return isPrimSubtype((PrimTy) a, b);
-      case ARRAY_TY:
-        return isArraySubtype((ArrayTy) a, b, strict);
-      case TY_VAR:
-        return isTyVarSubtype((TyVar) a, b, strict);
-      case INTERSECTION_TY:
-        return isIntersectionSubtype((IntersectionTy) a, b, strict);
-      case VOID_TY:
-        return b.tyKind() == TyKind.VOID_TY;
-      case NONE_TY:
-        return b.tyKind() == TyKind.NONE_TY;
-      case WILD_TY:
-        // TODO(cushon): javac takes wildcards as input to isSubtype and sometimes returns `true`,
-        // see JDK-8039198
-        return false;
-      case ERROR_TY:
-        // for compatibility with javac, treat error as bottom
-        return true;
-      case METHOD_TY:
-        return false;
-    }
-    throw new AssertionError(a.tyKind());
+    return switch (a.tyKind()) {
+      case CLASS_TY -> isClassSubtype((ClassTy) a, b, strict);
+      case PRIM_TY -> isPrimSubtype((PrimTy) a, b);
+      case ARRAY_TY -> isArraySubtype((ArrayTy) a, b, strict);
+      case TY_VAR -> isTyVarSubtype((TyVar) a, b, strict);
+      case INTERSECTION_TY -> isIntersectionSubtype((IntersectionTy) a, b, strict);
+      case VOID_TY -> b.tyKind() == TyKind.VOID_TY;
+      case NONE_TY -> b.tyKind() == TyKind.NONE_TY;
+      case WILD_TY ->
+          // TODO(cushon): javac takes wildcards as input to isSubtype and sometimes returns `true`,
+          // see JDK-8039198
+          false;
+      case ERROR_TY ->
+          // for compatibility with javac, treat error as bottom
+          true;
+      case METHOD_TY -> false;
+    };
   }
 
   private boolean isTyVarSubtype(TyVar a, Type b, boolean strict) {
@@ -392,27 +363,24 @@ public class TurbineTypes implements Types {
   // see JLS 4.10.3, 'subtyping among array types'
   // https://docs.oracle.com/javase/specs/jls/se11/html/jls-4.html#jls-4.10.3
   private boolean isArraySubtype(ArrayTy a, Type b, boolean strict) {
-    switch (b.tyKind()) {
-      case ARRAY_TY:
+    return switch (b.tyKind()) {
+      case ARRAY_TY -> {
         Type ae = a.elementType();
         Type be = ((ArrayTy) b).elementType();
         if (ae.tyKind() == TyKind.PRIM_TY) {
-          return isSameType(ae, be);
+          yield isSameType(ae, be);
         }
-        return isSubtype(ae, be, strict);
-      case CLASS_TY:
+        yield isSubtype(ae, be, strict);
+      }
+      case CLASS_TY -> {
         ClassSymbol bsym = ((ClassTy) b).sym();
-        switch (bsym.binaryName()) {
-          case "java/lang/Object":
-          case "java/lang/Cloneable":
-          case "java/io/Serializable":
-            return true;
-          default:
-            return false;
-        }
-      default:
-        return false;
-    }
+        yield switch (bsym.binaryName()) {
+          case "java/lang/Object", "java/lang/Cloneable", "java/io/Serializable" -> true;
+          default -> false;
+        };
+      }
+      default -> false;
+    };
   }
 
   // see JLS 4.10.1, 'subtyping among primitive types'
@@ -423,76 +391,40 @@ public class TurbineTypes implements Types {
       return a.primkind() == TurbineConstantTypeKind.NULL && isReferenceType(other);
     }
     PrimTy b = (PrimTy) other;
-    switch (a.primkind()) {
-      case CHAR:
-        switch (b.primkind()) {
-          case CHAR:
-          case INT:
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case BYTE:
-        switch (b.primkind()) {
-          case BYTE:
-          case SHORT:
-          case INT:
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case SHORT:
-        switch (b.primkind()) {
-          case SHORT:
-          case INT:
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case INT:
-        switch (b.primkind()) {
-          case INT:
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case LONG:
-        switch (b.primkind()) {
-          case LONG:
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case FLOAT:
-        switch (b.primkind()) {
-          case FLOAT:
-          case DOUBLE:
-            return true;
-          default:
-            return false;
-        }
-      case DOUBLE:
-      case STRING:
-      case BOOLEAN:
-        return a.primkind() == b.primkind();
-      case NULL:
-        return isReferenceType(other);
-    }
-    throw new AssertionError(a.primkind());
+    return switch (a.primkind()) {
+      case CHAR ->
+          switch (b.primkind()) {
+            case CHAR, INT, LONG, FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case BYTE ->
+          switch (b.primkind()) {
+            case BYTE, SHORT, INT, LONG, FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case SHORT ->
+          switch (b.primkind()) {
+            case SHORT, INT, LONG, FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case INT ->
+          switch (b.primkind()) {
+            case INT, LONG, FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case LONG ->
+          switch (b.primkind()) {
+            case LONG, FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case FLOAT ->
+          switch (b.primkind()) {
+            case FLOAT, DOUBLE -> true;
+            default -> false;
+          };
+      case DOUBLE, STRING, BOOLEAN -> a.primkind() == b.primkind();
+      case NULL -> isReferenceType(other);
+    };
   }
 
   private boolean isClassSubtype(ClassTy a, Type other, boolean strict) {
@@ -555,38 +487,25 @@ public class TurbineTypes implements Types {
   }
 
   private Type subst(Type type, Map<TyVarSymbol, Type> mapping) {
-    switch (type.tyKind()) {
-      case CLASS_TY:
-        return substClassTy((ClassTy) type, mapping);
-      case ARRAY_TY:
-        return substArrayTy((ArrayTy) type, mapping);
-      case TY_VAR:
-        return substTyVar((TyVar) type, mapping);
-      case PRIM_TY:
-      case VOID_TY:
-      case NONE_TY:
-      case ERROR_TY:
-        return type;
-      case METHOD_TY:
-        return substMethod((MethodTy) type, mapping);
-      case INTERSECTION_TY:
-        return substIntersectionTy((IntersectionTy) type, mapping);
-      case WILD_TY:
-        return substWildTy((WildTy) type, mapping);
-    }
-    throw new AssertionError(type.tyKind());
+    return switch (type.tyKind()) {
+      case CLASS_TY -> substClassTy((ClassTy) type, mapping);
+      case ARRAY_TY -> substArrayTy((ArrayTy) type, mapping);
+      case TY_VAR -> substTyVar((TyVar) type, mapping);
+      case PRIM_TY, VOID_TY, NONE_TY, ERROR_TY -> type;
+      case METHOD_TY -> substMethod((MethodTy) type, mapping);
+      case INTERSECTION_TY -> substIntersectionTy((IntersectionTy) type, mapping);
+      case WILD_TY -> substWildTy((WildTy) type, mapping);
+    };
   }
 
   private Type substWildTy(WildTy type, Map<TyVarSymbol, Type> mapping) {
-    switch (type.boundKind()) {
-      case NONE:
-        return type;
-      case UPPER:
-        return Type.WildUpperBoundedTy.create(subst(type.bound(), mapping), ImmutableList.of());
-      case LOWER:
-        return Type.WildLowerBoundedTy.create(subst(type.bound(), mapping), ImmutableList.of());
-    }
-    throw new AssertionError(type.boundKind());
+    return switch (type.boundKind()) {
+      case NONE -> type;
+      case UPPER ->
+          Type.WildUpperBoundedTy.create(subst(type.bound(), mapping), ImmutableList.of());
+      case LOWER ->
+          Type.WildLowerBoundedTy.create(subst(type.bound(), mapping), ImmutableList.of());
+    };
   }
 
   private Type substIntersectionTy(IntersectionTy type, Map<TyVarSymbol, Type> mapping) {
@@ -681,7 +600,7 @@ public class TurbineTypes implements Types {
       return true;
     }
     switch (t1.tyKind()) {
-      case PRIM_TY:
+      case PRIM_TY -> {
         TurbineConstantTypeKind primkind = ((PrimTy) t1).primkind();
         if (primkind == TurbineConstantTypeKind.NULL) {
           return isReferenceType(t2);
@@ -690,22 +609,17 @@ public class TurbineTypes implements Types {
           ClassSymbol boxed = boxedClass(primkind);
           t1 = ClassTy.asNonParametricClassTy(boxed);
         }
-        break;
-      case CLASS_TY:
-        switch (t2.tyKind()) {
-          case PRIM_TY:
-            TurbineConstantTypeKind unboxed = unboxedType((ClassTy) t1);
-            if (unboxed == null) {
-              return false;
-            }
-            t1 = PrimTy.create(unboxed, ImmutableList.of());
-            break;
-          case CLASS_TY:
-            break;
-          default: // fall out
+      }
+      case CLASS_TY -> {
+        if (t2.tyKind() == TyKind.PRIM_TY) {
+          TurbineConstantTypeKind unboxed = unboxedType((ClassTy) t1);
+          if (unboxed == null) {
+            return false;
+          }
+          t1 = PrimTy.create(unboxed, ImmutableList.of());
         }
-        break;
-      default: // fall out
+      }
+      default -> {}
     }
     return isSubtype(t1, t2, /* strict= */ false);
   }
@@ -741,7 +655,7 @@ public class TurbineTypes implements Types {
       WildTy w1 = (WildTy) t1;
       Type t;
       switch (w1.boundKind()) {
-        case UPPER:
+        case UPPER -> {
           t = w1.bound();
           if (t2.tyKind() == TyKind.WILD_TY) {
             WildTy w2 = (WildTy) t2;
@@ -759,7 +673,8 @@ public class TurbineTypes implements Types {
             throw new AssertionError(w1.boundKind());
           }
           return false;
-        case LOWER:
+        }
+        case LOWER -> {
           t = w1.bound();
           if (t2.tyKind() == TyKind.WILD_TY) {
             WildTy w2 = (WildTy) t2;
@@ -778,7 +693,8 @@ public class TurbineTypes implements Types {
           }
           // ? super Object <= Object
           return isObjectType(t2) && isObjectType(t);
-        case NONE:
+        }
+        case NONE -> {
           if (t2.tyKind() == TyKind.WILD_TY) {
             WildTy w2 = (WildTy) t2;
             switch (w2.boundKind()) {
@@ -795,23 +711,23 @@ public class TurbineTypes implements Types {
             throw new AssertionError(w2.boundKind());
           }
           return false;
+        }
       }
       throw new AssertionError(w1.boundKind());
     }
     if (t2.tyKind() == TyKind.WILD_TY) {
       WildTy w2 = (WildTy) t2;
-      switch (w2.boundKind()) {
-        case LOWER:
-          // T <= ? super S
-          return isSubtype(w2.bound(), t1, strict);
-        case UPPER:
-          // T <= ? extends S
-          return isSubtype(t1, w2.bound(), strict);
-        case NONE:
-          // T <= ? [extends Object]
-          return true;
-      }
-      throw new AssertionError(w2.boundKind());
+      return switch (w2.boundKind()) {
+        case LOWER ->
+            // T <= ? super S
+            isSubtype(w2.bound(), t1, strict);
+        case UPPER ->
+            // T <= ? extends S
+            isSubtype(t1, w2.bound(), strict);
+        case NONE ->
+            // T <= ? [extends Object]
+            true;
+      };
     }
     if (isSameType(t1, t2)) {
       return true;
@@ -856,25 +772,14 @@ public class TurbineTypes implements Types {
   }
 
   public ImmutableList<Type> directSupertypes(Type t) {
-    switch (t.tyKind()) {
-      case CLASS_TY:
-        return directSupertypes((ClassTy) t);
-      case INTERSECTION_TY:
-        return ((IntersectionTy) t).bounds();
-      case TY_VAR:
-        return getBounds(factory.getTyVarInfo(((TyVar) t).sym()).upperBound());
-      case ARRAY_TY:
-        return directSupertypes((ArrayTy) t);
-      case PRIM_TY:
-      case VOID_TY:
-      case WILD_TY:
-      case ERROR_TY:
-      case NONE_TY:
-        return ImmutableList.of();
-      case METHOD_TY:
-        break;
-    }
-    throw new IllegalArgumentException(t.tyKind().name());
+    return switch (t.tyKind()) {
+      case CLASS_TY -> directSupertypes((ClassTy) t);
+      case INTERSECTION_TY -> ((IntersectionTy) t).bounds();
+      case TY_VAR -> getBounds(factory.getTyVarInfo(((TyVar) t).sym()).upperBound());
+      case ARRAY_TY -> directSupertypes((ArrayTy) t);
+      case PRIM_TY, VOID_TY, WILD_TY, ERROR_TY, NONE_TY -> ImmutableList.of();
+      case METHOD_TY -> throw new IllegalArgumentException(t.tyKind().name());
+    };
   }
 
   private ImmutableList<Type> directSupertypes(ArrayTy t) {
@@ -885,7 +790,7 @@ public class TurbineTypes implements Types {
               ImmutableList.of(ClassTy.OBJECT, ClassTy.SERIALIZABLE, ClassTy.CLONEABLE)));
     }
     ImmutableList<Type> ex = directSupertypes(elem);
-    return ImmutableList.of(ArrayTy.create(ex.iterator().next(), ImmutableList.of()));
+    return ImmutableList.of(ArrayTy.create(ex.get(0), ImmutableList.of()));
   }
 
   private ImmutableList<Type> directSupertypes(ClassTy t) {
@@ -916,14 +821,7 @@ public class TurbineTypes implements Types {
   }
 
   private Type erasure(Type type) {
-    return Erasure.erase(
-        type,
-        new Function<TyVarSymbol, TyVarInfo>() {
-          @Override
-          public TyVarInfo apply(TyVarSymbol input) {
-            return factory.getTyVarInfo(input);
-          }
-        });
+    return Erasure.erase(type, factory::getTyVarInfo);
   }
 
   @Override
@@ -932,28 +830,17 @@ public class TurbineTypes implements Types {
   }
 
   static ClassSymbol boxedClass(TurbineConstantTypeKind kind) {
-    switch (kind) {
-      case CHAR:
-        return ClassSymbol.CHARACTER;
-      case SHORT:
-        return ClassSymbol.SHORT;
-      case INT:
-        return ClassSymbol.INTEGER;
-      case LONG:
-        return ClassSymbol.LONG;
-      case FLOAT:
-        return ClassSymbol.FLOAT;
-      case DOUBLE:
-        return ClassSymbol.DOUBLE;
-      case BOOLEAN:
-        return ClassSymbol.BOOLEAN;
-      case BYTE:
-        return ClassSymbol.BYTE;
-      case STRING:
-      case NULL:
-        break;
-    }
-    throw new AssertionError(kind);
+    return switch (kind) {
+      case CHAR -> ClassSymbol.CHARACTER;
+      case SHORT -> ClassSymbol.SHORT;
+      case INT -> ClassSymbol.INTEGER;
+      case LONG -> ClassSymbol.LONG;
+      case FLOAT -> ClassSymbol.FLOAT;
+      case DOUBLE -> ClassSymbol.DOUBLE;
+      case BOOLEAN -> ClassSymbol.BOOLEAN;
+      case BYTE -> ClassSymbol.BYTE;
+      case STRING, NULL -> throw new AssertionError(kind);
+    };
   }
 
   @Override
@@ -969,27 +856,18 @@ public class TurbineTypes implements Types {
     return (PrimitiveType) factory.asTypeMirror(PrimTy.create(unboxed, ImmutableList.of()));
   }
 
-  private static TurbineConstantTypeKind unboxedType(ClassTy classTy) {
-    switch (classTy.sym().binaryName()) {
-      case "java/lang/Boolean":
-        return TurbineConstantTypeKind.BOOLEAN;
-      case "java/lang/Byte":
-        return TurbineConstantTypeKind.BYTE;
-      case "java/lang/Short":
-        return TurbineConstantTypeKind.SHORT;
-      case "java/lang/Integer":
-        return TurbineConstantTypeKind.INT;
-      case "java/lang/Long":
-        return TurbineConstantTypeKind.LONG;
-      case "java/lang/Character":
-        return TurbineConstantTypeKind.CHAR;
-      case "java/lang/Float":
-        return TurbineConstantTypeKind.FLOAT;
-      case "java/lang/Double":
-        return TurbineConstantTypeKind.DOUBLE;
-      default:
-        return null;
-    }
+  private static @Nullable TurbineConstantTypeKind unboxedType(ClassTy classTy) {
+    return switch (classTy.sym().binaryName()) {
+      case "java/lang/Boolean" -> TurbineConstantTypeKind.BOOLEAN;
+      case "java/lang/Byte" -> TurbineConstantTypeKind.BYTE;
+      case "java/lang/Short" -> TurbineConstantTypeKind.SHORT;
+      case "java/lang/Integer" -> TurbineConstantTypeKind.INT;
+      case "java/lang/Long" -> TurbineConstantTypeKind.LONG;
+      case "java/lang/Character" -> TurbineConstantTypeKind.CHAR;
+      case "java/lang/Float" -> TurbineConstantTypeKind.FLOAT;
+      case "java/lang/Double" -> TurbineConstantTypeKind.DOUBLE;
+      default -> null;
+    };
   }
 
   @Override
@@ -1005,26 +883,17 @@ public class TurbineTypes implements Types {
   }
 
   private static TurbineConstantTypeKind primitiveType(TypeKind kind) {
-    switch (kind) {
-      case BOOLEAN:
-        return TurbineConstantTypeKind.BOOLEAN;
-      case BYTE:
-        return TurbineConstantTypeKind.BYTE;
-      case SHORT:
-        return TurbineConstantTypeKind.SHORT;
-      case INT:
-        return TurbineConstantTypeKind.INT;
-      case LONG:
-        return TurbineConstantTypeKind.LONG;
-      case CHAR:
-        return TurbineConstantTypeKind.CHAR;
-      case FLOAT:
-        return TurbineConstantTypeKind.FLOAT;
-      case DOUBLE:
-        return TurbineConstantTypeKind.DOUBLE;
-      default:
-        throw new IllegalArgumentException(kind + " is not a primitive type");
-    }
+    return switch (kind) {
+      case BOOLEAN -> TurbineConstantTypeKind.BOOLEAN;
+      case BYTE -> TurbineConstantTypeKind.BYTE;
+      case SHORT -> TurbineConstantTypeKind.SHORT;
+      case INT -> TurbineConstantTypeKind.INT;
+      case LONG -> TurbineConstantTypeKind.LONG;
+      case CHAR -> TurbineConstantTypeKind.CHAR;
+      case FLOAT -> TurbineConstantTypeKind.FLOAT;
+      case DOUBLE -> TurbineConstantTypeKind.DOUBLE;
+      default -> throw new IllegalArgumentException(kind + " is not a primitive type");
+    };
   }
 
   @Override
@@ -1034,14 +903,11 @@ public class TurbineTypes implements Types {
 
   @Override
   public NoType getNoType(TypeKind kind) {
-    switch (kind) {
-      case VOID:
-        return (NoType) factory.asTypeMirror(Type.VOID);
-      case NONE:
-        return factory.noType();
-      default:
-        throw new IllegalArgumentException(kind.toString());
-    }
+    return switch (kind) {
+      case VOID -> (NoType) factory.asTypeMirror(Type.VOID);
+      case NONE -> factory.noType();
+      default -> throw new IllegalArgumentException(kind.toString());
+    };
   }
 
   @Override

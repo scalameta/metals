@@ -93,7 +93,7 @@ public class VariableInitializerParser {
     OUTER:
     while (true) {
       switch (token) {
-        case IDENT:
+        case IDENT -> {
           save();
           next();
           if (state == FieldInitState.START) {
@@ -106,11 +106,10 @@ public class VariableInitializerParser {
               commaIndices.addLast(commas.size());
               save();
               next();
-              break;
             }
           }
-          break;
-        case LT:
+        }
+        case LT -> {
           if (state == FieldInitState.TYPE) {
             depth++;
             ltIndices.addLast(tokens.size());
@@ -118,33 +117,33 @@ public class VariableInitializerParser {
           }
           save();
           next();
-          break;
-        case GTGTGT:
+        }
+        case GTGTGT -> {
           save();
           next();
           dropBracks(3);
-          break;
-        case GTGT:
+        }
+        case GTGT -> {
           save();
           next();
           dropBracks(2);
-          break;
-        case GT:
+        }
+        case GT -> {
           save();
           next();
           dropBracks(1);
-          break;
-        case LPAREN:
+        }
+        case LPAREN -> {
           save();
           next();
           dropParens();
-          break;
-        case LBRACE:
+        }
+        case LBRACE -> {
           save();
           next();
           dropBraces();
-          break;
-        case SEMI:
+        }
+        case SEMI -> {
           switch (state) {
             case START:
             case TYPE:
@@ -152,8 +151,8 @@ public class VariableInitializerParser {
           }
           save();
           next();
-          break;
-        case COMMA:
+        }
+        case COMMA -> {
           save();
           next();
           switch (state) {
@@ -162,13 +161,13 @@ public class VariableInitializerParser {
               commas.add(tokens.size());
               break;
           }
-          break;
-        case DOT:
+        }
+        case DOT -> {
           save();
           next();
           dropTypeArguments();
-          break;
-        case NEW:
+        }
+        case NEW -> {
           save();
           next();
           dropTypeArguments();
@@ -182,21 +181,22 @@ public class VariableInitializerParser {
               break;
             }
           }
-          break;
-        case COLONCOLON:
+        }
+        case COLONCOLON -> {
           save();
           next();
           dropTypeArguments();
           if (token == Token.NEW) {
             next();
           }
-          break;
-        case EOF:
+        }
+        case EOF -> {
           break OUTER;
-        default:
+        }
+        default -> {
           save();
           next();
-          break;
+        }
       }
     }
     List<List<SavedToken>> result = new ArrayList<>();
@@ -221,22 +221,21 @@ public class VariableInitializerParser {
     int depth = 1;
     while (depth > 0) {
       switch (token) {
-        case LPAREN:
+        case LPAREN -> {
           save();
           next();
           depth++;
-          break;
-        case RPAREN:
+        }
+        case RPAREN -> {
           save();
           next();
           depth--;
-          break;
-        case EOF:
-          throw error(ErrorKind.UNEXPECTED_EOF);
-        default:
+        }
+        case EOF -> throw error(ErrorKind.UNEXPECTED_EOF);
+        default -> {
           save();
           next();
-          break;
+        }
       }
     }
   }
@@ -245,43 +244,40 @@ public class VariableInitializerParser {
     int depth = 1;
     while (depth > 0) {
       switch (token) {
-        case LBRACE:
+        case LBRACE -> {
           save();
           next();
           depth++;
-          break;
-        case RBRACE:
+        }
+        case RBRACE -> {
           save();
           next();
           depth--;
-          break;
-        case EOF:
-          throw error(ErrorKind.UNEXPECTED_EOF);
-        default:
+        }
+        case EOF -> throw error(ErrorKind.UNEXPECTED_EOF);
+        default -> {
           save();
           next();
-          break;
+        }
       }
     }
   }
 
   private void save() {
-    String value;
-    switch (token) {
-      case IDENT:
-      case INT_LITERAL:
-      case LONG_LITERAL:
-      case DOUBLE_LITERAL:
-      case FLOAT_LITERAL:
-      case STRING_LITERAL:
-      case CHAR_LITERAL:
-        value = lexer.stringValue();
-        break;
-      default:
-        // memory optimization: don't save string values for tokens that don't require them
-        value = null;
-        break;
-    }
+    String value =
+        switch (token) {
+          case IDENT,
+              INT_LITERAL,
+              LONG_LITERAL,
+              DOUBLE_LITERAL,
+              FLOAT_LITERAL,
+              STRING_LITERAL,
+              CHAR_LITERAL ->
+              lexer.stringValue();
+          default ->
+              // memory optimization: don't save string values for tokens that don't require them
+              null;
+        };
     tokens.add(new SavedToken(token, value, lexer.position()));
   }
 
@@ -305,13 +301,11 @@ public class VariableInitializerParser {
     // The only known type argument locations that require look-ahead to classify are method
     // references with parametric receivers, and qualified nested type names:
     switch (token) {
-      case COLONCOLON:
-      case DOT:
+      case COLONCOLON, DOT -> {
         this.tokens = tokens.subList(0, lastType);
         this.commas = commas.subList(0, lastComma);
-        break;
-      default:
-        break;
+      }
+      default -> {}
     }
   }
 
@@ -330,27 +324,24 @@ public class VariableInitializerParser {
     int depth = 1;
     while (depth > 0) {
       switch (token) {
-        case LT:
+        case LT -> {
           depth++;
           next();
-          break;
-        case GTGTGT:
+        }
+        case GTGTGT -> {
           depth -= 3;
           next();
-          break;
-        case GTGT:
+        }
+        case GTGT -> {
           depth -= 2;
           next();
-          break;
-        case GT:
+        }
+        case GT -> {
           depth--;
           next();
-          break;
-        case EOF:
-          throw error(ErrorKind.UNEXPECTED_EOF);
-        default:
-          next();
-          break;
+        }
+        case EOF -> throw error(ErrorKind.UNEXPECTED_EOF);
+        default -> next();
       }
     }
   }

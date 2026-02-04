@@ -17,6 +17,7 @@
 package com.google.turbine.parse;
 
 import com.google.turbine.diag.SourceFile;
+import com.google.turbine.model.TurbineJavadoc;
 
 /** A Java lexer. */
 public interface Lexer {
@@ -33,5 +34,5 @@ public interface Lexer {
   SourceFile source();
 
   /** Returns a saved javadoc comment. */
-  String javadoc();
+  TurbineJavadoc javadoc();
 }

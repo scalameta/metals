@@ -166,40 +166,30 @@ public class ModelFactory {
 
   /** Creates a {@link TurbineTypeMirror} backed by a {@link Type}. */
   private TurbineTypeMirror createTypeMirror(Type type) {
-    switch (type.tyKind()) {
-      case PRIM_TY:
+    return switch (type.tyKind()) {
+      case PRIM_TY -> {
         if (((PrimTy) type).primkind() == TurbineConstantTypeKind.STRING) {
-          return new TurbineDeclaredType(this, ClassTy.STRING);
+          yield new TurbineDeclaredType(this, ClassTy.STRING);
         }
-        return new TurbinePrimitiveType(this, (PrimTy) type);
-      case CLASS_TY:
-        return new TurbineDeclaredType(this, (ClassTy) type);
-      case ARRAY_TY:
-        return new TurbineArrayType(this, (ArrayTy) type);
-      case VOID_TY:
-        return new TurbineVoidType(this);
-      case WILD_TY:
-        return new TurbineWildcardType(this, (WildTy) type);
-      case TY_VAR:
-        return new TurbineTypeVariable(this, (TyVar) type);
-      case INTERSECTION_TY:
+        yield new TurbinePrimitiveType(this, (PrimTy) type);
+      }
+      case CLASS_TY -> new TurbineDeclaredType(this, (ClassTy) type);
+      case ARRAY_TY -> new TurbineArrayType(this, (ArrayTy) type);
+      case VOID_TY -> new TurbineVoidType(this);
+      case WILD_TY -> new TurbineWildcardType(this, (WildTy) type);
+      case TY_VAR -> new TurbineTypeVariable(this, (TyVar) type);
+      case INTERSECTION_TY -> {
         IntersectionTy intersectionTy = (IntersectionTy) type;
-        switch (intersectionTy.bounds().size()) {
-          case 0:
-            return createTypeMirror(ClassTy.OBJECT);
-          case 1:
-            return createTypeMirror(getOnlyElement(intersectionTy.bounds()));
-          default:
-            return new TurbineIntersectionType(this, intersectionTy);
-        }
-      case NONE_TY:
-        return new TurbineNoType(this);
-      case METHOD_TY:
-        return new TurbineExecutableType(this, (MethodTy) type);
-      case ERROR_TY:
-        return new TurbineErrorType(this, (ErrorTy) type);
-    }
-    throw new AssertionError(type.tyKind());
+        yield switch (intersectionTy.bounds().size()) {
+          case 0 -> createTypeMirror(ClassTy.OBJECT);
+          case 1 -> createTypeMirror(getOnlyElement(intersectionTy.bounds()));
+          default -> new TurbineIntersectionType(this, intersectionTy);
+        };
+      }
+      case NONE_TY -> new TurbineNoType(this);
+      case METHOD_TY -> new TurbineExecutableType(this, (MethodTy) type);
+      case ERROR_TY -> new TurbineErrorType(this, (ErrorTy) type);
+    };
   }
 
   /** Creates a list of {@link TurbineTypeMirror}s backed by the given {@link Type}s. */
@@ -225,25 +215,16 @@ public class ModelFactory {
 
   /** Creates an {@link Element} backed by the given {@link Symbol}. */
   Element element(Symbol symbol) {
-    switch (symbol.symKind()) {
-      case CLASS:
-        return typeElement((ClassSymbol) symbol);
-      case TY_PARAM:
-        return typeParameterElement((TyVarSymbol) symbol);
-      case METHOD:
-        return executableElement((MethodSymbol) symbol);
-      case FIELD:
-        return fieldElement((FieldSymbol) symbol);
-      case PARAMETER:
-        return parameterElement((ParamSymbol) symbol);
-      case RECORD_COMPONENT:
-        return recordComponentElement((RecordComponentSymbol) symbol);
-      case PACKAGE:
-        return packageElement((PackageSymbol) symbol);
-      case MODULE:
-        break;
-    }
-    throw new AssertionError(symbol.symKind());
+    return switch (symbol.symKind()) {
+      case CLASS -> typeElement((ClassSymbol) symbol);
+      case TY_PARAM -> typeParameterElement((TyVarSymbol) symbol);
+      case METHOD -> executableElement((MethodSymbol) symbol);
+      case FIELD -> fieldElement((FieldSymbol) symbol);
+      case PARAMETER -> parameterElement((ParamSymbol) symbol);
+      case RECORD_COMPONENT -> recordComponentElement((RecordComponentSymbol) symbol);
+      case PACKAGE -> packageElement((PackageSymbol) symbol);
+      case MODULE -> throw new AssertionError(symbol.symKind());
+    };
   }
 
   Element noElement(String name) {
@@ -367,39 +348,25 @@ public class ModelFactory {
   TyVarInfo getTyVarInfo(TyVarSymbol tyVar) {
     Symbol owner = tyVar.owner();
     Verify.verifyNotNull(owner); // TODO(cushon): capture variables
-    ImmutableMap<TyVarSymbol, TyVarInfo> tyParams;
-    switch (owner.symKind()) {
-      case METHOD:
-        tyParams = getMethodInfo((MethodSymbol) owner).tyParams();
-        break;
-      case CLASS:
-        tyParams = getSymbol((ClassSymbol) owner).typeParameterTypes();
-        break;
-      default:
-        throw new AssertionError(owner.symKind());
-    }
+    ImmutableMap<TyVarSymbol, TyVarInfo> tyParams =
+        switch (owner.symKind()) {
+          case METHOD -> getMethodInfo((MethodSymbol) owner).tyParams();
+          case CLASS -> getSymbol((ClassSymbol) owner).typeParameterTypes();
+          default -> throw new AssertionError(owner.symKind());
+        };
     return tyParams.get(tyVar);
   }
 
   static ClassSymbol enclosingClass(Symbol sym) {
-    switch (sym.symKind()) {
-      case CLASS:
-        return (ClassSymbol) sym;
-      case TY_PARAM:
-        return enclosingClass(((TyVarSymbol) sym).owner());
-      case METHOD:
-        return ((MethodSymbol) sym).owner();
-      case FIELD:
-        return ((FieldSymbol) sym).owner();
-      case PARAMETER:
-        return ((ParamSymbol) sym).owner().owner();
-      case RECORD_COMPONENT:
-        return ((RecordComponentSymbol) sym).owner();
-      case PACKAGE:
-      case MODULE:
-        throw new IllegalArgumentException(sym.toString());
-    }
-    throw new AssertionError(sym.symKind());
+    return switch (sym.symKind()) {
+      case CLASS -> (ClassSymbol) sym;
+      case TY_PARAM -> enclosingClass(((TyVarSymbol) sym).owner());
+      case METHOD -> ((MethodSymbol) sym).owner();
+      case FIELD -> ((FieldSymbol) sym).owner();
+      case PARAMETER -> ((ParamSymbol) sym).owner().owner();
+      case RECORD_COMPONENT -> ((RecordComponentSymbol) sym).owner();
+      case PACKAGE, MODULE -> throw new IllegalArgumentException(sym.toString());
+    };
   }
 
   ClassHierarchy cha() {

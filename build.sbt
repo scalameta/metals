@@ -299,6 +299,8 @@ lazy val turbine = project
       V.guava,
       "com.google.auto.value" % "auto-value" % "1.11.1",
       "com.google.auto.value" % "auto-value-annotations" % "1.11.1",
+      "com.google.errorprone" % "error_prone_annotations" % V.errorProne,
+      "org.jspecify" % "jspecify" % V.jspecify,
       "com.google.protobuf" % "protobuf-java" % V.protobuf,
     ),
     (Compile / PB.targets) :=
@@ -959,6 +961,29 @@ lazy val javapc = project
     Compile / resourceGenerators += packageJavaHeaderCompiler,
   )
   .dependsOn(mtest, `mtags-java`)
+
+lazy val turbinec = project
+  .in(file("tests/turbinec"))
+  .settings(
+    testSettings,
+    sharedSettings,
+    libraryDependencies ++= List(
+      "org.scalameta" %% "munit" % V.munit,
+      "org.ow2.asm" % "asm" % "9.9",
+      "org.ow2.asm" % "asm-tree" % "9.9",
+      "org.ow2.asm" % "asm-util" % "9.9",
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test,
+    ),
+    Compile / resourceGenerators += InputProperties
+      .resourceGenerator(input, input3),
+    Compile / compile := (Compile / compile)
+      .dependsOn(
+        input / Test / compile,
+        input3 / Test / compile,
+      )
+      .value,
+  )
+  .dependsOn(mtest, turbine)
 
 def isInTestShard(name: String): Boolean = {
   (

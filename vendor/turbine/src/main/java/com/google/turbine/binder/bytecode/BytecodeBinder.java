@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.turbine.binder.bound.EnumConstantValue;
 import com.google.turbine.binder.bound.ModuleInfo;
 import com.google.turbine.binder.bound.TurbineAnnotationValue;
@@ -88,7 +87,7 @@ public final class BytecodeBinder {
       sb.append(sig.pkg()).append('/');
     }
     boolean first = true;
-    Map<ClassSymbol, Sig.SimpleClassTySig> syms = new LinkedHashMap<>();
+    LinkedHashMap<ClassSymbol, Sig.SimpleClassTySig> syms = new LinkedHashMap<>();
     for (Sig.SimpleClassTySig s : sig.classes()) {
       if (!first) {
         sb.append('$');
@@ -99,9 +98,11 @@ public final class BytecodeBinder {
       first = false;
     }
     ArrayDeque<ClassSymbol> outers = new ArrayDeque<>();
-    for (ClassSymbol curr = Iterables.getLast(syms.keySet());
-        curr != null;
-        curr = scope.outer(curr)) {
+    ClassSymbol last = null;
+    for (ClassSymbol key : syms.keySet()) {
+      last = key;
+    }
+    for (ClassSymbol curr = last; curr != null; curr = scope.outer(curr)) {
       outers.addFirst(curr);
     }
     List<Type.ClassTy.SimpleClassTy> classes = new ArrayList<>();
@@ -125,19 +126,17 @@ public final class BytecodeBinder {
       Scope scope,
       ImmutableListMultimap<TypeAnnotationInfo.TypePath, AnnoInfo> annotations,
       TypeAnnotationInfo.TypePath typePath) {
-    switch (sig.boundKind()) {
-      case NONE:
-        return Type.WildUnboundedTy.create(annotations.get(typePath));
-      case LOWER:
-        return Type.WildLowerBoundedTy.create(
-            bindTy(((LowerBoundTySig) sig).bound(), scope, annotations, typePath.wild()),
-            annotations.get(typePath));
-      case UPPER:
-        return Type.WildUpperBoundedTy.create(
-            bindTy(((UpperBoundTySig) sig).bound(), scope, annotations, typePath.wild()),
-            annotations.get(typePath));
-    }
-    throw new AssertionError(sig.boundKind());
+    return switch (sig.boundKind()) {
+      case NONE -> Type.WildUnboundedTy.create(annotations.get(typePath));
+      case LOWER ->
+          Type.WildLowerBoundedTy.create(
+              bindTy(((LowerBoundTySig) sig).bound(), scope, annotations, typePath.wild()),
+              annotations.get(typePath));
+      case UPPER ->
+          Type.WildUpperBoundedTy.create(
+              bindTy(((UpperBoundTySig) sig).bound(), scope, annotations, typePath.wild()),
+              annotations.get(typePath));
+    };
   }
 
   public static Type bindTy(
@@ -151,22 +150,16 @@ public final class BytecodeBinder {
       Scope scope,
       ImmutableListMultimap<TypeAnnotationInfo.TypePath, AnnoInfo> annotations,
       TypeAnnotationInfo.TypePath typePath) {
-    switch (sig.kind()) {
-      case BASE_TY_SIG:
-        return Type.PrimTy.create(((Sig.BaseTySig) sig).type(), annotations.get(typePath));
-      case CLASS_TY_SIG:
-        return bindClassTy((Sig.ClassTySig) sig, scope, annotations, typePath);
-      case TY_VAR_SIG:
-        return Type.TyVar.create(
-            scope.apply(((Sig.TyVarSig) sig).name()), annotations.get(typePath));
-      case ARRAY_TY_SIG:
-        return bindArrayTy((Sig.ArrayTySig) sig, scope, annotations, typePath);
-      case WILD_TY_SIG:
-        return wildTy((WildTySig) sig, scope, annotations, typePath);
-      case VOID_TY_SIG:
-        return Type.VOID;
-    }
-    throw new AssertionError(sig.kind());
+    return switch (sig.kind()) {
+      case BASE_TY_SIG ->
+          Type.PrimTy.create(((Sig.BaseTySig) sig).type(), annotations.get(typePath));
+      case CLASS_TY_SIG -> bindClassTy((Sig.ClassTySig) sig, scope, annotations, typePath);
+      case TY_VAR_SIG ->
+          Type.TyVar.create(scope.apply(((Sig.TyVarSig) sig).name()), annotations.get(typePath));
+      case ARRAY_TY_SIG -> bindArrayTy((Sig.ArrayTySig) sig, scope, annotations, typePath);
+      case WILD_TY_SIG -> wildTy((WildTySig) sig, scope, annotations, typePath);
+      case VOID_TY_SIG -> Type.VOID;
+    };
   }
 
   private static Type bindArrayTy(
@@ -224,34 +217,30 @@ public final class BytecodeBinder {
   }
 
   public static Const bindValue(ElementValue value, Scope scope) {
-    switch (value.kind()) {
-      case ENUM:
-        return bindEnumValue((EnumConstValue) value);
-      case CONST:
-        return ((ConstValue) value).value();
-      case ARRAY:
-        return bindArrayValue((ArrayValue) value, scope);
-      case CLASS:
-        return new TurbineClassValue(
-            bindTy(
-                new SigParser(((ConstTurbineClassValue) value).className()).parseType(),
-                new Scope() {
-                  @Override
-                  public TyVarSymbol apply(String x) {
-                    throw new IllegalStateException(x);
-                  }
+    return switch (value.kind()) {
+      case ENUM -> bindEnumValue((EnumConstValue) value);
+      case CONST -> ((ConstValue) value).value();
+      case ARRAY -> bindArrayValue((ArrayValue) value, scope);
+      case CLASS ->
+          new TurbineClassValue(
+              bindTy(
+                  new SigParser(((ConstTurbineClassValue) value).className()).parseType(),
+                  new Scope() {
+                    @Override
+                    public TyVarSymbol apply(String x) {
+                      throw new IllegalStateException(x);
+                    }
 
-                  @Override
-                  public @Nullable ClassSymbol outer(ClassSymbol sym) {
-                    return scope.outer(sym);
-                  }
-                },
-                /* annotations= */ ImmutableList.of()));
-      case ANNOTATION:
-        return bindAnnotationValue(
-            ((ElementValue.ConstTurbineAnnotationValue) value).annotation(), scope);
-    }
-    throw new AssertionError(value.kind());
+                    @Override
+                    public @Nullable ClassSymbol outer(ClassSymbol sym) {
+                      return scope.outer(sym);
+                    }
+                  },
+                  /* annotations= */ ImmutableList.of()));
+      case ANNOTATION ->
+          bindAnnotationValue(
+              ((ElementValue.ConstTurbineAnnotationValue) value).annotation(), scope);
+    };
   }
 
   static TurbineAnnotationValue bindAnnotationValue(AnnotationInfo value, Scope scope) {
@@ -298,19 +287,15 @@ public final class BytecodeBinder {
     }
     // Deficient numeric types and booleans are all stored as ints in the class file,
     // coerce them to the target type.
-    switch (((Type.PrimTy) type).primkind()) {
-      case CHAR:
-        return new Const.CharValue((char) asInt(value));
-      case SHORT:
-        return new Const.ShortValue((short) asInt(value));
-      case BOOLEAN:
-        // boolean constants are encoded as integers, see also JDK-8171132
-        return new Const.BooleanValue(asInt(value) != 0);
-      case BYTE:
-        return new Const.ByteValue((byte) asInt(value));
-      default:
-        return value;
-    }
+    return switch (((Type.PrimTy) type).primkind()) {
+      case CHAR -> new Const.CharValue((char) asInt(value));
+      case SHORT -> new Const.ShortValue((short) asInt(value));
+      case BOOLEAN ->
+          // boolean constants are encoded as integers, see also JDK-8171132
+          new Const.BooleanValue(asInt(value) != 0);
+      case BYTE -> new Const.ByteValue((byte) asInt(value));
+      default -> value;
+    };
   }
 
   private static int asInt(Value value) {

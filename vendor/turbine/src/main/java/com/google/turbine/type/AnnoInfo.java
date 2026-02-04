@@ -86,10 +86,9 @@ public class AnnoInfo {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof AnnoInfo)) {
+    if (!(obj instanceof AnnoInfo that)) {
       return false;
     }
-    AnnoInfo that = (AnnoInfo) obj;
     return sym.equals(that.sym) && values.equals(that.values);
   }
 

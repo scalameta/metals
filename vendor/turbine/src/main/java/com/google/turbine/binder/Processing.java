@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 import com.google.auto.value.AutoValue;
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -65,7 +64,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 import javax.annotation.processing.Processor;
 import javax.lang.model.SourceVersion;
@@ -95,15 +93,12 @@ public class Processing {
     TurbineFiler filer =
         new TurbineFiler(
             seen,
-            new Function<String, @Nullable Supplier<byte[]>>() {
-              @Override
-              public @Nullable Supplier<byte[]> apply(String input) {
-                // TODO(cushon): should annotation processors be allowed to generate code with
-                // dependencies between source and bytecode, or vice versa?
-                // Currently generated classes are not available on the classpath when compiling
-                // the compilation sources (including generated sources).
-                return classpath.resource(input);
-              }
+            (String input) -> {
+              // TODO(cushon): should annotation processors be allowed to generate code with
+              // dependencies between source and bytecode, or vice versa?
+              // Currently generated classes are not available on the classpath when compiling
+              // the compilation sources (including generated sources).
+              return classpath.resource(input);
             },
             processorInfo.loader());
 
@@ -275,12 +270,7 @@ public class Processing {
     return result.buildOrThrow();
   }
 
-  @AutoValue
-  abstract static class SupportedAnnotationTypes {
-
-    abstract boolean everything();
-
-    abstract Pattern pattern();
+  record SupportedAnnotationTypes(boolean everything, Pattern pattern) {
 
     static SupportedAnnotationTypes create(Processor processor) {
       List<String> patterns = new ArrayList<>();
@@ -293,7 +283,7 @@ public class Processing {
           patterns.add(supportedAnnotationType);
         }
       }
-      return new AutoValue_Processing_SupportedAnnotationTypes(
+      return new SupportedAnnotationTypes(
           everything, Pattern.compile(Joiner.on('|').join(patterns)));
     }
   }
@@ -503,9 +493,7 @@ public class Processing {
       return new AutoValue_Processing_ProcessorInfo(processors, loader, options, sourceVersion);
     }
 
-    // TURBINE-DIFF START
-    public static ProcessorInfo empty() {
-      // TURBINE-DIFF END
+    static ProcessorInfo empty() {
       return create(
           /* processors= */ ImmutableList.of(),
           /* loader= */ null,

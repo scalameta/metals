@@ -71,7 +71,7 @@ public class ClassSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object o) {
-    return o instanceof ClassSymbol && className.equals(((ClassSymbol) o).className);
+    return o instanceof ClassSymbol classSymbol && className.equals(classSymbol.className);
   }
 
   /** The JVMS 4.2.1 binary name of the class. */

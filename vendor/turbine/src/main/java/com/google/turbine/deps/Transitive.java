@@ -32,6 +32,7 @@ import com.google.turbine.bytecode.ClassFile.InnerClass;
 import com.google.turbine.bytecode.ClassReader;
 import com.google.turbine.bytecode.ClassWriter;
 import com.google.turbine.model.TurbineFlag;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -46,10 +47,26 @@ public final class Transitive {
 
   public static ImmutableMap<String, byte[]> collectDeps(
       ClassPath bootClassPath, BindingResult bound) {
+    return collectDeps(bootClassPath, bound, Collections.emptySet(), Collections.emptySet());
+  }
+
+  public static ImmutableMap<String, byte[]> collectDeps(
+      ClassPath bootClassPath, BindingResult bound, Set<ClassSymbol> extraRoots) {
+    return collectDeps(bootClassPath, bound, extraRoots, extraRoots);
+  }
+
+  private static ImmutableMap<String, byte[]> collectDeps(
+      ClassPath bootClassPath,
+      BindingResult bound,
+      Set<ClassSymbol> extraRoots,
+      Set<ClassSymbol> skipSymbols) {
     ImmutableMap.Builder<String, byte[]> transitive = ImmutableMap.builder();
-    Set<ClassSymbol> closure = superClosure(bound);
+    Set<ClassSymbol> closure = superClosure(bound, extraRoots);
     Dependencies.addPackageInfos(closure, bound);
     for (ClassSymbol sym : closure) {
+      if (skipSymbols.contains(sym)) {
+        continue;
+      }
       BytecodeBoundClass info = bound.classPathEnv().get(sym);
       if (info == null) {
         // the symbol wasn't loaded from the classpath
@@ -144,11 +161,18 @@ public final class Transitive {
   }
 
   private static Set<ClassSymbol> superClosure(BindingResult bound) {
+    return superClosure(bound, Collections.emptySet());
+  }
+
+  private static Set<ClassSymbol> superClosure(BindingResult bound, Set<ClassSymbol> extraRoots) {
     Env<ClassSymbol, TypeBoundClass> env =
         CompoundEnv.<ClassSymbol, TypeBoundClass>of(new SimpleEnv<>(bound.units()))
             .append(bound.classPathEnv());
     Set<ClassSymbol> closure = new LinkedHashSet<>();
     for (ClassSymbol sym : bound.units().keySet()) {
+      addSuperTypes(closure, env, sym);
+    }
+    for (ClassSymbol sym : extraRoots) {
       addSuperTypes(closure, env, sym);
     }
     Set<ClassSymbol> directChildren = new LinkedHashSet<>();

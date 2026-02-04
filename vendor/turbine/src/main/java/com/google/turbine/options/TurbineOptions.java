@@ -16,15 +16,93 @@
 
 package com.google.turbine.options;
 
-import com.google.auto.value.AutoValue;
+import static java.util.Objects.requireNonNull;
+
+import com.google.auto.value.AutoBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
 import java.util.Optional;
 
-/** Header compilation options. */
-@AutoValue
-public abstract class TurbineOptions {
+/**
+ * Header compilation options.
+ *
+ * @param sources Paths to the Java source files to compile.
+ * @param classPath Paths to classpath artifacts.
+ * @param bootClassPath Paths to compilation bootclasspath artifacts.
+ * @param languageVersion The language version.
+ * @param system The target platform's system modules.
+ * @param output The output jar.
+ * @param headerCompilationOutput The header compilation output jar.
+ * @param processorPath Paths to annotation processor artifacts.
+ * @param processors Annotation processor class names.
+ * @param builtinProcessors Class names of annotation processor that are built in.
+ * @param sourceJars Source jars for compilation.
+ * @param outputDeps Output jdeps file.
+ * @param outputManifest Output manifest file.
+ * @param directJars The direct dependencies.
+ * @param targetLabel The label of the target being compiled.
+ * @param injectingRuleKind If present, the name of the rule that injected an aspect that compiles
+ *     this target.
+ *     <p>Note that this rule will have a completely different label to {@link #targetLabel} above.
+ * @param depsArtifacts The .jdeps artifacts for direct dependencies.
+ * @param help Print usage information.
+ * @param javacOpts Additional Java compiler flags.
+ * @param reducedClasspathMode The reduced classpath optimization mode.
+ * @param profile An optional path for profiling output.
+ * @param gensrcOutput An optional path for generated source output.
+ * @param resourceOutput An optional path for generated resource output.
+ */
+public record TurbineOptions(
+    ImmutableList<String> sources,
+    ImmutableList<String> classPath,
+    ImmutableSet<String> bootClassPath,
+    LanguageVersion languageVersion,
+    Optional<String> system,
+    Optional<String> output,
+    Optional<String> headerCompilationOutput,
+    ImmutableList<String> processorPath,
+    ImmutableSet<String> processors,
+    ImmutableSet<String> builtinProcessors,
+    ImmutableList<String> sourceJars,
+    Optional<String> outputDeps,
+    Optional<String> outputManifest,
+    ImmutableSet<String> directJars,
+    Optional<String> targetLabel,
+    Optional<String> injectingRuleKind,
+    ImmutableList<String> depsArtifacts,
+    boolean help,
+    ImmutableList<String> javacOpts,
+    ReducedClasspathMode reducedClasspathMode,
+    Optional<String> profile,
+    Optional<String> gensrcOutput,
+    Optional<String> resourceOutput,
+    int fullClasspathLength,
+    int reducedClasspathLength) {
+  public TurbineOptions {
+    requireNonNull(sources, "sources");
+    requireNonNull(classPath, "classPath");
+    requireNonNull(bootClassPath, "bootClassPath");
+    requireNonNull(languageVersion, "languageVersion");
+    requireNonNull(system, "system");
+    requireNonNull(output, "output");
+    requireNonNull(headerCompilationOutput, "headerCompilationOutput");
+    requireNonNull(processorPath, "processorPath");
+    requireNonNull(processors, "processors");
+    requireNonNull(builtinProcessors, "builtinProcessors");
+    requireNonNull(sourceJars, "sourceJars");
+    requireNonNull(outputDeps, "outputDeps");
+    requireNonNull(outputManifest, "outputManifest");
+    requireNonNull(directJars, "directJars");
+    requireNonNull(targetLabel, "targetLabel");
+    requireNonNull(injectingRuleKind, "injectingRuleKind");
+    requireNonNull(depsArtifacts, "depsArtifacts");
+    requireNonNull(javacOpts, "javacOpts");
+    requireNonNull(reducedClasspathMode, "reducedClasspathMode");
+    requireNonNull(profile, "profile");
+    requireNonNull(gensrcOutput, "gensrcOutput");
+    requireNonNull(resourceOutput, "resourceOutput");
+  }
 
   /**
    * This modes controls how a probablistic Java classpath reduction is used. For each mode except
@@ -52,85 +130,8 @@ public abstract class TurbineOptions {
     NONE
   }
 
-  /** Paths to the Java source files to compile. */
-  public abstract ImmutableList<String> sources();
-
-  /** Paths to classpath artifacts. */
-  public abstract ImmutableList<String> classPath();
-
-  /** Paths to compilation bootclasspath artifacts. */
-  public abstract ImmutableSet<String> bootClassPath();
-
-  /** The language version. */
-  public abstract LanguageVersion languageVersion();
-
-  /** The target platform's system modules. */
-  public abstract Optional<String> system();
-
-  /** The output jar. */
-  public abstract Optional<String> output();
-
-  /** The header compilation output jar. */
-  public abstract Optional<String> headerCompilationOutput();
-
-  /** Paths to annotation processor artifacts. */
-  public abstract ImmutableList<String> processorPath();
-
-  /** Annotation processor class names. */
-  public abstract ImmutableSet<String> processors();
-
-  /** Class names of annotation processor that are built in. */
-  public abstract ImmutableSet<String> builtinProcessors();
-
-  /** Source jars for compilation. */
-  public abstract ImmutableList<String> sourceJars();
-
-  /** Output jdeps file. */
-  public abstract Optional<String> outputDeps();
-
-  /** Output manifest file. */
-  public abstract Optional<String> outputManifest();
-
-  /** The direct dependencies. */
-  public abstract ImmutableSet<String> directJars();
-
-  /** The label of the target being compiled. */
-  public abstract Optional<String> targetLabel();
-
-  /**
-   * If present, the name of the rule that injected an aspect that compiles this target.
-   *
-   * <p>Note that this rule will have a completely different label to {@link #targetLabel} above.
-   */
-  public abstract Optional<String> injectingRuleKind();
-
-  /** The .jdeps artifacts for direct dependencies. */
-  public abstract ImmutableList<String> depsArtifacts();
-
-  /** Print usage information. */
-  public abstract boolean help();
-
-  /** Additional Java compiler flags. */
-  public abstract ImmutableList<String> javacOpts();
-
-  /** The reduced classpath optimization mode. */
-  public abstract ReducedClasspathMode reducedClasspathMode();
-
-  /** An optional path for profiling output. */
-  public abstract Optional<String> profile();
-
-  /** An optional path for generated source output. */
-  public abstract Optional<String> gensrcOutput();
-
-  /** An optional path for generated resource output. */
-  public abstract Optional<String> resourceOutput();
-
-  public abstract int fullClasspathLength();
-
-  public abstract int reducedClasspathLength();
-
   public static Builder builder() {
-    return new AutoValue_TurbineOptions.Builder()
+    return new AutoBuilder_TurbineOptions_Builder()
         .setSources(ImmutableList.of())
         .setClassPath(ImmutableList.of())
         .setBootClassPath(ImmutableList.of())
@@ -149,7 +150,7 @@ public abstract class TurbineOptions {
   }
 
   /** A {@link Builder} for {@link TurbineOptions}. */
-  @AutoValue.Builder
+  @AutoBuilder
   public abstract static class Builder {
     public abstract Builder setOutput(String output);
 

@@ -16,8 +16,6 @@
 
 package com.google.turbine.binder.lookup;
 
-import static com.google.common.collect.Iterables.getLast;
-
 import com.google.common.base.Joiner;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -48,7 +46,7 @@ public class ImportIndex implements ImportScope {
    * A map from simple names of imported symbols to an {@link ImportScope} for a named (possibly
    * static) import; e.g. {@code `Map` -> ImportScope(`import java.util.Map;`)}.
    */
-  private final Map<String, Supplier<ImportScope>> thunks;
+  private final ImmutableMap<String, Supplier<ImportScope>> thunks;
 
   public ImportIndex(TurbineLogWithSource log, ImmutableMap<String, Supplier<ImportScope>> thunks) {
     this.thunks = thunks;
@@ -66,14 +64,8 @@ public class ImportIndex implements ImportScope {
         continue;
       }
       thunks.put(
-          getLast(i.type()).value(),
-          Suppliers.memoize(
-              new Supplier<@Nullable ImportScope>() {
-                @Override
-                public @Nullable ImportScope get() {
-                  return namedImport(log, cpi, i, resolve);
-                }
-              }));
+          i.type().get(i.type().size() - 1).value(),
+          Suppliers.<@Nullable ImportScope>memoize(() -> namedImport(log, cpi, i, resolve)));
     }
     // Process static imports as a separate pass. If a static and non-static named import share a
     // simple name the non-static import wins.
@@ -81,16 +73,9 @@ public class ImportIndex implements ImportScope {
       if (!i.stat() || i.wild()) {
         continue;
       }
-      String last = getLast(i.type()).value();
+      String last = i.type().get(i.type().size() - 1).value();
       thunks.putIfAbsent(
-          last,
-          Suppliers.memoize(
-              new Supplier<@Nullable ImportScope>() {
-                @Override
-                public @Nullable ImportScope get() {
-                  return staticNamedImport(log, cpi, i);
-                }
-              }));
+          last, Suppliers.<@Nullable ImportScope>memoize(() -> staticNamedImport(log, cpi, i)));
     }
     return new ImportIndex(log, ImmutableMap.copyOf(thunks));
   }

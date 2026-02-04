@@ -54,10 +54,9 @@ public class TyVarSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof TyVarSymbol)) {
+    if (!(obj instanceof TyVarSymbol other)) {
       return false;
     }
-    TyVarSymbol other = (TyVarSymbol) obj;
     return name.equals(other.name()) && owner().equals(other.owner());
   }
 

@@ -170,6 +170,9 @@ public class SimpleTopLevelIndex implements TopLevelIndex {
   public @Nullable PackageScope lookupPackage(Iterable<String> packagename) {
     Node curr = root;
     for (String bit : packagename) {
+      if (bit.isEmpty()) {
+        throw new IllegalArgumentException("Empty package name");
+      }
       curr = curr.lookup(bit);
       if (curr == null || curr.sym != null) {
         return null;

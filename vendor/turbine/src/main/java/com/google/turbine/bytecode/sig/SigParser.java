@@ -62,25 +62,24 @@ public class SigParser {
   }
 
   public TySig parseFieldSig() {
-    switch (peek()) {
-      case '[':
-        return parseArraySig();
-      case 'T':
-        return parseTyVar();
-      case 'L':
-        return parseClassTySig();
-      case '+':
+    return switch (peek()) {
+      case '[' -> parseArraySig();
+      case 'T' -> parseTyVar();
+      case 'L' -> parseClassTySig();
+      case '+' -> {
         eat();
-        return new UpperBoundTySig(parseFieldSig());
-      case '-':
+        yield new UpperBoundTySig(parseFieldSig());
+      }
+      case '-' -> {
         eat();
-        return new LowerBoundTySig(parseFieldSig());
-      case '*':
+        yield new LowerBoundTySig(parseFieldSig());
+      }
+      case '*' -> {
         eat();
-        return new WildTyArgSig();
-      default:
-        throw new AssertionError(peek());
-    }
+        yield new WildTyArgSig();
+      }
+      default -> throw new AssertionError(peek());
+    };
   }
 
   /** Parses a MethodTypeSignature into a {@link MethodSig}. */
@@ -127,13 +126,8 @@ public class SigParser {
         }
         TySig classBound = null;
         switch (peek()) {
-          case 'L':
-          case '[':
-          case 'T':
-            classBound = parseFieldSig();
-            break;
-          default:
-            break;
+          case 'L', '[', 'T' -> classBound = parseFieldSig();
+          default -> {}
         }
         ImmutableList.Builder<TySig> interfaceBounds = ImmutableList.builder();
         while (peek() == ':') {
@@ -149,37 +143,45 @@ public class SigParser {
 
   /** Parses a type signature. */
   public TySig parseType() {
-    switch (peek()) {
-      case 'Z':
+    return switch (peek()) {
+      case 'Z' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.BOOLEAN);
-      case 'C':
+        yield new BaseTySig(TurbineConstantTypeKind.BOOLEAN);
+      }
+      case 'C' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.CHAR);
-      case 'B':
+        yield new BaseTySig(TurbineConstantTypeKind.CHAR);
+      }
+      case 'B' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.BYTE);
-      case 'S':
+        yield new BaseTySig(TurbineConstantTypeKind.BYTE);
+      }
+      case 'S' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.SHORT);
-      case 'I':
+        yield new BaseTySig(TurbineConstantTypeKind.SHORT);
+      }
+      case 'I' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.INT);
-      case 'F':
+        yield new BaseTySig(TurbineConstantTypeKind.INT);
+      }
+      case 'F' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.FLOAT);
-      case 'J':
+        yield new BaseTySig(TurbineConstantTypeKind.FLOAT);
+      }
+      case 'J' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.LONG);
-      case 'D':
+        yield new BaseTySig(TurbineConstantTypeKind.LONG);
+      }
+      case 'D' -> {
         eat();
-        return new BaseTySig(TurbineConstantTypeKind.DOUBLE);
-      case 'V':
+        yield new BaseTySig(TurbineConstantTypeKind.DOUBLE);
+      }
+      case 'V' -> {
         eat();
-        return Sig.VOID;
-      default:
-        return parseFieldSig();
-    }
+        yield Sig.VOID;
+      }
+      default -> parseFieldSig();
+    };
   }
 
   private ArrayTySig parseArraySig() {
@@ -207,36 +209,31 @@ public class SigParser {
     OUTER:
     while (true) {
       switch (peek()) {
-        case '/':
+        case '/' -> {
           eat();
           if (pkg.length() > 0) {
             pkg.append('/');
           }
           pkg.append(name);
           name = new StringBuilder();
-          break;
-        case '<':
-          {
-            eat();
-            do {
-              tyArgs.add(parseFieldSig());
-            } while (peek() != '>');
-            eat();
-            break;
-          }
-        case '.':
-          {
-            eat();
-            simples.add(new SimpleClassTySig(name.toString(), tyArgs.build()));
-            tyArgs = ImmutableList.builder();
-            name = new StringBuilder();
-            break;
-          }
-        case ';':
+        }
+        case '<' -> {
+          eat();
+          do {
+            tyArgs.add(parseFieldSig());
+          } while (peek() != '>');
+          eat();
+        }
+        case '.' -> {
+          eat();
+          simples.add(new SimpleClassTySig(name.toString(), tyArgs.build()));
+          tyArgs = ImmutableList.builder();
+          name = new StringBuilder();
+        }
+        case ';' -> {
           break OUTER;
-        default:
-          name.append(eat());
-          break;
+        }
+        default -> name.append(eat());
       }
     }
     simples.add(new SimpleClassTySig(name.toString(), tyArgs.build()));

@@ -58,8 +58,8 @@ public class TurbineAnnotationValue extends Const {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof TurbineAnnotationValue
-        && info().equals(((TurbineAnnotationValue) obj).info());
+    return obj instanceof TurbineAnnotationValue turbineAnnotationValue
+        && info().equals(turbineAnnotationValue.info());
   }
 
   public AnnoInfo info() {

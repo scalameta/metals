@@ -16,8 +16,6 @@
 
 package com.google.turbine.binder.lookup;
 
-import static com.google.common.collect.Iterables.getLast;
-
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
@@ -52,24 +50,21 @@ public class MemberImportIndex {
       }
       if (i.wild()) {
         packageScopes.add(
-            Suppliers.memoize(
-                new Supplier<@Nullable ClassSymbol>() {
-                  @Override
-                  public @Nullable ClassSymbol get() {
-                    LookupResult result = tli.scope().lookup(new LookupKey(i.type()));
-                    if (result == null) {
-                      return null;
-                    }
-                    ClassSymbol sym = (ClassSymbol) result.sym();
-                    for (Tree.Ident bit : result.remaining()) {
-                      sym = resolveNext(resolve, source, i.position(), sym, bit);
-                    }
-                    return sym;
+            Suppliers.<@Nullable ClassSymbol>memoize(
+                () -> {
+                  LookupResult result = tli.scope().lookup(new LookupKey(i.type()));
+                  if (result == null) {
+                    return null;
                   }
+                  ClassSymbol sym = (ClassSymbol) result.sym();
+                  for (Tree.Ident bit : result.remaining()) {
+                    sym = resolveNext(resolve, source, i.position(), sym, bit);
+                  }
+                  return sym;
                 }));
       } else {
         cache.put(
-            getLast(i.type()).value(),
+            i.type().get(i.type().size() - 1).value(),
             Suppliers.memoize(
                 new Supplier<@Nullable ClassSymbol>() {
                   @Override
@@ -127,7 +122,7 @@ public class MemberImportIndex {
   private static class WildcardSymbols implements Iterator<ClassSymbol> {
     private final Iterator<Supplier<ClassSymbol>> it;
 
-    public WildcardSymbols(Iterator<Supplier<ClassSymbol>> it) {
+    private WildcardSymbols(Iterator<Supplier<ClassSymbol>> it) {
       this.it = it;
     }
 

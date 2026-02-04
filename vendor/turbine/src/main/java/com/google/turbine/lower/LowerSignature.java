@@ -55,26 +55,15 @@ public class LowerSignature {
 
   /** Translates types to signatures. */
   public Sig.TySig signature(Type ty) {
-    switch (ty.tyKind()) {
-      case CLASS_TY:
-        return classTySig((Type.ClassTy) ty);
-      case TY_VAR:
-        return tyVarSig((TyVar) ty);
-      case ARRAY_TY:
-        return arrayTySig((ArrayTy) ty);
-      case PRIM_TY:
-        return refBaseTy((PrimTy) ty);
-      case VOID_TY:
-        return Sig.VOID;
-      case WILD_TY:
-        return wildTy((WildTy) ty);
-      // TURBINE-DIFF START
-      case ERROR_TY:
-        return classTySig(ClassTy.OBJECT);
-      // TURBINE-DIFF END
-      default:
-        throw new AssertionError(ty.tyKind());
-    }
+    return switch (ty.tyKind()) {
+      case CLASS_TY -> classTySig((Type.ClassTy) ty);
+      case TY_VAR -> tyVarSig((TyVar) ty);
+      case ARRAY_TY -> arrayTySig((ArrayTy) ty);
+      case PRIM_TY -> refBaseTy((PrimTy) ty);
+      case VOID_TY -> Sig.VOID;
+      case WILD_TY -> wildTy((WildTy) ty);
+      default -> throw new AssertionError(ty.tyKind());
+    };
   }
 
   private Sig.BaseTySig refBaseTy(PrimTy t) {
@@ -117,15 +106,11 @@ public class LowerSignature {
   }
 
   private TySig wildTy(WildTy ty) {
-    switch (ty.boundKind()) {
-      case NONE:
-        return new Sig.WildTyArgSig();
-      case UPPER:
-        return new UpperBoundTySig(signature(((Type.WildUpperBoundedTy) ty).bound()));
-      case LOWER:
-        return new LowerBoundTySig(signature(((Type.WildLowerBoundedTy) ty).bound()));
-    }
-    throw new AssertionError(ty.boundKind());
+    return switch (ty.boundKind()) {
+      case NONE -> new Sig.WildTyArgSig();
+      case UPPER -> new UpperBoundTySig(signature(ty.bound()));
+      case LOWER -> new LowerBoundTySig(signature(ty.bound()));
+    };
   }
 
   /**
@@ -201,24 +186,11 @@ public class LowerSignature {
     if (!classNeedsSig(info)) {
       return null;
     }
-    // TURBINE-DIFF START
-    if (info.superClassType() instanceof Type.ErrorTy) {
-      return null;
-    }
     ImmutableList<Sig.TyParamSig> typarams = tyParamSig(info.typeParameterTypes(), env);
-    Type superClassType = info.superClassType();
-    if (superClassType == null || !(superClassType instanceof ClassTy)) {
-      return null;
-    }
-    // TURBINE-DIFF END
-    ClassTySig xtnd = classTySig((ClassTy) superClassType);
+    ClassTySig xtnd = classTySig((ClassTy) info.superClassType());
     ImmutableList.Builder<ClassTySig> impl = ImmutableList.builder();
     for (Type i : info.interfaceTypes()) {
-      // TURBINE-DIFF START
-      if (i.tyKind() == TyKind.CLASS_TY) {
-        impl.add(classTySig((ClassTy) i));
-      }
-      // TURBINE-DIFF END
+      impl.add(classTySig((ClassTy) i));
     }
     ClassSig sig = new ClassSig(typarams, xtnd, impl.build());
     return SigWriter.classSig(sig);
@@ -247,30 +219,20 @@ public class LowerSignature {
   }
 
   private boolean needsSig(Type ty) {
-    switch (ty.tyKind()) {
-      case PRIM_TY:
-      case VOID_TY:
-        return false;
-      case CLASS_TY:
-        {
-          for (SimpleClassTy s : ((ClassTy) ty).classes()) {
-            if (!s.targs().isEmpty()) {
-              return true;
-            }
+    return switch (ty.tyKind()) {
+      case PRIM_TY, VOID_TY -> false;
+      case CLASS_TY -> {
+        for (SimpleClassTy s : ((ClassTy) ty).classes()) {
+          if (!s.targs().isEmpty()) {
+            yield true;
           }
-          return false;
         }
-      case ARRAY_TY:
-        return needsSig(((ArrayTy) ty).elementType());
-      case TY_VAR:
-        return true;
-      // TURBINE-DIFF START
-      case ERROR_TY:
-        return needsSig(ClassTy.OBJECT);
-      // TURBINE-DIFF END
-      default:
-        throw new AssertionError(ty.tyKind());
-    }
+        yield false;
+      }
+      case ARRAY_TY -> needsSig(((ArrayTy) ty).elementType());
+      case TY_VAR -> true;
+      default -> throw new AssertionError(ty.tyKind());
+    };
   }
 
   private ImmutableList<Sig.TyParamSig> tyParamSig(
@@ -320,11 +282,6 @@ public class LowerSignature {
   }
 
   String objectType(ClassSymbol sym) {
-    // TURBINE-DIFF START
-    if (sym == null) {
-      return "L" + ClassSymbol.OBJECT.binaryName() + ";";
-    }
-    // TURBINE-DIFF END
     return "L" + descriptor(sym) + ";";
   }
 }

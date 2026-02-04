@@ -63,6 +63,6 @@ public class TurbineName implements Name {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof TurbineName && contentEquals(((TurbineName) obj).name);
+    return obj instanceof TurbineName turbineName && contentEquals(turbineName.name);
   }
 }

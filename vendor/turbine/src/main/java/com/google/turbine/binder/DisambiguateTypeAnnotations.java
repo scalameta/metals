@@ -233,34 +233,35 @@ public final class DisambiguateTypeAnnotations {
    * before they are canonicalized.
    */
   private static Type addAnnotationsToType(Type type, ImmutableList<AnnoInfo> extra) {
-    switch (type.tyKind()) {
-      case PRIM_TY:
+    return switch (type.tyKind()) {
+      case PRIM_TY -> {
         PrimTy primTy = (PrimTy) type;
-        return Type.PrimTy.create(primTy.primkind(), appendAnnotations(primTy.annos(), extra));
-      case CLASS_TY:
+        yield Type.PrimTy.create(primTy.primkind(), appendAnnotations(primTy.annos(), extra));
+      }
+      case CLASS_TY -> {
         ClassTy classTy = (ClassTy) type;
         SimpleClassTy base = classTy.classes().get(0);
         SimpleClassTy simple =
             SimpleClassTy.create(base.sym(), base.targs(), appendAnnotations(base.annos(), extra));
-        return Type.ClassTy.create(
+        yield Type.ClassTy.create(
             ImmutableList.<SimpleClassTy>builder()
                 .add(simple)
                 .addAll(classTy.classes().subList(1, classTy.classes().size()))
                 .build());
-      case ARRAY_TY:
+      }
+      case ARRAY_TY -> {
         ArrayTy arrayTy = (ArrayTy) type;
-        return ArrayTy.create(addAnnotationsToType(arrayTy.elementType(), extra), arrayTy.annos());
-      case TY_VAR:
+        yield ArrayTy.create(addAnnotationsToType(arrayTy.elementType(), extra), arrayTy.annos());
+      }
+      case TY_VAR -> {
         TyVar tyVar = (TyVar) type;
-        return Type.TyVar.create(tyVar.sym(), appendAnnotations(tyVar.annos(), extra));
-      case VOID_TY:
-      case ERROR_TY:
-        return type;
-      case WILD_TY:
-        throw new AssertionError("unexpected wildcard type outside type argument context");
-      default:
-        throw new AssertionError(type.tyKind());
-    }
+        yield Type.TyVar.create(tyVar.sym(), appendAnnotations(tyVar.annos(), extra));
+      }
+      case VOID_TY, ERROR_TY -> type;
+      case WILD_TY ->
+          throw new AssertionError("unexpected wildcard type outside type argument context");
+      default -> throw new AssertionError(type.tyKind());
+    };
   }
 
   private static ImmutableList<AnnoInfo> appendAnnotations(

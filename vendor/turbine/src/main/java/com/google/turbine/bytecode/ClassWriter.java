@@ -85,27 +85,12 @@ public final class ClassWriter {
       output.writeByte(e.kind().tag());
       Value value = e.value();
       switch (e.kind()) {
-        case CLASS_INFO:
-        case STRING:
-        case MODULE:
-        case PACKAGE:
-          output.writeShort(((IntValue) value).value());
-          break;
-        case INTEGER:
-          output.writeInt(((IntValue) value).value());
-          break;
-        case DOUBLE:
-          output.writeDouble(((DoubleValue) value).value());
-          break;
-        case FLOAT:
-          output.writeFloat(((FloatValue) value).value());
-          break;
-        case LONG:
-          output.writeLong(((LongValue) value).value());
-          break;
-        case UTF8:
-          output.writeUTF(((StringValue) value).value());
-          break;
+        case CLASS_INFO, STRING, MODULE, PACKAGE -> output.writeShort(((IntValue) value).value());
+        case INTEGER -> output.writeInt(((IntValue) value).value());
+        case DOUBLE -> output.writeDouble(((DoubleValue) value).value());
+        case FLOAT -> output.writeFloat(((FloatValue) value).value());
+        case LONG -> output.writeLong(((LongValue) value).value());
+        case UTF8 -> output.writeUTF(((StringValue) value).value());
       }
     }
   }

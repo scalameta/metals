@@ -23,7 +23,6 @@ import com.google.turbine.options.TurbineOptions.ReducedClasspathMode;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.Deque;
 
@@ -54,112 +53,61 @@ public final class TurbineOptionsParser {
     while (!argumentDeque.isEmpty()) {
       String next = argumentDeque.removeFirst();
       switch (next) {
-        case "--output":
-          builder.setOutput(readOne(next, argumentDeque));
-          break;
-        case "--source_jars":
-          builder.setSourceJars(readList(argumentDeque));
-          break;
-        case "--temp_dir":
-          // TODO(cushon): remove this when Bazel no longer passes the flag
-          readOne(next, argumentDeque);
-          break;
-        case "--processors":
-          builder.setProcessors(readList(argumentDeque));
-          break;
-        case "--builtin_processors":
-          builder.setBuiltinProcessors(readList(argumentDeque));
-          break;
-        case "--processorpath":
-          builder.setProcessorPath(readList(argumentDeque));
-          break;
-        case "--classpath":
-          builder.setClassPath(readList(argumentDeque));
-          break;
-        case "--bootclasspath":
-          builder.setBootClassPath(readList(argumentDeque));
-          break;
-        case "--system":
-          builder.setSystem(readOne(next, argumentDeque));
-          break;
-        case "--javacopts":
+        case "--output" -> builder.setOutput(readOne(next, argumentDeque));
+        case "--source_jars" -> builder.setSourceJars(readList(argumentDeque));
+        case "--temp_dir" ->
+            // TODO(cushon): remove this when Bazel no longer passes the flag
+            readOne(next, argumentDeque);
+        case "--processors" -> builder.setProcessors(readList(argumentDeque));
+        case "--builtin_processors" -> builder.setBuiltinProcessors(readList(argumentDeque));
+        case "--processorpath" -> builder.setProcessorPath(readList(argumentDeque));
+        case "--classpath" -> builder.setClassPath(readList(argumentDeque));
+        case "--bootclasspath" -> builder.setBootClassPath(readList(argumentDeque));
+        case "--system" -> builder.setSystem(readOne(next, argumentDeque));
+        case "--javacopts" -> {
           ImmutableList<String> javacOpts = readJavacopts(argumentDeque);
           builder.setLanguageVersion(LanguageVersion.fromJavacopts(javacOpts));
           builder.addAllJavacOpts(javacOpts);
-          break;
-        case "--sources":
-          builder.setSources(readList(argumentDeque));
-          break;
-        case "--output_deps_proto":
-        case "--output_deps":
-          builder.setOutputDeps(readOne(next, argumentDeque));
-          break;
-        case "--header_compilation_output":
-          builder.setHeaderCompilationOutput(readOne(next, argumentDeque));
-          break;
-        case "--output_manifest_proto":
-          builder.setOutputManifest(readOne(next, argumentDeque));
-          break;
-        case "--direct_dependencies":
-          builder.setDirectJars(readList(argumentDeque));
-          break;
-        case "--deps_artifacts":
-          builder.setDepsArtifacts(readList(argumentDeque));
-          break;
-        case "--target_label":
-          builder.setTargetLabel(readOne(next, argumentDeque));
-          break;
-        case "--injecting_rule_kind":
-          builder.setInjectingRuleKind(readOne(next, argumentDeque));
-          break;
-        case "--javac_fallback":
-        case "--nojavac_fallback":
+        }
+        case "--sources" -> builder.setSources(readList(argumentDeque));
+        case "--output_deps_proto", "--output_deps" ->
+            builder.setOutputDeps(readOne(next, argumentDeque));
+        case "--header_compilation_output" ->
+            builder.setHeaderCompilationOutput(readOne(next, argumentDeque));
+        case "--output_manifest_proto" -> builder.setOutputManifest(readOne(next, argumentDeque));
+        case "--direct_dependencies" -> builder.setDirectJars(readList(argumentDeque));
+        case "--deps_artifacts" -> builder.setDepsArtifacts(readList(argumentDeque));
+        case "--target_label" -> builder.setTargetLabel(readOne(next, argumentDeque));
+        case "--injecting_rule_kind" -> builder.setInjectingRuleKind(readOne(next, argumentDeque));
+        case "--javac_fallback", "--nojavac_fallback" -> {
           // TODO(cushon): remove this case once blaze stops passing the flag
-          break;
-        case "--reduce_classpath":
-          builder.setReducedClasspathMode(ReducedClasspathMode.JAVABUILDER_REDUCED);
-          break;
-        case "--noreduce_classpath":
-          builder.setReducedClasspathMode(ReducedClasspathMode.NONE);
-          break;
-        case "--reduce_classpath_mode":
-          builder.setReducedClasspathMode(
-              ReducedClasspathMode.valueOf(readOne(next, argumentDeque)));
-          break;
-        case "--full_classpath_length":
-          builder.setFullClasspathLength(Integer.parseInt(readOne(next, argumentDeque)));
-          break;
-        case "--reduced_classpath_length":
-          builder.setReducedClasspathLength(Integer.parseInt(readOne(next, argumentDeque)));
-          break;
-        case "--profile":
-          builder.setProfile(readOne(next, argumentDeque));
-          break;
-        case "--generated_sources_output":
-        case "--gensrc_output":
-          builder.setGensrcOutput(readOne(next, argumentDeque));
-          break;
-        case "--resource_output":
-          builder.setResourceOutput(readOne(next, argumentDeque));
-          break;
-        case "--help":
-          builder.setHelp(true);
-          break;
-        case "--experimental_fix_deps_tool":
-        case "--strict_java_deps":
-        case "--native_header_output":
-          // accepted (and ignored) for compatibility with JavaBuilder command lines
-          readOne(next, argumentDeque);
-          break;
-        case "--post_processor":
+        }
+        case "--reduce_classpath" ->
+            builder.setReducedClasspathMode(ReducedClasspathMode.JAVABUILDER_REDUCED);
+        case "--noreduce_classpath" -> builder.setReducedClasspathMode(ReducedClasspathMode.NONE);
+        case "--reduce_classpath_mode" ->
+            builder.setReducedClasspathMode(
+                ReducedClasspathMode.valueOf(readOne(next, argumentDeque)));
+        case "--full_classpath_length" ->
+            builder.setFullClasspathLength(Integer.parseInt(readOne(next, argumentDeque)));
+        case "--reduced_classpath_length" ->
+            builder.setReducedClasspathLength(Integer.parseInt(readOne(next, argumentDeque)));
+        case "--profile" -> builder.setProfile(readOne(next, argumentDeque));
+        case "--generated_sources_output", "--gensrc_output" ->
+            builder.setGensrcOutput(readOne(next, argumentDeque));
+        case "--resource_output" -> builder.setResourceOutput(readOne(next, argumentDeque));
+        case "--help" -> builder.setHelp(true);
+        case "--experimental_fix_deps_tool", "--strict_java_deps", "--native_header_output" ->
+            // accepted (and ignored) for compatibility with JavaBuilder command lines
+            readOne(next, argumentDeque);
+        case "--post_processor" -> {
           // accepted (and ignored) for compatibility with JavaBuilder command lines
           ImmutableList<String> unused = readList(argumentDeque);
-          break;
-        case "--compress_jar":
+        }
+        case "--compress_jar" -> {
           // accepted (and ignored) for compatibility with JavaBuilder command lines
-          break;
-        default:
-          throw new IllegalArgumentException("unknown option: " + next);
+        }
+        default -> throw new IllegalArgumentException("unknown option: " + next);
       }
     }
   }
@@ -184,7 +132,7 @@ public final class TurbineOptionsParser {
       if (arg.startsWith("@@")) {
         argumentDeque.addLast(arg.substring(1));
       } else if (arg.startsWith("@")) {
-        Path paramsPath = Paths.get(arg.substring(1));
+        Path paramsPath = Path.of(arg.substring(1));
         if (!Files.exists(paramsPath)) {
           throw new AssertionError("params file does not exist: " + paramsPath);
         }

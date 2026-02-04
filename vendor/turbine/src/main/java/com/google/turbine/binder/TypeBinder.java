@@ -16,7 +16,6 @@
 
 package com.google.turbine.binder;
 
-import static com.google.common.collect.Iterables.getLast;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static java.util.Objects.requireNonNull;
 
@@ -61,7 +60,6 @@ import com.google.turbine.type.AnnoInfo;
 import com.google.turbine.type.Type;
 import com.google.turbine.type.Type.IntersectionTy;
 import com.google.turbine.types.Deannotate;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -191,20 +189,19 @@ public class TypeBinder {
     ImmutableList.Builder<Type> interfaceTypes = ImmutableList.builder();
     Type superClassType;
     switch (base.kind()) {
-      case ENUM:
-        superClassType =
-            Type.ClassTy.create(
-                ImmutableList.of(
-                    Type.ClassTy.SimpleClassTy.create(
-                        ClassSymbol.ENUM,
-                        ImmutableList.of(Type.ClassTy.asNonParametricClassTy(owner)),
-                        ImmutableList.of())));
-        break;
-      case ANNOTATION:
+      case ENUM ->
+          superClassType =
+              Type.ClassTy.create(
+                  ImmutableList.of(
+                      Type.ClassTy.SimpleClassTy.create(
+                          ClassSymbol.ENUM,
+                          ImmutableList.of(Type.ClassTy.asNonParametricClassTy(owner)),
+                          ImmutableList.of())));
+      case ANNOTATION -> {
         superClassType = Type.ClassTy.OBJECT;
         interfaceTypes.add(Type.ClassTy.asNonParametricClassTy(ClassSymbol.ANNOTATION));
-        break;
-      case CLASS:
+      }
+      case CLASS -> {
         if (base.decl().xtnds().isPresent()) {
           superClassType =
               checkClassType(bindingScope, base.decl().xtnds().get(), /* expectInterface= */ false);
@@ -214,18 +211,15 @@ public class TypeBinder {
         } else {
           superClassType = Type.ClassTy.OBJECT;
         }
-        break;
-      case INTERFACE:
+      }
+      case INTERFACE -> {
         if (base.decl().xtnds().isPresent()) {
           throw new AssertionError();
         }
         superClassType = Type.ClassTy.OBJECT;
-        break;
-      case RECORD:
-        superClassType = Type.ClassTy.asNonParametricClassTy(ClassSymbol.RECORD);
-        break;
-      default:
-        throw new AssertionError(base.decl().tykind());
+      }
+      case RECORD -> superClassType = Type.ClassTy.asNonParametricClassTy(ClassSymbol.RECORD);
+      default -> throw new AssertionError(base.decl().tykind());
     }
 
     for (Tree.ClassTy i : base.decl().impls()) {
@@ -236,13 +230,9 @@ public class TypeBinder {
     for (Tree.ClassTy i : base.decl().permits()) {
       Type type = bindClassTy(bindingScope, i);
       switch (type.tyKind()) {
-        case ERROR_TY:
-          continue;
-        case CLASS_TY:
-          permits.add(((Type.ClassTy) type).sym());
-          break;
-        default:
-          throw new AssertionError(type.tyKind());
+        case ERROR_TY -> {}
+        case CLASS_TY -> permits.add(((Type.ClassTy) type).sym());
+        default -> throw new AssertionError(type.tyKind());
       }
     }
 
@@ -268,7 +258,18 @@ public class TypeBinder {
               .build();
     }
 
-    ImmutableList<FieldInfo> fields = bindFields(scope, base.decl().members());
+    ImmutableList<FieldInfo> boundFields = bindFields(scope, base.decl().members());
+    ImmutableList<FieldInfo> fields;
+    if (base.kind().equals(TurbineTyKind.RECORD)) {
+      fields =
+          ImmutableList.<FieldInfo>builder()
+              // Implicit record fields will be output before any declared fields.
+              .addAll(recordFields(components))
+              .addAll(boundFields)
+              .build();
+    } else {
+      fields = boundFields;
+    }
 
     return new SourceTypeBoundClass(
         interfaceTypes.build(),
@@ -314,21 +315,17 @@ public class TypeBinder {
         boundConstructors.add(m);
       } else {
         switch (m.name()) {
-          case "toString":
-            hasToString = m.parameters().isEmpty();
-            break;
-          case "equals":
-            hasEquals =
-                m.parameters().size() == 1
-                    && hasSameErasure(getOnlyElement(m.parameters()).type(), Type.ClassTy.OBJECT);
-            break;
-          case "hashCode":
-            hasHashCode = m.parameters().isEmpty();
-            break;
-          default:
+          case "toString" -> hasToString = m.parameters().isEmpty();
+          case "equals" ->
+              hasEquals =
+                  m.parameters().size() == 1
+                      && hasSameErasure(getOnlyElement(m.parameters()).type(), Type.ClassTy.OBJECT);
+          case "hashCode" -> hasHashCode = m.parameters().isEmpty();
+          default -> {
             if (m.parameters().isEmpty()) {
               componentNamesToDeclare.remove(m.name());
             }
+          }
         }
         boundNonConstructors.add(m);
       }
@@ -410,6 +407,21 @@ public class TypeBinder {
     return methods.build();
   }
 
+  private ImmutableList<FieldInfo> recordFields(ImmutableList<RecordComponentInfo> components) {
+    ImmutableList.Builder<FieldInfo> fields = ImmutableList.builder();
+    for (RecordComponentInfo c : components) {
+      fields.add(
+          new FieldInfo(
+              new FieldSymbol(owner, c.name()),
+              c.type(),
+              TurbineFlag.ACC_PRIVATE | TurbineFlag.ACC_FINAL,
+              c.annotations(),
+              /* decl= */ null,
+              /* value= */ null));
+    }
+    return fields.build();
+  }
+
   private MethodInfo defaultRecordConstructor(
       SyntheticMethods syntheticMethods, ImmutableList<RecordComponentInfo> components) {
     MethodSymbol symbol = syntheticMethods.create(owner, "<init>");
@@ -440,29 +452,22 @@ public class TypeBinder {
   }
 
   private static boolean hasSameErasure(Type a, Type b) {
-    switch (a.tyKind()) {
-      case PRIM_TY:
-        return b.tyKind() == Type.TyKind.PRIM_TY
-            && ((Type.PrimTy) a).primkind() == ((Type.PrimTy) b).primkind();
-      case CLASS_TY:
-        return b.tyKind() == Type.TyKind.CLASS_TY
-            && ((Type.ClassTy) a).sym().equals(((Type.ClassTy) b).sym());
-      case ARRAY_TY:
-        return b.tyKind() == Type.TyKind.ARRAY_TY
-            && hasSameErasure(((Type.ArrayTy) a).elementType(), ((Type.ArrayTy) b).elementType());
-      case TY_VAR:
-        return b.tyKind() == Type.TyKind.TY_VAR
-            && ((Type.TyVar) a).sym().equals(((Type.TyVar) b).sym());
-      case ERROR_TY:
-        return false;
-      case WILD_TY:
-      case INTERSECTION_TY:
-      case METHOD_TY:
-      case NONE_TY:
-      case VOID_TY:
-        // fall out: impossible method parameter types
-    }
-    throw new AssertionError(a.tyKind());
+    return switch (a.tyKind()) {
+      case PRIM_TY ->
+          b.tyKind() == Type.TyKind.PRIM_TY
+              && ((Type.PrimTy) a).primkind() == ((Type.PrimTy) b).primkind();
+      case CLASS_TY ->
+          b.tyKind() == Type.TyKind.CLASS_TY
+              && ((Type.ClassTy) a).sym().equals(((Type.ClassTy) b).sym());
+      case ARRAY_TY ->
+          b.tyKind() == Type.TyKind.ARRAY_TY
+              && hasSameErasure(((Type.ArrayTy) a).elementType(), ((Type.ArrayTy) b).elementType());
+      case TY_VAR ->
+          b.tyKind() == Type.TyKind.TY_VAR && ((Type.TyVar) a).sym().equals(((Type.TyVar) b).sym());
+      case ERROR_TY -> false;
+      case WILD_TY, INTERSECTION_TY, METHOD_TY, NONE_TY, VOID_TY ->
+          throw new AssertionError(a.tyKind());
+    };
   }
 
   private Type checkClassType(CompoundScope scope, ClassTy tree, boolean expectInterface) {
@@ -470,26 +475,18 @@ public class TypeBinder {
     if (type.tyKind().equals(Type.TyKind.ERROR_TY)) {
       return type;
     }
-    // TURBINE-DIFF START
-    if (type instanceof Type.TyVar) {
-      return type;
-    }
-    // TURBINE-DIFF END
-    HeaderBoundClass info = env.getNonNull(((Type.ClassTy) type).sym());
-    boolean isInterface;
-    switch (info.kind()) {
-      case INTERFACE:
-      case ANNOTATION:
-        isInterface = true;
-        break;
-      default:
-        isInterface = false;
-        break;
-    }
+    ClassSymbol sym = ((Type.ClassTy) type).sym();
+    HeaderBoundClass info = env.getNonNull(sym);
+    boolean isInterface =
+        switch (info.kind()) {
+          case INTERFACE, ANNOTATION -> true;
+          default -> false;
+        };
     if (expectInterface != isInterface) {
       log.error(
           tree.position(),
-          expectInterface ? ErrorKind.EXPECTED_INTERFACE : ErrorKind.UNEXPECTED_INTERFACE);
+          expectInterface ? ErrorKind.EXPECTED_INTERFACE : ErrorKind.UNEXPECTED_INTERFACE,
+          sym);
     }
     return type;
   }
@@ -530,14 +527,11 @@ public class TypeBinder {
 
   /** Collect synthetic and implicit methods, including default constructors and enum methods. */
   ImmutableList<MethodInfo> syntheticMethods(SyntheticMethods syntheticMethods) {
-    switch (base.kind()) {
-      case CLASS:
-        return maybeDefaultConstructor(syntheticMethods);
-      case ENUM:
-        return syntheticEnumMethods(syntheticMethods);
-      default:
-        return ImmutableList.of();
-    }
+    return switch (base.kind()) {
+      case CLASS -> maybeDefaultConstructor(syntheticMethods);
+      case ENUM -> syntheticEnumMethods(syntheticMethods);
+      default -> ImmutableList.of();
+    };
   }
 
   private ImmutableList<MethodInfo> maybeDefaultConstructor(SyntheticMethods syntheticMethods) {
@@ -560,7 +554,8 @@ public class TypeBinder {
     int access = visibility.flag();
     access |= (base.access() & TurbineFlag.ACC_STRICT);
     if (!formals.isEmpty()
-        && (getLast(formals).access() & TurbineFlag.ACC_VARARGS) == TurbineFlag.ACC_VARARGS) {
+        && (formals.get(formals.size() - 1).access() & TurbineFlag.ACC_VARARGS)
+            == TurbineFlag.ACC_VARARGS) {
       access |= TurbineFlag.ACC_VARARGS;
     }
     return new MethodInfo(
@@ -742,10 +737,8 @@ public class TypeBinder {
         parameters.add(enclosingInstanceParameter(sym));
       } else {
         switch (base.kind()) {
-          case ENUM:
-            parameters.addAll(enumCtorParams(sym));
-            break;
-          case RECORD:
+          case ENUM -> parameters.addAll(enumCtorParams(sym));
+          case RECORD -> {
             if (t.mods().contains(TurbineModifier.COMPACT_CTOR)) {
               for (RecordComponentInfo component : components) {
                 parameters.add(
@@ -756,9 +749,8 @@ public class TypeBinder {
                         component.access()));
               }
             }
-            break;
-          default:
-            break;
+          }
+          default -> {}
         }
       }
     }
@@ -791,8 +783,7 @@ public class TypeBinder {
     }
 
     switch (base.kind()) {
-      case INTERFACE:
-      case ANNOTATION:
+      case INTERFACE, ANNOTATION -> {
         // interface members have default public visibility
         if ((access & TurbineVisibility.VISIBILITY_MASK) == 0) {
           access |= TurbineFlag.ACC_PUBLIC;
@@ -805,14 +796,13 @@ public class TypeBinder {
         if ((access & TurbineFlag.ACC_FINAL) == TurbineFlag.ACC_FINAL) {
           log.error(t.position(), ErrorKind.UNEXPECTED_MODIFIER, TurbineModifier.FINAL);
         }
-        break;
-      case ENUM:
+      }
+      case ENUM -> {
         if (name.equals("<init>")) {
           access |= TurbineFlag.ACC_PRIVATE;
         }
-        break;
-      default:
-        break;
+      }
+      default -> {}
     }
 
     if (((base.access() & TurbineFlag.ACC_STRICT) == TurbineFlag.ACC_STRICT)
@@ -865,12 +855,9 @@ public class TypeBinder {
       access |= m.flag();
     }
     switch (base.kind()) {
-      case INTERFACE:
-      case ANNOTATION:
-        access |= TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_STATIC;
-        break;
-      default:
-        break;
+      case INTERFACE, ANNOTATION ->
+          access |= TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_STATIC;
+      default -> {}
     }
     return new FieldInfo(sym, type, access, annotations, decl, null);
   }
@@ -927,9 +914,10 @@ public class TypeBinder {
 
   private Type bindTyArg(CompoundScope scope, Tree.Type ty) {
     switch (ty.kind()) {
-      case WILD_TY:
+      case WILD_TY -> {
         return bindWildTy(scope, (Tree.WildTy) ty);
-      default:
+      }
+      default -> {
         Type result = bindTy(scope, ty);
         if (result.tyKind().equals(Type.TyKind.PRIM_TY)) {
           // Omit type annotations when printing the type in the diagnostic, since they're
@@ -938,34 +926,23 @@ public class TypeBinder {
           log.error(ty.position(), ErrorKind.UNEXPECTED_TYPE, Deannotate.deannotate(result));
         }
         return result;
+      }
     }
   }
 
   private Type bindTy(CompoundScope scope, Tree t) {
-    switch (t.kind()) {
-      case CLASS_TY:
-        return bindClassTy(scope, (Tree.ClassTy) t);
-      case PRIM_TY:
-        return bindPrimTy(scope, (Tree.PrimTy) t);
-      case ARR_TY:
-        return bindArrTy(scope, (Tree.ArrTy) t);
-      case VOID_TY:
-        return Type.VOID;
-      default:
-        throw new AssertionError(t.kind());
-    }
+    return switch (t.kind()) {
+      case CLASS_TY -> bindClassTy(scope, (Tree.ClassTy) t);
+      case PRIM_TY -> bindPrimTy(scope, (Tree.PrimTy) t);
+      case ARR_TY -> bindArrTy(scope, (Tree.ArrTy) t);
+      case VOID_TY -> Type.VOID;
+      default -> throw new AssertionError(t.kind());
+    };
   }
 
   private Type bindClassTy(CompoundScope scope, Tree.ClassTy t) {
     // flatten the components of a qualified class type
-    ArrayList<Tree.ClassTy> flat;
-    {
-      ArrayDeque<Tree.ClassTy> builder = new ArrayDeque<>();
-      for (Tree.ClassTy curr = t; curr != null; curr = curr.base().orElse(null)) {
-        builder.addFirst(curr);
-      }
-      flat = new ArrayList<>(builder);
-    }
+    ImmutableList<Tree.ClassTy> flat = t.flatten();
     // the simple names of all classes in the qualified name
     ImmutableList.Builder<Tree.Ident> nameBuilder = ImmutableList.builder();
     for (Tree.ClassTy curr : flat) {
@@ -981,24 +958,24 @@ public class TypeBinder {
     Symbol sym = result.sym();
     int annoIdx = flat.size() - result.remaining().size() - 1;
     ImmutableList<AnnoInfo> annos = bindAnnotations(scope, flat.get(annoIdx).annos());
-    switch (sym.symKind()) {
-      case CLASS:
-        // resolve any remaining types in the qualified name, and their type arguments
-        return bindClassTyRest(scope, flat, names, result, (ClassSymbol) sym, annos);
-      case TY_PARAM:
+    return switch (sym.symKind()) {
+      case CLASS ->
+          // resolve any remaining types in the qualified name, and their type arguments
+          bindClassTyRest(scope, flat, names, result, (ClassSymbol) sym, annos);
+      case TY_PARAM -> {
         if (!result.remaining().isEmpty()) {
           log.error(t.position(), ErrorKind.TYPE_PARAMETER_QUALIFIER);
-          return Type.ErrorTy.create(names, ImmutableList.of());
+          yield Type.ErrorTy.create(names, ImmutableList.of());
         }
-        return Type.TyVar.create((TyVarSymbol) sym, annos);
-      default:
-        throw new AssertionError(sym.symKind());
-    }
+        yield Type.TyVar.create((TyVarSymbol) sym, annos);
+      }
+      default -> throw new AssertionError(sym.symKind());
+    };
   }
 
   private Type bindClassTyRest(
       CompoundScope scope,
-      ArrayList<ClassTy> flat,
+      ImmutableList<ClassTy> flat,
       ImmutableList<Tree.Ident> bits,
       LookupResult result,
       ClassSymbol sym,

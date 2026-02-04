@@ -32,7 +32,6 @@ import org.jspecify.annotations.Nullable;
 /** A JVMS §4.1 ClassFile. */
 public class ClassFile {
 
-  public byte[] bytes;
   private final int access;
   private final int majorVersion;
   private final String name;
@@ -609,30 +608,19 @@ public class ClassFile {
        * null} for target_type values that do not correspond to API elements (see JVMS 4.7.20-B).
        */
       static @Nullable TargetType forTag(int targetType) {
-        switch (targetType) {
-          case 0x00:
-            return CLASS_TYPE_PARAMETER;
-          case 0x01:
-            return METHOD_TYPE_PARAMETER;
-          case 0x10:
-            return SUPERTYPE;
-          case 0x11:
-            return CLASS_TYPE_PARAMETER_BOUND;
-          case 0x12:
-            return METHOD_TYPE_PARAMETER_BOUND;
-          case 0x13:
-            return FIELD;
-          case 0x14:
-            return METHOD_RETURN;
-          case 0x15:
-            return METHOD_RECEIVER_PARAMETER;
-          case 0x16:
-            return METHOD_FORMAL_PARAMETER;
-          case 0x17:
-            return METHOD_THROWS;
-          default:
-            return null;
-        }
+        return switch (targetType) {
+          case 0x00 -> CLASS_TYPE_PARAMETER;
+          case 0x01 -> METHOD_TYPE_PARAMETER;
+          case 0x10 -> SUPERTYPE;
+          case 0x11 -> CLASS_TYPE_PARAMETER_BOUND;
+          case 0x12 -> METHOD_TYPE_PARAMETER_BOUND;
+          case 0x13 -> FIELD;
+          case 0x14 -> METHOD_RETURN;
+          case 0x15 -> METHOD_RECEIVER_PARAMETER;
+          case 0x16 -> METHOD_FORMAL_PARAMETER;
+          case 0x17 -> METHOD_THROWS;
+          default -> null;
+        };
       }
     }
 

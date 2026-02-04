@@ -69,39 +69,42 @@ public class ConstantPoolReader {
   /** Skips over the data for a single constant pool entry and returns the size of the entry. */
   private static int skipConstantPool(ByteReader reader) {
     int tag = reader.u1();
-    switch (tag) {
-      case CONSTANT_CLASS:
-      case CONSTANT_METHOD_TYPE:
-      case CONSTANT_STRING:
-      case CONSTANT_MODULE:
-      case CONSTANT_PACKAGE:
+    return switch (tag) {
+      case CONSTANT_CLASS,
+          CONSTANT_METHOD_TYPE,
+          CONSTANT_STRING,
+          CONSTANT_MODULE,
+          CONSTANT_PACKAGE -> {
         reader.skip(2);
-        return 1;
-      case CONSTANT_DOUBLE:
-      case CONSTANT_LONG:
+        yield 1;
+      }
+      case CONSTANT_DOUBLE, CONSTANT_LONG -> {
         reader.skip(8);
         // "In retrospect, making 8-byte constants take two constant pool entries
         // was a poor choice." -- JVMS 4.4.5
-        return 2;
-      case CONSTANT_FIELDREF:
-      case CONSTANT_METHODREF:
-      case CONSTANT_INTERFACE_METHODREF:
-      case CONSTANT_INTEGER:
-      case CONSTANT_FLOAT:
-      case CONSTANT_NAME_AND_TYPE:
-      case CONSTANT_DYNAMIC:
-      case CONSTANT_INVOKE_DYNAMIC:
+        yield 2;
+      }
+      case CONSTANT_FIELDREF,
+          CONSTANT_METHODREF,
+          CONSTANT_INTERFACE_METHODREF,
+          CONSTANT_INTEGER,
+          CONSTANT_FLOAT,
+          CONSTANT_NAME_AND_TYPE,
+          CONSTANT_DYNAMIC,
+          CONSTANT_INVOKE_DYNAMIC -> {
         reader.skip(4);
-        return 1;
-      case CONSTANT_UTF8:
+        yield 1;
+      }
+      case CONSTANT_UTF8 -> {
         reader.skip(reader.u2());
-        return 1;
-      case CONSTANT_METHOD_HANDLE:
+        yield 1;
+      }
+      case CONSTANT_METHOD_HANDLE -> {
         reader.skip(3);
-        return 1;
-      default:
-        throw new AssertionError(String.format("bad constant pool tag: 0x%x", tag));
-    }
+        yield 1;
+      }
+      default -> throw new AssertionError(String.format("bad constant pool tag: 0x%x", tag));
+    };
   }
 
   /** Reads the CONSTANT_Class_info at the given index. */
@@ -154,21 +157,14 @@ public class ConstantPoolReader {
   Const.Value constant(int index) {
     ByteArrayDataInput reader = byteReader.seek(constantPool[index - 1]);
     byte tag = reader.readByte();
-    switch (tag) {
-      case CONSTANT_LONG:
-        return new Const.LongValue(reader.readLong());
-      case CONSTANT_FLOAT:
-        return new Const.FloatValue(reader.readFloat());
-      case CONSTANT_DOUBLE:
-        return new Const.DoubleValue(reader.readDouble());
-      case CONSTANT_INTEGER:
-        return new Const.IntValue(reader.readInt());
-      case CONSTANT_STRING:
-        return new Const.StringValue(utf8(reader.readUnsignedShort()));
-      case CONSTANT_UTF8:
-        return new Const.StringValue(reader.readUTF());
-      default:
-        throw new AssertionError(String.format("bad tag: %x", tag));
-    }
+    return switch (tag) {
+      case CONSTANT_LONG -> new Const.LongValue(reader.readLong());
+      case CONSTANT_FLOAT -> new Const.FloatValue(reader.readFloat());
+      case CONSTANT_DOUBLE -> new Const.DoubleValue(reader.readDouble());
+      case CONSTANT_INTEGER -> new Const.IntValue(reader.readInt());
+      case CONSTANT_STRING -> new Const.StringValue(utf8(reader.readUnsignedShort()));
+      case CONSTANT_UTF8 -> new Const.StringValue(reader.readUTF());
+      default -> throw new AssertionError(String.format("bad tag: %x", tag));
+    };
   }
 }

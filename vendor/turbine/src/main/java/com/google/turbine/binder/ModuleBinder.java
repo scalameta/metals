@@ -16,6 +16,7 @@
 
 package com.google.turbine.binder;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.turbine.binder.bound.ModuleInfo;
@@ -114,25 +115,15 @@ public class ModuleBinder {
     boolean requiresJavaBase = false;
     for (ModDirective directive : module.module().directives()) {
       switch (directive.directiveKind()) {
-        case REQUIRES:
-          {
-            ModRequires require = (ModRequires) directive;
-            requiresJavaBase |= require.moduleName().equals(ModuleSymbol.JAVA_BASE.name());
-            requires.add(bindRequires(require));
-            break;
-          }
-        case EXPORTS:
-          exports.add(bindExports((ModExports) directive));
-          break;
-        case OPENS:
-          opens.add(bindOpens((ModOpens) directive));
-          break;
-        case USES:
-          uses.add(bindUses((ModUses) directive));
-          break;
-        case PROVIDES:
-          provides.add(bindProvides((ModProvides) directive));
-          break;
+        case REQUIRES -> {
+          ModRequires require = (ModRequires) directive;
+          requiresJavaBase |= require.moduleName().equals(ModuleSymbol.JAVA_BASE.name());
+          requires.add(bindRequires(require));
+        }
+        case EXPORTS -> exports.add(bindExports((ModExports) directive));
+        case OPENS -> opens.add(bindOpens((ModOpens) directive));
+        case USES -> uses.add(bindUses((ModUses) directive));
+        case PROVIDES -> provides.add(bindProvides((ModProvides) directive));
       }
     }
     if (!requiresJavaBase && !module.module().moduleName().equals(ModuleSymbol.JAVA_BASE.name())) {
@@ -166,17 +157,14 @@ public class ModuleBinder {
     String moduleName = directive.moduleName();
     int flags = 0;
     for (TurbineModifier mod : directive.mods()) {
-      switch (mod) {
-        case TRANSITIVE:
-          flags |= mod.flag();
-          break;
-        case STATIC:
-          // the 'static' modifier on requires translates to ACC_STATIC_PHASE, not ACC_STATIC
-          flags |= TurbineFlag.ACC_STATIC_PHASE;
-          break;
-        default:
-          throw new AssertionError(mod);
-      }
+      flags |=
+          switch (mod) {
+            case TRANSITIVE -> mod.flag();
+            case STATIC ->
+                // the 'static' modifier on requires translates to ACC_STATIC_PHASE, not ACC_STATIC
+                TurbineFlag.ACC_STATIC_PHASE;
+            default -> throw new AssertionError(mod);
+          };
     }
     ModuleInfo requires = moduleEnv.get(new ModuleSymbol(moduleName));
     return new RequireInfo(moduleName, flags, requires != null ? requires.version() : null);
@@ -208,21 +196,15 @@ public class ModuleBinder {
     LookupKey key = new LookupKey(simpleNames);
     LookupResult result = scope.lookup(key);
     if (result == null) {
-      // TURBINE-DIFF START
-      return ClassSymbol.ERROR;
-      // throw error(
-      //     ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(Joiner.on('/').join(simpleNames)));
-      // TURBINE-DIFF END
+      throw error(
+          ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(Joiner.on('/').join(simpleNames)));
     }
     ClassSymbol sym = (ClassSymbol) result.sym();
     for (Tree.Ident name : result.remaining()) {
       ClassSymbol next = Resolve.resolve(env, /* origin= */ null, sym, name);
       if (next == null) {
-        // TURBINE-DIFF START
-        return ClassSymbol.ERROR;
-        // throw error(
-        //     ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(sym.binaryName() + '$' + name));
-        // TURBINE-DIFF END
+        throw error(
+            ErrorKind.SYMBOL_NOT_FOUND, pos, new ClassSymbol(sym.binaryName() + '$' + name));
       }
       sym = next;
     }

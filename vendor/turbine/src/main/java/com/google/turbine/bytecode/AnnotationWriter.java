@@ -59,55 +59,26 @@ public class AnnotationWriter {
 
   void writeElementValue(ElementValue value) {
     switch (value.kind()) {
-      case CONST:
-        writeConstElementValue(((ConstValue) value).value());
-        break;
-      case ENUM:
-        writeEnumElementValue((EnumConstValue) value);
-        break;
-      case CLASS:
-        writeClassElementValue((ConstTurbineClassValue) value);
-        break;
-      case ARRAY:
-        writeArrayElementValue((ArrayValue) value);
-        break;
-      case ANNOTATION:
-        writeAnnotationElementValue((ConstTurbineAnnotationValue) value);
-        break;
+      case CONST -> writeConstElementValue(((ConstValue) value).value());
+      case ENUM -> writeEnumElementValue((EnumConstValue) value);
+      case CLASS -> writeClassElementValue((ConstTurbineClassValue) value);
+      case ARRAY -> writeArrayElementValue((ArrayValue) value);
+      case ANNOTATION -> writeAnnotationElementValue((ConstTurbineAnnotationValue) value);
     }
   }
 
   private void writeConstElementValue(Value value) {
     switch (value.constantTypeKind()) {
-      case BYTE:
-        writeConst('B', pool.integer(((Const.ByteValue) value).value()));
-        break;
-      case CHAR:
-        writeConst('C', pool.integer(((Const.CharValue) value).value()));
-        break;
-      case SHORT:
-        writeConst('S', pool.integer(((Const.ShortValue) value).value()));
-        break;
-      case DOUBLE:
-        writeConst('D', pool.doubleInfo(((Const.DoubleValue) value).value()));
-        break;
-      case FLOAT:
-        writeConst('F', pool.floatInfo(((Const.FloatValue) value).value()));
-        break;
-      case INT:
-        writeConst('I', pool.integer(((Const.IntValue) value).value()));
-        break;
-      case LONG:
-        writeConst('J', pool.longInfo(((Const.LongValue) value).value()));
-        break;
-      case STRING:
-        writeConst('s', pool.utf8(((Const.StringValue) value).value()));
-        break;
-      case BOOLEAN:
-        writeConst('Z', pool.integer(((Const.BooleanValue) value).value() ? 1 : 0));
-        break;
-      default:
-        throw new AssertionError(value.constantTypeKind());
+      case BYTE -> writeConst('B', pool.integer(((Const.ByteValue) value).value()));
+      case CHAR -> writeConst('C', pool.integer(((Const.CharValue) value).value()));
+      case SHORT -> writeConst('S', pool.integer(((Const.ShortValue) value).value()));
+      case DOUBLE -> writeConst('D', pool.doubleInfo(((Const.DoubleValue) value).value()));
+      case FLOAT -> writeConst('F', pool.floatInfo(((Const.FloatValue) value).value()));
+      case INT -> writeConst('I', pool.integer(((Const.IntValue) value).value()));
+      case LONG -> writeConst('J', pool.longInfo(((Const.LongValue) value).value()));
+      case STRING -> writeConst('s', pool.utf8(((Const.StringValue) value).value()));
+      case BOOLEAN -> writeConst('Z', pool.integer(((Const.BooleanValue) value).value() ? 1 : 0));
+      default -> throw new AssertionError(value.constantTypeKind());
     }
   }
 
@@ -158,25 +129,16 @@ public class AnnotationWriter {
 
   private void writeTypeAnnotationTarget(Target target) {
     switch (target.kind()) {
-      case EMPTY:
-        break;
-      case TYPE_PARAMETER:
-        output.writeByte(((TypeParameterTarget) target).index());
-        break;
-      case FORMAL_PARAMETER:
-        output.writeByte(((FormalParameterTarget) target).index());
-        break;
-      case THROWS:
-        output.writeShort(((ThrowsTarget) target).index());
-        break;
-      case SUPERTYPE:
-        output.writeShort(((SuperTypeTarget) target).index());
-        break;
-      case TYPE_PARAMETER_BOUND:
+      case EMPTY -> {}
+      case TYPE_PARAMETER -> output.writeByte(((TypeParameterTarget) target).index());
+      case FORMAL_PARAMETER -> output.writeByte(((FormalParameterTarget) target).index());
+      case THROWS -> output.writeShort(((ThrowsTarget) target).index());
+      case SUPERTYPE -> output.writeShort(((SuperTypeTarget) target).index());
+      case TYPE_PARAMETER_BOUND -> {
         TypeParameterBoundTarget typeParameterBoundTarget = (TypeParameterBoundTarget) target;
         output.writeByte(typeParameterBoundTarget.typeParameterIndex());
         output.writeByte(typeParameterBoundTarget.boundIndex());
-        break;
+      }
     }
   }
 }

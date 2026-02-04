@@ -50,57 +50,29 @@ public class AttributeWriter {
   /** Writes a single attribute. */
   public void write(ByteArrayDataOutput output, Attribute attribute) {
     switch (attribute.kind()) {
-      case SIGNATURE:
-        writeSignatureAttribute(output, (Signature) attribute);
-        break;
-      case EXCEPTIONS:
-        writeExceptionsAttribute(output, (ExceptionsAttribute) attribute);
-        break;
-      case INNER_CLASSES:
-        writeInnerClasses(output, (InnerClasses) attribute);
-        break;
-      case CONSTANT_VALUE:
-        writeConstantValue(output, (ConstantValue) attribute);
-        break;
-      case RUNTIME_VISIBLE_ANNOTATIONS:
-      case RUNTIME_INVISIBLE_ANNOTATIONS:
-        writeAnnotation(output, (Attribute.Annotations) attribute);
-        break;
-      case ANNOTATION_DEFAULT:
-        writeAnnotationDefault(output, (Attribute.AnnotationDefault) attribute);
-        break;
-      case RUNTIME_VISIBLE_PARAMETER_ANNOTATIONS:
-      case RUNTIME_INVISIBLE_PARAMETER_ANNOTATIONS:
-        writeParameterAnnotations(output, (Attribute.ParameterAnnotations) attribute);
-        break;
-      case DEPRECATED:
-        writeDeprecated(output, attribute);
-        break;
-      case RUNTIME_INVISIBLE_TYPE_ANNOTATIONS:
-      case RUNTIME_VISIBLE_TYPE_ANNOTATIONS:
-        writeTypeAnnotation(output, (Attribute.TypeAnnotations) attribute);
-        break;
-      case METHOD_PARAMETERS:
-        writeMethodParameters(output, (Attribute.MethodParameters) attribute);
-        break;
-      case MODULE:
-        writeModule(output, (Attribute.Module) attribute);
-        break;
-      case NEST_HOST:
-        writeNestHost(output, (Attribute.NestHost) attribute);
-        break;
-      case NEST_MEMBERS:
-        writeNestMembers(output, (Attribute.NestMembers) attribute);
-        break;
-      case RECORD:
-        writeRecord(output, (Attribute.Record) attribute);
-        break;
-      case PERMITTED_SUBCLASSES:
-        writePermittedSubclasses(output, (Attribute.PermittedSubclasses) attribute);
-        break;
-      case TURBINE_TRANSITIVE_JAR:
-        writeTurbineTransitiveJar(output, (Attribute.TurbineTransitiveJar) attribute);
-        break;
+      case SIGNATURE -> writeSignatureAttribute(output, (Signature) attribute);
+      case EXCEPTIONS -> writeExceptionsAttribute(output, (ExceptionsAttribute) attribute);
+      case INNER_CLASSES -> writeInnerClasses(output, (InnerClasses) attribute);
+      case CONSTANT_VALUE -> writeConstantValue(output, (ConstantValue) attribute);
+      case RUNTIME_VISIBLE_ANNOTATIONS, RUNTIME_INVISIBLE_ANNOTATIONS ->
+          writeAnnotation(output, (Attribute.Annotations) attribute);
+      case ANNOTATION_DEFAULT ->
+          writeAnnotationDefault(output, (Attribute.AnnotationDefault) attribute);
+      case RUNTIME_VISIBLE_PARAMETER_ANNOTATIONS, RUNTIME_INVISIBLE_PARAMETER_ANNOTATIONS ->
+          writeParameterAnnotations(output, (Attribute.ParameterAnnotations) attribute);
+      case DEPRECATED -> writeDeprecated(output, attribute);
+      case RUNTIME_INVISIBLE_TYPE_ANNOTATIONS, RUNTIME_VISIBLE_TYPE_ANNOTATIONS ->
+          writeTypeAnnotation(output, (Attribute.TypeAnnotations) attribute);
+      case METHOD_PARAMETERS ->
+          writeMethodParameters(output, (Attribute.MethodParameters) attribute);
+      case MODULE -> writeModule(output, (Attribute.Module) attribute);
+      case NEST_HOST -> writeNestHost(output, (Attribute.NestHost) attribute);
+      case NEST_MEMBERS -> writeNestMembers(output, (Attribute.NestMembers) attribute);
+      case RECORD -> writeRecord(output, (Attribute.Record) attribute);
+      case PERMITTED_SUBCLASSES ->
+          writePermittedSubclasses(output, (Attribute.PermittedSubclasses) attribute);
+      case TURBINE_TRANSITIVE_JAR ->
+          writeTurbineTransitiveJar(output, (Attribute.TurbineTransitiveJar) attribute);
     }
   }
 
@@ -136,35 +108,16 @@ public class AttributeWriter {
     output.writeInt(2);
     Const.Value value = attribute.value;
     switch (value.constantTypeKind()) {
-      case INT:
-        output.writeShort(pool.integer(((Const.IntValue) value).value()));
-        break;
-      case CHAR:
-        output.writeShort(pool.integer(((Const.CharValue) value).value()));
-        break;
-      case SHORT:
-        output.writeShort(pool.integer(((Const.ShortValue) value).value()));
-        break;
-      case BYTE:
-        output.writeShort(pool.integer(((Const.ByteValue) value).value()));
-        break;
-      case LONG:
-        output.writeShort(pool.longInfo(((Const.LongValue) value).value()));
-        break;
-      case DOUBLE:
-        output.writeShort(pool.doubleInfo(((Const.DoubleValue) value).value()));
-        break;
-      case FLOAT:
-        output.writeShort(pool.floatInfo(((Const.FloatValue) value).value()));
-        break;
-      case BOOLEAN:
-        output.writeShort(pool.integer(((Const.BooleanValue) value).value() ? 1 : 0));
-        break;
-      case STRING:
-        output.writeShort(pool.string(((Const.StringValue) value).value()));
-        break;
-      default:
-        throw new AssertionError(value.constantTypeKind());
+      case INT -> output.writeShort(pool.integer(((Const.IntValue) value).value()));
+      case CHAR -> output.writeShort(pool.integer(((Const.CharValue) value).value()));
+      case SHORT -> output.writeShort(pool.integer(((Const.ShortValue) value).value()));
+      case BYTE -> output.writeShort(pool.integer(((Const.ByteValue) value).value()));
+      case LONG -> output.writeShort(pool.longInfo(((Const.LongValue) value).value()));
+      case DOUBLE -> output.writeShort(pool.doubleInfo(((Const.DoubleValue) value).value()));
+      case FLOAT -> output.writeShort(pool.floatInfo(((Const.FloatValue) value).value()));
+      case BOOLEAN -> output.writeShort(pool.integer(((Const.BooleanValue) value).value() ? 1 : 0));
+      case STRING -> output.writeShort(pool.string(((Const.StringValue) value).value()));
+      case NULL -> throw new AssertionError(value.constantTypeKind());
     }
   }
 

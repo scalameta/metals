@@ -1,0 +1,4 @@
+pkg=foo class C ctor=(x: Int, y: String = <expr>)
+  pkg=foo def f params=(a: Int = <expr>, b: String = <expr>) : String
+pkg=foo object C
+  pkg=foo def g params=(a: Int, b: Long = <expr>) : Long

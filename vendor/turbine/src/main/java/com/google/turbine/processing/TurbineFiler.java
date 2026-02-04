@@ -105,26 +105,17 @@ public class TurbineFiler implements Filer {
     for (TurbineJavaFileObject e : files) {
       String path = e.getName();
       switch (e.getKind()) {
-        case SOURCE:
-          roundSources.put(path, new SourceFile(path, e.contents()));
-          break;
-        case CLASS:
-          generatedClasses.put(path, e.bytes());
-          break;
-        case OTHER:
+        case SOURCE -> roundSources.put(path, new SourceFile(path, e.contents()));
+        case CLASS -> generatedClasses.put(path, e.bytes());
+        case OTHER -> {
           switch (e.location()) {
-            case CLASS_OUTPUT:
-              generatedClasses.put(path, e.bytes());
-              break;
-            case SOURCE_OUTPUT:
-              this.generatedSources.put(path, new SourceFile(path, e.contents()));
-              break;
-            default:
-              throw new AssertionError(e.location());
+            case CLASS_OUTPUT -> generatedClasses.put(path, e.bytes());
+            case SOURCE_OUTPUT ->
+                this.generatedSources.put(path, new SourceFile(path, e.contents()));
+            default -> throw new AssertionError(e.location());
           }
-          break;
-        case HTML:
-          throw new UnsupportedOperationException(String.valueOf(e.getKind()));
+        }
+        case HTML -> throw new UnsupportedOperationException(String.valueOf(e.getKind()));
       }
     }
     files.clear();
@@ -181,31 +172,34 @@ public class TurbineFiler implements Filer {
     StandardLocation standardLocation = (StandardLocation) location;
     String path = packageRelativePath(pkg, relativeName);
     switch (standardLocation) {
-      case CLASS_OUTPUT:
+      case CLASS_OUTPUT -> {
         byte[] generated = generatedClasses.get(path);
         if (generated == null) {
           throw new FileNotFoundException(path);
         }
         return new BytesFileObject(path, Suppliers.ofInstance(generated));
-      case SOURCE_OUTPUT:
+      }
+      case SOURCE_OUTPUT -> {
         SourceFile source = generatedSources.get(path);
         if (source == null) {
           throw new FileNotFoundException(path);
         }
         return new SourceFileObject(path, source.source());
-      case ANNOTATION_PROCESSOR_PATH:
+      }
+      case ANNOTATION_PROCESSOR_PATH -> {
         if (loader.getResource(path) == null) {
           throw new FileNotFoundException(path);
         }
         return new ResourceFileObject(loader, path);
-      case CLASS_PATH:
+      }
+      case CLASS_PATH -> {
         Supplier<byte[]> bytes = classPath.apply(path);
         if (bytes == null) {
           throw new FileNotFoundException(path);
         }
         return new BytesFileObject(path, bytes);
-      default:
-        throw new IllegalArgumentException(standardLocation.getName());
+      }
+      default -> throw new IllegalArgumentException(standardLocation.getName());
     }
   }
 

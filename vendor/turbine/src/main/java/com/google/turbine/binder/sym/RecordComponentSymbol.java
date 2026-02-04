@@ -53,10 +53,9 @@ public class RecordComponentSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof RecordComponentSymbol)) {
+    if (!(obj instanceof RecordComponentSymbol other)) {
       return false;
     }
-    RecordComponentSymbol other = (RecordComponentSymbol) obj;
     return name().equals(other.name()) && owner().equals(other.owner());
   }
 

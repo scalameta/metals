@@ -53,10 +53,9 @@ public class FieldSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof FieldSymbol)) {
+    if (!(obj instanceof FieldSymbol other)) {
       return false;
     }
-    FieldSymbol other = (FieldSymbol) obj;
     return name().equals(other.name()) && owner().equals(other.owner());
   }
 

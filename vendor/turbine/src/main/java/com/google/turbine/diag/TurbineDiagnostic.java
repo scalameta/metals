@@ -96,16 +96,13 @@ public class TurbineDiagnostic {
       SourceFile source,
       int position) {
     switch (kind) {
-      case SYMBOL_NOT_FOUND:
-        {
+      case SYMBOL_NOT_FOUND ->
           checkArgument(
               args.size() == 1 && getOnlyElement(args) instanceof ClassSymbol,
               "diagnostic (%s) has invalid argument %s",
               kind,
               args);
-          break;
-        }
-      default: // fall out
+      default -> {}
     }
     return new TurbineDiagnostic(severity, kind, args, source, position);
   }
@@ -148,10 +145,9 @@ public class TurbineDiagnostic {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof TurbineDiagnostic)) {
+    if (!(obj instanceof TurbineDiagnostic that)) {
       return false;
     }
-    TurbineDiagnostic that = (TurbineDiagnostic) obj;
     return severity.equals(that.severity)
         && kind.equals(that.kind)
         && args.equals(that.args)

@@ -106,7 +106,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof BooleanValue && value == ((BooleanValue) obj).value();
+      return obj instanceof BooleanValue booleanValue && value == booleanValue.value();
     }
   }
 
@@ -150,7 +150,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof IntValue && value == ((IntValue) obj).value;
+      return obj instanceof IntValue intValue && value == intValue.value;
     }
   }
 
@@ -193,7 +193,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof LongValue && value == ((LongValue) obj).value;
+      return obj instanceof LongValue longValue && value == longValue.value;
     }
   }
 
@@ -236,7 +236,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof CharValue && value == ((CharValue) obj).value;
+      return obj instanceof CharValue charValue && value == charValue.value;
     }
   }
 
@@ -282,7 +282,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof FloatValue && value == ((FloatValue) obj).value;
+      return obj instanceof FloatValue floatValue && value == floatValue.value;
     }
   }
 
@@ -334,7 +334,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof DoubleValue && value == ((DoubleValue) obj).value;
+      return obj instanceof DoubleValue doubleValue && value == doubleValue.value;
     }
   }
 
@@ -377,7 +377,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof StringValue && value.equals(((StringValue) obj).value);
+      return obj instanceof StringValue stringValue && value.equals(stringValue.value);
     }
   }
 
@@ -420,7 +420,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof ShortValue && value == ((ShortValue) obj).value;
+      return obj instanceof ShortValue shortValue && value == shortValue.value;
     }
   }
 
@@ -454,7 +454,7 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof ByteValue && value == ((ByteValue) obj).value;
+      return obj instanceof ByteValue byteValue && value == byteValue.value;
     }
 
     @Override
@@ -493,7 +493,8 @@ public abstract class Const {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof ArrayInitValue && elements.equals(((ArrayInitValue) obj).elements);
+      return obj instanceof ArrayInitValue arrayInitValue
+          && elements.equals(arrayInitValue.elements);
     }
 
     @Override

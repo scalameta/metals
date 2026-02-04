@@ -51,23 +51,14 @@ public class ConstantPool {
   }
 
   /** The number of constant pool entries the given kind takes up. */
-  private static short width(Kind kind) {
-    switch (kind) {
-      case CLASS_INFO:
-      case STRING:
-      case INTEGER:
-      case UTF8:
-      case FLOAT:
-      case MODULE:
-      case PACKAGE:
-        return 1;
-      case LONG:
-      case DOUBLE:
-        // "In retrospect, making 8-byte constants take two constant pool entries
-        // was a poor choice." -- JVMS 4.4.5
-        return 2;
-    }
-    throw new AssertionError(kind);
+  private static int width(Kind kind) {
+    return switch (kind) {
+      case CLASS_INFO, STRING, INTEGER, UTF8, FLOAT, MODULE, PACKAGE -> 1;
+      case LONG, DOUBLE ->
+          // "In retrospect, making 8-byte constants take two constant pool entries
+          // was a poor choice." -- JVMS 4.4.5
+          2;
+    };
   }
 
   /** A constant pool entry. */

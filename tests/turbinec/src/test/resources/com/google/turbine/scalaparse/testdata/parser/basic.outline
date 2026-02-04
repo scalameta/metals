@@ -1,0 +1,7 @@
+pkg=foo.bar import foo . bar . Baz
+pkg=foo.bar class Box case tparams=[A <: AnyRef, B >: Null] ctor=(x mods=[val]: A, y: Int = <expr>) parents=[Base, Trait]
+  pkg=foo.bar def foo params=(x: Int) : String
+  pkg=foo.bar val bar: Int = <expr>
+  pkg=foo.bar type Alias = List [ A ]
+pkg=foo.bar object Box
+  pkg=foo.bar def apply params=(x: Int) : Box [ Int ]

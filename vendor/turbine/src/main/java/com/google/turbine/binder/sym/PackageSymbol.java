@@ -36,7 +36,8 @@ public class PackageSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof PackageSymbol && binaryName.equals(((PackageSymbol) obj).binaryName);
+    return obj instanceof PackageSymbol packageSymbol
+        && binaryName.equals(packageSymbol.binaryName);
   }
 
   @Override

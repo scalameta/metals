@@ -102,17 +102,15 @@ public class SigWriter {
 
   private void wildTyArgSig(WildTySig sig) {
     switch (sig.boundKind()) {
-      case NONE:
-        sb.append('*');
-        break;
-      case LOWER:
+      case NONE -> sb.append('*');
+      case LOWER -> {
         sb.append('-');
         writeTySig(((LowerBoundTySig) sig).bound());
-        break;
-      case UPPER:
+      }
+      case UPPER -> {
         sb.append('+');
         writeTySig(((UpperBoundTySig) sig).bound());
-        break;
+      }
     }
   }
 
@@ -127,32 +125,15 @@ public class SigWriter {
 
   public void writePrimitiveTySig(BaseTySig ty) {
     switch (ty.type()) {
-      case BYTE:
-        sb.append('B');
-        break;
-      case CHAR:
-        sb.append('C');
-        break;
-      case DOUBLE:
-        sb.append('D');
-        break;
-      case FLOAT:
-        sb.append('F');
-        break;
-      case INT:
-        sb.append('I');
-        break;
-      case LONG:
-        sb.append('J');
-        break;
-      case SHORT:
-        sb.append('S');
-        break;
-      case BOOLEAN:
-        sb.append('Z');
-        break;
-      default:
-        throw new AssertionError(ty.type());
+      case BYTE -> sb.append('B');
+      case CHAR -> sb.append('C');
+      case DOUBLE -> sb.append('D');
+      case FLOAT -> sb.append('F');
+      case INT -> sb.append('I');
+      case LONG -> sb.append('J');
+      case SHORT -> sb.append('S');
+      case BOOLEAN -> sb.append('Z');
+      default -> throw new AssertionError(ty.type());
     }
   }
 
@@ -178,24 +159,12 @@ public class SigWriter {
 
   private void writeTySig(TySig p) {
     switch (p.kind()) {
-      case VOID_TY_SIG:
-        sb.append('V');
-        break;
-      case BASE_TY_SIG:
-        writePrimitiveTySig((BaseTySig) p);
-        break;
-      case CLASS_TY_SIG:
-        writeClassTySig((ClassTySig) p);
-        break;
-      case ARRAY_TY_SIG:
-        writeArrayTySig((ArrayTySig) p);
-        break;
-      case TY_VAR_SIG:
-        writeTyVarSig((TyVarSig) p);
-        break;
-      case WILD_TY_SIG:
-        wildTyArgSig((WildTySig) p);
-        break;
+      case VOID_TY_SIG -> sb.append('V');
+      case BASE_TY_SIG -> writePrimitiveTySig((BaseTySig) p);
+      case CLASS_TY_SIG -> writeClassTySig((ClassTySig) p);
+      case ARRAY_TY_SIG -> writeArrayTySig((ArrayTySig) p);
+      case TY_VAR_SIG -> writeTyVarSig((TyVarSig) p);
+      case WILD_TY_SIG -> wildTyArgSig((WildTySig) p);
     }
   }
 

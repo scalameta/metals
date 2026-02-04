@@ -33,29 +33,15 @@ import java.util.function.Function;
 /** Generic type erasure. */
 public final class Erasure {
   public static Type erase(Type ty, Function<TyVarSymbol, TyVarInfo> tenv) {
-    switch (ty.tyKind()) {
-      case CLASS_TY:
-        return eraseClassTy((Type.ClassTy) ty);
-      case ARRAY_TY:
-        return eraseArrayTy((Type.ArrayTy) ty, tenv);
-      case TY_VAR:
-        return eraseTyVar((TyVar) ty, tenv);
-      case INTERSECTION_TY:
-        return eraseIntersectionTy((Type.IntersectionTy) ty, tenv);
-      case WILD_TY:
-        return eraseWildTy((Type.WildTy) ty, tenv);
-      case METHOD_TY:
-        return erasureMethodTy((Type.MethodTy) ty, tenv);
-      // TURBINE-DIFF START
-      case ERROR_TY:
-        return ClassTy.OBJECT;
-      // TURBINE-DIFF END
-      case PRIM_TY:
-      case VOID_TY:
-      case NONE_TY:
-        return ty;
-    }
-    throw new AssertionError(ty.tyKind());
+    return switch (ty.tyKind()) {
+      case CLASS_TY -> eraseClassTy((Type.ClassTy) ty);
+      case ARRAY_TY -> eraseArrayTy((Type.ArrayTy) ty, tenv);
+      case TY_VAR -> eraseTyVar((TyVar) ty, tenv);
+      case INTERSECTION_TY -> eraseIntersectionTy((Type.IntersectionTy) ty, tenv);
+      case WILD_TY -> eraseWildTy((Type.WildTy) ty, tenv);
+      case METHOD_TY -> erasureMethodTy((Type.MethodTy) ty, tenv);
+      case PRIM_TY, VOID_TY, ERROR_TY, NONE_TY -> ty;
+    };
   }
 
   private static ImmutableList<Type> erase(
@@ -94,14 +80,10 @@ public final class Erasure {
   }
 
   private static Type eraseWildTy(WildTy ty, Function<TyVarSymbol, TyVarInfo> tenv) {
-    switch (ty.boundKind()) {
-      case NONE:
-      case LOWER:
-        return ClassTy.OBJECT;
-      case UPPER:
-        return erase(ty.bound(), tenv);
-    }
-    throw new AssertionError(ty.boundKind());
+    return switch (ty.boundKind()) {
+      case NONE, LOWER -> ClassTy.OBJECT;
+      case UPPER -> erase(ty.bound(), tenv);
+    };
   }
 
   private static Type erasureMethodTy(MethodTy ty, Function<TyVarSymbol, TyVarInfo> tenv) {

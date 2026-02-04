@@ -18,8 +18,6 @@ package com.google.turbine.binder;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.auto.value.AutoValue;
-import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -58,6 +56,7 @@ import com.google.turbine.binder.sym.ModuleSymbol;
 import com.google.turbine.diag.SourceFile;
 import com.google.turbine.diag.TurbineDiagnostic;
 import com.google.turbine.diag.TurbineError;
+import com.google.turbine.diag.TurbineError.ErrorKind;
 import com.google.turbine.diag.TurbineLog;
 import com.google.turbine.model.Const;
 import com.google.turbine.model.TurbineFlag;
@@ -68,7 +67,6 @@ import com.google.turbine.type.Type;
 import java.time.Duration;
 import java.util.Optional;
 import javax.annotation.processing.Processor;
-import javax.tools.Diagnostic;
 import org.jspecify.annotations.Nullable;
 
 /** The entry point for analysis. */
@@ -140,7 +138,7 @@ public final class Binder {
       Optional<String> moduleVersion) {
     ImmutableList<PreprocessedCompUnit> preProcessedUnits = CompUnitPreprocessor.preprocess(units);
 
-    SimpleEnv<ClassSymbol, SourceBoundClass> ienv = bindSourceBoundClasses(log, preProcessedUnits);
+    SimpleEnv<ClassSymbol, SourceBoundClass> ienv = bindSourceBoundClasses(preProcessedUnits);
 
     ImmutableSet<ClassSymbol> syms = ienv.asMap().keySet();
 
@@ -187,7 +185,10 @@ public final class Binder {
             log);
     tenv =
         canonicalizeTypes(
-            syms, tenv, CompoundEnv.<ClassSymbol, TypeBoundClass>of(classPathEnv).append(tenv));
+            syms,
+            tenv,
+            CompoundEnv.<ClassSymbol, TypeBoundClass>of(classPathEnv).append(tenv),
+            log);
 
     ImmutableList<SourceModuleInfo> boundModules =
         bindModules(
@@ -214,23 +215,14 @@ public final class Binder {
 
   /** Records enclosing declarations of member classes, and group classes by compilation unit. */
   static SimpleEnv<ClassSymbol, SourceBoundClass> bindSourceBoundClasses(
-      TurbineLog log, ImmutableList<PreprocessedCompUnit> units) {
+      ImmutableList<PreprocessedCompUnit> units) {
     SimpleEnv.Builder<ClassSymbol, SourceBoundClass> envBuilder = SimpleEnv.builder();
     for (PreprocessedCompUnit unit : units) {
       for (SourceBoundClass type : unit.types()) {
         SourceBoundClass prev = envBuilder.put(type.sym(), type);
         if (prev != null) {
-          // TURBINE-DIFF START
-          log.diagnostic(
-              Diagnostic.Kind.ERROR,
-              "Duplicate declaration of "
-                  + type.sym().binaryName()
-                  + " in "
-                  + unit.source().path());
-          // throw TurbineError.format(
-          //     unit.source(), type.decl().position(), ErrorKind.DUPLICATE_DECLARATION,
-          // type.sym());
-          // TURBINE-DIFF END
+          throw TurbineError.format(
+              unit.source(), type.decl().position(), ErrorKind.DUPLICATE_DECLARATION, type.sym());
         }
       }
     }
@@ -267,9 +259,7 @@ public final class Binder {
     }
     CompoundScope topLevel = CompoundScope.base(tli.scope()).append(javaLang);
     for (PreprocessedCompUnit unit : units) {
-      ImmutableList<String> packagename =
-          ImmutableList.copyOf(Splitter.on('/').omitEmptyStrings().split(unit.packageName()));
-      Scope packageScope = tli.lookupPackage(packagename);
+      Scope packageScope = tli.lookupPackage(unit.packageName());
       CanonicalSymbolResolver importResolver =
           new CanonicalResolver(
               unit.packageName(),
@@ -338,11 +328,12 @@ public final class Binder {
   private static Env<ClassSymbol, SourceTypeBoundClass> canonicalizeTypes(
       ImmutableSet<ClassSymbol> syms,
       Env<ClassSymbol, SourceTypeBoundClass> stenv,
-      Env<ClassSymbol, TypeBoundClass> tenv) {
+      Env<ClassSymbol, TypeBoundClass> tenv,
+      TurbineLog log) {
     SimpleEnv.Builder<ClassSymbol, SourceTypeBoundClass> builder = SimpleEnv.builder();
     for (ClassSymbol sym : syms) {
       SourceTypeBoundClass base = stenv.getNonNull(sym);
-      builder.put(sym, CanonicalTypeBinder.bind(sym, base, tenv));
+      builder.put(sym, CanonicalTypeBinder.bind(log.withSource(base.source()), sym, base, tenv));
     }
     return builder.build();
   }
@@ -402,36 +393,7 @@ public final class Binder {
         if (!isConst(field)) {
           continue;
         }
-        completers.put(
-            field.sym(),
-            new LazyEnv.Completer<FieldSymbol, Const.Value, Const.Value>() {
-              @Override
-              public Const.@Nullable Value complete(
-                  Env<FieldSymbol, Const.Value> env1, FieldSymbol k) {
-                try {
-                  return new ConstEvaluator(
-                          sym,
-                          sym,
-                          info.memberImports(),
-                          info.source(),
-                          info.scope(),
-                          env1,
-                          baseEnv,
-                          log.withSource(info.source()))
-                      .evalFieldInitializer(
-                          // we're processing fields bound from sources in the compilation
-                          requireNonNull(field.decl()).init().get(), field.type());
-                } catch (LazyEnv.LazyBindingError e) {
-                  // fields initializers are allowed to reference the field being initialized,
-                  // but if they do they aren't constants
-                  return null;
-                  // TURBINE-DIFF START
-                } catch (TurbineError e) {
-                  return null;
-                }
-                // TURBINE-DIFF END
-              }
-            });
+        completers.put(field.sym(), new LazyConstCompleter(sym, info, baseEnv, field, log));
       }
     }
 
@@ -445,20 +407,64 @@ public final class Binder {
     SimpleEnv.Builder<ClassSymbol, SourceTypeBoundClass> builder = SimpleEnv.builder();
     for (ClassSymbol sym : syms) {
       SourceTypeBoundClass base = env.getNonNull(sym);
-      try {
-        builder.put(
-            sym,
-            new ConstBinder(constenv, sym, baseEnv, base, log.withSource(base.source())).bind());
-        // TURBINE-DIFF START
-      } catch (TurbineError e) {
-        log.diagnostic(
-            Diagnostic.Kind.ERROR,
-            "Error binding constant for class " + sym.binaryName() + " in " + base.source().path());
-        builder.put(sym, SourceTypeBoundClass.EMPTY);
-        // TURBINE-DIFF END
-      }
+      builder.put(
+          sym, new ConstBinder(constenv, sym, baseEnv, base, log.withSource(base.source())).bind());
     }
     return builder.build();
+  }
+
+  private static class LazyConstCompleter
+      implements LazyEnv.Completer<FieldSymbol, Const.Value, Const.Value> {
+    private final ClassSymbol sym;
+    private final SourceTypeBoundClass info;
+    private final CompoundEnv<ClassSymbol, TypeBoundClass> baseEnv;
+    private final FieldInfo field;
+    private final TurbineLog log;
+
+    LazyConstCompleter(
+        ClassSymbol sym,
+        SourceTypeBoundClass info,
+        CompoundEnv<ClassSymbol, TypeBoundClass> baseEnv,
+        FieldInfo field,
+        TurbineLog log) {
+      this.sym = sym;
+      this.info = info;
+      this.baseEnv = baseEnv;
+      this.field = field;
+      this.log = log;
+    }
+
+    @Override
+    public Const.@Nullable Value complete(Env<FieldSymbol, Const.Value> env, FieldSymbol k) {
+      TurbineLog fieldBinderLog = new TurbineLog();
+      Const.Value value;
+      try {
+        value =
+            new ConstEvaluator(
+                    sym,
+                    sym,
+                    info.memberImports(),
+                    info.source(),
+                    info.scope(),
+                    env,
+                    baseEnv,
+                    fieldBinderLog.withSource(info.source()))
+                .evalFieldInitializer(
+                    // we're processing fields bound from sources in the compilation
+                    requireNonNull(field.decl()).init().get(), field.type());
+      } catch (LazyEnv.LazyBindingError e) {
+        // fields initializers are allowed to reference the field being initialized,
+        // but if they do they aren't constants
+        return null;
+      }
+      // assume any fields that couldn't be resolved weren't constants
+      for (TurbineDiagnostic diagnostic : fieldBinderLog.diagnostics()) {
+        if (!diagnostic.kind().equals(ErrorKind.CANNOT_RESOLVE_FIELD)) {
+          log.add(diagnostic);
+        }
+      }
+      return value;
+    }
   }
 
   static boolean isConst(FieldInfo field) {
@@ -503,25 +509,22 @@ public final class Binder {
     return builder.build();
   }
 
-  /** Statistics about annotation processing. */
-  @AutoValue
-  public abstract static class Statistics {
-
-    /**
-     * The total elapsed time spent in {@link Processor#init} and {@link Processor#process} across
-     * all rounds for each annotation processor.
-     */
-    public abstract ImmutableMap<String, Duration> processingTime();
-
-    /**
-     * Serialized protos containing processor-specific metrics. Currently only supported for Dagger.
-     */
-    public abstract ImmutableMap<String, byte[]> processorMetrics();
+  /**
+   * Statistics about annotation processing.
+   *
+   * @param processingTime The total elapsed time spent in {@link Processor#init} and {@link
+   *     Processor#process} across all rounds for each annotation processor.
+   * @param processorMetrics Serialized protos containing processor-specific metrics. Currently only
+   *     supported for Dagger.
+   */
+  public record Statistics(
+      ImmutableMap<String, Duration> processingTime,
+      ImmutableMap<String, byte[]> processorMetrics) {
 
     public static Statistics create(
         ImmutableMap<String, Duration> processingTime,
         ImmutableMap<String, byte[]> processorMetrics) {
-      return new AutoValue_Binder_Statistics(processingTime, processorMetrics);
+      return new Statistics(processingTime, processorMetrics);
     }
 
     public static Statistics empty() {

@@ -41,18 +41,6 @@ public class TurbineLog {
     }
   }
 
-  // TURBINE-DIFF START
-  public int errorCount() {
-    int count = 0;
-    for (TurbineDiagnostic error : diagnostics) {
-      if (error.severity().equals(Diagnostic.Kind.ERROR)) {
-        count++;
-      }
-    }
-    return count;
-    // TURBINE-DIFF END
-  }
-
   public boolean anyErrors() {
     for (TurbineDiagnostic error : diagnostics) {
       if (error.severity().equals(Diagnostic.Kind.ERROR)) {
@@ -86,6 +74,10 @@ public class TurbineLog {
   /** Reports an annotation processing diagnostic with no position information. */
   public void diagnostic(Diagnostic.Kind severity, String message) {
     diagnostics.add(TurbineDiagnostic.format(severity, ErrorKind.PROC, message));
+  }
+
+  public void add(TurbineDiagnostic diagnostic) {
+    diagnostics.add(diagnostic);
   }
 
   /** A log for a specific source file. */

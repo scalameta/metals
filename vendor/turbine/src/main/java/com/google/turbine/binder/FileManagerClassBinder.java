@@ -108,14 +108,11 @@ public final class FileManagerClassBinder {
             sym,
             new BytecodeBoundClass(
                 sym,
-                new Supplier<byte[]>() {
-                  @Override
-                  public byte[] get() {
-                    try {
-                      return jfo.openInputStream().readAllBytes();
-                    } catch (IOException e) {
-                      throw new UncheckedIOException(e);
-                    }
+                () -> {
+                  try {
+                    return jfo.openInputStream().readAllBytes();
+                  } catch (IOException e) {
+                    throw new UncheckedIOException(e);
                   }
                 },
                 env,
@@ -157,14 +154,11 @@ public final class FileManagerClassBinder {
       if (fileObject == null) {
         return null;
       }
-      return new Supplier<byte[]>() {
-        @Override
-        public byte[] get() {
-          try {
-            return fileObject.openInputStream().readAllBytes();
-          } catch (IOException e) {
-            throw new UncheckedIOException(e);
-          }
+      return () -> {
+        try {
+          return fileObject.openInputStream().readAllBytes();
+        } catch (IOException e) {
+          throw new UncheckedIOException(e);
         }
       };
     }

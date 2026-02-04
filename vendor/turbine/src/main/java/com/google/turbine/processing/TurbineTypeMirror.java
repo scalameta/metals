@@ -16,7 +16,6 @@
 
 package com.google.turbine.processing;
 
-import static com.google.common.collect.Iterables.getLast;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.Joiner;
@@ -116,28 +115,18 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public TypeKind getKind() {
-      switch (type.primkind()) {
-        case CHAR:
-          return TypeKind.CHAR;
-        case SHORT:
-          return TypeKind.SHORT;
-        case INT:
-          return TypeKind.INT;
-        case LONG:
-          return TypeKind.LONG;
-        case FLOAT:
-          return TypeKind.FLOAT;
-        case DOUBLE:
-          return TypeKind.DOUBLE;
-        case BOOLEAN:
-          return TypeKind.BOOLEAN;
-        case BYTE:
-          return TypeKind.BYTE;
-        case NULL:
-          return TypeKind.NULL;
-        case STRING:
-      }
-      throw new AssertionError(type.primkind());
+      return switch (type.primkind()) {
+        case CHAR -> TypeKind.CHAR;
+        case SHORT -> TypeKind.SHORT;
+        case INT -> TypeKind.INT;
+        case LONG -> TypeKind.LONG;
+        case FLOAT -> TypeKind.FLOAT;
+        case DOUBLE -> TypeKind.DOUBLE;
+        case BOOLEAN -> TypeKind.BOOLEAN;
+        case BYTE -> TypeKind.BYTE;
+        case NULL -> TypeKind.NULL;
+        case STRING -> throw new AssertionError(type.primkind());
+      };
     }
 
     @Override
@@ -161,7 +150,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof TurbineDeclaredType && type.equals(((TurbineDeclaredType) obj).type);
+      return obj instanceof TurbineDeclaredType turbineDeclaredType
+          && type.equals(turbineDeclaredType.type);
     }
 
     @Override
@@ -220,7 +210,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
             new Supplier<ImmutableList<TypeMirror>>() {
               @Override
               public ImmutableList<TypeMirror> get() {
-                return factory.asTypeMirrors(getLast(type.classes()).targs());
+                return factory.asTypeMirrors(
+                    type.classes().get(type.classes().size() - 1).targs());
               }
             });
 
@@ -245,7 +236,7 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     protected ImmutableList<AnnoInfo> annos() {
-      return getLast(type.classes()).annos();
+      return type.classes().get(type.classes().size() - 1).annos();
     }
   }
 
@@ -363,8 +354,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object other) {
-      return other instanceof TurbinePackageType
-          && symbol.equals(((TurbinePackageType) other).symbol);
+      return other instanceof TurbinePackageType turbinePackageType
+          && symbol.equals(turbinePackageType.symbol);
     }
 
     @Override
@@ -454,7 +445,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof TurbineTypeVariable && type.equals(((TurbineTypeVariable) obj).type);
+      return obj instanceof TurbineTypeVariable turbineTypeVariable
+          && type.equals(turbineTypeVariable.type);
     }
 
     @Override
@@ -542,7 +534,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof TurbineWildcardType && type.equals(((TurbineWildcardType) obj).type);
+      return obj instanceof TurbineWildcardType turbineWildcardType
+          && type.equals(turbineWildcardType.type);
     }
 
     @Override
@@ -583,8 +576,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof TurbineIntersectionType
-          && type.equals(((TurbineIntersectionType) obj).type);
+      return obj instanceof TurbineIntersectionType turbineIntersectionType
+          && type.equals(turbineIntersectionType.type);
     }
 
     @Override
@@ -682,8 +675,8 @@ public abstract class TurbineTypeMirror implements TypeMirror {
 
     @Override
     public boolean equals(@Nullable Object obj) {
-      return obj instanceof TurbineExecutableType
-          && type.equals(((TurbineExecutableType) obj).type);
+      return obj instanceof TurbineExecutableType turbineExecutableType
+          && type.equals(turbineExecutableType.type);
     }
 
     @Override

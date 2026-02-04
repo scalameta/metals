@@ -17,6 +17,7 @@
 package com.google.turbine.parse;
 
 import com.google.turbine.diag.SourceFile;
+import com.google.turbine.model.TurbineJavadoc;
 import java.util.Iterator;
 
 /**
@@ -60,7 +61,7 @@ public class IteratorLexer implements Lexer {
   }
 
   @Override
-  public String javadoc() {
+  public TurbineJavadoc javadoc() {
     return null;
   }
 }

@@ -45,7 +45,8 @@ public class EnumConstantValue extends Const {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    return obj instanceof EnumConstantValue && sym().equals(((EnumConstantValue) obj).sym());
+    return obj instanceof EnumConstantValue enumConstantValue
+        && sym().equals(enumConstantValue.sym());
   }
 
   @Override

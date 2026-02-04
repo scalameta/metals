@@ -60,10 +60,9 @@ public class MethodSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof MethodSymbol)) {
+    if (!(obj instanceof MethodSymbol other)) {
       return false;
     }
-    MethodSymbol other = (MethodSymbol) obj;
     return name().equals(other.name()) && owner().equals(other.owner()) && idx == other.idx;
   }
 

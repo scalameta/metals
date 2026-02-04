@@ -53,10 +53,9 @@ public class ParamSymbol implements Symbol {
 
   @Override
   public boolean equals(@Nullable Object obj) {
-    if (!(obj instanceof ParamSymbol)) {
+    if (!(obj instanceof ParamSymbol other)) {
       return false;
     }
-    ParamSymbol other = (ParamSymbol) obj;
     return name().equals(other.name()) && owner().equals(other.owner());
   }
 

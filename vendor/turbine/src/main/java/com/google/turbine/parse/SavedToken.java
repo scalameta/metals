@@ -29,18 +29,16 @@ class SavedToken {
 
   @Override
   public String toString() {
-    switch (token) {
-      case IDENT:
-      case CHAR_LITERAL:
-      case LONG_LITERAL:
-      case DOUBLE_LITERAL:
-      case FLOAT_LITERAL:
-      case INT_LITERAL:
-      case STRING_LITERAL:
-        return String.format("%s(%s)", token.name(), value);
-      default:
-        break;
-    }
-    return token.name();
+    return switch (token) {
+      case IDENT,
+          CHAR_LITERAL,
+          LONG_LITERAL,
+          DOUBLE_LITERAL,
+          FLOAT_LITERAL,
+          INT_LITERAL,
+          STRING_LITERAL ->
+          String.format("%s(%s)", token.name(), value);
+      default -> token.name();
+    };
   }
 }

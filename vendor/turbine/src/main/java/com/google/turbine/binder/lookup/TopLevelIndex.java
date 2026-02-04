@@ -16,6 +16,8 @@
 
 package com.google.turbine.binder.lookup;
 
+import com.google.common.base.Splitter;
+import com.google.common.collect.ImmutableList;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -37,4 +39,14 @@ public interface TopLevelIndex {
 
   /** Returns a scope to look up members of the given package. */
   @Nullable PackageScope lookupPackage(Iterable<String> packagename);
+
+  /**
+   * Returns a scope to look up members of the given package.
+   *
+   * @param packageName the binary ({@code '/'}-delimited) package name
+   */
+  public default @Nullable PackageScope lookupPackage(String packageName) {
+    return lookupPackage(
+        packageName.isEmpty() ? ImmutableList.of() : Splitter.on('/').split(packageName));
+  }
 }

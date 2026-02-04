@@ -17,7 +17,6 @@
 package com.google.turbine.tree;
 
 import com.google.common.base.Joiner;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -68,7 +67,7 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
     if (c == '\n') {
       newLine = true;
     } else if (newLine) {
-      sb.append(Strings.repeat(" ", indent * 2));
+      sb.append(" ".repeat(indent * 2));
       newLine = false;
     }
     sb.append(c);
@@ -78,7 +77,7 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
   @CanIgnoreReturnValue
   Pretty append(String s) {
     if (newLine) {
-      sb.append(Strings.repeat(" ", indent * 2));
+      sb.append(" ".repeat(indent * 2));
       newLine = false;
     }
     sb.append(s);
@@ -187,22 +186,15 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
   @Override
   public @Nullable Void visitUnary(Tree.Unary unary, @Nullable Void input) {
     switch (unary.op()) {
-      case POST_INCR:
-      case POST_DECR:
+      case POST_INCR, POST_DECR -> {
         unary.expr().accept(this, null);
         append(unary.op().toString());
-        break;
-      case PRE_INCR:
-      case PRE_DECR:
-      case UNARY_PLUS:
-      case NEG:
-      case NOT:
-      case BITWISE_COMP:
+      }
+      case PRE_INCR, PRE_DECR, UNARY_PLUS, NEG, NOT, BITWISE_COMP -> {
         append(unary.op().toString());
         unary.expr().accept(this, null);
-        break;
-      default:
-        throw new AssertionError(unary.op().name());
+      }
+      default -> throw new AssertionError(unary.op().name());
     }
     return null;
   }
@@ -413,23 +405,14 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
       printLine();
     }
     printModifiers(tyDecl.mods());
-    switch (tyDecl.tykind()) {
-      case CLASS:
-        append("class");
-        break;
-      case INTERFACE:
-        append("interface");
-        break;
-      case ENUM:
-        append("enum");
-        break;
-      case ANNOTATION:
-        append("@interface");
-        break;
-      case RECORD:
-        append("record");
-        break;
-    }
+    append(
+        switch (tyDecl.tykind()) {
+          case CLASS -> "class";
+          case INTERFACE -> "interface";
+          case ENUM -> "enum";
+          case ANNOTATION -> "@interface";
+          case RECORD -> "record";
+        });
     append(' ').append(tyDecl.name().value());
     if (!tyDecl.typarams().isEmpty()) {
       append('<');
@@ -484,42 +467,37 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
     append(" {").append('\n');
     indent++;
     switch (tyDecl.tykind()) {
-      case ENUM:
-        {
-          List<Tree> nonConsts = new ArrayList<>();
-          for (Tree t : tyDecl.members()) {
-            if (t instanceof Tree.VarDecl) {
-              Tree.VarDecl decl = (Tree.VarDecl) t;
-              if (decl.mods().contains(TurbineModifier.ACC_ENUM)) {
-                append(decl.name().value()).append(',').append('\n');
-                continue;
-              }
+      case ENUM -> {
+        List<Tree> nonConsts = new ArrayList<>();
+        for (Tree t : tyDecl.members()) {
+          if (t instanceof Tree.VarDecl decl) {
+            if (decl.mods().contains(TurbineModifier.ACC_ENUM)) {
+              append(decl.name().value()).append(',').append('\n');
+              continue;
             }
-            nonConsts.add(t);
           }
-          printLine(";");
-          boolean first = true;
-          for (Tree t : nonConsts) {
-            if (!first) {
-              printLine();
-            }
-            t.accept(this, null);
-            first = false;
-          }
-          break;
+          nonConsts.add(t);
         }
-      default:
-        {
-          boolean first = true;
-          for (Tree t : tyDecl.members()) {
-            if (!first) {
-              printLine();
-            }
-            t.accept(this, null);
-            first = false;
+        printLine(";");
+        boolean first = true;
+        for (Tree t : nonConsts) {
+          if (!first) {
+            printLine();
           }
-          break;
+          t.accept(this, null);
+          first = false;
         }
+      }
+      default -> {
+        boolean first = true;
+        for (Tree t : tyDecl.members()) {
+          if (!first) {
+            printLine();
+          }
+          t.accept(this, null);
+          first = false;
+        }
+      }
     }
     indent--;
     printLine("}");
@@ -531,33 +509,31 @@ public class Pretty implements Tree.Visitor<@Nullable Void, @Nullable Void> {
     Collections.sort(modifiers);
     for (TurbineModifier mod : modifiers) {
       switch (mod) {
-        case PRIVATE:
-        case PROTECTED:
-        case PUBLIC:
-        case ABSTRACT:
-        case FINAL:
-        case STATIC:
-        case VOLATILE:
-        case SYNCHRONIZED:
-        case STRICTFP:
-        case NATIVE:
-        case TRANSIENT:
-        case DEFAULT:
-        case TRANSITIVE:
-        case SEALED:
-        case NON_SEALED:
-          append(mod.toString()).append(' ');
-          break;
-        case ACC_SUPER:
-        case VARARGS:
-        case INTERFACE:
-        case ACC_ENUM:
-        case ACC_ANNOTATION:
-        case ACC_SYNTHETIC:
-        case ACC_BRIDGE:
-        case COMPACT_CTOR:
-        case ENUM_IMPL:
-          break;
+        case PRIVATE,
+            PROTECTED,
+            PUBLIC,
+            ABSTRACT,
+            FINAL,
+            STATIC,
+            VOLATILE,
+            SYNCHRONIZED,
+            STRICTFP,
+            NATIVE,
+            TRANSIENT,
+            DEFAULT,
+            TRANSITIVE,
+            SEALED,
+            NON_SEALED ->
+            append(mod.toString()).append(' ');
+        case ACC_SUPER,
+            VARARGS,
+            INTERFACE,
+            ACC_ENUM,
+            ACC_ANNOTATION,
+            ACC_SYNTHETIC,
+            ACC_BRIDGE,
+            COMPACT_CTOR,
+            ENUM_IMPL -> {}
       }
     }
   }

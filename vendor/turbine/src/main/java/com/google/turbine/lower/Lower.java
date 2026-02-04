@@ -25,7 +25,6 @@ import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.turbine.binder.bound.AnnotationMetadata;
 import com.google.turbine.binder.bound.EnumConstantValue;
 import com.google.turbine.binder.bound.ModuleInfo.ExportInfo;
 import com.google.turbine.binder.bound.ModuleInfo.OpenInfo;
@@ -518,11 +517,6 @@ public class Lower {
       ClassSymbol sym) {
     TypeBoundClass info = env.get(sym);
     if (info == null) {
-      // TURBINE-DIFF START
-      if (sym == ClassSymbol.ERROR) {
-        return;
-      }
-      // TURBINE-DIFF END
       throw TurbineError.format(source, ErrorKind.CLASS_FILE_NOT_FOUND, sym);
     }
     ClassSymbol owner = info.owner();
@@ -669,25 +663,13 @@ public class Lower {
    * and {@code null} if it should not be retained in bytecode.
    */
   private @Nullable RuntimeVisibility getVisibility(ClassSymbol sym) {
-    // TURBINE-DIFF START
-    if (env.get(sym) == null) {
-      return null;
-    }
-    AnnotationMetadata annotationMetadata = env.getNonNull(sym).annotationMetadata();
-    if (annotationMetadata == null) {
-      return null;
-    }
-    RetentionPolicy retention = annotationMetadata.retention();
-    // TURBINE-DIFF END
-    switch (retention) {
-      case CLASS:
-        return RuntimeVisibility.INVISIBLE;
-      case RUNTIME:
-        return RuntimeVisibility.VISIBLE;
-      case SOURCE:
-        return null;
-    }
-    throw new AssertionError(retention);
+    RetentionPolicy retention =
+        requireNonNull(env.getNonNull(sym).annotationMetadata()).retention();
+    return switch (retention) {
+      case CLASS -> RuntimeVisibility.INVISIBLE;
+      case RUNTIME -> RuntimeVisibility.VISIBLE;
+      case SOURCE -> null;
+    };
   }
 
   private ImmutableMap<String, ElementValue> annotationValues(ImmutableMap<String, Const> values) {
@@ -699,45 +681,39 @@ public class Lower {
   }
 
   private ElementValue annotationValue(Const value) {
-    switch (value.kind()) {
-      case CLASS_LITERAL:
-        {
-          TurbineClassValue classValue = (TurbineClassValue) value;
-          return new ElementValue.ConstTurbineClassValue(
-              SigWriter.type(sig.signature(classValue.type())));
+    return switch (value.kind()) {
+      case CLASS_LITERAL -> {
+        TurbineClassValue classValue = (TurbineClassValue) value;
+        yield new ElementValue.ConstTurbineClassValue(
+            SigWriter.type(sig.signature(classValue.type())));
+      }
+      case ENUM_CONSTANT -> {
+        EnumConstantValue enumValue = (EnumConstantValue) value;
+        yield new ElementValue.EnumConstValue(
+            sig.objectType(enumValue.sym().owner()), enumValue.sym().name());
+      }
+      case ARRAY -> {
+        Const.ArrayInitValue arrayValue = (Const.ArrayInitValue) value;
+        List<ElementValue> values = new ArrayList<>();
+        for (Const element : arrayValue.elements()) {
+          values.add(annotationValue(element));
         }
-      case ENUM_CONSTANT:
-        {
-          EnumConstantValue enumValue = (EnumConstantValue) value;
-          return new ElementValue.EnumConstValue(
-              sig.objectType(enumValue.sym().owner()), enumValue.sym().name());
+        yield new ElementValue.ArrayValue(values);
+      }
+      case ANNOTATION -> {
+        TurbineAnnotationValue annotationValue = (TurbineAnnotationValue) value;
+        RuntimeVisibility visibility = getVisibility(annotationValue.sym());
+        if (visibility == null) {
+          visibility = RuntimeVisibility.VISIBLE;
         }
-      case ARRAY:
-        {
-          Const.ArrayInitValue arrayValue = (Const.ArrayInitValue) value;
-          List<ElementValue> values = new ArrayList<>();
-          for (Const element : arrayValue.elements()) {
-            values.add(annotationValue(element));
-          }
-          return new ElementValue.ArrayValue(values);
-        }
-      case ANNOTATION:
-        {
-          TurbineAnnotationValue annotationValue = (TurbineAnnotationValue) value;
-          RuntimeVisibility visibility = getVisibility(annotationValue.sym());
-          if (visibility == null) {
-            visibility = RuntimeVisibility.VISIBLE;
-          }
-          return new ElementValue.ConstTurbineAnnotationValue(
-              new AnnotationInfo(
-                  sig.objectType(annotationValue.sym()),
-                  visibility,
-                  annotationValues(annotationValue.values())));
-        }
-      case PRIMITIVE:
-        return new ElementValue.ConstValue((Const.Value) value);
-    }
-    throw new AssertionError(value.kind());
+        yield new ElementValue.ConstTurbineAnnotationValue(
+            new AnnotationInfo(
+                sig.objectType(annotationValue.sym()),
+                visibility,
+                annotationValues(annotationValue.values())));
+      }
+      case PRIMITIVE -> new ElementValue.ConstValue((Const.Value) value);
+    };
   }
 
   /** Lower type annotations in a class declaration's signature. */
@@ -883,30 +859,13 @@ public class Lower {
      */
     private void lowerTypeAnnotations(Type type, TypePath path) {
       switch (type.tyKind()) {
-        case TY_VAR:
-          lowerTypeAnnotations(((TyVar) type).annos(), path);
-          break;
-        case CLASS_TY:
-          lowerClassTypeTypeAnnotations((ClassTy) type, path);
-          break;
-        case ARRAY_TY:
-          lowerArrayTypeAnnotations((ArrayTy) type, path);
-          break;
-        case WILD_TY:
-          lowerWildTyTypeAnnotations((WildTy) type, path);
-          break;
-        case PRIM_TY:
-          lowerTypeAnnotations(((Type.PrimTy) type).annos(), path);
-          break;
-        case VOID_TY:
-          break;
-        // TURBINE-DIFF START
-        case ERROR_TY:
-          lowerClassTypeTypeAnnotations(ClassTy.OBJECT, path);
-          break;
-        // TURBINE-DIFF END
-        default:
-          throw new AssertionError(type.tyKind());
+        case TY_VAR -> lowerTypeAnnotations(((TyVar) type).annos(), path);
+        case CLASS_TY -> lowerClassTypeTypeAnnotations((ClassTy) type, path);
+        case ARRAY_TY -> lowerArrayTypeAnnotations((ArrayTy) type, path);
+        case WILD_TY -> lowerWildTyTypeAnnotations((WildTy) type, path);
+        case PRIM_TY -> lowerTypeAnnotations(((Type.PrimTy) type).annos(), path);
+        case VOID_TY -> {}
+        default -> throw new AssertionError(type.tyKind());
       }
     }
 
@@ -923,14 +882,11 @@ public class Lower {
 
     private void lowerWildTyTypeAnnotations(WildTy type, TypePath path) {
       switch (type.boundKind()) {
-        case NONE:
-          lowerTypeAnnotations(type.annotations(), path);
-          break;
-        case UPPER:
-        case LOWER:
+        case NONE -> lowerTypeAnnotations(type.annotations(), path);
+        case UPPER, LOWER -> {
           lowerTypeAnnotations(type.annotations(), path);
           lowerTypeAnnotations(type.bound(), path.wild());
-          break;
+        }
       }
     }
 

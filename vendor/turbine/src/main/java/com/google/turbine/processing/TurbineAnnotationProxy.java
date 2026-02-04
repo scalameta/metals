@@ -89,9 +89,7 @@ class TurbineAnnotationProxy implements InvocationHandler {
     return null;
   }
 
-  // TURBINE-DIFF START
-  static final <A extends Annotation> A[] getAnnotationsByType(
-      // TURBINE-DIFF END
+  static final <A extends Annotation> A @Nullable [] getAnnotationsByType(
       ModelFactory factory, ImmutableList<AnnoInfo> annos, Class<A> annotationType) {
     ClassSymbol sym = new ClassSymbol(annotationType.getName().replace('.', '/'));
     TypeBoundClass info = factory.getSymbol(sym);
@@ -125,20 +123,23 @@ class TurbineAnnotationProxy implements InvocationHandler {
   @Override
   public Object invoke(Object proxy, Method method, Object[] args) {
     switch (method.getName()) {
-      case "hashCode":
+      case "hashCode" -> {
         checkArgument(args == null);
         return anno.hashCode();
-      case "annotationType":
+      }
+      case "annotationType" -> {
         checkArgument(args == null);
         return annotationType;
-      case "equals":
+      }
+      case "equals" -> {
         checkArgument(args.length == 1);
         return proxyEquals(args[0]);
-      case "toString":
+      }
+      case "toString" -> {
         checkArgument(args == null);
         return anno.toString();
-      default:
-        break;
+      }
+      default -> {}
     }
     Const value = anno.values().get(method.getName());
     if (value != null) {
@@ -160,28 +161,21 @@ class TurbineAnnotationProxy implements InvocationHandler {
       return false;
     }
     InvocationHandler handler = Proxy.getInvocationHandler(other);
-    if (!(handler instanceof TurbineAnnotationProxy)) {
+    if (!(handler instanceof TurbineAnnotationProxy that)) {
       return false;
     }
-    TurbineAnnotationProxy that = (TurbineAnnotationProxy) handler;
     return anno.equals(that.anno);
   }
 
   static Object constValue(
       Class<?> returnType, ModelFactory factory, ClassLoader loader, Const value) {
-    switch (value.kind()) {
-      case PRIMITIVE:
-        return ((Value) value).getValue();
-      case ARRAY:
-        return constArrayValue(returnType, factory, loader, (Const.ArrayInitValue) value);
-      case ENUM_CONSTANT:
-        return constEnumValue(loader, (EnumConstantValue) value);
-      case ANNOTATION:
-        return constAnnotationValue(factory, loader, (TurbineAnnotationValue) value);
-      case CLASS_LITERAL:
-        return constClassValue(factory, (TurbineClassValue) value);
-    }
-    throw new AssertionError(value.kind());
+    return switch (value.kind()) {
+      case PRIMITIVE -> ((Value) value).getValue();
+      case ARRAY -> constArrayValue(returnType, factory, loader, (Const.ArrayInitValue) value);
+      case ENUM_CONSTANT -> constEnumValue(loader, (EnumConstantValue) value);
+      case ANNOTATION -> constAnnotationValue(factory, loader, (TurbineAnnotationValue) value);
+      case CLASS_LITERAL -> constClassValue(factory, (TurbineClassValue) value);
+    };
   }
 
   private static Object constArrayValue(

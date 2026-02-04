@@ -68,15 +68,16 @@ public class TurbineElements implements Elements {
   }
 
   private static Symbol asSymbol(Element element) {
-    if (!(element instanceof TurbineElement)) {
+    if (!(element instanceof TurbineElement turbineElement)) {
       throw new IllegalArgumentException(element.toString());
     }
-    return ((TurbineElement) element).sym();
+    return turbineElement.sym();
   }
 
   @Override
   public PackageElement getPackageElement(CharSequence name) {
-    ImmutableList<String> packageName = ImmutableList.copyOf(Splitter.on('.').split(name));
+    ImmutableList<String> packageName =
+        name.isEmpty() ? ImmutableList.of() : ImmutableList.copyOf(Splitter.on('.').split(name));
     if (factory.tli().lookupPackage(packageName) == null) {
       return null;
     }
@@ -103,10 +104,10 @@ public class TurbineElements implements Elements {
 
   @Override
   public String getDocComment(Element e) {
-    if (!(e instanceof TurbineElement)) {
+    if (!(e instanceof TurbineElement turbineElement)) {
       throw new IllegalArgumentException(e.toString());
     }
-    String comment = ((TurbineElement) e).javadoc();
+    String comment = turbineElement.javadoc();
     if (comment == null) {
       return null;
     }
@@ -131,10 +132,10 @@ public class TurbineElements implements Elements {
 
   @Override
   public boolean isDeprecated(Element element) {
-    if (!(element instanceof TurbineElement)) {
+    if (!(element instanceof TurbineElement turbineElement)) {
       throw new IllegalArgumentException(element.toString());
     }
-    for (AnnoInfo a : ((TurbineElement) element).annos()) {
+    for (AnnoInfo a : turbineElement.annos()) {
       if (a.sym().equals(ClassSymbol.DEPRECATED)) {
         return true;
       }
@@ -144,10 +145,10 @@ public class TurbineElements implements Elements {
 
   @Override
   public Name getBinaryName(TypeElement element) {
-    if (!(element instanceof TurbineTypeElement)) {
+    if (!(element instanceof TurbineTypeElement turbineTypeElement)) {
       throw new IllegalArgumentException(element.toString());
     }
-    return getName(((TurbineTypeElement) element).sym().binaryName().replace('/', '.'));
+    return getName(turbineTypeElement.sym().binaryName().replace('/', '.'));
   }
 
   /**
@@ -187,20 +188,19 @@ public class TurbineElements implements Elements {
       for (Element el : factory.typeElement(superType).getEnclosedElements()) {
         Symbol sym = asSymbol(el);
         switch (sym.symKind()) {
-          case METHOD:
+          case METHOD -> {
             TurbineExecutableElement m = (TurbineExecutableElement) el;
             if (shouldAdd(s, from, methods, m)) {
               methods.put(m.info().name(), m);
               results.add(el);
             }
-            break;
-          case FIELD:
+          }
+          case FIELD -> {
             if (shouldAdd(s, from, (TurbineFieldElement) el)) {
               results.add(el);
             }
-            break;
-          default:
-            results.add(el);
+          }
+          default -> results.add(el);
         }
       }
     }
@@ -274,13 +274,13 @@ public class TurbineElements implements Elements {
   private static boolean isVisible(
       PackageSymbol from, PackageSymbol to, TurbineVisibility visibility) {
     switch (visibility) {
-      case PUBLIC:
-      case PROTECTED:
-        break;
-      case PACKAGE:
+      case PUBLIC, PROTECTED -> {}
+      case PACKAGE -> {
         return from.equals(to);
-      case PRIVATE:
+      }
+      case PRIVATE -> {
         return false;
+      }
     }
     return true;
   }
@@ -292,13 +292,13 @@ public class TurbineElements implements Elements {
 
   @Override
   public boolean hides(Element hider, Element hidden) {
-    if (!(hider instanceof TurbineElement)) {
+    if (!(hider instanceof TurbineElement hiderElement)) {
       throw new IllegalArgumentException(hider.toString());
     }
-    if (!(hidden instanceof TurbineElement)) {
+    if (!(hidden instanceof TurbineElement hiddenElement)) {
       throw new IllegalArgumentException(hidden.toString());
     }
-    return hides((TurbineElement) hider, (TurbineElement) hidden);
+    return hides(hiderElement, hiddenElement);
   }
 
   private boolean hides(TurbineElement hider, TurbineElement hidden) {
@@ -359,17 +359,12 @@ public class TurbineElements implements Elements {
   private static boolean isVisibleForHiding(TurbineElement hider, TurbineElement hidden) {
     int access;
     switch (hidden.sym().symKind()) {
-      case CLASS:
-        access = ((TurbineTypeElement) hidden).info().access();
-        break;
-      case FIELD:
-        access = ((TurbineFieldElement) hidden).info().access();
-        break;
-      case METHOD:
-        access = ((TurbineExecutableElement) hidden).info().access();
-        break;
-      default:
+      case CLASS -> access = ((TurbineTypeElement) hidden).info().access();
+      case FIELD -> access = ((TurbineFieldElement) hidden).info().access();
+      case METHOD -> access = ((TurbineExecutableElement) hidden).info().access();
+      default -> {
         return false;
+      }
     }
     return isVisible(
         packageSymbol(asSymbol(hider)),
@@ -399,28 +394,28 @@ public class TurbineElements implements Elements {
 
   @Override
   public String getConstantExpression(Object value) {
-    if (value instanceof Byte) {
-      return new Const.ByteValue((Byte) value).toString();
+    if (value instanceof Byte b) {
+      return new Const.ByteValue(b).toString();
     }
-    if (value instanceof Long) {
-      return new Const.LongValue((Long) value).toString();
+    if (value instanceof Long l) {
+      return new Const.LongValue(l).toString();
     }
-    if (value instanceof Float) {
-      return new Const.FloatValue((Float) value).toString();
+    if (value instanceof Float f) {
+      return new Const.FloatValue(f).toString();
     }
-    if (value instanceof Double) {
-      return new Const.DoubleValue((Double) value).toString();
+    if (value instanceof Double d) {
+      return new Const.DoubleValue(d).toString();
     }
-    if (value instanceof Short) {
+    if (value instanceof Short s) {
       // Special-case short for consistency with javac, see:
       // https://bugs.openjdk.java.net/browse/JDK-8227617
-      return String.format("(short)%d", (Short) value);
+      return String.format("(short)%d", s);
     }
-    if (value instanceof String) {
-      return new Const.StringValue((String) value).toString();
+    if (value instanceof String string) {
+      return new Const.StringValue(string).toString();
     }
-    if (value instanceof Character) {
-      return new Const.CharValue((Character) value).toString();
+    if (value instanceof Character c) {
+      return new Const.CharValue(c).toString();
     }
     return String.valueOf(value);
   }

@@ -22,28 +22,18 @@ import com.google.turbine.type.Type;
 /** Removes type annotation metadata. */
 public class Deannotate {
   public static Type deannotate(Type ty) {
-    switch (ty.tyKind()) {
-      case CLASS_TY:
-        return deannotateClassTy((Type.ClassTy) ty);
-      case ARRAY_TY:
-        return Type.ArrayTy.create(
-            deannotate(((Type.ArrayTy) ty).elementType()), ImmutableList.of());
-      case INTERSECTION_TY:
-        return Type.IntersectionTy.create(deannotate(((Type.IntersectionTy) ty).bounds()));
-      case WILD_TY:
-        return deannotateWildTy((Type.WildTy) ty);
-      case METHOD_TY:
-        return deannotateMethodTy((Type.MethodTy) ty);
-      case PRIM_TY:
-        return Type.PrimTy.create(((Type.PrimTy) ty).primkind(), ImmutableList.of());
-      case TY_VAR:
-        return Type.TyVar.create(((Type.TyVar) ty).sym(), ImmutableList.of());
-      case VOID_TY:
-      case ERROR_TY:
-      case NONE_TY:
-        return ty;
-    }
-    throw new AssertionError(ty.tyKind());
+    return switch (ty.tyKind()) {
+      case CLASS_TY -> deannotateClassTy((Type.ClassTy) ty);
+      case ARRAY_TY ->
+          Type.ArrayTy.create(deannotate(((Type.ArrayTy) ty).elementType()), ImmutableList.of());
+      case INTERSECTION_TY ->
+          Type.IntersectionTy.create(deannotate(((Type.IntersectionTy) ty).bounds()));
+      case WILD_TY -> deannotateWildTy((Type.WildTy) ty);
+      case METHOD_TY -> deannotateMethodTy((Type.MethodTy) ty);
+      case PRIM_TY -> Type.PrimTy.create(((Type.PrimTy) ty).primkind(), ImmutableList.of());
+      case TY_VAR -> Type.TyVar.create(((Type.TyVar) ty).sym(), ImmutableList.of());
+      case VOID_TY, ERROR_TY, NONE_TY -> ty;
+    };
   }
 
   public static ImmutableList<Type> deannotate(ImmutableList<Type> types) {
@@ -64,15 +54,11 @@ public class Deannotate {
   }
 
   private static Type deannotateWildTy(Type.WildTy ty) {
-    switch (ty.boundKind()) {
-      case NONE:
-        return Type.WildUnboundedTy.create(ImmutableList.of());
-      case LOWER:
-        return Type.WildLowerBoundedTy.create(deannotate(ty.bound()), ImmutableList.of());
-      case UPPER:
-        return Type.WildUpperBoundedTy.create(deannotate(ty.bound()), ImmutableList.of());
-    }
-    throw new AssertionError(ty.boundKind());
+    return switch (ty.boundKind()) {
+      case NONE -> Type.WildUnboundedTy.create(ImmutableList.of());
+      case LOWER -> Type.WildLowerBoundedTy.create(deannotate(ty.bound()), ImmutableList.of());
+      case UPPER -> Type.WildUpperBoundedTy.create(deannotate(ty.bound()), ImmutableList.of());
+    };
   }
 
   private static Type deannotateMethodTy(Type.MethodTy ty) {

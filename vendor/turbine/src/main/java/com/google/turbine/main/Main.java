@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.hash.Hashing;
 import com.google.common.io.MoreFiles;
 import com.google.errorprone.annotations.CanIgnoreReturnValue;
@@ -31,7 +32,9 @@ import com.google.turbine.binder.Binder.BindingResult;
 import com.google.turbine.binder.Binder.Statistics;
 import com.google.turbine.binder.ClassPath;
 import com.google.turbine.binder.ClassPathBinder;
+import com.google.turbine.binder.CompoundClassPath;
 import com.google.turbine.binder.CtSymClassBinder;
+import com.google.turbine.binder.InMemoryClassPath;
 import com.google.turbine.binder.JimageClassBinder;
 import com.google.turbine.binder.Processing;
 import com.google.turbine.binder.bound.SourceTypeBoundClass;
@@ -46,6 +49,9 @@ import com.google.turbine.options.TurbineOptions;
 import com.google.turbine.options.TurbineOptions.ReducedClasspathMode;
 import com.google.turbine.options.TurbineOptionsParser;
 import com.google.turbine.parse.Parser;
+import com.google.turbine.scalagen.ScalaLower;
+import com.google.turbine.scalaparse.ScalaParser;
+import com.google.turbine.scalaparse.ScalaTree;
 import com.google.turbine.proto.DepsProto;
 import com.google.turbine.proto.ManifestProto;
 import com.google.turbine.proto.ManifestProto.CompilationUnit;
@@ -57,7 +63,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collection;
@@ -139,8 +144,22 @@ public final class Main {
     usage(options);
 
     ImmutableList<CompUnit> units = parseAll(options);
+    ImmutableList<ScalaTree.CompUnit> scalaUnits = parseAllScala(options);
 
     ClassPath bootclasspath = bootclasspath(options);
+
+    ClassPath scalaClasspath = null;
+    ImmutableMap<String, byte[]> scalaLowered = ImmutableMap.of();
+    ImmutableSet<ClassSymbol> scalaSymbols = ImmutableSet.of();
+    if (!scalaUnits.isEmpty()) {
+      scalaLowered = ScalaLower.lower(scalaUnits, options.languageVersion().majorVersion());
+      scalaClasspath = InMemoryClassPath.create(scalaLowered, "<scala>");
+      ImmutableSet.Builder<ClassSymbol> symbols = ImmutableSet.builder();
+      for (String name : scalaLowered.keySet()) {
+        symbols.add(new ClassSymbol(name));
+      }
+      scalaSymbols = symbols.build();
+    }
 
     BindingResult bound;
     ReducedClasspathMode reducedClasspathMode = options.reducedClasspathMode();
@@ -155,29 +174,27 @@ public final class Main {
     int transitiveClasspathLength = classPath.size();
     int reducedClasspathLength = classPath.size();
     switch (reducedClasspathMode) {
-      case NONE:
-        bound = bind(options, units, bootclasspath, classPath);
-        break;
-      case BAZEL_FALLBACK:
+      case NONE -> bound = bind(options, units, bootclasspath, classPath, scalaClasspath);
+      case BAZEL_FALLBACK -> {
         reducedClasspathLength = options.reducedClasspathLength();
-        bound = bind(options, units, bootclasspath, classPath);
+        bound = bind(options, units, bootclasspath, classPath, scalaClasspath);
         transitiveClasspathFallback = true;
-        break;
-      case JAVABUILDER_REDUCED:
+      }
+      case JAVABUILDER_REDUCED -> {
         Collection<String> reducedClasspath =
             Dependencies.reduceClasspath(classPath, options.directJars(), options.depsArtifacts());
         reducedClasspathLength = reducedClasspath.size();
         try {
-          bound = bind(options, units, bootclasspath, reducedClasspath);
+          bound = bind(options, units, bootclasspath, reducedClasspath, scalaClasspath);
         } catch (TurbineError e) {
-          bound = fallback(options, units, bootclasspath, classPath);
+          bound = fallback(options, units, bootclasspath, classPath, scalaClasspath);
           transitiveClasspathFallback = true;
         }
-        break;
-      case BAZEL_REDUCED:
+      }
+      case BAZEL_REDUCED -> {
         transitiveClasspathLength = options.fullClasspathLength();
         try {
-          bound = bind(options, units, bootclasspath, classPath);
+          bound = bind(options, units, bootclasspath, classPath, scalaClasspath);
         } catch (TurbineError e) {
           writeJdepsForFallback(options);
           return Result.create(
@@ -186,9 +203,8 @@ public final class Main {
               /* reducedClasspathLength= */ reducedClasspathLength,
               Statistics.empty());
         }
-        break;
-      default:
-        throw new AssertionError(reducedClasspathMode);
+      }
+      default -> throw new AssertionError(reducedClasspathMode);
     }
 
     if (options.outputDeps().isPresent()
@@ -210,7 +226,7 @@ public final class Main {
       if (options.outputDeps().isPresent()) {
         DepsProto.Dependencies deps =
             Dependencies.collectDeps(options.targetLabel(), bootclasspath, bound, lowered);
-        Path path = Paths.get(options.outputDeps().get());
+        Path path = Path.of(options.outputDeps().get());
         /*
          * TODO: cpovirk - Consider checking outputDeps for validity earlier so that anyone who
          * `--output_deps=/` or similar will get a proper error instead of NPE.
@@ -224,12 +240,18 @@ public final class Main {
         ImmutableMap<String, byte[]> transitive =
             options.headerCompilationOutput().isPresent()
                 ? ImmutableMap.of()
-                : Transitive.collectDeps(bootclasspath, bound);
-        writeOutput(options, bound.generatedClasses(), lowered.bytes(), transitive);
+                : collectTransitive(bootclasspath, bound, scalaSymbols);
+        writeOutput(
+            options,
+            bound.generatedClasses(),
+            mergeLowered(scalaLowered, lowered.bytes()),
+            transitive);
       }
       if (options.headerCompilationOutput().isPresent()) {
-        ImmutableMap<String, byte[]> trimmed = Transitive.trimOutput(lowered.bytes());
-        ImmutableMap<String, byte[]> transitive = Transitive.collectDeps(bootclasspath, bound);
+        ImmutableMap<String, byte[]> trimmed =
+            mergeLowered(scalaLowered, Transitive.trimOutput(lowered.bytes()));
+        ImmutableMap<String, byte[]> transitive =
+            collectTransitive(bootclasspath, bound, scalaSymbols);
         writeHeaderCompilationOutput(options, trimmed, transitive);
       }
       if (options.outputManifest().isPresent()) {
@@ -251,9 +273,10 @@ public final class Main {
       TurbineOptions options,
       ImmutableList<CompUnit> units,
       ClassPath bootclasspath,
-      ImmutableList<String> classPath)
+      ImmutableList<String> classPath,
+      @org.jspecify.annotations.Nullable ClassPath scalaClasspath)
       throws IOException {
-    return bind(options, units, bootclasspath, classPath);
+    return bind(options, units, bootclasspath, classPath, scalaClasspath);
   }
 
   /**
@@ -263,7 +286,7 @@ public final class Main {
    */
   public static void writeJdepsForFallback(TurbineOptions options) throws IOException {
     try (OutputStream os =
-        new BufferedOutputStream(Files.newOutputStream(Paths.get(options.outputDeps().get())))) {
+        new BufferedOutputStream(Files.newOutputStream(Path.of(options.outputDeps().get())))) {
       DepsProto.Dependencies.newBuilder()
           .setRuleLabel(options.targetLabel().get())
           .setRequiresReducedClasspathFallback(true)
@@ -276,11 +299,16 @@ public final class Main {
       TurbineOptions options,
       ImmutableList<CompUnit> units,
       ClassPath bootclasspath,
-      Collection<String> classpath)
+      Collection<String> classpath,
+      @org.jspecify.annotations.Nullable ClassPath scalaClasspath)
       throws IOException {
+    ClassPath cp = ClassPathBinder.bindClasspath(toPaths(classpath));
+    if (scalaClasspath != null) {
+      cp = CompoundClassPath.of(scalaClasspath, cp);
+    }
     return Binder.bind(
         units,
-        ClassPathBinder.bindClasspath(toPaths(classpath)),
+        cp,
         Processing.initializeProcessors(
             /* sourceVersion= */ options.languageVersion().sourceVersion(),
             /* javacopts= */ options.javacOpts(),
@@ -296,9 +324,9 @@ public final class Main {
     if (options.help()) {
       throw new UsageException();
     }
-    if (!options.output().isPresent()
-        && !options.gensrcOutput().isPresent()
-        && !options.resourceOutput().isPresent()) {
+    if (options.output().isEmpty()
+        && options.gensrcOutput().isEmpty()
+        && options.resourceOutput().isEmpty()) {
       throw new UsageException(
           "at least one of --output, --gensrc_output, or --resource_output is required");
     }
@@ -347,11 +375,13 @@ public final class Main {
       throws IOException {
     ImmutableList.Builder<CompUnit> units = ImmutableList.builder();
     for (String source : sources) {
-      Path path = Paths.get(source);
-      units.add(Parser.parse(new SourceFile(source, MoreFiles.asCharSource(path, UTF_8).read())));
+      if (source.endsWith(".java")) {
+        Path path = Path.of(source);
+        units.add(Parser.parse(new SourceFile(source, MoreFiles.asCharSource(path, UTF_8).read())));
+      }
     }
     for (String sourceJar : sourceJars) {
-      try (Zip.ZipIterable iterable = new Zip.ZipIterable(Paths.get(sourceJar))) {
+      try (Zip.ZipIterable iterable = new Zip.ZipIterable(Path.of(sourceJar))) {
         for (Zip.Entry ze : iterable) {
           if (ze.name().endsWith(".java")) {
             String name = ze.name();
@@ -364,14 +394,64 @@ public final class Main {
     return units.build();
   }
 
+  private static ImmutableList<ScalaTree.CompUnit> parseAllScala(TurbineOptions options)
+      throws IOException {
+    return parseAllScala(options.sources(), options.sourceJars());
+  }
+
+  static ImmutableList<ScalaTree.CompUnit> parseAllScala(
+      Iterable<String> sources, Iterable<String> sourceJars) throws IOException {
+    ImmutableList.Builder<ScalaTree.CompUnit> units = ImmutableList.builder();
+    for (String source : sources) {
+      if (source.endsWith(".scala")) {
+        Path path = Path.of(source);
+        units.add(
+            ScalaParser.parse(new SourceFile(source, MoreFiles.asCharSource(path, UTF_8).read())));
+      }
+    }
+    for (String sourceJar : sourceJars) {
+      try (Zip.ZipIterable iterable = new Zip.ZipIterable(Path.of(sourceJar))) {
+        for (Zip.Entry ze : iterable) {
+          if (ze.name().endsWith(".scala")) {
+            String name = ze.name();
+            String source = new String(ze.data(), UTF_8);
+            units.add(ScalaParser.parse(new SourceFile(name, source)));
+          }
+        }
+      }
+    }
+    return units.build();
+  }
+
+  private static ImmutableMap<String, byte[]> mergeLowered(
+      ImmutableMap<String, byte[]> scalaLowered, ImmutableMap<String, byte[]> javaLowered) {
+    if (scalaLowered.isEmpty()) {
+      return javaLowered;
+    }
+    ImmutableMap.Builder<String, byte[]> merged = ImmutableMap.builder();
+    merged.putAll(scalaLowered);
+    merged.putAll(javaLowered);
+    return merged.buildOrThrow();
+  }
+
+  private static ImmutableMap<String, byte[]> collectTransitive(
+      ClassPath bootclasspath,
+      BindingResult bound,
+      ImmutableSet<ClassSymbol> scalaSymbols) {
+    if (scalaSymbols.isEmpty()) {
+      return Transitive.collectDeps(bootclasspath, bound);
+    }
+    return Transitive.collectDeps(bootclasspath, bound, scalaSymbols);
+  }
+
   /** Writes source files generated by annotation processors. */
   private static void writeSources(
       TurbineOptions options, ImmutableMap<String, SourceFile> generatedSources)
       throws IOException {
-    if (!options.gensrcOutput().isPresent()) {
+    if (options.gensrcOutput().isEmpty()) {
       return;
     }
-    Path path = Paths.get(options.gensrcOutput().get());
+    Path path = Path.of(options.gensrcOutput().get());
     if (Files.isDirectory(path)) {
       for (SourceFile source : generatedSources.values()) {
         Path to = path.resolve(source.path());
@@ -394,10 +474,10 @@ public final class Main {
   /** Writes resource files generated by annotation processors. */
   private static void writeResources(
       TurbineOptions options, ImmutableMap<String, byte[]> generatedResources) throws IOException {
-    if (!options.resourceOutput().isPresent()) {
+    if (options.resourceOutput().isEmpty()) {
       return;
     }
-    Path path = Paths.get(options.resourceOutput().get());
+    Path path = Path.of(options.resourceOutput().get());
     if (Files.isDirectory(path)) {
       for (Map.Entry<String, byte[]> resource : generatedResources.entrySet()) {
         Path to = path.resolve(resource.getKey());
@@ -423,7 +503,7 @@ public final class Main {
       Map<String, byte[]> lowered,
       Map<String, byte[]> transitive)
       throws IOException {
-    Path path = Paths.get(options.output().get());
+    Path path = Path.of(options.output().get());
     try (OutputStream os = Files.newOutputStream(path);
         BufferedOutputStream bos = new BufferedOutputStream(os, BUFFER_SIZE);
         JarOutputStream jos = new JarOutputStream(bos)) {
@@ -448,7 +528,7 @@ public final class Main {
   private static void writeHeaderCompilationOutput(
       TurbineOptions options, Map<String, byte[]> trimmed, Map<String, byte[]> transitive)
       throws IOException {
-    Path path = Paths.get(options.headerCompilationOutput().get());
+    Path path = Path.of(options.headerCompilationOutput().get());
     try (OutputStream os = Files.newOutputStream(path);
         BufferedOutputStream bos = new BufferedOutputStream(os, BUFFER_SIZE);
         JarOutputStream jos = new JarOutputStream(bos)) {
@@ -487,8 +567,7 @@ public final class Main {
               .build());
     }
     try (OutputStream os =
-        new BufferedOutputStream(
-            Files.newOutputStream(Paths.get(options.outputManifest().get())))) {
+        new BufferedOutputStream(Files.newOutputStream(Path.of(options.outputManifest().get())))) {
       manifest.build().writeTo(os);
     }
   }
@@ -541,7 +620,7 @@ public final class Main {
   private static ImmutableList<Path> toPaths(Iterable<String> paths) {
     ImmutableList.Builder<Path> result = ImmutableList.builder();
     for (String path : paths) {
-      result.add(Paths.get(path));
+      result.add(Path.of(path));
     }
     return result.build();
   }
