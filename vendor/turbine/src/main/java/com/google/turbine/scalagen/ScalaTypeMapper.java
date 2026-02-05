@@ -185,7 +185,10 @@ public final class ScalaTypeMapper {
     }
     List<String> tokens = Arrays.asList(trimmed.split("\\s+"));
     int arrow = tokens.indexOf("=>");
-    if (arrow <= 0) {
+    if (arrow == 0) {
+      return "scala/Function0";
+    }
+    if (arrow < 0) {
       return null;
     }
     int arity = functionArity(tokens.subList(0, arrow));
@@ -301,10 +304,12 @@ public final class ScalaTypeMapper {
   private static @Nullable String mapKnownClass(String raw) {
     return switch (raw) {
       case "String", "scala/String", "scala/Predef/String" -> "java/lang/String";
+      case "StringContext", "scala/StringContext" -> "scala/StringContext";
       case "Any", "AnyRef", "Object", "scala/Any", "scala/AnyRef", "java/lang/Object" ->
           "java/lang/Object";
       case "List", "scala/List", "scala/collection/immutable/List" ->
           "scala/collection/immutable/List";
+      case "PartialFunction", "scala/PartialFunction" -> "scala/PartialFunction";
       case "Seq", "scala/Seq", "scala/collection/Seq", "scala/collection/immutable/Seq" ->
           "scala/collection/immutable/Seq";
       case "Vector", "scala/Vector", "scala/collection/immutable/Vector" ->
@@ -316,6 +321,8 @@ public final class ScalaTypeMapper {
       case "Option", "scala/Option" -> "scala/Option";
       case "Some", "scala/Some" -> "scala/Some";
       case "Iterator", "scala/collection/Iterator" -> "scala/collection/Iterator";
+      case "Serializable" -> "java/io/Serializable";
+      case "scala/Serializable" -> "scala/Serializable";
       default -> null;
     };
   }
@@ -364,6 +371,13 @@ public final class ScalaTypeMapper {
     if (explicit != null) {
       return explicit;
     }
+    return resolveWildcard(raw, importScope);
+  }
+
+  private static @Nullable String resolveWildcard(String raw, ImportScope importScope) {
+    if (importScope == null || importScope.isEmpty() || raw.contains("/")) {
+      return null;
+    }
     List<String> wildcards = importScope.wildcards();
     for (int i = wildcards.size() - 1; i >= 0; i--) {
       String prefix = wildcards.get(i);
@@ -407,9 +421,15 @@ public final class ScalaTypeMapper {
       return raw;
     }
     String head = parts[0];
-    String resolvedHead = resolveImport(head, importScope);
+    String resolvedHead = resolveExplicit(head, importScope);
     if (resolvedHead != null) {
       return resolvedHead + "$" + String.join("$", Arrays.asList(parts).subList(1, parts.length));
+    }
+    if (!isRootPackage(head)) {
+      String wildcardHead = resolveWildcard(head, importScope);
+      if (wildcardHead != null) {
+        return wildcardHead + "$" + String.join("$", Arrays.asList(parts).subList(1, parts.length));
+      }
     }
     if (!currentPackage.isEmpty() && isClassLike(head)) {
       return currentPackage.replace('.', '/')
@@ -419,6 +439,13 @@ public final class ScalaTypeMapper {
           + String.join("$", Arrays.asList(parts).subList(1, parts.length));
     }
     return raw;
+  }
+
+  private static boolean isRootPackage(String head) {
+    if (head == null || head.isEmpty()) {
+      return false;
+    }
+    return "scala".equals(head) || "java".equals(head) || "javax".equals(head);
   }
 
   private static boolean isClassLike(String segment) {

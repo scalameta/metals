@@ -11,16 +11,18 @@ Akka (`--javac-release 11`)
 - Baseline classes: 17336
 - Missing classes: 7982
 - Extra classes: 212
-- Mismatched members: 75850
+- Mismatched members: 66210
 - Baseline-only classes not explained by skipped Scala sources: 7982
+- Skipped Scala sources: 15
 
 Spark (`--javac-release 17`)
 - Turbine classes: 16040
 - Baseline classes: 17718
 - Missing classes: 2173
 - Extra classes: 495
-- Mismatched members: 135688
+- Mismatched members: 108536
 - Baseline-only classes not explained by skipped Scala sources: 2173
+- Skipped Scala sources: 7
 
 **Principles**
 - Always keep a reproducible command for each target.
@@ -31,7 +33,7 @@ Spark (`--javac-release 17`)
 **Known Constraints**
 - Akka needs at least `--javac-release 11` for `VarHandle` and `java.util.concurrent.Flow`.
 - Spark needs at least `--javac-release 17` for `@Serial` and `java.lang.Record`.
-- `.envrc` is not present in this repo; commands should not assume it.
+- `.envrc` is present in this repo; source it before running `sbt` commands.
 
 ---
 
@@ -52,6 +54,9 @@ Spark (`--javac-release 17`)
    - `missing-field`, `field-*` (access, annotations)
 2. Record a small sample of each bucket to drive targeted fixes.
 3. Track baseline-only classes that do not map to skipped Scala sources.
+4. Current high-impact gap: wildcard package imports can incorrectly re-root
+   qualified names like `scala.collection.Iterator` and `java.lang.Object`.
+   Added mini-case `case34` to lock this down; fix in `ScalaTypeMapper.resolveQualified`.
 
 **Priority Order (Work the biggest buckets first)**
 1. `missing-class` (usually indicates whole-class lowering or source inclusion problems).

@@ -1246,16 +1246,26 @@ public final class ScalaParser {
     ImmutableList.Builder<String> mods = ImmutableList.builder();
     while (true) {
       if (token == AT) {
-        skipAnnotation();
+        String annotation = skipAnnotation();
+        if (annotation != null && !annotation.isEmpty()) {
+          mods.add("@" + annotation);
+        }
         continue;
       }
       String text = token.toString();
       if (isModifierToken(token, value)) {
+        if ("private".equals(text) || "protected".equals(text)) {
+          next();
+          if (token == LBRACK) {
+            String qualifier = parseAccessQualifier();
+            mods.add(text + "[" + qualifier + "]");
+          } else {
+            mods.add(text);
+          }
+          continue;
+        }
         mods.add(text);
         next();
-        if (("private".equals(text) || "protected".equals(text)) && token == LBRACK) {
-          skipDelimited(LBRACK, RBRACK);
-        }
         continue;
       }
       break;
@@ -1267,16 +1277,26 @@ public final class ScalaParser {
     ImmutableList.Builder<String> mods = ImmutableList.builder();
     while (true) {
       if (token == AT) {
-        skipAnnotation();
+        String annotation = skipAnnotation();
+        if (annotation != null && !annotation.isEmpty()) {
+          mods.add("@" + annotation);
+        }
         continue;
       }
       String text = token.toString();
       if (isParamModifierToken(token, value)) {
+        if ("private".equals(text) || "protected".equals(text)) {
+          next();
+          if (token == LBRACK) {
+            String qualifier = parseAccessQualifier();
+            mods.add(text + "[" + qualifier + "]");
+          } else {
+            mods.add(text);
+          }
+          continue;
+        }
         mods.add(text);
         next();
-        if (("private".equals(text) || "protected".equals(text)) && token == LBRACK) {
-          skipDelimited(LBRACK, RBRACK);
-        }
         continue;
       }
       break;
@@ -1284,14 +1304,23 @@ public final class ScalaParser {
     return mods.build();
   }
 
-  private void skipAnnotation() {
+  private String parseAccessQualifier() {
+    accept(LBRACK);
+    String qualifier = parseTypeText(EnumSet.of(RBRACK));
+    accept(RBRACK);
+    return qualifier;
+  }
+
+  private @Nullable String skipAnnotation() {
     accept(AT);
+    String name = null;
     if (token.isIdentifier()) {
-      next();
+      StringBuilder sb = new StringBuilder();
+      sb.append(parseName());
       while (token == DOT) {
         next();
         if (token.isIdentifier()) {
-          next();
+          sb.append('.').append(parseName());
         } else {
           break;
         }
@@ -1299,10 +1328,12 @@ public final class ScalaParser {
       if (token == LBRACK) {
         skipDelimited(LBRACK, RBRACK);
       }
+      name = sb.toString();
     }
     if (token == LPAREN) {
       skipDelimited(LPAREN, RPAREN);
     }
+    return name;
   }
 
   private void skipDelimited(ScalaToken open, ScalaToken close) {

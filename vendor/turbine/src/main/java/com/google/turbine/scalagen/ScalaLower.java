@@ -18,6 +18,7 @@ package com.google.turbine.scalagen;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.turbine.bytecode.ClassFile;
 import com.google.turbine.bytecode.ClassFile.AnnotationInfo;
 import com.google.turbine.bytecode.ClassWriter;
@@ -36,14 +37,17 @@ import com.google.turbine.scalaparse.ScalaTree.ValDef;
 import java.util.ArrayList;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import org.jspecify.annotations.Nullable;
 
 /** Lowers Scala outline trees to minimal classfiles. */
 public final class ScalaLower {
@@ -53,48 +57,69 @@ public final class ScalaLower {
     List<ClassDef> classDefs = new ArrayList<>();
     List<ClassDef> objectDefs = new ArrayList<>();
     List<ClassDef> packageObjects = new ArrayList<>();
+    List<List<ClassDef>> unitClassDefs = new ArrayList<>();
+    Map<ClassDef, @Nullable String> outerBinaryNames = new IdentityHashMap<>();
     for (ScalaTree.CompUnit unit : units) {
+      List<ClassDef> unitDefs = new ArrayList<>();
       for (ScalaTree.Stat stat : unit.stats()) {
-        if (stat instanceof ClassDef cls) {
-          if (cls.isPackageObject()) {
-            packageObjects.add(cls);
-          } else if (cls.kind() == ClassDef.Kind.OBJECT) {
-            objectDefs.add(cls);
-          } else {
-            classDefs.add(cls);
-          }
-        }
+        collectClassDefs(
+            stat,
+            /* outerBinarySimpleName= */ null,
+            outerBinaryNames,
+            classDefs,
+            objectDefs,
+            packageObjects,
+            unitDefs);
       }
+      unitClassDefs.add(unitDefs);
     }
 
     Map<String, Set<String>> objectTypeMembers = objectTypeMembers(objectDefs);
+    Map<String, ScalaTypeMapper.ImportScope> packageTypeScopes = packageTypeScopes(classDefs);
+    Map<String, ScalaTypeMapper.ImportScope> memberTypeScopes =
+        memberTypeScopes(classDefs, outerBinaryNames);
+    Map<Key, @Nullable String> outerByKey =
+        outerByKey(classDefs, objectDefs, packageObjects, outerBinaryNames);
     Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes = new IdentityHashMap<>();
     Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes = new IdentityHashMap<>();
-    for (ScalaTree.CompUnit unit : units) {
+    for (int i = 0; i < units.size(); i++) {
+      ScalaTree.CompUnit unit = units.get(i);
       ScalaTypeMapper.ImportScope unitScope = importScope(unit, objectTypeMembers);
-      for (ScalaTree.Stat stat : unit.stats()) {
-        if (stat instanceof ClassDef cls) {
-          ScalaTypeMapper.ImportScope localScope =
-              importScope(cls.imports(), cls.packageName(), objectTypeMembers);
-          ScalaTypeMapper.ImportScope scope = mergeImportScopes(unitScope, localScope);
-          importScopes.put(cls, scope);
-          aliasScopes.put(cls, typeAliasScope(cls));
-        }
+      for (ClassDef cls : unitClassDefs.get(i)) {
+        ScalaTypeMapper.ImportScope localScope =
+            importScope(cls.imports(), cls.packageName(), objectTypeMembers);
+        ScalaTypeMapper.ImportScope scope = mergeImportScopes(unitScope, localScope);
+        ScalaTypeMapper.ImportScope packageScope =
+            packageTypeScopes.getOrDefault(cls.packageName(), ScalaTypeMapper.ImportScope.empty());
+        scope = mergeImportScopes(scope, packageScope);
+        ScalaTypeMapper.ImportScope nestedScope =
+            nestedTypeScope(cls, memberTypeScopes, outerByKey);
+        scope = mergeImportScopes(scope, nestedScope);
+        importScopes.put(cls, scope);
+        aliasScopes.put(cls, typeAliasScope(cls));
       }
     }
 
     Map<Key, ClassDef> objectsByKey = new HashMap<>();
+    Map<String, ClassDef> objectsByBinary = new HashMap<>();
     Map<String, ClassDef> traitsByBinary = new HashMap<>();
+    Map<String, ClassDef> classesByBinary = new HashMap<>();
     Set<Key> caseCompanions = new HashSet<>();
     Map<Key, Integer> caseCompanionFunctionArity = new HashMap<>();
     for (ClassDef obj : objectDefs) {
       objectsByKey.put(new Key(obj.packageName(), obj.name()), obj);
+      objectsByBinary.put(binaryName(obj.packageName(), obj.name()), obj);
     }
     for (ClassDef cls : classDefs) {
       if (cls.kind() == ClassDef.Kind.TRAIT) {
         traitsByBinary.put(binaryName(cls.packageName(), cls.name()), cls);
+      } else if (cls.kind() == ClassDef.Kind.CLASS) {
+        classesByBinary.put(binaryName(cls.packageName(), cls.name()), cls);
       }
     }
+
+    Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes =
+        mergedAliasScopes(aliasScopes, importScopes, traitsByBinary, classesByBinary, objectsByBinary);
 
     Map<Key, List<ClassFile.MethodInfo>> companionExtras = new HashMap<>();
     Map<Key, Boolean> hasCtorDefaults = new HashMap<>();
@@ -102,7 +127,7 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope =
           importScopes.getOrDefault(cls, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
-          aliasScopes.getOrDefault(cls, ScalaTypeMapper.TypeAliasScope.empty());
+          memberAliasScopes.getOrDefault(cls, ScalaTypeMapper.TypeAliasScope.empty());
       List<ClassFile.MethodInfo> ctorDefaults =
           ctorDefaultGetters(cls, scope, aliases, /* staticContext= */ false);
       List<ClassFile.MethodInfo> caseCompanionMethods = ImmutableList.of();
@@ -126,8 +151,10 @@ public final class ScalaLower {
           ClassDef synthetic = synthesizeCompanion(cls);
           objectDefs.add(synthetic);
           objectsByKey.put(key, synthetic);
+          objectsByBinary.put(binaryName(synthetic.packageName(), synthetic.name()), synthetic);
           importScopes.put(synthetic, scope);
           aliasScopes.put(synthetic, ScalaTypeMapper.TypeAliasScope.empty());
+          memberAliasScopes.put(synthetic, ScalaTypeMapper.TypeAliasScope.empty());
         }
       }
     }
@@ -147,10 +174,6 @@ public final class ScalaLower {
           importScopes.getOrDefault(cls, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
           aliasScopes.getOrDefault(cls, ScalaTypeMapper.TypeAliasScope.empty());
-      ScalaTypeMapper.TypeAliasScope companionAliases =
-          companion == null
-              ? ScalaTypeMapper.TypeAliasScope.empty()
-              : aliasScopes.getOrDefault(companion, ScalaTypeMapper.TypeAliasScope.empty());
       putAllUnique(
           out,
           generateClass(
@@ -159,13 +182,16 @@ public final class ScalaLower {
               ctorDefaults,
               scope,
               aliases,
-              companionAliases,
               traitsByBinary,
+              classesByBinary,
               importScopes,
               aliasScopes,
+              memberAliasScopes,
               majorVersion));
       if (cls.kind() == ClassDef.Kind.TRAIT) {
-        putAllUnique(out, generateTraitImplClass(cls, scope, aliases, majorVersion));
+        ScalaTypeMapper.TypeAliasScope memberAliases =
+            memberAliasScopes.getOrDefault(cls, aliases);
+        putAllUnique(out, generateTraitImplClass(cls, scope, memberAliases, majorVersion));
       }
     }
 
@@ -179,6 +205,7 @@ public final class ScalaLower {
           importScopes.getOrDefault(obj, ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope aliases =
           aliasScopes.getOrDefault(obj, ScalaTypeMapper.TypeAliasScope.empty());
+      boolean hasCompanionClass = classKeys.contains(key);
       putAllUnique(
           out,
           generateObject(
@@ -187,16 +214,27 @@ public final class ScalaLower {
               scope,
               aliases,
               traitsByBinary,
+              classesByBinary,
               importScopes,
               aliasScopes,
+              memberAliasScopes,
               majorVersion,
               isCaseCompanion,
-              functionArity));
+              functionArity,
+              hasCompanionClass));
       if (!classKeys.contains(key)) {
         putAllUnique(
             out,
             generateObjectMirror(
-                obj, scope, aliases, traitsByBinary, importScopes, aliasScopes, majorVersion));
+                obj,
+                scope,
+                aliases,
+                traitsByBinary,
+                classesByBinary,
+                importScopes,
+                aliasScopes,
+                memberAliasScopes,
+                majorVersion));
       }
     }
 
@@ -208,10 +246,75 @@ public final class ScalaLower {
       putAllUnique(
           out,
           generatePackageObject(
-              pkgObj, scope, aliases, traitsByBinary, importScopes, aliasScopes, majorVersion));
+              pkgObj,
+              scope,
+              aliases,
+              traitsByBinary,
+              classesByBinary,
+              importScopes,
+              aliasScopes,
+              memberAliasScopes,
+              majorVersion));
     }
 
     return ImmutableMap.copyOf(out);
+  }
+
+  private static void collectClassDefs(
+      ScalaTree.Stat stat,
+      @Nullable String outerBinarySimpleName,
+      Map<ClassDef, @Nullable String> outerBinaryNames,
+      List<ClassDef> classDefs,
+      List<ClassDef> objectDefs,
+      List<ClassDef> packageObjects,
+      List<ClassDef> unitDefs) {
+    if (!(stat instanceof ClassDef cls)) {
+      return;
+    }
+    String adjustedName = cls.name();
+    if (outerBinarySimpleName != null && !outerBinarySimpleName.isEmpty()) {
+      String sep = outerBinarySimpleName.endsWith("$") ? "" : "$";
+      adjustedName = outerBinarySimpleName + sep + cls.name();
+    }
+    ClassDef adjusted = renameClassDef(cls, adjustedName);
+    outerBinaryNames.put(adjusted, outerBinarySimpleName);
+    unitDefs.add(adjusted);
+    if (adjusted.isPackageObject()) {
+      packageObjects.add(adjusted);
+    } else if (adjusted.kind() == ClassDef.Kind.OBJECT) {
+      objectDefs.add(adjusted);
+    } else {
+      classDefs.add(adjusted);
+    }
+    String childOuter = adjustedName;
+    if (cls.kind() == ClassDef.Kind.OBJECT) {
+      childOuter = adjustedName + "$";
+    }
+    for (Defn defn : cls.members()) {
+      if (defn instanceof ClassDef nested) {
+        collectClassDefs(
+            nested, childOuter, outerBinaryNames, classDefs, objectDefs, packageObjects, unitDefs);
+      }
+    }
+  }
+
+  private static ClassDef renameClassDef(ClassDef cls, String adjustedName) {
+    if (cls.name().equals(adjustedName)) {
+      return cls;
+    }
+    return new ClassDef(
+        cls.packageName(),
+        adjustedName,
+        cls.kind(),
+        cls.isCase(),
+        cls.isPackageObject(),
+        cls.modifiers(),
+        cls.typeParams(),
+        cls.ctorParams(),
+        cls.parents(),
+        cls.imports(),
+        cls.members(),
+        cls.position());
   }
 
   private static void putAllUnique(Map<String, byte[]> target, Map<String, byte[]> source) {
@@ -226,14 +329,17 @@ public final class ScalaLower {
       boolean hasCtorDefaults,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
-      ScalaTypeMapper.TypeAliasScope companionAliases,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
       int majorVersion) {
     String pkg = cls.packageName();
     String name = cls.name();
     String binaryName = binaryName(pkg, name);
+    ScalaTypeMapper.TypeAliasScope memberAliases =
+        memberAliasScopes.getOrDefault(cls, aliasScope);
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_SUPER;
     boolean isTrait = cls.kind() == ClassDef.Kind.TRAIT;
     if (isTrait) {
@@ -247,19 +353,17 @@ public final class ScalaLower {
       }
     }
 
-    String superName = "java/lang/Object";
-    List<String> interfaces = new ArrayList<>();
-    if (!cls.parents().isEmpty()) {
-      String first = cls.parents().get(0);
-      if (isTrait) {
-        interfaces.add(eraseType(first, pkg, cls.typeParams(), scope, aliasScope));
-      } else {
-        superName = eraseType(first, pkg, cls.typeParams(), scope, aliasScope);
-      }
-      for (int i = 1; i < cls.parents().size(); i++) {
-        interfaces.add(eraseType(cls.parents().get(i), pkg, cls.typeParams(), scope, aliasScope));
-      }
-    }
+    ParentInfo parentInfo =
+        resolveParents(
+            cls,
+            scope,
+            aliasScope,
+            traitsByBinary,
+            classesByBinary,
+            importScopes,
+            aliasScopes);
+    String superName = parentInfo.superName();
+    List<String> interfaces = new ArrayList<>(parentInfo.interfaces());
     if (cls.isCase()) {
       if (!interfaces.contains("scala/Product")) {
         interfaces.add("scala/Product");
@@ -271,16 +375,23 @@ public final class ScalaLower {
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     if (!isTrait) {
-      methods.add(ctorMethod(cls, scope, aliasScope));
+      methods.add(ctorMethod(cls, scope, memberAliases));
     }
-    methods.addAll(memberMethods(cls, scope, aliasScope, /* staticContext= */ false));
+    methods.addAll(memberMethods(cls, scope, memberAliases, /* staticContext= */ false));
+    if (isTrait) {
+      methods.addAll(traitStaticMethods(cls, scope, memberAliases));
+    }
+    if (isTrait && hasConcreteTraitMembers(cls)) {
+      methods.add(traitInitMethod(cls, scope, memberAliases));
+    }
     if (!isTrait) {
       methods.addAll(
           traitForwarders(
               cls,
               traitsByBinary,
+              classesByBinary,
               importScopes,
-              aliasScopes,
+              memberAliasScopes,
               scope,
               aliasScope,
               /* staticContext= */ false,
@@ -292,26 +403,43 @@ public final class ScalaLower {
             cls.packageName(),
             ScalaTypeMapper.typeParamNames(cls.typeParams()),
             scope,
-            aliasScope,
+            memberAliases,
             /* staticContext= */ false,
             cls.kind()));
     if (hasCtorDefaults) {
-      methods.addAll(ctorDefaultGetters(cls, scope, aliasScope, /* staticContext= */ true));
+      methods.addAll(ctorDefaultGetters(cls, scope, memberAliases, /* staticContext= */ true));
     }
     if (cls.isCase()) {
-      methods.addAll(caseClassInstanceMethods(cls, scope, aliasScope));
-      methods.addAll(caseClassStaticMethods(cls, scope, aliasScope));
+      methods.addAll(caseClassInstanceMethods(cls, scope, memberAliases));
+      methods.addAll(caseClassStaticMethods(cls, scope, memberAliases));
     }
     if (companion != null) {
+      ScalaTypeMapper.TypeAliasScope companionAliases =
+          aliasScopes.getOrDefault(companion, ScalaTypeMapper.TypeAliasScope.empty());
+      ScalaTypeMapper.TypeAliasScope companionMemberAliases =
+          memberAliasScopes.getOrDefault(companion, companionAliases);
       methods.addAll(
           forwarders(
               companion,
               scope,
-              companionAliases,
+              companionMemberAliases,
               /* isTrait= */ isTrait));
+      methods.addAll(
+          classForwarders(
+              companion,
+              ScalaTypeMapper.typeParamNames(cls.typeParams()),
+              classesByBinary,
+              traitsByBinary,
+              importScopes,
+              memberAliasScopes,
+              scope,
+              companionAliases,
+              /* staticContext= */ true,
+              /* publicOnly= */ false));
     }
     methods = uniqueMethods(methods);
-    List<ClassFile.FieldInfo> fields = memberFields(cls, scope, aliasScope);
+    List<ClassFile.FieldInfo> fields =
+        memberFields(cls, scope, memberAliases, /* staticContext= */ false);
 
     String classSignature = ScalaSignature.classSignature(cls, scope, aliasScope);
     ClassFile classFile =
@@ -325,7 +453,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             methods,
             fields,
-            /* annotations= */ scalaClassAnnotations(),
+            /* annotations= */ classAnnotations(cls, pkg, scope, aliasScope),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -346,9 +474,12 @@ public final class ScalaLower {
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(),
+        ImmutableMap.of(),
+        ImmutableMap.of(),
         majorVersion,
         /* isCaseCompanion= */ false,
-        /* caseCompanionFunctionArity= */ -1);
+        /* caseCompanionFunctionArity= */ -1,
+        /* hasCompanionClass= */ false);
   }
 
   private static ImmutableMap<String, byte[]> generateObject(
@@ -357,32 +488,46 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
       int majorVersion,
       boolean isCaseCompanion,
-      int caseCompanionFunctionArity) {
+      int caseCompanionFunctionArity,
+      boolean hasCompanionClass) {
     String pkg = obj.packageName();
     String name = obj.name() + "$";
     String binaryName = binaryName(pkg, name);
+    ScalaTypeMapper.TypeAliasScope memberAliases =
+        memberAliasScopes.getOrDefault(obj, aliasScope);
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
     boolean isCaseObject = obj.isCase();
     boolean isApp = isAppObject(obj, scope, aliasScope);
 
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
     fields.add(moduleField(binaryName));
-    fields.addAll(memberFields(obj, scope, aliasScope));
+    fields.addAll(memberFields(obj, scope, memberAliases, /* staticContext= */ true));
+    if (hasCompanionClass) {
+      fields.addAll(companionPrivateFields(obj, scope, memberAliases));
+    }
     fields = uniqueFields(fields);
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     methods.add(defaultConstructor(/* isPublic= */ false));
-    methods.addAll(memberMethods(obj, scope, aliasScope, /* staticContext= */ false));
+    methods.add(staticInitializer());
+    methods.add(writeReplaceMethod());
+    methods.addAll(memberMethods(obj, scope, memberAliases, /* staticContext= */ false));
+    if (hasCompanionClass) {
+      methods.addAll(companionPrivateAccessors(obj, scope, memberAliases));
+    }
     methods.addAll(
         traitForwarders(
             obj,
             traitsByBinary,
+            classesByBinary,
             importScopes,
-            aliasScopes,
+            memberAliasScopes,
             scope,
             aliasScope,
             /* staticContext= */ false,
@@ -393,11 +538,11 @@ public final class ScalaLower {
             obj.packageName(),
             ScalaTypeMapper.typeParamNames(obj.typeParams()),
             scope,
-            aliasScope,
+            memberAliases,
             /* staticContext= */ false,
             ClassDef.Kind.CLASS));
     if (isCaseObject) {
-      methods.addAll(caseObjectInstanceMethods(obj, scope, aliasScope));
+      methods.addAll(caseObjectInstanceMethods(obj, scope, memberAliases));
     }
     if (isApp) {
       methods.addAll(appInstanceMethods());
@@ -405,8 +550,16 @@ public final class ScalaLower {
     methods.addAll(extraMethods);
     methods = uniqueMethods(methods);
 
-    List<String> interfaces = new ArrayList<>();
-    addInterface(interfaces, "java/io/Serializable");
+    ParentInfo parentInfo =
+        resolveParents(
+            obj,
+            scope,
+            aliasScope,
+            traitsByBinary,
+            classesByBinary,
+            importScopes,
+            aliasScopes);
+    List<String> interfaces = new ArrayList<>(parentInfo.interfaces());
     if (isApp) {
       addInterface(interfaces, "scala/App");
     }
@@ -417,7 +570,8 @@ public final class ScalaLower {
       addInterface(interfaces, "scala/Product");
       addInterface(interfaces, "scala/deriving/Mirror$Singleton");
     }
-    String superName = "java/lang/Object";
+    addInterface(interfaces, "java/io/Serializable");
+    String superName = parentInfo.superName();
     if (caseCompanionFunctionArity >= 0 && caseCompanionFunctionArity <= 22) {
       superName = "scala/runtime/AbstractFunction" + caseCompanionFunctionArity;
     }
@@ -433,7 +587,7 @@ public final class ScalaLower {
             /* permits= */ ImmutableList.of(),
             methods,
             fields,
-            /* annotations= */ scalaClassAnnotations(),
+            /* annotations= */ classAnnotations(obj, pkg, scope, aliasScope),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -450,28 +604,45 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
       int majorVersion) {
     String pkg = obj.packageName();
     String binaryName = binaryName(pkg, obj.name());
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
+    ScalaTypeMapper.TypeAliasScope memberAliases =
+        memberAliasScopes.getOrDefault(obj, aliasScope);
     boolean isApp = isAppObject(obj, scope, aliasScope);
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
-    methods.addAll(publicForwarders(obj, scope, aliasScope));
+    methods.addAll(publicForwarders(obj, scope, memberAliases));
     methods.addAll(
         traitForwarders(
             obj,
             traitsByBinary,
+            classesByBinary,
             importScopes,
-            aliasScopes,
+            memberAliasScopes,
+            scope,
+            aliasScope,
+            /* staticContext= */ true,
+            /* publicOnly= */ true));
+    methods.addAll(
+        classForwarders(
+            obj,
+            ScalaTypeMapper.typeParamNames(obj.typeParams()),
+            classesByBinary,
+            traitsByBinary,
+            importScopes,
+            memberAliasScopes,
             scope,
             aliasScope,
             /* staticContext= */ true,
             /* publicOnly= */ true));
     if (obj.isCase()) {
-      methods.addAll(caseObjectStaticMethods(obj, scope, aliasScope));
+      methods.addAll(caseObjectStaticMethods(obj, scope, memberAliases));
     }
     if (isApp) {
       methods.addAll(appStaticMethods());
@@ -506,31 +677,38 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
       int majorVersion) {
     String pkg = pkgObj.packageName();
     String fullPackage = pkg.isEmpty() ? pkgObj.name() : pkg + "." + pkgObj.name();
 
     ClassDef companion = pkgObj;
+    ScalaTypeMapper.TypeAliasScope memberAliases =
+        memberAliasScopes.getOrDefault(pkgObj, aliasScope);
 
     String moduleBinary = binaryName(fullPackage, "package$");
     String companionBinary = binaryName(fullPackage, "package");
 
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
     fields.add(moduleField(moduleBinary));
-    fields.addAll(memberFields(pkgObj, scope, aliasScope));
+    fields.addAll(memberFields(pkgObj, scope, memberAliases, /* staticContext= */ true));
     fields = uniqueFields(fields);
 
     List<ClassFile.MethodInfo> moduleMethods = new ArrayList<>();
     moduleMethods.add(defaultConstructor(/* isPublic= */ false));
-    moduleMethods.addAll(memberMethods(pkgObj, scope, aliasScope, /* staticContext= */ false));
+    moduleMethods.add(staticInitializer());
+    moduleMethods.add(writeReplaceMethod());
+    moduleMethods.addAll(memberMethods(pkgObj, scope, memberAliases, /* staticContext= */ false));
     moduleMethods.addAll(
         traitForwarders(
             pkgObj,
             traitsByBinary,
+            classesByBinary,
             importScopes,
-            aliasScopes,
+            memberAliasScopes,
             scope,
             aliasScope,
             /* staticContext= */ false,
@@ -541,23 +719,34 @@ public final class ScalaLower {
             pkgObj.packageName(),
             ScalaTypeMapper.typeParamNames(pkgObj.typeParams()),
             scope,
-            aliasScope,
+            memberAliases,
             /* staticContext= */ false,
             ClassDef.Kind.CLASS));
     moduleMethods = uniqueMethods(moduleMethods);
 
+    ParentInfo parentInfo =
+        resolveParents(
+            pkgObj,
+            scope,
+            aliasScope,
+            traitsByBinary,
+            classesByBinary,
+            importScopes,
+            aliasScopes);
+    List<String> moduleInterfaces = new ArrayList<>(parentInfo.interfaces());
+    addInterface(moduleInterfaces, "java/io/Serializable");
     ClassFile moduleClass =
         new ClassFile(
             TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER,
             majorVersion,
             moduleBinary,
             /* signature= */ null,
-            "java/lang/Object",
-            /* interfaces= */ ImmutableList.of(),
+            parentInfo.superName(),
+            /* interfaces= */ moduleInterfaces,
             /* permits= */ ImmutableList.of(),
             moduleMethods,
             fields,
-            /* annotations= */ scalaClassAnnotations(),
+            /* annotations= */ classAnnotations(pkgObj, pkgObj.packageName(), scope, aliasScope),
             /* innerClasses= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* module= */ null,
@@ -571,14 +760,15 @@ public final class ScalaLower {
         forwarders(
             companion,
             scope,
-            aliasScope,
+            memberAliases,
             /* isTrait= */ false));
     companionMethods.addAll(
         traitForwarders(
             companion,
             traitsByBinary,
+            classesByBinary,
             importScopes,
-            aliasScopes,
+            memberAliasScopes,
             scope,
             aliasScope,
             /* staticContext= */ true,
@@ -705,7 +895,11 @@ public final class ScalaLower {
                 scope,
                 aliasScope,
                 staticContext,
-                cls.kind()));
+                cls.kind(),
+                /* isCtorParam= */ false));
+        if (shouldEmitLazyCompute(val, cls.kind())) {
+          methods.add(lazyComputeMethod(val, cls.packageName(), typeParams, scope, aliasScope));
+        }
       }
     }
     // constructor params with val/var become accessors
@@ -730,37 +924,287 @@ public final class ScalaLower {
                   scope,
                   aliasScope,
                   staticContext,
-                  cls.kind()));
+                  cls.kind(),
+                  /* isCtorParam= */ true));
         }
       }
     }
+    methods.addAll(implicitClassConversionMethods(cls, scope, aliasScope, staticContext));
     return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> implicitClassConversionMethods(
+      ClassDef owner,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(owner.typeParams());
+    for (Defn defn : owner.members()) {
+      if (!(defn instanceof ClassDef nested)) {
+        continue;
+      }
+      if (nested.kind() != ClassDef.Kind.CLASS) {
+        continue;
+      }
+      if (!nested.modifiers().contains("implicit")) {
+        continue;
+      }
+      methods.add(implicitClassConversionMethod(owner, nested, classTypeParams, scope, aliasScope, staticContext));
+    }
+    return methods;
+  }
+
+  private static ClassFile.MethodInfo implicitClassConversionMethod(
+      ClassDef owner,
+      ClassDef nested,
+      Set<String> classTypeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
+    Set<String> typeParams = new HashSet<>(classTypeParams);
+    typeParams.addAll(ScalaTypeMapper.typeParamNames(nested.typeParams()));
+    StringBuilder desc = new StringBuilder();
+    desc.append('(');
+    for (ParamList list : nested.ctorParams()) {
+      for (Param param : list.params()) {
+        desc.append(
+            ScalaTypeMapper.descriptorForParam(param.type(), owner.packageName(), typeParams, scope, aliasScope));
+      }
+    }
+    desc.append(')').append(implicitClassReturnDescriptor(owner, nested));
+
+    int access = TurbineFlag.ACC_PUBLIC;
+    if (staticContext) {
+      access |= TurbineFlag.ACC_STATIC;
+    } else if (owner.kind() != ClassDef.Kind.TRAIT) {
+      access |= TurbineFlag.ACC_FINAL;
+    }
+    return new ClassFile.MethodInfo(
+        access,
+        encodeName(nested.name()),
+        desc.toString(),
+        /* signature= */ null,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
+  }
+
+  private static List<ClassFile.MethodInfo> implicitClassStaticMethods(
+      ClassDef traitDef,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(traitDef.typeParams());
+    for (Defn defn : traitDef.members()) {
+      if (!(defn instanceof ClassDef nested)) {
+        continue;
+      }
+      if (nested.kind() != ClassDef.Kind.CLASS) {
+        continue;
+      }
+      if (!nested.modifiers().contains("implicit")) {
+        continue;
+      }
+      methods.add(implicitClassStaticMethod(traitDef, nested, classTypeParams, scope, aliasScope));
+    }
+    return methods;
+  }
+
+  private static ClassFile.MethodInfo implicitClassStaticMethod(
+      ClassDef traitDef,
+      ClassDef nested,
+      Set<String> classTypeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    Set<String> typeParams = new HashSet<>(classTypeParams);
+    typeParams.addAll(ScalaTypeMapper.typeParamNames(nested.typeParams()));
+    StringBuilder desc = new StringBuilder();
+    desc.append('(');
+    desc.append('L').append(binaryName(traitDef.packageName(), traitDef.name())).append(';');
+    for (ParamList list : nested.ctorParams()) {
+      for (Param param : list.params()) {
+        desc.append(
+            ScalaTypeMapper.descriptorForParam(param.type(), traitDef.packageName(), typeParams, scope, aliasScope));
+      }
+    }
+    desc.append(')').append(implicitClassReturnDescriptor(traitDef, nested));
+    return new ClassFile.MethodInfo(
+        TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
+        encodeName(nested.name()) + "$",
+        desc.toString(),
+        /* signature= */ null,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
+  }
+
+  private static String implicitClassReturnDescriptor(ClassDef owner, ClassDef nested) {
+    String nestedBinary = binaryName(owner.packageName(), owner.name() + "$" + nested.name());
+    return "L" + nestedBinary + ";";
   }
 
   private static List<ClassFile.FieldInfo> memberFields(
       ClassDef cls,
       ScalaTypeMapper.ImportScope scope,
-      ScalaTypeMapper.TypeAliasScope aliasScope) {
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
     if (cls.kind() == ClassDef.Kind.TRAIT) {
       return ImmutableList.of();
     }
     List<ClassFile.FieldInfo> fields = new ArrayList<>();
+    int lazyCount = 0;
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
     for (Defn defn : cls.members()) {
       if (defn instanceof ValDef val) {
         if (val.hasDefault()) {
-          fields.add(fieldForVal(val, cls.packageName(), typeParams, scope, aliasScope));
+          if (val.modifiers().contains("lazy")) {
+            lazyCount++;
+          }
+          fields.add(fieldForVal(val, cls.packageName(), typeParams, scope, aliasScope, staticContext));
         }
       }
+    }
+    if (lazyCount > 0) {
+      fields.addAll(lazyBitmapFields(lazyCount, staticContext));
     }
     for (ParamList list : cls.ctorParams()) {
       for (Param param : list.params()) {
         if (param.modifiers().contains("val") || param.modifiers().contains("var") || cls.isCase()) {
-          fields.add(fieldForParam(param, cls.packageName(), typeParams, scope, aliasScope));
+          fields.add(
+              fieldForParam(param, cls.packageName(), typeParams, scope, aliasScope, staticContext));
         }
       }
     }
     return uniqueFields(fields);
+  }
+
+  private static List<ClassFile.FieldInfo> companionPrivateFields(
+      ClassDef obj,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.FieldInfo> fields = new ArrayList<>();
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(obj.typeParams());
+    for (Defn defn : obj.members()) {
+      if (defn instanceof ValDef val) {
+        if (!val.hasDefault() || !isPrivateMember(val.modifiers())) {
+          continue;
+        }
+        String mangled = companionPrivateName(obj, val.name());
+        ValDef adjusted =
+            new ValDef(
+                obj.packageName(),
+                mangled,
+                val.isVar(),
+                val.modifiers(),
+                val.type(),
+                val.hasExplicitType(),
+                val.hasDefault(),
+                val.position());
+        fields.add(
+            fieldForVal(
+                adjusted,
+                obj.packageName(),
+                typeParams,
+                scope,
+                aliasScope,
+                /* staticContext= */ true));
+      }
+    }
+    return fields;
+  }
+
+  private static List<ClassFile.MethodInfo> companionPrivateAccessors(
+      ClassDef obj,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    Set<String> typeParams = ScalaTypeMapper.typeParamNames(obj.typeParams());
+    for (Defn defn : obj.members()) {
+      if (defn instanceof DefDef def) {
+        if (isAbstractDef(def, ClassDef.Kind.CLASS) || !isPrivateMember(def.modifiers())) {
+          continue;
+        }
+        String mangled = companionPrivateName(obj, def.name());
+        DefDef adjusted =
+            new DefDef(
+                def.packageName(),
+                mangled,
+                publicizeModifiers(def.modifiers()),
+                def.typeParams(),
+                def.paramLists(),
+                def.returnType(),
+                def.position());
+        methods.add(
+            buildMethod(
+                adjusted,
+                obj.packageName(),
+                typeParams,
+                scope,
+                aliasScope,
+                /* staticContext= */ false,
+                ClassDef.Kind.CLASS));
+      } else if (defn instanceof ValDef val) {
+        if (!val.hasDefault() || !isPrivateMember(val.modifiers())) {
+          continue;
+        }
+        String mangled = companionPrivateName(obj, val.name());
+        ValDef adjusted =
+            new ValDef(
+                obj.packageName(),
+                mangled,
+                val.isVar(),
+                publicizeModifiers(val.modifiers()),
+                val.type(),
+                val.hasExplicitType(),
+                val.hasDefault(),
+                val.position());
+        methods.addAll(
+            accessorsForVal(
+                adjusted,
+                obj.packageName(),
+                typeParams,
+                scope,
+                aliasScope,
+                /* staticContext= */ false,
+                ClassDef.Kind.CLASS,
+                /* isCtorParam= */ false));
+      }
+    }
+    return methods;
+  }
+
+  private static boolean isPrivateMember(ImmutableList<String> modifiers) {
+    for (String modifier : modifiers) {
+      if ("private".equals(modifier) || modifier.startsWith("private[")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static ImmutableList<String> publicizeModifiers(ImmutableList<String> modifiers) {
+    ImmutableList.Builder<String> out = ImmutableList.builder();
+    for (String modifier : modifiers) {
+      if (isAccessModifier(modifier)) {
+        continue;
+      }
+      out.add(modifier);
+    }
+    return out.build();
+  }
+
+  private static boolean isAccessModifier(String modifier) {
+    return "private".equals(modifier)
+        || "protected".equals(modifier)
+        || modifier.startsWith("private[")
+        || modifier.startsWith("protected[");
   }
 
   private static ClassFile.FieldInfo fieldForVal(
@@ -768,17 +1212,21 @@ public final class ScalaLower {
       String pkg,
       Set<String> typeParams,
       ScalaTypeMapper.ImportScope scope,
-      ScalaTypeMapper.TypeAliasScope aliasScope) {
-    int access = fieldAccess(val.isVar(), val.modifiers());
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
+    boolean isLazy = val.modifiers().contains("lazy");
+    int access = fieldAccess(val.isVar(), isLazy, staticContext);
     String name = encodeName(val.name());
     String desc = ScalaTypeMapper.descriptorForParam(val.type(), pkg, typeParams, scope, aliasScope);
+    List<AnnotationInfo> annotations =
+        annotationsFromModifiers(val.modifiers(), pkg, scope, aliasScope);
     return new ClassFile.FieldInfo(
         access,
         name,
         desc,
         /* signature= */ null,
         /* value= */ null,
-        /* annotations= */ ImmutableList.of(),
+        /* annotations= */ annotations,
         /* typeAnnotations= */ ImmutableList.of());
   }
 
@@ -787,30 +1235,75 @@ public final class ScalaLower {
       String pkg,
       Set<String> typeParams,
       ScalaTypeMapper.ImportScope scope,
-      ScalaTypeMapper.TypeAliasScope aliasScope) {
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
     boolean isVar = param.modifiers().contains("var");
-    int access = fieldAccess(isVar, param.modifiers());
+    int access = fieldAccess(isVar, /* isLazy= */ false, staticContext);
     String name = encodeName(param.name());
     String desc = ScalaTypeMapper.descriptorForParam(param.type(), pkg, typeParams, scope, aliasScope);
+    List<AnnotationInfo> annotations =
+        annotationsFromModifiers(param.modifiers(), pkg, scope, aliasScope);
     return new ClassFile.FieldInfo(
         access,
         name,
         desc,
         /* signature= */ null,
         /* value= */ null,
-        /* annotations= */ ImmutableList.of(),
+        /* annotations= */ annotations,
         /* typeAnnotations= */ ImmutableList.of());
   }
 
-  private static int fieldAccess(boolean isVar, ImmutableList<String> modifiers) {
+  private static int fieldAccess(boolean isVar, boolean isLazy, boolean staticContext) {
     int access = TurbineFlag.ACC_PRIVATE;
-    if (!isVar && !modifiers.contains("lazy")) {
+    if (staticContext) {
+      access |= TurbineFlag.ACC_STATIC;
+    }
+    if (!isVar && !isLazy) {
       access |= TurbineFlag.ACC_FINAL;
     }
-    if (modifiers.contains("lazy")) {
-      access |= TurbineFlag.ACC_VOLATILE;
-    }
     return access;
+  }
+
+  private static List<ClassFile.FieldInfo> lazyBitmapFields(int lazyCount, boolean staticContext) {
+    if (lazyCount <= 0) {
+      return ImmutableList.of();
+    }
+    int bits;
+    String desc;
+    if (lazyCount == 1) {
+      bits = 1;
+      desc = "Z";
+    } else if (lazyCount <= 8) {
+      bits = 8;
+      desc = "B";
+    } else if (lazyCount <= 16) {
+      bits = 16;
+      desc = "S";
+    } else if (lazyCount <= 32) {
+      bits = 32;
+      desc = "I";
+    } else {
+      bits = 64;
+      desc = "J";
+    }
+    int fieldCount = (lazyCount + bits - 1) / bits;
+    List<ClassFile.FieldInfo> fields = new ArrayList<>();
+    for (int i = 0; i < fieldCount; i++) {
+      int access = TurbineFlag.ACC_PRIVATE | TurbineFlag.ACC_VOLATILE;
+      if (staticContext) {
+        access |= TurbineFlag.ACC_STATIC;
+      }
+      fields.add(
+          new ClassFile.FieldInfo(
+              access,
+              "bitmap$" + i,
+              desc,
+              /* signature= */ null,
+              /* value= */ null,
+              /* annotations= */ ImmutableList.of(),
+              /* typeAnnotations= */ ImmutableList.of()));
+    }
+    return fields;
   }
 
   private static List<ClassFile.MethodInfo> forwarders(
@@ -841,7 +1334,8 @@ public final class ScalaLower {
                 scope,
                 aliasScope,
                 /* staticContext= */ true,
-                ownerKind));
+                ownerKind,
+                /* isCtorParam= */ false));
       }
     }
     methods.addAll(
@@ -853,27 +1347,64 @@ public final class ScalaLower {
             aliasScope,
             /* staticContext= */ true,
             ownerKind));
+    methods.addAll(implicitClassConversionMethods(obj, scope, aliasScope, /* staticContext= */ true));
     return methods;
   }
 
   private static List<ClassFile.MethodInfo> traitForwarders(
       ClassDef target,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
-      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
+      ScalaTypeMapper.ImportScope targetScope,
+      ScalaTypeMapper.TypeAliasScope targetAliases,
+      boolean staticContext,
+      boolean publicOnly) {
+    Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(target.typeParams());
+    return traitForwardersFromParents(
+        target.parents(),
+        target.packageName(),
+        target.typeParams(),
+        classTypeParams,
+        traitsByBinary,
+        classesByBinary,
+        importScopes,
+        memberAliasScopes,
+        targetScope,
+        targetAliases,
+        staticContext,
+        publicOnly);
+  }
+
+  private static List<ClassFile.MethodInfo> traitForwardersFromParents(
+      Iterable<String> parentTypeTexts,
+      String targetPkg,
+      List<TypeParam> targetTypeParams,
+      Set<String> classTypeParams,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
       ScalaTypeMapper.ImportScope targetScope,
       ScalaTypeMapper.TypeAliasScope targetAliases,
       boolean staticContext,
       boolean publicOnly) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
-    if (traitsByBinary.isEmpty() || target.parents().isEmpty()) {
+    if (traitsByBinary.isEmpty()) {
       return methods;
     }
-    Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(target.typeParams());
     Deque<TraitRef> pending = new ArrayDeque<>();
-    for (String parent : target.parents()) {
+    for (String parent : parentTypeTexts) {
       String binary =
-          eraseType(parent, target.packageName(), target.typeParams(), targetScope, targetAliases);
+          resolveParentBinary(
+              parent,
+              targetPkg,
+              targetTypeParams,
+              targetScope,
+              targetAliases,
+              traitsByBinary,
+              classesByBinary);
       ClassDef trait = traitsByBinary.get(binary);
       if (trait != null) {
         pending.addLast(new TraitRef(trait, parent));
@@ -890,7 +1421,7 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope traitScope =
           importScopes.getOrDefault(current.trait(), ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope traitAliases =
-          aliasScopes.getOrDefault(current.trait(), ScalaTypeMapper.TypeAliasScope.empty());
+          memberAliasScopes.getOrDefault(current.trait(), ScalaTypeMapper.TypeAliasScope.empty());
       Map<String, String> substitutions =
           traitTypeSubstitutions(current.trait(), current.parentTypeText());
       for (Defn defn : current.trait().members()) {
@@ -928,21 +1459,26 @@ public final class ScalaLower {
                   traitScope,
                   traitAliases,
                   staticContext,
-                  ClassDef.Kind.CLASS));
+                  ClassDef.Kind.CLASS,
+                  /* isCtorParam= */ false));
         }
       }
+      methods.addAll(
+          implicitClassConversionMethods(current.trait(), traitScope, traitAliases, staticContext));
       if (current.trait().parents().isEmpty()) {
         continue;
       }
       for (String parent : current.trait().parents()) {
         String substitutedParent = substituteType(parent, substitutions);
         String parentBinary =
-            eraseType(
+            resolveParentBinary(
                 substitutedParent,
                 current.trait().packageName(),
                 current.trait().typeParams(),
                 traitScope,
-                traitAliases);
+                traitAliases,
+                traitsByBinary,
+                classesByBinary);
         ClassDef parentTrait = traitsByBinary.get(parentBinary);
         if (parentTrait != null) {
           pending.addLast(new TraitRef(parentTrait, substitutedParent));
@@ -958,6 +1494,186 @@ public final class ScalaLower {
       }
       return publicMethods;
     }
+    return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> classForwarders(
+      ClassDef target,
+      Set<String> classTypeParams,
+      Map<String, ClassDef> classesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> memberAliasScopes,
+      ScalaTypeMapper.ImportScope targetScope,
+      ScalaTypeMapper.TypeAliasScope targetAliases,
+      boolean staticContext,
+      boolean publicOnly) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    if (classesByBinary.isEmpty() || target.parents().isEmpty()) {
+      return methods;
+    }
+    Deque<ClassParentRef> pending = new ArrayDeque<>();
+    for (String parent : target.parents()) {
+      String binary =
+          resolveParentBinary(
+              parent,
+              target.packageName(),
+              target.typeParams(),
+              targetScope,
+              targetAliases,
+              traitsByBinary,
+              classesByBinary);
+      ClassDef parentClass = classesByBinary.get(binary);
+      if (parentClass != null) {
+        pending.addLast(new ClassParentRef(parentClass, parent));
+      }
+    }
+    Set<String> seen = new HashSet<>();
+    while (!pending.isEmpty()) {
+      ClassParentRef current = pending.removeFirst();
+      String currentBinary = binaryName(current.parent().packageName(), current.parent().name());
+      String currentKey = currentBinary + "::" + current.parentTypeText();
+      if (!seen.add(currentKey)) {
+        continue;
+      }
+      ScalaTypeMapper.ImportScope parentScope =
+          importScopes.getOrDefault(current.parent(), ScalaTypeMapper.ImportScope.empty());
+      ScalaTypeMapper.TypeAliasScope parentAliases =
+          memberAliasScopes.getOrDefault(current.parent(), ScalaTypeMapper.TypeAliasScope.empty());
+      Map<String, String> substitutions =
+          traitTypeSubstitutions(current.parent(), current.parentTypeText());
+      methods.addAll(
+          classMemberForwarders(
+              current.parent(),
+              substitutions,
+              classTypeParams,
+              parentScope,
+              parentAliases,
+              staticContext));
+      if (!current.parent().parents().isEmpty()) {
+        List<String> substitutedParents = new ArrayList<>();
+        for (String parent : current.parent().parents()) {
+          substitutedParents.add(substituteType(parent, substitutions));
+        }
+        methods.addAll(
+            traitForwardersFromParents(
+                substitutedParents,
+                current.parent().packageName(),
+                current.parent().typeParams(),
+            classTypeParams,
+            traitsByBinary,
+            classesByBinary,
+            importScopes,
+            memberAliasScopes,
+            parentScope,
+            parentAliases,
+            staticContext,
+            publicOnly));
+        for (String parent : substitutedParents) {
+          String parentBinary =
+              resolveParentBinary(
+                  parent,
+                  current.parent().packageName(),
+                  current.parent().typeParams(),
+                  parentScope,
+                  parentAliases,
+                  traitsByBinary,
+                  classesByBinary);
+          ClassDef parentClass = classesByBinary.get(parentBinary);
+          if (parentClass != null) {
+            pending.addLast(new ClassParentRef(parentClass, parent));
+          }
+        }
+      }
+    }
+    methods = uniqueMethods(methods);
+    if (publicOnly) {
+      List<ClassFile.MethodInfo> publicMethods = new ArrayList<>();
+      for (ClassFile.MethodInfo method : methods) {
+        if ((method.access() & TurbineFlag.ACC_PUBLIC) != 0) {
+          publicMethods.add(method);
+        }
+      }
+      return publicMethods;
+    }
+    return methods;
+  }
+
+  private static List<ClassFile.MethodInfo> classMemberForwarders(
+      ClassDef cls,
+      Map<String, String> substitutions,
+      Set<String> classTypeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    for (Defn defn : cls.members()) {
+      if (defn instanceof DefDef def) {
+        if ("this".equals(def.name()) || isAbstractDef(def, ClassDef.Kind.CLASS)) {
+          continue;
+        }
+        Map<String, String> filtered = substitutions;
+        if (!substitutions.isEmpty() && !def.typeParams().isEmpty()) {
+          filtered = new HashMap<>(substitutions);
+          for (TypeParam tp : def.typeParams()) {
+            filtered.remove(tp.name());
+          }
+        }
+        DefDef adjusted = substituteDef(def, filtered);
+        methods.add(
+            buildMethod(
+                adjusted,
+                cls.packageName(),
+                classTypeParams,
+                scope,
+                aliasScope,
+                staticContext,
+                ClassDef.Kind.CLASS));
+      } else if (defn instanceof ValDef val) {
+        if (isAbstractVal(val, ClassDef.Kind.CLASS)) {
+          continue;
+        }
+        ValDef adjusted = substituteVal(val, substitutions);
+        methods.addAll(
+            accessorsForVal(
+                adjusted,
+                cls.packageName(),
+                classTypeParams,
+                scope,
+                aliasScope,
+                staticContext,
+                ClassDef.Kind.CLASS,
+                /* isCtorParam= */ false));
+      }
+    }
+    for (ParamList list : cls.ctorParams()) {
+      for (Param param : list.params()) {
+        if (param.modifiers().contains("val") || param.modifiers().contains("var") || cls.isCase()) {
+          ValDef val =
+              new ValDef(
+                  cls.packageName(),
+                  param.name(),
+                  param.modifiers().contains("var"),
+                  param.modifiers(),
+                  param.type(),
+                  param.type() != null,
+                  param.hasDefault(),
+                  cls.position());
+          ValDef adjusted = substituteVal(val, substitutions);
+          methods.addAll(
+              accessorsForVal(
+                  adjusted,
+                  cls.packageName(),
+                  classTypeParams,
+                  scope,
+                  aliasScope,
+                  staticContext,
+                  ClassDef.Kind.CLASS,
+                  /* isCtorParam= */ true));
+        }
+      }
+    }
+    methods.addAll(implicitClassConversionMethods(cls, scope, aliasScope, staticContext));
     return methods;
   }
 
@@ -1070,15 +1786,69 @@ public final class ScalaLower {
         /* parameters= */ ImmutableList.of());
   }
 
+  private static ClassFile.MethodInfo staticInitializer() {
+    return new ClassFile.MethodInfo(
+        TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
+        "<clinit>",
+        "()V",
+        /* signature= */ null,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
+  }
+
+  private static ClassFile.MethodInfo writeReplaceMethod() {
+    return new ClassFile.MethodInfo(
+        TurbineFlag.ACC_PRIVATE,
+        "writeReplace",
+        "()Ljava/lang/Object;",
+        /* signature= */ null,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
+  }
+
   private static boolean isAbstractDef(DefDef def, ClassDef.Kind ownerKind) {
     return def.modifiers().contains("abstract");
   }
 
   private static boolean isAbstractVal(ValDef val, ClassDef.Kind ownerKind) {
+    return isAbstractVal(val, ownerKind, /* isCtorParam= */ false);
+  }
+
+  private static boolean isAbstractVal(ValDef val, ClassDef.Kind ownerKind, boolean isCtorParam) {
     if (val.modifiers().contains("abstract")) {
       return true;
     }
+    if (isCtorParam) {
+      return false;
+    }
     return !val.hasDefault();
+  }
+
+  private static boolean hasConcreteTraitMembers(ClassDef traitDef) {
+    for (Defn defn : traitDef.members()) {
+      if (defn instanceof DefDef def) {
+        if (!isAbstractDef(def, ClassDef.Kind.TRAIT)) {
+          return true;
+        }
+      } else if (defn instanceof ValDef val) {
+        if (!isAbstractVal(val, ClassDef.Kind.TRAIT)) {
+          return true;
+        }
+      } else if (defn instanceof ClassDef cls) {
+        if (cls.modifiers().contains("implicit")) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   private static int methodAccess(
@@ -1093,23 +1863,57 @@ public final class ScalaLower {
     if (isAbstract) {
       access |= TurbineFlag.ACC_ABSTRACT;
     }
-    if (modifiers.contains("final")) {
+    if (modifiers.contains("final") && !staticContext) {
       access |= TurbineFlag.ACC_FINAL;
     }
     return access;
   }
 
   private static int visibility(ImmutableList<String> modifiers, ClassDef.Kind ownerKind) {
+    String privateQualifier = accessQualifier(modifiers, "private");
+    String protectedQualifier = accessQualifier(modifiers, "protected");
     if (ownerKind == ClassDef.Kind.TRAIT) {
+      if (privateQualifier != null) {
+        if (privateQualifier.isEmpty() || isThisQualifier(privateQualifier)) {
+          return TurbineFlag.ACC_PRIVATE;
+        }
+      }
       return TurbineFlag.ACC_PUBLIC;
     }
-    if (modifiers.contains("private")) {
-      return TurbineFlag.ACC_PRIVATE;
+    if (privateQualifier != null) {
+      if (privateQualifier.isEmpty() || isThisQualifier(privateQualifier)) {
+        return TurbineFlag.ACC_PRIVATE;
+      }
+      return TurbineFlag.ACC_PUBLIC;
     }
-    if (modifiers.contains("protected")) {
-      return TurbineFlag.ACC_PROTECTED;
+    if (protectedQualifier != null) {
+      if (protectedQualifier.isEmpty() || isThisQualifier(protectedQualifier)) {
+        return TurbineFlag.ACC_PROTECTED;
+      }
+      return TurbineFlag.ACC_PUBLIC;
     }
     return TurbineFlag.ACC_PUBLIC;
+  }
+
+  private static String accessQualifier(ImmutableList<String> modifiers, String keyword) {
+    for (String modifier : modifiers) {
+      if (modifier.equals(keyword)) {
+        return "";
+      }
+      String prefix = keyword + "[";
+      if (modifier.startsWith(prefix) && modifier.endsWith("]")) {
+        return modifier.substring(prefix.length(), modifier.length() - 1);
+      }
+    }
+    return null;
+  }
+
+  private static boolean isThisQualifier(String qualifier) {
+    if (qualifier == null) {
+      return false;
+    }
+    String normalized = qualifier.replace(" ", "");
+    return "this".equals(normalized);
   }
 
   private static ClassFile.MethodInfo buildMethod(
@@ -1143,6 +1947,8 @@ public final class ScalaLower {
     String signature =
         ScalaSignature.methodSignature(
             def.typeParams(), paramTypes, def.returnType(), typeParams, pkg, scope, aliasScope);
+    List<AnnotationInfo> annotations =
+        annotationsFromModifiers(def.modifiers(), pkg, scope, aliasScope);
     return new ClassFile.MethodInfo(
         access,
         encodeName(def.name()),
@@ -1150,7 +1956,7 @@ public final class ScalaLower {
         signature,
         /* exceptions= */ ImmutableList.of(),
         /* defaultValue= */ null,
-        /* annotations= */ ImmutableList.of(),
+        /* annotations= */ annotations,
         /* parameterAnnotations= */ ImmutableList.of(),
         /* typeAnnotations= */ ImmutableList.of(),
         /* parameters= */ ImmutableList.of());
@@ -1163,13 +1969,16 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       boolean staticContext,
-      ClassDef.Kind ownerKind) {
+      ClassDef.Kind ownerKind,
+      boolean isCtorParam) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String getterDesc =
         "()" + ScalaTypeMapper.descriptorForReturn(val.type(), pkg, typeParams, scope, aliasScope);
-    boolean isAbstract = isAbstractVal(val, ownerKind);
+    boolean isAbstract = isAbstractVal(val, ownerKind, isCtorParam);
     int access = methodAccess(val.modifiers(), staticContext, isAbstract, ownerKind);
     String encodedName = encodeName(val.name());
+    List<AnnotationInfo> annotations =
+        annotationsFromModifiers(val.modifiers(), pkg, scope, aliasScope);
     String getterSignature =
         ScalaSignature.methodSignature(
             ImmutableList.of(),
@@ -1183,14 +1992,14 @@ public final class ScalaLower {
         new ClassFile.MethodInfo(
             access,
             encodedName,
-            getterDesc,
-            getterSignature,
-            /* exceptions= */ ImmutableList.of(),
-            /* defaultValue= */ null,
-            /* annotations= */ ImmutableList.of(),
-            /* parameterAnnotations= */ ImmutableList.of(),
-            /* typeAnnotations= */ ImmutableList.of(),
-            /* parameters= */ ImmutableList.of()));
+        getterDesc,
+        getterSignature,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ annotations,
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of()));
 
     if (val.isVar()) {
       String setterDesc =
@@ -1212,16 +2021,50 @@ public final class ScalaLower {
           new ClassFile.MethodInfo(
               access,
               encodedName + "_$eq",
-              setterDesc,
-              setterSignature,
-              /* exceptions= */ ImmutableList.of(),
-              /* defaultValue= */ null,
-              /* annotations= */ ImmutableList.of(),
-              /* parameterAnnotations= */ ImmutableList.of(),
-              /* typeAnnotations= */ ImmutableList.of(),
-              /* parameters= */ ImmutableList.of()));
+          setterDesc,
+          setterSignature,
+          /* exceptions= */ ImmutableList.of(),
+          /* defaultValue= */ null,
+          /* annotations= */ annotations,
+          /* parameterAnnotations= */ ImmutableList.of(),
+          /* typeAnnotations= */ ImmutableList.of(),
+          /* parameters= */ ImmutableList.of()));
     }
     return methods;
+  }
+
+  private static boolean shouldEmitLazyCompute(ValDef val, ClassDef.Kind ownerKind) {
+    return ownerKind != ClassDef.Kind.TRAIT && val.modifiers().contains("lazy") && val.hasDefault();
+  }
+
+  private static ClassFile.MethodInfo lazyComputeMethod(
+      ValDef val,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    String desc =
+        "()" + ScalaTypeMapper.descriptorForReturn(val.type(), pkg, typeParams, scope, aliasScope);
+    String signature =
+        ScalaSignature.methodSignature(
+            ImmutableList.of(),
+            ImmutableList.of(),
+            val.type(),
+            typeParams,
+            pkg,
+            scope,
+            aliasScope);
+    return new ClassFile.MethodInfo(
+        TurbineFlag.ACC_PRIVATE,
+        encodeName(val.name()) + "$lzycompute",
+        desc,
+        signature,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
   }
 
   private static ClassFile.MethodInfo buildTraitImplMethod(
@@ -1265,6 +2108,74 @@ public final class ScalaLower {
     return new ClassFile.MethodInfo(
         TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
         encodeName(def.name()),
+        desc.toString(),
+        signature,
+        /* exceptions= */ ImmutableList.of(),
+        /* defaultValue= */ null,
+        /* annotations= */ ImmutableList.of(),
+        /* parameterAnnotations= */ ImmutableList.of(),
+        /* typeAnnotations= */ ImmutableList.of(),
+        /* parameters= */ ImmutableList.of());
+  }
+
+  private static List<ClassFile.MethodInfo> traitStaticMethods(
+      ClassDef traitDef,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    for (Defn defn : traitDef.members()) {
+      if (defn instanceof DefDef def) {
+        if (isAbstractDef(def, ClassDef.Kind.TRAIT)) {
+          continue;
+        }
+        methods.add(buildTraitStaticMethod(def, traitDef, scope, aliasScope));
+      }
+    }
+    methods.addAll(implicitClassStaticMethods(traitDef, scope, aliasScope));
+    return methods;
+  }
+
+  private static ClassFile.MethodInfo buildTraitStaticMethod(
+      DefDef def,
+      ClassDef traitDef,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    Set<String> typeParams = new HashSet<>(ScalaTypeMapper.typeParamNames(traitDef.typeParams()));
+    typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
+
+    StringBuilder desc = new StringBuilder();
+    desc.append('(');
+    desc.append('L').append(binaryName(traitDef.packageName(), traitDef.name())).append(';');
+    List<String> paramTypes = new ArrayList<>();
+    paramTypes.add(traitSelfTypeText(traitDef));
+    for (ParamList list : def.paramLists()) {
+      for (Param param : list.params()) {
+        desc.append(
+            ScalaTypeMapper.descriptorForParam(
+                param.type(), traitDef.packageName(), typeParams, scope, aliasScope));
+        paramTypes.add(param.type());
+      }
+    }
+    desc.append(')');
+    desc.append(
+        ScalaTypeMapper.descriptorForReturn(
+            def.returnType(), traitDef.packageName(), typeParams, scope, aliasScope));
+
+    ImmutableList<TypeParam> declared =
+        concatTypeParams(traitDef.typeParams(), def.typeParams());
+    String signature =
+        ScalaSignature.methodSignature(
+            declared,
+            paramTypes,
+            def.returnType(),
+            typeParams,
+            traitDef.packageName(),
+            scope,
+            aliasScope);
+
+    return new ClassFile.MethodInfo(
+        TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC | TurbineFlag.ACC_SYNTHETIC,
+        encodeName(def.name()) + "$",
         desc.toString(),
         signature,
         /* exceptions= */ ImmutableList.of(),
@@ -1432,6 +2343,16 @@ public final class ScalaLower {
     return pkg.replace('.', '/') + "/" + name;
   }
 
+  private static String companionPrivateName(ClassDef obj, String memberName) {
+    String pkg = obj.packageName();
+    StringBuilder sb = new StringBuilder();
+    if (pkg != null && !pkg.isEmpty()) {
+      sb.append(pkg.replace('.', '$')).append('$');
+    }
+    sb.append(obj.name()).append("$$").append(encodeName(memberName));
+    return sb.toString();
+  }
+
   private static String encodeName(String name) {
     if (name == null || name.isEmpty()) {
       return name;
@@ -1495,7 +2416,196 @@ public final class ScalaLower {
 
   private record Key(String pkg, String name) {}
 
+  private record ParentInfo(String superName, List<String> interfaces) {}
+
+  private static String resolveParentBinary(
+      String typeText,
+      String pkg,
+      List<ScalaTree.TypeParam> tparams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary) {
+    String simple = simpleTypeName(typeText);
+    if (simple != null) {
+      String local = binaryName(pkg, simple);
+      if (classesByBinary.containsKey(local) || traitsByBinary.containsKey(local)) {
+        return local;
+      }
+    }
+    return eraseType(typeText, pkg, tparams, scope, aliasScope);
+  }
+
+  private static String simpleTypeName(String typeText) {
+    if (typeText == null) {
+      return null;
+    }
+    String trimmed = typeText.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+    StringBuilder sb = new StringBuilder();
+    boolean inBackticks = false;
+    for (int i = 0; i < trimmed.length(); i++) {
+      char c = trimmed.charAt(i);
+      if (sb.length() == 0) {
+        if (Character.isWhitespace(c)) {
+          continue;
+        }
+        if (c == '`') {
+          inBackticks = true;
+          continue;
+        }
+        if (Character.isJavaIdentifierStart(c) || c == '$' || c == '_') {
+          sb.append(c);
+          continue;
+        }
+        return null;
+      }
+      if (inBackticks) {
+        if (c == '`') {
+          break;
+        }
+        sb.append(c);
+        continue;
+      }
+      if (Character.isJavaIdentifierPart(c) || c == '$' || c == '_') {
+        sb.append(c);
+        continue;
+      }
+      if (c == '.') {
+        return null;
+      }
+      break;
+    }
+    if (sb.length() == 0) {
+      return null;
+    }
+    return sb.toString();
+  }
+
+  private static boolean isSerializableInterface(String binary) {
+    return "java/io/Serializable".equals(binary) || "scala/Serializable".equals(binary);
+  }
+
+  private static ParentInfo resolveParents(
+      ClassDef cls,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes) {
+    String pkg = cls.packageName();
+    if (cls.parents().isEmpty()) {
+      return new ParentInfo("java/lang/Object", ImmutableList.of());
+    }
+    List<String> interfaces = new ArrayList<>();
+    if (cls.kind() == ClassDef.Kind.TRAIT) {
+      for (String parent : cls.parents()) {
+        String binary =
+            resolveParentBinary(
+                parent, pkg, cls.typeParams(), scope, aliasScope, traitsByBinary, classesByBinary);
+        if (traitsByBinary.containsKey(binary)) {
+          addInterface(interfaces, binary);
+          continue;
+        }
+        if (classesByBinary.containsKey(binary)) {
+          continue;
+        }
+        // Unknown parent: treat as interface by default.
+        addInterface(interfaces, binary);
+      }
+      return new ParentInfo("java/lang/Object", interfaces);
+    }
+
+    String classParent = null;
+    for (String parent : cls.parents()) {
+      String binary =
+          resolveParentBinary(
+              parent, pkg, cls.typeParams(), scope, aliasScope, traitsByBinary, classesByBinary);
+      if (isSerializableInterface(binary)) {
+        addInterface(interfaces, binary);
+        continue;
+      }
+      ClassDef trait = traitsByBinary.get(binary);
+      if (trait != null) {
+        addInterface(interfaces, binary);
+        String traitParent =
+            traitClassParentBinary(
+                trait, traitsByBinary, classesByBinary, importScopes, aliasScopes, new HashSet<>());
+        if (traitParent != null && classParent == null) {
+          classParent = traitParent;
+        }
+        continue;
+      }
+      if (classesByBinary.containsKey(binary)) {
+        if (classParent == null) {
+          classParent = binary;
+        } else {
+          addInterface(interfaces, binary);
+        }
+        continue;
+      }
+      if (classParent == null) {
+        classParent = binary;
+      } else {
+        addInterface(interfaces, binary);
+      }
+    }
+    if (classParent == null) {
+      classParent = "java/lang/Object";
+    }
+    return new ParentInfo(classParent, interfaces);
+  }
+
+  private static String traitClassParentBinary(
+      ClassDef traitDef,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Set<String> seen) {
+    String traitBinary = binaryName(traitDef.packageName(), traitDef.name());
+    if (!seen.add(traitBinary)) {
+      return null;
+    }
+    ScalaTypeMapper.ImportScope scope =
+        importScopes.getOrDefault(traitDef, ScalaTypeMapper.ImportScope.empty());
+    ScalaTypeMapper.TypeAliasScope aliases =
+        aliasScopes.getOrDefault(traitDef, ScalaTypeMapper.TypeAliasScope.empty());
+    for (String parent : traitDef.parents()) {
+      String binary =
+          resolveParentBinary(
+              parent,
+              traitDef.packageName(),
+              traitDef.typeParams(),
+              scope,
+              aliases,
+              traitsByBinary,
+              classesByBinary);
+      ClassDef parentTrait = traitsByBinary.get(binary);
+      if (parentTrait != null) {
+        String nested =
+            traitClassParentBinary(
+                parentTrait, traitsByBinary, classesByBinary, importScopes, aliasScopes, seen);
+        if (nested != null) {
+          return nested;
+        }
+        continue;
+      }
+      if (classesByBinary.containsKey(binary)) {
+        return binary;
+      }
+      // Unknown parent: ignore to avoid guessing class vs interface.
+    }
+    return null;
+  }
+
+
   private record TraitRef(ClassDef trait, String parentTypeText) {}
+
+  private record ClassParentRef(ClassDef parent, String parentTypeText) {}
 
   private static ClassDef synthesizeCompanion(ClassDef cls) {
     return new ClassDef(
@@ -2260,6 +3370,108 @@ public final class ScalaLower {
     return builder.build();
   }
 
+  private static Map<ClassDef, ScalaTypeMapper.TypeAliasScope> mergedAliasScopes(
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
+      Map<String, ClassDef> objectsByBinary) {
+    Map<ClassDef, ScalaTypeMapper.TypeAliasScope> merged = new IdentityHashMap<>();
+    Set<ClassDef> inProgress = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (ClassDef cls : aliasScopes.keySet()) {
+      merged.put(
+          cls,
+          mergedAliasScope(
+              cls,
+              aliasScopes,
+              importScopes,
+              traitsByBinary,
+              classesByBinary,
+              objectsByBinary,
+              merged,
+              inProgress));
+    }
+    return merged;
+  }
+
+  private static ScalaTypeMapper.TypeAliasScope mergedAliasScope(
+      ClassDef cls,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> classesByBinary,
+      Map<String, ClassDef> objectsByBinary,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> cache,
+      Set<ClassDef> inProgress) {
+    ScalaTypeMapper.TypeAliasScope cached = cache.get(cls);
+    if (cached != null) {
+      return cached;
+    }
+    if (!inProgress.add(cls)) {
+      return aliasScopes.getOrDefault(cls, ScalaTypeMapper.TypeAliasScope.empty());
+    }
+    ScalaTypeMapper.TypeAliasScope own =
+        aliasScopes.getOrDefault(cls, ScalaTypeMapper.TypeAliasScope.empty());
+    ScalaTypeMapper.TypeAliasScope.Builder builder = ScalaTypeMapper.TypeAliasScope.builder();
+    ScalaTypeMapper.ImportScope scope =
+        importScopes.getOrDefault(cls, ScalaTypeMapper.ImportScope.empty());
+    for (String parent : cls.parents()) {
+      String parentBinary =
+          resolveParentBinary(
+              parent,
+              cls.packageName(),
+              cls.typeParams(),
+              scope,
+              own,
+              traitsByBinary,
+              classesByBinary);
+      ClassDef parentDef = traitsByBinary.get(parentBinary);
+      if (parentDef == null) {
+        parentDef = classesByBinary.get(parentBinary);
+      }
+      if (parentDef == null) {
+        continue;
+      }
+      ScalaTypeMapper.TypeAliasScope parentAliases =
+          mergedAliasScope(
+              parentDef,
+              aliasScopes,
+              importScopes,
+              traitsByBinary,
+              classesByBinary,
+              objectsByBinary,
+              cache,
+              inProgress);
+      Map<String, String> substitutions = traitTypeSubstitutions(parentDef, parent);
+      for (Map.Entry<String, String> entry : parentAliases.aliases().entrySet()) {
+        String rhs = entry.getValue();
+        if (!substitutions.isEmpty()) {
+          rhs = substituteType(rhs, substitutions);
+        }
+        rhs = expandQualifiedAlias(rhs, cls.packageName(), scope, aliasScopes, objectsByBinary);
+        builder.addAlias(entry.getKey(), rhs);
+      }
+    }
+    own.aliases()
+        .forEach(
+            (name, rhs) -> {
+              String expanded =
+                  expandQualifiedAlias(rhs, cls.packageName(), scope, aliasScopes, objectsByBinary);
+              builder.addAlias(name, expanded);
+            });
+    addObjectAliasEntries(
+        builder,
+        cls.packageName(),
+        scope,
+        importScopes,
+        aliasScopes,
+        objectsByBinary);
+    ScalaTypeMapper.TypeAliasScope merged = builder.build();
+    cache.put(cls, merged);
+    inProgress.remove(cls);
+    return merged;
+  }
+
   private static ScalaTypeMapper.ImportScope importScope(
       ScalaTree.CompUnit unit, Map<String, Set<String>> objectTypeMembers) {
     ScalaTypeMapper.ImportScope.Builder builder = ScalaTypeMapper.ImportScope.builder();
@@ -2319,6 +3531,29 @@ public final class ScalaLower {
     return members;
   }
 
+  private static Map<String, ScalaTypeMapper.ImportScope> packageTypeScopes(List<ClassDef> classDefs) {
+    Map<String, ScalaTypeMapper.ImportScope.Builder> builders = new HashMap<>();
+    for (ClassDef cls : classDefs) {
+      if (cls.kind() != ClassDef.Kind.CLASS && cls.kind() != ClassDef.Kind.TRAIT) {
+        continue;
+      }
+      if (cls.name().contains("$")) {
+        // Nested types are not imported by package wildcard.
+        continue;
+      }
+      String pkg = cls.packageName();
+      String binary = binaryName(pkg, cls.name());
+      builders
+          .computeIfAbsent(pkg, unused -> ScalaTypeMapper.ImportScope.builder())
+          .addExplicit(cls.name(), binary);
+    }
+    Map<String, ScalaTypeMapper.ImportScope> scopes = new HashMap<>();
+    for (Map.Entry<String, ScalaTypeMapper.ImportScope.Builder> entry : builders.entrySet()) {
+      scopes.put(entry.getKey(), entry.getValue().build());
+    }
+    return scopes;
+  }
+
   private static void addWildcardImport(
       ScalaTypeMapper.ImportScope.Builder builder,
       String qualifier,
@@ -2329,6 +3564,10 @@ public final class ScalaLower {
       for (String member : members) {
         builder.addExplicit(member, joinQualifier(wildcard, member));
       }
+      return;
+    }
+    if (wildcard.endsWith("$")) {
+      // Unknown object members: avoid guessing type imports from term-only wildcards.
       return;
     }
     builder.addWildcard(wildcard);
@@ -2539,6 +3778,121 @@ public final class ScalaLower {
     return null;
   }
 
+  private static String expandQualifiedAlias(
+      String rhs,
+      String currentPackage,
+      ScalaTypeMapper.ImportScope scope,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, ClassDef> objectsByBinary) {
+    if (rhs == null || rhs.isEmpty()) {
+      return rhs;
+    }
+    String raw = stripRootPrefix(rawTypeName(rhs));
+    if (raw == null) {
+      return rhs;
+    }
+    int slash = raw.lastIndexOf('/');
+    if (slash < 0) {
+      return rhs;
+    }
+    String qualifier = raw.substring(0, slash);
+    String member = raw.substring(slash + 1);
+    if (member.isEmpty()) {
+      return rhs;
+    }
+    String qualifierBinary = resolveQualifierBinary(qualifier, currentPackage, scope);
+    ClassDef obj = objectsByBinary.get(qualifierBinary);
+    if (obj == null) {
+      return rhs;
+    }
+    ScalaTypeMapper.TypeAliasScope objAliases =
+        aliasScopes.getOrDefault(obj, ScalaTypeMapper.TypeAliasScope.empty());
+    String alias = objAliases.aliases().get(member);
+    return alias == null ? rhs : alias;
+  }
+
+  private static String resolveQualifierBinary(
+      String qualifier, String currentPackage, ScalaTypeMapper.ImportScope scope) {
+    if (qualifier == null || qualifier.isEmpty()) {
+      return qualifier;
+    }
+    String cleaned = stripRootPrefix(qualifier);
+    if (cleaned != null && cleaned.contains("/")) {
+      return cleaned;
+    }
+    if (scope != null && !scope.isEmpty()) {
+      String explicit = scope.explicit().get(qualifier);
+      if (explicit != null) {
+        return explicit;
+      }
+    }
+    if (currentPackage != null && !currentPackage.isEmpty()) {
+      return currentPackage.replace('.', '/') + "/" + qualifier;
+    }
+    return qualifier;
+  }
+
+  private static void addObjectAliasEntries(
+      ScalaTypeMapper.TypeAliasScope.Builder builder,
+      String currentPackage,
+      ScalaTypeMapper.ImportScope scope,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, ClassDef> objectsByBinary) {
+    if (objectsByBinary.isEmpty()) {
+      return;
+    }
+    String pkgPrefix = "";
+    if (currentPackage != null && !currentPackage.isEmpty()) {
+      pkgPrefix = currentPackage.replace('.', '/') + "/";
+    }
+    for (Map.Entry<String, ClassDef> entry : objectsByBinary.entrySet()) {
+      String binary = entry.getKey();
+      ClassDef obj = entry.getValue();
+      int slash = binary.lastIndexOf('/');
+      String objPkg = slash >= 0 ? binary.substring(0, slash + 1) : "";
+      if (!pkgPrefix.equals(objPkg)) {
+        continue;
+      }
+      addObjectAliasEntries(builder, obj.name(), binary, obj, importScopes, aliasScopes, objectsByBinary);
+    }
+    if (scope != null && !scope.isEmpty()) {
+      for (Map.Entry<String, String> entry : scope.explicit().entrySet()) {
+        String simple = entry.getKey();
+        String binary = entry.getValue();
+        ClassDef obj = objectsByBinary.get(binary);
+        if (obj == null) {
+          continue;
+        }
+        addObjectAliasEntries(builder, simple, binary, obj, importScopes, aliasScopes, objectsByBinary);
+      }
+    }
+  }
+
+  private static void addObjectAliasEntries(
+      ScalaTypeMapper.TypeAliasScope.Builder builder,
+      String qualifier,
+      String qualifierBinary,
+      ClassDef obj,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, ClassDef> objectsByBinary) {
+    ScalaTypeMapper.TypeAliasScope objAliases =
+        aliasScopes.getOrDefault(obj, ScalaTypeMapper.TypeAliasScope.empty());
+    if (objAliases.isEmpty()) {
+      return;
+    }
+    ScalaTypeMapper.ImportScope objScope =
+        importScopes.getOrDefault(obj, ScalaTypeMapper.ImportScope.empty());
+    for (Map.Entry<String, String> entry : objAliases.aliases().entrySet()) {
+      String name = entry.getKey();
+      String rhs = entry.getValue();
+      String expanded = expandQualifiedAlias(rhs, obj.packageName(), objScope, aliasScopes, objectsByBinary);
+      builder.addAlias(qualifier + "/" + name, expanded);
+      builder.addAlias(qualifierBinary + "/" + name, expanded);
+    }
+  }
+
   private static String stripRootPrefix(String raw) {
     if (raw == null) {
       return null;
@@ -2695,6 +4049,112 @@ public final class ScalaLower {
       unique.putIfAbsent(field.name() + field.descriptor(), field);
     }
     return new ArrayList<>(unique.values());
+  }
+
+  private static ImmutableList<AnnotationInfo> classAnnotations(
+      ClassDef cls,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    ImmutableList<AnnotationInfo> extra = annotationsFromModifiers(cls.modifiers(), pkg, scope, aliasScope);
+    if (extra.isEmpty()) {
+      return scalaClassAnnotations();
+    }
+    ImmutableList.Builder<AnnotationInfo> out = ImmutableList.builder();
+    out.addAll(scalaClassAnnotations());
+    out.addAll(extra);
+    return out.build();
+  }
+
+  private static ImmutableList<AnnotationInfo> annotationsFromModifiers(
+      ImmutableList<String> modifiers,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (modifiers.isEmpty()) {
+      return ImmutableList.of();
+    }
+    ImmutableList.Builder<AnnotationInfo> out = ImmutableList.builder();
+    Set<String> seen = new HashSet<>();
+    for (String modifier : modifiers) {
+      if (!modifier.startsWith("@")) {
+        continue;
+      }
+      String name = modifier.substring(1);
+      String desc = annotationDescriptor(name, pkg, scope, aliasScope);
+      if (desc == null) {
+        continue;
+      }
+      if (isScalaSignatureAnnotation(desc)) {
+        continue;
+      }
+      String invisibleKey = desc + "#I";
+      if (seen.add(invisibleKey)) {
+        out.add(new AnnotationInfo(desc, AnnotationInfo.RuntimeVisibility.INVISIBLE, ImmutableMap.of()));
+      }
+      if (isVisibleAnnotation(desc)) {
+        String visibleKey = desc + "#V";
+        if (seen.add(visibleKey)) {
+          out.add(new AnnotationInfo(desc, AnnotationInfo.RuntimeVisibility.VISIBLE, ImmutableMap.of()));
+        }
+      }
+    }
+    return out.build();
+  }
+
+  private static boolean isScalaSignatureAnnotation(String desc) {
+    return "Lscala/reflect/ScalaSignature;".equals(desc)
+        || "Lscala/reflect/ScalaLongSignature;".equals(desc);
+  }
+
+  private static @Nullable String annotationDescriptor(
+      String name,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (name == null || name.isEmpty()) {
+      return null;
+    }
+    String cleaned = name;
+    if (cleaned.startsWith("_root_.")) {
+      cleaned = cleaned.substring("_root_.".length());
+    } else if (cleaned.startsWith("_root_/")) {
+      cleaned = cleaned.substring("_root_/".length());
+    }
+    String desc = ScalaTypeMapper.descriptorForParam(cleaned, pkg, ImmutableSet.of(), scope, aliasScope);
+    if (desc == null) {
+      return null;
+    }
+    if ("Ljava/lang/Object;".equals(desc)) {
+      String raw = stripRootPrefix(cleaned.replace('.', '/'));
+      if (!"java/lang/Object".equals(raw)) {
+        return "L" + raw + ";";
+      }
+    }
+    return desc;
+  }
+
+  private static boolean isVisibleAnnotation(String desc) {
+    String binary = desc;
+    if (binary.startsWith("L") && binary.endsWith(";")) {
+      binary = binary.substring(1, binary.length() - 1);
+    }
+    String lower = binary.toLowerCase(Locale.ROOT);
+    if (lower.startsWith("org/openjdk/jmh/annotations/")) {
+      return true;
+    }
+    if (lower.startsWith("jdk/jfr/")) {
+      return true;
+    }
+    if (lower.startsWith("org/apache/spark/annotation/")) {
+      return true;
+    }
+    if (binary.endsWith("/ExpressionDescription")) {
+      return true;
+    }
+    return "java/lang/Deprecated".equals(binary)
+        || "scala/deprecated".equals(binary)
+        || "scala/Deprecated".equals(binary);
   }
 
   private static ImmutableList<AnnotationInfo> scalaClassAnnotations() {

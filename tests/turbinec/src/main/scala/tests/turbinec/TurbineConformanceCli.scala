@@ -1167,15 +1167,20 @@ object TurbineConformanceCli {
   }
 
   private def textify(bytes: Array[Byte], skipDebug: Boolean): String = {
-    val textifier: Printer = new Textifier()
-    val sw = new java.io.StringWriter()
-    val flags = ClassReader.SKIP_FRAMES | ClassReader.SKIP_CODE | (if (skipDebug) ClassReader.SKIP_DEBUG else 0)
-    new ClassReader(bytes)
-      .accept(new TraceClassVisitor(null, textifier, new java.io.PrintWriter(sw, true)), flags)
-    sw.toString
-      .linesIterator
-      .map(trimTrailingSpaces)
-      .mkString("\n")
+    try {
+      val textifier: Printer = new Textifier()
+      val sw = new java.io.StringWriter()
+      val flags = ClassReader.SKIP_FRAMES | ClassReader.SKIP_CODE | (if (skipDebug) ClassReader.SKIP_DEBUG else 0)
+      new ClassReader(bytes)
+        .accept(new TraceClassVisitor(null, textifier, new java.io.PrintWriter(sw, true)), flags)
+      sw.toString
+        .linesIterator
+        .map(trimTrailingSpaces)
+        .mkString("\n")
+    } catch {
+      case e: RuntimeException =>
+        s"<<textify failed: ${e.getClass.getSimpleName}: ${e.getMessage}>>"
+    }
   }
 
   private def trimTrailingSpaces(line: String): String = line.reverse.dropWhile(_ == ' ').reverse
