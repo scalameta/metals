@@ -130,7 +130,7 @@ abstract class MetalsLspService(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
-  def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
+  def getVisibleName: String = folderVisibleName.getOrElse(folder.filename)
 
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
