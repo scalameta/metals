@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.mcp
 
-import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
 import java.util.Arrays
@@ -27,7 +26,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
@@ -80,9 +78,6 @@ class MetalsMcpServer(
 
   private val client =
     Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
-
-  val tracePrinter: Option[PrintWriter] =
-    Trace.setupTracePrinter("mcp", projectPath)
 
   private val objectMapper = new ObjectMapper()
 
@@ -206,7 +201,9 @@ class MetalsMcpServer(
       )
     )
 
-    scribe.info(s"Metals MCP server started on port: $port.")
+    scribe.info(
+      s"To connect to Metals MCP server use `http` transport type and url: http://localhost:$port/mcp."
+    )
 
     cancelable.add(() => undertowServer.stop())
   }
