@@ -42,6 +42,7 @@ object FutureWithTimeout {
     def withOnTimeout(
         withTimeout: Future[(T, FiniteDuration)],
         duration: FiniteDuration,
+        reason: Option[String],
     ): Future[(T, FiniteDuration)] = {
       withTimeout.transformWith {
         case Success(res) => Future.successful(res)
@@ -54,7 +55,11 @@ object FutureWithTimeout {
                 cancelable.cancel()
                 Future.failed(e)
               case FutureWithTimeout.Wait =>
-                withOnTimeout(request.withTimeout(duration * 3), duration * 3)
+                withOnTimeout(
+                  request.withTimeout(duration * 3, reason),
+                  duration * 3,
+                  reason,
+                )
               case FutureWithTimeout.Dismiss => request
             }
           } yield res
@@ -62,7 +67,11 @@ object FutureWithTimeout {
       }
     }
 
-    withOnTimeout(request.withTimeout(duration), duration)
+    withOnTimeout(
+      request.withTimeout(duration, reason = None),
+      duration,
+      reason = None,
+    )
 
     CancelableFuture(result.future, cancelable)
   }

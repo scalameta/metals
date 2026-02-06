@@ -377,8 +377,7 @@ object Messages {
     val switch = new MessageActionItem("yes")
     val dontSwitch = new MessageActionItem("no")
     def notificationParams(
-        newBuildTool: String,
-        currentBuildTool: String,
+        newBuildTool: String
     ): MessageParams = {
       new MessageParams(
         MessageType.Info,

@@ -172,6 +172,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     "-Wconf:src=*.InheritanceContext.scala&msg=parameter ec in method getLocations is never used:silent",
     "-Wconf:src=*.CompilerWrapper.scala&msg=parameter params in method compiler is never used:silent",
+    "-Wconf:src=*.MetalsLanguageClient.scala&msg=parameter params in method showMessageRequest is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
   )

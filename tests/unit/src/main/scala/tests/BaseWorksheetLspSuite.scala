@@ -227,7 +227,7 @@ abstract class BaseWorksheetLspSuite(
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
-      _ <- cancelled.future.withTimeout(10.seconds)
+      _ <- cancelled.future.withTimeout(10.seconds, reason = None)
       _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didChange("a/src/main/scala/Main.worksheet.sc")(
         _.replace("Stream", "// Stream")

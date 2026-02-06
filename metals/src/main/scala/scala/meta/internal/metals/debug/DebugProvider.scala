@@ -260,7 +260,11 @@ class DebugProvider(
             clientConfig.initialConfig.debugServerStartTimeout
 
           conn
-            .withTimeout(startupTimeout, TimeUnit.SECONDS)
+            .withTimeout(
+              startupTimeout,
+              TimeUnit.SECONDS,
+              Some("starting the debug sessions"),
+            )
             .recover { case exception =>
               connectedToServer.tryFailure(exception)
               cancelPromise.trySuccess(())
