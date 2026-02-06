@@ -427,4 +427,25 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       )
     } yield ()
   }
+  test("scala3-toplevel-package") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala3}" }
+           |}
+           |/a/src/main/scala/a/MyFile.scala
+           |package a
+           |def foo = 1
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/MyFile.scala")
+      _ = assertNoDiff(
+        server.workspaceSymbol("MyFile"),
+        "",
+      )
+    } yield ()
+  }
 }
