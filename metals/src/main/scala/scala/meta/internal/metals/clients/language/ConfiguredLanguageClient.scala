@@ -154,7 +154,7 @@ final class ConfiguredLanguageClient(
             },
           )
         )
-        .withTimeout(15, TimeUnit.SECONDS)
+        .withTimeout(15, TimeUnit.SECONDS, Some("sending showMessageRequest"))
         .recover { case _: TimeoutException =>
           result.cancel(false)
           Messages.missedByUser

@@ -47,7 +47,6 @@ final class MetalsHttpClient(
     initial: MetalsLanguageClient,
     triggerReload: () => Unit,
     icons: Icons,
-    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext)
     extends DelegatingLanguageClient(initial) {
 

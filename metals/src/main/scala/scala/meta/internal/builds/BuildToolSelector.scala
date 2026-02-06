@@ -94,8 +94,7 @@ final class BuildToolSelector(
         defaultTo = () => {
           languageClient.showMessage(
             Messages.NewBuildToolDetected.notificationParams(
-              newBuildTool.executableName,
-              currentBuildTool.executableName,
+              newBuildTool.executableName
             )
           )
           Messages.NewBuildToolDetected.dontSwitch

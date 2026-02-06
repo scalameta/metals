@@ -1453,7 +1453,6 @@ class WorkspaceLspService(
         languageClient.underlying,
         () => server.reload(),
         clientConfig.icons(),
-        clientConfig,
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)

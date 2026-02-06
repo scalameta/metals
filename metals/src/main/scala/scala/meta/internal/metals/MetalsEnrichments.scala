@@ -285,23 +285,32 @@ object MetalsEnrichments
       }
     }
 
-    def withTimeout(length: Int, unit: TimeUnit)(implicit
-        ec: ExecutionContext
-    ): Future[A] = withTimeout(FiniteDuration(length, unit))
+    def withTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
+        implicit ec: ExecutionContext
+    ): Future[A] = withTimeout(FiniteDuration(length, unit), reason)
 
     def withTimeout(
-        duration: FiniteDuration
+        duration: FiniteDuration,
+        reason: Option[String],
     )(implicit ec: ExecutionContext): Future[A] = {
-      Future(Await.result(future, duration))
+      Future {
+        try { Await.result(future, duration) }
+        catch {
+          case e: TimeoutException =>
+            reason.foreach(r => scribe.error(s"Timeout while $r", e))
+            throw e
+        }
+      }
     }
 
-    def onTimeout(length: Int, unit: TimeUnit)(
+    def onTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
         action: => Unit
     )(implicit ec: ExecutionContext): Future[A] = {
       // schedule action to execute on timeout
-      future.withTimeout(length, unit).recoverWith { case e: TimeoutException =>
-        action
-        Future.failed(e)
+      future.withTimeout(length, unit, reason).recoverWith {
+        case e: TimeoutException =>
+          action
+          Future.failed(e)
       }
     }
 
