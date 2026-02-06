@@ -31,9 +31,18 @@ object McpConfig {
     val serverName = client.projectName(projectName)
 
     // Read existing config if it exists
-    val config = if (configFile.exists) configFile.readText else "{ }"
-    val newConfig = createConfig(config, port, serverName, client)
-    configFile.writeText(newConfig)
+    val config = if (configFile.exists) configFile.readText else ""
+    if (filename.endsWith(".toml")) {
+      val url = s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}"
+      val props = client.additionalProperties.toMap + ("url" -> url)
+      val newConfig =
+        TomlConfig.upsertServer(config, client.serverField, serverName, props)
+      configFile.writeText(newConfig)
+    } else {
+      val jsonConfig = if (config.trim.isEmpty) "{ }" else config
+      val newConfig = createConfig(jsonConfig, port, serverName, client)
+      configFile.writeText(newConfig)
+    }
   }
 
   def deleteConfig(
@@ -41,20 +50,37 @@ object McpConfig {
       projectName: String,
       client: Client,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${client.settingsPath}mcp.json")
+    val configFile = projectPath.resolve(
+      s"${client.settingsPath}${client.fileName.getOrElse("mcp.json")}"
+    )
     if (configFile.exists) {
-      val configContent = configFile.readText
-      val updatedConfig = removeMetalsEntry(configContent, projectName, client)
+      if (configFile.toFile.getName.endsWith(".toml")) {
+        val configContent = configFile.readText
+        val updatedConfig = TomlConfig.removeServer(
+          configContent,
+          client.serverField,
+          projectName,
+        )
+        if (updatedConfig.trim.isEmpty) {
+          configFile.delete()
+        } else {
+          configFile.writeText(updatedConfig)
+        }
+      } else {
+        val configContent = configFile.readText
+        val updatedConfig =
+          removeMetalsEntry(configContent, projectName, client)
 
-      updatedConfig match {
-        case Failure(exception) =>
-          scribe.error(s"Error removing metals entry: $exception")
-        case Success(value) =>
-          if (isConfigEmpty(value, client)) {
-            configFile.delete()
-          } else {
-            configFile.writeText(gson.toJson(value))
-          }
+        updatedConfig match {
+          case Failure(exception) =>
+            scribe.error(s"Error removing metals entry: $exception")
+          case Success(value) =>
+            if (isConfigEmpty(value, client)) {
+              configFile.delete()
+            } else {
+              configFile.writeText(gson.toJson(value))
+            }
+        }
       }
     }
   }
@@ -71,7 +97,8 @@ object McpConfig {
   ): Unit = {
     val filename = client.fileName.getOrElse("mcp.json")
     val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
-    if (configFile.exists) {
+    // TOML does not support the old endpoint, so we don't need to rewrite it
+    if (configFile.exists && !filename.endsWith(".toml")) {
       val configContent = configFile.readText
       rewriteOldEndpoint(configContent, projectName, client, port) match {
         case Some(newContent) =>
@@ -181,7 +208,16 @@ object McpConfig {
     val filename = editor.fileName.getOrElse("mcp.json")
     val configFile = projectPath.resolve(s"${editor.settingsPath}$filename")
     if (configFile.exists)
-      getPort(configFile.readText, projectName, editor)
+      if (filename.endsWith(".toml")) {
+        TomlConfig.readPort(
+          configFile.readText,
+          editor.serverField,
+          editor.projectName(projectName),
+          MetalsMcpServer.mcpEndpoint,
+        )
+      } else {
+        getPort(configFile.readText, projectName, editor)
+      }
     else None
   }
 
@@ -258,6 +294,15 @@ object Claude
       fileName = Some(".mcp.json"),
     )
 
+object Codex
+    extends Client(
+      names = List("Codex", "codex"),
+      settingsPath = ".codex/",
+      serverField = "mcpServers",
+      additionalProperties = Nil,
+      fileName = Some("config.toml"),
+    )
+
 object NoClient
     extends Client(
       names = Nil,
@@ -267,5 +312,5 @@ object NoClient
     )
 
 object Client {
-  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude)
+  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude, Codex)
 }
