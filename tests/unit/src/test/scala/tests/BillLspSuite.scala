@@ -89,6 +89,44 @@ class BillLspSuite extends BaseLspSuite("bill") {
     } yield ()
   }
 
+  test("reconnect-after-disconnect-and-shutdown") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    for {
+      _ <- initialize(
+        """
+          |/src/com/App.scala
+          |object App {
+          |  val x: Int = ""
+          |}
+          |/shutdown-trace
+          |true
+        """.stripMargin
+      )
+      _ <- server.executeCommand(
+        ServerCommands.DisconnectBuildServerAndShutdown
+      )
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
+      _ = {
+        val logs = workspace
+          .resolve(Bill.logName)
+          .readText
+          .linesIterator
+          .filter(_.startsWith("trace:"))
+          .mkString("\n")
+        assertNoDiff(
+          logs,
+          // Assert that "Disconnect and shutdown" sends shutdown to the build server,
+          // and we can then connect back with no issues.
+          """|trace: initialize
+             |trace: shutdown
+             |trace: initialize
+             |""".stripMargin,
+        )
+      }
+    } yield ()
+  }
+
   test("reconnect") {
     cleanWorkspace()
     Bill.installWorkspace(workspace)
