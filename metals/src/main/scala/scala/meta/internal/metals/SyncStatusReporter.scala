@@ -9,13 +9,19 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
 
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+object SyncStatusReporter {
+  private sealed trait Status
+  private case class Importing(uri: Option[String]) extends Status
+  private case object Indexing extends Status
+  private case object Idle extends Status
+}
 
 class SyncStatusReporter(
     languageClient: MetalsLanguageClient,
     buildTargets: BuildTargets,
 ) {
-  private val importing = new AtomicReference[Option[Option[String]]](None)
+  import SyncStatusReporter._
+  private val status = new AtomicReference[Status](Idle)
   private val isBspActive = new AtomicReference[Boolean](false)
   private val currentFocus = new AtomicReference[Option[String]](None)
 
@@ -34,48 +40,10 @@ class SyncStatusReporter(
 
   def onSync(uri: String): Unit = {
     scribe.trace(
-      s"SyncStatusReporter: didSync: $uri: ${MetalsSyncStatusParams.Synced}"
+      s"SyncStatusReporter: onSync: $uri: ${MetalsSyncStatusParams.Synced}"
     )
-    importing.set(Some(Some(uri)))
-    languageClient.metalsSyncStatus(
-      MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Syncing)
-    )
-  }
-
-  def expanded(
-      uri: String,
-      targets: Option[Seq[BuildTargetIdentifier]],
-  ): Unit = {
-    targets match {
-      case Some(targets) =>
-        // Successfully expanded the build targets, check if we already know
-        targets.find(buildTargets.info(_).isDefined) match {
-          case Some(target) =>
-            scribe.trace(
-              s"SyncStatusReporter: didSync: $uri: targets: ${targets.mkString(", ")}, target: ${target.getUri()}, ${MetalsSyncStatusParams.Synced}"
-            )
-            // If we already know about at least one target, we can report that the build is synced
-            languageClient.metalsSyncStatus(
-              MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Synced)
-            )
-          case None =>
-            scribe.trace(
-              s"SyncStatusReporter: didSync: $uri: targets: ${targets.mkString(", ")}, ${MetalsSyncStatusParams.Syncing}"
-            )
-            // Otherwise, we expect the build to be imported soon so we report that it's syncing
-            languageClient.metalsSyncStatus(
-              MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Syncing)
-            )
-        }
-      case None =>
-        scribe.trace(
-          s"SyncStatusReporter: didSync: $uri: targets: None, ${MetalsSyncStatusParams.Unknown}"
-        )
-        // Failed to expand the build targets, report unknown status
-        languageClient.metalsSyncStatus(
-          MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Unknown)
-        )
-    }
+    status.set(Importing(Some(uri)))
+    didFocus(uri)
   }
 
   def didFocus(uri: String): Unit = {
@@ -85,12 +53,13 @@ class SyncStatusReporter(
       scribe.trace(
         s"SyncStatusReporter: didFocus: $uri: bsp is not responsive, hiding status"
       )
+      status.set(Idle)
       languageClient.metalsSyncStatus(
         MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Hidden)
       )
     } else if (path.isScalaOrJava) {
-      (buildTargets.inverseSources(path), importing.get()) match {
-        case (_, Some(Some(requested))) if requested == uri =>
+      (buildTargets.inverseSources(path), status.get()) match {
+        case (_, Importing(Some(requested))) if requested == uri =>
           scribe.trace(
             s"SyncStatusReporter: didFocus: $uri: requested: $requested, importing focused: ${MetalsSyncStatusParams.Syncing}"
           )
@@ -98,7 +67,7 @@ class SyncStatusReporter(
           languageClient.metalsSyncStatus(
             MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Syncing)
           )
-        case (_, Some(value)) =>
+        case (_, Importing(value)) =>
           scribe.trace(
             s"SyncStatusReporter: didFocus: $uri: requested: $value, importing: ${MetalsSyncStatusParams.Syncing}"
           )
@@ -106,7 +75,14 @@ class SyncStatusReporter(
           languageClient.metalsSyncStatus(
             MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Busy)
           )
-        case (Some(target), None) if buildTargets.info(target).isDefined =>
+        case (_, Indexing) =>
+          scribe.trace(
+            s"SyncStatusReporter: didFocus: $uri: indexing: ${MetalsSyncStatusParams.Syncing}"
+          )
+          languageClient.metalsSyncStatus(
+            MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Indexing)
+          )
+        case (Some(target), Idle) if buildTargets.info(target).isDefined =>
           scribe.trace(
             s"SyncStatusReporter: didFocus: $uri: known target: ${target}, ${MetalsSyncStatusParams.Synced}"
           )
@@ -114,7 +90,7 @@ class SyncStatusReporter(
           languageClient.metalsSyncStatus(
             MetalsSyncStatusParams(uri, MetalsSyncStatusParams.Synced)
           )
-        case (_, None) =>
+        case (_, Idle) =>
           scribe.trace(
             s"SyncStatusReporter: didFocus: $uri: unknown target: ${MetalsSyncStatusParams.Untracked}"
           )
@@ -135,13 +111,19 @@ class SyncStatusReporter(
 
   def importStarted(uri: Option[String]): Unit = {
     scribe.trace(s"SyncStatusReporter: importStarted: $uri")
-    importing.compareAndSet(None, Some(uri))
+    status.compareAndSet(Idle, Importing(uri))
+    uri.orElse(currentFocus.get()).foreach(didFocus)
+  }
+
+  def indexingStarted(uri: Option[String]): Unit = {
+    scribe.trace(s"SyncStatusReporter: indexingStarted: $uri")
+    status.set(Indexing)
+    uri.orElse(currentFocus.get()).foreach(didFocus)
   }
 
   def importFinished(uri: Option[String]): Unit = {
     scribe.trace(s"SyncStatusReporter: importFinished: $uri")
-    importing.set(None)
-    uri.foreach(didFocus)
+    status.set(Idle)
+    uri.orElse(currentFocus.get()).foreach(didFocus)
   }
-
 }

@@ -435,11 +435,13 @@ class ConnectionProvider(
     private def index(
         check: () => Unit,
         progress: TaskProgress,
-    ): Future[BuildChange] =
+    ): Future[BuildChange] = {
+      syncStatusReporter.indexingStarted(focusedDocument.map(_.toURI.toString))
       profiledIndexWorkspace(check, progress).map { _ =>
         progress.message = "wrapping up"
         BuildChange.None
       }
+    }
 
     private def importBuildAndIndex(
         session: BspSession,

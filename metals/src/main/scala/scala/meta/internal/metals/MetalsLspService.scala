@@ -962,13 +962,7 @@ abstract class MetalsLspService(
     syncStatusReporter.onSync(uri)
     buildTargets
       .bspInverseSources(uri.toAbsolutePath)
-      .andThen {
-        case Success(targets) =>
-          syncStatusReporter.expanded(uri, Some(targets.toList))
-        case Failure(_) =>
-          syncStatusReporter.expanded(uri, None)
-          syncStatusReporter.importFinished(Some(uri))
-      }
+      .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
       .ignoreValue
   }
 

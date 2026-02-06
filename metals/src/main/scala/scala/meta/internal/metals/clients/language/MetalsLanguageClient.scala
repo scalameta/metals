@@ -151,6 +151,14 @@ object MetalsSyncStatusParams {
       "Syncing document with build server. Click to see logs."
     override def command = ClientCommands.ToggleLogs.id
   }
+  case object Indexing extends Status {
+    def name = "indexing"
+    override def text = "$(sync~spin) Indexing"
+    override def kind = "warning"
+    override def tooltip =
+      "Indexing project. Click to see logs."
+    override def command = ClientCommands.ToggleLogs.id
+  }
   case object Busy extends Status {
     def name = "busy"
     override def text = "$(sync~spin) Busy"
