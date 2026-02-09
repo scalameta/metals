@@ -623,6 +623,10 @@ public final class ScalaStreamLexer implements ScalaLexer {
   }
 
   private static boolean isIdentifierPart(int ch) {
+    // EOF sentinel is represented as ASCII SUB and must not be consumed as an identifier tail.
+    if (ch == ASCII_SUB) {
+      return false;
+    }
     return ch == '$' || Character.isUnicodeIdentifierPart(ch);
   }
 

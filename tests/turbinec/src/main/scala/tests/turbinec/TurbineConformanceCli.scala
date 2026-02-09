@@ -392,6 +392,16 @@ object TurbineConformanceCli {
           println(s"  $category: $count")
         }
       }
+      if (diffCollector.filteredMismatches > 0) {
+        println(s"Filtered mismatches: ${diffCollector.filteredMismatches}")
+      }
+      val filteredCategoryCounts = diffCollector.filteredCategoryCounts
+      if (filteredCategoryCounts.nonEmpty) {
+        println("Filtered mismatch summary by category:")
+        filteredCategoryCounts.foreach { case (category, count) =>
+          println(s"  $category: $count")
+        }
+      }
 
       if (diffCollector.hasDiffs) {
         if (diffCollector.output.nonEmpty) {
@@ -946,13 +956,18 @@ object TurbineConformanceCli {
           val ignoredBySkippedSource =
             skippedScalaFileNames.nonEmpty &&
               classSourceFile(bytes).exists(skippedScalaFileNames.contains)
-          if (ignoredBySkippedSource && !javaRequiredClasses.contains(name)) {
+          if (ignoredBySkippedSource) {
             ignoredFromSkippedSources += name
           } else {
             abiScope match {
               case AbiScope.Java | AbiScope.JavaUsed =>
                 if (javaRequiredClasses.contains(name)) {
-                  missing += name
+                  classifyOutsideJavaAbi(name, bytes) match {
+                    case Some(reason) =>
+                      ignoredFromAbiScope.put(name, s"java-reachable-$reason")
+                    case None =>
+                      missing += name
+                  }
                 } else {
                   classifyOutsideJavaAbi(name, bytes) match {
                     case Some(reason) =>
@@ -1062,9 +1077,11 @@ object TurbineConformanceCli {
     var missingClasses: Int = 0
     var extraClasses: Int = 0
     var mismatchedMembers: Int = 0
+    var filteredMismatches: Int = 0
     private var printed: Int = 0
     private val sb = new StringBuilder
     private val categories = mutable.LinkedHashMap.empty[String, Int]
+    private val filteredCategories = mutable.LinkedHashMap.empty[String, Int]
 
     def hasDiffs: Boolean = missingClasses > 0 || extraClasses > 0 || mismatchedMembers > 0
 
@@ -1072,6 +1089,9 @@ object TurbineConformanceCli {
 
     def categoryCounts: Seq[(String, Int)] =
       categories.toSeq.sortBy { case (_, count) => -count }
+
+    def filteredCategoryCounts: Seq[(String, Int)] =
+      filteredCategories.toSeq.sortBy { case (_, count) => -count }
 
     def missingClass(name: String, expected: Array[Byte]): Unit = {
       missingClasses += 1
@@ -1109,9 +1129,26 @@ object TurbineConformanceCli {
       }
     }
 
+    def filteredMismatch(
+        category: String,
+        detail: String,
+    ): Unit = {
+      filteredMismatches += 1
+      recordFilteredCategory(category)
+      if (printed < max) {
+        printed += 1
+        sb.append(s"filtered mismatch: $detail\n")
+      }
+    }
+
     private def recordCategory(category: String): Unit = {
       val updated = categories.getOrElse(category, 0) + 1
       categories.put(category, updated)
+    }
+
+    private def recordFilteredCategory(category: String): Unit = {
+      val updated = filteredCategories.getOrElse(category, 0) + 1
+      filteredCategories.put(category, updated)
     }
   }
 
@@ -1160,6 +1197,7 @@ object TurbineConformanceCli {
                   methodName = methodName,
                   expectedMethod = methodInfo,
                   actualMethod = a.methods.get(methodName),
+                  actualMethods = a.methods,
                   compareAnnotations = true,
                   expectedClass = expected(name),
                   actualClass = actual(name),
@@ -1195,6 +1233,7 @@ object TurbineConformanceCli {
                     methodName = methodName,
                     expectedMethod = expectedMethod,
                     actualMethod = a.methods.get(methodName),
+                    actualMethods = a.methods,
                     compareAnnotations = false,
                     expectedClass = expected(name),
                     actualClass = actual(name),
@@ -1283,6 +1322,7 @@ object TurbineConformanceCli {
       methodName: String,
       expectedMethod: MemberInfo,
       actualMethod: Option[MemberInfo],
+      actualMethods: Map[String, MemberInfo],
       compareAnnotations: Boolean,
       expectedClass: Array[Byte],
       actualClass: Array[Byte],
@@ -1290,7 +1330,20 @@ object TurbineConformanceCli {
   ): Unit = {
     actualMethod match {
       case None =>
-        diffs.mismatch(className, "missing-method", s"missing method $methodName", expectedClass, actualClass)
+        if (
+          isNoTypeInferencePublicMethodMismatch(
+            methodName,
+            expectedMethod.access,
+            actualMethods.iterator.map { case (key, info) => (key, info.access) }.toSeq,
+          )
+        ) {
+          diffs.filteredMismatch(
+            NoTypeInferencePublicMembersCategory,
+            s"no type inference on public member $methodName ($className)",
+          )
+        } else {
+          diffs.mismatch(className, "missing-method", s"missing method $methodName", expectedClass, actualClass)
+        }
       case Some(actual) =>
         if (expectedMethod.access != actual.access) {
           diffs.mismatch(
@@ -1375,9 +1428,58 @@ object TurbineConformanceCli {
               actualClass,
             )
           }
-        }
+      }
     }
   }
+
+  private val NoTypeInferencePublicMembersCategory = "no-type-inference-public-members"
+
+  private final case class MethodKey(name: String, paramsDesc: String, returnDesc: String)
+
+  private[turbinec] def isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey: String,
+      expectedAccess: Int,
+      actualMethods: Iterable[(String, Int)],
+  ): Boolean = {
+    if (!isPublicOrProtected(expectedAccess)) {
+      return false
+    }
+    val expected = parseMethodKey(expectedMethodKey).getOrElse(return false)
+    if (expected.returnDesc == "Ljava/lang/Object;" || expected.returnDesc == "V") {
+      return false
+    }
+    val candidates = actualMethods.iterator.flatMap { case (actualKey, actualAccess) =>
+      parseMethodKey(actualKey).map(sig => (sig, actualAccess))
+    }.filter { case (sig, info) =>
+      sig.name == expected.name &&
+      sig.paramsDesc == expected.paramsDesc &&
+      isPublicOrProtected(info)
+    }.toList
+    if (candidates.isEmpty) {
+      return false
+    }
+    candidates.forall { case (sig, _) =>
+      sig.returnDesc == "Ljava/lang/Object;" || sig.returnDesc == "V"
+    }
+  }
+
+  private def parseMethodKey(methodKey: String): Option[MethodKey] = {
+    if (methodKey == null || methodKey.isEmpty) {
+      return None
+    }
+    val open = methodKey.indexOf('(')
+    val close = methodKey.lastIndexOf(')')
+    if (open <= 0 || close <= open || close + 1 >= methodKey.length) {
+      return None
+    }
+    val name = methodKey.substring(0, open)
+    val paramsDesc = methodKey.substring(open, close + 1)
+    val returnDesc = methodKey.substring(close + 1)
+    Some(MethodKey(name, paramsDesc, returnDesc))
+  }
+
+  private def isPublicOrProtected(access: Int): Boolean =
+    (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
 
   private final case class AnnotationSet(visible: List[String], invisible: List[String])
 

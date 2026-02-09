@@ -420,10 +420,21 @@ public final class ScalaSignature {
     }
 
     private @Nullable String resolveExplicit(String raw) {
-      if (scope == null || scope.isEmpty() || raw.contains("/")) {
+      if (scope == null || scope.isEmpty()) {
         return null;
       }
-      return scope.explicit().get(raw);
+      String resolved = scope.explicit().get(raw);
+      if (resolved != null) {
+        return resolved;
+      }
+      if (raw.endsWith("$")) {
+        String base = raw.substring(0, raw.length() - 1);
+        String withoutSuffix = scope.explicit().get(base);
+        if (withoutSuffix != null) {
+          return withoutSuffix.endsWith("$") ? withoutSuffix : withoutSuffix + "$";
+        }
+      }
+      return null;
     }
 
     private @Nullable String resolveWildcard(String raw) {

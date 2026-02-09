@@ -22,6 +22,16 @@ source .envrc
 coursier launch sbt -- --client javapc/testOnly pc.CompletionIdentifierSuite "-- *private-member"
 ```
 
+### Turbinec Test Wrapper (Preferred)
+
+For `turbinec` test slices, prefer `bin/turbinec-test` instead of invoking `coursier` directly.
+This wrapper already selects the configured JDK and sources `.envrc`.
+
+```bash
+bin/turbinec-test "com.google.turbine.scalagen.ScalaLowerSuite -- *root-package-heads-and-term-wildcards"
+bin/turbinec-test "tests.turbinec.TurbineConformanceCliSuite"
+```
+
 For more information on filtering tests in MUnit, see the
 [MUnit filtering documentation](https://scalameta.org/munit/docs/filtering.html).
 

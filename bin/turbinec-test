@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+JAVA_TOOL="${JAVA_TOOL:-java@corretto-17.0.18.9.1}"
+
+if [[ $# -eq 0 ]]; then
+  cat <<'EOF'
+Usage:
+  bin/turbinec-test "<testOnly args>"
+
+Examples:
+  bin/turbinec-test "com.google.turbine.scalagen.ScalaLowerSuite"
+  bin/turbinec-test "com.google.turbine.scalagen.ScalaLowerSuite -- *emits-recursive-nested-source-defs"
+  bin/turbinec-test "tests.turbinec.TurbineConformanceCliSuite"
+EOF
+  exit 1
+fi
+
+TEST_ARGS="$1"
+COMMAND="turbinec/testOnly ${TEST_ARGS}"
+
+exec mise x "${JAVA_TOOL}" -- sh -lc "source .envrc; coursier launch sbt -- --client \"${COMMAND}\""

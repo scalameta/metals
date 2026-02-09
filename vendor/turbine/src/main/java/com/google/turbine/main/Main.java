@@ -145,6 +145,7 @@ public final class Main {
 
     ImmutableList<CompUnit> units = parseAll(options);
     ImmutableList<ScalaTree.CompUnit> scalaUnits = parseAllScala(options);
+    ImmutableList<String> classPath = options.classPath();
 
     ClassPath bootclasspath = bootclasspath(options);
 
@@ -152,7 +153,13 @@ public final class Main {
     ImmutableMap<String, byte[]> scalaLowered = ImmutableMap.of();
     ImmutableSet<ClassSymbol> scalaSymbols = ImmutableSet.of();
     if (!scalaUnits.isEmpty()) {
-      scalaLowered = ScalaLower.lower(scalaUnits, options.languageVersion().majorVersion());
+      ClassPath userClasspath = ClassPathBinder.bindClasspath(toPaths(classPath));
+      ClassPath parentLookupClasspath = CompoundClassPath.of(userClasspath, bootclasspath);
+      scalaLowered =
+          ScalaLower.lower(
+              scalaUnits,
+              options.languageVersion().majorVersion(),
+              ScalaLower.classPathParentKindResolver(parentLookupClasspath));
       scalaClasspath = InMemoryClassPath.create(scalaLowered, "<scala>");
       ImmutableSet.Builder<ClassSymbol> symbols = ImmutableSet.builder();
       for (String name : scalaLowered.keySet()) {
@@ -170,7 +177,6 @@ public final class Main {
       reducedClasspathMode = ReducedClasspathMode.NONE;
     }
     boolean transitiveClasspathFallback = false;
-    ImmutableList<String> classPath = options.classPath();
     int transitiveClasspathLength = classPath.size();
     int reducedClasspathLength = classPath.size();
     switch (reducedClasspathMode) {

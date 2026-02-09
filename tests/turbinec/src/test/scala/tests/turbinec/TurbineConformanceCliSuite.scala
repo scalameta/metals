@@ -112,8 +112,87 @@ class TurbineConformanceCliSuite extends FunSuite {
       javaRequiredClasses = Set("foo/FromSkipped"),
     )
 
-    assertEquals(result.ignoredFromSkippedSources, Set.empty[String])
-    assertEquals(result.missing, Set("foo/FromSkipped"))
+    assertEquals(result.ignoredFromSkippedSources, Set("foo/FromSkipped"))
+    assertEquals(result.missing, Set.empty[String])
+  }
+
+  test("classify-baseline-only-required-non-api-java-used-class") {
+    val baselineClasses = Map(
+      "foo/LocalRequired" -> classBytes(
+        internalName = "foo/LocalRequired",
+        access = 0,
+      ),
+    )
+
+    val result = TurbineConformanceCli.classifyBaselineOnlyClasses(
+      baselineOnly = baselineClasses.keySet,
+      baselineClasses = baselineClasses,
+      skippedScalaFileNames = Set.empty,
+      abiScope = AbiScope.JavaUsed,
+      javaRequiredClasses = Set("foo/LocalRequired"),
+    )
+
+    assertEquals(
+      result.ignoredFromAbiScope.get("foo/LocalRequired"),
+      Some("java-reachable-non-api-class"),
+    )
+    assertEquals(result.missing, Set.empty[String])
+  }
+
+  test("classify-no-type-inference-public-method-mismatch-object-return") {
+    val actualMethods = Seq(
+      "childActorOf(Lakka/actor/Props;)Ljava/lang/Object;" -> Opcodes.ACC_PUBLIC,
+    )
+
+    val filtered = TurbineConformanceCli.isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey = "childActorOf(Lakka/actor/Props;)Lakka/actor/ActorRef;",
+      expectedAccess = Opcodes.ACC_PUBLIC,
+      actualMethods = actualMethods,
+    )
+
+    assert(filtered)
+  }
+
+  test("classify-no-type-inference-public-method-mismatch-unit-return") {
+    val actualMethods = Seq(
+      "childActorOf(Lakka/actor/Props;)V" -> Opcodes.ACC_PROTECTED,
+    )
+
+    val filtered = TurbineConformanceCli.isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey = "childActorOf(Lakka/actor/Props;)Lakka/actor/ActorRef;",
+      expectedAccess = Opcodes.ACC_PROTECTED,
+      actualMethods = actualMethods,
+    )
+
+    assert(filtered)
+  }
+
+  test("classify-no-type-inference-public-method-mismatch-does-not-filter-private-members") {
+    val actualMethods = Seq(
+      "childActorOf(Lakka/actor/Props;)Ljava/lang/Object;" -> Opcodes.ACC_PRIVATE,
+    )
+
+    val filtered = TurbineConformanceCli.isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey = "childActorOf(Lakka/actor/Props;)Lakka/actor/ActorRef;",
+      expectedAccess = Opcodes.ACC_PRIVATE,
+      actualMethods = actualMethods,
+    )
+
+    assert(!filtered)
+  }
+
+  test("classify-no-type-inference-public-method-mismatch-does-not-filter-non-object-return") {
+    val actualMethods = Seq(
+      "childActorOf(Lakka/actor/Props;)Lakka/actor/ActorSystem;" -> Opcodes.ACC_PUBLIC,
+    )
+
+    val filtered = TurbineConformanceCli.isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey = "childActorOf(Lakka/actor/Props;)Lakka/actor/ActorRef;",
+      expectedAccess = Opcodes.ACC_PUBLIC,
+      actualMethods = actualMethods,
+    )
+
+    assert(!filtered)
   }
 
   private def classBytes(

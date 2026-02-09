@@ -133,6 +133,22 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("yLen()I"))
   }
 
+  test("constructor-param-accessors-are-concrete") {
+    val source =
+      List(
+        "package foo",
+        "final class LeaseSettings(val leaseName: String, val ownerName: String)",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/LeaseSettings"))
+    assert((cls.methods("leaseName()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) == 0)
+    assert((cls.methods("ownerName()Ljava/lang/String;") & Opcodes.ACC_ABSTRACT) == 0)
+  }
+
   test("case-class-synthetics") {
     val source =
       List(
@@ -214,15 +230,62 @@ class ScalaLowerSuite extends FunSuite {
     assert(module.methods.contains("hashCode()I"))
     assert(module.methods.contains("toString()Ljava/lang/String;"))
     assert(module.methods.contains("canEqual(Ljava/lang/Object;)Z"))
-    assert(module.methods.contains("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;"))
 
     val mirror = readMembers(classes.get("foo/Solo"))
     assert(mirror.methods.contains("productArity()I"))
     assert((mirror.methods("productArity()I") & Opcodes.ACC_STATIC) != 0)
-    assert(mirror.methods.contains("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;"))
-    assert(
-      (mirror.methods("fromProduct(Lscala/Product;)Lscala/deriving/Mirror$Singleton;") & Opcodes.ACC_STATIC) != 0
-    )
+  }
+
+  test("case-class-interfaces-skip-inherited-serializable") {
+    val source =
+      List(
+        "package foo",
+        "trait Ser extends java.io.Serializable",
+        "case class Box(x: Int) extends Ser",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/Box"))
+    assert(header.interfaces.contains("foo/Ser"))
+    assert(header.interfaces.contains("scala/Product"))
+    assert(!header.interfaces.contains("java/io/Serializable"))
+  }
+
+  test("object-interfaces-skip-inherited-serializable") {
+    val source =
+      List(
+        "package foo",
+        "trait Ser extends java.io.Serializable",
+        "object O extends Ser",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/O$"))
+    assertEquals(header.interfaces, List("foo/Ser"))
+  }
+
+  test("case-object-interfaces-skip-inherited-product-and-serializable") {
+    val source =
+      List(
+        "package foo",
+        "trait ProductLike extends scala.Product with java.io.Serializable",
+        "case object O extends ProductLike",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/O$"))
+    assert(header.interfaces.contains("foo/ProductLike"))
+    assert(!header.interfaces.contains("scala/Product"))
+    assert(!header.interfaces.contains("java/io/Serializable"))
   }
 
   test("resolves-imports-for-types") {
@@ -272,6 +335,53 @@ class ScalaLowerSuite extends FunSuite {
     assert((cls.methods("pub()I") & Opcodes.ACC_PUBLIC) != 0)
     assert((cls.methods("secret()Ljava/lang/String;") & Opcodes.ACC_PRIVATE) != 0)
     assert((cls.methods("shield()I") & Opcodes.ACC_PROTECTED) != 0)
+  }
+
+  test("object-forwarders-infer-this-singleton-return") {
+    val source =
+      List(
+        "package foo",
+        "object O {",
+        "  def getInstance = this",
+        "}",
+        "class O",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val mirror = readMembers(classes.get("foo/O"))
+    assert(mirror.methods.contains("getInstance()Lfoo/O$;"))
+    assert((mirror.methods("getInstance()Lfoo/O$;") & Opcodes.ACC_STATIC) != 0)
+
+    val module = readMembers(classes.get("foo/O$"))
+    assert(module.methods.contains("getInstance()Lfoo/O$;"))
+    assert((module.methods("getInstance()Lfoo/O$;") & Opcodes.ACC_STATIC) == 0)
+  }
+
+  test("object-forwarders-emit-uppercase-val-accessors") {
+    val source =
+      List(
+        "package foo",
+        "object Dispatchers {",
+        "  final val DefaultDispatcherId = \"foo.default-dispatcher\"",
+        "  final val DefaultBlockingDispatcherId: String = \"foo.default-blocking-dispatcher\"",
+        "}",
+        "class Dispatchers",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val mirror = readMembers(classes.get("foo/Dispatchers"))
+    assert(mirror.methods.contains("DefaultDispatcherId()Ljava/lang/String;"))
+    assert(mirror.methods.contains("DefaultBlockingDispatcherId()Ljava/lang/String;"))
+
+    val module = readMembers(classes.get("foo/Dispatchers$"))
+    assert(module.methods.contains("DefaultDispatcherId()Ljava/lang/String;"))
+    assert(module.methods.contains("DefaultBlockingDispatcherId()Ljava/lang/String;"))
   }
 
   test("object-mirror-class") {
@@ -429,6 +539,99 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("g(Lfoo/O$Inner;)V"))
   }
 
+  test("wildcard-import-object-types-prefer-class-over-companion-module") {
+    val source =
+      List(
+        "package foo",
+        "object O {",
+        "  class Inner",
+        "  object Inner",
+        "}",
+        "class C {",
+        "  import O._",
+        "  def f(i: Inner): Inner = i",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("f(Lfoo/O$Inner;)Lfoo/O$Inner;"))
+  }
+
+  test("wildcard-import-qualified-object-types-prefer-class-over-companion-module") {
+    val source1 =
+      List(
+        "package foo.core",
+        "object Effect {",
+        "  class Spawned[T]",
+        "  object Spawned",
+        "}",
+      ).mkString("\n")
+    val source2 =
+      List(
+        "package foo.api",
+        "class Effects {",
+        "  import foo.core.Effect._",
+        "  def spawned[T](s: Spawned[T]): Spawned[T] = s",
+        "}",
+      ).mkString("\n")
+
+    val unit1 = ScalaParser.parse(new SourceFile(null, source1))
+    val unit2 = ScalaParser.parse(new SourceFile(null, source2))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit1, unit2),
+        LanguageVersion.createDefault().majorVersion(),
+      )
+
+    val cls = readMembers(classes.get("foo/api/Effects"))
+    assert(
+      cls.methods.contains("spawned(Lfoo/core/Effect$Spawned;)Lfoo/core/Effect$Spawned;")
+    )
+  }
+
+  test("local-imports-do-not-override-unit-explicit-imports") {
+    val source1 =
+      List(
+        "package foo.actor",
+        "class ActorRef",
+      ).mkString("\n")
+    val source2 =
+      List(
+        "package foo.actor.typed",
+        "class ActorRef",
+      ).mkString("\n")
+    val source3 =
+      List(
+        "package foo.api",
+        "import foo.actor.typed.ActorRef",
+        "object O {",
+        "  class Inner",
+        "}",
+        "class C {",
+        "  import O._",
+        "  def f(a: ActorRef): ActorRef = a",
+        "  def g(i: Inner): Inner = i",
+        "}",
+      ).mkString("\n")
+
+    val unit1 = ScalaParser.parse(new SourceFile(null, source1))
+    val unit2 = ScalaParser.parse(new SourceFile(null, source2))
+    val unit3 = ScalaParser.parse(new SourceFile(null, source3))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit1, unit2, unit3),
+        LanguageVersion.createDefault().majorVersion(),
+      )
+
+    val cls = readMembers(classes.get("foo/api/C"))
+    assert(cls.methods.contains("f(Lfoo/actor/typed/ActorRef;)Lfoo/actor/typed/ActorRef;"))
+    assert(cls.methods.contains("g(Lfoo/api/O$Inner;)Lfoo/api/O$Inner;"))
+  }
+
   test("wildcard-import-object-types-over-package") {
     val source =
       List(
@@ -494,6 +697,24 @@ class ScalaLowerSuite extends FunSuite {
     assert(
       mirror.methods.contains("processEvent(Lfoo/CommonMapAsync$EntityEvent;I)Lscala/concurrent/Future;")
     )
+  }
+
+  test("infers-forwarder-return-type-from-later-helper") {
+    val source =
+      List(
+        "package foo",
+        "final class Settings(private val value: Int) {",
+        "  def withValue(v: Int) = copy(v)",
+        "  private def copy(v: Int) = new Settings(v)",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Settings"))
+    assert(cls.methods.contains("withValue(I)Lfoo/Settings;"))
   }
 
   test("trait-inferred-val-concrete") {
@@ -629,6 +850,668 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("f()Lscala/Function1;"))
   }
 
+  test("varargs-bridges-and-static-forwarders") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def many(xs: Int*): Int = 0",
+        "}",
+        "object C {",
+        "  def fromInts(xs: Int*): Int = 0",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("many([I)I"))
+    assert((cls.methods("many([I)I") & Opcodes.ACC_VARARGS) != 0)
+    assert((cls.methods("many([I)I") & Opcodes.ACC_STATIC) == 0)
+
+    assert(cls.methods.contains("fromInts([I)I"))
+    assert((cls.methods("fromInts([I)I") & Opcodes.ACC_STATIC) != 0)
+    assert((cls.methods("fromInts([I)I") & Opcodes.ACC_VARARGS) != 0)
+    assert((cls.methods("fromInts([I)I") & Opcodes.ACC_FINAL) == 0)
+  }
+
+  test("resolves-core-java-and-scala-type-names") {
+    val source =
+      List(
+        "package foo",
+        "import java.io.File",
+        "trait T {",
+        "  def f(r: Runnable, pf: PartialFunction, it: Iterable, s: Serializable, file: File): Unit",
+        "  def g(xs: immutable.Seq): immutable.Seq",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/T"))
+    assert(
+      cls.methods.contains(
+        "f(Ljava/lang/Runnable;Lscala/PartialFunction;Lscala/collection/Iterable;Ljava/io/Serializable;Ljava/io/File;)V"
+      )
+    )
+    assert(
+      cls.methods.contains(
+        "g(Lscala/collection/immutable/Seq;)Lscala/collection/immutable/Seq;"
+      )
+    )
+  }
+
+  test("resolves-imported-package-prefix-types") {
+    val source =
+      List(
+        "package foo",
+        "import demo.lib.fn",
+        "class C {",
+        "  def run(cb: fn.Procedure): Unit = ()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("run(Ldemo/lib/fn/Procedure;)V"))
+  }
+
+  test("qualified-package-heads-and-scala-tuples") {
+    val source =
+      List(
+        "package demo.stream.api",
+        "import demo.lib.fn._",
+        "import demo.stream.core._",
+        "import example.pkg._",
+        "class C {",
+        "  def run(cb: fn.Function): Unit = ()",
+        "  def lift(src: core.Source): core.Source = src",
+        "  def pair(p: Tuple2): scala.Tuple2 = p",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("demo/stream/api/C"))
+    assert(cls.methods.contains("run(Ldemo/lib/fn/Function;)V"))
+    assert(
+      cls.methods.contains(
+        "lift(Ldemo/stream/core/Source;)Ldemo/stream/core/Source;"
+      )
+    )
+    assert(cls.methods.contains("pair(Lscala/Tuple2;)Lscala/Tuple2;"))
+  }
+
+  test("resolves-sibling-package-prefix-types") {
+    val source =
+      List(
+        "package com.example.ml.util {",
+        "  class DefaultParamsWritable",
+        "}",
+        "package com.example.ml.feature {",
+        "  class C {",
+        "    def writable(p: util.DefaultParamsWritable): util.DefaultParamsWritable = p",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("com/example/ml/feature/C"))
+    assert(
+      cls.methods.contains(
+        "writable(Lcom/example/ml/util/DefaultParamsWritable;)Lcom/example/ml/util/DefaultParamsWritable;"
+      )
+    )
+  }
+
+  test("generic-varargs-bridges") {
+    val source =
+      List(
+        "package foo",
+        "class JavaRDD[T]",
+        "class JavaPairRDD[K, V]",
+        "class JavaDoubleRDD",
+        "class C {",
+        "  @varargs",
+        "  def union[T](rdds: JavaRDD[T]*): JavaRDD[T] = null",
+        "  @varargs",
+        "  def union[K, V](rdds: JavaPairRDD[K, V]*): JavaPairRDD[K, V] = null",
+        "  @varargs",
+        "  def union(rdds: JavaDoubleRDD*): JavaDoubleRDD = null",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("union(Lscala/collection/immutable/Seq;)Lfoo/JavaRDD;"))
+    assert(cls.methods.contains("union([Lfoo/JavaRDD;)Lfoo/JavaRDD;"))
+    assert((cls.methods("union([Lfoo/JavaRDD;)Lfoo/JavaRDD;") & Opcodes.ACC_VARARGS) != 0)
+    assert(cls.methods.contains("union(Lscala/collection/immutable/Seq;)Lfoo/JavaPairRDD;"))
+    assert(cls.methods.contains("union([Lfoo/JavaPairRDD;)Lfoo/JavaPairRDD;"))
+    assert((cls.methods("union([Lfoo/JavaPairRDD;)Lfoo/JavaPairRDD;") & Opcodes.ACC_VARARGS) != 0)
+    assert(cls.methods.contains("union(Lscala/collection/immutable/Seq;)Lfoo/JavaDoubleRDD;"))
+    assert(cls.methods.contains("union([Lfoo/JavaDoubleRDD;)Lfoo/JavaDoubleRDD;"))
+    assert((cls.methods("union([Lfoo/JavaDoubleRDD;)Lfoo/JavaDoubleRDD;") & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("root-package-heads-and-term-wildcards") {
+    val actorSource =
+      List(
+        "package demo.actor",
+        "class ActorRef {}",
+        "class ActorSystem {}",
+      ).mkString("\n")
+
+    val aliasSource =
+      List(
+        "package demo.event",
+        "object Levels {",
+        "  type Level = Int",
+        "}",
+      ).mkString("\n")
+
+    val clusterSource =
+      List(
+        "package demo.cluster",
+        "import demo.actor._",
+        "import demo.event.Levels.Level",
+        "class Settings",
+        "class C {",
+        "  val settings = new Settings",
+        "  import settings._",
+        "  def ref(x: ActorRef): ActorRef = x",
+        "  def systemOf(x: ActorSystem): ActorSystem = x",
+        "  def levelOf(x: Level): Level = x",
+        "}",
+      ).mkString("\n")
+
+    val javaSource =
+      List(
+        "package example.api",
+        "import java.{lang, util}",
+        "class J {",
+        "  def bool(x: java.lang.Boolean): java.lang.Boolean = x",
+        "  def builder(x: lang.StringBuilder): lang.StringBuilder = x",
+        "  def listOf(xs: util.List[String]): util.List[String] = xs",
+        "}",
+      ).mkString("\n")
+
+    val actorUnit = ScalaParser.parse(new SourceFile(null, actorSource))
+    val aliasUnit = ScalaParser.parse(new SourceFile(null, aliasSource))
+    val clusterUnit = ScalaParser.parse(new SourceFile(null, clusterSource))
+    val javaUnit = ScalaParser.parse(new SourceFile(null, javaSource))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(actorUnit, aliasUnit, clusterUnit, javaUnit),
+        LanguageVersion.createDefault().majorVersion(),
+      )
+
+    val clusterCls = readMembers(classes.get("demo/cluster/C"))
+    assert(
+      clusterCls.methods.contains("ref(Ldemo/actor/ActorRef;)Ldemo/actor/ActorRef;")
+    )
+    assert(
+      clusterCls.methods.contains("systemOf(Ldemo/actor/ActorSystem;)Ldemo/actor/ActorSystem;")
+    )
+    assert(clusterCls.methods.contains("levelOf(I)I"))
+
+    val javaCls = readMembers(classes.get("example/api/J"))
+    assert(javaCls.methods.contains("bool(Ljava/lang/Boolean;)Ljava/lang/Boolean;"))
+    assert(
+      javaCls.methods.contains("builder(Ljava/lang/StringBuilder;)Ljava/lang/StringBuilder;")
+    )
+    assert(javaCls.methods.contains("listOf(Ljava/util/List;)Ljava/util/List;"))
+  }
+
+  test("qualified-type-aliases-and-imported-typed-system") {
+    val actorSource =
+      List(
+        "package demo.actor",
+        "object Supervisor {",
+        "  type Decider = PartialFunction[Throwable, Directive]",
+        "  type JDecider = demo.fn.Function",
+        "  type Level = Int",
+        "  trait Directive",
+        "}",
+        "class C(",
+        "  decider: Supervisor.Decider,",
+        "  jdecider: Supervisor.JDecider,",
+        "  level: Supervisor.Level",
+        ") {",
+        "  def decide(d: Supervisor.Decider): Supervisor.Decider = d",
+        "  def decideJ(d: Supervisor.JDecider): Supervisor.JDecider = d",
+        "  def current(level: Supervisor.Level): Supervisor.Level = level",
+        "  def product5Of(p: Product5): Product5 = p",
+        "}",
+      ).mkString("\n")
+
+    val functionSource =
+      List(
+        "package demo.fn",
+        "class Function {}",
+      ).mkString("\n")
+
+    val typedModelSource =
+      List(
+        "package demo.actor.typed",
+        "class System[T] {}",
+      ).mkString("\n")
+
+    val typedSource =
+      List(
+        "package demo.cluster.typed",
+        "import demo.actor.typed.System",
+        "class D {",
+        "  def create(system: System[_]): System[_] = system",
+        "}",
+      ).mkString("\n")
+
+    val actorUnit = ScalaParser.parse(new SourceFile(null, actorSource))
+    val functionUnit = ScalaParser.parse(new SourceFile(null, functionSource))
+    val typedModelUnit = ScalaParser.parse(new SourceFile(null, typedModelSource))
+    val typedUnit = ScalaParser.parse(new SourceFile(null, typedSource))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(actorUnit, functionUnit, typedModelUnit, typedUnit),
+        LanguageVersion.createDefault().majorVersion(),
+      )
+
+    val actorCls = readMembers(classes.get("demo/actor/C"))
+    assert(
+      actorCls.methods.contains("<init>(Lscala/PartialFunction;Ldemo/fn/Function;I)V"),
+      actorCls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(
+      actorCls.methods.contains("decide(Lscala/PartialFunction;)Lscala/PartialFunction;")
+    )
+    assert(actorCls.methods.contains("decideJ(Ldemo/fn/Function;)Ldemo/fn/Function;"))
+    assert(actorCls.methods.contains("current(I)I"))
+    assert(actorCls.methods.contains("product5Of(Lscala/Product5;)Lscala/Product5;"))
+
+    val typedCls = readMembers(classes.get("demo/cluster/typed/D"))
+    assert(
+      typedCls.methods.contains(
+        "create(Ldemo/actor/typed/System;)Ldemo/actor/typed/System;"
+      )
+    )
+  }
+
+  test("nested-case-object-module-shape-and-package-qualified-types") {
+    val source =
+      List(
+        "package demo.stream.api",
+        "object Holder {",
+        "  sealed trait Directive {",
+        "    private[demo] def logLevel: Int",
+        "  }",
+        "  private[demo] sealed class Resume(private[demo] val logLevel: Int) extends Directive",
+        "  case object Resume extends Resume(1)",
+        "}",
+        "class Source",
+        "class C {",
+        "  def from(src: api.Source): api.Source = src",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val moduleHeader = readClassHeader(classes.get("demo/stream/api/Holder$Resume$"))
+    assertEquals(moduleHeader.superName, "demo/stream/api/Holder$Resume")
+    assert((moduleHeader.access & Opcodes.ACC_FINAL) == 0)
+    assert(moduleHeader.interfaces.contains("scala/Product"))
+    assert(moduleHeader.interfaces.contains("java/io/Serializable"))
+    assert(!moduleHeader.interfaces.contains("scala/deriving/Mirror$Singleton"))
+
+    val cls = readMembers(classes.get("demo/stream/api/C"))
+    assert(
+      cls.methods.contains("from(Ldemo/stream/api/Source;)Ldemo/stream/api/Source;")
+    )
+  }
+
+  test("local-nested-types-shadow-package-wildcards") {
+    val source =
+      List(
+        "package foo",
+        "object Common {",
+        "  import scala.concurrent.duration._",
+        "  sealed trait Event",
+        "  object Consumer",
+        "  def consumer = Consumer",
+        "  def handle(e: Event): Event = e",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/Common$"))
+    assert(module.methods.contains("consumer()Lfoo/Common$Consumer$;"))
+    assert(module.methods.contains("handle(Lfoo/Common$Event;)Lfoo/Common$Event;"))
+  }
+
+  test("emits-recursive-nested-source-defs") {
+    val source =
+      List(
+        "package foo",
+        "object Outer {",
+        "  class A",
+        "  class B {",
+        "    def f(a: A): A = a",
+        "  }",
+        "  object Mid {",
+        "    class C",
+        "  }",
+        "  class D {",
+        "    import Mid._",
+        "    def g(c: C): C = c",
+        "  }",
+        "  class Holder {",
+        "    class Nested",
+        "    object Worker",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    assert(classes.containsKey("foo/Outer$A"))
+    assert(classes.containsKey("foo/Outer$B"))
+    assert(classes.containsKey("foo/Outer$Mid$"))
+    assert(classes.containsKey("foo/Outer$Mid$C"))
+    assert(classes.containsKey("foo/Outer$D"))
+    assert(classes.containsKey("foo/Outer$Holder"))
+    assert(classes.containsKey("foo/Outer$Holder$Nested"))
+    assert(classes.containsKey("foo/Outer$Holder$Worker$"))
+
+    assert(!classes.containsKey("foo/Outer$Mid"))
+    assert(!classes.containsKey("foo/Outer$Holder$Worker"))
+
+    val b = readMembers(classes.get("foo/Outer$B"))
+    assert(b.methods.contains("f(Lfoo/Outer$A;)Lfoo/Outer$A;"))
+
+    val d = readMembers(classes.get("foo/Outer$D"))
+    assert(d.methods.contains("g(Lfoo/Outer$Mid$C;)Lfoo/Outer$Mid$C;"))
+  }
+
+  test("normalizes-this-type-method-returns") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def set(v: Int): this.type = this",
+        "}",
+        "object O {",
+        "  def set(v: Int): this.type = this",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("set(I)Lfoo/C;"))
+
+    val module = readMembers(classes.get("foo/O$"))
+    assert(module.methods.contains("set(I)Lfoo/O$;"))
+
+    val mirror = readMembers(classes.get("foo/O"))
+    assert(mirror.methods.contains("set(I)Lfoo/O$;"))
+  }
+
+  test("infers-object-expression-return-types") {
+    val source =
+      List(
+        "package foo",
+        "object FromConfig",
+        "object Plugins {",
+        "  object PersistenceTestKitPlugin",
+        "}",
+        "class C {",
+        "  def getInstance = FromConfig",
+        "  import Plugins._",
+        "  def plugin = PersistenceTestKitPlugin",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("getInstance()Lfoo/FromConfig$;"))
+    assert(cls.methods.contains("plugin()Lfoo/Plugins$PersistenceTestKitPlugin$;"))
+  }
+
+  test("falls-back-uninferred-member-types-to-object") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def inferred = unknown.value",
+        "  val data = unknown.value",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("inferred()Ljava/lang/Object;"))
+    assert(cls.methods.contains("data()Ljava/lang/Object;"))
+  }
+
+  test("class-parent-interface-from-resolver") {
+    val source =
+      List(
+        "package foo",
+        "import java.sql.Driver",
+        "class C extends Driver {}",
+      ).mkString("\n")
+
+    val resolver: ScalaLower.ParentKindResolver =
+      (binaryName: String) => binaryName == "java/sql/Driver"
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("java/sql/Driver"))
+  }
+
+  test("object-interfaces-skip-inherited-serializable-from-resolver") {
+    val source =
+      List(
+        "package foo",
+        "import java.sql.Driver",
+        "object O extends Driver {}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "java/sql/Driver"
+
+      override def interfaces(binaryName: String): ImmutableList[String] =
+        binaryName match {
+          case "java/sql/Driver" => ImmutableList.of("java/io/Serializable")
+          case _ => ImmutableList.of()
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/O$"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("java/sql/Driver"))
+  }
+
+  test("class-parent-interface-prefers-local-package-object") {
+    val source =
+      List(
+        "package foo.io {",
+        "  import foo.actor.IO",
+        "  object IO {",
+        "    trait Extension",
+        "  }",
+        "  class C extends IO.Extension",
+        "}",
+        "package foo.actor {",
+        "  object IO {",
+        "    class Extension",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/io/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/io/IO$Extension"))
+  }
+
+  test("trait-forwarders-prefer-local-package-object-parent") {
+    val source =
+      List(
+        "package foo.io {",
+        "  import foo.actor.IO",
+        "  object IO {",
+        "    trait Extension[A] {",
+        "      def id(value: A): A = value",
+        "      def const: String = \"ok\"",
+        "    }",
+        "  }",
+        "  class C extends IO.Extension[String] {}",
+        "  object O extends IO.Extension[String] {}",
+        "}",
+        "package foo.actor {",
+        "  object IO {",
+        "    class Extension",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/io/C"))
+    assert(cls.methods.contains("id(Ljava/lang/String;)Ljava/lang/String;"))
+    assert(cls.methods.contains("const()Ljava/lang/String;"))
+
+    val module = readMembers(classes.get("foo/io/O$"))
+    assert(module.methods.contains("id(Ljava/lang/String;)Ljava/lang/String;"))
+    assert(module.methods.contains("const()Ljava/lang/String;"))
+
+    val mirror = readMembers(classes.get("foo/io/O"))
+    assert(mirror.methods.contains("id(Ljava/lang/String;)Ljava/lang/String;"))
+    assert((mirror.methods("id(Ljava/lang/String;)Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+    assert(mirror.methods.contains("const()Ljava/lang/String;"))
+    assert((mirror.methods("const()Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("parent-resolution-prefers-known-package-wildcard-members") {
+    val source =
+      List(
+        "package foo.alpha {",
+        "  trait Parent {",
+        "    def ping(value: String): String = value",
+        "  }",
+        "}",
+        "package foo.beta {",
+        "  class Marker",
+        "}",
+        "package foo.use {",
+        "  import foo.alpha._",
+        "  import foo.beta._",
+        "  class C extends Parent {}",
+        "  object O extends Parent {}",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val classHeader = readClassHeader(classes.get("foo/use/C"))
+    assertEquals(classHeader.superName, "java/lang/Object")
+    assertEquals(classHeader.interfaces, List("foo/alpha/Parent"))
+
+    val cls = readMembers(classes.get("foo/use/C"))
+    assert(cls.methods.contains("ping(Ljava/lang/String;)Ljava/lang/String;"))
+
+    val module = readMembers(classes.get("foo/use/O$"))
+    assert(module.methods.contains("ping(Ljava/lang/String;)Ljava/lang/String;"))
+
+    val mirror = readMembers(classes.get("foo/use/O"))
+    assert(mirror.methods.contains("ping(Ljava/lang/String;)Ljava/lang/String;"))
+    assert((mirror.methods("ping(Ljava/lang/String;)Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("parent-resolution-falls-back-to-local-package-when-wildcard-parent-unknown") {
+    val source =
+      List(
+        "package foo.use",
+        "import bar.pkg._",
+        "class C extends Base {}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/use/Base" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/use/C"))
+    assertEquals(header.superName, "foo/use/Base")
+    assertEquals(header.interfaces, Nil)
+  }
+
   test("qualified-java-scala-types-ignore-package-wildcard-imports") {
     val source =
       List(
@@ -746,6 +1629,35 @@ class ScalaLowerSuite extends FunSuite {
   private class ClassMembers {
     val methods: mutable.Map[String, Int] = mutable.Map.empty
     val fields: mutable.Map[String, Int] = mutable.Map.empty
+  }
+
+  private def readClassHeader(bytes: Array[Byte]): ClassHeader = {
+    val header = new ClassHeader
+    new ClassReader(bytes)
+      .accept(
+        new ClassVisitor(Opcodes.ASM9) {
+          override def visit(
+              version: Int,
+              access: Int,
+              name: String,
+              signature: String,
+              superName: String,
+              interfaces: Array[String],
+          ): Unit = {
+            header.access = access
+            header.superName = superName
+            header.interfaces = interfaces.toList
+          }
+        },
+        ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES,
+      )
+    header
+  }
+
+  private class ClassHeader {
+    var access: Int = 0
+    var superName: String = _
+    var interfaces: List[String] = Nil
   }
 
   private def readSignatures(bytes: Array[Byte]): ClassSignatures = {

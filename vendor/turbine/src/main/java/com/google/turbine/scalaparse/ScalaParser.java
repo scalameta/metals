@@ -103,6 +103,7 @@ public final class ScalaParser {
 
   private final Deque<String> packagePrefix = new ArrayDeque<>();
   private final Deque<Map<String, ExprInfo>> valueScopes = new ArrayDeque<>();
+  private final Deque<Map<Integer, String>> deferredReturnRefs = new ArrayDeque<>();
 
   public static ScalaTree.CompUnit parse(String source) {
     return parse(new SourceFile(null, source));
@@ -343,7 +344,9 @@ public final class ScalaParser {
     if (token == EQUALS) {
       hasBody = true;
       next();
+      String deferredRef = null;
       if (returnType == null) {
+        deferredRef = inferDeferredReturnRef();
         returnType = inferLiteralType(token);
         if (returnType == null && token.isIdentifier()) {
           returnType = paramTypes.get(value);
@@ -366,6 +369,12 @@ public final class ScalaParser {
       } else {
         skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
       }
+      if (returnType == null && deferredRef != null) {
+        Map<Integer, String> deferred = deferredReturnRefs.peek();
+        if (deferred != null) {
+          deferred.put(start, deferredRef);
+        }
+      }
     } else if (token == LBRACE) {
       hasBody = true;
       if (returnType == null) {
@@ -382,6 +391,12 @@ public final class ScalaParser {
       adjusted =
           ImmutableList.<String>builder().addAll(modifiers).add("abstract").build();
     }
+    if (returnType != null) {
+      Map<String, ExprInfo> scope = currentValueScope();
+      if (scope != null) {
+        scope.put(name, ExprInfo.ofType(returnType));
+      }
+    }
     return new DefDef(
         currentPackageName(), name, adjusted, tparams, params, returnType, start);
   }
@@ -397,10 +412,10 @@ public final class ScalaParser {
     next();
     EnumSet<ScalaToken> patternTypeStops = patternTypeStops(/* allowArrow= */ true);
     List<Pattern> patterns = new ArrayList<>();
-    patterns.add(parsePattern(patternTypeStops));
+    patterns.add(normalizeValPattern(parsePattern(patternTypeStops)));
     while (token == COMMA) {
       next();
-      patterns.add(parsePattern(patternTypeStops));
+      patterns.add(normalizeValPattern(parsePattern(patternTypeStops)));
     }
     String explicitType = null;
     boolean hasExplicitType = false;
@@ -450,6 +465,10 @@ public final class ScalaParser {
           binderExplicit = explicitType != null;
         } else {
           type = binderTypes.get(binder);
+        }
+        if (type == null) {
+          // Keep un-inferred member/value types usable in outlines.
+          type = "java/lang/Object";
         }
         ValDef val =
             new ValDef(
@@ -528,6 +547,25 @@ public final class ScalaParser {
       }
       return null;
     }
+    if (token == THIS) {
+      next();
+      // `this` expressions in defs (for example `def getInstance = this`) should infer
+      // a singleton receiver type rather than falling back to Unit.
+      if (token == DOT) {
+        next();
+        if (token.isIdentifier()) {
+          String member = value;
+          next();
+          if ("type".equals(member)) {
+            return ExprInfo.ofType("this/type");
+          }
+          if (token == LPAREN) {
+            parseCallArgTypes();
+          }
+        }
+      }
+      return ExprInfo.ofType("this/type");
+    }
     if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
       boolean backquoted = token == BACKQUOTED_IDENT;
       String name = value;
@@ -560,16 +598,57 @@ public final class ScalaParser {
         }
       }
       if (!backquoted && isTypeLike(current)) {
-        return ExprInfo.ofType(current);
+        String inferred = qualified ? current : singletonObjectType(current);
+        return ExprInfo.ofType(inferred);
       }
       return null;
     }
     return null;
   }
 
+  private Pattern normalizeValPattern(Pattern pattern) {
+    if (pattern instanceof ConstructorPattern ctor) {
+      if (ctor.args().isEmpty() && ctor.name().indexOf('/') < 0) {
+        return new BinderPattern(ctor.name());
+      }
+      ImmutableList.Builder<Pattern> args = ImmutableList.builder();
+      for (Pattern arg : ctor.args()) {
+        args.add(normalizeValPattern(arg));
+      }
+      return new ConstructorPattern(ctor.name(), args.build());
+    }
+    if (pattern instanceof TuplePattern tuple) {
+      ImmutableList.Builder<Pattern> normalized = ImmutableList.builder();
+      for (Pattern element : tuple.elements()) {
+        normalized.add(normalizeValPattern(element));
+      }
+      return new TuplePattern(normalized.build());
+    }
+    if (pattern instanceof AliasPattern alias) {
+      return new AliasPattern(alias.name(), normalizeValPattern(alias.rhs()));
+    }
+    if (pattern instanceof TypedPattern typed) {
+      return new TypedPattern(normalizeValPattern(typed.pattern()), typed.type());
+    }
+    return pattern;
+  }
+
+  private String singletonObjectType(String name) {
+    if (name == null || name.isEmpty() || name.endsWith("$")) {
+      return name;
+    }
+    return name + "$";
+  }
+
   private ExprInfo parseCallExprInfo(String name) {
     if (!isTypeLike(name)) {
       parseCallArgTypes();
+      if (name.indexOf('/') < 0) {
+        ExprInfo scoped = lookupValue(name);
+        if (scoped != null) {
+          return scoped;
+        }
+      }
       return null;
     }
     List<String> typeArgs = parseCallArgTypes();
@@ -1063,7 +1142,11 @@ public final class ScalaParser {
   private String inferTypeFromExprStart(ScalaToken token, @Nullable String value) {
     if (token == IDENTIFIER || token == BACKQUOTED_IDENT) {
       if (value != null && !value.isEmpty() && Character.isUpperCase(value.charAt(0))) {
-        return value;
+        ScalaToken nextToken = peek();
+        if (nextToken == LPAREN || nextToken == DOT) {
+          return null;
+        }
+        return singletonObjectType(value);
       }
     }
     return null;
@@ -1160,6 +1243,8 @@ public final class ScalaParser {
       return new TemplateBody(ImmutableList.of(), ImmutableList.of());
     }
     valueScopes.push(new HashMap<>());
+    Map<Integer, String> deferredRefs = new HashMap<>();
+    deferredReturnRefs.push(deferredRefs);
     accept(LBRACE);
     ImmutableList.Builder<String> imports = ImmutableList.builder();
     ImmutableList.Builder<ScalaTree.Defn> members = ImmutableList.builder();
@@ -1215,8 +1300,11 @@ public final class ScalaParser {
       skipExpr(EnumSet.of(SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
     }
     accept(RBRACE);
+    deferredReturnRefs.pop();
     valueScopes.pop();
-    return new TemplateBody(imports.build(), members.build());
+    ImmutableList<ScalaTree.Defn> resolvedMembers =
+        resolveDeferredMethodReturns(members.build(), deferredRefs);
+    return new TemplateBody(imports.build(), resolvedMembers);
   }
 
   private void skipSelfType() {
@@ -1239,6 +1327,96 @@ public final class ScalaParser {
       }
       next();
     }
+  }
+
+  private @Nullable String inferDeferredReturnRef() {
+    if (token != IDENTIFIER && token != BACKQUOTED_IDENT) {
+      return null;
+    }
+    String name = value;
+    ScalaToken nextToken = peek();
+    if (nextToken == LPAREN
+        || nextToken == SEMI
+        || nextToken == NEWLINE
+        || nextToken == NEWLINES
+        || nextToken == RBRACE
+        || nextToken == EOF) {
+      return name;
+    }
+    return null;
+  }
+
+  private ImmutableList<ScalaTree.Defn> resolveDeferredMethodReturns(
+      ImmutableList<ScalaTree.Defn> members, Map<Integer, String> deferredRefs) {
+    if (members.isEmpty()) {
+      return members;
+    }
+    Map<String, String> knownTypes = new HashMap<>();
+    for (ScalaTree.Defn member : members) {
+      if (member instanceof DefDef def && def.returnType() != null) {
+        knownTypes.putIfAbsent(def.name(), def.returnType());
+      } else if (member instanceof ValDef val && val.type() != null) {
+        knownTypes.putIfAbsent(val.name(), val.type());
+      }
+    }
+    ImmutableList<ScalaTree.Defn> current = members;
+    int maxPasses = Math.max(1, members.size());
+    for (int pass = 0; pass < maxPasses; pass++) {
+      boolean changed = false;
+      ImmutableList.Builder<ScalaTree.Defn> nextMembers = ImmutableList.builder();
+      for (ScalaTree.Defn member : current) {
+        if (member instanceof DefDef def && def.returnType() == null) {
+          String refName = deferredRefs.get(def.position());
+          if (refName != null) {
+            String resolved = knownTypes.get(refName);
+            if (resolved == null && "copy".equals(refName)) {
+              resolved = "this/type";
+            }
+            if (resolved != null) {
+              DefDef rewritten =
+                  new DefDef(
+                      def.packageName(),
+                      def.name(),
+                      def.modifiers(),
+                      def.typeParams(),
+                      def.paramLists(),
+                      resolved,
+                      def.position());
+              nextMembers.add(rewritten);
+              knownTypes.putIfAbsent(rewritten.name(), resolved);
+              changed = true;
+              continue;
+            }
+          }
+        }
+        if (member instanceof DefDef def && def.returnType() != null) {
+          knownTypes.putIfAbsent(def.name(), def.returnType());
+        }
+        nextMembers.add(member);
+      }
+      current = nextMembers.build();
+      if (!changed) {
+        break;
+      }
+    }
+    ImmutableList.Builder<ScalaTree.Defn> finalized = ImmutableList.builder();
+    for (ScalaTree.Defn member : current) {
+      if (member instanceof DefDef def && def.returnType() == null && !"this".equals(def.name())) {
+        // IDE-facing outlines prefer object fallback when return inference is unavailable.
+        finalized.add(
+            new DefDef(
+                def.packageName(),
+                def.name(),
+                def.modifiers(),
+                def.typeParams(),
+                def.paramLists(),
+                "java/lang/Object",
+                def.position()));
+      } else {
+        finalized.add(member);
+      }
+    }
+    return finalized.build();
   }
 
   private record TemplateBody(ImmutableList<String> imports, ImmutableList<ScalaTree.Defn> members) {}
