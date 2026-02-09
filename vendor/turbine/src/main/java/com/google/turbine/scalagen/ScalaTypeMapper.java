@@ -303,6 +303,12 @@ public final class ScalaTypeMapper {
       case "String", "scala/String", "scala/Predef/String" -> "java/lang/String";
       case "Any", "AnyRef", "Object", "scala/Any", "scala/AnyRef", "java/lang/Object" ->
           "java/lang/Object";
+      case "Throwable", "scala/Throwable" -> "java/lang/Throwable";
+      case "Exception", "scala/Exception" -> "java/lang/Exception";
+      case "RuntimeException", "scala/RuntimeException" -> "java/lang/RuntimeException";
+      case "Error", "scala/Error" -> "java/lang/Error";
+      case "Class", "scala/Class" -> "java/lang/Class";
+      case "ClassLoader", "scala/ClassLoader" -> "java/lang/ClassLoader";
       case "List", "scala/List", "scala/collection/immutable/List" ->
           "scala/collection/immutable/List";
       case "Seq", "scala/Seq", "scala/collection/Seq", "scala/collection/immutable/Seq" ->
@@ -367,8 +373,11 @@ public final class ScalaTypeMapper {
     List<String> wildcards = importScope.wildcards();
     for (int i = wildcards.size() - 1; i >= 0; i--) {
       String prefix = wildcards.get(i);
+      // Object wildcard imports are too ambiguous for binary name resolution.
+      // They frequently over-capture unrelated type names (for example
+      // scala/jdk/* converters), which breaks Java-facing descriptors.
       if (prefix.endsWith("$")) {
-        return prefix + raw;
+        continue;
       }
       return prefix + "/" + raw;
     }
@@ -407,16 +416,18 @@ public final class ScalaTypeMapper {
       return raw;
     }
     String head = parts[0];
-    String resolvedHead = resolveImport(head, importScope);
-    if (resolvedHead != null) {
-      return resolvedHead + "$" + String.join("$", Arrays.asList(parts).subList(1, parts.length));
-    }
-    if (!currentPackage.isEmpty() && isClassLike(head)) {
-      return currentPackage.replace('.', '/')
-          + "/"
-          + head
-          + "$"
-          + String.join("$", Arrays.asList(parts).subList(1, parts.length));
+    if (isClassLike(head)) {
+      String resolvedHead = resolveImport(head, importScope);
+      if (resolvedHead != null) {
+        return resolvedHead + "$" + String.join("$", Arrays.asList(parts).subList(1, parts.length));
+      }
+      if (!currentPackage.isEmpty()) {
+        return currentPackage.replace('.', '/')
+            + "/"
+            + head
+            + "$"
+            + String.join("$", Arrays.asList(parts).subList(1, parts.length));
+      }
     }
     return raw;
   }

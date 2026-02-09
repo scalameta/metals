@@ -5,22 +5,54 @@ Bring Turbine Scala lowering conformance to zero diffs against build outputs for
 - `/Users/olafurpg/dev/akka/akka`
 - `/Users/olafurpg/dev/apache/spark`
 
-**Current Snapshot (2026-02-05)**
+Scope definitions:
+- `java`: Java-facing ABI gating for Bazel Java compilation unblock.
+- `full`: Full Scala/JVM bytecode parity tracking.
+
+**Current Snapshot (2026-02-09)**
 Akka (`--javac-release 11`)
-- Turbine classes: 9566
-- Baseline classes: 17336
-- Missing classes: 7982
-- Extra classes: 212
-- Mismatched members: 75850
-- Baseline-only classes not explained by skipped Scala sources: 7982
+- `java` scope:
+  - Turbine classes: 4894
+  - Baseline classes: 4958
+  - Missing classes: 0
+  - Extra classes: 0
+  - Mismatched members: 0
+  - Ignored baseline-only classes from skipped Scala sources: 64
+- `full` scope:
+  - Turbine classes: 9566
+  - Baseline classes: 17336
+  - Missing classes: 7804
+  - Extra classes: 212
+  - Mismatched members: 73077
+  - Baseline-only classes still required for full ABI: 7804
+- `java-used` scope (Java-bytecode-referenced members/classes):
+  - Turbine classes: 3073
+  - Baseline classes: 3309
+  - Missing classes: 236
+  - Extra classes: 0
+  - Mismatched members: 881
 
 Spark (`--javac-release 17`)
-- Turbine classes: 16040
-- Baseline classes: 17718
-- Missing classes: 2173
-- Extra classes: 495
-- Mismatched members: 135688
-- Baseline-only classes not explained by skipped Scala sources: 2173
+- `java` scope:
+  - Turbine classes: 8622
+  - Baseline classes: 8635
+  - Missing classes: 0
+  - Extra classes: 0
+  - Mismatched members: 0
+  - Ignored baseline-only classes from skipped Scala sources: 13
+- `full` scope:
+  - Turbine classes: 16040
+  - Baseline classes: 17718
+  - Missing classes: 2096
+  - Extra classes: 495
+  - Mismatched members: 122582
+  - Baseline-only classes still required for full ABI: 2096
+- `java-used` scope (Java-bytecode-referenced members/classes):
+  - Turbine classes: 3550
+  - Baseline classes: 3563
+  - Missing classes: 13
+  - Extra classes: 0
+  - Mismatched members: 957
 
 **Principles**
 - Always keep a reproducible command for each target.
@@ -104,9 +136,20 @@ Spark (`--javac-release 17`)
 - `/Users/olafurpg/dev/apache/spark/.metals/turbine-workspace.jar`
 
 **Definition of Done**
-- Both workspaces report:
-  - Missing classes: 0
-  - Extra classes: 0
-  - Mismatched members: 0
-  - Baseline-only classes not explained by skipped Scala sources: 0
+- Java ABI done (`--abi-scope java`):
+  - Both workspaces report:
+    - Missing classes: 0
+    - Extra classes: 0
+    - Mismatched members: 0
+- Java call-surface done (`--abi-scope java-used`):
+  - Both workspaces report:
+    - Missing classes: 0
+    - Extra classes: 0
+    - Mismatched members: 0
+- Full ABI done (`--abi-scope full`):
+  - Both workspaces report:
+    - Missing classes: 0
+    - Extra classes: 0
+    - Mismatched members: 0
+    - Baseline-only classes still required for full ABI: 0
 - All changes are covered by targeted tests or regression fixtures.

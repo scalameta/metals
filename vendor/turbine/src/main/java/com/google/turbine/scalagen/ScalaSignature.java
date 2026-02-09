@@ -47,6 +47,9 @@ public final class ScalaSignature {
 
   public static @Nullable String classSignature(
       ClassDef cls, ImportScope scope, TypeAliasScope aliasScope) {
+    if (!emitSignatures()) {
+      return null;
+    }
     Set<String> typeParamNames = new HashSet<>();
     for (TypeParam param : cls.typeParams()) {
       typeParamNames.add(param.name());
@@ -93,6 +96,9 @@ public final class ScalaSignature {
       String pkg,
       ImportScope scope,
       TypeAliasScope aliasScope) {
+    if (!emitSignatures()) {
+      return null;
+    }
     if (!needsMethodSignature(declaredTypeParams, paramTypes, returnType, typeParamNames)) {
       return null;
     }
@@ -164,7 +170,7 @@ public final class ScalaSignature {
     }
     ImmutableList.Builder<TyParamSig> out = ImmutableList.builder();
     for (TypeParam param : params) {
-      TySig bound = null;
+      TySig bound = objectClass();
       if (param.upperBound() != null && !param.upperBound().isEmpty()) {
         bound = signatureForType(param.upperBound(), /* isReturn= */ false, "", typeParamNames, scope, aliasScope);
       }
@@ -227,6 +233,10 @@ public final class ScalaSignature {
 
   private static ClassTySig objectClass() {
     return new ClassTySig("java/lang", ImmutableList.of(new SimpleClassTySig("Object", ImmutableList.of())));
+  }
+
+  private static boolean emitSignatures() {
+    return !"false".equalsIgnoreCase(System.getProperty("turbine.scala.emitSignatures", "true"));
   }
 
   private static final class TypeParser {
@@ -423,8 +433,10 @@ public final class ScalaSignature {
       ImmutableList<String> wildcards = scope.wildcards();
       for (int i = wildcards.size() - 1; i >= 0; i--) {
         String prefix = wildcards.get(i);
+        // Object wildcard imports are too ambiguous for type signatures and
+        // can hijack unrelated simple names.
         if (prefix.endsWith("$")) {
-          return prefix + raw;
+          continue;
         }
         return prefix + "/" + raw;
       }
@@ -457,6 +469,26 @@ public final class ScalaSignature {
           "scala/AnyRef",
           "java/lang/Object" ->
           "java/lang/Object";
+      case "Throwable", "scala/Throwable" -> "java/lang/Throwable";
+      case "Exception", "scala/Exception" -> "java/lang/Exception";
+      case "RuntimeException", "scala/RuntimeException" -> "java/lang/RuntimeException";
+      case "Error", "scala/Error" -> "java/lang/Error";
+      case "Class", "scala/Class" -> "java/lang/Class";
+      case "ClassLoader", "scala/ClassLoader" -> "java/lang/ClassLoader";
+      case "Serializable", "scala/Serializable" -> "java/io/Serializable";
+      case "Comparable", "scala/Comparable" -> "java/lang/Comparable";
+      case "Cloneable", "scala/Cloneable" -> "java/lang/Cloneable";
+      case "Product", "scala/Product" -> "scala/Product";
+      case "Option", "scala/Option" -> "scala/Option";
+      case "Seq", "scala/Seq", "scala/collection/Seq", "scala/collection/immutable/Seq" ->
+          "scala/collection/immutable/Seq";
+      case "List", "scala/List", "scala/collection/immutable/List" ->
+          "scala/collection/immutable/List";
+      case "Set", "scala/Set", "scala/collection/immutable/Set" ->
+          "scala/collection/immutable/Set";
+      case "Map", "scala/Map", "scala/collection/immutable/Map" ->
+          "scala/collection/immutable/Map";
+      case "Iterator", "scala/collection/Iterator" -> "scala/collection/Iterator";
       default -> null;
     };
   }

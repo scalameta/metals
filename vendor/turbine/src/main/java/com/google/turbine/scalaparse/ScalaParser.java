@@ -292,6 +292,7 @@ public final class ScalaParser {
     next();
     String name = parseName();
     ImmutableList<TypeParam> tparams = parseTypeParams();
+    skipCtorModifiers();
     ImmutableList<ParamList> ctorParams = ImmutableList.of();
     if (token == LPAREN) {
       ctorParams = parseParamLists();
@@ -1261,6 +1262,23 @@ public final class ScalaParser {
       break;
     }
     return mods.build();
+  }
+
+  private void skipCtorModifiers() {
+    while (true) {
+      if (token == AT) {
+        skipAnnotation();
+        continue;
+      }
+      if (token == PRIVATE || token == PROTECTED) {
+        next();
+        if (token == LBRACK) {
+          skipDelimited(LBRACK, RBRACK);
+        }
+        continue;
+      }
+      break;
+    }
   }
 
   private ImmutableList<String> parseParamModifiers() {

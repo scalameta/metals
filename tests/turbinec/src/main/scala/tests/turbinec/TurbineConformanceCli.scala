@@ -21,11 +21,19 @@ import java.time.Instant
 import java.util.jar.JarFile
 import org.apache.maven.model.io.xpp3.MavenXpp3Reader
 import org.objectweb.asm.ClassReader
+import org.objectweb.asm.Handle
 import org.objectweb.asm.Opcodes
+import org.objectweb.asm.Type
 import org.objectweb.asm.tree.AnnotationNode
 import org.objectweb.asm.tree.ClassNode
 import org.objectweb.asm.tree.FieldNode
+import org.objectweb.asm.tree.FieldInsnNode
+import org.objectweb.asm.tree.InvokeDynamicInsnNode
+import org.objectweb.asm.tree.LdcInsnNode
 import org.objectweb.asm.tree.MethodNode
+import org.objectweb.asm.tree.MethodInsnNode
+import org.objectweb.asm.tree.MultiANewArrayInsnNode
+import org.objectweb.asm.tree.TypeInsnNode
 import org.objectweb.asm.util.Printer
 import org.objectweb.asm.util.Textifier
 import org.objectweb.asm.util.TraceClassVisitor
@@ -68,6 +76,26 @@ object TurbineConformanceCli {
     case object All extends Command { val name = "all" }
   }
 
+  private[turbinec] sealed trait AbiScope {
+    def value: String
+  }
+  private[turbinec] object AbiScope {
+    case object Java extends AbiScope { val value = "java" }
+    case object JavaUsed extends AbiScope { val value = "java-used" }
+    case object Full extends AbiScope { val value = "full" }
+
+    val default: AbiScope = Java
+
+    def parse(value: String): Either[String, AbiScope] = {
+      value.toLowerCase match {
+        case Java.value => Right(Java)
+        case JavaUsed.value => Right(JavaUsed)
+        case Full.value => Right(Full)
+        case other => Left(s"Invalid value for --abi-scope: $other (expected: java|java-used|full)")
+      }
+    }
+  }
+
   private final case class Config(
       command: Command = Command.Compare,
       workspace: Path = Paths.get(".").toAbsolutePath.normalize,
@@ -79,6 +107,8 @@ object TurbineConformanceCli {
       verbose: Boolean = false,
       javacRelease: Option[String] = None,
       includeBaselineClasspath: Boolean = true,
+      abiScope: AbiScope = AbiScope.default,
+      allowSkippedScala: Boolean = false,
       turbineOut: Option[Path] = None,
   ) {
     def mbtJsonPath: Path = mbtJson.getOrElse(workspace.resolve(".metals/mbt.json"))
@@ -237,14 +267,49 @@ object TurbineConformanceCli {
       val turbineClasses = filterStableClasses(readJarClasses(turbineJar))
       val baselineResult = readDirClasses(outputDirs)
       val baselineClasses = filterStableClasses(baselineResult.classes)
+      val scopedTurbineClasses = filterAbiClasses(turbineClasses, config.abiScope)
+      val scopedBaselineClasses = filterAbiClasses(baselineClasses, config.abiScope)
+      val javaReachability =
+        if (config.abiScope == AbiScope.JavaUsed) {
+          Some(collectJavaReachability(baselineClasses, scopedBaselineClasses.keySet))
+        } else {
+          None
+        }
+      val requiredClassNames =
+        javaReachability match {
+          case Some(reachability) => scopedBaselineClasses.keySet.intersect(reachability.referencedClasses)
+          case None => scopedBaselineClasses.keySet
+        }
+      val comparedBaselineClasses =
+        if (config.abiScope == AbiScope.JavaUsed) {
+          scopedBaselineClasses.filter { case (name, _) => requiredClassNames.contains(name) }
+        } else {
+          scopedBaselineClasses
+        }
+      val comparedTurbineClasses =
+        if (config.abiScope == AbiScope.JavaUsed) {
+          scopedTurbineClasses.filter { case (name, _) => requiredClassNames.contains(name) }
+        } else {
+          scopedTurbineClasses
+        }
 
-      if (baselineClasses.isEmpty) {
+      if (scopedBaselineClasses.isEmpty) {
         return Left("Baseline outputDirs contained no .class files; ensure Maven build is complete")
       }
 
       println(
-        s"Turbine classes: ${turbineClasses.size}, baseline classes: ${baselineClasses.size}, sources: ${sources.size}"
+        s"Turbine classes: ${comparedTurbineClasses.size}, baseline classes: ${comparedBaselineClasses.size}, sources: ${sources.size}"
       )
+      if (config.abiScope == AbiScope.Java) {
+        println("ABI scope java: class-level Java ABI conformance (member diffs are ignored)")
+      } else if (config.abiScope == AbiScope.JavaUsed) {
+        val reachability = javaReachability.getOrElse(JavaReachability.empty)
+        println(
+          s"ABI scope java-used: Java-referenced surface (java classes=${reachability.javaClassCount}, " +
+            s"referenced classes=${requiredClassNames.size}, methods=${reachability.methodReferenceCount}, " +
+            s"fields=${reachability.fieldReferenceCount})"
+        )
+      }
 
       if (baselineResult.duplicates.nonEmpty) {
         println(s"Warning: ${baselineResult.duplicates.size} duplicate class names found in baseline outputs")
@@ -256,41 +321,68 @@ object TurbineConformanceCli {
       }
 
       val diffCollector = new DiffCollector(config.showDiffs)
-      val commonNames = baselineClasses.keySet.intersect(turbineClasses.keySet)
-      val baselineCommon = baselineClasses.filter { case (name, _) => commonNames.contains(name) }
-      val turbineCommon = turbineClasses.filter { case (name, _) => commonNames.contains(name) }
-      compareSubset("baseline", baselineCommon, "turbine", turbineCommon, diffCollector)
-
-      val turbineOnly = turbineClasses.keySet.diff(baselineClasses.keySet)
-      turbineOnly.foreach { name =>
-        diffCollector.extraClass(name, turbineClasses(name))
+      val commonNames = comparedBaselineClasses.keySet.intersect(comparedTurbineClasses.keySet)
+      val baselineCommon = comparedBaselineClasses.filter { case (name, _) => commonNames.contains(name) }
+      val turbineCommon = comparedTurbineClasses.filter { case (name, _) => commonNames.contains(name) }
+      if (config.abiScope == AbiScope.Full || config.abiScope == AbiScope.JavaUsed) {
+        compareSubset(
+          baselineCommon,
+          turbineCommon,
+          config.abiScope,
+          diffCollector,
+          javaReachability,
+        )
       }
-      val baselineOnly = baselineClasses.keySet.diff(turbineClasses.keySet)
+
+      val turbineOnly = comparedTurbineClasses.keySet.diff(comparedBaselineClasses.keySet)
+      turbineOnly.foreach { name =>
+        diffCollector.extraClass(name, comparedTurbineClasses(name))
+      }
+      val baselineOnly = comparedBaselineClasses.keySet.diff(comparedTurbineClasses.keySet)
       val skippedScalaFileNames = skippedScalaSources.map(_.getFileName.toString).toSet
-      val (baselineOnlySkipped, baselineOnlyMissing) =
-        if (skippedScalaFileNames.nonEmpty) {
-          baselineOnly.partition { name =>
-            baselineClasses
-              .get(name)
-              .flatMap(bytes => classSourceFile(bytes))
-              .exists(skippedScalaFileNames.contains)
-          }
-        } else {
-          (Set.empty[String], baselineOnly)
-        }
-      baselineOnlyMissing.foreach { name =>
-        diffCollector.missingClass(name, baselineClasses(name))
+      val baselineOnlyClassification = classifyBaselineOnlyClasses(
+        baselineOnly = baselineOnly,
+        baselineClasses = comparedBaselineClasses,
+        skippedScalaFileNames = skippedScalaFileNames,
+        abiScope = config.abiScope,
+        javaRequiredClasses = if (config.abiScope == AbiScope.JavaUsed) requiredClassNames else Set.empty,
+      )
+      baselineOnlyClassification.missing.foreach { name =>
+        diffCollector.missingClass(name, comparedBaselineClasses(name))
       }
 
       println(
         s"Missing classes: ${diffCollector.missingClasses}, extra classes: ${diffCollector.extraClasses}, " +
           s"mismatched members: ${diffCollector.mismatchedMembers}"
       )
-      if (baselineOnlySkipped.nonEmpty) {
-        println(s"Ignored baseline-only classes from skipped Scala sources: ${baselineOnlySkipped.size}")
+      if (baselineOnlyClassification.ignoredFromSkippedSources.nonEmpty) {
+        println(
+          s"Ignored baseline-only classes from skipped Scala sources: " +
+            s"${baselineOnlyClassification.ignoredFromSkippedSources.size}"
+        )
       }
-      if (baselineOnlyMissing.nonEmpty) {
-        println(s"Baseline-only classes not explained by skipped Scala sources: ${baselineOnlyMissing.size}")
+      if (baselineOnlyClassification.ignoredFromAbiScope.nonEmpty) {
+        println(
+          s"Ignored baseline-only classes outside ${config.abiScope.value} ABI scope: " +
+            s"${baselineOnlyClassification.ignoredFromAbiScope.size}"
+        )
+        if (config.verbose) {
+          val reasonCounts = mutable.LinkedHashMap.empty[String, Int]
+          baselineOnlyClassification.ignoredFromAbiScope.values.foreach { reason =>
+            val updated = reasonCounts.getOrElse(reason, 0) + 1
+            reasonCounts.put(reason, updated)
+          }
+          val reasons = reasonCounts.toSeq.sortBy { case (_, count) => -count }
+          reasons.foreach { case (reason, count) =>
+            println(s"  $reason: $count")
+          }
+        }
+      }
+      if (baselineOnlyClassification.missing.nonEmpty) {
+        println(
+          s"Baseline-only classes still required for ${config.abiScope.value} ABI: " +
+            s"${baselineOnlyClassification.missing.size}"
+        )
       }
 
       val categoryCounts = diffCollector.categoryCounts
@@ -326,6 +418,11 @@ object TurbineConformanceCli {
           val result = filterScalaSources(config, sources)
           if (result.parseable.isEmpty) {
             return Left("No sources left after filtering Scala parse failures")
+          }
+          if (result.skipped.nonEmpty && !config.allowSkippedScala) {
+            return Left(
+              s"Skipped ${result.skipped.size} Scala sources; rerun with --allow-skipped-scala to continue"
+            )
           }
           result.parseable
         } else {
@@ -420,6 +517,10 @@ object TurbineConformanceCli {
           }
         case "--javac-release" :: release :: rest =>
           loop(rest, config.copy(javacRelease = Some(release)))
+        case "--abi-scope" :: scope :: rest =>
+          parseAbiScope(scope).flatMap(value => loop(rest, config.copy(abiScope = value)))
+        case "--allow-skipped-scala" :: rest =>
+          loop(rest, config.copy(allowSkippedScala = true))
         case "--turbine-out" :: path :: rest =>
           loop(rest, config.copy(turbineOut = Some(Paths.get(path).toAbsolutePath.normalize)))
         case "--include-baseline-classpath" :: rest =>
@@ -438,6 +539,9 @@ object TurbineConformanceCli {
     loop(args, Config())
   }
 
+  private[turbinec] def parseAbiScope(value: String): Either[String, AbiScope] =
+    AbiScope.parse(value)
+
   private def printHelp(): Unit = {
     println("""turbinec - Turbine Scala conformance CLI
               |
@@ -451,6 +555,9 @@ object TurbineConformanceCli {
               |  --no-scala            Exclude Scala sources from Turbine compilation
               |  --include-tests        Include test sources/output dirs
               |  --javac-release <ver>  Override --release for Turbine (e.g., 8, 11, 17)
+              |  --abi-scope <scope>    Compare scope: java|java-used|full (default: java).
+              |                         java=class-level only, java-used=members/classes referenced from Java bytecode.
+              |  --allow-skipped-scala  Continue when Scala parser skips files (default: fail in compile)
               |  --turbine-out <path>   Output jar path for compile (default: <workspace>/.metals/turbine-workspace.jar)
               |  --no-baseline-classpath Disable baseline output dirs on Turbine classpath (default: include)
               |  --show-diffs <n>        Max number of detailed diffs to print (default: 20)
@@ -810,8 +917,81 @@ object TurbineConformanceCli {
 
   private def classSourceFile(bytes: Array[Byte]): Option[String] = {
     val node = new ClassNode()
-    new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+    new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_FRAMES)
     Option(node.sourceFile)
+  }
+
+  private[turbinec] final case class BaselineOnlyClassification(
+      ignoredFromSkippedSources: Set[String],
+      ignoredFromAbiScope: Map[String, String],
+      missing: Set[String],
+  )
+
+  private[turbinec] def classifyBaselineOnlyClasses(
+      baselineOnly: Set[String],
+      baselineClasses: Map[String, Array[Byte]],
+      skippedScalaFileNames: Set[String],
+      abiScope: AbiScope,
+      javaRequiredClasses: Set[String] = Set.empty,
+  ): BaselineOnlyClassification = {
+    val ignoredFromSkippedSources = mutable.LinkedHashSet.empty[String]
+    val ignoredFromAbiScope = mutable.LinkedHashMap.empty[String, String]
+    val missing = mutable.LinkedHashSet.empty[String]
+
+    baselineOnly.foreach { name =>
+      baselineClasses.get(name) match {
+        case None =>
+          missing += name
+        case Some(bytes) =>
+          val ignoredBySkippedSource =
+            skippedScalaFileNames.nonEmpty &&
+              classSourceFile(bytes).exists(skippedScalaFileNames.contains)
+          if (ignoredBySkippedSource && !javaRequiredClasses.contains(name)) {
+            ignoredFromSkippedSources += name
+          } else {
+            abiScope match {
+              case AbiScope.Java | AbiScope.JavaUsed =>
+                if (javaRequiredClasses.contains(name)) {
+                  missing += name
+                } else {
+                  classifyOutsideJavaAbi(name, bytes) match {
+                    case Some(reason) =>
+                      ignoredFromAbiScope.put(name, reason)
+                    case None =>
+                      missing += name
+                  }
+                }
+              case AbiScope.Full =>
+                missing += name
+            }
+          }
+      }
+    }
+
+    BaselineOnlyClassification(
+      ignoredFromSkippedSources = ignoredFromSkippedSources.toSet,
+      ignoredFromAbiScope = ignoredFromAbiScope.toMap,
+      missing = missing.toSet,
+    )
+  }
+
+  private def classifyOutsideJavaAbi(className: String, bytes: Array[Byte]): Option[String] = {
+    if (className.endsWith("$class")) {
+      Some("scala2-trait-impl-class")
+    } else {
+      val node = new ClassNode()
+      new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+      val access = node.access
+      val isSynthetic = (access & Opcodes.ACC_SYNTHETIC) != 0
+      val isApiClass = (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+      if (isSynthetic) {
+        Some("synthetic-class")
+      } else if (!isApiClass) {
+        Some("non-api-class")
+      } else {
+        None
+      }
+    }
   }
 
   private def filterStableClasses(classes: Map[String, Array[Byte]]): Map[String, Array[Byte]] = {
@@ -820,14 +1000,57 @@ object TurbineConformanceCli {
       if (name.endsWith("/package-info")) {
         // ignore package-info classes; they are often skipped in baseline outputs
       } else {
-      val node = new ClassNode()
-      new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
-      if (!isLocal(node) && !isAnonymous(node)) {
-        out.put(name, bytes)
-      }
+        val node = new ClassNode()
+        new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+        if (!isLocal(node) && !isAnonymous(node)) {
+          out.put(name, bytes)
+        }
       }
     }
     out.toMap
+  }
+
+  private def filterAbiClasses(
+      classes: Map[String, Array[Byte]],
+      abiScope: AbiScope,
+  ): Map[String, Array[Byte]] = {
+    abiScope match {
+      case AbiScope.Full => classes
+      case AbiScope.Java =>
+        classes.filter { case (name, bytes) =>
+          isJavaAbiClass(name, bytes)
+        }
+      case AbiScope.JavaUsed =>
+        classes.filter { case (name, bytes) =>
+          isJavaUsedAbiClass(name, bytes)
+        }
+    }
+  }
+
+  private def isJavaAbiClass(className: String, bytes: Array[Byte]): Boolean = {
+    if (className.contains("$")) {
+      return false
+    }
+    if (!className.matches("[A-Za-z0-9_/$]+")) {
+      return false
+    }
+    val node = new ClassNode()
+    new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+    val access = node.access
+    val isPublic = (access & Opcodes.ACC_PUBLIC) != 0
+    val isSynthetic = (access & Opcodes.ACC_SYNTHETIC) != 0
+    isPublic && !isSynthetic
+  }
+
+  private def isJavaUsedAbiClass(className: String, bytes: Array[Byte]): Boolean = {
+    if (className.endsWith("$class")) {
+      return false
+    }
+    val node = new ClassNode()
+    new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+    val access = node.access
+    val isSynthetic = (access & Opcodes.ACC_SYNTHETIC) != 0
+    !isSynthetic
   }
 
   private def isLocal(node: ClassNode): Boolean = node.outerMethod != null
@@ -892,135 +1115,267 @@ object TurbineConformanceCli {
     }
   }
 
+  private final case class JavaReachability(
+      javaClassCount: Int,
+      referencedClasses: Set[String],
+      methodsByOwner: Map[String, Set[String]],
+      fieldsByOwner: Map[String, Set[String]],
+  ) {
+    def methodReferenceCount: Int = methodsByOwner.valuesIterator.map(_.size).sum
+    def fieldReferenceCount: Int = fieldsByOwner.valuesIterator.map(_.size).sum
+  }
+
+  private object JavaReachability {
+    val empty: JavaReachability =
+      JavaReachability(
+        javaClassCount = 0,
+        referencedClasses = Set.empty,
+        methodsByOwner = Map.empty,
+        fieldsByOwner = Map.empty,
+      )
+  }
+
   private def compareSubset(
-      expectedLabel: String,
       expected: Map[String, Array[Byte]],
-      actualLabel: String,
       actual: Map[String, Array[Byte]],
+      abiScope: AbiScope,
       diffs: DiffCollector,
+      javaReachability: Option[JavaReachability] = None,
   ): Unit = {
-    val expectedInfos = toClassInfos(expected)
-    val actualInfos = toClassInfos(actual)
+    val expectedInfos = toClassInfos(expected, abiScope)
+    val actualInfos = toClassInfos(actual, abiScope)
+    val reachability = javaReachability.getOrElse(JavaReachability.empty)
 
     expectedInfos.foreach { case (name, e) =>
       actualInfos.get(name) match {
         case None =>
           diffs.missingClass(name, expected(name))
         case Some(a) =>
-          val isModuleClass = name.endsWith("$")
-          if (e.access != a.access) {
-            diffs.mismatch(name, "class-access", "class access mismatch", expected(name), actual(name))
-          }
-          if (!isModuleClass || e.superName != "java/lang/Object") {
-            if (e.superName != a.superName) {
-              diffs.mismatch(name, "class-superclass", "class superclass mismatch", expected(name), actual(name))
-            }
-          }
-          if (isModuleClass) {
-            if (!e.interfaces.forall(a.interfaces.contains)) {
-              diffs.mismatch(name, "class-interfaces", "class interfaces mismatch", expected(name), actual(name))
-            }
-          } else if (e.interfaces != a.interfaces) {
-            diffs.mismatch(name, "class-interfaces", "class interfaces mismatch", expected(name), actual(name))
-          }
-          if (!e.annotations.visible.forall(a.annotations.visible.contains)) {
-            diffs.mismatch(
-              name,
-              "class-annotation-visible",
-              "class visible annotations mismatch",
-              expected(name),
-              actual(name),
-            )
-          }
-          if (!e.annotations.invisible.forall(a.annotations.invisible.contains)) {
-            diffs.mismatch(
-              name,
-              "class-annotation-invisible",
-              "class invisible annotations mismatch",
-              expected(name),
-              actual(name),
-            )
-          }
-
-          e.methods.foreach { case (methodName, methodInfo) =>
-            a.methods.get(methodName) match {
-              case None =>
-                diffs.mismatch(name, "missing-method", s"missing method $methodName", expected(name), actual(name))
-              case Some(actualMethod) =>
-                if (methodInfo.access != actualMethod.access) {
-                  diffs.mismatch(
-                    name,
-                    "method-access",
-                    s"method access mismatch: $methodName",
-                    expected(name),
-                    actual(name),
+          abiScope match {
+            case AbiScope.Full =>
+              compareClassShapeWithAnnotations(name, e, a, expected(name), actual(name), diffs)
+              e.methods.foreach { case (methodName, methodInfo) =>
+                compareMethod(
+                  className = name,
+                  methodName = methodName,
+                  expectedMethod = methodInfo,
+                  actualMethod = a.methods.get(methodName),
+                  compareAnnotations = true,
+                  expectedClass = expected(name),
+                  actualClass = actual(name),
+                  diffs = diffs,
+                )
+              }
+              e.fields.foreach { case (fieldName, fieldInfo) =>
+                compareField(
+                  className = name,
+                  fieldName = fieldName,
+                  expectedField = fieldInfo,
+                  actualField = a.fields.get(fieldName),
+                  compareAnnotations = true,
+                  expectedClass = expected(name),
+                  actualClass = actual(name),
+                  diffs = diffs,
+                )
+              }
+            case AbiScope.JavaUsed =>
+              val requiredMethods = reachability.methodsByOwner.getOrElse(name, Set.empty)
+              val requiredFields = reachability.fieldsByOwner.getOrElse(name, Set.empty)
+              val requireClassShape =
+                reachability.referencedClasses.contains(name) ||
+                  requiredMethods.nonEmpty ||
+                  requiredFields.nonEmpty
+              if (requireClassShape) {
+                compareClassShapeWithoutAnnotations(name, e, a, expected(name), actual(name), diffs)
+              }
+              requiredMethods.foreach { methodName =>
+                e.methods.get(methodName).foreach { expectedMethod =>
+                  compareMethod(
+                    className = name,
+                    methodName = methodName,
+                    expectedMethod = expectedMethod,
+                    actualMethod = a.methods.get(methodName),
+                    compareAnnotations = false,
+                    expectedClass = expected(name),
+                    actualClass = actual(name),
+                    diffs = diffs,
                   )
                 }
-                if (methodInfo.exceptions != actualMethod.exceptions) {
-                  diffs.mismatch(
-                    name,
-                    "method-exceptions",
-                    s"method exceptions mismatch: $methodName",
-                    expected(name),
-                    actual(name),
+              }
+              requiredFields.foreach { fieldName =>
+                e.fields.get(fieldName).foreach { expectedField =>
+                  compareField(
+                    className = name,
+                    fieldName = fieldName,
+                    expectedField = expectedField,
+                    actualField = a.fields.get(fieldName),
+                    compareAnnotations = false,
+                    expectedClass = expected(name),
+                    actualClass = actual(name),
+                    diffs = diffs,
                   )
                 }
-                if (!methodInfo.annotations.visible.forall(actualMethod.annotations.visible.contains)) {
-                  diffs.mismatch(
-                    name,
-                    "method-annotation-visible",
-                    s"method visible annotations mismatch: $methodName",
-                    expected(name),
-                    actual(name),
-                  )
-                }
-                if (!methodInfo.annotations.invisible.forall(actualMethod.annotations.invisible.contains)) {
-                  diffs.mismatch(
-                    name,
-                    "method-annotation-invisible",
-                    s"method invisible annotations mismatch: $methodName",
-                    expected(name),
-                    actual(name),
-                  )
-                }
-            }
-          }
-
-          e.fields.foreach { case (fieldName, fieldInfo) =>
-            a.fields.get(fieldName) match {
-              case None =>
-                diffs.mismatch(name, "missing-field", s"missing field $fieldName", expected(name), actual(name))
-              case Some(actualField) =>
-                if (fieldInfo.access != actualField.access) {
-                  diffs.mismatch(
-                    name,
-                    "field-access",
-                    s"field access mismatch: $fieldName",
-                    expected(name),
-                    actual(name),
-                  )
-                }
-                if (!fieldInfo.annotations.visible.forall(actualField.annotations.visible.contains)) {
-                  diffs.mismatch(
-                    name,
-                    "field-annotation-visible",
-                    s"field visible annotations mismatch: $fieldName",
-                    expected(name),
-                    actual(name),
-                  )
-                }
-                if (!fieldInfo.annotations.invisible.forall(actualField.annotations.invisible.contains)) {
-                  diffs.mismatch(
-                    name,
-                    "field-annotation-invisible",
-                    s"field invisible annotations mismatch: $fieldName",
-                    expected(name),
-                    actual(name),
-                  )
-                }
-            }
+              }
+            case AbiScope.Java =>
+            // class-level-only compare; member checks intentionally skipped
           }
       }
+    }
+  }
+
+  private def compareClassShapeWithAnnotations(
+      className: String,
+      expected: ClassInfo,
+      actual: ClassInfo,
+      expectedClass: Array[Byte],
+      actualClass: Array[Byte],
+      diffs: DiffCollector,
+  ): Unit = {
+    compareClassShapeWithoutAnnotations(className, expected, actual, expectedClass, actualClass, diffs)
+    if (!expected.annotations.visible.forall(actual.annotations.visible.contains)) {
+      diffs.mismatch(
+        className,
+        "class-annotation-visible",
+        "class visible annotations mismatch",
+        expectedClass,
+        actualClass,
+      )
+    }
+    if (!expected.annotations.invisible.forall(actual.annotations.invisible.contains)) {
+      diffs.mismatch(
+        className,
+        "class-annotation-invisible",
+        "class invisible annotations mismatch",
+        expectedClass,
+        actualClass,
+      )
+    }
+  }
+
+  private def compareClassShapeWithoutAnnotations(
+      className: String,
+      expected: ClassInfo,
+      actual: ClassInfo,
+      expectedClass: Array[Byte],
+      actualClass: Array[Byte],
+      diffs: DiffCollector,
+  ): Unit = {
+    val isModuleClass = className.endsWith("$")
+    if (expected.access != actual.access) {
+      diffs.mismatch(className, "class-access", "class access mismatch", expectedClass, actualClass)
+    }
+    if (!isModuleClass || expected.superName != "java/lang/Object") {
+      if (expected.superName != actual.superName) {
+        diffs.mismatch(className, "class-superclass", "class superclass mismatch", expectedClass, actualClass)
+      }
+    }
+    if (isModuleClass) {
+      if (!expected.interfaces.forall(actual.interfaces.contains)) {
+        diffs.mismatch(className, "class-interfaces", "class interfaces mismatch", expectedClass, actualClass)
+      }
+    } else if (expected.interfaces != actual.interfaces) {
+      diffs.mismatch(className, "class-interfaces", "class interfaces mismatch", expectedClass, actualClass)
+    }
+  }
+
+  private def compareMethod(
+      className: String,
+      methodName: String,
+      expectedMethod: MemberInfo,
+      actualMethod: Option[MemberInfo],
+      compareAnnotations: Boolean,
+      expectedClass: Array[Byte],
+      actualClass: Array[Byte],
+      diffs: DiffCollector,
+  ): Unit = {
+    actualMethod match {
+      case None =>
+        diffs.mismatch(className, "missing-method", s"missing method $methodName", expectedClass, actualClass)
+      case Some(actual) =>
+        if (expectedMethod.access != actual.access) {
+          diffs.mismatch(
+            className,
+            "method-access",
+            s"method access mismatch: $methodName",
+            expectedClass,
+            actualClass,
+          )
+        }
+        if (expectedMethod.exceptions != actual.exceptions) {
+          diffs.mismatch(
+            className,
+            "method-exceptions",
+            s"method exceptions mismatch: $methodName",
+            expectedClass,
+            actualClass,
+          )
+        }
+        if (compareAnnotations) {
+          if (!expectedMethod.annotations.visible.forall(actual.annotations.visible.contains)) {
+            diffs.mismatch(
+              className,
+              "method-annotation-visible",
+              s"method visible annotations mismatch: $methodName",
+              expectedClass,
+              actualClass,
+            )
+          }
+          if (!expectedMethod.annotations.invisible.forall(actual.annotations.invisible.contains)) {
+            diffs.mismatch(
+              className,
+              "method-annotation-invisible",
+              s"method invisible annotations mismatch: $methodName",
+              expectedClass,
+              actualClass,
+            )
+          }
+        }
+    }
+  }
+
+  private def compareField(
+      className: String,
+      fieldName: String,
+      expectedField: MemberInfo,
+      actualField: Option[MemberInfo],
+      compareAnnotations: Boolean,
+      expectedClass: Array[Byte],
+      actualClass: Array[Byte],
+      diffs: DiffCollector,
+  ): Unit = {
+    actualField match {
+      case None =>
+        diffs.mismatch(className, "missing-field", s"missing field $fieldName", expectedClass, actualClass)
+      case Some(actual) =>
+        if (expectedField.access != actual.access) {
+          diffs.mismatch(
+            className,
+            "field-access",
+            s"field access mismatch: $fieldName",
+            expectedClass,
+            actualClass,
+          )
+        }
+        if (compareAnnotations) {
+          if (!expectedField.annotations.visible.forall(actual.annotations.visible.contains)) {
+            diffs.mismatch(
+              className,
+              "field-annotation-visible",
+              s"field visible annotations mismatch: $fieldName",
+              expectedClass,
+              actualClass,
+            )
+          }
+          if (!expectedField.annotations.invisible.forall(actual.annotations.invisible.contains)) {
+            diffs.mismatch(
+              className,
+              "field-annotation-invisible",
+              s"field invisible annotations mismatch: $fieldName",
+              expectedClass,
+              actualClass,
+            )
+          }
+        }
     }
   }
 
@@ -1071,7 +1426,7 @@ object TurbineConformanceCli {
   )
 
   private object ClassInfo {
-    def from(node: ClassNode): ClassInfo = {
+    def from(node: ClassNode, abiScope: AbiScope): ClassInfo = {
       val access = normalizeAccess(node.access, ClassAccessMask)
       val ifaces = Option(node.interfaces).map(_.asScala.toList).getOrElse(Nil).sorted
       val annotations = AnnotationSet.from(node.visibleAnnotations, node.invisibleAnnotations)
@@ -1079,11 +1434,15 @@ object TurbineConformanceCli {
       val methods = new java.util.TreeMap[String, MemberInfo]()
       node.methods.forEach { method =>
         val acc = method.access
-        val isApi = (acc & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
         val isSynthetic = (acc & Opcodes.ACC_SYNTHETIC) != 0
         val isBridge = (acc & Opcodes.ACC_BRIDGE) != 0
         val isClinit = method.name == "<clinit>"
-        if (isApi && !isSynthetic && !isBridge && !isClinit) {
+        if (
+          !isSynthetic &&
+          !isBridge &&
+          !isClinit &&
+          includeMethodInAbi(method.name, acc, abiScope)
+        ) {
           methods.put(method.name + method.desc, MemberInfo.from(method))
         }
       }
@@ -1091,23 +1450,238 @@ object TurbineConformanceCli {
       val fields = new java.util.TreeMap[String, MemberInfo]()
       node.fields.forEach { field =>
         val acc = field.access
-        val isApi = (acc & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
         val isSynthetic = (acc & Opcodes.ACC_SYNTHETIC) != 0
-        if (isApi && !isSynthetic) {
+        if (!isSynthetic && includeFieldInAbi(field.desc, acc, abiScope)) {
           fields.put(field.name + field.desc, MemberInfo.from(field))
         }
       }
 
       ClassInfo(access, node.superName, ifaces, annotations, methods.asScala.toMap, fields.asScala.toMap)
     }
+
+    private def includeMethodInAbi(name: String, access: Int, abiScope: AbiScope): Boolean = {
+      val isApi = (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+      val isPrivate = (access & Opcodes.ACC_PRIVATE) != 0
+      abiScope match {
+        case AbiScope.Full =>
+          isApi
+        case AbiScope.Java =>
+          isApi &&
+          (if (name == "<init>") {
+             true
+           } else if (name.contains("$")) {
+             false
+           } else if (name.matches("_\\d+")) {
+             false
+           } else if (JavaAbiIgnoredMethods.contains(name)) {
+             false
+           } else {
+             true
+           })
+        case AbiScope.JavaUsed =>
+          !isPrivate
+      }
+    }
+
+    private def includeFieldInAbi(desc: String, access: Int, abiScope: AbiScope): Boolean = {
+      val isApi = (access & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PROTECTED)) != 0
+      val isPrivate = (access & Opcodes.ACC_PRIVATE) != 0
+      abiScope match {
+        case AbiScope.Full =>
+          isApi
+        case AbiScope.Java =>
+          val isStatic = (access & Opcodes.ACC_STATIC) != 0
+          val isFinal = (access & Opcodes.ACC_FINAL) != 0
+          val isPrimitive = desc.length == 1
+          val isString = desc == "Ljava/lang/String;"
+          isApi && isStatic && isFinal && (isPrimitive || isString)
+        case AbiScope.JavaUsed =>
+          !isPrivate
+      }
+    }
   }
 
-  private def toClassInfos(classes: Map[String, Array[Byte]]): Map[String, ClassInfo] = {
+  private val JavaAbiIgnoredMethods: Set[String] = Set(
+    "apply",
+    "unapply",
+    "copy",
+    "canEqual",
+    "productArity",
+    "productElement",
+    "productElementName",
+    "productElementNames",
+    "productPrefix",
+    "productIterator",
+    "tupled",
+    "curried",
+    "compose",
+    "andThen",
+    "fromProduct",
+    "hashCode",
+    "toString",
+    "equals",
+    "MDC",
+    "logName",
+    "logInfo",
+    "logDebug",
+    "logTrace",
+    "logWarning",
+    "logError",
+    "logBasedOnLevel",
+    "withLogContext",
+    "initializeForcefully",
+    "initializeLogIfNecessary",
+    "LogStringContext",
+  )
+
+  private def collectJavaReachability(
+      baselineClasses: Map[String, Array[Byte]],
+      candidateOwners: Set[String],
+  ): JavaReachability = {
+    val referencedClasses = mutable.LinkedHashSet.empty[String]
+    val methodsByOwner = mutable.LinkedHashMap.empty[String, mutable.LinkedHashSet[String]]
+    val fieldsByOwner = mutable.LinkedHashMap.empty[String, mutable.LinkedHashSet[String]]
+    var javaClassCount = 0
+
+    def addClass(owner: String): Unit = {
+      if (owner != null && candidateOwners.contains(owner)) {
+        referencedClasses += owner
+      }
+    }
+
+    def addMember(
+        owner: String,
+        memberKey: String,
+        target: mutable.LinkedHashMap[String, mutable.LinkedHashSet[String]],
+    ): Unit = {
+      if (owner != null && candidateOwners.contains(owner)) {
+        referencedClasses += owner
+        val members = target.getOrElseUpdate(owner, mutable.LinkedHashSet.empty[String])
+        members += memberKey
+      }
+    }
+
+    def addType(tpe: Type): Unit = {
+      if (tpe != null) {
+        tpe.getSort match {
+          case Type.OBJECT =>
+            addClass(tpe.getInternalName)
+          case Type.ARRAY =>
+            addType(tpe.getElementType)
+          case Type.METHOD =>
+            tpe.getArgumentTypes.foreach(addType)
+            addType(tpe.getReturnType)
+          case _ =>
+        }
+      }
+    }
+
+    def addDescriptor(desc: String): Unit = {
+      if (desc != null && desc.nonEmpty) {
+        addType(Type.getType(desc))
+      }
+    }
+
+    def addMethodDescriptor(desc: String): Unit = {
+      if (desc != null && desc.nonEmpty) {
+        val methodType = Type.getMethodType(desc)
+        methodType.getArgumentTypes.foreach(addType)
+        addType(methodType.getReturnType)
+      }
+    }
+
+    baselineClasses.foreach { case (_, bytes) =>
+      val isJavaClass = classSourceFile(bytes).exists(_.endsWith(".java"))
+      if (isJavaClass) {
+        javaClassCount += 1
+        val node = new ClassNode()
+        new ClassReader(bytes).accept(node, ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
+
+        addClass(node.superName)
+        Option(node.interfaces).foreach(_.asScala.foreach(addClass))
+
+        node.fields.forEach { field =>
+          addDescriptor(field.desc)
+        }
+
+        node.methods.forEach { method =>
+          addMethodDescriptor(method.desc)
+          Option(method.exceptions).foreach(_.asScala.foreach(addClass))
+
+          var insn = method.instructions.getFirst
+          while (insn != null) {
+            insn match {
+              case methodInsn: MethodInsnNode =>
+                addMember(
+                  methodInsn.owner,
+                  methodInsn.name + methodInsn.desc,
+                  methodsByOwner,
+                )
+                addMethodDescriptor(methodInsn.desc)
+              case fieldInsn: FieldInsnNode =>
+                addMember(
+                  fieldInsn.owner,
+                  fieldInsn.name + fieldInsn.desc,
+                  fieldsByOwner,
+                )
+                addDescriptor(fieldInsn.desc)
+              case typeInsn: TypeInsnNode =>
+                if (typeInsn.desc.startsWith("[")) addDescriptor(typeInsn.desc)
+                else addClass(typeInsn.desc)
+              case multi: MultiANewArrayInsnNode =>
+                addDescriptor(multi.desc)
+              case ldc: LdcInsnNode =>
+                ldc.cst match {
+                  case typ: Type =>
+                    addType(typ)
+                  case _ =>
+                }
+              case indy: InvokeDynamicInsnNode =>
+                addMethodDescriptor(indy.desc)
+                Option(indy.bsmArgs).foreach(_.foreach {
+                  case handle: Handle =>
+                    handle.getTag match {
+                      case Opcodes.H_GETFIELD | Opcodes.H_GETSTATIC | Opcodes.H_PUTFIELD | Opcodes.H_PUTSTATIC =>
+                        addMember(
+                          handle.getOwner,
+                          handle.getName + handle.getDesc,
+                          fieldsByOwner,
+                        )
+                        addDescriptor(handle.getDesc)
+                      case _ =>
+                        addMember(
+                          handle.getOwner,
+                          handle.getName + handle.getDesc,
+                          methodsByOwner,
+                        )
+                        addMethodDescriptor(handle.getDesc)
+                    }
+                  case typ: Type =>
+                    addType(typ)
+                  case _ =>
+                })
+              case _ =>
+            }
+            insn = insn.getNext
+          }
+        }
+      }
+    }
+
+    JavaReachability(
+      javaClassCount = javaClassCount,
+      referencedClasses = referencedClasses.toSet,
+      methodsByOwner = methodsByOwner.view.mapValues(_.toSet).toMap,
+      fieldsByOwner = fieldsByOwner.view.mapValues(_.toSet).toMap,
+    )
+  }
+
+  private def toClassInfos(classes: Map[String, Array[Byte]], abiScope: AbiScope): Map[String, ClassInfo] = {
     val out = mutable.LinkedHashMap.empty[String, ClassInfo]
     classes.foreach { case (name, bytes) =>
       val node = new ClassNode()
       new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES)
-      out.put(name, ClassInfo.from(node))
+      out.put(name, ClassInfo.from(node, abiScope))
     }
     out.toMap
   }

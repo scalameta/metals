@@ -114,6 +114,25 @@ class ScalaLowerSuite extends FunSuite {
     )
   }
 
+  test("class-private-constructor-modifier-before-params") {
+    val source =
+      List(
+        "package foo",
+        "class C private[foo] (val x: Int, y: String) {",
+        "  def yLen(): Int = y.length",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("<init>(ILjava/lang/String;)V"))
+    assert(cls.methods.contains("x()I"))
+    assert(cls.methods.contains("yLen()I"))
+  }
+
   test("case-class-synthetics") {
     val source =
       List(
@@ -610,6 +629,42 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("f()Lscala/Function1;"))
   }
 
+  test("qualified-java-scala-types-ignore-package-wildcard-imports") {
+    val source =
+      List(
+        "package foo",
+        "class Helper",
+        "trait T {",
+        "  import foo._",
+        "  def f(x: scala.Option, y: java.lang.Object): scala.collection.Iterator",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/T"))
+    assert(cls.methods.contains("f(Lscala/Option;Ljava/lang/Object;)Lscala/collection/Iterator;"))
+  }
+
+  test("unqualified-throwable-resolves-to-java-lang") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def f(e: Throwable): Throwable = e",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("f(Ljava/lang/Throwable;)Ljava/lang/Throwable;"))
+  }
+
   test("trait-impl-class") {
     val source =
       List(
@@ -648,10 +703,10 @@ class ScalaLowerSuite extends FunSuite {
       ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
 
     val sigs = readSignatures(classes.get("foo/Box"))
-    assertEquals(sigs.classSignature, "<T:>Ljava/lang/Object;")
+    assertEquals(sigs.classSignature, "<T:Ljava/lang/Object;>Ljava/lang/Object;")
     assertEquals(
       sigs.methodSignatures("id(Ljava/lang/Object;)Ljava/lang/Object;"),
-      "<U:>(TU;)TT;",
+      "<U:Ljava/lang/Object;>(TU;)TT;",
     )
     assertEquals(sigs.methodSignatures("x()Ljava/lang/Object;"), "()TT;")
   }

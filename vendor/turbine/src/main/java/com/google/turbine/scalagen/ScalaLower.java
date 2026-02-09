@@ -68,14 +68,17 @@ public final class ScalaLower {
     }
 
     Map<String, Set<String>> objectTypeMembers = objectTypeMembers(objectDefs);
+    Map<String, Set<String>> packageTypeMembers = packageTypeMembers(classDefs);
     Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes = new IdentityHashMap<>();
     Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes = new IdentityHashMap<>();
     for (ScalaTree.CompUnit unit : units) {
-      ScalaTypeMapper.ImportScope unitScope = importScope(unit, objectTypeMembers);
+      ScalaTypeMapper.ImportScope unitScope =
+          importScope(unit, objectTypeMembers, packageTypeMembers);
       for (ScalaTree.Stat stat : unit.stats()) {
         if (stat instanceof ClassDef cls) {
           ScalaTypeMapper.ImportScope localScope =
-              importScope(cls.imports(), cls.packageName(), objectTypeMembers);
+              importScope(
+                  cls.imports(), cls.packageName(), objectTypeMembers, packageTypeMembers);
           ScalaTypeMapper.ImportScope scope = mergeImportScopes(unitScope, localScope);
           importScopes.put(cls, scope);
           aliasScopes.put(cls, typeAliasScope(cls));
@@ -2260,9 +2263,49 @@ public final class ScalaLower {
     return builder.build();
   }
 
+  private static Map<String, Set<String>> packageTypeMembers(List<ClassDef> classDefs) {
+    Map<String, Set<String>> members = new HashMap<>();
+    for (ClassDef cls : classDefs) {
+      members.computeIfAbsent(cls.packageName(), ignored -> new HashSet<>()).add(cls.name());
+    }
+    return members;
+  }
+
+  private static void addEnclosingPackageMembers(
+      ScalaTypeMapper.ImportScope.Builder builder,
+      String currentPackage,
+      Map<String, Set<String>> packageTypeMembers) {
+    if (currentPackage == null || currentPackage.isEmpty() || packageTypeMembers.isEmpty()) {
+      return;
+    }
+    String[] segments = currentPackage.split("\\.");
+    StringBuilder pkg = new StringBuilder();
+    for (int i = 0; i < segments.length; i++) {
+      if (segments[i].isEmpty()) {
+        continue;
+      }
+      if (pkg.length() > 0) {
+        pkg.append('.');
+      }
+      pkg.append(segments[i]);
+      String pkgName = pkg.toString();
+      Set<String> names = packageTypeMembers.get(pkgName);
+      if (names == null || names.isEmpty()) {
+        continue;
+      }
+      String binaryPrefix = pkgName.replace('.', '/');
+      for (String name : names) {
+        builder.addExplicit(name, binaryPrefix + "/" + name);
+      }
+    }
+  }
+
   private static ScalaTypeMapper.ImportScope importScope(
-      ScalaTree.CompUnit unit, Map<String, Set<String>> objectTypeMembers) {
+      ScalaTree.CompUnit unit,
+      Map<String, Set<String>> objectTypeMembers,
+      Map<String, Set<String>> packageTypeMembers) {
     ScalaTypeMapper.ImportScope.Builder builder = ScalaTypeMapper.ImportScope.builder();
+    addEnclosingPackageMembers(builder, unitPackageName(unit), packageTypeMembers);
     for (ScalaTree.Stat stat : unit.stats()) {
       if (stat instanceof ImportStat imp) {
         parseImportText(builder, imp.text(), imp.packageName(), objectTypeMembers);
@@ -2271,14 +2314,28 @@ public final class ScalaLower {
     return builder.build();
   }
 
+  private static String unitPackageName(ScalaTree.CompUnit unit) {
+    for (ScalaTree.Stat stat : unit.stats()) {
+      if (stat instanceof ClassDef cls && cls.packageName() != null && !cls.packageName().isEmpty()) {
+        return cls.packageName();
+      }
+      if (stat instanceof ImportStat imp && imp.packageName() != null && !imp.packageName().isEmpty()) {
+        return imp.packageName();
+      }
+    }
+    return "";
+  }
+
   private static ScalaTypeMapper.ImportScope importScope(
       ImmutableList<String> imports,
       String currentPackage,
-      Map<String, Set<String>> objectTypeMembers) {
+      Map<String, Set<String>> objectTypeMembers,
+      Map<String, Set<String>> packageTypeMembers) {
     if (imports == null || imports.isEmpty()) {
       return ScalaTypeMapper.ImportScope.empty();
     }
     ScalaTypeMapper.ImportScope.Builder builder = ScalaTypeMapper.ImportScope.builder();
+    addEnclosingPackageMembers(builder, currentPackage, packageTypeMembers);
     for (String text : imports) {
       parseImportText(builder, text, currentPackage, objectTypeMembers);
     }
@@ -2329,6 +2386,11 @@ public final class ScalaLower {
       for (String member : members) {
         builder.addExplicit(member, joinQualifier(wildcard, member));
       }
+      return;
+    }
+    // Unknown object wildcard imports are too ambiguous for type mapping.
+    // Keep only package wildcards and object members we can resolve explicitly.
+    if (wildcard != null && wildcard.endsWith("$")) {
       return;
     }
     builder.addWildcard(wildcard);
