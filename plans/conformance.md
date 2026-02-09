@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-09, latest local run after parent-shape follow-up + ctor param-list newline fix)**
+**Current Snapshot (2026-02-10, latest local run after classpath-validated wildcard import resolution)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -23,7 +23,7 @@ Akka (`--javac-release 11`)
   - Extra classes: 0
   - Mismatched members: 0
   - Ignored baseline-only classes from skipped Scala sources: 69
-- `full` scope:
+- `full` scope (not re-run in this iteration; last known):
   - Turbine classes: 9566
   - Baseline classes: 17336
   - Missing classes: 7804
@@ -35,20 +35,20 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 98
+  - Mismatched members: 51
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
-  - Filtered mismatches (no type inference on public members): 23
+  - Filtered mismatches (no type inference on public members): 17
 
 Spark (`--javac-release 17`)
 - `java` scope:
-  - Turbine classes: 8622
+  - Turbine classes: 8609
   - Baseline classes: 8635
   - Missing classes: 0
   - Extra classes: 0
   - Mismatched members: 0
-  - Ignored baseline-only classes from skipped Scala sources: 13
-- `full` scope:
+  - Ignored baseline-only classes from skipped Scala sources: 26
+- `full` scope (not re-run in this iteration; last known):
   - Turbine classes: 16040
   - Baseline classes: 17718
   - Missing classes: 2096
@@ -60,11 +60,38 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 191
+  - Mismatched members: 33
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
-**Current Change Summary (2026-02-09)**
+**Current Change Summary (2026-02-10)**
+- Latest update (lexical import scope + nested parent precedence):
+  - `ScalaLower` import scope resolution now chains prior imports in the same scope when resolving subsequent import qualifiers (for example `import X; import X.Y`).
+  - Nested definitions now include enclosing-owner imports in their type/import scope, not only enclosing-owner member types.
+  - Scope merge order now treats current-package classpath fallback as lower priority than enclosing/local explicit mappings, so nested owner members/imports are not overridden by same-package classpath names.
+  - Added `ScalaLowerSuite` regressions:
+    - `nested-parent-prefers-enclosing-member-over-current-package-classpath`
+    - `nested-parent-uses-enclosing-import-chain`
+  - Measured effect (`java-used`): Akka mismatches `58 -> 51` (`class-superclass 6 -> 3`, `class-interfaces 13 -> 10`); Spark remained `33`.
+- Latest update (classpath-validated wildcard import resolution):
+  - `ScalaLower` now resolves wildcard-imported class-like names by checking classpath existence for candidate simple names and materializing explicit mappings in import scope.
+  - `ScalaTypeMapper` now avoids blind wildcard fallback for class-like names; unresolved simple names must come from explicit/import-scoped mappings.
+  - Added `ScalaLowerSuite` regressions:
+    - `classpath-wildcard-imports-do-not-capture-unresolved-simple-types`
+    - `classpath-wildcard-imports-resolve-per-package-members`
+  - Measured effect (`java-used`): Akka mismatches `63 -> 58`; Spark mismatches `41 -> 33`.
+- Latest update (package-object alias precedence for wildcard-heavy packages):
+  - `ScalaLower` package member scope now includes top-level package objects when building import/type visibility.
+  - Package-object type aliases are now added under their effective package (`pkg.name`) so same-package alias names are visible during type resolution.
+  - Added `ScalaLowerSuite` regression: `package-object-type-alias-beats-wildcard-import-type`.
+  - Measured effect: Spark `java-used` mismatches dropped from `80` to `41` (`missing-method` from `69` to `30`); Akka `java-used` remained `63`.
+  - Validation: `ScalaLowerSuite` and `TurbineConformanceCliSuite` pass; `java-used` compare now reports `Akka mismatched=63`, `Spark mismatched=41`.
+- Latest update (package-object/java-used follow-up):
+  - `ScalaLower` now uses `effectiveTypePackage` for package objects in member methods/fields, object forwarders, default getters, and package-object module binary naming.
+  - `ScalaParser` expression-chain inference now handles newline-separated selectors (`\n .method(...)`) so multiline builder chains keep inferred return types.
+  - `ScalaSignature` type tokenization/parsing now normalizes compact wildcard bounds and advances safely on unsupported tokens, reducing malformed generic signature emission.
+  - `TurbineConformanceCli` class textification now degrades gracefully when ASM cannot render a class dump, so compare runs continue to completion.
+  - Added `ScalaLowerSuite` regression: `package-object-forwarders-follow-multiline-builder-return-types`.
 - `ScalaTypeMapper` was extended with additional type normalization and resolution logic to reduce high-frequency conformance buckets (`missing-method`, `class-interfaces`, `class-superclass`).
 - `java-used` missing-class handling in conformance classification now ignores baseline-only classes tied to skipped Scala sources and filters java-reachable non-API/synthetic classes by ABI classification.
 - Result: Akka `java-used` moved from `missing-class 43` to `0`, with mismatches reduced to `203`; Spark `missing-class 3` to `0`, with mismatches at `357`.
@@ -115,11 +142,11 @@ Spark (`--javac-release 17`)
 - IDE/header fallback update:
   - Uninferred member outlines now default to `java/lang/Object` (instead of `Unit`) for non-constructor defs/vals to keep IDE/header compilation robust without inference expansion.
 - Latest measured effect with these generic fixes:
-  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 98` (from 114 at the previous snapshot).
-    - Top buckets: `missing-method 66`, `class-interfaces 15`, `class-superclass 11`.
-    - Filtered: `no-type-inference-public-members 23`.
-  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 191` (from 232 at the previous snapshot).
-    - Top buckets: `missing-method 163`, `class-interfaces 5`, `class-superclass 5`.
+  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 51`.
+    - Top buckets: `missing-method 37`, `class-interfaces 10`, `class-superclass 3`, `method-exceptions 1`.
+    - Filtered: `no-type-inference-public-members 17`.
+  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 33`.
+    - Top buckets: `missing-method 22`, `class-interfaces 4`, `class-superclass 4`, `method-access 1`, `method-exceptions 1`, `class-access 1`.
     - Filtered: `no-type-inference-public-members 4`.
   - Akka/Spark `java` remain `Missing 0 / Extra 0 / Mismatched 0`.
 

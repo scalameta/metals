@@ -334,6 +334,7 @@ public final class ScalaParser {
     }
     String returnType = null;
     boolean hasBody = false;
+    boolean synchronizedBody = false;
     if (token == COLON) {
       next();
       returnType = parseTypeText(EnumSet.of(EQUALS, SEMI, NEWLINE, NEWLINES, RBRACE, EOF));
@@ -341,6 +342,9 @@ public final class ScalaParser {
     if (token == EQUALS) {
       hasBody = true;
       next();
+      if (isSynchronizedExprStart()) {
+        synchronizedBody = true;
+      }
       String deferredRef = null;
       if (returnType == null) {
         deferredRef = inferDeferredReturnRef();
@@ -387,6 +391,9 @@ public final class ScalaParser {
     if (!hasBody && !modifiers.contains("abstract")) {
       adjusted =
           ImmutableList.<String>builder().addAll(modifiers).add("abstract").build();
+    }
+    if (synchronizedBody && !adjusted.contains("synchronized")) {
+      adjusted = ImmutableList.<String>builder().addAll(adjusted).add("synchronized").build();
     }
     if (returnType != null) {
       Map<String, ExprInfo> scope = currentValueScope();
@@ -582,25 +589,99 @@ public final class ScalaParser {
         current = current + "/" + value;
         next();
       }
+      ExprInfo info;
       if (token == LPAREN) {
         if (qualified && "apply".equals(lastSegment) && isTypeLike(base)) {
-          return parseApplyExprInfo(base);
+          info = parseApplyExprInfo(base);
+        } else {
+          info = parseCallExprInfo(current);
         }
-        return parseCallExprInfo(current);
-      }
-      if (!qualified) {
+      } else if (!qualified) {
         ExprInfo scoped = lookupValue(name);
         if (scoped != null) {
-          return scoped;
+          info = scoped;
+        } else if (!backquoted && isTypeLike(current)) {
+          String inferred = singletonObjectType(current);
+          info = ExprInfo.ofType(inferred);
+        } else {
+          info = null;
         }
+      } else if (!backquoted && isTypeLike(current)) {
+        String inferred = current;
+        info = ExprInfo.ofType(inferred);
+      } else {
+        info = null;
       }
-      if (!backquoted && isTypeLike(current)) {
-        String inferred = qualified ? current : singletonObjectType(current);
-        return ExprInfo.ofType(inferred);
+      while (true) {
+        if (token == NEWLINE || token == NEWLINES) {
+          if (peek() != DOT) {
+            break;
+          }
+          next();
+        }
+        if (token != DOT) {
+          break;
+        }
+        next();
+        if (!token.isIdentifier()) {
+          break;
+        }
+        String member = value;
+        next();
+        boolean invoked = false;
+        if (token == LPAREN) {
+          parseCallArgTypes();
+          invoked = true;
+        }
+        info = refineChainedExprInfo(info, member, invoked);
       }
-      return null;
+      return info;
     }
     return null;
+  }
+
+  private @Nullable ExprInfo refineChainedExprInfo(
+      @Nullable ExprInfo receiver, String member, boolean invoked) {
+    if (receiver == null || receiver.rawType() == null) {
+      return null;
+    }
+    String rawType = receiver.rawType();
+    if (invoked && member != null && (member.startsWith("create") || "fallbackConf".equals(member))) {
+      String replacement =
+          "createOptional".equals(member) ? "OptionalConfigEntry" : "ConfigEntry";
+      String createdType = rewriteBuilderResultType(rawType, replacement);
+      if (!createdType.equals(rawType)) {
+        return ExprInfo.ofType(createdType);
+      }
+    }
+    if (invoked) {
+      return ExprInfo.ofType(rawType);
+    }
+    if (member != null && isTypeLike(member)) {
+      return ExprInfo.ofType(rawType + "/" + member);
+    }
+    return receiver;
+  }
+
+  private String rewriteBuilderResultType(String rawType, String replacementSuffix) {
+    if (rawType == null || rawType.isEmpty()) {
+      return rawType;
+    }
+    int slash = rawType.lastIndexOf('/');
+    String prefix = slash >= 0 ? rawType.substring(0, slash + 1) : "";
+    String simple = slash >= 0 ? rawType.substring(slash + 1) : rawType;
+    if ("ConfigBuilder".equals(simple)) {
+      return prefix + replacementSuffix;
+    }
+    if (simple.endsWith("ConfigBuilder")) {
+      return prefix
+          + simple.substring(0, simple.length() - "ConfigBuilder".length())
+          + replacementSuffix;
+    }
+    if (simple.endsWith("Builder")) {
+      return prefix + simple.substring(0, simple.length() - "Builder".length()) + replacementSuffix;
+    }
+    return rawType;
   }
 
   private Pattern normalizeValPattern(Pattern pattern) {
@@ -1426,18 +1507,38 @@ public final class ScalaParser {
 
   private ImmutableList<String> parseModifiers() {
     ImmutableList.Builder<String> mods = ImmutableList.builder();
+    boolean sawAnnotationOrModifier = false;
     while (true) {
+      if (isSeparator(token)) {
+        if (sawAnnotationOrModifier) {
+          next();
+          continue;
+        }
+        break;
+      }
       if (token == AT) {
-        skipAnnotation();
+        String throwsType = parseAnnotationAndExtractThrows();
+        if (throwsType != null && !throwsType.isEmpty()) {
+          mods.add("throws:" + throwsType);
+        }
+        sawAnnotationOrModifier = true;
         continue;
       }
-      String text = token.toString();
+      String text = token == IDENTIFIER ? value : token.toString();
       if (isModifierToken(token, value)) {
-        mods.add(text);
+        boolean visibilityModifier = "private".equals(text) || "protected".equals(text);
         next();
-        if (("private".equals(text) || "protected".equals(text)) && token == LBRACK) {
-          skipDelimited(LBRACK, RBRACK);
+        boolean scopedVisibility = false;
+        boolean thisScope = false;
+        if (visibilityModifier && token == LBRACK) {
+          scopedVisibility = true;
+          thisScope = consumeAccessQualifierIsThis();
         }
+        if (visibilityModifier && scopedVisibility && !thisScope) {
+          continue;
+        }
+        mods.add(text);
+        sawAnnotationOrModifier = true;
         continue;
       }
       break;
@@ -1454,7 +1555,7 @@ public final class ScalaParser {
       if (token == PRIVATE || token == PROTECTED) {
         next();
         if (token == LBRACK) {
-          skipDelimited(LBRACK, RBRACK);
+          consumeAccessQualifierIsThis();
         }
         continue;
       }
@@ -1469,18 +1570,96 @@ public final class ScalaParser {
         skipAnnotation();
         continue;
       }
-      String text = token.toString();
+      String text = token == IDENTIFIER ? value : token.toString();
       if (isParamModifierToken(token, value)) {
-        mods.add(text);
+        boolean visibilityModifier = "private".equals(text) || "protected".equals(text);
         next();
-        if (("private".equals(text) || "protected".equals(text)) && token == LBRACK) {
-          skipDelimited(LBRACK, RBRACK);
+        boolean scopedVisibility = false;
+        boolean thisScope = false;
+        if (visibilityModifier && token == LBRACK) {
+          scopedVisibility = true;
+          thisScope = consumeAccessQualifierIsThis();
         }
+        if (visibilityModifier && scopedVisibility && !thisScope) {
+          continue;
+        }
+        mods.add(text);
         continue;
       }
       break;
     }
     return mods.build();
+  }
+
+  private boolean consumeAccessQualifierIsThis() {
+    if (token != LBRACK) {
+      return false;
+    }
+    accept(LBRACK);
+    boolean thisScope = token == THIS || (token == IDENTIFIER && "this".equals(value));
+    while (token != RBRACK && token != EOF) {
+      next();
+    }
+    if (token == RBRACK) {
+      accept(RBRACK);
+    }
+    return thisScope;
+  }
+
+  private @Nullable String parseAnnotationAndExtractThrows() {
+    accept(AT);
+    String annotationName = null;
+    if (token.isIdentifier()) {
+      annotationName = value;
+      next();
+      while (token == DOT) {
+        next();
+        if (token.isIdentifier()) {
+          annotationName = value;
+          next();
+        } else {
+          break;
+        }
+      }
+      if (token == LBRACK) {
+        accept(LBRACK);
+        String typeText = parseTypeText(EnumSet.of(RBRACK));
+        accept(RBRACK);
+        if ("throws".equals(annotationName)) {
+          return typeText == null || typeText.isEmpty() ? null : typeText;
+        }
+      }
+    }
+    if (token == LPAREN) {
+      if ("throws".equals(annotationName)) {
+        return parseThrowsTypeArg();
+      }
+      skipDelimited(LPAREN, RPAREN);
+    }
+    return null;
+  }
+
+  private @Nullable String parseThrowsTypeArg() {
+    accept(LPAREN);
+    String typeText = null;
+    if ((token == IDENTIFIER || token == BACKQUOTED_IDENT) && "classOf".equals(value)) {
+      next();
+      if (token == LBRACK) {
+        accept(LBRACK);
+        typeText = parseTypeText(EnumSet.of(RBRACK));
+        accept(RBRACK);
+      }
+    } else if (token != RPAREN) {
+      typeText = parseTypeText(EnumSet.of(RPAREN));
+    }
+    if (token != RPAREN) {
+      skipExpr(EnumSet.of(RPAREN));
+    }
+    accept(RPAREN);
+    if (typeText == null || typeText.isEmpty()) {
+      return null;
+    }
+    return typeText;
   }
 
   private void skipAnnotation() {
@@ -1502,6 +1681,10 @@ public final class ScalaParser {
     if (token == LPAREN) {
       skipDelimited(LPAREN, RPAREN);
     }
+  }
+
+  private boolean isSynchronizedExprStart() {
+    return (token == IDENTIFIER || token == BACKQUOTED_IDENT) && "synchronized".equals(value);
   }
 
   private void skipDelimited(ScalaToken open, ScalaToken close) {

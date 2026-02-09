@@ -255,12 +255,34 @@ public final class ScalaSignature {
         ImportScope scope,
         TypeAliasScope aliasScope,
         boolean isReturn) {
-        this.tokens = Arrays.asList(text.trim().split("\\s+"));
-        this.pkg = pkg;
-        this.typeParams = typeParams;
-        this.scope = scope;
-        this.aliasScope = aliasScope;
-        this.isReturn = isReturn;
+      this.tokens = tokenizeTypeText(text);
+      this.pkg = pkg;
+      this.typeParams = typeParams;
+      this.scope = scope;
+      this.aliasScope = aliasScope;
+      this.isReturn = isReturn;
+    }
+
+    private static List<String> tokenizeTypeText(String text) {
+      if (text == null || text.isBlank()) {
+        return List.of();
+      }
+      String normalized = text;
+      normalized = normalized.replace("<:", " <: ");
+      normalized = normalized.replace(">:", " >: ");
+      normalized = normalized.replace("[", " [ ");
+      normalized = normalized.replace("]", " ] ");
+      normalized = normalized.replace("(", " ( ");
+      normalized = normalized.replace(")", " ) ");
+      normalized = normalized.replace(",", " , ");
+      normalized = normalized.replace(".", " . ");
+      normalized = normalized.replace("+", " + ");
+      normalized = normalized.replace("-", " - ");
+      String trimmed = normalized.trim();
+      if (trimmed.isEmpty()) {
+        return List.of();
+      }
+      return Arrays.asList(trimmed.split("\\s+"));
     }
 
     @Nullable TySig parseType() {
@@ -285,6 +307,7 @@ public final class ScalaSignature {
         return "+".equals(token) ? new UpperBoundTySig(inner) : new LowerBoundTySig(inner);
       }
       if (!isIdentifierToken(token)) {
+        index++;
         return objectClass();
       }
       List<String> parts = new ArrayList<>();
@@ -389,6 +412,14 @@ public final class ScalaSignature {
           return new LowerBoundTySig(bound == null ? objectClass() : bound);
         }
         return new WildTyArgSig();
+      }
+      if ("_<:".equals(token) || "_>:".equals(token)) {
+        index++;
+        TySig bound = parseType();
+        if (bound == null) {
+          bound = objectClass();
+        }
+        return "_<:".equals(token) ? new UpperBoundTySig(bound) : new LowerBoundTySig(bound);
       }
       if ("+".equals(token) || "-".equals(token)) {
         index++;

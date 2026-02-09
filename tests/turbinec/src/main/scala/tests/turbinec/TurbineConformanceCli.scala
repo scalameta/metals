@@ -1846,12 +1846,18 @@ object TurbineConformanceCli {
     val textifier: Printer = new Textifier()
     val sw = new java.io.StringWriter()
     val flags = ClassReader.SKIP_FRAMES | ClassReader.SKIP_CODE | (if (skipDebug) ClassReader.SKIP_DEBUG else 0)
-    new ClassReader(bytes)
-      .accept(new TraceClassVisitor(null, textifier, new java.io.PrintWriter(sw, true)), flags)
-    sw.toString
-      .linesIterator
-      .map(trimTrailingSpaces)
-      .mkString("\n")
+    try {
+      new ClassReader(bytes)
+        .accept(new TraceClassVisitor(null, textifier, new java.io.PrintWriter(sw, true)), flags)
+      sw.toString
+        .linesIterator
+        .map(trimTrailingSpaces)
+        .mkString("\n")
+    } catch {
+      case t: Throwable =>
+        val details = Option(t.getMessage).getOrElse(t.getClass.getName)
+        s"<failed to render class with ASM textifier: ${trimTrailingSpaces(details)}>"
+    }
   }
 
   private def trimTrailingSpaces(line: String): String = line.reverse.dropWhile(_ == ' ').reverse

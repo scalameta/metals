@@ -86,8 +86,25 @@ public final class ScalaTypeMapper {
       Set<String> typeParams,
       ImportScope importScope,
       TypeAliasScope aliasScope) {
+    return descriptorForParam(
+        typeText, currentPackage, typeParams, importScope, aliasScope, /* typeParamErasures= */ Map.of());
+  }
+
+  public static String descriptorForParam(
+      @Nullable String typeText,
+      String currentPackage,
+      Set<String> typeParams,
+      ImportScope importScope,
+      TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
     return descriptor(
-        typeText, currentPackage, typeParams, importScope, aliasScope, /* isReturn= */ false);
+        typeText,
+        currentPackage,
+        typeParams,
+        importScope,
+        aliasScope,
+        /* isReturn= */ false,
+        typeParamErasures);
   }
 
   public static String descriptorForReturn(
@@ -96,8 +113,25 @@ public final class ScalaTypeMapper {
       Set<String> typeParams,
       ImportScope importScope,
       TypeAliasScope aliasScope) {
+    return descriptorForReturn(
+        typeText, currentPackage, typeParams, importScope, aliasScope, /* typeParamErasures= */ Map.of());
+  }
+
+  public static String descriptorForReturn(
+      @Nullable String typeText,
+      String currentPackage,
+      Set<String> typeParams,
+      ImportScope importScope,
+      TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
     return descriptor(
-        typeText, currentPackage, typeParams, importScope, aliasScope, /* isReturn= */ true);
+        typeText,
+        currentPackage,
+        typeParams,
+        importScope,
+        aliasScope,
+        /* isReturn= */ true,
+        typeParamErasures);
   }
 
   public static String descriptorForVarArgsParam(
@@ -106,6 +140,17 @@ public final class ScalaTypeMapper {
       Set<String> typeParams,
       ImportScope importScope,
       TypeAliasScope aliasScope) {
+    return descriptorForVarArgsParam(
+        typeText, currentPackage, typeParams, importScope, aliasScope, /* typeParamErasures= */ Map.of());
+  }
+
+  public static String descriptorForVarArgsParam(
+      @Nullable String typeText,
+      String currentPackage,
+      Set<String> typeParams,
+      ImportScope importScope,
+      TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
     String elementType = stripVarArgs(typeText);
     String component =
         descriptor(
@@ -114,7 +159,8 @@ public final class ScalaTypeMapper {
             typeParams,
             importScope,
             aliasScope,
-            /* isReturn= */ false);
+            /* isReturn= */ false,
+            typeParamErasures);
     return "[" + component;
   }
 
@@ -125,7 +171,15 @@ public final class ScalaTypeMapper {
       ImportScope importScope,
       TypeAliasScope aliasScope,
       boolean isReturn) {
-    return descriptor(typeText, currentPackage, typeParams, importScope, aliasScope, isReturn, new HashSet<>());
+    return descriptor(
+        typeText,
+        currentPackage,
+        typeParams,
+        importScope,
+        aliasScope,
+        isReturn,
+        new HashSet<>(),
+        /* typeParamErasures= */ Map.of());
   }
 
   private static String descriptor(
@@ -135,7 +189,27 @@ public final class ScalaTypeMapper {
       ImportScope importScope,
       TypeAliasScope aliasScope,
       boolean isReturn,
-      Set<String> seenAliases) {
+      Map<String, String> typeParamErasures) {
+    return descriptor(
+        typeText,
+        currentPackage,
+        typeParams,
+        importScope,
+        aliasScope,
+        isReturn,
+        new HashSet<>(),
+        typeParamErasures);
+  }
+
+  private static String descriptor(
+      @Nullable String typeText,
+      String currentPackage,
+      Set<String> typeParams,
+      ImportScope importScope,
+      TypeAliasScope aliasScope,
+      boolean isReturn,
+      Set<String> seenAliases,
+      Map<String, String> typeParamErasures) {
     String functionBinary = functionTypeBinary(typeText);
     if (functionBinary != null) {
       return "L" + functionBinary + ";";
@@ -147,13 +221,32 @@ public final class ScalaTypeMapper {
     if (raw == null) {
       return isReturn ? "V" : "Ljava/lang/Object;";
     }
+    String erasedTypeParam = typeParamErasures.get(raw);
+    if (erasedTypeParam != null && !erasedTypeParam.isEmpty() && !erasedTypeParam.equals(raw)) {
+      return descriptor(
+          erasedTypeParam,
+          currentPackage,
+          typeParams,
+          importScope,
+          aliasScope,
+          isReturn,
+          seenAliases,
+          typeParamErasures);
+    }
     if (typeParams.contains(raw)) {
       return "Ljava/lang/Object;";
     }
     String alias = resolveAlias(raw, aliasScope, seenAliases);
     if (alias != null) {
       return descriptor(
-          alias, currentPackage, typeParams, importScope, aliasScope, isReturn, seenAliases);
+          alias,
+          currentPackage,
+          typeParams,
+          importScope,
+          aliasScope,
+          isReturn,
+          seenAliases,
+          typeParamErasures);
     }
     String mapped = mapPrimitive(raw, isReturn);
     if (mapped != null) {
@@ -171,7 +264,14 @@ public final class ScalaTypeMapper {
         String explicitAlias = resolveQualifiedAlias(explicit, aliasScope, seenAliases);
         if (explicitAlias != null) {
           return descriptor(
-              explicitAlias, currentPackage, typeParams, importScope, aliasScope, isReturn, seenAliases);
+              explicitAlias,
+              currentPackage,
+              typeParams,
+              importScope,
+              aliasScope,
+              isReturn,
+              seenAliases,
+              typeParamErasures);
         }
         return "L" + explicit + ";";
       }
@@ -189,7 +289,14 @@ public final class ScalaTypeMapper {
       String qualifiedAlias = resolveQualifiedAlias(binary, aliasScope, seenAliases);
       if (qualifiedAlias != null) {
         return descriptor(
-            qualifiedAlias, currentPackage, typeParams, importScope, aliasScope, isReturn, seenAliases);
+            qualifiedAlias,
+            currentPackage,
+            typeParams,
+            importScope,
+            aliasScope,
+            isReturn,
+            seenAliases,
+            typeParamErasures);
       }
     }
     if (binary == null) {
@@ -489,6 +596,12 @@ public final class ScalaTypeMapper {
       return explicit;
     }
     List<String> wildcards = importScope.wildcards();
+    if (isClassLike(raw)) {
+      // For class-like names, rely on explicit mappings collected from
+      // imports/owner/current-package/classpath. Blind wildcard fallback
+      // over-captures unresolved names (for example java/util/concurrent/Foo).
+      return null;
+    }
     for (int i = wildcards.size() - 1; i >= 0; i--) {
       String prefix = wildcards.get(i);
       // Object wildcard imports are too ambiguous for binary name resolution.
@@ -503,6 +616,19 @@ public final class ScalaTypeMapper {
       return prefix + "/" + raw;
     }
     return null;
+  }
+
+  private static int wildcardSpecificity(String wildcardPrefix) {
+    if (wildcardPrefix == null || wildcardPrefix.isEmpty()) {
+      return 0;
+    }
+    int depth = 1;
+    for (int i = 0; i < wildcardPrefix.length(); i++) {
+      if (wildcardPrefix.charAt(i) == '/') {
+        depth++;
+      }
+    }
+    return depth;
   }
 
   private static boolean isLikelyTermWildcard(String prefix) {
@@ -770,6 +896,11 @@ public final class ScalaTypeMapper {
 
       public Builder addExplicit(String simpleName, String binaryName) {
         explicit.put(simpleName, binaryName);
+        return this;
+      }
+
+      public Builder addExplicitIfAbsent(String simpleName, String binaryName) {
+        explicit.putIfAbsent(simpleName, binaryName);
         return this;
       }
 

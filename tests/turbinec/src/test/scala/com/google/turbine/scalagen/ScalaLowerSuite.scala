@@ -63,6 +63,50 @@ class ScalaLowerSuite extends FunSuite {
     assert(pkg.methods.contains("f()Ljava/lang/String;"))
   }
 
+  test("package-object-forwarders-follow-multiline-builder-return-types") {
+    val source =
+      List(
+        "package foo",
+        "package bar {",
+        "  class ConfigEntry",
+        "  class OptionalConfigEntry",
+        "  class ConfigBuilder {",
+        "    def doc(v: String): ConfigBuilder = this",
+        "    def createWithDefault(v: Int): ConfigEntry = new ConfigEntry",
+        "    def createOptional(): OptionalConfigEntry = new OptionalConfigEntry",
+        "  }",
+        "  object ConfigBuilder {",
+        "    def apply(key: String): ConfigBuilder = new ConfigBuilder",
+        "  }",
+        "}",
+        "package object bar {",
+        "  private[foo] val A =",
+        "    ConfigBuilder(\"a\")",
+        "      .doc(\"a\")",
+        "      .createWithDefault(1)",
+        "  private[foo] val B =",
+        "    ConfigBuilder(\"b\")",
+        "      .createOptional()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/bar/package$"))
+    assert(module.methods.contains("A()Lfoo/bar/ConfigEntry;"))
+    assert(module.methods.contains("B()Lfoo/bar/OptionalConfigEntry;"))
+    assert(module.fields.contains("ALfoo/bar/ConfigEntry;"))
+    assert(module.fields.contains("BLfoo/bar/OptionalConfigEntry;"))
+
+    val mirror = readMembers(classes.get("foo/bar/package"))
+    assert(mirror.methods.contains("A()Lfoo/bar/ConfigEntry;"))
+    assert(mirror.methods.contains("B()Lfoo/bar/OptionalConfigEntry;"))
+    assert((mirror.methods("A()Lfoo/bar/ConfigEntry;") & Opcodes.ACC_STATIC) != 0)
+    assert((mirror.methods("B()Lfoo/bar/OptionalConfigEntry;") & Opcodes.ACC_STATIC) != 0)
+  }
+
   test("default-parameters") {
     val source =
       List(
@@ -358,6 +402,86 @@ class ScalaLowerSuite extends FunSuite {
     val module = readMembers(classes.get("foo/O$"))
     assert(module.methods.contains("getInstance()Lfoo/O$;"))
     assert((module.methods("getInstance()Lfoo/O$;") & Opcodes.ACC_STATIC) == 0)
+  }
+
+  test("object-forwarders-prefer-nested-class-over-module-return") {
+    val source =
+      List(
+        "package foo",
+        "object O {",
+        "  class R",
+        "  object R",
+        "  def mk(): R = new R",
+        "}",
+        "class O",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val mirror = readMembers(classes.get("foo/O"))
+    assert(mirror.methods.contains("mk()Lfoo/O$R;"))
+    assert(!mirror.methods.contains("mk()Lfoo/O$R$;"))
+  }
+
+  test("method-type-parameter-erases-to-upper-bound") {
+    val source =
+      List(
+        "package foo",
+        "trait Attr",
+        "class C {",
+        "  def get[T <: Attr](c: Class[T], t: T): T = t",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("get(Ljava/lang/Class;Lfoo/Attr;)Lfoo/Attr;"))
+  }
+
+  test("throws-annotation-emits-method-exceptions") {
+    val source =
+      List(
+        "package foo",
+        "trait F[T, R] {",
+        "  @throws(classOf[Exception])",
+        "  def apply(t: T): R",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/F"))
+    assertEquals(
+      cls.methodExceptions("apply(Ljava/lang/Object;)Ljava/lang/Object;"),
+      List("java/lang/Exception"),
+    )
+  }
+
+  test("scoped-private-and-synchronized-defs-lower-to-public-synchronized") {
+    val source =
+      List(
+        "package foo.memory",
+        "class C {",
+        "  private[memory] def used(task: Long): Long = synchronized { task }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/memory/C"))
+    val access = cls.methods("used(J)J")
+    assert((access & Opcodes.ACC_PUBLIC) != 0)
+    assert((access & Opcodes.ACC_PRIVATE) == 0)
+    assert((access & Opcodes.ACC_SYNCHRONIZED) != 0)
   }
 
   test("object-forwarders-emit-uppercase-val-accessors") {
@@ -762,8 +886,21 @@ class ScalaLowerSuite extends FunSuite {
       ).mkString("\n")
 
     val unit = ScalaParser.parse(new SourceFile(null, source))
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "java/util/ArrayList" => "java/util/AbstractList"
+          case _ => null
+        }
+    }
     val classes =
-      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
 
     val cls = readMembers(classes.get("foo/C"))
     assert(cls.methods.contains("xs()Ljava/util/List;"))
@@ -1078,6 +1215,91 @@ class ScalaLowerSuite extends FunSuite {
     assert(javaCls.methods.contains("listOf(Ljava/util/List;)Ljava/util/List;"))
   }
 
+  test("classpath-wildcard-imports-do-not-capture-unresolved-simple-types") {
+    val source =
+      List(
+        "package demo.api",
+        "import akka.actor._",
+        "import java.util.concurrent._",
+        "class C {",
+        "  def systemOf(x: ActorSystem): ActorSystem = x",
+        "  def tableOf(x: ConcurrentHashMap): ConcurrentHashMap = x",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "akka/actor/ActorSystem" => "java/lang/Object"
+          case "java/util/concurrent/ConcurrentHashMap" => "java/util/AbstractMap"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val cls = readMembers(classes.get("demo/api/C"))
+    assert(
+      cls.methods.contains("systemOf(Lakka/actor/ActorSystem;)Lakka/actor/ActorSystem;")
+    )
+    assert(
+      cls.methods.contains(
+        "tableOf(Ljava/util/concurrent/ConcurrentHashMap;)Ljava/util/concurrent/ConcurrentHashMap;"
+      )
+    )
+  }
+
+  test("classpath-wildcard-imports-resolve-per-package-members") {
+    val source =
+      List(
+        "package demo.sql",
+        "import org.apache.spark.api.java.function._",
+        "import org.apache.spark.sql.streaming._",
+        "class C {",
+        "  def state(",
+        "      f: FlatMapGroupsWithStateFunction,",
+        "      o: OutputMode,",
+        "      t: GroupStateTimeout",
+        "  ): Unit = ()",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "org/apache/spark/api/java/function/FlatMapGroupsWithStateFunction"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "org/apache/spark/sql/streaming/OutputMode" => "java/lang/Object"
+          case "org/apache/spark/sql/streaming/GroupStateTimeout" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val cls = readMembers(classes.get("demo/sql/C"))
+    assert(
+      cls.methods.contains(
+        "state(Lorg/apache/spark/api/java/function/FlatMapGroupsWithStateFunction;Lorg/apache/spark/sql/streaming/OutputMode;Lorg/apache/spark/sql/streaming/GroupStateTimeout;)V"
+      )
+    )
+  }
+
   test("qualified-type-aliases-and-imported-typed-system") {
     val actorSource =
       List(
@@ -1345,6 +1567,87 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(header.interfaces, List("java/sql/Driver"))
   }
 
+  test("same-package-classpath-type-beats-wildcard-import") {
+    val source =
+      List(
+        "package foo.config {",
+        "  class MemoryMode",
+        "}",
+        "package foo {",
+        "  import foo.config._",
+        "  class C {",
+        "    def use(mode: MemoryMode): MemoryMode = mode",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/MemoryMode" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("use(Lfoo/MemoryMode;)Lfoo/MemoryMode;"))
+  }
+
+  test("package-object-type-alias-beats-wildcard-import-type") {
+    val sqlSource =
+      List(
+        "package demo.sql",
+        "class Dataset",
+      ).mkString("\n")
+
+    val packageObjectSource =
+      List(
+        "package demo",
+        "package object sql {",
+        "  type DataFrame = sql.Dataset",
+        "}",
+      ).mkString("\n")
+
+    val functionsSource =
+      List(
+        "package demo.sql.functions",
+        "class DataFrame",
+      ).mkString("\n")
+
+    val modelSource =
+      List(
+        "package demo.sql",
+        "import demo.sql.functions._",
+        "class Model {",
+        "  def transform(ds: Dataset): DataFrame = ds",
+        "}",
+      ).mkString("\n")
+
+    val sqlUnit = ScalaParser.parse(new SourceFile(null, sqlSource))
+    val packageObjectUnit = ScalaParser.parse(new SourceFile(null, packageObjectSource))
+    val functionsUnit = ScalaParser.parse(new SourceFile(null, functionsSource))
+    val modelUnit = ScalaParser.parse(new SourceFile(null, modelSource))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(sqlUnit, packageObjectUnit, functionsUnit, modelUnit),
+        LanguageVersion.createDefault().majorVersion(),
+      )
+
+    val model = readMembers(classes.get("demo/sql/Model"))
+    assert(model.methods.contains("transform(Ldemo/sql/Dataset;)Ldemo/sql/Dataset;"))
+    assert(!model.methods.contains("transform(Ldemo/sql/Dataset;)Ldemo/sql/functions/DataFrame;"))
+  }
+
   test("object-interfaces-skip-inherited-serializable-from-resolver") {
     val source =
       List(
@@ -1401,6 +1704,72 @@ class ScalaLowerSuite extends FunSuite {
     val header = readClassHeader(classes.get("foo/io/C"))
     assertEquals(header.superName, "java/lang/Object")
     assertEquals(header.interfaces, List("foo/io/IO$Extension"))
+  }
+
+  test("nested-parent-prefers-enclosing-member-over-current-package-classpath") {
+    val source =
+      List(
+        "package foo",
+        "class Status",
+        "object Status {",
+        "  trait Status",
+        "  final class Success extends Status",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "foo/Status$Status"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/Status" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/Status$Success"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/Status$Status"))
+  }
+
+  test("nested-parent-uses-enclosing-import-chain") {
+    val source =
+      List(
+        "package foo.internal {",
+        "  object Impl {",
+        "    trait Marker",
+        "  }",
+        "}",
+        "package foo.api {",
+        "  object Api {",
+        "    import foo.internal.Impl",
+        "    import Impl.Marker",
+        "    trait Command extends Marker",
+        "    final class Ack extends Marker",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val commandHeader = readClassHeader(classes.get("foo/api/Api$Command"))
+    assertEquals(commandHeader.superName, "java/lang/Object")
+    assertEquals(commandHeader.interfaces, List("foo/internal/Impl$Marker"))
+
+    val ackHeader = readClassHeader(classes.get("foo/api/Api$Ack"))
+    assertEquals(ackHeader.superName, "java/lang/Object")
+    assertEquals(ackHeader.interfaces, List("foo/internal/Impl$Marker"))
   }
 
   test("class-parent-trait-with-class-superclass") {
@@ -1685,6 +2054,7 @@ class ScalaLowerSuite extends FunSuite {
               exceptions: Array[String],
           ): MethodVisitor = {
             members.methods.put(name + descriptor, access)
+            members.methodExceptions.put(name + descriptor, Option(exceptions).map(_.toList).getOrElse(Nil))
             null
           }
 
@@ -1706,6 +2076,7 @@ class ScalaLowerSuite extends FunSuite {
 
   private class ClassMembers {
     val methods: mutable.Map[String, Int] = mutable.Map.empty
+    val methodExceptions: mutable.Map[String, List[String]] = mutable.Map.empty
     val fields: mutable.Map[String, Int] = mutable.Map.empty
   }
 
