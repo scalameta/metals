@@ -294,10 +294,7 @@ public final class ScalaParser {
     String name = parseName();
     ImmutableList<TypeParam> tparams = parseTypeParams();
     skipCtorModifiers();
-    ImmutableList<ParamList> ctorParams = ImmutableList.of();
-    if (token == LPAREN) {
-      ctorParams = parseParamLists();
-    }
+    ImmutableList<ParamList> ctorParams = parseParamLists();
     ImmutableList<String> parents = parseParents();
     TemplateBody body = parseTemplateBody();
     return new ClassDef(
@@ -1081,7 +1078,13 @@ public final class ScalaParser {
   private ImmutableList<ParamList> parseParamLists() {
     ImmutableList.Builder<ParamList> lists = ImmutableList.builder();
     List<String> priorParams = new ArrayList<>();
-    while (token == LPAREN) {
+    while (true) {
+      while (token == NEWLINE || token == NEWLINES) {
+        next();
+      }
+      if (token != LPAREN) {
+        break;
+      }
       lists.add(parseParamList(priorParams));
     }
     return lists.build();

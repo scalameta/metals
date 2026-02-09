@@ -414,7 +414,22 @@ public final class ScalaLower {
       firstErased =
           preferLocalObjectParentType(
               first, firstErased, pkg, packageObjectTypes, traitsByBinary, parentKindResolver);
-      if (isTrait || isInterfaceParent(firstErased, traitsByBinary, parentKindResolver)) {
+      firstErased = normalizeParentBinary(firstErased);
+      if (isTrait) {
+        addInterface(interfaces, firstErased);
+      } else if (isInterfaceParent(firstErased, traitsByBinary, parentKindResolver)) {
+        String firstSuper =
+            interfaceSuperclass(
+                firstErased,
+                sourceTypesByBinary,
+                traitsByBinary,
+                packageObjectTypes,
+                importScopes,
+                aliasScopes,
+                parentKindResolver);
+        if (firstSuper != null && !firstSuper.isEmpty()) {
+          superName = firstSuper;
+        }
         addInterface(interfaces, firstErased);
       } else {
         superName = firstErased;
@@ -438,8 +453,8 @@ public final class ScalaLower {
                 packageObjectTypes,
                 traitsByBinary,
                 parentKindResolver);
-        addInterface(
-            interfaces, erasedParent);
+        erasedParent = normalizeParentBinary(erasedParent);
+        addInterface(interfaces, erasedParent);
       }
     }
     if (cls.isCase()) {
@@ -464,6 +479,16 @@ public final class ScalaLower {
           aliasScopes,
           parentKindResolver);
     }
+    interfaces =
+        pruneInheritedInterfaces(
+            interfaces,
+            superName,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            parentKindResolver);
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     if (!isTrait) {
@@ -637,7 +662,20 @@ public final class ScalaLower {
               traitsByBinary,
               parentKindResolver);
       first = normalizeObjectParentType(first, moduleBinary);
+      first = normalizeParentBinary(first);
       if (isInterfaceParent(first, traitsByBinary, parentKindResolver)) {
+        String firstSuper =
+            interfaceSuperclass(
+                first,
+                sourceTypesByBinary,
+                traitsByBinary,
+                packageObjectTypes,
+                importScopes,
+                aliasScopes,
+                parentKindResolver);
+        if (firstSuper != null && !firstSuper.isEmpty()) {
+          superName = normalizeObjectParentType(firstSuper, moduleBinary);
+        }
         addInterface(interfaces, first);
       } else {
         superName = first;
@@ -661,6 +699,7 @@ public final class ScalaLower {
                 traitsByBinary,
                 parentKindResolver);
         erasedParent = normalizeObjectParentType(erasedParent, moduleBinary);
+        erasedParent = normalizeParentBinary(erasedParent);
         addInterface(interfaces, erasedParent);
       }
     }
@@ -694,6 +733,16 @@ public final class ScalaLower {
           aliasScopes,
           parentKindResolver);
     }
+    interfaces =
+        pruneInheritedInterfaces(
+            interfaces,
+            superName,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            parentKindResolver);
 
     ClassFile classFile =
         new ClassFile(
@@ -3586,6 +3635,7 @@ public final class ScalaLower {
       Map<String, ClassDef> sourceTypesByBinary,
       Map<String, ClassDef> traitsByBinary,
       ParentKindResolver parentKindResolver) {
+    binaryName = normalizeParentBinary(binaryName);
     if (binaryName == null || binaryName.isEmpty()) {
       return false;
     }
@@ -3683,12 +3733,172 @@ public final class ScalaLower {
     return erasedType;
   }
 
+  private static String normalizeParentBinary(String binaryName) {
+    if (binaryName == null || binaryName.isEmpty()) {
+      return binaryName;
+    }
+    return switch (binaryName) {
+      case "scala/Serializable" -> "java/io/Serializable";
+      default -> binaryName;
+    };
+  }
+
+  private static boolean isKnownInterfaceBinary(String binaryName) {
+    if (binaryName == null || binaryName.isEmpty()) {
+      return false;
+    }
+    if (binaryName.startsWith("scala/Product")) {
+      return true;
+    }
+    return switch (binaryName) {
+      case "java/io/Serializable", "scala/Equals", "scala/Serializable" -> true;
+      default -> false;
+    };
+  }
+
+  private static String interfaceSuperclass(
+      String interfaceBinary,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver) {
+    return interfaceSuperclass(
+        interfaceBinary,
+        sourceTypesByBinary,
+        traitsByBinary,
+        packageObjectTypes,
+        importScopes,
+        aliasScopes,
+        parentKindResolver,
+        new HashSet<>());
+  }
+
+  private static String interfaceSuperclass(
+      String interfaceBinary,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver,
+      Set<String> seen) {
+    interfaceBinary = normalizeParentBinary(interfaceBinary);
+    if (interfaceBinary == null || interfaceBinary.isEmpty()) {
+      return null;
+    }
+    if (!seen.add(interfaceBinary)) {
+      return null;
+    }
+    ClassDef traitDef = traitsByBinary.get(interfaceBinary);
+    if (traitDef != null) {
+      ScalaTypeMapper.ImportScope traitScope =
+          importScopes.getOrDefault(traitDef, ScalaTypeMapper.ImportScope.empty());
+      ScalaTypeMapper.TypeAliasScope traitAliases =
+          aliasScopes.getOrDefault(traitDef, ScalaTypeMapper.TypeAliasScope.empty());
+      for (String parent : traitDef.parents()) {
+        String erased =
+            eraseType(parent, traitDef.packageName(), traitDef.typeParams(), traitScope, traitAliases);
+        erased =
+            preferKnownLocalParentType(
+                parent,
+                erased,
+                traitDef.packageName(),
+                sourceTypesByBinary,
+                traitsByBinary,
+                parentKindResolver);
+        erased =
+            preferLocalObjectParentType(
+                parent,
+                erased,
+                traitDef.packageName(),
+                packageObjectTypes,
+                traitsByBinary,
+                parentKindResolver);
+        erased = normalizeParentBinary(erased);
+        if (erased == null || erased.isEmpty() || "java/lang/Object".equals(erased)) {
+          continue;
+        }
+        if (isInterfaceParent(erased, traitsByBinary, parentKindResolver)) {
+          String nested =
+              interfaceSuperclass(
+                  erased,
+                  sourceTypesByBinary,
+                  traitsByBinary,
+                  packageObjectTypes,
+                  importScopes,
+                  aliasScopes,
+                  parentKindResolver,
+                  seen);
+          if (nested != null && !nested.isEmpty()) {
+            return nested;
+          }
+        } else if (sourceTypesByBinary.containsKey(erased) && !traitsByBinary.containsKey(erased)) {
+          return erased;
+        }
+      }
+      return null;
+    }
+    return null;
+  }
+
+  private static List<String> pruneInheritedInterfaces(
+      List<String> interfaces,
+      String superName,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver) {
+    if (interfaces.isEmpty()) {
+      return interfaces;
+    }
+    List<String> normalized = new ArrayList<>();
+    for (String iface : interfaces) {
+      String normalizedIface = normalizeParentBinary(iface);
+      if (normalizedIface == null
+          || normalizedIface.isEmpty()
+          || normalized.contains(normalizedIface)) {
+        continue;
+      }
+      normalized.add(normalizedIface);
+    }
+    if (normalized.size() <= 1) {
+      return normalized;
+    }
+    List<String> pruned = new ArrayList<>();
+    for (int i = 0; i < normalized.size(); i++) {
+      String iface = normalized.get(i);
+      List<String> otherDirectInterfaces = new ArrayList<>(normalized);
+      otherDirectInterfaces.remove(i);
+      if (!isInheritedInterface(
+          superName,
+          otherDirectInterfaces,
+          iface,
+          sourceTypesByBinary,
+          traitsByBinary,
+          packageObjectTypes,
+          importScopes,
+          aliasScopes,
+          parentKindResolver)) {
+        pruned.add(iface);
+      }
+    }
+    return pruned;
+  }
+
   private static boolean isInterfaceParent(
       String binaryName,
       Map<String, ClassDef> traitsByBinary,
       ParentKindResolver parentKindResolver) {
+    binaryName = normalizeParentBinary(binaryName);
     if (binaryName == null || binaryName.isEmpty() || "java/lang/Object".equals(binaryName)) {
       return false;
+    }
+    if (isKnownInterfaceBinary(binaryName)) {
+      return true;
     }
     if (traitsByBinary.containsKey(binaryName)) {
       return true;
@@ -3706,13 +3916,14 @@ public final class ScalaLower {
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
       ParentKindResolver parentKindResolver) {
-    if (iface == null || iface.isEmpty() || interfaces.contains(iface)) {
+    String normalizedIface = normalizeParentBinary(iface);
+    if (normalizedIface == null || normalizedIface.isEmpty() || interfaces.contains(normalizedIface)) {
       return;
     }
     if (isInheritedInterface(
         superName,
         interfaces,
-        iface,
+        normalizedIface,
         sourceTypesByBinary,
         traitsByBinary,
         packageObjectTypes,
@@ -3721,7 +3932,7 @@ public final class ScalaLower {
         parentKindResolver)) {
       return;
     }
-    interfaces.add(iface);
+    interfaces.add(normalizedIface);
   }
 
   private static boolean isInheritedInterface(
@@ -3734,6 +3945,8 @@ public final class ScalaLower {
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
       ParentKindResolver parentKindResolver) {
+    superName = normalizeParentBinary(superName);
+    iface = normalizeParentBinary(iface);
     Map<String, Boolean> inheritanceCache = new HashMap<>();
     if (inheritsInterface(
         superName,
@@ -3777,6 +3990,8 @@ public final class ScalaLower {
       ParentKindResolver parentKindResolver,
       Set<String> seen,
       Map<String, Boolean> inheritanceCache) {
+    binaryName = normalizeParentBinary(binaryName);
+    iface = normalizeParentBinary(iface);
     if (binaryName == null || binaryName.isEmpty()) {
       return false;
     }
@@ -3820,6 +4035,7 @@ public final class ScalaLower {
                   packageObjectTypes,
                   traitsByBinary,
                   parentKindResolver);
+          erased = normalizeParentBinary(erased);
           if (inheritsInterface(
               erased,
               iface,
@@ -3840,6 +4056,7 @@ public final class ScalaLower {
       ImmutableList<String> resolvedInterfaces = parentKindResolver.interfaces(binaryName);
       if (resolvedInterfaces != null) {
         for (String parentInterface : resolvedInterfaces) {
+          parentInterface = normalizeParentBinary(parentInterface);
           if (inheritsInterface(
               parentInterface,
               iface,
@@ -3857,7 +4074,7 @@ public final class ScalaLower {
         }
       }
       if (!result) {
-        String parentSuper = parentKindResolver.superName(binaryName);
+        String parentSuper = normalizeParentBinary(parentKindResolver.superName(binaryName));
         result =
             inheritsInterface(
                 parentSuper,
@@ -3878,6 +4095,10 @@ public final class ScalaLower {
   }
 
   private static void addInterface(List<String> interfaces, String iface) {
+    iface = normalizeParentBinary(iface);
+    if (iface == null || iface.isEmpty()) {
+      return;
+    }
     if (!interfaces.contains(iface)) {
       interfaces.add(iface);
     }

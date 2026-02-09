@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-09, latest local run after parent-shape/wildcard-parent fix)**
+**Current Snapshot (2026-02-09, latest local run after parent-shape follow-up + ctor param-list newline fix)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 114
+  - Mismatched members: 98
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 23
@@ -60,7 +60,7 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 232
+  - Mismatched members: 191
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
@@ -95,17 +95,31 @@ Spark (`--javac-release 17`)
     - `trait-forwarders-prefer-local-package-object-parent`
     - `parent-resolution-prefers-known-package-wildcard-members`
     - `parent-resolution-falls-back-to-local-package-when-wildcard-parent-unknown`
+- Parent-shape follow-up + multiline ctor parsing update:
+  - `ScalaParser` now always parses constructor parameter lists in class parsing and allows newline-separated consecutive parameter lists, so multiline implicit parameter lists no longer block parent parsing.
+  - `ScalaLower` now normalizes parent binaries (notably `scala/Serializable` -> `java/io/Serializable`), tightens first-parent interface/class handling, derives class super from source-trait parent chains when needed, and prunes direct interfaces already inherited transitively.
+  - Added synthetic regressions in `ScalaLowerSuite`:
+    - `class-parent-trait-with-class-superclass`
+    - `class-parent-prunes-redundant-direct-interfaces`
+    - `class-parent-normalizes-scala-serializable`
+    - `class-constructor-parses-newline-separated-parameter-lists`
+  - Verified previously failing parent-shape exemplars moved out of `class-superclass`/`class-interfaces` in `java-used`:
+    - `akka/pattern/PromiseActorRef`
+    - `akka/routing/RoundRobinPool`
+    - `akka/persistence/testkit/query/scaladsl/PersistenceTestKitReadJournal`
+    - `akka/stream/Attributes`
+    - `org/apache/spark/streaming/api/java/JavaInputDStream`
 - Public-member no-type-inference classification update:
   - Conformance compare now recognizes return-type-only misses for public/protected methods when Turbine emits the same name+params with `java/lang/Object` or `Unit`.
   - Those are filtered from mismatch failures and counted separately under `no-type-inference-public-members`.
 - IDE/header fallback update:
   - Uninferred member outlines now default to `java/lang/Object` (instead of `Unit`) for non-constructor defs/vals to keep IDE/header compilation robust without inference expansion.
 - Latest measured effect with these generic fixes:
-  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 114` (from 138 at the previous snapshot).
-    - Top buckets: `missing-method 66`, `class-interfaces 30`, `class-superclass 12`.
+  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 98` (from 114 at the previous snapshot).
+    - Top buckets: `missing-method 66`, `class-interfaces 15`, `class-superclass 11`.
     - Filtered: `no-type-inference-public-members 23`.
-  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 232` (from 333 at the previous snapshot).
-    - Top buckets: `missing-method 174`, `class-interfaces 29`, `class-superclass 11`.
+  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 191` (from 232 at the previous snapshot).
+    - Top buckets: `missing-method 163`, `class-interfaces 5`, `class-superclass 5`.
     - Filtered: `no-type-inference-public-members 4`.
   - Akka/Spark `java` remain `Missing 0 / Extra 0 / Mismatched 0`.
 

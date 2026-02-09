@@ -1403,6 +1403,60 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(header.interfaces, List("foo/io/IO$Extension"))
   }
 
+  test("class-parent-trait-with-class-superclass") {
+    val source =
+      List(
+        "package foo",
+        "abstract class Base",
+        "trait Parent extends Base",
+        "trait Child extends Parent",
+        "class C extends Child",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "foo/Base")
+    assertEquals(header.interfaces, List("foo/Child"))
+  }
+
+  test("class-parent-prunes-redundant-direct-interfaces") {
+    val source =
+      List(
+        "package foo",
+        "trait ReadJournal",
+        "trait Query extends ReadJournal",
+        "class C extends ReadJournal with Query",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/Query"))
+  }
+
+  test("class-parent-normalizes-scala-serializable") {
+    val source =
+      List(
+        "package foo",
+        "trait Product extends scala.Equals",
+        "class C extends Product with scala.Serializable with scala.Equals",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/Product", "java/io/Serializable"))
+  }
+
   test("trait-forwarders-prefer-local-package-object-parent") {
     val source =
       List(
@@ -1510,6 +1564,30 @@ class ScalaLowerSuite extends FunSuite {
     val header = readClassHeader(classes.get("foo/use/C"))
     assertEquals(header.superName, "foo/use/Base")
     assertEquals(header.interfaces, Nil)
+  }
+
+  test("class-constructor-parses-newline-separated-parameter-lists") {
+    val source =
+      List(
+        "package foo",
+        "class InputDStream[T]",
+        "class ClassTag[T]",
+        "class JavaDStream[T](val dstream: InputDStream[T])(implicit val classTag: ClassTag[T])",
+        "class JavaInputDStream[T](val inputDStream: InputDStream[T])",
+        "  (implicit override val classTag: ClassTag[T]) extends JavaDStream[T](inputDStream)",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/JavaInputDStream"))
+    assertEquals(header.superName, "foo/JavaDStream")
+    assertEquals(header.interfaces, Nil)
+
+    val cls = readMembers(classes.get("foo/JavaInputDStream"))
+    assert(cls.methods.contains("<init>(Lfoo/InputDStream;Lfoo/ClassTag;)V"))
+    assert(cls.methods.contains("classTag()Lfoo/ClassTag;"))
   }
 
   test("qualified-java-scala-types-ignore-package-wildcard-imports") {
