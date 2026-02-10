@@ -1,6 +1,7 @@
 package com.google.turbine.scalagen
 
 import com.google.common.collect.ImmutableList
+import com.google.turbine.bytecode.sig.SigParser
 import com.google.turbine.diag.SourceFile
 import com.google.turbine.options.LanguageVersion
 import com.google.turbine.scalaparse.ScalaParser
@@ -497,6 +498,25 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.contains("collect(Ljava/lang/Object;)[Ljava/lang/Object;"))
   }
 
+  test("constructor-array-typeparam-param-erases-to-object") {
+    val source =
+      List(
+        "package foo",
+        "class Box[T](val items: Array[T], val freq: Long)",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Box"))
+    assert(
+      cls.methods.contains("<init>(Ljava/lang/Object;J)V"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.contains("<init>([Ljava/lang/Object;J)V"))
+  }
+
   test("throws-annotation-emits-method-exceptions") {
     val source =
       List(
@@ -926,6 +946,32 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
   }
 
+  test("static-forwarder-preserves-owner-qualified-return-type") {
+    val source =
+      List(
+        "package foo",
+        "object PipeToSupport {",
+        "  class PipeableFuture",
+        "}",
+        "class Patterns",
+        "object Patterns {",
+        "  import PipeToSupport.PipeableFuture",
+        "  def pipe(): PipeableFuture = new PipeableFuture",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Patterns"))
+    assert(
+      cls.methods.contains("pipe()Lfoo/PipeToSupport$PipeableFuture;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
+  }
+
   test("static-forwarder-return-does-not-leak-module-class-binary") {
     val source =
       List(
@@ -997,6 +1043,27 @@ class ScalaLowerSuite extends FunSuite {
     assert(!mirror.methods.keys.exists(_.contains("PackedRecordPointer$MAXIMUM_PARTITION_ID")))
   }
 
+  test("method-return-does-not-leak-module-class-binary") {
+    val source =
+      List(
+        "package foo",
+        "object Props",
+        "class Props",
+        "object Factory {",
+        "  def empty(): Props = new Props",
+        "}",
+        "class Factory",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val mirror = readMembers(classes.get("foo/Factory"))
+    assert(mirror.methods.contains("empty()Lfoo/Props;"), mirror.methods.keys.toList.sorted.mkString("\n"))
+    assert(!mirror.methods.contains("empty()Lfoo/Props$;"))
+  }
+
   test("method-return-alias-resolves-in-target-context") {
     val source =
       List(
@@ -1042,6 +1109,89 @@ class ScalaLowerSuite extends FunSuite {
 
     val cls = readMembers(classes.get("foo/C"))
     assert(cls.methods.contains("value()Lfoo/Owner$Out;"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("public-alias-parameter-prefers-owner-visible-type") {
+    val source =
+      List(
+        "package foo",
+        "trait ProcessingPolicy",
+        "object EventStorage {",
+        "  object JournalPolicies {",
+        "    trait PolicyType",
+        "  }",
+        "}",
+        "object Aliases {",
+        "  type ProcessingPolicy = EventStorage.JournalPolicies.PolicyType",
+        "}",
+        "class Api {",
+        "  def withPolicy(policy: ProcessingPolicy): Api = this",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("withPolicy(Lfoo/ProcessingPolicy;)Lfoo/Api;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("JournalPolicies$PolicyType")))
+  }
+
+  test("method-param-function-resolves-to-scala-function1") {
+    val source =
+      List(
+        "package foo.javadsl",
+        "class LoggingEvent",
+        "abstract class LoggingTestKit {",
+        "  def withCustom(test: Function[LoggingEvent, Boolean]): LoggingTestKit",
+        "}",
+        "object LoggingTestKit {",
+        "  def custom(test: Function[LoggingEvent, Boolean]): LoggingTestKit = null",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/javadsl/LoggingTestKit"))
+    assert(
+      cls.methods.contains("withCustom(Lscala/Function1;)Lfoo/javadsl/LoggingTestKit;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(
+      cls.methods.contains("custom(Lscala/Function1;)Lfoo/javadsl/LoggingTestKit;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+  }
+
+  test("invalid-generic-signature-falls-back-to-safe-emission") {
+    val source =
+      List(
+        "package foo",
+        "trait Outer { type T }",
+        "class C {",
+        "  def id[A <: Outer](v: A#T): A#T = v",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    // Should remain readable even if signature generation falls back to erased/no-signature form.
+    val cls = readMembers(classes.get("foo/C"))
+    val idMethod =
+      cls.methods.keys.find(_.startsWith("id(")).getOrElse(fail(cls.methods.keys.toList.sorted.mkString("\n")))
+    val signatures = readSignatures(classes.get("foo/C"))
+    val methodSignature = signatures.methodSignatures.getOrElse(idMethod, null)
+    if (methodSignature != null) {
+      new SigParser(methodSignature).parseMethodSig()
+    }
   }
 
   test("descriptor-canonicalization-does-not-change-parent-lowering") {
@@ -1095,6 +1245,27 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("<init>(Lfoo/Bound;)V"), cls.methods.keys.toList.sorted.mkString("\n"))
     assert(cls.methods.contains("value()Lfoo/Bound;"), cls.methods.keys.toList.sorted.mkString("\n"))
     assert(cls.methods.contains("id(Lfoo/Bound;)Lfoo/Bound;"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("method-with-array-upper-bound-param-and-this-type-return") {
+    val source =
+      List(
+        "package foo",
+        "class Stage",
+        "class Pipeline {",
+        "  def setStages(value: Array[_ <: Stage]): this.type = this",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Pipeline"))
+    assert(
+      cls.methods.contains("setStages([Lfoo/Stage;)Lfoo/Pipeline;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
   }
 
   test("wildcard-import-object-types") {

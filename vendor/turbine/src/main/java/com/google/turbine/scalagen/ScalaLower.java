@@ -24,6 +24,7 @@ import com.google.turbine.binder.sym.ClassSymbol;
 import com.google.turbine.bytecode.ClassFile;
 import com.google.turbine.bytecode.ClassFile.AnnotationInfo;
 import com.google.turbine.bytecode.ClassWriter;
+import com.google.turbine.bytecode.sig.SigParser;
 import com.google.turbine.model.Const;
 import com.google.turbine.model.TurbineFlag;
 import com.google.turbine.model.TurbineTyKind;
@@ -580,7 +581,7 @@ public final class ScalaLower {
     methods = uniqueMethods(methods);
     List<ClassFile.FieldInfo> fields = memberFields(cls, scope, aliasScope);
 
-    String classSignature = ScalaSignature.classSignature(cls, scope, aliasScope);
+    String classSignature = safeClassSignature(ScalaSignature.classSignature(cls, scope, aliasScope));
     ClassFile classFile =
         new ClassFile(
             access,
@@ -1637,14 +1638,15 @@ public final class ScalaLower {
     }
     desc.append(')').append('V');
     String signature =
-        ScalaSignature.methodSignature(
-            ImmutableList.of(),
-            paramTypes,
-            null,
-            typeParams,
-            cls.packageName(),
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                ImmutableList.of(),
+                paramTypes,
+                null,
+                typeParams,
+                cls.packageName(),
+                scope,
+                aliasScope));
     return new ClassFile.MethodInfo(
         TurbineFlag.ACC_PUBLIC,
         "<init>",
@@ -1680,14 +1682,15 @@ public final class ScalaLower {
     }
     desc.append(')').append('V');
     String signature =
-        ScalaSignature.methodSignature(
-            ImmutableList.of(),
-            paramTypes,
-            null,
-            typeParams,
-            cls.packageName(),
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                ImmutableList.of(),
+                paramTypes,
+                null,
+                typeParams,
+                cls.packageName(),
+                scope,
+                aliasScope));
     int access = visibility(def.modifiers(), cls.kind());
     return new ClassFile.MethodInfo(
         access,
@@ -1834,8 +1837,9 @@ public final class ScalaLower {
     int access = methodAccess(def.modifiers(), staticContext, isAbstract, ownerKind);
 
     String signature =
-        ScalaSignature.methodSignature(
-            def.typeParams(), paramTypes, def.returnType(), typeParams, pkg, scope, aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                def.typeParams(), paramTypes, def.returnType(), typeParams, pkg, scope, aliasScope));
     return new ClassFile.MethodInfo(
         access,
         encodeName(def.name()),
@@ -2264,27 +2268,144 @@ public final class ScalaLower {
     String normalizedTypeText = typeText;
     if (position == MethodTypePosition.RETURN) {
       normalizedTypeText = resolveStableMemberReturnType(typeText, stableMemberTypes);
+    }
+    if (position != MethodTypePosition.VARARGS_PARAM) {
       normalizedTypeText =
-          eraseTypeParamArrayReturn(normalizedTypeText, typeParams, typeParamErasures);
+          eraseTypeParamArrayMethodType(normalizedTypeText, typeParams, typeParamErasures);
     }
     normalizedTypeText = normalizeTupleTypeForErasure(normalizedTypeText);
-    String resolved = resolveMethodTypeAlias(normalizedTypeText, pkg, scope, aliasScope);
-    String descriptor =
-        switch (position) {
-          case PARAM ->
-              ScalaTypeMapper.descriptorForParam(
-                  resolved, pkg, typeParams, scope, aliasScope, typeParamErasures);
-          case VARARGS_PARAM ->
-              ScalaTypeMapper.descriptorForVarArgsParam(
-                  resolved, pkg, typeParams, scope, aliasScope, typeParamErasures);
-          case RETURN ->
-              ScalaTypeMapper.descriptorForReturn(
-                  resolved, pkg, typeParams, scope, aliasScope, typeParamErasures);
-        };
+    String directDescriptor =
+        methodPositionDescriptor(
+            normalizedTypeText, pkg, typeParams, scope, aliasScope, typeParamErasures, position);
+    String resolvedTypeText = resolveMethodTypeAlias(normalizedTypeText, pkg, scope, aliasScope);
+    String descriptor = directDescriptor;
+    if (resolvedTypeText != null && !resolvedTypeText.equals(normalizedTypeText)) {
+      String aliasedDescriptor =
+          methodPositionDescriptor(
+              resolvedTypeText, pkg, typeParams, scope, aliasScope, typeParamErasures, position);
+      descriptor =
+          chooseMethodDescriptorForAlias(
+              aliasedDescriptor, directDescriptor, normalizedTypeText, pkg, scope);
+    }
+    if (isSpeculativeCurrentPackageMethodDescriptor(descriptor, normalizedTypeText, pkg)) {
+      String objectWildcardNested =
+          wildcardObjectNestedMethodBinaryCandidate(normalizedTypeText, scope);
+      if (objectWildcardNested != null && !objectWildcardNested.isEmpty()) {
+        descriptor = "L" + objectWildcardNested + ";";
+      }
+    }
     if (position == MethodTypePosition.RETURN) {
-      descriptor = normalizeMethodReturnDescriptor(descriptor);
+      descriptor = normalizeMethodReturnDescriptor(descriptor, normalizedTypeText);
     }
     return descriptor;
+  }
+
+  private static String methodPositionDescriptor(
+      @Nullable String typeText,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures,
+      MethodTypePosition position) {
+    return switch (position) {
+      case PARAM ->
+          ScalaTypeMapper.descriptorForParam(
+              typeText, pkg, typeParams, scope, aliasScope, typeParamErasures);
+      case VARARGS_PARAM ->
+          ScalaTypeMapper.descriptorForVarArgsParam(
+              typeText, pkg, typeParams, scope, aliasScope, typeParamErasures);
+      case RETURN ->
+          ScalaTypeMapper.descriptorForReturn(
+              typeText, pkg, typeParams, scope, aliasScope, typeParamErasures);
+    };
+  }
+
+  private static String chooseMethodDescriptorForAlias(
+      String aliasedDescriptor,
+      String directDescriptor,
+      @Nullable String typeText,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope) {
+    if (aliasedDescriptor == null || aliasedDescriptor.isEmpty()) {
+      return directDescriptor;
+    }
+    if (directDescriptor == null || directDescriptor.isEmpty()) {
+      return aliasedDescriptor;
+    }
+    if (aliasedDescriptor.equals(directDescriptor)) {
+      return aliasedDescriptor;
+    }
+    if (shouldPreferDirectOwnerVisibleDescriptor(aliasedDescriptor, directDescriptor, typeText, pkg, scope)) {
+      return directDescriptor;
+    }
+    return aliasedDescriptor;
+  }
+
+  private static boolean shouldPreferDirectOwnerVisibleDescriptor(
+      String aliasedDescriptor,
+      String directDescriptor,
+      @Nullable String typeText,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope) {
+    String raw = stripRootPrefix(rawTypeName(typeText));
+    if (raw == null || raw.isEmpty()) {
+      return false;
+    }
+    String aliasedBinary = descriptorBinary(aliasedDescriptor);
+    String directBinary = descriptorBinary(directDescriptor);
+    if (aliasedBinary == null || directBinary == null || aliasedBinary.equals(directBinary)) {
+      return false;
+    }
+    if (raw.indexOf('/') >= 0) {
+      // Keep owner-qualified API aliases (for example Outer.Inner) when alias expansion
+      // drifts to broad scala function/object fallbacks.
+      if (!isSpeculativeCurrentPackageMethodDescriptor(directDescriptor, typeText, pkg)
+          && directBinary.indexOf('$') >= 0
+          && (aliasedBinary.startsWith("scala/") || "java/lang/Object".equals(aliasedBinary))) {
+        return true;
+      }
+      return false;
+    }
+    if (!isClassLike(raw)) {
+      return false;
+    }
+    String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/') + "/";
+    if (pkgPrefix.isEmpty() || !directBinary.equals(pkgPrefix + raw)) {
+      return false;
+    }
+    if (aliasedBinary.indexOf('$') < 0) {
+      return false;
+    }
+    String explicit = (scope == null || scope.isEmpty()) ? null : scope.explicit().get(raw);
+    if (explicit != null && explicit.indexOf('$') >= 0) {
+      return false;
+    }
+    return true;
+  }
+
+  private static @Nullable String wildcardObjectNestedMethodBinaryCandidate(
+      @Nullable String typeText, ScalaTypeMapper.ImportScope scope) {
+    if (scope == null || scope.isEmpty()) {
+      return null;
+    }
+    String raw = stripRootPrefix(rawTypeName(typeText));
+    if (raw == null || raw.isEmpty() || raw.indexOf('/') >= 0 || !isClassLike(raw)) {
+      return null;
+    }
+    List<String> wildcards = scope.wildcards();
+    for (int i = wildcards.size() - 1; i >= 0; i--) {
+      String prefix = wildcards.get(i);
+      if (prefix == null || !prefix.endsWith("$")) {
+        continue;
+      }
+      String owner = prefix.substring(0, prefix.length() - 1);
+      if (owner.isEmpty()) {
+        continue;
+      }
+      return owner + "$" + raw;
+    }
+    return null;
   }
 
   private static @Nullable String normalizeTupleTypeForErasure(@Nullable String typeText) {
@@ -2327,7 +2448,7 @@ public final class ScalaLower {
     return "scala/Tuple" + arity;
   }
 
-  private static @Nullable String eraseTypeParamArrayReturn(
+  private static @Nullable String eraseTypeParamArrayMethodType(
       @Nullable String typeText,
       Set<String> typeParams,
       Map<String, String> typeParamErasures) {
@@ -2447,6 +2568,9 @@ public final class ScalaLower {
     if ("Ljava/lang/Object;".equals(primary) && !"Ljava/lang/Object;".equals(fallback)) {
       return true;
     }
+    if (isReferenceDescriptor(primary) && isPrimitiveOrStringDescriptor(fallback)) {
+      return true;
+    }
     if (isSpeculativeCurrentPackageMethodDescriptor(primary, typeText, pkg)
         && !isSpeculativeCurrentPackageMethodDescriptor(fallback, typeText, pkg)) {
       return true;
@@ -2479,6 +2603,20 @@ public final class ScalaLower {
   private static boolean isModuleClassDescriptor(@Nullable String descriptor) {
     String binary = descriptorBinary(descriptor);
     return binary != null && binary.endsWith("$");
+  }
+
+  private static boolean isReferenceDescriptor(@Nullable String descriptor) {
+    return descriptor != null && descriptor.length() >= 3 && descriptor.startsWith("L") && descriptor.endsWith(";");
+  }
+
+  private static boolean isPrimitiveOrStringDescriptor(@Nullable String descriptor) {
+    if (descriptor == null || descriptor.isEmpty()) {
+      return false;
+    }
+    return switch (descriptor) {
+      case "Z", "B", "S", "C", "I", "J", "F", "D", "Ljava/lang/String;" -> true;
+      default -> false;
+    };
   }
 
   private static boolean looksLikeSingletonType(@Nullable String typeText) {
@@ -2532,7 +2670,8 @@ public final class ScalaLower {
     return descriptor.substring(1, descriptor.length() - 1);
   }
 
-  private static String normalizeMethodReturnDescriptor(String descriptor) {
+  private static String normalizeMethodReturnDescriptor(
+      String descriptor, @Nullable String typeText) {
     String binary = descriptorBinary(descriptor);
     if (binary == null || binary.isEmpty()) {
       return descriptor;
@@ -2544,16 +2683,50 @@ public final class ScalaLower {
     return descriptor;
   }
 
+  private static @Nullable String safeClassSignature(@Nullable String signature) {
+    if (signature == null || signature.isEmpty()) {
+      return null;
+    }
+    if (!isValidClassSignature(signature)) {
+      return null;
+    }
+    return signature;
+  }
+
+  private static @Nullable String safeMethodSignature(@Nullable String signature) {
+    if (signature == null || signature.isEmpty()) {
+      return null;
+    }
+    if (!isValidMethodSignature(signature)) {
+      return null;
+    }
+    return signature;
+  }
+
+  private static boolean isValidClassSignature(String signature) {
+    try {
+      new SigParser(signature).parseClassSig();
+      return true;
+    } catch (RuntimeException | AssertionError e) {
+      return false;
+    }
+  }
+
+  private static boolean isValidMethodSignature(String signature) {
+    try {
+      new SigParser(signature).parseMethodSig();
+      return true;
+    } catch (RuntimeException | AssertionError e) {
+      return false;
+    }
+  }
+
   private static @Nullable String resolveMethodTypeAlias(
       @Nullable String typeText,
       String pkg,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope) {
-    if (typeText == null
-        || typeText.isEmpty()
-        || aliasScope == null
-        || aliasScope.isEmpty()
-        || aliasScope.aliases().isEmpty()) {
+    if (typeText == null || typeText.isEmpty()) {
       return typeText;
     }
     String raw = stripRootPrefix(rawTypeName(typeText));
@@ -2580,7 +2753,10 @@ public final class ScalaLower {
     }
     if (resolved == null || resolved.isEmpty()) {
       String known = knownMethodTypeAlias(raw);
-      if (known == null && simple != null && !simple.isEmpty()) {
+      if (known == null
+          && raw.indexOf('/') < 0
+          && simple != null
+          && !simple.isEmpty()) {
         known = knownMethodTypeAlias(simple);
       }
       if (known != null && !known.isEmpty()) {
@@ -2597,6 +2773,13 @@ public final class ScalaLower {
     return switch (raw) {
       case "BigInt", "scala/BigInt", "scala/math/BigInt" -> "scala/math/BigInt";
       case "OutOfMemoryError", "java/lang/OutOfMemoryError" -> "java/lang/OutOfMemoryError";
+      case "IllegalArgumentException", "java/lang/IllegalArgumentException" ->
+          "java/lang/IllegalArgumentException";
+      case "UnsupportedOperationException", "java/lang/UnsupportedOperationException" ->
+          "java/lang/UnsupportedOperationException";
+      case "InterruptedException", "java/lang/InterruptedException" ->
+          "java/lang/InterruptedException";
+      case "Function", "scala/Function" -> "scala/Function1";
       default -> null;
     };
   }
@@ -2833,14 +3016,15 @@ public final class ScalaLower {
     int access = methodAccess(val.modifiers(), staticContext, isAbstract, ownerKind);
     String encodedName = encodeName(val.name());
     String getterSignature =
-        ScalaSignature.methodSignature(
-            ImmutableList.of(),
-            ImmutableList.of(),
-            val.type(),
-            typeParams,
-            pkg,
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                ImmutableList.of(),
+                ImmutableList.of(),
+                val.type(),
+                typeParams,
+                pkg,
+                scope,
+                aliasScope));
     addMethodIfAbsent(
         methods,
         reservedMethodKeys,
@@ -2905,14 +3089,15 @@ public final class ScalaLower {
       List<String> setterParamTypes = new ArrayList<>();
       setterParamTypes.add(val.type());
       String setterSignature =
-          ScalaSignature.methodSignature(
-              ImmutableList.of(),
-              setterParamTypes,
-              "Unit",
-              typeParams,
-              pkg,
-              scope,
-              aliasScope);
+          safeMethodSignature(
+              ScalaSignature.methodSignature(
+                  ImmutableList.of(),
+                  setterParamTypes,
+                  "Unit",
+                  typeParams,
+                  pkg,
+                  scope,
+                  aliasScope));
       addMethodIfAbsent(
           methods,
           reservedMethodKeys,
@@ -3020,14 +3205,15 @@ public final class ScalaLower {
     ImmutableList<TypeParam> declared =
         concatTypeParams(traitDef.typeParams(), def.typeParams());
     String signature =
-        ScalaSignature.methodSignature(
-            declared,
-            paramTypes,
-            def.returnType(),
-            typeParams,
-            traitDef.packageName(),
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                declared,
+                paramTypes,
+                def.returnType(),
+                typeParams,
+                traitDef.packageName(),
+                scope,
+                aliasScope));
 
     return new ClassFile.MethodInfo(
         TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
@@ -3142,14 +3328,15 @@ public final class ScalaLower {
                 typeParamErasures,
                 Map.of());
     String getterSignature =
-        ScalaSignature.methodSignature(
-            traitDef.typeParams(),
-            ImmutableList.of(traitSelfTypeText(traitDef)),
-            val.type(),
-            typeParams,
-            traitDef.packageName(),
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                traitDef.typeParams(),
+                ImmutableList.of(traitSelfTypeText(traitDef)),
+                val.type(),
+                typeParams,
+                traitDef.packageName(),
+                scope,
+                aliasScope));
     methods.add(
         new ClassFile.MethodInfo(
             TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
@@ -3180,14 +3367,15 @@ public final class ScalaLower {
       paramTypes.add(traitSelfTypeText(traitDef));
       paramTypes.add(val.type());
       String setterSignature =
-          ScalaSignature.methodSignature(
-              traitDef.typeParams(),
-              paramTypes,
-              "Unit",
-              typeParams,
-              traitDef.packageName(),
-              scope,
-              aliasScope);
+          safeMethodSignature(
+              ScalaSignature.methodSignature(
+                  traitDef.typeParams(),
+                  paramTypes,
+                  "Unit",
+                  typeParams,
+                  traitDef.packageName(),
+                  scope,
+                  aliasScope));
       methods.add(
           new ClassFile.MethodInfo(
               TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
@@ -3213,14 +3401,15 @@ public final class ScalaLower {
     List<String> paramTypes = ImmutableList.of(traitSelfTypeText(traitDef));
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(traitDef.typeParams());
     String signature =
-        ScalaSignature.methodSignature(
-            traitDef.typeParams(),
-            paramTypes,
-            null,
-            typeParams,
-            traitDef.packageName(),
-            scope,
-            aliasScope);
+        safeMethodSignature(
+            ScalaSignature.methodSignature(
+                traitDef.typeParams(),
+                paramTypes,
+                null,
+                typeParams,
+                traitDef.packageName(),
+                scope,
+                aliasScope));
     return new ClassFile.MethodInfo(
         TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_STATIC,
         "$init$",
@@ -5410,14 +5599,15 @@ public final class ScalaLower {
       String desc =
           defaultGetterDescriptor(params, i, pkg, typeParams, scope, aliasScope, param.defaultUsesParam());
       String signature =
-          ScalaSignature.methodSignature(
-              methodTypeParams,
-              paramTypes,
-              param.type(),
-              typeParams,
-              pkg,
-              scope,
-              aliasScope);
+          safeMethodSignature(
+              ScalaSignature.methodSignature(
+                  methodTypeParams,
+                  paramTypes,
+                  param.type(),
+                  typeParams,
+                  pkg,
+                  scope,
+                  aliasScope));
       methods.add(
           new ClassFile.MethodInfo(
               access,

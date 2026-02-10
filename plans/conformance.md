@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after method erasure canonicalization parity pass)**
+**Current Snapshot (2026-02-10, latest local run after alias/singleton method erasure + signature safety pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 12
+  - Mismatched members: 6
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 13
@@ -56,15 +56,33 @@ Spark (`--javac-release 17`)
   - Mismatched members: 122582
   - Baseline-only classes still required for full ABI: 2096
 - `java-used` scope (Java-bytecode-referenced members/classes):
-  - Turbine classes: 3560
+  - Turbine classes: 3559
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 6
-  - Ignored baseline-only classes from skipped Scala sources: 3
-  - Filtered mismatches (no type inference on public members): 4
+  - Mismatched members: 2
+  - Ignored baseline-only classes from skipped Scala sources: 4
+  - Filtered mismatches (no type inference on public members): 3
 
 **Current Change Summary (2026-02-10)**
+- Latest update (alias/singleton method erasure normalization + signature safety pass):
+  - `ScalaLower` now canonicalizes method descriptors with stronger method-context normalization for owner-qualified aliases, singleton/module value typing, and parameter-side array/type-parameter erasure (including constructors).
+  - `ScalaLower` now validates class/method generic signatures before emission and drops invalid signatures to erased output instead of writing malformed `Signature` attributes.
+  - `ScalaTypeMapper` wildcard erasure now respects upper bounds (`_ <: T`) rather than collapsing to `java/lang/Object`.
+  - `ScalaParser` expression inference now handles type-arg apply chains and arithmetic binary refinement to avoid singleton/module drift in inferred method return shapes.
+  - Added `ScalaLowerSuite` regressions:
+    - `constructor-array-typeparam-param-erases-to-object`
+    - `static-forwarder-preserves-owner-qualified-return-type`
+    - `method-return-does-not-leak-module-class-binary`
+    - `public-alias-parameter-prefers-owner-visible-type`
+    - `invalid-generic-signature-falls-back-to-safe-emission`
+    - `method-with-array-upper-bound-param-and-this-type-return`
+    - `method-param-function-resolves-to-scala-function1`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `12 -> 6` (`missing-method 11 -> 6`; `method-exceptions 1 -> 0`).
+    - Spark mismatches `6 -> 2` (`missing-method 4 -> 1`; `method-exceptions 1 -> 0`; `class-access 1` unchanged).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Remaining `missing-method` cases are now concentrated in Akka `TestLatch.countDown`, `PersistenceTestKit.withPolicy`, `Patterns.pipe*`, `LeveldbReadJournal.Identifier`, `ByteString.size`, and Spark `StructType.size` (+ Spark `BaseRelation` class-access mismatch).
 - Latest update (method type erasure canonicalization parity pass):
   - `ScalaLower` now threads class + method type-parameter erasures through regular methods, constructors, trait/class forwarders, and accessor synthesis via a shared method descriptor path.
   - Method descriptor canonicalization now normalizes tuple syntax, type-parameter array returns, stable/module term returns, and owner-qualified alias resolution in target emission context with fallback.

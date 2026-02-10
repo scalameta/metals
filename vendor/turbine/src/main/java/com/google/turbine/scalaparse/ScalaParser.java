@@ -511,6 +511,7 @@ public final class ScalaParser {
 
   private @Nullable ExprInfo parseExprInfo(EnumSet<ScalaToken> stops) {
     ExprInfo info = parseSimpleExprInfo();
+    info = refineBinaryExprInfo(info);
     if (!stops.contains(token)) {
       skipExpr(stops);
     }
@@ -519,10 +520,82 @@ public final class ScalaParser {
 
   private @Nullable ExprInfo parseExprInfoInBlock(EnumSet<ScalaToken> stops, BlockDepth depth) {
     ExprInfo info = parseSimpleExprInfo();
+    info = refineBinaryExprInfo(info);
     if (depth.value > 0 && !stops.contains(token)) {
       skipExprInBlock(stops, depth);
     }
     return info;
+  }
+
+  private @Nullable ExprInfo refineBinaryExprInfo(@Nullable ExprInfo lhs) {
+    if (token != IDENTIFIER || value == null || !isArithmeticOperator(value)) {
+      return lhs;
+    }
+    String op = value;
+    next();
+    ExprInfo rhs = parseSimpleExprInfo();
+    String lhsType = lhs == null ? null : lhs.rawType();
+    String rhsType = rhs == null ? null : rhs.rawType();
+    if ("+".equals(op) && ("String".equals(lhsType) || "String".equals(rhsType))) {
+      return ExprInfo.ofType("String");
+    }
+    String promoted = promoteNumericType(lhsType, rhsType);
+    if (promoted != null) {
+      return ExprInfo.ofType(promoted);
+    }
+    if (rhsType != null && isNumericType(rhsType)) {
+      return ExprInfo.ofType(normalizeNumericType(rhsType));
+    }
+    if (lhsType != null && isNumericType(lhsType)) {
+      return ExprInfo.ofType(normalizeNumericType(lhsType));
+    }
+    return lhs;
+  }
+
+  private boolean isArithmeticOperator(String op) {
+    return "+".equals(op)
+        || "-".equals(op)
+        || "*".equals(op)
+        || "/".equals(op)
+        || "%".equals(op);
+  }
+
+  private @Nullable String promoteNumericType(@Nullable String lhs, @Nullable String rhs) {
+    if (lhs == null || rhs == null) {
+      return null;
+    }
+    if (!isNumericType(lhs) || !isNumericType(rhs)) {
+      return null;
+    }
+    String left = normalizeNumericType(lhs);
+    String right = normalizeNumericType(rhs);
+    if ("Double".equals(left) || "Double".equals(right)) {
+      return "Double";
+    }
+    if ("Float".equals(left) || "Float".equals(right)) {
+      return "Float";
+    }
+    if ("Long".equals(left) || "Long".equals(right)) {
+      return "Long";
+    }
+    return "Int";
+  }
+
+  private boolean isNumericType(@Nullable String rawType) {
+    if (rawType == null) {
+      return false;
+    }
+    return switch (rawType) {
+      case "Byte", "Short", "Char", "Int", "Long", "Float", "Double" -> true;
+      default -> false;
+    };
+  }
+
+  private String normalizeNumericType(String rawType) {
+    return switch (rawType) {
+      case "Byte", "Short", "Char" -> "Int";
+      default -> rawType;
+    };
   }
 
   private @Nullable ExprInfo parseSimpleExprInfo() {
@@ -589,10 +662,16 @@ public final class ScalaParser {
         current = current + "/" + value;
         next();
       }
+      boolean hasTypeArgs = false;
+      if (token == LBRACK) {
+        skipDelimited(LBRACK, RBRACK);
+        hasTypeArgs = true;
+      }
       ExprInfo info;
       if (token == LPAREN) {
-        if (qualified && "apply".equals(lastSegment) && isTypeLike(base)) {
-          info = parseApplyExprInfo(base);
+        if ((qualified && "apply".equals(lastSegment) && isTypeLike(base))
+            || (!qualified && hasTypeArgs && isTypeLike(current))) {
+          info = parseApplyExprInfo(qualified ? base : current);
         } else {
           info = parseCallExprInfo(current);
         }

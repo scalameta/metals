@@ -394,6 +394,25 @@ public final class ScalaTypeMapper {
     for (int i = 0; i < tokens.size(); i++) {
       String token = tokens.get(i);
       if ("_".equals(token)) {
+        // Wildcard upper bounds erase to their first upper bound.
+        // Example: Array[_ <: Foo] -> Foo[]
+        if (i + 2 < tokens.size() && "<:".equals(tokens.get(i + 1))) {
+          int j = i + 2;
+          while (j < tokens.size() && !isIdentifierToken(tokens.get(j))) {
+            j++;
+          }
+          if (j < tokens.size() && isIdentifierToken(tokens.get(j))) {
+            StringBuilder name = new StringBuilder(stripBackticks(tokens.get(j)));
+            int k = j + 1;
+            while (k + 1 < tokens.size()
+                && ".".equals(tokens.get(k))
+                && isIdentifierToken(tokens.get(k + 1))) {
+              name.append('/').append(stripBackticks(tokens.get(k + 1)));
+              k += 2;
+            }
+            return name.toString().replace('.', '/');
+          }
+        }
         return "java/lang/Object";
       }
       if (isIdentifierToken(token)) {
