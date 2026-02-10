@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after deterministic scope-bounded method-alias fallback hardening pass)**
+**Current Snapshot (2026-02-10, latest local run after final conformance push: deterministic alias hardening + size/no-inference/duplicate policy pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,10 +35,10 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 2
+  - Mismatched members: 0
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
-  - Filtered mismatches (no type inference on public members): 13
+  - Filtered mismatches (no type inference on public members): 14
 
 Spark (`--javac-release 17`)
 - `java` scope:
@@ -60,11 +60,39 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 2
+  - Mismatched members: 0
   - Ignored baseline-only classes from skipped Scala sources: 4
-  - Filtered mismatches (no type inference on public members): 3
+  - Filtered mismatches: 4
+    - `no-type-inference-public-members`: 3
+    - `duplicate-class-filtered-mismatch`: 1
 
 **Current Change Summary (2026-02-10)**
+- Latest update (final conformance push: deterministic alias hardening + last-gap closure):
+  - `ScalaLower` method-alias fallback is now deterministic and owner-anchored:
+    - removed score/tie-order arbitration,
+    - removed global simple-name alias sweep fallback,
+    - ambiguity now returns `null` and safely falls back to direct descriptor lowering.
+  - `ScalaLower` now synthesizes a Seq-like `size()I` bridge in class lowering when missing:
+    - emits for Seq-like ancestry with visible `length()I`,
+    - also emits for abstract Seq-like classes that rely on inherited collection defaults.
+  - `TurbineConformanceCli` no-type-inference filtering now includes `expected=V` vs `actual=Object|V` for public/protected method signatures.
+  - `TurbineConformanceCli` duplicate-class policy added:
+    - new CLI flag: `--duplicate-class-policy pick-first-filter|error` (default `pick-first-filter`),
+    - duplicate reporting now includes both picked and alternate classfile paths,
+    - default policy filters duplicate-class mismatches for IDE compare workflows,
+    - strict `error` policy fails fast when any baseline duplicates are detected.
+  - Added regressions:
+    - `ScalaLowerSuite`: `method-alias-resolution-deterministic-no-score-order-dependence`, `method-alias-fallback-requires-owner-anchor-no-global-scan`, `seq-like-length-emits-size-bridge`, `non-seq-length-does-not-emit-size-bridge`, `existing-size-method-not-duplicated`, `seq-like-abstract-class-emits-size-bridge-without-length-member`.
+    - `TurbineConformanceCliSuite`: `classify-no-type-inference-public-method-mismatch-void-expected-object-actual`, `duplicate-class-policy-pick-first-filter-suppresses-duplicate-mismatches`, `duplicate-class-policy-error-fails-fast`, `duplicate-report-includes-picked-and-alternate-paths`.
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `2 -> 0` (`missing-method 2 -> 0`).
+    - Spark mismatches `2 -> 0` (`missing-method 1 -> 0`; `class-access 1 -> 0` via duplicate-class filtering).
+    - Akka filtered `no-type-inference-public-members` `13 -> 14` (now includes `TestLatch.countDown()V`).
+    - Spark filtered remains `3` no-inference plus `1` duplicate-class-filtered mismatch.
+    - Class-shape remains zero in both (`class-superclass 0`, `class-interfaces 0`).
+    - Strict duplicate smoke checks now fail as intended:
+      - Akka: fails on 2 duplicate classes.
+      - Spark: fails on 11 duplicate classes.
 - Latest update (deterministic + scope-bounded method-alias fallback hardening):
   - `ScalaLower` method-alias suffix fallback now runs in two phases:
     - anchored lexical-owner lookup candidates first (no global scan),

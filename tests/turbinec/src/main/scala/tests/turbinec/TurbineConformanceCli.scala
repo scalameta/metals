@@ -96,6 +96,28 @@ object TurbineConformanceCli {
     }
   }
 
+  private[turbinec] sealed trait DuplicateClassPolicy {
+    def value: String
+  }
+  private[turbinec] object DuplicateClassPolicy {
+    case object PickFirstFilter extends DuplicateClassPolicy { val value = "pick-first-filter" }
+    case object Error extends DuplicateClassPolicy { val value = "error" }
+
+    val default: DuplicateClassPolicy = PickFirstFilter
+
+    def parse(value: String): Either[String, DuplicateClassPolicy] = {
+      value.toLowerCase match {
+        case PickFirstFilter.value => Right(PickFirstFilter)
+        case Error.value => Right(Error)
+        case other =>
+          Left(
+            s"Invalid value for --duplicate-class-policy: $other " +
+              s"(expected: ${PickFirstFilter.value}|${Error.value})",
+          )
+      }
+    }
+  }
+
   private final case class Config(
       command: Command = Command.Compare,
       workspace: Path = Paths.get(".").toAbsolutePath.normalize,
@@ -108,6 +130,7 @@ object TurbineConformanceCli {
       javacRelease: Option[String] = None,
       includeBaselineClasspath: Boolean = true,
       abiScope: AbiScope = AbiScope.default,
+      duplicateClassPolicy: DuplicateClassPolicy = DuplicateClassPolicy.default,
       allowSkippedScala: Boolean = false,
       turbineOut: Option[Path] = None,
   ) {
@@ -313,14 +336,30 @@ object TurbineConformanceCli {
 
       if (baselineResult.duplicates.nonEmpty) {
         println(s"Warning: ${baselineResult.duplicates.size} duplicate class names found in baseline outputs")
-        if (config.verbose) {
-          baselineResult.duplicates.take(20).foreach { case (name, paths) =>
-            println(s"  $name <- ${paths.mkString(", ")}")
-          }
+        val limit = if (config.verbose) Int.MaxValue else 20
+        baselineResult.duplicates.toSeq.take(limit).foreach { case (name, paths) =>
+          println(s"  ${duplicateClassReportLine(name, paths)}")
+        }
+        if (!config.verbose && baselineResult.duplicates.size > limit) {
+          println(s"  ... ${baselineResult.duplicates.size - limit} more duplicates (use --verbose to expand)")
         }
       }
 
-      val diffCollector = new DiffCollector(config.showDiffs)
+      val duplicateClassesInScope =
+        baselineResult.duplicates.filter { case (name, _) => comparedBaselineClasses.contains(name) }
+      applyDuplicateClassPolicy(config.duplicateClassPolicy, baselineResult.duplicates) match {
+        case Left(error) =>
+          return Left(error)
+        case Right(_) =>
+      }
+      val duplicateMismatchFilter =
+        if (config.duplicateClassPolicy == DuplicateClassPolicy.PickFirstFilter) {
+          duplicateClassesInScope
+        } else {
+          Map.empty[String, List[String]]
+        }
+
+      val diffCollector = new DiffCollector(config.showDiffs, duplicateMismatchFilter)
       val commonNames = comparedBaselineClasses.keySet.intersect(comparedTurbineClasses.keySet)
       val baselineCommon = comparedBaselineClasses.filter { case (name, _) => commonNames.contains(name) }
       val turbineCommon = comparedTurbineClasses.filter { case (name, _) => commonNames.contains(name) }
@@ -529,6 +568,8 @@ object TurbineConformanceCli {
           loop(rest, config.copy(javacRelease = Some(release)))
         case "--abi-scope" :: scope :: rest =>
           parseAbiScope(scope).flatMap(value => loop(rest, config.copy(abiScope = value)))
+        case "--duplicate-class-policy" :: policy :: rest =>
+          parseDuplicateClassPolicy(policy).flatMap(value => loop(rest, config.copy(duplicateClassPolicy = value)))
         case "--allow-skipped-scala" :: rest =>
           loop(rest, config.copy(allowSkippedScala = true))
         case "--turbine-out" :: path :: rest =>
@@ -552,6 +593,43 @@ object TurbineConformanceCli {
   private[turbinec] def parseAbiScope(value: String): Either[String, AbiScope] =
     AbiScope.parse(value)
 
+  private[turbinec] def parseDuplicateClassPolicy(value: String): Either[String, DuplicateClassPolicy] =
+    DuplicateClassPolicy.parse(value)
+
+  private[turbinec] def duplicateClassReportLine(className: String, paths: List[String]): String = {
+    val normalized = paths.distinct
+    val picked = normalized.headOption.getOrElse("<unknown>")
+    val alternates = normalized.drop(1)
+    if (alternates.isEmpty) {
+      s"$className <- picked: $picked"
+    } else {
+      s"$className <- picked: $picked; alternates: ${alternates.mkString(", ")}"
+    }
+  }
+
+  private[turbinec] def applyDuplicateClassPolicy(
+      policy: DuplicateClassPolicy,
+      duplicateClassesInScope: Map[String, List[String]],
+  ): Either[String, Map[String, List[String]]] = {
+    policy match {
+      case DuplicateClassPolicy.PickFirstFilter =>
+        Right(duplicateClassesInScope)
+      case DuplicateClassPolicy.Error =>
+        if (duplicateClassesInScope.nonEmpty) {
+          val preview = duplicateClassesInScope.toSeq.take(5).map { case (name, paths) =>
+            duplicateClassReportLine(name, paths)
+          }
+          Left(
+            s"Duplicate baseline class names detected (${duplicateClassesInScope.size}): " +
+              s"${preview.mkString(" | ")}. " +
+              s"Use --duplicate-class-policy ${DuplicateClassPolicy.PickFirstFilter.value} to continue with filtered compare.",
+          )
+        } else {
+          Right(Map.empty)
+        }
+    }
+  }
+
   private def printHelp(): Unit = {
     println("""turbinec - Turbine Scala conformance CLI
               |
@@ -567,6 +645,8 @@ object TurbineConformanceCli {
               |  --javac-release <ver>  Override --release for Turbine (e.g., 8, 11, 17)
               |  --abi-scope <scope>    Compare scope: java|java-used|full (default: java).
               |                         java=class-level only, java-used=members/classes referenced from Java bytecode.
+              |  --duplicate-class-policy <policy> Duplicate baseline class handling:
+              |                         pick-first-filter|error (default: pick-first-filter)
               |  --allow-skipped-scala  Continue when Scala parser skips files (default: fail in compile)
               |  --turbine-out <path>   Output jar path for compile (default: <workspace>/.metals/turbine-workspace.jar)
               |  --no-baseline-classpath Disable baseline output dirs on Turbine classpath (default: include)
@@ -898,6 +978,7 @@ object TurbineConformanceCli {
 
   private def readDirClasses(outputDirs: Seq[Path]): BaselineResult = {
     val out = new mutable.LinkedHashMap[String, Array[Byte]]()
+    val firstSeenPath = mutable.LinkedHashMap.empty[String, String]
     val duplicates = mutable.LinkedHashMap.empty[String, List[String]]
     outputDirs.foreach { root =>
       if (Files.isDirectory(root)) {
@@ -910,10 +991,12 @@ object TurbineConformanceCli {
                 .stripSuffix(".class")
                 .replace(File.separatorChar, '/')
               if (out.contains(name)) {
-                val updated = duplicates.getOrElse(name, Nil) :+ path.toString
+                val picked = firstSeenPath.getOrElse(name, path.toString)
+                val updated = duplicates.getOrElse(name, List(picked)) :+ path.toString
                 duplicates.put(name, updated)
               } else {
                 out.put(name, Files.readAllBytes(path))
+                firstSeenPath.put(name, path.toString)
               }
             }
           }
@@ -1073,7 +1156,10 @@ object TurbineConformanceCli {
   private def isAnonymous(node: ClassNode): Boolean =
     node.innerClasses.asScala.exists(inner => inner.name == node.name && inner.innerName == null)
 
-  private final class DiffCollector(max: Int) {
+  private val DuplicateClassMismatchCategory = "duplicate-class-filtered-mismatch"
+  private val NoTypeInferencePublicMembersCategory = "no-type-inference-public-members"
+
+  private final class DiffCollector(max: Int, duplicateMismatchFilter: Map[String, List[String]]) {
     var missingClasses: Int = 0
     var extraClasses: Int = 0
     var mismatchedMembers: Int = 0
@@ -1082,6 +1168,7 @@ object TurbineConformanceCli {
     private val sb = new StringBuilder
     private val categories = mutable.LinkedHashMap.empty[String, Int]
     private val filteredCategories = mutable.LinkedHashMap.empty[String, Int]
+    private val duplicateSuppressed = mutable.LinkedHashSet.empty[String]
 
     def hasDiffs: Boolean = missingClasses > 0 || extraClasses > 0 || mismatchedMembers > 0
 
@@ -1120,6 +1207,17 @@ object TurbineConformanceCli {
         expected: Array[Byte],
         actual: Array[Byte],
     ): Unit = {
+      duplicateMismatchFilter.get(className) match {
+        case Some(paths) =>
+          if (duplicateSuppressed.add(className)) {
+            filteredMismatch(
+              DuplicateClassMismatchCategory,
+              s"duplicate baseline class mismatch suppressed: ${duplicateClassReportLine(className, paths)}",
+            )
+          }
+          return
+        case None =>
+      }
       mismatchedMembers += 1
       recordCategory(category)
       if (printed < max) {
@@ -1432,8 +1530,6 @@ object TurbineConformanceCli {
     }
   }
 
-  private val NoTypeInferencePublicMembersCategory = "no-type-inference-public-members"
-
   private final case class MethodKey(name: String, paramsDesc: String, returnDesc: String)
 
   private[turbinec] def isNoTypeInferencePublicMethodMismatch(
@@ -1445,7 +1541,7 @@ object TurbineConformanceCli {
       return false
     }
     val expected = parseMethodKey(expectedMethodKey).getOrElse(return false)
-    if (expected.returnDesc == "Ljava/lang/Object;" || expected.returnDesc == "V") {
+    if (expected.returnDesc == "Ljava/lang/Object;") {
       return false
     }
     val candidates = actualMethods.iterator.flatMap { case (actualKey, actualAccess) =>

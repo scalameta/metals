@@ -591,6 +591,19 @@ public final class ScalaLower {
               /* staticContext= */ true,
               /* publicOnly= */ true));
     }
+    if (!isTrait) {
+      addSeqLikeSizeBridgeIfNeeded(
+          methods,
+          access,
+          superName,
+          interfaces,
+          sourceTypesByBinary,
+          traitsByBinary,
+          packageObjectTypes,
+          importScopes,
+          aliasScopes,
+          parentKindResolver);
+    }
     methods = uniqueMethods(methods);
     List<ClassFile.FieldInfo> fields = memberFields(cls, scope, aliasScope);
 
@@ -6459,6 +6472,177 @@ public final class ScalaLower {
       unique.putIfAbsent(field.name() + field.descriptor(), field);
     }
     return new ArrayList<>(unique.values());
+  }
+
+  private static final ImmutableList<String> SEQ_LIKE_INTERFACE_ROOTS =
+      ImmutableList.of(
+          "scala/collection/Iterable",
+          "scala/collection/IterableOps",
+          "scala/collection/Seq",
+          "scala/collection/immutable/Seq",
+          "scala/collection/IndexedSeq",
+          "scala/collection/immutable/IndexedSeq");
+
+  private static void addSeqLikeSizeBridgeIfNeeded(
+      List<ClassFile.MethodInfo> methods,
+      int classAccess,
+      String superName,
+      List<String> interfaces,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver) {
+    if (methods == null
+        || methods.isEmpty()
+        || containsMethod(methods, "size", "()I")
+        || !hasSeqLikeAncestry(
+            superName,
+            interfaces,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            parentKindResolver)) {
+      return;
+    }
+    ClassFile.MethodInfo length = findVisibleInstanceMethod(methods, "length", "()I");
+    boolean abstractClass = (classAccess & TurbineFlag.ACC_ABSTRACT) != 0;
+    if (length == null && !abstractClass) {
+      return;
+    }
+    methods.add(
+        new ClassFile.MethodInfo(
+            TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL,
+            "size",
+            "()I",
+            /* signature= */ null,
+            /* exceptions= */ ImmutableList.of(),
+            /* defaultValue= */ null,
+            /* annotations= */ ImmutableList.of(),
+            /* parameterAnnotations= */ ImmutableList.of(),
+            /* typeAnnotations= */ ImmutableList.of(),
+            /* parameters= */ ImmutableList.of()));
+  }
+
+  private static boolean containsMethod(
+      List<ClassFile.MethodInfo> methods, String name, String descriptor) {
+    if (methods == null || methods.isEmpty()) {
+      return false;
+    }
+    for (ClassFile.MethodInfo method : methods) {
+      if (name.equals(method.name()) && descriptor.equals(method.descriptor())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static ClassFile.MethodInfo findVisibleInstanceMethod(
+      List<ClassFile.MethodInfo> methods, String name, String descriptor) {
+    if (methods == null || methods.isEmpty()) {
+      return null;
+    }
+    for (ClassFile.MethodInfo method : methods) {
+      if (!name.equals(method.name()) || !descriptor.equals(method.descriptor())) {
+        continue;
+      }
+      int access = method.access();
+      if ((access & TurbineFlag.ACC_STATIC) != 0) {
+        continue;
+      }
+      if ((access & (TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_PROTECTED)) == 0) {
+        continue;
+      }
+      return method;
+    }
+    return null;
+  }
+
+  private static boolean hasSeqLikeAncestry(
+      String superName,
+      List<String> interfaces,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver) {
+    Map<String, Boolean> inheritanceCache = new HashMap<>();
+    if (isSeqLikeBinary(superName)
+        || inheritsSeqLikeInterface(
+            superName,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            parentKindResolver,
+            inheritanceCache)) {
+      return true;
+    }
+    if (interfaces == null || interfaces.isEmpty()) {
+      return false;
+    }
+    for (String iface : interfaces) {
+      if (isSeqLikeBinary(iface)
+          || inheritsSeqLikeInterface(
+              iface,
+              sourceTypesByBinary,
+              traitsByBinary,
+              packageObjectTypes,
+              importScopes,
+              aliasScopes,
+              parentKindResolver,
+              inheritanceCache)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean isSeqLikeBinary(@Nullable String binaryName) {
+    if (binaryName == null || binaryName.isEmpty()) {
+      return false;
+    }
+    if (!binaryName.startsWith("scala/collection/")) {
+      return false;
+    }
+    String suffix = binaryName.substring("scala/collection/".length());
+    return suffix.contains("Seq") || suffix.contains("Iterable");
+  }
+
+  private static boolean inheritsSeqLikeInterface(
+      String binaryName,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver,
+      Map<String, Boolean> inheritanceCache) {
+    binaryName = normalizeParentBinary(binaryName);
+    if (binaryName == null || binaryName.isEmpty()) {
+      return false;
+    }
+    for (String seqRoot : SEQ_LIKE_INTERFACE_ROOTS) {
+      if (inheritsInterface(
+          binaryName,
+          seqRoot,
+          sourceTypesByBinary,
+          traitsByBinary,
+          packageObjectTypes,
+          importScopes,
+          aliasScopes,
+          parentKindResolver,
+          new HashSet<>(),
+          inheritanceCache)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static ImmutableList<AnnotationInfo> scalaClassAnnotations() {

@@ -2525,6 +2525,81 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(methodOccurrences(classes.get("foo/C"), "many([Ljava/lang/String;)I"), 1)
   }
 
+  test("seq-like-length-emits-size-bridge") {
+    val source =
+      List(
+        "package foo",
+        "class C extends scala.collection.immutable.Seq[Int] {",
+        "  def length(): Int = 0",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("length()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(cls.methods.contains("size()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+    val access = cls.methods("size()I")
+    assert((access & Opcodes.ACC_PUBLIC) != 0)
+    assert((access & Opcodes.ACC_STATIC) == 0)
+  }
+
+  test("non-seq-length-does-not-emit-size-bridge") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def length(): Int = 0",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("length()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(!cls.methods.contains("size()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("existing-size-method-not-duplicated") {
+    val source =
+      List(
+        "package foo",
+        "class C extends scala.collection.immutable.Seq[Int] {",
+        "  def length(): Int = 0",
+        "  def size(): Int = length()",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("size()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assertEquals(methodOccurrences(classes.get("foo/C"), "size()I"), 1)
+  }
+
+  test("seq-like-abstract-class-emits-size-bridge-without-length-member") {
+    val source =
+      List(
+        "package foo",
+        "abstract class C extends scala.collection.immutable.IndexedSeq[Byte] {",
+        "  def apply(i: Int): Byte",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("size()I"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
   test("root-package-heads-and-term-wildcards") {
     val actorSource =
       List(

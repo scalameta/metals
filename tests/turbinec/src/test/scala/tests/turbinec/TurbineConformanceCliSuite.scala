@@ -7,6 +7,7 @@ import org.objectweb.asm.Opcodes
 
 class TurbineConformanceCliSuite extends FunSuite {
   import TurbineConformanceCli.AbiScope
+  import TurbineConformanceCli.DuplicateClassPolicy
 
   test("parse-abi-scope") {
     assertEquals(TurbineConformanceCli.parseAbiScope("java"), Right(AbiScope.Java))
@@ -193,6 +194,64 @@ class TurbineConformanceCliSuite extends FunSuite {
     )
 
     assert(!filtered)
+  }
+
+  test("classify-no-type-inference-public-method-mismatch-void-expected-object-actual") {
+    val actualMethods = Seq(
+      "countDown()Ljava/lang/Object;" -> Opcodes.ACC_PUBLIC,
+    )
+
+    val filtered = TurbineConformanceCli.isNoTypeInferencePublicMethodMismatch(
+      expectedMethodKey = "countDown()V",
+      expectedAccess = Opcodes.ACC_PUBLIC,
+      actualMethods = actualMethods,
+    )
+
+    assert(filtered)
+  }
+
+  test("duplicate-class-policy-pick-first-filter-suppresses-duplicate-mismatches") {
+    val duplicates = Map(
+      "foo/Dup" -> List(
+        "/tmp/first/foo/Dup.class",
+        "/tmp/alt/foo/Dup.class",
+      ),
+    )
+
+    val result =
+      TurbineConformanceCli.applyDuplicateClassPolicy(DuplicateClassPolicy.PickFirstFilter, duplicates)
+
+    assertEquals(result, Right(duplicates))
+  }
+
+  test("duplicate-class-policy-error-fails-fast") {
+    val duplicates = Map(
+      "foo/Dup" -> List(
+        "/tmp/first/foo/Dup.class",
+        "/tmp/alt/foo/Dup.class",
+      ),
+    )
+
+    val result =
+      TurbineConformanceCli.applyDuplicateClassPolicy(DuplicateClassPolicy.Error, duplicates)
+
+    assert(result.isLeft)
+    assert(result.left.toOption.exists(_.contains("Duplicate baseline class names detected")))
+  }
+
+  test("duplicate-report-includes-picked-and-alternate-paths") {
+    val report =
+      TurbineConformanceCli.duplicateClassReportLine(
+        "foo/Dup",
+        List(
+          "/tmp/first/foo/Dup.class",
+          "/tmp/alt/foo/Dup.class",
+        ),
+      )
+
+    assert(report.contains("foo/Dup"))
+    assert(report.contains("picked: /tmp/first/foo/Dup.class"))
+    assert(report.contains("/tmp/alt/foo/Dup.class"))
   }
 
   private def classBytes(
