@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after classpath-validated wildcard import resolution)**
+**Current Snapshot (2026-02-10, latest local run after relative package-prefix nearest-child resolution)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 51
+  - Mismatched members: 43
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -65,6 +65,12 @@ Spark (`--javac-release 17`)
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (relative package-prefix nearest-child resolution):
+  - `ScalaLower` import scope now adds explicit qualified mappings for direct child packages across the current/enclosing package chain, with nearest package precedence.
+  - This ensures qualified references such as `javadsl.EntityTypeKey` in `pkg.api` resolve to `pkg.api.javadsl.EntityTypeKey` before falling back to enclosing sibling packages.
+  - Added `ScalaLowerSuite` regression:
+    - `relative-package-prefix-prefers-nearest-child-package`
+  - Measured effect (`java-used`): Akka mismatches `51 -> 43` (`missing-method 37 -> 30`, `class-interfaces 10 -> 9`); Spark remained `33`.
 - Latest update (lexical import scope + nested parent precedence):
   - `ScalaLower` import scope resolution now chains prior imports in the same scope when resolving subsequent import qualifiers (for example `import X; import X.Y`).
   - Nested definitions now include enclosing-owner imports in their type/import scope, not only enclosing-owner member types.
@@ -142,8 +148,8 @@ Spark (`--javac-release 17`)
 - IDE/header fallback update:
   - Uninferred member outlines now default to `java/lang/Object` (instead of `Unit`) for non-constructor defs/vals to keep IDE/header compilation robust without inference expansion.
 - Latest measured effect with these generic fixes:
-  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 51`.
-    - Top buckets: `missing-method 37`, `class-interfaces 10`, `class-superclass 3`, `method-exceptions 1`.
+  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 43`.
+    - Top buckets: `missing-method 30`, `class-interfaces 9`, `class-superclass 3`, `method-exceptions 1`.
     - Filtered: `no-type-inference-public-members 17`.
   - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 33`.
     - Top buckets: `missing-method 22`, `class-interfaces 4`, `class-superclass 4`, `method-access 1`, `method-exceptions 1`, `class-access 1`.

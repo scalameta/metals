@@ -3148,12 +3148,56 @@ public final class ScalaLower {
     }
   }
 
+  private static void addRelativePackageMembers(
+      ScalaTypeMapper.ImportScope.Builder builder,
+      String currentPackage,
+      Map<String, Set<String>> packageTypeMembers) {
+    if (currentPackage == null || currentPackage.isEmpty() || packageTypeMembers.isEmpty()) {
+      return;
+    }
+    String[] segments = currentPackage.split("\\.");
+    if (segments.length == 0) {
+      return;
+    }
+    for (int i = segments.length; i >= 1; i--) {
+      String basePackage = String.join(".", Arrays.copyOfRange(segments, 0, i));
+      if (basePackage.isEmpty()) {
+        continue;
+      }
+      String basePrefix = basePackage + ".";
+      for (Map.Entry<String, Set<String>> entry : packageTypeMembers.entrySet()) {
+        String packageName = entry.getKey();
+        if (packageName == null || packageName.isEmpty() || !packageName.startsWith(basePrefix)) {
+          continue;
+        }
+        String relative = packageName.substring(basePrefix.length());
+        if (relative.isEmpty() || relative.indexOf('.') >= 0) {
+          continue;
+        }
+        Set<String> names = entry.getValue();
+        if (names == null || names.isEmpty()) {
+          continue;
+        }
+        String binaryPrefix = packageName.replace('.', '/');
+        for (String name : names) {
+          if (name == null || name.isEmpty()) {
+            continue;
+          }
+          // Prefer the nearest enclosing package when multiple relative paths exist
+          // (for example api.javadsl before javadsl).
+          builder.addExplicitIfAbsent(relative + "/" + name, binaryPrefix + "/" + name);
+        }
+      }
+    }
+  }
+
   private static ScalaTypeMapper.ImportScope importScope(
       ScalaTree.CompUnit unit,
       Map<String, Map<String, String>> objectTypeMembers,
       Map<String, Set<String>> packageTypeMembers) {
     ScalaTypeMapper.ImportScope.Builder builder = ScalaTypeMapper.ImportScope.builder();
     addEnclosingPackageMembers(builder, unitPackageName(unit), packageTypeMembers);
+    addRelativePackageMembers(builder, unitPackageName(unit), packageTypeMembers);
     for (ScalaTree.Stat stat : unit.stats()) {
       if (stat instanceof ImportStat imp) {
         parseImportText(

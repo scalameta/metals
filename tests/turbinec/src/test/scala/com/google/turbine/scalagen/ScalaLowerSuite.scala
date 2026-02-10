@@ -1113,6 +1113,34 @@ class ScalaLowerSuite extends FunSuite {
     )
   }
 
+  test("relative-package-prefix-prefers-nearest-child-package") {
+    val source =
+      List(
+        "package demo.api.javadsl {",
+        "  class EntityTypeKey",
+        "}",
+        "package demo.javadsl {",
+        "  class EntityTypeKey",
+        "}",
+        "package demo.api {",
+        "  class Query {",
+        "    def keyOf(k: javadsl.EntityTypeKey): javadsl.EntityTypeKey = k",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("demo/api/Query"))
+    assert(
+      cls.methods.contains(
+        "keyOf(Ldemo/api/javadsl/EntityTypeKey;)Ldemo/api/javadsl/EntityTypeKey;"
+      )
+    )
+  }
+
   test("generic-varargs-bridges") {
     val source =
       List(
