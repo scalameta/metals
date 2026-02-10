@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after alias/singleton method erasure + signature safety pass)**
+**Current Snapshot (2026-02-10, latest local run after owner-qualified nested return + public alias descriptor parity pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 6
+  - Mismatched members: 2
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 13
@@ -65,6 +65,26 @@ Spark (`--javac-release 17`)
   - Filtered mismatches (no type inference on public members): 3
 
 **Current Change Summary (2026-02-10)**
+- Latest update (owner-qualified nested returns + public alias param descriptor parity pass):
+  - `ScalaLower` method descriptor selection now:
+    - prefers explicit-head direct descriptors only when alias expansion drifts to current-package types,
+    - prefers explicit simple imported binaries for class-like names,
+    - prefers source/fallback descriptors when target-context resolution collapses to nested current-package internals.
+  - This preserves owner-qualified nested returns for forwarders while preventing cross-package alias over-expansion.
+  - Added `ScalaLowerSuite` regressions:
+    - `static-forwarder-preserves-owner-qualified-nested-return-type`
+    - `public-method-param-prefers-owner-visible-alias-over-expanded-internal-type`
+    - `static-stable-accessor-returns-declared-value-type-not-singleton-binary`
+    - `descriptor-canonicalization-keeps-owner-prefix-in-forwarder-context`
+    - `cross-package-qualified-alias-param-prefers-public-owner-type`
+    - `qualified-import-head-without-rename-prefers-direct-method-descriptor`
+    - `inherited-forwarders-prefer-source-imported-creator-type`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `6 -> 2` (`missing-method 6 -> 2`).
+    - Spark unchanged at `2` (`missing-method 1`, `class-access 1`).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Cleared Akka descriptor-drift families include `Patterns.pipe*`, `PersistenceTestKit.withPolicy`, `LeveldbReadJournal.Identifier`, `JavaFlowAndRsConverters.asJava/asRs`, and `Props.create(..., Creator)`.
+    - Remaining top-level misses are now `akka/testkit/TestLatch.countDown`, `akka/util/ByteString.size`, and Spark `StructType.size` + `BaseRelation` class-access.
 - Latest update (alias/singleton method erasure normalization + signature safety pass):
   - `ScalaLower` now canonicalizes method descriptors with stronger method-context normalization for owner-qualified aliases, singleton/module value typing, and parameter-side array/type-parameter erasure (including constructors).
   - `ScalaLower` now validates class/method generic signatures before emission and drops invalid signatures to erased output instead of writing malformed `Signature` attributes.

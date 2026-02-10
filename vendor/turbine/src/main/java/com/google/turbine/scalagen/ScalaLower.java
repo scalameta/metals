@@ -158,6 +158,8 @@ public final class ScalaLower {
         packageTypeMembers(defs.topLevelClassDefs(), topLevelAndPackageObjects);
     ScalaTypeMapper.TypeAliasScope qualifiedAliases =
         qualifiedTypeAliasScope(defs.allDefs(), defs.classBinaryNames(), defs.moduleBinaryNames());
+    Map<String, String> qualifiedStableMemberTypes =
+        qualifiedStableMemberTypes(defs.allDefs(), defs.classBinaryNames(), defs.moduleBinaryNames());
     Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes = new IdentityHashMap<>();
     Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes = new IdentityHashMap<>();
     Map<ClassDef, ScalaTypeMapper.ImportScope> ownerTypeScopes = new IdentityHashMap<>();
@@ -307,6 +309,7 @@ public final class ScalaLower {
               packageObjectTypes,
               importScopes,
               aliasScopes,
+              qualifiedStableMemberTypes,
               resolver,
               majorVersion));
       if (cls.kind() == ClassDef.Kind.TRAIT) {
@@ -343,6 +346,7 @@ public final class ScalaLower {
               packageObjectTypes,
               importScopes,
               aliasScopes,
+              qualifiedStableMemberTypes,
               resolver,
               majorVersion,
               defs.topLevelObjects().contains(obj),
@@ -361,6 +365,7 @@ public final class ScalaLower {
                 packageObjectTypes,
                 importScopes,
                 aliasScopes,
+                qualifiedStableMemberTypes,
                 resolver,
                 majorVersion));
       }
@@ -382,6 +387,7 @@ public final class ScalaLower {
               packageObjectTypes,
               importScopes,
               aliasScopes,
+              qualifiedStableMemberTypes,
               resolver,
               majorVersion));
     }
@@ -408,6 +414,7 @@ public final class ScalaLower {
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, String> globalStableMemberTypes,
       ParentKindResolver parentKindResolver,
       int majorVersion) {
     String pkg = cls.packageName();
@@ -512,7 +519,9 @@ public final class ScalaLower {
     if (!isTrait) {
       methods.add(ctorMethod(cls, scope, aliasScope));
     }
-    methods.addAll(memberMethods(cls, scope, aliasScope, /* staticContext= */ false));
+    methods.addAll(
+        memberMethods(
+            cls, scope, aliasScope, globalStableMemberTypes, /* staticContext= */ false));
     if (!isTrait) {
       methods.addAll(
           traitForwarders(
@@ -523,6 +532,7 @@ public final class ScalaLower {
               packageObjectTypes,
               scope,
               aliasScope,
+              globalStableMemberTypes,
               /* targetModuleBinary= */ null,
               /* staticContext= */ false,
               /* publicOnly= */ false));
@@ -551,6 +561,7 @@ public final class ScalaLower {
               companion,
               companionScope,
               companionAliases,
+              globalStableMemberTypes,
               /* isTrait= */ isTrait));
       methods.addAll(
           traitForwarders(
@@ -561,6 +572,7 @@ public final class ScalaLower {
               packageObjectTypes,
               companionScope,
               companionAliases,
+              globalStableMemberTypes,
               /* targetModuleBinary= */ null,
               /* staticContext= */ true,
               /* publicOnly= */ true));
@@ -574,6 +586,7 @@ public final class ScalaLower {
               aliasScopes,
               companionScope,
               companionAliases,
+              globalStableMemberTypes,
               parentKindResolver,
               /* staticContext= */ true,
               /* publicOnly= */ true));
@@ -617,6 +630,7 @@ public final class ScalaLower {
         ImmutableMap.of(),
         ImmutableMap.of(),
         ImmutableMap.of(),
+        ImmutableMap.of(),
         ParentKindResolver.none(),
         majorVersion,
         /* isTopLevelObject= */ true,
@@ -634,6 +648,7 @@ public final class ScalaLower {
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, String> globalStableMemberTypes,
       ParentKindResolver parentKindResolver,
       int majorVersion,
       boolean isTopLevelObject,
@@ -653,7 +668,9 @@ public final class ScalaLower {
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     methods.add(defaultConstructor(/* isPublic= */ !isTopLevelObject));
-    methods.addAll(memberMethods(obj, scope, aliasScope, /* staticContext= */ false));
+    methods.addAll(
+        memberMethods(
+            obj, scope, aliasScope, globalStableMemberTypes, /* staticContext= */ false));
     methods.addAll(
         traitForwarders(
             obj,
@@ -663,6 +680,7 @@ public final class ScalaLower {
             packageObjectTypes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             moduleBinary,
             /* staticContext= */ false,
             /* publicOnly= */ false));
@@ -809,13 +827,14 @@ public final class ScalaLower {
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, String> globalStableMemberTypes,
       ParentKindResolver parentKindResolver,
       int majorVersion) {
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
     boolean isApp = isAppObject(obj, scope, aliasScope);
 
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
-    methods.addAll(publicForwarders(obj, scope, aliasScope));
+    methods.addAll(publicForwarders(obj, scope, aliasScope, globalStableMemberTypes));
     methods.addAll(
         traitForwarders(
             obj,
@@ -825,6 +844,7 @@ public final class ScalaLower {
             packageObjectTypes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             moduleBinary,
             /* staticContext= */ true,
             /* publicOnly= */ true));
@@ -838,6 +858,7 @@ public final class ScalaLower {
             aliasScopes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             parentKindResolver,
             /* staticContext= */ true,
             /* publicOnly= */ true));
@@ -881,6 +902,7 @@ public final class ScalaLower {
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      Map<String, String> globalStableMemberTypes,
       ParentKindResolver parentKindResolver,
       int majorVersion) {
     String fullPackage = effectiveTypePackage(pkgObj);
@@ -897,7 +919,9 @@ public final class ScalaLower {
 
     List<ClassFile.MethodInfo> moduleMethods = new ArrayList<>();
     moduleMethods.add(defaultConstructor(/* isPublic= */ false));
-    moduleMethods.addAll(memberMethods(pkgObj, scope, aliasScope, /* staticContext= */ false));
+    moduleMethods.addAll(
+        memberMethods(
+            pkgObj, scope, aliasScope, globalStableMemberTypes, /* staticContext= */ false));
     moduleMethods.addAll(
         traitForwarders(
             pkgObj,
@@ -907,6 +931,7 @@ public final class ScalaLower {
             packageObjectTypes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             moduleBinary,
             /* staticContext= */ false,
             /* publicOnly= */ false));
@@ -947,6 +972,7 @@ public final class ScalaLower {
             companion,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             /* isTrait= */ false));
     companionMethods.addAll(
         traitForwarders(
@@ -957,6 +983,7 @@ public final class ScalaLower {
             packageObjectTypes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             moduleBinary,
             /* staticContext= */ true,
             /* publicOnly= */ true));
@@ -970,6 +997,7 @@ public final class ScalaLower {
             aliasScopes,
             scope,
             aliasScope,
+            globalStableMemberTypes,
             parentKindResolver,
             /* staticContext= */ true,
             /* publicOnly= */ true));
@@ -1068,12 +1096,14 @@ public final class ScalaLower {
       ClassDef cls,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> globalStableMemberTypes,
       boolean staticContext) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String pkg = effectiveTypePackage(cls);
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
     Map<String, String> classTypeParamErasures = typeParamErasures(cls.typeParams());
-    Map<String, String> stableMemberTypes = stableMemberTypes(cls);
+    Map<String, String> stableMemberTypes =
+        mergeStableMemberTypes(stableMemberTypes(cls), globalStableMemberTypes);
     Set<String> reservedMethodKeys =
         declaredMethodKeys(
             cls,
@@ -1267,12 +1297,14 @@ public final class ScalaLower {
       ClassDef obj,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> globalStableMemberTypes,
       boolean isTrait) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String pkg = effectiveTypePackage(obj);
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(obj.typeParams());
     Map<String, String> classTypeParamErasures = typeParamErasures(obj.typeParams());
-    Map<String, String> stableMemberTypes = stableMemberTypes(obj);
+    Map<String, String> stableMemberTypes =
+        mergeStableMemberTypes(stableMemberTypes(obj), globalStableMemberTypes);
     ClassDef.Kind ownerKind = isTrait ? ClassDef.Kind.TRAIT : ClassDef.Kind.CLASS;
     for (Defn defn : obj.members()) {
       if (defn instanceof DefDef def) {
@@ -1323,6 +1355,7 @@ public final class ScalaLower {
       Map<String, Map<String, String>> packageObjectTypes,
       ScalaTypeMapper.ImportScope targetScope,
       ScalaTypeMapper.TypeAliasScope targetAliases,
+      Map<String, String> globalStableMemberTypes,
       String targetModuleBinary,
       boolean staticContext,
       boolean publicOnly) {
@@ -1364,7 +1397,8 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope forwarderScope = mergeImportScopes(traitScope, targetScope);
       ScalaTypeMapper.TypeAliasScope forwarderAliases =
           mergeAliasScopes(traitAliases, targetAliases);
-      Map<String, String> traitStableMemberTypes = stableMemberTypes(current.trait());
+      Map<String, String> traitStableMemberTypes =
+          mergeStableMemberTypes(stableMemberTypes(current.trait()), globalStableMemberTypes);
       Map<String, String> substitutions =
           traitTypeSubstitutions(current.trait(), current.parentTypeText());
       for (Defn defn : current.trait().members()) {
@@ -1460,6 +1494,7 @@ public final class ScalaLower {
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
       ScalaTypeMapper.ImportScope targetScope,
       ScalaTypeMapper.TypeAliasScope targetAliases,
+      Map<String, String> globalStableMemberTypes,
       ParentKindResolver parentKindResolver,
       boolean staticContext,
       boolean publicOnly) {
@@ -1506,7 +1541,8 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope forwarderScope = mergeImportScopes(parentScope, targetScope);
       ScalaTypeMapper.TypeAliasScope forwarderAliases =
           mergeAliasScopes(parentAliases, targetAliases);
-      Map<String, String> parentStableMemberTypes = stableMemberTypes(current.parent());
+      Map<String, String> parentStableMemberTypes =
+          mergeStableMemberTypes(stableMemberTypes(current.parent()), globalStableMemberTypes);
       Map<String, String> substitutions =
           traitTypeSubstitutions(current.parent(), current.parentTypeText());
       for (Defn defn : current.parent().members()) {
@@ -1608,8 +1644,15 @@ public final class ScalaLower {
   private static List<ClassFile.MethodInfo> publicForwarders(
       ClassDef obj,
       ScalaTypeMapper.ImportScope scope,
-      ScalaTypeMapper.TypeAliasScope aliasScope) {
-    List<ClassFile.MethodInfo> methods = forwarders(obj, scope, aliasScope, /* isTrait= */ false);
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> globalStableMemberTypes) {
+    List<ClassFile.MethodInfo> methods =
+        forwarders(
+            obj,
+            scope,
+            aliasScope,
+            globalStableMemberTypes,
+            /* isTrait= */ false);
     List<ClassFile.MethodInfo> publicMethods = new ArrayList<>();
     for (ClassFile.MethodInfo method : methods) {
       if ((method.access() & TurbineFlag.ACC_PUBLIC) != 0) {
@@ -2267,7 +2310,7 @@ public final class ScalaLower {
       MethodTypePosition position) {
     String normalizedTypeText = typeText;
     if (position == MethodTypePosition.RETURN) {
-      normalizedTypeText = resolveStableMemberReturnType(typeText, stableMemberTypes);
+      normalizedTypeText = resolveStableMemberReturnType(typeText, pkg, stableMemberTypes);
     }
     if (position != MethodTypePosition.VARARGS_PARAM) {
       normalizedTypeText =
@@ -2288,10 +2331,16 @@ public final class ScalaLower {
               aliasedDescriptor, directDescriptor, normalizedTypeText, pkg, scope);
     }
     if (isSpeculativeCurrentPackageMethodDescriptor(descriptor, normalizedTypeText, pkg)) {
-      String objectWildcardNested =
-          wildcardObjectNestedMethodBinaryCandidate(normalizedTypeText, scope);
-      if (objectWildcardNested != null && !objectWildcardNested.isEmpty()) {
-        descriptor = "L" + objectWildcardNested + ";";
+      String ownerQualifiedNested =
+          ownerQualifiedNestedMethodBinaryCandidate(normalizedTypeText, pkg, scope, aliasScope);
+      if (ownerQualifiedNested != null && !ownerQualifiedNested.isEmpty()) {
+        descriptor = "L" + ownerQualifiedNested + ";";
+      } else {
+        String objectWildcardNested =
+            wildcardObjectNestedMethodBinaryCandidate(normalizedTypeText, scope);
+        if (objectWildcardNested != null && !objectWildcardNested.isEmpty()) {
+          descriptor = "L" + objectWildcardNested + ";";
+        }
       }
     }
     if (position == MethodTypePosition.RETURN) {
@@ -2357,7 +2406,23 @@ public final class ScalaLower {
     if (aliasedBinary == null || directBinary == null || aliasedBinary.equals(directBinary)) {
       return false;
     }
+    if (shouldPreferDirectSelfTypeDescriptor(directBinary, aliasedBinary, scope)) {
+      return true;
+    }
+    String explicitSimpleBinary = explicitMethodImportBinary(scope, raw);
+    if (explicitSimpleBinary != null
+        && directBinary.equals(explicitSimpleBinary)
+        && !aliasedBinary.equals(explicitSimpleBinary)) {
+      return true;
+    }
     if (raw.indexOf('/') >= 0) {
+      String explicitHeadBinary = explicitHeadQualifiedMethodBinary(raw, pkg, scope);
+      if (explicitHeadBinary != null
+          && directBinary.equals(explicitHeadBinary)
+          && !aliasedBinary.equals(explicitHeadBinary)
+          && isCurrentPackageMethodBinary(aliasedBinary, pkg)) {
+        return true;
+      }
       // Keep owner-qualified API aliases (for example Outer.Inner) when alias expansion
       // drifts to broad scala function/object fallbacks.
       if (!isSpeculativeCurrentPackageMethodDescriptor(directDescriptor, typeText, pkg)
@@ -2378,10 +2443,180 @@ public final class ScalaLower {
       return false;
     }
     String explicit = (scope == null || scope.isEmpty()) ? null : scope.explicit().get(raw);
-    if (explicit != null && explicit.indexOf('$') >= 0) {
+    if (explicit == null || explicit.isEmpty()) {
       return false;
     }
-    return true;
+    String normalizedExplicit = explicit.endsWith("$") ? explicit.substring(0, explicit.length() - 1) : explicit;
+    if (normalizedExplicit.equals(directBinary)) {
+      return true;
+    }
+    return false;
+  }
+
+  private static @Nullable String explicitMethodImportBinary(
+      ScalaTypeMapper.ImportScope scope, @Nullable String raw) {
+    if (scope == null || scope.isEmpty() || raw == null || raw.isEmpty()) {
+      return null;
+    }
+    String explicit = scope.explicit().get(raw);
+    if (explicit == null || explicit.isEmpty()) {
+      return null;
+    }
+    if (explicit.endsWith("$")) {
+      return explicit.substring(0, explicit.length() - 1);
+    }
+    return explicit;
+  }
+
+  private static boolean isCurrentPackageMethodBinary(@Nullable String binary, String pkg) {
+    if (binary == null || binary.isEmpty() || pkg == null || pkg.isEmpty()) {
+      return false;
+    }
+    return binary.startsWith(pkg.replace('.', '/') + "/");
+  }
+
+  private static boolean shouldPreferDirectSelfTypeDescriptor(
+      String directBinary, String aliasedBinary, ScalaTypeMapper.ImportScope scope) {
+    if (scope == null || scope.isEmpty()) {
+      return false;
+    }
+    String thisBinary = scope.explicit().get("this/type");
+    if (thisBinary == null || thisBinary.isEmpty()) {
+      return false;
+    }
+    if (thisBinary.endsWith("$")) {
+      return false;
+    }
+    return directBinary.equals(thisBinary) && !aliasedBinary.equals(thisBinary);
+  }
+
+  private static @Nullable String explicitHeadQualifiedMethodBinary(
+      String raw, String pkg, ScalaTypeMapper.ImportScope scope) {
+    if (raw == null || raw.isEmpty() || scope == null || scope.isEmpty()) {
+      return null;
+    }
+    int slash = raw.indexOf('/');
+    if (slash <= 0 || slash >= raw.length() - 1) {
+      return null;
+    }
+    String head = raw.substring(0, slash);
+    String tail = raw.substring(slash + 1);
+    String resolvedHead = scope.explicit().get(head);
+    if (resolvedHead == null || resolvedHead.isEmpty()) {
+      return null;
+    }
+    String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/');
+    if (!pkgPrefix.isEmpty() && resolvedHead.startsWith(pkgPrefix + "/")) {
+      return null;
+    }
+    if (isClassLike(head)) {
+      return resolvedHead + "$" + tail.replace('/', '$');
+    }
+    return resolvedHead + "/" + tail;
+  }
+
+  private static final String NESTED_TYPE_ALIAS_MARKER_PREFIX = "__nested_type_alias__:";
+
+  private static String nestedTypeAliasMarker(@Nullable String ownerBinary, String nestedName) {
+    String ownerPart = ownerBinary == null ? "" : ownerBinary;
+    return NESTED_TYPE_ALIAS_MARKER_PREFIX + ownerPart + ":" + nestedName;
+  }
+
+  private static boolean isNestedTypeAliasMarker(@Nullable String key) {
+    return key != null && key.startsWith(NESTED_TYPE_ALIAS_MARKER_PREFIX);
+  }
+
+  private static @Nullable String ownerQualifiedNestedMethodBinaryCandidate(
+      @Nullable String typeText,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (aliasScope == null || aliasScope.isEmpty()) {
+      return null;
+    }
+    String raw = stripRootPrefix(rawTypeName(typeText));
+    if (raw == null || raw.isEmpty() || raw.indexOf('/') >= 0 || !isClassLike(raw)) {
+      return null;
+    }
+    if (scope != null && !scope.isEmpty()) {
+      String explicitRaw = scope.explicit().get(raw);
+      if (explicitRaw != null && !explicitRaw.isEmpty()) {
+        // If the simple name already resolves explicitly, keep that binding and
+        // avoid forcing an owner-qualified nested fallback.
+        return null;
+      }
+    }
+    String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/');
+    Set<String> explicitOwners = new LinkedHashSet<>();
+    if (scope != null && !scope.isEmpty()) {
+      explicitOwners.addAll(scope.explicit().values());
+    }
+    String best = null;
+    int bestScore = Integer.MIN_VALUE;
+    boolean ambiguousBest = false;
+    for (Map.Entry<String, String> entry : aliasScope.aliases().entrySet()) {
+      if (!isNestedTypeAliasMarker(entry.getKey())) {
+        continue;
+      }
+      String binary = normalizeMethodAliasBinary(entry.getValue());
+      if (binary == null || binary.isEmpty() || binary.indexOf('$') < 0) {
+        continue;
+      }
+      String binarySimple = nestedSimpleName(binary);
+      if (binarySimple == null || binarySimple.isEmpty() || !raw.equals(binarySimple)) {
+        continue;
+      }
+      int score = 0;
+      if (!pkgPrefix.isEmpty()) {
+        if (!binary.startsWith(pkgPrefix + "/")) {
+          continue;
+        }
+        score += 6;
+      }
+      for (String owner : explicitOwners) {
+        if (owner == null || owner.isEmpty()) {
+          continue;
+        }
+        String ownerBinary = owner.endsWith("$") ? owner.substring(0, owner.length() - 1) : owner;
+        if (binary.startsWith(ownerBinary + "$") || binary.startsWith(ownerBinary + "/")) {
+          score += 3;
+          break;
+        }
+      }
+      if (binary.indexOf('$') >= 0) {
+        score += 2;
+      }
+      if (binary.endsWith("$")) {
+        score -= 3;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = binary;
+        ambiguousBest = false;
+      } else if (score == bestScore && best != null && !best.equals(binary)) {
+        ambiguousBest = true;
+      }
+    }
+    if (ambiguousBest) {
+      return null;
+    }
+    return best;
+  }
+
+  private static @Nullable String nestedSimpleName(@Nullable String binary) {
+    if (binary == null || binary.isEmpty()) {
+      return null;
+    }
+    int slash = binary.lastIndexOf('/');
+    int dollar = binary.lastIndexOf('$');
+    int idx = Math.max(slash, dollar);
+    if (idx < 0) {
+      return binary;
+    }
+    if (idx >= binary.length() - 1) {
+      return null;
+    }
+    return binary.substring(idx + 1);
   }
 
   private static @Nullable String wildcardObjectNestedMethodBinaryCandidate(
@@ -2482,24 +2717,58 @@ public final class ScalaLower {
   }
 
   private static @Nullable String resolveStableMemberReturnType(
-      @Nullable String typeText, Map<String, String> stableMemberTypes) {
+      @Nullable String typeText, String pkg, Map<String, String> stableMemberTypes) {
     if (typeText == null
         || typeText.isEmpty()
         || stableMemberTypes == null
         || stableMemberTypes.isEmpty()) {
       return typeText;
     }
-    String raw = stripRootPrefix(rawTypeName(typeText));
-    if (raw == null || raw.isEmpty()) {
-      return typeText;
-    }
-    for (String candidate : stableMemberLookupCandidates(raw)) {
-      String resolved = stableMemberTypes.get(candidate);
-      if (resolved != null && !resolved.isEmpty()) {
-        return resolved;
+    String current = typeText;
+    Set<String> seen = new HashSet<>();
+    while (true) {
+      String raw = stripRootPrefix(rawTypeName(current));
+      if (raw == null || raw.isEmpty() || !seen.add(raw)) {
+        return current;
       }
+      String resolved = null;
+      for (String candidate : stableMemberLookupCandidates(raw)) {
+        resolved = stableMemberTypes.get(candidate);
+        if (resolved == null || resolved.isEmpty()) {
+          String pkgQualified = packageQualifiedStableMemberCandidate(candidate, pkg);
+          if (pkgQualified != null && !pkgQualified.isEmpty()) {
+            resolved = stableMemberTypes.get(pkgQualified);
+          }
+        }
+        if (resolved != null && !resolved.isEmpty()) {
+          break;
+        }
+      }
+      if (resolved == null || resolved.isEmpty() || resolved.equals(current)) {
+        return current;
+      }
+      current = resolved;
     }
-    return typeText;
+  }
+
+  private static @Nullable String packageQualifiedStableMemberCandidate(
+      @Nullable String candidate, String pkg) {
+    if (candidate == null || candidate.isEmpty() || pkg == null || pkg.isEmpty()) {
+      return null;
+    }
+    int slash = candidate.indexOf('/');
+    if (slash <= 0) {
+      return null;
+    }
+    String head = candidate.substring(0, slash);
+    if (isRootPackagePrefix(head)) {
+      return null;
+    }
+    String pkgPrefix = pkg.replace('.', '/');
+    if (pkgPrefix.isEmpty() || candidate.startsWith(pkgPrefix + "/")) {
+      return null;
+    }
+    return pkgPrefix + "/" + candidate;
   }
 
   private static Set<String> stableMemberLookupCandidates(String raw) {
@@ -2585,6 +2854,10 @@ public final class ScalaLower {
     if (primaryBinary == null || fallbackBinary == null) {
       return false;
     }
+    if (isCurrentPackageNestedMethodBinary(primaryBinary, pkg)
+        && !isCurrentPackageMethodBinary(fallbackBinary, pkg)) {
+      return true;
+    }
     if (primaryBinary.endsWith("$type") && !fallbackBinary.endsWith("$type")) {
       return true;
     }
@@ -2598,6 +2871,13 @@ public final class ScalaLower {
       return true;
     }
     return false;
+  }
+
+  private static boolean isCurrentPackageNestedMethodBinary(@Nullable String binary, String pkg) {
+    if (!isCurrentPackageMethodBinary(binary, pkg)) {
+      return false;
+    }
+    return binary != null && binary.indexOf('$') >= 0;
   }
 
   private static boolean isModuleClassDescriptor(@Nullable String descriptor) {
@@ -2751,6 +3031,10 @@ public final class ScalaLower {
         break;
       }
     }
+    if ((resolved == null || resolved.isEmpty())
+        && shouldTryMethodAliasSuffixFallback(raw, scope)) {
+      resolved = resolveMethodAliasBySuffix(raw, simple, pkg, aliasScope);
+    }
     if (resolved == null || resolved.isEmpty()) {
       String known = knownMethodTypeAlias(raw);
       if (known == null
@@ -2791,6 +3075,12 @@ public final class ScalaLower {
     }
     String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/');
     if (raw.indexOf('/') < 0) {
+      if (raw.indexOf('$') >= 0) {
+        String qualified = methodAliasQualifiedCandidate(raw.replace('$', '/'), pkg, scope);
+        if (qualified != null && !qualified.isEmpty()) {
+          return qualified;
+        }
+      }
       if (scope != null && !scope.isEmpty()) {
         String explicit = scope.explicit().get(raw);
         if (explicit != null && !explicit.isEmpty()) {
@@ -2832,23 +3122,156 @@ public final class ScalaLower {
     if (candidate == null || candidate.isEmpty() || aliasScope == null || aliasScope.isEmpty()) {
       return null;
     }
-    String resolved = aliasScope.aliases().get(candidate);
-    if (resolved != null && !resolved.isEmpty()) {
-      return resolved;
-    }
-    if (candidate.indexOf('$') >= 0) {
-      String slash = aliasScope.aliases().get(candidate.replace('$', '/'));
-      if (slash != null && !slash.isEmpty()) {
-        return slash;
-      }
-    }
-    if (candidate.indexOf('/') >= 0) {
-      String dollar = aliasScope.aliases().get(candidate.replace('/', '$'));
-      if (dollar != null && !dollar.isEmpty()) {
-        return dollar;
+    for (String lookup : methodAliasLookupCandidates(candidate)) {
+      String resolved = aliasScope.aliases().get(lookup);
+      if (resolved != null && !resolved.isEmpty()) {
+        return resolved;
       }
     }
     return null;
+  }
+
+  private static Set<String> methodAliasLookupCandidates(String candidate) {
+    Set<String> out = new LinkedHashSet<>();
+    addParentAliasLookupCandidates(out, candidate);
+    int slash = candidate.lastIndexOf('/');
+    if (slash > 0 && slash < candidate.length() - 1) {
+      String owner = candidate.substring(0, slash);
+      String name = candidate.substring(slash + 1);
+      addParentAliasLookupCandidates(out, owner.replace('/', '$') + "$" + name);
+    }
+    int dollar = candidate.lastIndexOf('$');
+    if (dollar > 0 && dollar < candidate.length() - 1) {
+      String owner = candidate.substring(0, dollar);
+      String name = candidate.substring(dollar + 1);
+      addParentAliasLookupCandidates(out, owner.replace('$', '/') + "/" + name);
+    }
+    return out;
+  }
+
+  private static @Nullable String resolveMethodAliasBySuffix(
+      String raw,
+      @Nullable String simple,
+      String pkg,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (simple == null
+        || simple.isEmpty()
+        || aliasScope == null
+        || aliasScope.isEmpty()) {
+      return null;
+    }
+    String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/');
+    String best = null;
+    int bestScore = Integer.MIN_VALUE;
+    for (Map.Entry<String, String> entry : aliasScope.aliases().entrySet()) {
+      String key = entry.getKey();
+      if (!methodAliasKeyMatchesSimple(key, simple)) {
+        continue;
+      }
+      int score = methodAliasSuffixScore(key, raw, pkgPrefix);
+      if (score == Integer.MIN_VALUE) {
+        continue;
+      }
+      if (score > bestScore) {
+        bestScore = score;
+        best = entry.getValue();
+      }
+    }
+    return best;
+  }
+
+  private static boolean shouldTryMethodAliasSuffixFallback(
+      @Nullable String raw, ScalaTypeMapper.ImportScope scope) {
+    if (raw == null || raw.isEmpty()) {
+      return false;
+    }
+    int slash = raw.indexOf('/');
+    if (slash <= 0) {
+      return false;
+    }
+    String head = raw.substring(0, slash);
+    if (isRootPackagePrefix(head)) {
+      return false;
+    }
+    if (scope != null && !scope.isEmpty()) {
+      String explicitHead = scope.explicit().get(head);
+      if (explicitHead != null
+          && !explicitHead.isEmpty()
+          && explicitHead.indexOf('/') >= 0
+          && !isClassLike(head)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static boolean methodAliasKeyMatchesSimple(String key, String simple) {
+    if (key == null || key.isEmpty() || simple == null || simple.isEmpty()) {
+      return false;
+    }
+    return key.endsWith("$" + simple) || key.endsWith("/" + simple);
+  }
+
+  private static int methodAliasSuffixScore(String key, String raw, String pkgPrefix) {
+    if (key == null || key.isEmpty()) {
+      return Integer.MIN_VALUE;
+    }
+    String normalizedKey = key.replace('$', '/');
+    int score = 0;
+    if (pkgPrefix != null && !pkgPrefix.isEmpty()) {
+      if (normalizedKey.startsWith(pkgPrefix + "/")) {
+        score += 8;
+      } else {
+        int shared = sharedPrefixSegments(normalizedKey, pkgPrefix);
+        if (shared == 0) {
+          return Integer.MIN_VALUE;
+        }
+        score += shared;
+      }
+    }
+    if (raw != null && raw.indexOf('/') >= 0) {
+      String parentRaw = raw.substring(0, raw.lastIndexOf('/'));
+      String parentSimple = parentSimpleName(parentRaw);
+      if (parentSimple != null && !parentSimple.isEmpty() && normalizedKey.contains("/" + parentSimple + "/")) {
+        score += 2;
+      }
+    }
+    if (key.indexOf('$') >= 0) {
+      score += 1;
+    }
+    return score;
+  }
+
+  private static int sharedPrefixSegments(String left, String right) {
+    if (left == null || left.isEmpty() || right == null || right.isEmpty()) {
+      return 0;
+    }
+    String[] leftParts = left.split("/");
+    String[] rightParts = right.split("/");
+    int limit = Math.min(leftParts.length, rightParts.length);
+    int count = 0;
+    for (int i = 0; i < limit; i++) {
+      if (!leftParts[i].equals(rightParts[i])) {
+        break;
+      }
+      count++;
+    }
+    return count;
+  }
+
+  private static @Nullable String normalizeMethodAliasBinary(@Nullable String aliasTarget) {
+    if (aliasTarget == null || aliasTarget.isEmpty()) {
+      return null;
+    }
+    String raw = stripRootPrefix(rawTypeName(aliasTarget));
+    if (raw != null && !raw.isEmpty()) {
+      return raw;
+    }
+    String trimmed = aliasTarget.trim();
+    if (trimmed.isEmpty()) {
+      return null;
+    }
+    return stripRootPrefix(trimmed.replace('.', '/'));
   }
 
   private static Map<String, String> typeParamErasures(ImmutableList<TypeParam> typeParams) {
@@ -4491,6 +4914,24 @@ public final class ScalaLower {
     return out;
   }
 
+  private static Map<String, String> mergeStableMemberTypes(
+      Map<String, String> localStableMemberTypes, Map<String, String> qualifiedStableMemberTypes) {
+    boolean localEmpty = localStableMemberTypes == null || localStableMemberTypes.isEmpty();
+    boolean qualifiedEmpty = qualifiedStableMemberTypes == null || qualifiedStableMemberTypes.isEmpty();
+    if (localEmpty && qualifiedEmpty) {
+      return Map.of();
+    }
+    if (localEmpty) {
+      return qualifiedStableMemberTypes;
+    }
+    if (qualifiedEmpty) {
+      return localStableMemberTypes;
+    }
+    Map<String, String> merged = new LinkedHashMap<>(qualifiedStableMemberTypes);
+    merged.putAll(localStableMemberTypes);
+    return Map.copyOf(merged);
+  }
+
   private static Map<String, String> stableMemberTypes(ClassDef cls) {
     if (cls == null || cls.members().isEmpty()) {
       return Map.of();
@@ -4501,6 +4942,63 @@ public final class ScalaLower {
       return Map.of();
     }
     return Map.copyOf(stable);
+  }
+
+  private static Map<String, String> qualifiedStableMemberTypes(
+      List<ClassDef> defs,
+      Map<ClassDef, String> classBinaryNames,
+      Map<ClassDef, String> moduleBinaryNames) {
+    if (defs == null || defs.isEmpty()) {
+      return Map.of();
+    }
+    Map<String, String> stable = new LinkedHashMap<>();
+    for (ClassDef owner : defs) {
+      addQualifiedStableMemberTypesForOwner(stable, owner, classBinaryNames, moduleBinaryNames);
+    }
+    if (stable.isEmpty()) {
+      return Map.of();
+    }
+    return Map.copyOf(stable);
+  }
+
+  private static void addQualifiedStableMemberTypesForOwner(
+      Map<String, String> out,
+      ClassDef owner,
+      Map<ClassDef, String> classBinaryNames,
+      Map<ClassDef, String> moduleBinaryNames) {
+    if (owner == null || out == null) {
+      return;
+    }
+    Map<String, String> localStable = stableMemberTypes(owner);
+    if (localStable.isEmpty()) {
+      return;
+    }
+    String ownerClassBinary = classBinaryName(owner, classBinaryNames, moduleBinaryNames);
+    String ownerMemberBinary = ownerMemberBinary(owner, classBinaryNames, moduleBinaryNames);
+    for (Map.Entry<String, String> entry : localStable.entrySet()) {
+      String key = entry.getKey();
+      String value = entry.getValue();
+      if (key == null || key.isEmpty() || value == null || value.isEmpty()) {
+        continue;
+      }
+      addQualifiedStableMemberCandidate(out, ownerClassBinary, key, value);
+      if (ownerMemberBinary != null && !ownerMemberBinary.equals(ownerClassBinary)) {
+        addQualifiedStableMemberCandidate(out, ownerMemberBinary, key, value);
+      }
+    }
+  }
+
+  private static void addQualifiedStableMemberCandidate(
+      Map<String, String> out, @Nullable String ownerBinary, String key, String value) {
+    if (ownerBinary == null || ownerBinary.isEmpty() || key == null || key.isEmpty()) {
+      return;
+    }
+    String normalizedKey = key.replace('$', '/');
+    out.putIfAbsent(ownerBinary + "/" + normalizedKey, value);
+    out.putIfAbsent(ownerBinary + "$" + normalizedKey.replace('/', '$'), value);
+    if (ownerBinary.endsWith("$")) {
+      out.putIfAbsent(ownerBinary + normalizedKey, value);
+    }
   }
 
   private static void collectStableMemberTypes(
@@ -4582,10 +5080,23 @@ public final class ScalaLower {
             builder, ownerMemberBinary, ownerClassBinary, type.name(), target);
       } else if (defn instanceof ClassDef nested) {
         String erased = valueClassErasedType(nested);
-        if (erased == null || erased.isEmpty()) {
+        if (erased != null && !erased.isEmpty()) {
+          addQualifiedTypeAlias(builder, ownerMemberBinary, ownerClassBinary, nested.name(), erased);
           continue;
         }
-        addQualifiedTypeAlias(builder, ownerMemberBinary, ownerClassBinary, nested.name(), erased);
+        if (nested.kind() == ClassDef.Kind.OBJECT || nested.isPackageObject()) {
+          continue;
+        }
+        String nestedBinary = classBinaryName(nested, classBinaryNames, moduleBinaryNames);
+        if (nestedBinary == null || nestedBinary.isEmpty()) {
+          continue;
+        }
+        // Record nested class binaries behind a marker key so they are only used by
+        // owner-qualified method descriptor fallback, not general alias expansion.
+        builder.addAlias(nestedTypeAliasMarker(ownerClassBinary, nested.name()), nestedBinary);
+        if (ownerMemberBinary != null && !ownerMemberBinary.equals(ownerClassBinary)) {
+          builder.addAlias(nestedTypeAliasMarker(ownerMemberBinary, nested.name()), nestedBinary);
+        }
       }
     }
   }

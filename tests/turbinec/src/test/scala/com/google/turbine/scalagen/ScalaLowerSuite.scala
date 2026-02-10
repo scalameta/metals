@@ -972,6 +972,35 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
   }
 
+  test("static-forwarder-preserves-owner-qualified-nested-return-type") {
+    val source =
+      List(
+        "package foo",
+        "object PipeToSupport {",
+        "  class PipeableFuture",
+        "}",
+        "object Aliases {",
+        "  type PipeableFuture = PipeToSupport.PipeableFuture",
+        "}",
+        "class Patterns",
+        "object Patterns {",
+        "  import Aliases.PipeableFuture",
+        "  def pipe(): PipeableFuture = new PipeToSupport.PipeableFuture",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Patterns"))
+    assert(
+      cls.methods.contains("pipe()Lfoo/PipeToSupport$PipeableFuture;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
+  }
+
   test("static-forwarder-return-does-not-leak-module-class-binary") {
     val source =
       List(
@@ -1043,6 +1072,38 @@ class ScalaLowerSuite extends FunSuite {
     assert(!mirror.methods.keys.exists(_.contains("PackedRecordPointer$MAXIMUM_PARTITION_ID")))
   }
 
+  test("static-stable-accessor-returns-declared-value-type-not-singleton-binary") {
+    val source =
+      List(
+        "package foo",
+        "object scaladsl {",
+        "  object LeveldbReadJournal {",
+        "    final val Identifier = \"akka.persistence.query.journal.leveldb\"",
+        "  }",
+        "}",
+        "class LeveldbReadJournal",
+        "object LeveldbReadJournal {",
+        "  final val Identifier = scaladsl.LeveldbReadJournal.Identifier",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/LeveldbReadJournal$"))
+    assert(
+      module.methods.contains("Identifier()Ljava/lang/String;"),
+      module.methods.keys.toList.sorted.mkString("\n"),
+    )
+    val mirror = readMembers(classes.get("foo/LeveldbReadJournal"))
+    assert(
+      mirror.methods.contains("Identifier()Ljava/lang/String;"),
+      mirror.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!mirror.methods.keys.exists(_.contains("LeveldbReadJournal/Identifier;")))
+  }
+
   test("method-return-does-not-leak-module-class-binary") {
     val source =
       List(
@@ -1111,6 +1172,183 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("value()Lfoo/Owner$Out;"), cls.methods.keys.toList.sorted.mkString("\n"))
   }
 
+  test("descriptor-canonicalization-keeps-owner-prefix-in-forwarder-context") {
+    val source =
+      List(
+        "package foo",
+        "object Owner {",
+        "  class Out",
+        "}",
+        "trait Shared {",
+        "  import Owner.Out",
+        "  def value(): Out = new Out",
+        "}",
+        "class C",
+        "object C extends Shared",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(
+      cls.methods.contains("value()Lfoo/Owner$Out;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.contains("value()Lfoo/Out;"))
+  }
+
+  test("qualified-import-head-prefers-direct-method-descriptor") {
+    val source =
+      List(
+        "package foo",
+        "import java.util.concurrent.{ Flow => FlowApi }",
+        "trait Procedure",
+        "trait LocalAliases {",
+        "  type Subscriber = Procedure",
+        "}",
+        "class Api extends LocalAliases {",
+        "  def asJava(s: FlowApi.Subscriber[String]): FlowApi.Subscriber[String] = s",
+        "  def asRs(s: FlowApi.Subscriber[String]): FlowApi.Subscriber[String] = s",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains(
+        "asJava(Ljava/util/concurrent/Flow$Subscriber;)Ljava/util/concurrent/Flow$Subscriber;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(
+      cls.methods.contains(
+        "asRs(Ljava/util/concurrent/Flow$Subscriber;)Ljava/util/concurrent/Flow$Subscriber;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("Lfoo/Procedure;")))
+  }
+
+  test("qualified-import-head-without-rename-prefers-direct-method-descriptor") {
+    val source =
+      List(
+        "package foo",
+        "import java.util.concurrent.Flow",
+        "trait Procedure",
+        "trait LocalAliases {",
+        "  type Subscriber = Procedure",
+        "}",
+        "class Api extends LocalAliases {",
+        "  def asJava(s: Flow.Subscriber[String]): Flow.Subscriber[String] = s",
+        "  def asRs(s: Flow.Subscriber[String]): Flow.Subscriber[String] = s",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains(
+        "asJava(Ljava/util/concurrent/Flow$Subscriber;)Ljava/util/concurrent/Flow$Subscriber;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(
+      cls.methods.contains(
+        "asRs(Ljava/util/concurrent/Flow$Subscriber;)Ljava/util/concurrent/Flow$Subscriber;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("Lfoo/Procedure;")))
+  }
+
+  test("inherited-forwarders-prefer-source-imported-creator-type") {
+    val source =
+      List(
+        "package foo",
+        "package japi {",
+        "  trait Creator[T]",
+        "}",
+        "object SupervisorSpec {",
+        "  trait Creator[T]",
+        "}",
+        "trait AbstractProps {",
+        "  def create[T](creator: japi.Creator[T]): Api = null",
+        "  def create[T](clazz: Class[T], creator: japi.Creator[T]): Api = null",
+        "}",
+        "class Api",
+        "object Api extends AbstractProps {",
+        "  import foo.SupervisorSpec._",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("create(Lfoo/japi/Creator;)Lfoo/Api;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(
+      cls.methods.contains("create(Ljava/lang/Class;Lfoo/japi/Creator;)Lfoo/Api;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("SupervisorSpec$Creator")))
+  }
+
+  test("trait-forwarder-uses-owner-qualified-nested-return-type") {
+    val source =
+      List(
+        "package foo",
+        "trait PipeToSupport {",
+        "  class PipeableFuture",
+        "  def pipe(): PipeableFuture = new PipeableFuture",
+        "}",
+        "class Patterns",
+        "object Patterns extends PipeToSupport",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Patterns"))
+    assert(
+      cls.methods.contains("pipe()Lfoo/PipeToSupport$PipeableFuture;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
+  }
+
+  test("self-type-qualified-return-beats-simple-alias-expansion") {
+    val source =
+      List(
+        "package foo",
+        "trait LocalAlias {",
+        "  type MapType = java.util.concurrent.ConcurrentHashMap[String, String]",
+        "}",
+        "class MapType extends LocalAlias {",
+        "  def keep(): foo.MapType = this",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/MapType"))
+    assert(
+      cls.methods.contains("keep()Lfoo/MapType;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("ConcurrentHashMap")))
+  }
+
   test("public-alias-parameter-prefers-owner-visible-type") {
     val source =
       List(
@@ -1136,6 +1374,64 @@ class ScalaLowerSuite extends FunSuite {
     val cls = readMembers(classes.get("foo/Api"))
     assert(
       cls.methods.contains("withPolicy(Lfoo/ProcessingPolicy;)Lfoo/Api;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("JournalPolicies$PolicyType")))
+  }
+
+  test("public-method-param-prefers-owner-visible-alias-over-expanded-internal-type") {
+    val source =
+      List(
+        "package foo",
+        "trait ProcessingPolicy",
+        "trait DefaultPolicies {",
+        "  type PolicyType = ProcessingPolicy",
+        "}",
+        "object EventStorage {",
+        "  object JournalPolicies extends DefaultPolicies",
+        "}",
+        "class Api {",
+        "  def withPolicy(policy: EventStorage.JournalPolicies.PolicyType): Api = this",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("withPolicy(Lfoo/ProcessingPolicy;)Lfoo/Api;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("JournalPolicies$PolicyType")))
+  }
+
+  test("cross-package-qualified-alias-param-prefers-public-owner-type") {
+    val source =
+      List(
+        "package foo.testkit",
+        "trait ProcessingPolicy",
+        "trait DefaultPolicies {",
+        "  type PolicyType = ProcessingPolicy",
+        "}",
+        "object EventStorage {",
+        "  object JournalPolicies extends DefaultPolicies",
+        "}",
+        "package javadsl {",
+        "  class Api {",
+        "    def withPolicy(policy: EventStorage.JournalPolicies.PolicyType): Api = this",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/testkit/javadsl/Api"))
+    assert(
+      cls.methods.contains("withPolicy(Lfoo/testkit/ProcessingPolicy;)Lfoo/testkit/javadsl/Api;"),
       cls.methods.keys.toList.sorted.mkString("\n"),
     )
     assert(!cls.methods.keys.exists(_.contains("JournalPolicies$PolicyType")))
