@@ -1355,7 +1355,7 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.keys.exists(_.contains("Ljava/lang/Integer;")))
   }
 
-  test("method-alias-resolution-stable-under-definition-order-change") {
+  test("method-alias-resolution-deterministic-no-score-order-dependence") {
     val sourceA =
       List(
         "package foo",
@@ -1412,7 +1412,7 @@ class ScalaLowerSuite extends FunSuite {
     )
   }
 
-  test("method-alias-fallback-does-not-cross-unrelated-owner-prefix") {
+  test("method-alias-fallback-requires-owner-anchor-no-global-scan") {
     val source =
       List(
         "package foo",
