@@ -1325,6 +1325,177 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
   }
 
+  test("method-alias-suffix-fallback-ambiguous-returns-null") {
+    val source =
+      List(
+        "package foo",
+        "object left {",
+        "  type Result = java.lang.String",
+        "}",
+        "object right {",
+        "  type Result = java.lang.Integer",
+        "}",
+        "class Api {",
+        "  import left._",
+        "  import right._",
+        "  def value(v: Bridge.Result): Bridge.Result = v",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("value(Lfoo/Bridge$Result;)Lfoo/Bridge$Result;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("Ljava/lang/String;")))
+    assert(!cls.methods.keys.exists(_.contains("Ljava/lang/Integer;")))
+  }
+
+  test("method-alias-resolution-stable-under-definition-order-change") {
+    val sourceA =
+      List(
+        "package foo",
+        "object left {",
+        "  object Pipe {",
+        "    type Result = java.lang.String",
+        "  }",
+        "}",
+        "object right {",
+        "  object Pipe {",
+        "    type Result = java.lang.Integer",
+        "  }",
+        "}",
+        "class Api {",
+        "  import left.Pipe",
+        "  import right._",
+        "  def value(v: Pipe.Result): Pipe.Result = v",
+        "}",
+      ).mkString("\n")
+    val sourceB =
+      List(
+        "package foo",
+        "object right {",
+        "  object Pipe {",
+        "    type Result = java.lang.Integer",
+        "  }",
+        "}",
+        "object left {",
+        "  object Pipe {",
+        "    type Result = java.lang.String",
+        "  }",
+        "}",
+        "class Api {",
+        "  import left.Pipe",
+        "  import right._",
+        "  def value(v: Pipe.Result): Pipe.Result = v",
+        "}",
+      ).mkString("\n")
+
+    val unitA = ScalaParser.parse(new SourceFile(null, sourceA))
+    val unitB = ScalaParser.parse(new SourceFile(null, sourceB))
+
+    val classesA =
+      ScalaLower.lower(ImmutableList.of(unitA), LanguageVersion.createDefault().majorVersion())
+    val classesB =
+      ScalaLower.lower(ImmutableList.of(unitB), LanguageVersion.createDefault().majorVersion())
+
+    val methodsA = readMembers(classesA.get("foo/Api")).methods.keySet.filter(_.startsWith("value("))
+    val methodsB = readMembers(classesB.get("foo/Api")).methods.keySet.filter(_.startsWith("value("))
+    assertEquals(methodsA, methodsB)
+    assert(
+      methodsA.contains("value(Lfoo/left/Pipe$Result;)Lfoo/left/Pipe$Result;"),
+      methodsA.toList.sorted.mkString("\n"),
+    )
+  }
+
+  test("method-alias-fallback-does-not-cross-unrelated-owner-prefix") {
+    val source =
+      List(
+        "package foo",
+        "object target {",
+        "  trait Policy",
+        "}",
+        "object unrelated {",
+        "  type Policy = java.lang.String",
+        "}",
+        "class Api {",
+        "  def withPolicy(policy: target.Policy): target.Policy = policy",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("withPolicy(Lfoo/target/Policy;)Lfoo/target/Policy;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("Ljava/lang/String;")))
+  }
+
+  test("method-alias-fallback-prefers-explicit-owner-anchored-candidate") {
+    val source =
+      List(
+        "package foo",
+        "object left {",
+        "  object Pipe {",
+        "    type Result = java.lang.String",
+        "  }",
+        "}",
+        "object right {",
+        "  object Pipe {",
+        "    type Result = java.lang.Integer",
+        "  }",
+        "}",
+        "class Api {",
+        "  import left.{ Pipe => PipeToSupport }",
+        "  import right._",
+        "  def value(v: PipeToSupport.Result): PipeToSupport.Result = v",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Api"))
+    assert(
+      cls.methods.contains("value(Lfoo/left/Pipe$Result;)Lfoo/left/Pipe$Result;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("Lfoo/right/Pipe$Result;")))
+  }
+
+  test("method-alias-fallback-keeps-existing-patterns-pipe-parity") {
+    val source =
+      List(
+        "package foo",
+        "trait PipeToSupport {",
+        "  class PipeableFuture",
+        "  def pipe(): PipeableFuture = new PipeableFuture",
+        "}",
+        "class Patterns",
+        "object Patterns extends PipeToSupport",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Patterns"))
+    assert(
+      cls.methods.contains("pipe()Lfoo/PipeToSupport$PipeableFuture;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert(!cls.methods.keys.exists(_.contains("pipe()Lfoo/PipeableFuture;")))
+  }
+
   test("self-type-qualified-return-beats-simple-alias-expansion") {
     val source =
       List(

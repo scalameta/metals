@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after owner-qualified nested return + public alias descriptor parity pass)**
+**Current Snapshot (2026-02-10, latest local run after deterministic scope-bounded method-alias fallback hardening pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -65,6 +65,23 @@ Spark (`--javac-release 17`)
   - Filtered mismatches (no type inference on public members): 3
 
 **Current Change Summary (2026-02-10)**
+- Latest update (deterministic + scope-bounded method-alias fallback hardening):
+  - `ScalaLower` method-alias suffix fallback now runs in two phases:
+    - anchored lexical-owner lookup candidates first (no global scan),
+    - indexed simple-name fallback second, but only when key ownership is scope-anchored/parent-anchored.
+  - Method-alias candidate tie handling is now deterministic and safe:
+    - if top-scoring candidates resolve to different binaries, fallback returns `null` instead of picking by map iteration order.
+  - Qualified owner joining for alias candidates now normalizes head separators (`/` vs `$`) before appending tails, avoiding malformed owner+tail combinations.
+  - Added `ScalaLowerSuite` regressions:
+    - `method-alias-suffix-fallback-ambiguous-returns-null`
+    - `method-alias-resolution-stable-under-definition-order-change`
+    - `method-alias-fallback-does-not-cross-unrelated-owner-prefix`
+    - `method-alias-fallback-prefers-explicit-owner-anchored-candidate`
+    - `method-alias-fallback-keeps-existing-patterns-pipe-parity`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka unchanged at `2` mismatches (`missing-method 2`).
+    - Spark unchanged at `2` mismatches (`missing-method 1`, `class-access 1`).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
 - Latest update (owner-qualified nested returns + public alias param descriptor parity pass):
   - `ScalaLower` method descriptor selection now:
     - prefers explicit-head direct descriptors only when alias expansion drifts to current-package types,

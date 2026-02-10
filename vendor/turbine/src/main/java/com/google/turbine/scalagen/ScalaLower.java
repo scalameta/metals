@@ -3033,7 +3033,7 @@ public final class ScalaLower {
     }
     if ((resolved == null || resolved.isEmpty())
         && shouldTryMethodAliasSuffixFallback(raw, scope)) {
-      resolved = resolveMethodAliasBySuffix(raw, simple, pkg, aliasScope);
+      resolved = resolveMethodAliasBySuffix(raw, simple, pkg, scope, aliasScope);
     }
     if (resolved == null || resolved.isEmpty()) {
       String known = knownMethodTypeAlias(raw);
@@ -3104,17 +3104,34 @@ public final class ScalaLower {
     }
     if (resolvedHead != null && !resolvedHead.isEmpty()) {
       if (isClassLike(head)) {
-        return resolvedHead + "$" + tail.replace('/', '$');
+        return joinMethodAliasQualifiedHead(resolvedHead, tail, /* classLikeHead= */ true);
       }
-      return resolvedHead + "/" + tail;
+      return joinMethodAliasQualifiedHead(resolvedHead, tail, /* classLikeHead= */ false);
     }
     if (!pkgPrefix.isEmpty()) {
       if (isClassLike(head)) {
-        return pkgPrefix + "/" + head + "$" + tail.replace('/', '$');
+        return joinMethodAliasQualifiedHead(
+            pkgPrefix + "/" + head, tail, /* classLikeHead= */ true);
       }
       return pkgPrefix + "/" + raw;
     }
     return null;
+  }
+
+  private static String joinMethodAliasQualifiedHead(
+      String resolvedHead, String tail, boolean classLikeHead) {
+    if (!classLikeHead) {
+      String normalizedHead =
+          resolvedHead.endsWith("/")
+              ? resolvedHead.substring(0, resolvedHead.length() - 1)
+              : resolvedHead;
+      return normalizedHead + "/" + tail;
+    }
+    String normalizedHead =
+        resolvedHead.endsWith("$")
+            ? resolvedHead.substring(0, resolvedHead.length() - 1)
+            : resolvedHead;
+    return normalizedHead + "$" + tail.replace('/', '$');
   }
 
   private static @Nullable String resolveMethodAliasCandidate(
@@ -3153,6 +3170,7 @@ public final class ScalaLower {
       String raw,
       @Nullable String simple,
       String pkg,
+      ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope) {
     if (simple == null
         || simple.isEmpty()
@@ -3161,21 +3179,133 @@ public final class ScalaLower {
       return null;
     }
     String pkgPrefix = (pkg == null || pkg.isEmpty()) ? "" : pkg.replace('.', '/');
-    String best = null;
-    int bestScore = Integer.MIN_VALUE;
-    for (Map.Entry<String, String> entry : aliasScope.aliases().entrySet()) {
-      String key = entry.getKey();
-      if (!methodAliasKeyMatchesSimple(key, simple)) {
+    Set<String> anchoredKeys = methodAliasSuffixLookupKeys(raw, simple, pkg, scope);
+    String anchored = resolveBestMethodAliasSuffixCandidate(anchoredKeys, raw, pkgPrefix, scope, aliasScope, false);
+    if (anchored != null && !anchored.isEmpty()) {
+      return anchored;
+    }
+    List<String> indexedKeys = methodAliasIndexedKeys(simple, aliasScope);
+    if (indexedKeys.isEmpty()) {
+      return null;
+    }
+    return resolveBestMethodAliasSuffixCandidate(
+        indexedKeys, raw, pkgPrefix, scope, aliasScope, /* requireScopeAnchor= */ true);
+  }
+
+  private static Set<String> methodAliasSuffixLookupKeys(
+      String raw,
+      String simple,
+      String pkg,
+      ScalaTypeMapper.ImportScope scope) {
+    Set<String> keys = new LinkedHashSet<>();
+    addParentAliasLookupCandidates(keys, raw);
+    addParentAliasLookupCandidates(keys, methodAliasQualifiedCandidate(raw, pkg, scope));
+    int slash = raw.lastIndexOf('/');
+    if (slash > 0 && slash < raw.length() - 1) {
+      String parentRaw = raw.substring(0, slash);
+      String parentQualified = methodAliasQualifiedCandidate(parentRaw, pkg, scope);
+      addMethodAliasOwnerCandidates(keys, parentQualified, simple);
+      String parentSimple = parentSimpleName(parentRaw);
+      if (scope != null && !scope.isEmpty()) {
+        addMethodAliasOwnerCandidates(keys, scope.explicit().get(parentSimple), simple);
+        for (String owner : scope.explicit().values()) {
+          addMethodAliasOwnerCandidates(keys, owner, simple);
+        }
+        for (String owner : scope.wildcards()) {
+          addMethodAliasOwnerCandidates(keys, owner, simple);
+        }
+      }
+      if (pkg != null
+          && !pkg.isEmpty()
+          && parentRaw.indexOf('/') < 0
+          && isClassLike(parentRaw)) {
+        addMethodAliasOwnerCandidates(keys, pkg.replace('.', '/') + "/" + parentRaw, simple);
+      }
+    }
+    return keys;
+  }
+
+  private static void addMethodAliasOwnerCandidates(
+      Set<String> out, @Nullable String owner, String simple) {
+    if (owner == null || owner.isEmpty() || simple == null || simple.isEmpty()) {
+      return;
+    }
+    addMethodAliasOwnerCandidate(out, owner, simple);
+    if (owner.endsWith("$") && owner.length() > 1) {
+      addMethodAliasOwnerCandidate(out, owner.substring(0, owner.length() - 1), simple);
+    }
+    if (owner.indexOf('/') >= 0) {
+      addMethodAliasOwnerCandidate(out, owner.replace('/', '$'), simple);
+    }
+    if (owner.indexOf('$') >= 0) {
+      addMethodAliasOwnerCandidate(out, owner.replace('$', '/'), simple);
+    }
+  }
+
+  private static void addMethodAliasOwnerCandidate(Set<String> out, String owner, String simple) {
+    if (owner == null || owner.isEmpty()) {
+      return;
+    }
+    out.add(owner + "/" + simple);
+    if (owner.endsWith("$")) {
+      out.add(owner + simple);
+    } else {
+      out.add(owner + "$" + simple);
+    }
+  }
+
+  private static List<String> methodAliasIndexedKeys(
+      String simple, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (simple == null || simple.isEmpty() || aliasScope == null || aliasScope.isEmpty()) {
+      return List.of();
+    }
+    List<String> keys = new ArrayList<>();
+    for (String key : aliasScope.aliases().keySet()) {
+      if (isNestedTypeAliasMarker(key)) {
         continue;
       }
-      int score = methodAliasSuffixScore(key, raw, pkgPrefix);
+      if (methodAliasKeyMatchesSimple(key, simple)) {
+        keys.add(key);
+      }
+    }
+    return keys;
+  }
+
+  private static @Nullable String resolveBestMethodAliasSuffixCandidate(
+      Iterable<String> keys,
+      String raw,
+      String pkgPrefix,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean requireScopeAnchor) {
+    String best = null;
+    int bestScore = Integer.MIN_VALUE;
+    boolean ambiguousBest = false;
+    for (String key : keys) {
+      if (key == null || key.isEmpty()) {
+        continue;
+      }
+      if (requireScopeAnchor && !methodAliasKeyAllowedForFallback(key, raw, pkgPrefix, scope)) {
+        continue;
+      }
+      String resolved = resolveMethodAliasCandidate(key, aliasScope);
+      if (resolved == null || resolved.isEmpty()) {
+        continue;
+      }
+      int score = methodAliasSuffixScore(key, raw, pkgPrefix, scope);
       if (score == Integer.MIN_VALUE) {
         continue;
       }
       if (score > bestScore) {
         bestScore = score;
-        best = entry.getValue();
+        best = resolved;
+        ambiguousBest = false;
+      } else if (score == bestScore && best != null && !best.equals(resolved)) {
+        ambiguousBest = true;
       }
+    }
+    if (ambiguousBest) {
+      return null;
     }
     return best;
   }
@@ -3212,12 +3342,35 @@ public final class ScalaLower {
     return key.endsWith("$" + simple) || key.endsWith("/" + simple);
   }
 
-  private static int methodAliasSuffixScore(String key, String raw, String pkgPrefix) {
+  private static boolean methodAliasKeyAllowedForFallback(
+      String key, String raw, String pkgPrefix, ScalaTypeMapper.ImportScope scope) {
+    if (key == null || key.isEmpty()) {
+      return false;
+    }
+    if (methodAliasMatchesScopeOwner(key, scope)) {
+      return true;
+    }
+    String normalizedKey = key.replace('$', '/');
+    if (raw != null && raw.indexOf('/') >= 0) {
+      String parentRaw = raw.substring(0, raw.lastIndexOf('/'));
+      String parentSimple = parentSimpleName(parentRaw);
+      if (parentSimple != null && !parentSimple.isEmpty()) {
+        return normalizedKey.contains("/" + parentSimple + "/");
+      }
+    }
+    return false;
+  }
+
+  private static int methodAliasSuffixScore(
+      String key, String raw, String pkgPrefix, ScalaTypeMapper.ImportScope scope) {
     if (key == null || key.isEmpty()) {
       return Integer.MIN_VALUE;
     }
     String normalizedKey = key.replace('$', '/');
     int score = 0;
+    if (methodAliasMatchesScopeOwner(key, scope)) {
+      score += 6;
+    }
     if (pkgPrefix != null && !pkgPrefix.isEmpty()) {
       if (normalizedKey.startsWith(pkgPrefix + "/")) {
         score += 8;
@@ -3240,6 +3393,41 @@ public final class ScalaLower {
       score += 1;
     }
     return score;
+  }
+
+  private static boolean methodAliasMatchesScopeOwner(
+      @Nullable String key, ScalaTypeMapper.ImportScope scope) {
+    if (key == null || key.isEmpty() || scope == null || scope.isEmpty()) {
+      return false;
+    }
+    String normalizedKey = key.replace('$', '/');
+    for (String owner : scope.explicit().values()) {
+      if (methodAliasMatchesOwnerPrefix(normalizedKey, owner)) {
+        return true;
+      }
+    }
+    for (String owner : scope.wildcards()) {
+      if (methodAliasMatchesOwnerPrefix(normalizedKey, owner)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean methodAliasMatchesOwnerPrefix(
+      String normalizedKey, @Nullable String owner) {
+    if (owner == null || owner.isEmpty()) {
+      return false;
+    }
+    String normalizedOwner = owner;
+    while (normalizedOwner.endsWith("$") || normalizedOwner.endsWith("/")) {
+      normalizedOwner = normalizedOwner.substring(0, normalizedOwner.length() - 1);
+    }
+    if (normalizedOwner.isEmpty()) {
+      return false;
+    }
+    normalizedOwner = normalizedOwner.replace('$', '/');
+    return normalizedKey.startsWith(normalizedOwner + "/");
   }
 
   private static int sharedPrefixSegments(String left, String right) {
