@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after BeanProperty accessor parity pass)**
+**Current Snapshot (2026-02-10, latest local run after method erasure canonicalization parity pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,10 +35,10 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 17
+  - Mismatched members: 12
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
-  - Filtered mismatches (no type inference on public members): 17
+  - Filtered mismatches (no type inference on public members): 13
 
 Spark (`--javac-release 17`)
 - `java` scope:
@@ -60,11 +60,26 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 11
+  - Mismatched members: 6
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (method type erasure canonicalization parity pass):
+  - `ScalaLower` now threads class + method type-parameter erasures through regular methods, constructors, trait/class forwarders, and accessor synthesis via a shared method descriptor path.
+  - Method descriptor canonicalization now normalizes tuple syntax, type-parameter array returns, stable/module term returns, and owner-qualified alias resolution in target emission context with fallback.
+  - Added `ScalaLowerSuite` regressions:
+    - `method-param-typevar-erases-to-upper-bound`
+    - `method-return-tuple-type-erases-to-scala-tuple`
+    - `generic-array-return-erases-to-object-descriptor`
+    - `stable-term-return-uses-declared-value-type-not-module-class`
+    - `owner-qualified-alias-return-resolves-in-forwarder-context`
+    - `descriptor-canonicalization-shared-across-emitters`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `17 -> 12` (`missing-method 16 -> 11`, `method-exceptions 1` unchanged).
+    - Spark mismatches `11 -> 6` (`missing-method 9 -> 4`, `method-exceptions 1` unchanged, `class-access 1` unchanged).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Remaining highest-signal misses now cluster around Akka `Patterns.pipe*`/`Props.empty` and Spark `FPGrowth$FreqItemset.<init>`, `StructType.size`, `Pipeline.setStages`, `SortShuffleManager.MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE`.
 - Latest update (`@BeanProperty` / `@BooleanBeanProperty` Java accessor parity pass):
   - `ScalaParser` now preserves bean annotations as internal modifiers (`bean-property`, `boolean-bean-property`) for both member vals/vars and constructor parameters.
   - `ScalaLower` now synthesizes Java bean accessors from those modifiers:

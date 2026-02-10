@@ -1071,9 +1071,18 @@ public final class ScalaLower {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String pkg = effectiveTypePackage(cls);
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    Map<String, String> classTypeParamErasures = typeParamErasures(cls.typeParams());
     Map<String, String> stableMemberTypes = stableMemberTypes(cls);
     Set<String> reservedMethodKeys =
-        declaredMethodKeys(cls, pkg, typeParams, scope, aliasScope, stableMemberTypes, staticContext);
+        declaredMethodKeys(
+            cls,
+            pkg,
+            typeParams,
+            classTypeParamErasures,
+            scope,
+            aliasScope,
+            stableMemberTypes,
+            staticContext);
     for (Defn defn : cls.members()) {
       if (defn instanceof DefDef def) {
         if ("this".equals(def.name()) && cls.kind() == ClassDef.Kind.CLASS) {
@@ -1084,6 +1093,7 @@ public final class ScalaLower {
                   def,
                   pkg,
                   typeParams,
+                  classTypeParamErasures,
                   scope,
                   aliasScope,
                   stableMemberTypes,
@@ -1098,6 +1108,10 @@ public final class ScalaLower {
                 typeParams,
                 scope,
                 aliasScope,
+                scope,
+                aliasScope,
+                classTypeParamErasures,
+                stableMemberTypes,
                 staticContext,
                 cls.kind(),
                 reservedMethodKeys));
@@ -1124,6 +1138,10 @@ public final class ScalaLower {
                   typeParams,
                   scope,
                   aliasScope,
+                  scope,
+                  aliasScope,
+                  classTypeParamErasures,
+                  stableMemberTypes,
                   staticContext,
                   cls.kind(),
                   reservedMethodKeys));
@@ -1137,6 +1155,7 @@ public final class ScalaLower {
       ClassDef cls,
       String pkg,
       Set<String> typeParams,
+      Map<String, String> classTypeParamErasures,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, String> stableMemberTypes,
@@ -1154,6 +1173,7 @@ public final class ScalaLower {
               def,
               pkg,
               typeParams,
+              classTypeParamErasures,
               scope,
               aliasScope,
               stableMemberTypes,
@@ -1250,6 +1270,7 @@ public final class ScalaLower {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String pkg = effectiveTypePackage(obj);
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(obj.typeParams());
+    Map<String, String> classTypeParamErasures = typeParamErasures(obj.typeParams());
     Map<String, String> stableMemberTypes = stableMemberTypes(obj);
     ClassDef.Kind ownerKind = isTrait ? ClassDef.Kind.TRAIT : ClassDef.Kind.CLASS;
     for (Defn defn : obj.members()) {
@@ -1259,6 +1280,7 @@ public final class ScalaLower {
                 def,
                 pkg,
                 typeParams,
+                classTypeParamErasures,
                 scope,
                 aliasScope,
                 stableMemberTypes,
@@ -1272,6 +1294,10 @@ public final class ScalaLower {
                 typeParams,
                 scope,
                 aliasScope,
+                scope,
+                aliasScope,
+                classTypeParamErasures,
+                stableMemberTypes,
                 /* staticContext= */ true,
                 ownerKind));
       }
@@ -1304,6 +1330,7 @@ public final class ScalaLower {
       return methods;
     }
     Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(target.typeParams());
+    Map<String, String> classTypeParamErasures = typeParamErasures(target.typeParams());
     Deque<TraitRef> pending = new ArrayDeque<>();
     for (String parent : target.parents()) {
       String binary =
@@ -1357,6 +1384,9 @@ public final class ScalaLower {
                   adjusted,
                   current.trait().packageName(),
                   classTypeParams,
+                  classTypeParamErasures,
+                  targetScope,
+                  targetAliases,
                   forwarderScope,
                   forwarderAliases,
                   traitStableMemberTypes,
@@ -1372,8 +1402,12 @@ public final class ScalaLower {
                   adjusted,
                   current.trait().packageName(),
                   classTypeParams,
+                  targetScope,
+                  targetAliases,
                   forwarderScope,
                   forwarderAliases,
+                  classTypeParamErasures,
+                  traitStableMemberTypes,
                   staticContext,
                   ClassDef.Kind.CLASS));
         }
@@ -1433,6 +1467,7 @@ public final class ScalaLower {
       return methods;
     }
     Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(target.typeParams());
+    Map<String, String> classTypeParamErasures = typeParamErasures(target.typeParams());
     Deque<ParentRef> pending = new ArrayDeque<>();
     for (String parent : target.parents()) {
       String binary =
@@ -1491,6 +1526,9 @@ public final class ScalaLower {
                   adjusted,
                   current.parent().packageName(),
                   classTypeParams,
+                  classTypeParamErasures,
+                  targetScope,
+                  targetAliases,
                   forwarderScope,
                   forwarderAliases,
                   parentStableMemberTypes,
@@ -1506,8 +1544,12 @@ public final class ScalaLower {
                   adjusted,
                   current.parent().packageName(),
                   classTypeParams,
+                  targetScope,
+                  targetAliases,
                   forwarderScope,
                   forwarderAliases,
+                  classTypeParamErasures,
+                  parentStableMemberTypes,
                   staticContext,
                   ClassDef.Kind.CLASS));
         }
@@ -1586,10 +1628,11 @@ public final class ScalaLower {
     desc.append('(');
     List<String> paramTypes = new ArrayList<>();
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    Map<String, String> typeParamErasures = typeParamErasures(cls.typeParams());
     for (Param param : params) {
       desc.append(
-          ScalaTypeMapper.descriptorForParam(
-              param.type(), cls.packageName(), typeParams, scope, aliasScope));
+          methodParamDescriptor(
+              param.type(), cls.packageName(), typeParams, scope, aliasScope, typeParamErasures));
       paramTypes.add(param.type());
     }
     desc.append(')').append('V');
@@ -1624,11 +1667,14 @@ public final class ScalaLower {
     desc.append('(');
     List<String> paramTypes = new ArrayList<>();
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
+    Map<String, String> typeParamErasures =
+        mergeTypeParamErasures(
+            typeParamErasures(cls.typeParams()), typeParamErasures(def.typeParams()));
     for (ParamList list : def.paramLists()) {
       for (Param param : list.params()) {
         desc.append(
-            ScalaTypeMapper.descriptorForParam(
-                param.type(), cls.packageName(), typeParams, scope, aliasScope));
+            methodParamDescriptor(
+                param.type(), cls.packageName(), typeParams, scope, aliasScope, typeParamErasures));
         paramTypes.add(param.type());
       }
     }
@@ -1728,6 +1774,7 @@ public final class ScalaLower {
         def,
         pkg,
         classTypeParams,
+        Map.of(),
         scope,
         aliasScope,
         scope,
@@ -1741,6 +1788,7 @@ public final class ScalaLower {
       DefDef def,
       String pkg,
       Set<String> classTypeParams,
+      Map<String, String> classTypeParamErasures,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       ScalaTypeMapper.ImportScope fallbackScope,
@@ -1750,7 +1798,8 @@ public final class ScalaLower {
       ClassDef.Kind ownerKind) {
     Set<String> typeParams = new HashSet<>(classTypeParams);
     typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
-    Map<String, String> typeParamErasures = typeParamErasures(def.typeParams());
+    Map<String, String> typeParamErasures =
+        mergeTypeParamErasures(classTypeParamErasures, typeParamErasures(def.typeParams()));
 
     StringBuilder desc = new StringBuilder();
     desc.append('(');
@@ -1820,6 +1869,7 @@ public final class ScalaLower {
         def,
         pkg,
         classTypeParams,
+        Map.of(),
         scope,
         aliasScope,
         Map.of(),
@@ -1831,6 +1881,7 @@ public final class ScalaLower {
       DefDef def,
       String pkg,
       Set<String> classTypeParams,
+      Map<String, String> classTypeParamErasures,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, String> stableMemberTypes,
@@ -1840,6 +1891,7 @@ public final class ScalaLower {
         def,
         pkg,
         classTypeParams,
+        classTypeParamErasures,
         scope,
         aliasScope,
         scope,
@@ -1853,6 +1905,7 @@ public final class ScalaLower {
       DefDef def,
       String pkg,
       Set<String> classTypeParams,
+      Map<String, String> classTypeParamErasures,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       ScalaTypeMapper.ImportScope fallbackScope,
@@ -1865,6 +1918,7 @@ public final class ScalaLower {
             def,
             pkg,
             classTypeParams,
+            classTypeParamErasures,
             scope,
             aliasScope,
             fallbackScope,
@@ -1880,6 +1934,7 @@ public final class ScalaLower {
             def,
             pkg,
             classTypeParams,
+            classTypeParamErasures,
             scope,
             aliasScope,
             fallbackScope,
@@ -1918,6 +1973,7 @@ public final class ScalaLower {
         def,
         pkg,
         classTypeParams,
+        Map.of(),
         scope,
         aliasScope,
         scope,
@@ -1931,6 +1987,7 @@ public final class ScalaLower {
       DefDef def,
       String pkg,
       Set<String> classTypeParams,
+      Map<String, String> classTypeParamErasures,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       ScalaTypeMapper.ImportScope fallbackScope,
@@ -1942,7 +1999,8 @@ public final class ScalaLower {
     desc.append('(');
     Set<String> typeParams = new HashSet<>(classTypeParams);
     typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
-    Map<String, String> typeParamErasures = typeParamErasures(def.typeParams());
+    Map<String, String> typeParamErasures =
+        mergeTypeParamErasures(classTypeParamErasures, typeParamErasures(def.typeParams()));
     boolean hasVarArgs = false;
     for (JvmMethodParam param : jvmMethodParams(def)) {
       if (param.varArgs()) {
@@ -2206,7 +2264,10 @@ public final class ScalaLower {
     String normalizedTypeText = typeText;
     if (position == MethodTypePosition.RETURN) {
       normalizedTypeText = resolveStableMemberReturnType(typeText, stableMemberTypes);
+      normalizedTypeText =
+          eraseTypeParamArrayReturn(normalizedTypeText, typeParams, typeParamErasures);
     }
+    normalizedTypeText = normalizeTupleTypeForErasure(normalizedTypeText);
     String resolved = resolveMethodTypeAlias(normalizedTypeText, pkg, scope, aliasScope);
     String descriptor =
         switch (position) {
@@ -2224,6 +2285,79 @@ public final class ScalaLower {
       descriptor = normalizeMethodReturnDescriptor(descriptor);
     }
     return descriptor;
+  }
+
+  private static @Nullable String normalizeTupleTypeForErasure(@Nullable String typeText) {
+    if (typeText == null) {
+      return null;
+    }
+    String trimmed = typeText.trim();
+    if (trimmed.isEmpty() || trimmed.charAt(0) != '(' || trimmed.charAt(trimmed.length() - 1) != ')') {
+      return typeText;
+    }
+    int depth = 0;
+    int arity = 1;
+    boolean hasTopLevelComma = false;
+    for (int i = 1; i < trimmed.length() - 1; i++) {
+      char c = trimmed.charAt(i);
+      switch (c) {
+        case '(':
+        case '[':
+        case '{':
+          depth++;
+          break;
+        case ')':
+        case ']':
+        case '}':
+          depth = Math.max(0, depth - 1);
+          break;
+        case ',':
+          if (depth == 0) {
+            arity++;
+            hasTopLevelComma = true;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    if (!hasTopLevelComma || arity < 1 || arity > 22) {
+      return typeText;
+    }
+    return "scala/Tuple" + arity;
+  }
+
+  private static @Nullable String eraseTypeParamArrayReturn(
+      @Nullable String typeText,
+      Set<String> typeParams,
+      Map<String, String> typeParamErasures) {
+    if (typeText == null || typeText.isEmpty()) {
+      return typeText;
+    }
+    String raw = stripRootPrefix(rawTypeName(typeText));
+    if (!isArrayTypeName(raw)) {
+      return typeText;
+    }
+    List<String> args = extractTypeArgs(typeText);
+    if (args.size() != 1) {
+      return typeText;
+    }
+    String elementRaw = stripRootPrefix(rawTypeName(args.get(0)));
+    if (elementRaw == null || elementRaw.isEmpty()) {
+      return typeText;
+    }
+    if (!typeParams.contains(elementRaw) && !typeParamErasures.containsKey(elementRaw)) {
+      return typeText;
+    }
+    String erased = typeParamErasures.get(elementRaw);
+    if (erased == null || erased.isEmpty() || erased.equals(elementRaw)) {
+      return "java/lang/Object";
+    }
+    return erased;
+  }
+
+  private static boolean isArrayTypeName(@Nullable String raw) {
+    return "Array".equals(raw) || "scala/Array".equals(raw);
   }
 
   private static @Nullable String resolveStableMemberReturnType(
@@ -2252,10 +2386,31 @@ public final class ScalaLower {
     addStableMemberCandidate(candidates, raw);
     String simple = parentSimpleName(raw);
     addStableMemberCandidate(candidates, simple);
+    addStableMemberCandidate(candidates, singletonTermName(raw));
     if (simple != null && simple.indexOf('$') >= 0) {
       addStableMemberCandidate(candidates, simple.substring(simple.lastIndexOf('$') + 1));
     }
     return candidates;
+  }
+
+  private static @Nullable String singletonTermName(@Nullable String raw) {
+    if (raw == null || raw.isEmpty()) {
+      return null;
+    }
+    String normalized = raw;
+    if (normalized.endsWith("/type")) {
+      normalized = normalized.substring(0, normalized.length() - "/type".length());
+    }
+    if (normalized.endsWith("$type")) {
+      normalized = normalized.substring(0, normalized.length() - "$type".length());
+    }
+    int slash = normalized.lastIndexOf('/');
+    int dollar = normalized.lastIndexOf('$');
+    int idx = Math.max(slash, dollar);
+    if (idx < 0 || idx >= normalized.length() - 1) {
+      return null;
+    }
+    return normalized.substring(idx + 1);
   }
 
   private static void addStableMemberCandidate(Set<String> candidates, @Nullable String candidate) {
@@ -2289,8 +2444,16 @@ public final class ScalaLower {
     if (primary == null || fallback == null || primary.equals(fallback)) {
       return false;
     }
+    if ("Ljava/lang/Object;".equals(primary) && !"Ljava/lang/Object;".equals(fallback)) {
+      return true;
+    }
     if (isSpeculativeCurrentPackageMethodDescriptor(primary, typeText, pkg)
         && !isSpeculativeCurrentPackageMethodDescriptor(fallback, typeText, pkg)) {
+      return true;
+    }
+    if (isModuleClassDescriptor(primary)
+        && !isModuleClassDescriptor(fallback)
+        && !looksLikeSingletonType(typeText)) {
       return true;
     }
     String primaryBinary = descriptorBinary(primary);
@@ -2311,6 +2474,22 @@ public final class ScalaLower {
       return true;
     }
     return false;
+  }
+
+  private static boolean isModuleClassDescriptor(@Nullable String descriptor) {
+    String binary = descriptorBinary(descriptor);
+    return binary != null && binary.endsWith("$");
+  }
+
+  private static boolean looksLikeSingletonType(@Nullable String typeText) {
+    if (typeText == null) {
+      return false;
+    }
+    String trimmed = typeText.trim();
+    return trimmed.endsWith(".type")
+        || trimmed.endsWith("/type")
+        || trimmed.endsWith("$type")
+        || trimmed.contains(". type");
   }
 
   private static boolean isSpeculativeCurrentPackageMethodDescriptor(
@@ -2507,6 +2686,24 @@ public final class ScalaLower {
     return Map.copyOf(erasures);
   }
 
+  private static Map<String, String> mergeTypeParamErasures(
+      Map<String, String> classTypeParamErasures, Map<String, String> methodTypeParamErasures) {
+    boolean classEmpty = classTypeParamErasures == null || classTypeParamErasures.isEmpty();
+    boolean methodEmpty = methodTypeParamErasures == null || methodTypeParamErasures.isEmpty();
+    if (classEmpty && methodEmpty) {
+      return Map.of();
+    }
+    if (classEmpty) {
+      return methodTypeParamErasures;
+    }
+    if (methodEmpty) {
+      return classTypeParamErasures;
+    }
+    Map<String, String> merged = new LinkedHashMap<>(classTypeParamErasures);
+    merged.putAll(methodTypeParamErasures);
+    return Map.copyOf(merged);
+  }
+
   private static ImmutableList<String> methodExceptions(
       ImmutableList<String> modifiers,
       String pkg,
@@ -2565,7 +2762,18 @@ public final class ScalaLower {
       boolean staticContext,
       ClassDef.Kind ownerKind) {
     return accessorsForVal(
-        val, pkg, typeParams, scope, aliasScope, staticContext, ownerKind, new HashSet<>());
+        val,
+        pkg,
+        typeParams,
+        scope,
+        aliasScope,
+        scope,
+        aliasScope,
+        Map.of(),
+        Map.of(),
+        staticContext,
+        ownerKind,
+        new HashSet<>());
   }
 
   private static List<ClassFile.MethodInfo> accessorsForVal(
@@ -2574,12 +2782,53 @@ public final class ScalaLower {
       Set<String> typeParams,
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
+      ScalaTypeMapper.ImportScope fallbackScope,
+      ScalaTypeMapper.TypeAliasScope fallbackAliasScope,
+      Map<String, String> typeParamErasures,
+      Map<String, String> stableMemberTypes,
+      boolean staticContext,
+      ClassDef.Kind ownerKind) {
+    return accessorsForVal(
+        val,
+        pkg,
+        typeParams,
+        scope,
+        aliasScope,
+        fallbackScope,
+        fallbackAliasScope,
+        typeParamErasures,
+        stableMemberTypes,
+        staticContext,
+        ownerKind,
+        new HashSet<>());
+  }
+
+  private static List<ClassFile.MethodInfo> accessorsForVal(
+      ValDef val,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      ScalaTypeMapper.ImportScope fallbackScope,
+      ScalaTypeMapper.TypeAliasScope fallbackAliasScope,
+      Map<String, String> typeParamErasures,
+      Map<String, String> stableMemberTypes,
       boolean staticContext,
       ClassDef.Kind ownerKind,
       Set<String> reservedMethodKeys) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String getterDesc =
-        "()" + ScalaTypeMapper.descriptorForReturn(val.type(), pkg, typeParams, scope, aliasScope);
+        "()"
+            + methodReturnDescriptor(
+                val.type(),
+                pkg,
+                typeParams,
+                scope,
+                aliasScope,
+                fallbackScope,
+                fallbackAliasScope,
+                typeParamErasures,
+                stableMemberTypes);
     boolean isAbstract = isAbstractVal(val, ownerKind);
     int access = methodAccess(val.modifiers(), staticContext, isAbstract, ownerKind);
     String encodedName = encodeName(val.name());
@@ -2643,7 +2892,15 @@ public final class ScalaLower {
     if (val.isVar()) {
       String setterDesc =
           "("
-              + ScalaTypeMapper.descriptorForParam(val.type(), pkg, typeParams, scope, aliasScope)
+              + methodParamDescriptor(
+                  val.type(),
+                  pkg,
+                  typeParams,
+                  scope,
+                  aliasScope,
+                  fallbackScope,
+                  fallbackAliasScope,
+                  typeParamErasures)
               + ")V";
       List<String> setterParamTypes = new ArrayList<>();
       setterParamTypes.add(val.type());
@@ -2730,7 +2987,9 @@ public final class ScalaLower {
       ScalaTypeMapper.TypeAliasScope aliasScope) {
     Set<String> typeParams = new HashSet<>(ScalaTypeMapper.typeParamNames(traitDef.typeParams()));
     typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
-    Map<String, String> typeParamErasures = typeParamErasures(def.typeParams());
+    Map<String, String> typeParamErasures =
+        mergeTypeParamErasures(
+            typeParamErasures(traitDef.typeParams()), typeParamErasures(def.typeParams()));
 
     StringBuilder desc = new StringBuilder();
     desc.append('(');
@@ -2868,13 +3127,20 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope) {
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(traitDef.typeParams());
+    Map<String, String> typeParamErasures = typeParamErasures(traitDef.typeParams());
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String getterDesc =
         "(L"
             + traitBinary
             + ";)"
-            + ScalaTypeMapper.descriptorForReturn(
-                val.type(), traitDef.packageName(), typeParams, scope, aliasScope);
+            + methodReturnDescriptor(
+                val.type(),
+                traitDef.packageName(),
+                typeParams,
+                scope,
+                aliasScope,
+                typeParamErasures,
+                Map.of());
     String getterSignature =
         ScalaSignature.methodSignature(
             traitDef.typeParams(),
@@ -2902,8 +3168,13 @@ public final class ScalaLower {
           "(L"
               + traitBinary
               + ";"
-              + ScalaTypeMapper.descriptorForParam(
-                  val.type(), traitDef.packageName(), typeParams, scope, aliasScope)
+              + methodParamDescriptor(
+                  val.type(),
+                  traitDef.packageName(),
+                  typeParams,
+                  scope,
+                  aliasScope,
+                  typeParamErasures)
               + ")V";
       List<String> paramTypes = new ArrayList<>();
       paramTypes.add(traitSelfTypeText(traitDef));
@@ -4036,20 +4307,39 @@ public final class ScalaLower {
       return Map.of();
     }
     Map<String, String> stable = new LinkedHashMap<>();
-    for (Defn defn : cls.members()) {
-      if (!(defn instanceof ValDef val) || val.isVar()) {
-        continue;
-      }
-      String type = val.type();
-      if (type == null || type.isEmpty()) {
-        continue;
-      }
-      stable.putIfAbsent(val.name(), type);
-    }
+    collectStableMemberTypes(stable, cls, "");
     if (stable.isEmpty()) {
       return Map.of();
     }
     return Map.copyOf(stable);
+  }
+
+  private static void collectStableMemberTypes(
+      Map<String, String> stable, ClassDef owner, String prefix) {
+    if (owner == null || owner.members().isEmpty()) {
+      return;
+    }
+    for (Defn defn : owner.members()) {
+      if (defn instanceof ValDef val) {
+        if (val.isVar()) {
+          continue;
+        }
+        String type = val.type();
+        if (type == null || type.isEmpty()) {
+          continue;
+        }
+        stable.putIfAbsent(val.name(), type);
+        if (!prefix.isEmpty()) {
+          stable.putIfAbsent(prefix + "/" + val.name(), type);
+          stable.putIfAbsent(prefix + "$" + val.name(), type);
+        }
+        continue;
+      }
+      if (defn instanceof ClassDef nested && nested.kind() == ClassDef.Kind.OBJECT) {
+        String nestedPrefix = prefix.isEmpty() ? nested.name() : prefix + "/" + nested.name();
+        collectStableMemberTypes(stable, nested, nestedPrefix);
+      }
+    }
   }
 
   private static ScalaTypeMapper.TypeAliasScope typeAliasScope(ClassDef cls) {

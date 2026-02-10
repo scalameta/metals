@@ -443,6 +443,60 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("get(Ljava/lang/Class;Lfoo/Attr;)Lfoo/Attr;"))
   }
 
+  test("method-param-typevar-erases-to-upper-bound") {
+    val source =
+      List(
+        "package foo",
+        "trait Bound",
+        "class C {",
+        "  def id[T <: Bound](v: T): T = v",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("id(Lfoo/Bound;)Lfoo/Bound;"))
+  }
+
+  test("method-return-tuple-type-erases-to-scala-tuple") {
+    val source =
+      List(
+        "package foo",
+        "class V",
+        "class C {",
+        "  def pair(v: V): (V, Array[Double]) = (v, Array.empty[Double])",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("pair(Lfoo/V;)Lscala/Tuple2;"))
+  }
+
+  test("generic-array-return-erases-to-object-descriptor") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def collect[T](v: T): Array[T] = Array(v)",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("collect(Ljava/lang/Object;)Ljava/lang/Object;"))
+    assert(!cls.methods.contains("collect(Ljava/lang/Object;)[Ljava/lang/Object;"))
+  }
+
   test("throws-annotation-emits-method-exceptions") {
     val source =
       List(
@@ -918,6 +972,31 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("None()Lfoo/Criteria;"), cls.methods.keys.toList.sorted.mkString("\n"))
   }
 
+  test("stable-term-return-uses-declared-value-type-not-module-class") {
+    val source =
+      List(
+        "package foo",
+        "object Limits {",
+        "  object PackedRecordPointer {",
+        "    final val MAXIMUM_PARTITION_ID: Int = 1024",
+        "  }",
+        "  def max() = PackedRecordPointer.MAXIMUM_PARTITION_ID",
+        "}",
+        "class Limits",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/Limits$"))
+    assert(module.methods.contains("max()I"), module.methods.keys.toList.sorted.mkString("\n"))
+
+    val mirror = readMembers(classes.get("foo/Limits"))
+    assert(mirror.methods.contains("max()I"), mirror.methods.keys.toList.sorted.mkString("\n"))
+    assert(!mirror.methods.keys.exists(_.contains("PackedRecordPointer$MAXIMUM_PARTITION_ID")))
+  }
+
   test("method-return-alias-resolves-in-target-context") {
     val source =
       List(
@@ -940,6 +1019,29 @@ class ScalaLowerSuite extends FunSuite {
 
     val cls = readMembers(classes.get("foo/C"))
     assert(cls.methods.contains("value()Ljava/lang/String;"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("owner-qualified-alias-return-resolves-in-forwarder-context") {
+    val source =
+      List(
+        "package foo",
+        "object Owner {",
+        "  class Out",
+        "}",
+        "trait Shared {",
+        "  import Owner.Out",
+        "  def value(): Out = new Out",
+        "}",
+        "class C",
+        "object C extends Shared",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("value()Lfoo/Owner$Out;"), cls.methods.keys.toList.sorted.mkString("\n"))
   }
 
   test("descriptor-canonicalization-does-not-change-parent-lowering") {
@@ -972,6 +1074,27 @@ class ScalaLowerSuite extends FunSuite {
     val header = readClassHeader(classes.get("foo/use/C"))
     assertEquals(header.superName, "java/lang/Object")
     assertEquals(header.interfaces, List("foo/target/WrappedMessage"))
+  }
+
+  test("descriptor-canonicalization-shared-across-emitters") {
+    val source =
+      List(
+        "package foo",
+        "trait Bound",
+        "trait Shared[A <: Bound] {",
+        "  def id(a: A): A = a",
+        "}",
+        "class Impl[A <: Bound](val value: A) extends Shared[A]",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Impl"))
+    assert(cls.methods.contains("<init>(Lfoo/Bound;)V"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(cls.methods.contains("value()Lfoo/Bound;"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(cls.methods.contains("id(Lfoo/Bound;)Lfoo/Bound;"), cls.methods.keys.toList.sorted.mkString("\n"))
   }
 
   test("wildcard-import-object-types") {
@@ -1583,7 +1706,7 @@ class ScalaLowerSuite extends FunSuite {
       ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
 
     val cls = readMembers(classes.get("foo/C"))
-    assert(cls.methods.contains("mk(Ljava/lang/Object;Lscala/reflect/ClassTag;)[Ljava/lang/Object;"))
+    assert(cls.methods.contains("mk(Ljava/lang/Object;Lscala/reflect/ClassTag;)Ljava/lang/Object;"))
   }
 
   test("varargs-annotated-method-emits-array-bridge") {
