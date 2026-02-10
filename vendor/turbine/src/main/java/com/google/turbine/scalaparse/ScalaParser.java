@@ -1534,9 +1534,9 @@ public final class ScalaParser {
         break;
       }
       if (token == AT) {
-        String throwsType = parseAnnotationAndExtractThrows();
-        if (throwsType != null && !throwsType.isEmpty()) {
-          mods.add("throws:" + throwsType);
+        String annotationModifier = parseAnnotationAndExtractModifier();
+        if (annotationModifier != null && !annotationModifier.isEmpty()) {
+          mods.add(annotationModifier);
         }
         sawAnnotationOrModifier = true;
         continue;
@@ -1623,7 +1623,7 @@ public final class ScalaParser {
     return thisScope;
   }
 
-  private @Nullable String parseAnnotationAndExtractThrows() {
+  private @Nullable String parseAnnotationAndExtractModifier() {
     accept(AT);
     String annotationName = null;
     if (token.isIdentifier()) {
@@ -1643,17 +1643,26 @@ public final class ScalaParser {
         String typeText = parseTypeText(EnumSet.of(RBRACK));
         accept(RBRACK);
         if ("throws".equals(annotationName)) {
-          return typeText == null || typeText.isEmpty() ? null : typeText;
+          return typeText == null || typeText.isEmpty() ? null : "throws:" + typeText;
         }
       }
     }
+    boolean varargsAnnotation = isVarargsAnnotationName(annotationName);
     if (token == LPAREN) {
       if ("throws".equals(annotationName)) {
-        return parseThrowsTypeArg();
+        String throwsType = parseThrowsTypeArg();
+        return throwsType == null || throwsType.isEmpty() ? null : "throws:" + throwsType;
       }
       skipDelimited(LPAREN, RPAREN);
     }
+    if (varargsAnnotation) {
+      return "varargs";
+    }
     return null;
+  }
+
+  private static boolean isVarargsAnnotationName(@Nullable String annotationName) {
+    return "varargs".equals(annotationName);
   }
 
   private @Nullable String parseThrowsTypeArg() {

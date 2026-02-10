@@ -1719,20 +1719,18 @@ public final class ScalaLower {
     StringBuilder desc = new StringBuilder();
     desc.append('(');
     List<String> paramTypes = new ArrayList<>();
-    for (ParamList list : def.paramLists()) {
-      for (Param param : list.params()) {
-        desc.append(
-            methodParamDescriptor(
-                param.type(),
-                pkg,
-                typeParams,
-                scope,
-                aliasScope,
-                fallbackScope,
-                fallbackAliasScope,
-                typeParamErasures));
-        paramTypes.add(param.type());
-      }
+    for (JvmMethodParam param : jvmMethodParams(def)) {
+      desc.append(
+          methodParamDescriptor(
+              param.typeText(),
+              pkg,
+              typeParams,
+              scope,
+              aliasScope,
+              fallbackScope,
+              fallbackAliasScope,
+              typeParamErasures));
+      paramTypes.add(param.typeText());
     }
     desc.append(')');
     desc.append(
@@ -1838,7 +1836,7 @@ public final class ScalaLower {
             stableMemberTypes,
             staticContext,
             ownerKind);
-    if (isAbstractDef(def, ownerKind) || !hasVarArgsParam(def)) {
+    if (!hasVarArgsParam(def) || !hasVarArgsAnnotation(def.modifiers())) {
       return ImmutableList.of(method);
     }
     ClassFile.MethodInfo bridge =
@@ -1860,14 +1858,16 @@ public final class ScalaLower {
   }
 
   private static boolean hasVarArgsParam(DefDef def) {
-    for (ParamList list : def.paramLists()) {
-      for (Param param : list.params()) {
-        if (ScalaTypeMapper.isVarArgsType(param.type())) {
-          return true;
-        }
+    for (JvmMethodParam param : jvmMethodParams(def)) {
+      if (param.varArgs()) {
+        return true;
       }
     }
     return false;
+  }
+
+  private static boolean hasVarArgsAnnotation(ImmutableList<String> modifiers) {
+    return modifiers != null && modifiers.contains("varargs");
   }
 
   private static ClassFile.MethodInfo buildVarArgsBridge(
@@ -1908,32 +1908,30 @@ public final class ScalaLower {
     typeParams.addAll(ScalaTypeMapper.typeParamNames(def.typeParams()));
     Map<String, String> typeParamErasures = typeParamErasures(def.typeParams());
     boolean hasVarArgs = false;
-    for (ParamList list : def.paramLists()) {
-      for (Param param : list.params()) {
-        if (ScalaTypeMapper.isVarArgsType(param.type())) {
-          hasVarArgs = true;
-          desc.append(
-              methodVarArgsDescriptor(
-                  param.type(),
-                  pkg,
-                  typeParams,
-                  scope,
-                  aliasScope,
-                  fallbackScope,
-                  fallbackAliasScope,
-                  typeParamErasures));
-        } else {
-          desc.append(
-              methodParamDescriptor(
-                  param.type(),
-                  pkg,
-                  typeParams,
-                  scope,
-                  aliasScope,
-                  fallbackScope,
-                  fallbackAliasScope,
-                  typeParamErasures));
-        }
+    for (JvmMethodParam param : jvmMethodParams(def)) {
+      if (param.varArgs()) {
+        hasVarArgs = true;
+        desc.append(
+            methodVarArgsDescriptor(
+                param.typeText(),
+                pkg,
+                typeParams,
+                scope,
+                aliasScope,
+                fallbackScope,
+                fallbackAliasScope,
+                typeParamErasures));
+      } else {
+        desc.append(
+            methodParamDescriptor(
+                param.typeText(),
+                pkg,
+                typeParams,
+                scope,
+                aliasScope,
+                fallbackScope,
+                fallbackAliasScope,
+                typeParamErasures));
       }
     }
     if (!hasVarArgs) {
@@ -2605,22 +2603,20 @@ public final class ScalaLower {
     desc.append('L').append(traitBinary).append(';');
     List<String> paramTypes = new ArrayList<>();
     paramTypes.add(traitSelfTypeText(traitDef));
-    for (ParamList list : def.paramLists()) {
-      for (Param param : list.params()) {
-        desc.append(
-            ScalaTypeMapper.descriptorForParam(
-                param.type(),
-                traitDef.packageName(),
-                typeParams,
-                scope,
-                aliasScope,
-                typeParamErasures));
-        paramTypes.add(param.type());
-      }
+    for (JvmMethodParam param : jvmMethodParams(def)) {
+      desc.append(
+          methodParamDescriptor(
+              param.type(),
+              traitDef.packageName(),
+              typeParams,
+              scope,
+              aliasScope,
+              typeParamErasures));
+      paramTypes.add(param.type());
     }
     desc.append(')');
     desc.append(
-        ScalaTypeMapper.descriptorForReturn(
+        methodReturnDescriptor(
             def.returnType(),
             traitDef.packageName(),
             typeParams,
@@ -2657,6 +2653,78 @@ public final class ScalaLower {
         /* parameterAnnotations= */ ImmutableList.of(),
         /* typeAnnotations= */ ImmutableList.of(),
         /* parameters= */ ImmutableList.of());
+  }
+
+  private record JvmMethodParam(@Nullable String typeText, boolean varArgs) {
+    @Nullable
+    String type() {
+      return typeText;
+    }
+  }
+
+  private static ImmutableList<JvmMethodParam> jvmMethodParams(DefDef def) {
+    ImmutableList<JvmMethodParam> evidenceParams = syntheticEvidenceParams(def.typeParams());
+    ImmutableList<ParamList> paramLists = def.paramLists();
+    if (paramLists.isEmpty()) {
+      return evidenceParams;
+    }
+    ImmutableList.Builder<JvmMethodParam> params = ImmutableList.builder();
+    boolean insertedEvidence = evidenceParams.isEmpty();
+    for (ParamList list : paramLists) {
+      if (!insertedEvidence && isImplicitParamList(list)) {
+        params.addAll(evidenceParams);
+        insertedEvidence = true;
+      }
+      for (Param param : list.params()) {
+        params.add(new JvmMethodParam(param.type(), ScalaTypeMapper.isVarArgsType(param.type())));
+      }
+    }
+    if (!insertedEvidence) {
+      params.addAll(evidenceParams);
+    }
+    return params.build();
+  }
+
+  private static boolean isImplicitParamList(ParamList list) {
+    for (Param param : list.params()) {
+      if (param.modifiers().contains("implicit")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static ImmutableList<JvmMethodParam> syntheticEvidenceParams(
+      ImmutableList<TypeParam> typeParams) {
+    if (typeParams == null || typeParams.isEmpty()) {
+      return ImmutableList.of();
+    }
+    ImmutableList.Builder<JvmMethodParam> evidence = ImmutableList.builder();
+    for (TypeParam param : typeParams) {
+      for (String viewBound : param.viewBounds()) {
+        String typeText = viewBoundEvidenceType(param.name(), viewBound);
+        if (typeText != null && !typeText.isEmpty()) {
+          evidence.add(new JvmMethodParam(typeText, /* varArgs= */ false));
+        }
+      }
+      for (String contextBound : param.contextBounds()) {
+        if (contextBound != null && !contextBound.isEmpty()) {
+          evidence.add(new JvmMethodParam(contextBound, /* varArgs= */ false));
+        }
+      }
+    }
+    return evidence.build();
+  }
+
+  private static @Nullable String viewBoundEvidenceType(
+      @Nullable String typeParamName, @Nullable String viewBound) {
+    if (viewBound == null || viewBound.isEmpty()) {
+      return null;
+    }
+    if (typeParamName == null || typeParamName.isEmpty()) {
+      return viewBound;
+    }
+    return typeParamName + " => " + viewBound;
   }
 
   private static List<ClassFile.MethodInfo> buildTraitImplAccessors(

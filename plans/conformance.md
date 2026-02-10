@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after same-name method descriptor parity pass)**
+**Current Snapshot (2026-02-10, latest local run after implicit-evidence/varargs bridge parity pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -60,11 +60,26 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 23
+  - Mismatched members: 15
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (implicit evidence params + `@varargs` bridge parity pass):
+  - `ScalaLower` now emits JVM-visible evidence/implicit parameters from context/view bounds through a shared method parameter lowering path, used by regular methods, trait forwarders, and static forwarders.
+  - `ScalaParser` now records `@varargs`/`@scala.annotation.varargs` as a method modifier, and varargs bridge emission is now annotation-gated with non-abstract array-bridge access matching baseline classfiles.
+  - Added `ScalaLowerSuite` regressions:
+    - `method-with-implicit-only-params-emits-jvm-params`
+    - `method-with-context-bound-emits-evidence-parameter`
+    - `varargs-annotated-method-emits-array-bridge`
+    - `method-without-varargs-annotation-does-not-emit-array-bridge`
+    - `companion-static-forwarder-emits-varargs-array-bridge`
+    - `bridge-and-direct-overload-deduplicate-by-erased-signature`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka unchanged at `18` mismatches (`missing-method 17`, `method-exceptions 1`).
+    - Spark mismatches `23 -> 15` (`missing-method 20 -> 13`; `method-access 1 -> 0`; `method-exceptions 1` unchanged; `class-access 1` unchanged).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Cleared Spark method-shape families include `Dataset.as(Encoder)`, `SparkSession.createDataset(List, Encoder)`, `Dataset.select/groupBy/toDF` varargs families, and `SerializationStream.writeKey/writeValue(..., ClassTag)`.
 - Latest update (same-name missing-method descriptor parity pass):
   - `ScalaLower` method descriptor lowering now runs a shared canonicalization path across regular methods and static/trait forwarder method emission, with target+fallback scope support and method-context alias normalization.
   - Added stable-member return canonicalization in owner context so inferred returns like `def none() = None` erase to the declared member value type when available.

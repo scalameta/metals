@@ -1366,9 +1366,11 @@ class ScalaLowerSuite extends FunSuite {
       List(
         "package foo",
         "class C {",
+        "  @scala.annotation.varargs",
         "  def many(xs: Int*): Int = 0",
         "}",
         "object C {",
+        "  @scala.annotation.varargs",
         "  def fromInts(xs: Int*): Int = 0",
         "}",
       ).mkString("\n")
@@ -1546,6 +1548,123 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("union(Lscala/collection/immutable/Seq;)Lfoo/JavaDoubleRDD;"))
     assert(cls.methods.contains("union([Lfoo/JavaDoubleRDD;)Lfoo/JavaDoubleRDD;"))
     assert((cls.methods("union([Lfoo/JavaDoubleRDD;)Lfoo/JavaDoubleRDD;") & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("method-with-implicit-only-params-emits-jvm-params") {
+    val source =
+      List(
+        "package foo",
+        "import scala.reflect.ClassTag",
+        "class C {",
+        "  def cast[T](implicit ct: ClassTag[T]): T = null.asInstanceOf[T]",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("cast(Lscala/reflect/ClassTag;)Ljava/lang/Object;"))
+  }
+
+  test("method-with-context-bound-emits-evidence-parameter") {
+    val source =
+      List(
+        "package foo",
+        "import scala.reflect.ClassTag",
+        "class C {",
+        "  def mk[T: ClassTag](value: T): Array[T] = Array(value)",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("mk(Ljava/lang/Object;Lscala/reflect/ClassTag;)[Ljava/lang/Object;"))
+  }
+
+  test("varargs-annotated-method-emits-array-bridge") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  @scala.annotation.varargs",
+        "  def many(xs: Int*): Int = xs.size",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("many([I)I"))
+    assert((cls.methods("many([I)I") & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("method-without-varargs-annotation-does-not-emit-array-bridge") {
+    val source =
+      List(
+        "package foo",
+        "class C {",
+        "  def many(xs: Int*): Int = xs.size",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("many(Lscala/collection/immutable/Seq;)I"))
+    assert(!cls.methods.contains("many([I)I"))
+  }
+
+  test("companion-static-forwarder-emits-varargs-array-bridge") {
+    val source =
+      List(
+        "package foo",
+        "class C",
+        "object C {",
+        "  @scala.annotation.varargs",
+        "  def many(xs: String*): Int = xs.size",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("many([Ljava/lang/String;)I"))
+    assert((cls.methods("many([Ljava/lang/String;)I") & Opcodes.ACC_STATIC) != 0)
+    assert((cls.methods("many([Ljava/lang/String;)I") & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("bridge-and-direct-overload-deduplicate-by-erased-signature") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  @scala.annotation.varargs",
+        "  def many(xs: String*): Int = xs.size",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  override def many(xs: String*): Int = xs.length",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("many([Ljava/lang/String;)I"))
+    assertEquals(methodOccurrences(classes.get("foo/C"), "many([Ljava/lang/String;)I"), 1)
   }
 
   test("root-package-heads-and-term-wildcards") {
