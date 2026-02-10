@@ -756,6 +756,45 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("g(Lfoo/api/O$Inner;)Lfoo/api/O$Inner;"))
   }
 
+  test("unit-explicit-imports-beat-current-package-classpath-fallback") {
+    val source1 =
+      List(
+        "package foo.actor.typed",
+        "class ActorRef",
+      ).mkString("\n")
+    val source2 =
+      List(
+        "package foo.api",
+        "import foo.actor.typed.ActorRef",
+        "class C {",
+        "  def f(a: ActorRef): ActorRef = a",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/api/ActorRef" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit1 = ScalaParser.parse(new SourceFile(null, source1))
+    val unit2 = ScalaParser.parse(new SourceFile(null, source2))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit1, unit2),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val cls = readMembers(classes.get("foo/api/C"))
+    assert(cls.methods.contains("f(Lfoo/actor/typed/ActorRef;)Lfoo/actor/typed/ActorRef;"))
+    assert(!cls.methods.contains("f(Lfoo/api/ActorRef;)Lfoo/api/ActorRef;"))
+  }
+
   test("wildcard-import-object-types-over-package") {
     val source =
       List(
@@ -1800,6 +1839,37 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(ackHeader.interfaces, List("foo/internal/Impl$Marker"))
   }
 
+  test("nested-parent-owner-import-chain-can-use-unit-imports") {
+    val source =
+      List(
+        "package foo.internal {",
+        "  object Impl {",
+        "    trait Marker",
+        "  }",
+        "}",
+        "package foo.api {",
+        "  import foo.internal.Impl",
+        "  object Api {",
+        "    import Impl.Marker",
+        "    trait Command extends Marker",
+        "    final class Ack extends Marker",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val commandHeader = readClassHeader(classes.get("foo/api/Api$Command"))
+    assertEquals(commandHeader.superName, "java/lang/Object")
+    assertEquals(commandHeader.interfaces, List("foo/internal/Impl$Marker"))
+
+    val ackHeader = readClassHeader(classes.get("foo/api/Api$Ack"))
+    assertEquals(ackHeader.superName, "java/lang/Object")
+    assertEquals(ackHeader.interfaces, List("foo/internal/Impl$Marker"))
+  }
+
   test("class-parent-trait-with-class-superclass") {
     val source =
       List(
@@ -1835,6 +1905,23 @@ class ScalaLowerSuite extends FunSuite {
     val header = readClassHeader(classes.get("foo/C"))
     assertEquals(header.superName, "java/lang/Object")
     assertEquals(header.interfaces, List("foo/Query"))
+  }
+
+  test("class-parent-prunes-single-interface-inherited-from-superclass") {
+    val source =
+      List(
+        "package foo",
+        "class Base extends java.io.Serializable",
+        "class C extends Base with java.io.Serializable",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "foo/Base")
+    assertEquals(header.interfaces, Nil)
   }
 
   test("class-parent-normalizes-scala-serializable") {

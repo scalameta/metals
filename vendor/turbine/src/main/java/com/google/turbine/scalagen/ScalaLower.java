@@ -167,6 +167,7 @@ public final class ScalaLower {
     for (ScalaTree.CompUnit unit : units) {
       ScalaTypeMapper.ImportScope unitScope =
           importScope(unit, objectTypeMembers, packageTypeMembers);
+      ScalaTypeMapper.ImportScope unitExplicitScope = unitExplicitImportScope(unit);
       List<ClassDef> unitDefs = defs.unitClassDefs().get(unit);
       if (unitDefs == null || unitDefs.isEmpty()) {
         continue;
@@ -178,7 +179,8 @@ public final class ScalaLower {
                 defs.owners(),
                 ownerTypeScopes,
                 objectTypeMembers,
-                packageTypeMembers);
+                packageTypeMembers,
+                unitScope);
         ScalaTypeMapper.ImportScope localQualifierScope =
             mergeImportScopes(unitScope, enclosingScope);
         ScalaTypeMapper.ImportScope localScope =
@@ -195,7 +197,10 @@ public final class ScalaLower {
         ScalaTypeMapper.ImportScope scope =
             mergeImportScopes(
                 mergeImportScopes(
-                    mergeImportScopes(mergeImportScopes(unitScope, currentPackageScope), enclosingScope),
+                    mergeImportScopes(
+                        mergeImportScopes(
+                            mergeImportScopes(unitScope, currentPackageScope), unitExplicitScope),
+                        enclosingScope),
                     localScope),
                 ownerScope);
         scope = addClasspathResolvedWildcardTypes(cls, scope, parentKindResolver);
@@ -3212,6 +3217,31 @@ public final class ScalaLower {
     return builder.build();
   }
 
+  private static ScalaTypeMapper.ImportScope unitExplicitImportScope(ScalaTree.CompUnit unit) {
+    if (unit == null || unit.stats() == null || unit.stats().isEmpty()) {
+      return ScalaTypeMapper.ImportScope.empty();
+    }
+    ScalaTypeMapper.ImportScope.Builder builder = ScalaTypeMapper.ImportScope.builder();
+    for (ScalaTree.Stat stat : unit.stats()) {
+      if (stat instanceof ImportStat imp) {
+        parseImportText(
+            builder,
+            imp.text(),
+            imp.packageName(),
+            Map.of(),
+            Map.of(),
+            ScalaTypeMapper.ImportScope.empty());
+      }
+    }
+    ScalaTypeMapper.ImportScope parsed = builder.build();
+    if (parsed.explicit().isEmpty()) {
+      return ScalaTypeMapper.ImportScope.empty();
+    }
+    ScalaTypeMapper.ImportScope.Builder explicitOnly = ScalaTypeMapper.ImportScope.builder();
+    parsed.explicit().forEach(explicitOnly::addExplicit);
+    return explicitOnly.build();
+  }
+
   private static String unitPackageName(ScalaTree.CompUnit unit) {
     for (ScalaTree.Stat stat : unit.stats()) {
       if (stat instanceof ClassDef cls && cls.packageName() != null && !cls.packageName().isEmpty()) {
@@ -3492,7 +3522,8 @@ public final class ScalaLower {
       Map<ClassDef, ClassDef> owners,
       Map<ClassDef, ScalaTypeMapper.ImportScope> ownerTypeScopes,
       Map<String, Map<String, String>> objectTypeMembers,
-      Map<String, Set<String>> packageTypeMembers) {
+      Map<String, Set<String>> packageTypeMembers,
+      ScalaTypeMapper.ImportScope qualifierBaseScope) {
     List<ClassDef> chain = new ArrayList<>();
     ClassDef owner = owners.get(cls);
     while (owner != null) {
@@ -3500,6 +3531,10 @@ public final class ScalaLower {
       owner = owners.get(owner);
     }
     ScalaTypeMapper.ImportScope scope = ScalaTypeMapper.ImportScope.empty();
+    ScalaTypeMapper.ImportScope baseScope =
+        qualifierBaseScope == null
+            ? ScalaTypeMapper.ImportScope.empty()
+            : qualifierBaseScope;
     for (int i = chain.size() - 1; i >= 0; i--) {
       ClassDef enclosing = chain.get(i);
       ScalaTypeMapper.ImportScope ownerScope = ownerTypeScopes.get(enclosing);
@@ -3512,7 +3547,7 @@ public final class ScalaLower {
               enclosing.packageName(),
               objectTypeMembers,
               packageTypeMembers,
-              scope);
+              mergeImportScopes(baseScope, scope));
       if (!ownerImports.isEmpty()) {
         scope = mergeImportScopes(scope, ownerImports);
       }
@@ -4291,7 +4326,7 @@ public final class ScalaLower {
       }
       normalized.add(normalizedIface);
     }
-    if (normalized.size() <= 1) {
+    if (normalized.isEmpty()) {
       return normalized;
     }
     List<String> pruned = new ArrayList<>();
