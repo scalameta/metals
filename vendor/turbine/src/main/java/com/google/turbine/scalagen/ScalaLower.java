@@ -547,6 +547,18 @@ public final class ScalaLower {
               companionScope,
               companionAliases,
               /* isTrait= */ isTrait));
+      methods.addAll(
+          traitForwarders(
+              companion,
+              traitsByBinary,
+              importScopes,
+              aliasScopes,
+              packageObjectTypes,
+              companionScope,
+              companionAliases,
+              /* targetModuleBinary= */ null,
+              /* staticContext= */ true,
+              /* publicOnly= */ true));
     }
     methods = uniqueMethods(methods);
     List<ClassFile.FieldInfo> fields = memberFields(cls, scope, aliasScope);
@@ -1234,6 +1246,9 @@ public final class ScalaLower {
           importScopes.getOrDefault(current.trait(), ScalaTypeMapper.ImportScope.empty());
       ScalaTypeMapper.TypeAliasScope traitAliases =
           aliasScopes.getOrDefault(current.trait(), ScalaTypeMapper.TypeAliasScope.empty());
+      ScalaTypeMapper.ImportScope forwarderScope = mergeImportScopes(traitScope, targetScope);
+      ScalaTypeMapper.TypeAliasScope forwarderAliases =
+          mergeAliasScopes(traitAliases, targetAliases);
       Map<String, String> substitutions =
           traitTypeSubstitutions(current.trait(), current.parentTypeText());
       for (Defn defn : current.trait().members()) {
@@ -1254,8 +1269,8 @@ public final class ScalaLower {
                   adjusted,
                   current.trait().packageName(),
                   classTypeParams,
-                  traitScope,
-                  traitAliases,
+                  forwarderScope,
+                  forwarderAliases,
                   staticContext,
                   ClassDef.Kind.CLASS));
         } else if (defn instanceof ValDef val) {
@@ -1268,8 +1283,8 @@ public final class ScalaLower {
                   adjusted,
                   current.trait().packageName(),
                   classTypeParams,
-                  traitScope,
-                  traitAliases,
+                  forwarderScope,
+                  forwarderAliases,
                   staticContext,
                   ClassDef.Kind.CLASS));
         }
@@ -1284,8 +1299,8 @@ public final class ScalaLower {
                 substitutedParent,
                 current.trait().packageName(),
                 current.trait().typeParams(),
-                traitScope,
-                traitAliases);
+                forwarderScope,
+                forwarderAliases);
         parentBinary =
             normalizeTraitForwarderParent(
                 substitutedParent,

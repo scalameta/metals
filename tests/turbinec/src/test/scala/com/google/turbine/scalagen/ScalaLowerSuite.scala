@@ -639,6 +639,101 @@ class ScalaLowerSuite extends FunSuite {
     assert(cls.methods.contains("foo()I"))
   }
 
+  test("class-static-forwarders-include-inherited-companion-trait-methods") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  def inherited(): String = \"ok\"",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  def direct(): Int = 1",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("direct()I"))
+    assert((cls.methods("direct()I") & Opcodes.ACC_STATIC) != 0)
+    assert(
+      cls.methods.contains("inherited()Ljava/lang/String;"),
+      cls.methods.keys.toList.sorted.mkString("\n"),
+    )
+    assert((cls.methods("inherited()Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("trait-forwarders-self-alias-erases-to-target-owner") {
+    val source =
+      List(
+        "package foo",
+        "trait Fluent {",
+        "  type Self",
+        "  def next(v: Any): Self = this.asInstanceOf[Self]",
+        "}",
+        "class C extends Fluent {",
+        "  type Self = C",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("next(Ljava/lang/Object;)Lfoo/C;"))
+    assert(!cls.methods.keys.exists(k => k.startsWith("next(") && k.contains("$Self;")))
+  }
+
+  test("class-static-forwarders-keep-inherited-varargs-bridge") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  @scala.annotation.varargs",
+        "  def inherited(values: String*): Int = values.size",
+        "}",
+        "class C",
+        "object C extends Shared",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("inherited([Ljava/lang/String;)I"))
+    val access = cls.methods("inherited([Ljava/lang/String;)I")
+    assert((access & Opcodes.ACC_STATIC) != 0)
+    assert((access & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("class-static-forwarders-dedupe-direct-and-inherited-overlap") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  def dup(): Int = 1",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  override def dup(): Int = 2",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("dup()I"))
+    assert((cls.methods("dup()I") & Opcodes.ACC_STATIC) != 0)
+    assertEquals(methodOccurrences(classes.get("foo/C"), "dup()I"), 1)
+  }
+
   test("wildcard-import-object-types") {
     val source =
       List(
@@ -2465,6 +2560,29 @@ class ScalaLowerSuite extends FunSuite {
         ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES,
       )
     members
+  }
+
+  private def methodOccurrences(bytes: Array[Byte], methodSig: String): Int = {
+    var count = 0
+    new ClassReader(bytes)
+      .accept(
+        new ClassVisitor(Opcodes.ASM9) {
+          override def visitMethod(
+              access: Int,
+              name: String,
+              descriptor: String,
+              signature: String,
+              exceptions: Array[String],
+          ): MethodVisitor = {
+            if (name + descriptor == methodSig) {
+              count += 1
+            }
+            null
+          }
+        },
+        ClassReader.SKIP_CODE | ClassReader.SKIP_DEBUG | ClassReader.SKIP_FRAMES,
+      )
+    count
   }
 
   private class ClassMembers {
