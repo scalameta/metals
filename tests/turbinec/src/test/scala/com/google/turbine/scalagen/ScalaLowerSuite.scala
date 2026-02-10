@@ -849,6 +849,131 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(methodOccurrences(classes.get("foo/C"), "dup()I"), 1)
   }
 
+  test("static-forwarder-return-uses-owner-qualified-nested-type") {
+    val source =
+      List(
+        "package foo",
+        "object PipeToSupport {",
+        "  class PipeableFuture",
+        "}",
+        "class Patterns",
+        "object Patterns {",
+        "  import PipeToSupport.PipeableFuture",
+        "  def pipe(): PipeableFuture = new PipeableFuture",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/Patterns"))
+    assert(cls.methods.contains("pipe()Lfoo/PipeToSupport$PipeableFuture;"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(!cls.methods.contains("pipe()Lfoo/PipeableFuture;"))
+  }
+
+  test("static-forwarder-return-does-not-leak-module-class-binary") {
+    val source =
+      List(
+        "package foo",
+        "class C",
+        "object C {",
+        "  class Result",
+        "  object Result",
+        "  def mk(): Result = new Result",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("mk()Lfoo/C$Result;"))
+    assert(!cls.methods.contains("mk()Lfoo/C$Result$;"))
+  }
+
+  test("stable-member-return-erases-to-declared-value-type") {
+    val source =
+      List(
+        "package foo",
+        "class Criteria(v: Int)",
+        "object Criteria {",
+        "  final val None: Criteria = new Criteria(0)",
+        "  def none() = None",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val module = readMembers(classes.get("foo/Criteria$"))
+    assert(module.methods.contains("none()Lfoo/Criteria;"), module.methods.keys.toList.sorted.mkString("\n"))
+    assert(module.methods.contains("None()Lfoo/Criteria;"), module.methods.keys.toList.sorted.mkString("\n"))
+    assert(!module.methods.keys.exists(_.contains("Lfoo/None$;")))
+
+    val cls = readMembers(classes.get("foo/Criteria"))
+    assert(cls.methods.contains("none()Lfoo/Criteria;"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(cls.methods.contains("None()Lfoo/Criteria;"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("method-return-alias-resolves-in-target-context") {
+    val source =
+      List(
+        "package foo",
+        "object Aliases {",
+        "  type Out = java.lang.String",
+        "}",
+        "trait Shared {",
+        "  def value(): Out = \"ok\"",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  import Aliases.Out",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("value()Ljava/lang/String;"), cls.methods.keys.toList.sorted.mkString("\n"))
+  }
+
+  test("descriptor-canonicalization-does-not-change-parent-lowering") {
+    val source =
+      List(
+        "package foo.use",
+        "import foo.target._",
+        "class C extends WrappedMessage",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "foo/use/WrappedMessage" || binaryName == "foo/target/WrappedMessage"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/use/WrappedMessage" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/use/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/target/WrappedMessage"))
+  }
+
   test("wildcard-import-object-types") {
     val source =
       List(

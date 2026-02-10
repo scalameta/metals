@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after owner-alias member-signature erasure + companion static forwarder completion follow-up)**
+**Current Snapshot (2026-02-10, latest local run after same-name method descriptor parity pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 20
+  - Mismatched members: 18
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -60,11 +60,26 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 24
+  - Mismatched members: 23
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (same-name missing-method descriptor parity pass):
+  - `ScalaLower` method descriptor lowering now runs a shared canonicalization path across regular methods and static/trait forwarder method emission, with target+fallback scope support and method-context alias normalization.
+  - Added stable-member return canonicalization in owner context so inferred returns like `def none() = None` erase to the declared member value type when available.
+  - Added `ScalaLowerSuite` regressions:
+    - `static-forwarder-return-uses-owner-qualified-nested-type`
+    - `static-forwarder-return-does-not-leak-module-class-binary`
+    - `stable-member-return-erases-to-declared-value-type`
+    - `method-return-alias-resolves-in-target-context`
+    - `descriptor-canonicalization-does-not-change-parent-lowering`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `20 -> 18` (`missing-method 19 -> 17`, `method-exceptions 1` unchanged).
+    - Spark mismatches `24 -> 23` (`missing-method 21 -> 20`; `method-access 1`, `method-exceptions 1`, `class-access 1` unchanged).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Previously tracked descriptor-family misses that no longer appear in latest `missing-method` output include `org/apache/spark/errors/SparkCoreErrors.outOfMemoryError` and `akka/persistence/SnapshotSelectionCriteria.none`.
+    - Remaining high-signal descriptor drifts still include `akka/actor/Props.empty`, `akka/pattern/Patterns.pipe*`, `akka/persistence/query/journal/leveldb/javadsl/LeveldbReadJournal.Identifier`, `akka/persistence/typed/crdt/Counter.value`, and `org/apache/spark/shuffle/sort/SortShuffleManager.MAX_SHUFFLE_OUTPUT_PARTITIONS_FOR_SERIALIZED_MODE`.
 - Latest update (owner-alias member-signature erasure + inherited companion static forwarder completion):
   - `ScalaLower` method descriptor lowering now resolves owner/member type aliases in method context before descriptor emission, reducing synthetic owner type-member leakage such as `Owner$Self` in method signatures.
   - Class/object static-forwarder collection now includes inherited non-trait companion parent methods (in addition to direct companion and inherited companion-trait methods), with deduping by erased JVM signature.
