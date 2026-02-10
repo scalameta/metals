@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after relative package-prefix nearest-child resolution)**
+**Current Snapshot (2026-02-10, latest local run after parent fallback ranking for imports/core aliases/package-object parents)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 43
+  - Mismatched members: 38
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -60,11 +60,22 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 33
+  - Mismatched members: 25
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (parent fallback ranking for imports/core aliases/package-object parents):
+  - `ScalaLower` parent resolution now treats speculative same-package fallback as lower-priority in parent positions, preferring known wildcard-import candidates, selected core aliases, and package-object member parents.
+  - Added `ScalaLowerSuite` regressions:
+    - `class-parent-prefers-java-lang-illegal-argument-exception`
+    - `class-parent-prefers-java-lang-unsupported-operation-exception`
+    - `class-parent-prefers-scala-math-ordering`
+    - `class-parent-prefers-package-object-member-binary`
+    - `parent-wildcard-import-beats-speculative-current-package-fallback`
+  - Measured delta vs previous run (`java-used`):
+    - Akka mismatches `43 -> 38` (`class-interfaces 9 -> 5`, `class-superclass 3 -> 2`; `missing-method 30` and `method-exceptions 1` unchanged).
+    - Spark mismatches `33 -> 25` with class-shape buckets eliminated (`class-interfaces 4 -> 0`, `class-superclass 4 -> 0`; `missing-method 22`, `method-access 1`, `method-exceptions 1`, `class-access 1` unchanged).
 - Latest update (relative package-prefix nearest-child resolution):
   - `ScalaLower` import scope now adds explicit qualified mappings for direct child packages across the current/enclosing package chain, with nearest package precedence.
   - This ensures qualified references such as `javadsl.EntityTypeKey` in `pkg.api` resolve to `pkg.api.javadsl.EntityTypeKey` before falling back to enclosing sibling packages.
@@ -148,11 +159,11 @@ Spark (`--javac-release 17`)
 - IDE/header fallback update:
   - Uninferred member outlines now default to `java/lang/Object` (instead of `Unit`) for non-constructor defs/vals to keep IDE/header compilation robust without inference expansion.
 - Latest measured effect with these generic fixes:
-  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 43`.
-    - Top buckets: `missing-method 30`, `class-interfaces 9`, `class-superclass 3`, `method-exceptions 1`.
+  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 38`.
+    - Top buckets: `missing-method 30`, `class-interfaces 5`, `class-superclass 2`, `method-exceptions 1`.
     - Filtered: `no-type-inference-public-members 17`.
-  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 33`.
-    - Top buckets: `missing-method 22`, `class-interfaces 4`, `class-superclass 4`, `method-access 1`, `method-exceptions 1`, `class-access 1`.
+  - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 25`.
+    - Top buckets: `missing-method 22`, `method-access 1`, `method-exceptions 1`, `class-access 1`.
     - Filtered: `no-type-inference-public-members 4`.
   - Akka/Spark `java` remain `Missing 0 / Extra 0 / Mismatched 0`.
 

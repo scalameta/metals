@@ -429,6 +429,7 @@ public final class ScalaLower {
               first,
               firstErased,
               pkg,
+              scope,
               sourceTypesByBinary,
               traitsByBinary,
               parentKindResolver);
@@ -463,6 +464,7 @@ public final class ScalaLower {
                 cls.parents().get(i),
                 erasedParent,
                 pkg,
+                scope,
                 sourceTypesByBinary,
                 traitsByBinary,
                 parentKindResolver);
@@ -671,6 +673,7 @@ public final class ScalaLower {
               obj.parents().get(0),
               first,
               pkg,
+              scope,
               sourceTypesByBinary,
               traitsByBinary,
               parentKindResolver);
@@ -708,6 +711,7 @@ public final class ScalaLower {
                 obj.parents().get(i),
                 erasedParent,
                 pkg,
+                scope,
                 sourceTypesByBinary,
                 traitsByBinary,
                 parentKindResolver);
@@ -4124,13 +4128,12 @@ public final class ScalaLower {
       String parentTypeText,
       String erasedType,
       String currentPackage,
+      ScalaTypeMapper.ImportScope scope,
       Map<String, ClassDef> sourceTypesByBinary,
       Map<String, ClassDef> traitsByBinary,
       ParentKindResolver parentKindResolver) {
     if (parentTypeText == null
         || parentTypeText.isEmpty()
-        || currentPackage == null
-        || currentPackage.isEmpty()
         || erasedType == null
         || erasedType.isEmpty()) {
       return erasedType;
@@ -4139,18 +4142,94 @@ public final class ScalaLower {
     if (raw == null || raw.isEmpty() || raw.indexOf('/') >= 0 || !isClassLike(raw)) {
       return erasedType;
     }
-    if (isKnownParentBinary(erasedType, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+    String localCandidate = localSimpleParentCandidate(currentPackage, raw);
+    boolean speculativeSimpleLocal =
+        localCandidate != null && !localCandidate.isEmpty() && localCandidate.equals(erasedType);
+    if (!speculativeSimpleLocal
+        && isKnownParentBinary(erasedType, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
       return erasedType;
     }
-    String localCandidate = currentPackage.replace('.', '/') + "/" + raw;
-    if (localCandidate.equals(erasedType)) {
-      return erasedType;
+    String wildcardCandidate =
+        wildcardSimpleParentCandidate(
+            raw, scope, sourceTypesByBinary, traitsByBinary, parentKindResolver);
+    if (wildcardCandidate != null && !wildcardCandidate.isEmpty()) {
+      return wildcardCandidate;
     }
-    if (isKnownParentBinary(
-        localCandidate, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+    String knownAlias = knownSimpleParentAlias(raw);
+    if (knownAlias != null
+        && isKnownParentBinary(knownAlias, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+      return knownAlias;
+    }
+    String packageObjectCandidate = packageObjectMemberParentCandidate(currentPackage, raw);
+    if (packageObjectCandidate != null
+        && isKnownParentBinary(
+            packageObjectCandidate, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+      return packageObjectCandidate;
+    }
+    if (localCandidate != null
+        && isKnownParentBinary(localCandidate, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
       return localCandidate;
     }
     return erasedType;
+  }
+
+  private static @Nullable String localSimpleParentCandidate(String currentPackage, String raw) {
+    if (currentPackage == null || currentPackage.isEmpty() || raw == null || raw.isEmpty()) {
+      return null;
+    }
+    return currentPackage.replace('.', '/') + "/" + raw;
+  }
+
+  private static @Nullable String wildcardSimpleParentCandidate(
+      String raw,
+      ScalaTypeMapper.ImportScope scope,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      ParentKindResolver parentKindResolver) {
+    if (raw == null
+        || raw.isEmpty()
+        || scope == null
+        || scope.isEmpty()
+        || !isClassLike(raw)) {
+      return null;
+    }
+    List<String> wildcards = scope.wildcards();
+    if (wildcards == null || wildcards.isEmpty()) {
+      return null;
+    }
+    for (int i = wildcards.size() - 1; i >= 0; i--) {
+      String prefix = wildcards.get(i);
+      if (prefix == null || prefix.isEmpty()) {
+        continue;
+      }
+      if (prefix.endsWith("$") || isLikelyTermWildcardPrefix(prefix)) {
+        continue;
+      }
+      String candidate = prefix + "/" + raw;
+      if (isKnownParentBinary(candidate, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+        return candidate;
+      }
+    }
+    return null;
+  }
+
+  private static @Nullable String knownSimpleParentAlias(String raw) {
+    if (raw == null || raw.isEmpty()) {
+      return null;
+    }
+    return switch (raw) {
+      case "IllegalArgumentException" -> "java/lang/IllegalArgumentException";
+      case "UnsupportedOperationException" -> "java/lang/UnsupportedOperationException";
+      case "Ordering" -> "scala/math/Ordering";
+      default -> null;
+    };
+  }
+
+  private static @Nullable String packageObjectMemberParentCandidate(String currentPackage, String raw) {
+    if (currentPackage == null || currentPackage.isEmpty() || raw == null || raw.isEmpty()) {
+      return null;
+    }
+    return currentPackage.replace('.', '/') + "/package$" + raw;
   }
 
   private static String preferLocalObjectParentType(
@@ -4266,6 +4345,7 @@ public final class ScalaLower {
                 parent,
                 erased,
                 traitDef.packageName(),
+                traitScope,
                 sourceTypesByBinary,
                 traitsByBinary,
                 parentKindResolver);
@@ -4485,6 +4565,7 @@ public final class ScalaLower {
                   parent,
                   erased,
                   source.packageName(),
+                  sourceScope,
                   sourceTypesByBinary,
                   traitsByBinary,
                   parentKindResolver);

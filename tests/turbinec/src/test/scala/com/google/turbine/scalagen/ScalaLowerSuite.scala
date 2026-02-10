@@ -2050,6 +2050,175 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(header.interfaces, Nil)
   }
 
+  test("class-parent-prefers-java-lang-illegal-argument-exception") {
+    val source =
+      List(
+        "package foo",
+        "class C extends IllegalArgumentException",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/IllegalArgumentException" => "java/lang/Object"
+          case "java/lang/IllegalArgumentException" => "java/lang/RuntimeException"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/IllegalArgumentException")
+    assertEquals(header.interfaces, Nil)
+  }
+
+  test("class-parent-prefers-java-lang-unsupported-operation-exception") {
+    val source =
+      List(
+        "package foo",
+        "class C extends UnsupportedOperationException",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/UnsupportedOperationException" => "java/lang/Object"
+          case "java/lang/UnsupportedOperationException" => "java/lang/RuntimeException"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/UnsupportedOperationException")
+    assertEquals(header.interfaces, Nil)
+  }
+
+  test("class-parent-prefers-scala-math-ordering") {
+    val source =
+      List(
+        "package foo",
+        "class C extends Ordering[Int]",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "scala/math/Ordering"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/Ordering" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("scala/math/Ordering"))
+  }
+
+  test("class-parent-prefers-package-object-member-binary") {
+    val packageObjectSource =
+      List(
+        "package foo",
+        "package object bar {",
+        "  abstract class Projection",
+        "}",
+      ).mkString("\n")
+
+    val classSource =
+      List(
+        "package foo.bar",
+        "abstract class UnsafeProjection extends Projection",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean = false
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/bar/Projection" => "java/lang/Object"
+          case "foo/bar/package$Projection" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val packageObjectUnit = ScalaParser.parse(new SourceFile(null, packageObjectSource))
+    val classUnit = ScalaParser.parse(new SourceFile(null, classSource))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(packageObjectUnit, classUnit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/bar/UnsafeProjection"))
+    assertEquals(header.superName, "foo/bar/package$Projection")
+    assertEquals(header.interfaces, Nil)
+  }
+
+  test("parent-wildcard-import-beats-speculative-current-package-fallback") {
+    val source =
+      List(
+        "package foo.target {",
+        "  trait WrappedMessage",
+        "}",
+        "package foo.use {",
+        "  import foo.target._",
+        "  class C extends WrappedMessage",
+        "}",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "foo/target/WrappedMessage"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/use/WrappedMessage" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/use/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/target/WrappedMessage"))
+  }
+
   test("class-constructor-parses-newline-separated-parameter-lists") {
     val source =
       List(
