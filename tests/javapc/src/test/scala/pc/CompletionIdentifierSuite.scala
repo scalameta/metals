@@ -76,7 +76,6 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |OneTouchActionHandler
       |""".stripMargin,
   )
-
   check(
     "import List",
     """
@@ -89,22 +88,42 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |    }
       |
       |}
-      |""".stripMargin,
-    """
-      |List
-      |List
-      |ListSelectionHandler
-      |List12
-      |ListN
-      |ListItr
-      |AccessibleAWTList
-      |AccessibleAWTListChild
-      |JList
-      |AccessibleJList
-      |AccessibleJListChild
-      |SubList
-      |AbstractImmutableList
-      |""".stripMargin,
+      |""".stripMargin, {
+      if (isJava25)
+        """|List
+           |List
+           |ListSelectionHandler
+           |List12
+           |ListN
+           |ListItr
+           |AccessibleAWTList
+           |AccessibleAWTListChild
+           |JList
+           |AccessibleJList
+           |AccessibleJListChild
+           |StableList
+           |StableReverseOrderListView
+           |StableSubList
+           |SubList
+           |AbstractImmutableList
+           |""".stripMargin
+      else
+        """
+          |List
+          |List
+          |ListSelectionHandler
+          |List12
+          |ListN
+          |ListItr
+          |AccessibleAWTList
+          |AccessibleAWTListChild
+          |JList
+          |AccessibleJList
+          |AccessibleJListChild
+          |SubList
+          |AbstractImmutableList
+          |""".stripMargin
+    },
   )
 
   check(
@@ -119,31 +138,60 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |    }
       |
       |}
-      |""".stripMargin,
-    """
-      |ListResourceBundle
-      |ListIterator
-      |List
-      |List
-      |ListSelectionHandler
-      |List12
-      |ListN
-      |ListItr
-      |TooManyListenersException
-      |LinkedList
-      |EventListenerProxy
-      |EventListener
-      |ArrayList
-      |AbstractSequentialList
-      |AbstractList
-      |AccessibleAWTList
-      |AccessibleAWTListChild
-      |JList
-      |AccessibleJList
-      |AccessibleJListChild
-      |SubList
-      |AbstractImmutableList
-      |""".stripMargin,
+      |""".stripMargin, {
+      if (isJava25)
+        """|ListResourceBundle
+           |ListIterator
+           |List
+           |List
+           |ListSelectionHandler
+           |List12
+           |ListN
+           |ListItr
+           |TooManyListenersException
+           |LinkedList
+           |EventListenerProxy
+           |EventListener
+           |ArrayList
+           |AbstractSequentialList
+           |AbstractList
+           |AccessibleAWTList
+           |AccessibleAWTListChild
+           |JList
+           |AccessibleJList
+           |AccessibleJListChild
+           |StableList
+           |StableReverseOrderListView
+           |StableSubList
+           |SubList
+           |AbstractImmutableList
+           |""".stripMargin
+      else
+        """
+          |ListResourceBundle
+          |ListIterator
+          |List
+          |List
+          |ListSelectionHandler
+          |List12
+          |ListN
+          |ListItr
+          |TooManyListenersException
+          |LinkedList
+          |EventListenerProxy
+          |EventListener
+          |ArrayList
+          |AbstractSequentialList
+          |AbstractList
+          |AccessibleAWTList
+          |AccessibleAWTListChild
+          |JList
+          |AccessibleJList
+          |AccessibleJListChild
+          |SubList
+          |AbstractImmutableList
+          |""".stripMargin
+    },
   )
 
   check(
