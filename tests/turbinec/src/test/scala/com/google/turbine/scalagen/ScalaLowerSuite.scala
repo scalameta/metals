@@ -688,6 +688,121 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.keys.exists(k => k.startsWith("next(") && k.contains("$Self;")))
   }
 
+  test("member-method-erases-self-alias-to-owner-type") {
+    val source =
+      List(
+        "package foo",
+        "object O {",
+        "  class C {",
+        "    type Self <: C",
+        "    private val self = this.asInstanceOf[Self]",
+        "    def next(): Self = self",
+        "  }",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/O$C"))
+    assert(cls.methods.contains("next()Lfoo/O$C;"))
+    assert(!cls.methods.keys.exists(k => k.startsWith("next()") && k.contains("$Self;")))
+  }
+
+  test("companion-class-includes-inherited-static-forwarders") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  def inherited(): String = \"ok\"",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  def direct(): Int = 1",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("direct()I"))
+    assert((cls.methods("direct()I") & Opcodes.ACC_STATIC) != 0)
+    assert(cls.methods.contains("inherited()Ljava/lang/String;"))
+    assert((cls.methods("inherited()Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("companion-static-forwarders-include-high-arity-overloads") {
+    val source =
+      List(
+        "package foo",
+        "abstract class SharedBase {",
+        "  def create2(a: Int, b: Int): String = (a + b).toString",
+        "  def create3(a: Int, b: Int, c: Int): String = (a + b + c).toString",
+        "}",
+        "class C",
+        "object C extends SharedBase",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("create2(II)Ljava/lang/String;"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert(cls.methods.contains("create3(III)Ljava/lang/String;"), cls.methods.keys.toList.sorted.mkString("\n"))
+    assert((cls.methods("create2(II)Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+    assert((cls.methods("create3(III)Ljava/lang/String;") & Opcodes.ACC_STATIC) != 0)
+  }
+
+  test("companion-static-forwarders-preserve-varargs-and-access") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  @scala.annotation.varargs",
+        "  def inherited(values: String*): Int = values.size",
+        "}",
+        "class C",
+        "object C extends Shared",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("inherited([Ljava/lang/String;)I"))
+    val access = cls.methods("inherited([Ljava/lang/String;)I")
+    assert((access & Opcodes.ACC_STATIC) != 0)
+    assert((access & Opcodes.ACC_VARARGS) != 0)
+  }
+
+  test("companion-static-forwarders-deduplicate-direct-and-inherited") {
+    val source =
+      List(
+        "package foo",
+        "trait Shared {",
+        "  def dup(): Int = 1",
+        "}",
+        "class C",
+        "object C extends Shared {",
+        "  override def dup(): Int = 2",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("dup()I"))
+    assert((cls.methods("dup()I") & Opcodes.ACC_STATIC) != 0)
+    assertEquals(methodOccurrences(classes.get("foo/C"), "dup()I"), 1)
+  }
+
   test("class-static-forwarders-keep-inherited-varargs-bridge") {
     val source =
       List(

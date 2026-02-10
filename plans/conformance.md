@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after trait-forwarder signature parity + inherited companion forwarder follow-up)**
+**Current Snapshot (2026-02-10, latest local run after owner-alias member-signature erasure + companion static forwarder completion follow-up)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 27
+  - Mismatched members: 20
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -65,6 +65,20 @@ Spark (`--javac-release 17`)
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (owner-alias member-signature erasure + inherited companion static forwarder completion):
+  - `ScalaLower` method descriptor lowering now resolves owner/member type aliases in method context before descriptor emission, reducing synthetic owner type-member leakage such as `Owner$Self` in method signatures.
+  - Class/object static-forwarder collection now includes inherited non-trait companion parent methods (in addition to direct companion and inherited companion-trait methods), with deduping by erased JVM signature.
+  - Added `ScalaLowerSuite` regressions:
+    - `member-method-erases-self-alias-to-owner-type`
+    - `companion-class-includes-inherited-static-forwarders`
+    - `companion-static-forwarders-include-high-arity-overloads`
+    - `companion-static-forwarders-preserve-varargs-and-access`
+    - `companion-static-forwarders-deduplicate-direct-and-inherited`
+  - Measured delta vs previous run (`java-used`):
+    - Akka mismatches `27 -> 20` (`missing-method 26 -> 19`, `method-exceptions 1` unchanged).
+    - Spark unchanged at `24` (`missing-method 21`, `method-access 1`, `method-exceptions 1`, `class-access 1` unchanged).
+    - Akka class-shape remains zero (`class-interfaces 0`, `class-superclass 0`).
+    - Notable clears include `akka/stream/testkit/TestSubscriber$ManualProbe` fluent `expect*` methods and `akka/stream/javadsl/GraphDSL` `create*` family misses.
 - Latest update (trait-forwarder signature parity + inherited companion static forwarders):
   - `ScalaLower` trait-forwarder lowering now merges target import/alias context with source-trait context when erasing forwarded signatures, so target aliases (for example `Self`) can override synthetic owner-member fallback binaries.
   - Class header static forwarders now include inherited companion-trait methods (public-only) in addition to methods declared directly on the companion object.

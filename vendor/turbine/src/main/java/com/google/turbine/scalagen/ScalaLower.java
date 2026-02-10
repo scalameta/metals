@@ -356,9 +356,11 @@ public final class ScalaLower {
                 scope,
                 aliases,
                 traitsByBinary,
+                sourceTypesByBinary,
                 packageObjectTypes,
                 importScopes,
                 aliasScopes,
+                resolver,
                 majorVersion));
       }
     }
@@ -375,9 +377,11 @@ public final class ScalaLower {
               scope,
               aliases,
               traitsByBinary,
+              sourceTypesByBinary,
               packageObjectTypes,
               importScopes,
               aliasScopes,
+              resolver,
               majorVersion));
     }
 
@@ -557,6 +561,19 @@ public final class ScalaLower {
               companionScope,
               companionAliases,
               /* targetModuleBinary= */ null,
+              /* staticContext= */ true,
+              /* publicOnly= */ true));
+      methods.addAll(
+          classParentForwarders(
+              companion,
+              sourceTypesByBinary,
+              traitsByBinary,
+              packageObjectTypes,
+              importScopes,
+              aliasScopes,
+              companionScope,
+              companionAliases,
+              parentKindResolver,
               /* staticContext= */ true,
               /* publicOnly= */ true));
     }
@@ -787,9 +804,11 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> sourceTypesByBinary,
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver,
       int majorVersion) {
     int access = TurbineFlag.ACC_PUBLIC | TurbineFlag.ACC_FINAL | TurbineFlag.ACC_SUPER;
     boolean isApp = isAppObject(obj, scope, aliasScope);
@@ -806,6 +825,19 @@ public final class ScalaLower {
             scope,
             aliasScope,
             moduleBinary,
+            /* staticContext= */ true,
+            /* publicOnly= */ true));
+    methods.addAll(
+        classParentForwarders(
+            obj,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            scope,
+            aliasScope,
+            parentKindResolver,
             /* staticContext= */ true,
             /* publicOnly= */ true));
     if (obj.isCase()) {
@@ -844,9 +876,11 @@ public final class ScalaLower {
       ScalaTypeMapper.ImportScope scope,
       ScalaTypeMapper.TypeAliasScope aliasScope,
       Map<String, ClassDef> traitsByBinary,
+      Map<String, ClassDef> sourceTypesByBinary,
       Map<String, Map<String, String>> packageObjectTypes,
       Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
       Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ParentKindResolver parentKindResolver,
       int majorVersion) {
     String fullPackage = effectiveTypePackage(pkgObj);
 
@@ -923,6 +957,19 @@ public final class ScalaLower {
             scope,
             aliasScope,
             moduleBinary,
+            /* staticContext= */ true,
+            /* publicOnly= */ true));
+    companionMethods.addAll(
+        classParentForwarders(
+            companion,
+            sourceTypesByBinary,
+            traitsByBinary,
+            packageObjectTypes,
+            importScopes,
+            aliasScopes,
+            scope,
+            aliasScope,
+            parentKindResolver,
             /* staticContext= */ true,
             /* publicOnly= */ true));
     companionMethods = uniqueMethods(companionMethods);
@@ -1327,6 +1374,150 @@ public final class ScalaLower {
     return methods;
   }
 
+  private static List<ClassFile.MethodInfo> classParentForwarders(
+      ClassDef target,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      Map<ClassDef, ScalaTypeMapper.ImportScope> importScopes,
+      Map<ClassDef, ScalaTypeMapper.TypeAliasScope> aliasScopes,
+      ScalaTypeMapper.ImportScope targetScope,
+      ScalaTypeMapper.TypeAliasScope targetAliases,
+      ParentKindResolver parentKindResolver,
+      boolean staticContext,
+      boolean publicOnly) {
+    List<ClassFile.MethodInfo> methods = new ArrayList<>();
+    if (sourceTypesByBinary.isEmpty() || target.parents().isEmpty()) {
+      return methods;
+    }
+    Set<String> classTypeParams = ScalaTypeMapper.typeParamNames(target.typeParams());
+    Deque<ParentRef> pending = new ArrayDeque<>();
+    for (String parent : target.parents()) {
+      String binary =
+          canonicalParentType(
+              parent,
+              eraseType(parent, target.packageName(), target.typeParams(), targetScope, targetAliases),
+              target.packageName(),
+              target.typeParams(),
+              targetScope,
+              targetAliases,
+              sourceTypesByBinary,
+              traitsByBinary,
+              packageObjectTypes,
+              parentKindResolver);
+      ClassDef parentDef = sourceTypesByBinary.get(binary);
+      if (parentDef != null && parentDef.kind() == ClassDef.Kind.CLASS) {
+        pending.addLast(new ParentRef(parentDef, parent));
+      }
+    }
+    Set<String> seen = new HashSet<>();
+    while (!pending.isEmpty()) {
+      ParentRef current = pending.removeFirst();
+      String currentBinary = sourceBinaryName(current.parent(), sourceTypesByBinary);
+      if (currentBinary == null || currentBinary.isEmpty()) {
+        currentBinary = binaryName(current.parent().packageName(), current.parent().name());
+      }
+      String currentKey = currentBinary + "::" + current.parentTypeText();
+      if (!seen.add(currentKey)) {
+        continue;
+      }
+      ScalaTypeMapper.ImportScope parentScope =
+          importScopes.getOrDefault(current.parent(), ScalaTypeMapper.ImportScope.empty());
+      ScalaTypeMapper.TypeAliasScope parentAliases =
+          aliasScopes.getOrDefault(current.parent(), ScalaTypeMapper.TypeAliasScope.empty());
+      ScalaTypeMapper.ImportScope forwarderScope = mergeImportScopes(parentScope, targetScope);
+      ScalaTypeMapper.TypeAliasScope forwarderAliases =
+          mergeAliasScopes(parentAliases, targetAliases);
+      Map<String, String> substitutions =
+          traitTypeSubstitutions(current.parent(), current.parentTypeText());
+      for (Defn defn : current.parent().members()) {
+        if (defn instanceof DefDef def) {
+          if ("this".equals(def.name()) || isAbstractDef(def, ClassDef.Kind.CLASS)) {
+            continue;
+          }
+          Map<String, String> filtered = substitutions;
+          if (!substitutions.isEmpty() && !def.typeParams().isEmpty()) {
+            filtered = new HashMap<>(substitutions);
+            for (TypeParam tp : def.typeParams()) {
+              filtered.remove(tp.name());
+            }
+          }
+          DefDef adjusted = substituteDef(def, filtered);
+          methods.addAll(
+              buildMethods(
+                  adjusted,
+                  current.parent().packageName(),
+                  classTypeParams,
+                  forwarderScope,
+                  forwarderAliases,
+                  staticContext,
+                  ClassDef.Kind.CLASS));
+        } else if (defn instanceof ValDef val) {
+          if (isAbstractVal(val, ClassDef.Kind.CLASS)) {
+            continue;
+          }
+          ValDef adjusted = substituteVal(val, substitutions);
+          methods.addAll(
+              accessorsForVal(
+                  adjusted,
+                  current.parent().packageName(),
+                  classTypeParams,
+                  forwarderScope,
+                  forwarderAliases,
+                  staticContext,
+                  ClassDef.Kind.CLASS));
+        }
+      }
+      for (String parent : current.parent().parents()) {
+        String substitutedParent = substituteType(parent, substitutions);
+        String parentBinary =
+            canonicalParentType(
+                substitutedParent,
+                eraseType(
+                    substitutedParent,
+                    current.parent().packageName(),
+                    current.parent().typeParams(),
+                    forwarderScope,
+                    forwarderAliases),
+                current.parent().packageName(),
+                current.parent().typeParams(),
+                forwarderScope,
+                forwarderAliases,
+                sourceTypesByBinary,
+                traitsByBinary,
+                packageObjectTypes,
+                parentKindResolver);
+        ClassDef parentDef = sourceTypesByBinary.get(parentBinary);
+        if (parentDef != null && parentDef.kind() == ClassDef.Kind.CLASS) {
+          pending.addLast(new ParentRef(parentDef, substitutedParent));
+        }
+      }
+    }
+    if (publicOnly) {
+      List<ClassFile.MethodInfo> publicMethods = new ArrayList<>();
+      for (ClassFile.MethodInfo method : methods) {
+        if ((method.access() & TurbineFlag.ACC_PUBLIC) != 0) {
+          publicMethods.add(method);
+        }
+      }
+      return publicMethods;
+    }
+    return methods;
+  }
+
+  private static @Nullable String sourceBinaryName(
+      ClassDef source, Map<String, ClassDef> sourceTypesByBinary) {
+    if (source == null || sourceTypesByBinary.isEmpty()) {
+      return null;
+    }
+    for (Map.Entry<String, ClassDef> entry : sourceTypesByBinary.entrySet()) {
+      if (entry.getValue() == source) {
+        return entry.getKey();
+      }
+    }
+    return null;
+  }
+
   private static List<ClassFile.MethodInfo> publicForwarders(
       ClassDef obj,
       ScalaTypeMapper.ImportScope scope,
@@ -1499,14 +1690,14 @@ public final class ScalaLower {
     for (ParamList list : def.paramLists()) {
       for (Param param : list.params()) {
         desc.append(
-            ScalaTypeMapper.descriptorForParam(
+            methodParamDescriptor(
                 param.type(), pkg, typeParams, scope, aliasScope, typeParamErasures));
         paramTypes.add(param.type());
       }
     }
     desc.append(')');
     desc.append(
-        ScalaTypeMapper.descriptorForReturn(
+        methodReturnDescriptor(
             def.returnType(), pkg, typeParams, scope, aliasScope, typeParamErasures));
 
     boolean isAbstract = isAbstractDef(def, ownerKind);
@@ -1579,11 +1770,11 @@ public final class ScalaLower {
         if (ScalaTypeMapper.isVarArgsType(param.type())) {
           hasVarArgs = true;
           desc.append(
-              ScalaTypeMapper.descriptorForVarArgsParam(
+              methodVarArgsDescriptor(
                   param.type(), pkg, typeParams, scope, aliasScope, typeParamErasures));
         } else {
           desc.append(
-              ScalaTypeMapper.descriptorForParam(
+              methodParamDescriptor(
                   param.type(), pkg, typeParams, scope, aliasScope, typeParamErasures));
         }
       }
@@ -1593,7 +1784,7 @@ public final class ScalaLower {
     }
     desc.append(')');
     desc.append(
-        ScalaTypeMapper.descriptorForReturn(
+        methodReturnDescriptor(
             def.returnType(), pkg, typeParams, scope, aliasScope, typeParamErasures));
     int access =
         methodAccess(def.modifiers(), staticContext, /* isAbstract= */ false, ownerKind)
@@ -1609,6 +1800,101 @@ public final class ScalaLower {
         /* parameterAnnotations= */ ImmutableList.of(),
         /* typeAnnotations= */ ImmutableList.of(),
         /* parameters= */ ImmutableList.of());
+  }
+
+  private static String methodParamDescriptor(
+      @Nullable String typeText,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
+    return ScalaTypeMapper.descriptorForParam(
+        resolveMethodTypeAlias(typeText, aliasScope),
+        pkg,
+        typeParams,
+        scope,
+        aliasScope,
+        typeParamErasures);
+  }
+
+  private static String methodVarArgsDescriptor(
+      @Nullable String typeText,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
+    return ScalaTypeMapper.descriptorForVarArgsParam(
+        resolveMethodTypeAlias(typeText, aliasScope),
+        pkg,
+        typeParams,
+        scope,
+        aliasScope,
+        typeParamErasures);
+  }
+
+  private static String methodReturnDescriptor(
+      @Nullable String typeText,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> typeParamErasures) {
+    return ScalaTypeMapper.descriptorForReturn(
+        resolveMethodTypeAlias(typeText, aliasScope),
+        pkg,
+        typeParams,
+        scope,
+        aliasScope,
+        typeParamErasures);
+  }
+
+  private static @Nullable String resolveMethodTypeAlias(
+      @Nullable String typeText, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (typeText == null
+        || typeText.isEmpty()
+        || aliasScope == null
+        || aliasScope.isEmpty()
+        || aliasScope.aliases().isEmpty()) {
+      return typeText;
+    }
+    String raw = stripRootPrefix(rawTypeName(typeText));
+    if (raw == null || raw.isEmpty()) {
+      return typeText;
+    }
+    String resolved = resolveMethodAliasCandidate(raw, aliasScope);
+    if (resolved == null) {
+      String simple = parentSimpleName(raw);
+      if (simple != null && !simple.isEmpty()) {
+        resolved = resolveMethodAliasCandidate(simple, aliasScope);
+      }
+    }
+    return resolved == null || resolved.isEmpty() ? typeText : resolved;
+  }
+
+  private static @Nullable String resolveMethodAliasCandidate(
+      String candidate, ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (candidate == null || candidate.isEmpty() || aliasScope == null || aliasScope.isEmpty()) {
+      return null;
+    }
+    String resolved = aliasScope.aliases().get(candidate);
+    if (resolved != null && !resolved.isEmpty()) {
+      return resolved;
+    }
+    if (candidate.indexOf('$') >= 0) {
+      String slash = aliasScope.aliases().get(candidate.replace('$', '/'));
+      if (slash != null && !slash.isEmpty()) {
+        return slash;
+      }
+    }
+    if (candidate.indexOf('/') >= 0) {
+      String dollar = aliasScope.aliases().get(candidate.replace('/', '$'));
+      if (dollar != null && !dollar.isEmpty()) {
+        return dollar;
+      }
+    }
+    return null;
   }
 
   private static Map<String, String> typeParamErasures(ImmutableList<TypeParam> typeParams) {
@@ -1649,7 +1935,7 @@ public final class ScalaLower {
         continue;
       }
       String descriptor =
-          ScalaTypeMapper.descriptorForParam(
+          methodParamDescriptor(
               exceptionType, pkg, typeParams, scope, aliasScope, typeParamErasures);
       if (descriptor.length() >= 3 && descriptor.startsWith("L") && descriptor.endsWith(";")) {
         exceptions.add(descriptor.substring(1, descriptor.length() - 1));
@@ -2016,6 +2302,8 @@ public final class ScalaLower {
   private record Key(String binaryName) {}
 
   private record TraitRef(ClassDef trait, String parentTypeText) {}
+
+  private record ParentRef(ClassDef parent, String parentTypeText) {}
 
   private static ClassCollection collectClassDefs(ImmutableList<ScalaTree.CompUnit> units) {
     ClassCollection defs = new ClassCollection();
@@ -2967,13 +3255,11 @@ public final class ScalaLower {
     ScalaTypeMapper.TypeAliasScope.Builder builder = ScalaTypeMapper.TypeAliasScope.builder();
     for (Defn defn : cls.members()) {
       if (defn instanceof TypeDef type) {
-        if (type.rhs() == null || type.rhs().isEmpty()) {
+        String target = typeAliasErasureTarget(type);
+        if (target == null || target.isEmpty()) {
           continue;
         }
-        if (!type.typeParams().isEmpty()) {
-          continue;
-        }
-        builder.addAlias(type.name(), type.rhs());
+        builder.addAlias(type.name(), target);
       }
     }
     return builder.build();
@@ -3008,14 +3294,12 @@ public final class ScalaLower {
     String ownerClassBinary = classBinaryName(owner, classBinaryNames, moduleBinaryNames);
     for (Defn defn : owner.members()) {
       if (defn instanceof TypeDef type) {
-        if (type.rhs() == null || type.rhs().isEmpty()) {
-          continue;
-        }
-        if (!type.typeParams().isEmpty()) {
+        String target = typeAliasErasureTarget(type);
+        if (target == null || target.isEmpty()) {
           continue;
         }
         addQualifiedTypeAlias(
-            builder, ownerMemberBinary, ownerClassBinary, type.name(), type.rhs());
+            builder, ownerMemberBinary, ownerClassBinary, type.name(), target);
       } else if (defn instanceof ClassDef nested) {
         String erased = valueClassErasedType(nested);
         if (erased == null || erased.isEmpty()) {
@@ -3024,6 +3308,22 @@ public final class ScalaLower {
         addQualifiedTypeAlias(builder, ownerMemberBinary, ownerClassBinary, nested.name(), erased);
       }
     }
+  }
+
+  private static @Nullable String typeAliasErasureTarget(TypeDef type) {
+    if (type == null || !type.typeParams().isEmpty()) {
+      return null;
+    }
+    if (type.rhs() != null && !type.rhs().isEmpty()) {
+      return type.rhs();
+    }
+    if (type.upperBound() != null && !type.upperBound().isEmpty()) {
+      return type.upperBound();
+    }
+    if (type.lowerBound() != null && !type.lowerBound().isEmpty()) {
+      return type.lowerBound();
+    }
+    return null;
   }
 
   private static @Nullable String valueClassErasedType(ClassDef cls) {
@@ -4056,14 +4356,19 @@ public final class ScalaLower {
     if (includeParams) {
       for (int i = 0; i < defaultIndex; i++) {
         desc.append(
-            ScalaTypeMapper.descriptorForParam(
-                params.get(i).type(), pkg, typeParams, scope, aliasScope));
+            methodParamDescriptor(
+                params.get(i).type(), pkg, typeParams, scope, aliasScope, /* typeParamErasures= */ Map.of()));
       }
     }
     desc.append(')');
     desc.append(
-        ScalaTypeMapper.descriptorForParam(
-            params.get(defaultIndex).type(), pkg, typeParams, scope, aliasScope));
+        methodParamDescriptor(
+            params.get(defaultIndex).type(),
+            pkg,
+            typeParams,
+            scope,
+            aliasScope,
+            /* typeParamErasures= */ Map.of()));
     return desc.toString();
   }
 
