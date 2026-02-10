@@ -423,20 +423,18 @@ public final class ScalaLower {
     List<String> interfaces = new ArrayList<>();
     if (!cls.parents().isEmpty()) {
       String first = cls.parents().get(0);
-      String firstErased = eraseType(first, pkg, cls.typeParams(), scope, aliasScope);
-      firstErased =
-          preferKnownLocalParentType(
+      String firstErased =
+          canonicalParentType(
               first,
-              firstErased,
+              eraseType(first, pkg, cls.typeParams(), scope, aliasScope),
               pkg,
+              cls.typeParams(),
               scope,
+              aliasScope,
               sourceTypesByBinary,
               traitsByBinary,
+              packageObjectTypes,
               parentKindResolver);
-      firstErased =
-          preferLocalObjectParentType(
-              first, firstErased, pkg, packageObjectTypes, traitsByBinary, parentKindResolver);
-      firstErased = normalizeParentBinary(firstErased);
       if (isTrait) {
         addInterface(interfaces, firstErased);
       } else if (isInterfaceParent(firstErased, traitsByBinary, parentKindResolver)) {
@@ -458,25 +456,17 @@ public final class ScalaLower {
       }
       for (int i = 1; i < cls.parents().size(); i++) {
         String erasedParent =
-            eraseType(cls.parents().get(i), pkg, cls.typeParams(), scope, aliasScope);
-        erasedParent =
-            preferKnownLocalParentType(
+            canonicalParentType(
                 cls.parents().get(i),
-                erasedParent,
+                eraseType(cls.parents().get(i), pkg, cls.typeParams(), scope, aliasScope),
                 pkg,
+                cls.typeParams(),
                 scope,
+                aliasScope,
                 sourceTypesByBinary,
                 traitsByBinary,
-                parentKindResolver);
-        erasedParent =
-            preferLocalObjectParentType(
-                cls.parents().get(i),
-                erasedParent,
-                pkg,
                 packageObjectTypes,
-                traitsByBinary,
                 parentKindResolver);
-        erasedParent = normalizeParentBinary(erasedParent);
         addInterface(interfaces, erasedParent);
       }
     }
@@ -667,26 +657,19 @@ public final class ScalaLower {
     String superName = "java/lang/Object";
     List<String> interfaces = new ArrayList<>();
     if (!obj.parents().isEmpty()) {
-      String first = eraseType(obj.parents().get(0), pkg, obj.typeParams(), scope, aliasScope);
-      first =
-          preferKnownLocalParentType(
+      String first =
+          canonicalParentType(
               obj.parents().get(0),
-              first,
+              eraseType(obj.parents().get(0), pkg, obj.typeParams(), scope, aliasScope),
               pkg,
+              obj.typeParams(),
               scope,
+              aliasScope,
               sourceTypesByBinary,
               traitsByBinary,
-              parentKindResolver);
-      first =
-          preferLocalObjectParentType(
-              obj.parents().get(0),
-              first,
-              pkg,
               packageObjectTypes,
-              traitsByBinary,
               parentKindResolver);
       first = normalizeObjectParentType(first, moduleBinary);
-      first = normalizeParentBinary(first);
       if (isInterfaceParent(first, traitsByBinary, parentKindResolver)) {
         String firstSuper =
             interfaceSuperclass(
@@ -705,26 +688,19 @@ public final class ScalaLower {
         superName = first;
       }
       for (int i = 1; i < obj.parents().size(); i++) {
-        String erasedParent = eraseType(obj.parents().get(i), pkg, obj.typeParams(), scope, aliasScope);
-        erasedParent =
-            preferKnownLocalParentType(
+        String erasedParent =
+            canonicalParentType(
                 obj.parents().get(i),
-                erasedParent,
+                eraseType(obj.parents().get(i), pkg, obj.typeParams(), scope, aliasScope),
                 pkg,
+                obj.typeParams(),
                 scope,
+                aliasScope,
                 sourceTypesByBinary,
                 traitsByBinary,
-                parentKindResolver);
-        erasedParent =
-            preferLocalObjectParentType(
-                obj.parents().get(i),
-                erasedParent,
-                pkg,
                 packageObjectTypes,
-                traitsByBinary,
                 parentKindResolver);
         erasedParent = normalizeObjectParentType(erasedParent, moduleBinary);
-        erasedParent = normalizeParentBinary(erasedParent);
         addInterface(interfaces, erasedParent);
       }
     }
@@ -2994,28 +2970,45 @@ public final class ScalaLower {
       Map<ClassDef, String> moduleBinaryNames) {
     ScalaTypeMapper.TypeAliasScope.Builder builder = ScalaTypeMapper.TypeAliasScope.builder();
     for (ClassDef owner : defs) {
-      String ownerMemberBinary = ownerMemberBinary(owner, classBinaryNames, moduleBinaryNames);
-      String ownerClassBinary = classBinaryName(owner, classBinaryNames, moduleBinaryNames);
-      for (Defn defn : owner.members()) {
-        if (defn instanceof TypeDef type) {
-          if (type.rhs() == null || type.rhs().isEmpty()) {
-            continue;
-          }
-          if (!type.typeParams().isEmpty()) {
-            continue;
-          }
-          addQualifiedTypeAlias(
-              builder, ownerMemberBinary, ownerClassBinary, type.name(), type.rhs());
-        } else if (defn instanceof ClassDef nested) {
-          String erased = valueClassErasedType(nested);
-          if (erased == null || erased.isEmpty()) {
-            continue;
-          }
-          addQualifiedTypeAlias(builder, ownerMemberBinary, ownerClassBinary, nested.name(), erased);
-        }
+      if (owner.kind() == ClassDef.Kind.OBJECT || owner.isPackageObject()) {
+        continue;
       }
+      addQualifiedTypeAliasesForOwner(builder, owner, classBinaryNames, moduleBinaryNames);
+    }
+    for (ClassDef owner : defs) {
+      if (owner.kind() != ClassDef.Kind.OBJECT && !owner.isPackageObject()) {
+        continue;
+      }
+      addQualifiedTypeAliasesForOwner(builder, owner, classBinaryNames, moduleBinaryNames);
     }
     return builder.build();
+  }
+
+  private static void addQualifiedTypeAliasesForOwner(
+      ScalaTypeMapper.TypeAliasScope.Builder builder,
+      ClassDef owner,
+      Map<ClassDef, String> classBinaryNames,
+      Map<ClassDef, String> moduleBinaryNames) {
+    String ownerMemberBinary = ownerMemberBinary(owner, classBinaryNames, moduleBinaryNames);
+    String ownerClassBinary = classBinaryName(owner, classBinaryNames, moduleBinaryNames);
+    for (Defn defn : owner.members()) {
+      if (defn instanceof TypeDef type) {
+        if (type.rhs() == null || type.rhs().isEmpty()) {
+          continue;
+        }
+        if (!type.typeParams().isEmpty()) {
+          continue;
+        }
+        addQualifiedTypeAlias(
+            builder, ownerMemberBinary, ownerClassBinary, type.name(), type.rhs());
+      } else if (defn instanceof ClassDef nested) {
+        String erased = valueClassErasedType(nested);
+        if (erased == null || erased.isEmpty()) {
+          continue;
+        }
+        addQualifiedTypeAlias(builder, ownerMemberBinary, ownerClassBinary, nested.name(), erased);
+      }
+    }
   }
 
   private static @Nullable String valueClassErasedType(ClassDef cls) {
@@ -4124,6 +4117,48 @@ public final class ScalaLower {
     return interfaces != null && !interfaces.isEmpty();
   }
 
+  private static String canonicalParentType(
+      String parentTypeText,
+      String erasedType,
+      String currentPackage,
+      List<TypeParam> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      Map<String, Map<String, String>> packageObjectTypes,
+      ParentKindResolver parentKindResolver) {
+    String resolved =
+        preferKnownLocalParentType(
+            parentTypeText,
+            erasedType,
+            currentPackage,
+            scope,
+            sourceTypesByBinary,
+            traitsByBinary,
+            parentKindResolver);
+    resolved =
+        preferQualifiedParentAliasType(
+            parentTypeText,
+            resolved,
+            currentPackage,
+            typeParams,
+            scope,
+            aliasScope,
+            sourceTypesByBinary,
+            traitsByBinary,
+            parentKindResolver);
+    resolved =
+        preferLocalObjectParentType(
+            parentTypeText,
+            resolved,
+            currentPackage,
+            packageObjectTypes,
+            traitsByBinary,
+            parentKindResolver);
+    return normalizeParentBinary(resolved);
+  }
+
   private static String preferKnownLocalParentType(
       String parentTypeText,
       String erasedType,
@@ -4221,6 +4256,9 @@ public final class ScalaLower {
       case "IllegalArgumentException" -> "java/lang/IllegalArgumentException";
       case "UnsupportedOperationException" -> "java/lang/UnsupportedOperationException";
       case "Ordering" -> "scala/math/Ordering";
+      case "Ordered" -> "scala/math/Ordered";
+      case "Equals" -> "scala/Equals";
+      case "PartialFunction" -> "scala/PartialFunction";
       default -> null;
     };
   }
@@ -4230,6 +4268,93 @@ public final class ScalaLower {
       return null;
     }
     return currentPackage.replace('.', '/') + "/package$" + raw;
+  }
+
+  private static String preferQualifiedParentAliasType(
+      String parentTypeText,
+      String erasedType,
+      String currentPackage,
+      List<TypeParam> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, ClassDef> sourceTypesByBinary,
+      Map<String, ClassDef> traitsByBinary,
+      ParentKindResolver parentKindResolver) {
+    if (erasedType == null
+        || erasedType.isEmpty()
+        || aliasScope == null
+        || aliasScope.isEmpty()
+        || isKnownParentBinary(erasedType, sourceTypesByBinary, traitsByBinary, parentKindResolver)) {
+      return erasedType;
+    }
+    String aliasRhs = qualifiedParentAliasRhs(parentTypeText, erasedType, scope, aliasScope);
+    if (aliasRhs == null || aliasRhs.isEmpty()) {
+      return erasedType;
+    }
+    String resolved =
+        eraseType(
+            aliasRhs,
+            currentPackage == null ? "" : currentPackage,
+            typeParams == null ? ImmutableList.of() : typeParams,
+            scope == null ? ScalaTypeMapper.ImportScope.empty() : scope,
+            aliasScope);
+    return resolved == null || resolved.isEmpty() ? erasedType : resolved;
+  }
+
+  private static @Nullable String qualifiedParentAliasRhs(
+      String parentTypeText,
+      String erasedType,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope) {
+    if (aliasScope == null || aliasScope.isEmpty()) {
+      return null;
+    }
+    Set<String> candidates = new LinkedHashSet<>();
+    addParentAliasLookupCandidates(candidates, erasedType);
+    addParentAliasLookupCandidates(candidates, normalizeParentBinary(erasedType));
+    String raw = stripRootPrefix(rawTypeName(parentTypeText));
+    addParentAliasLookupCandidates(candidates, raw);
+    if (raw != null && !raw.isEmpty() && scope != null && !scope.isEmpty()) {
+      addParentAliasLookupCandidates(candidates, scope.explicit().get(raw));
+      String simpleName = parentSimpleName(raw);
+      if (simpleName != null && !simpleName.isEmpty()) {
+        addParentAliasLookupCandidates(candidates, scope.explicit().get(simpleName));
+      }
+    }
+    for (String candidate : candidates) {
+      String rhs = aliasScope.aliases().get(candidate);
+      if (rhs != null && !rhs.isEmpty()) {
+        return rhs;
+      }
+    }
+    return null;
+  }
+
+  private static void addParentAliasLookupCandidates(Set<String> out, @Nullable String candidate) {
+    if (candidate == null || candidate.isEmpty()) {
+      return;
+    }
+    out.add(candidate);
+    if (candidate.indexOf('$') >= 0) {
+      out.add(candidate.replace('$', '/'));
+    }
+    if (candidate.indexOf('/') >= 0) {
+      out.add(candidate.replace('/', '$'));
+    }
+  }
+
+  private static @Nullable String parentSimpleName(@Nullable String raw) {
+    if (raw == null || raw.isEmpty()) {
+      return null;
+    }
+    int slash = raw.lastIndexOf('/');
+    if (slash < 0) {
+      return raw;
+    }
+    if (slash == raw.length() - 1) {
+      return null;
+    }
+    return raw.substring(slash + 1);
   }
 
   private static String preferLocalObjectParentType(
@@ -4291,7 +4416,12 @@ public final class ScalaLower {
       return true;
     }
     return switch (binaryName) {
-      case "java/io/Serializable", "scala/Equals", "scala/Serializable" -> true;
+      case "java/io/Serializable",
+          "scala/Equals",
+          "scala/Serializable",
+          "scala/PartialFunction",
+          "scala/math/Ordered",
+          "scala/math/Ordering" -> true;
       default -> false;
     };
   }
@@ -4339,25 +4469,22 @@ public final class ScalaLower {
           aliasScopes.getOrDefault(traitDef, ScalaTypeMapper.TypeAliasScope.empty());
       for (String parent : traitDef.parents()) {
         String erased =
-            eraseType(parent, traitDef.packageName(), traitDef.typeParams(), traitScope, traitAliases);
-        erased =
-            preferKnownLocalParentType(
+            canonicalParentType(
                 parent,
-                erased,
+                eraseType(
+                    parent,
+                    traitDef.packageName(),
+                    traitDef.typeParams(),
+                    traitScope,
+                    traitAliases),
                 traitDef.packageName(),
+                traitDef.typeParams(),
                 traitScope,
+                traitAliases,
                 sourceTypesByBinary,
                 traitsByBinary,
-                parentKindResolver);
-        erased =
-            preferLocalObjectParentType(
-                parent,
-                erased,
-                traitDef.packageName(),
                 packageObjectTypes,
-                traitsByBinary,
                 parentKindResolver);
-        erased = normalizeParentBinary(erased);
         if (erased == null || erased.isEmpty() || "java/lang/Object".equals(erased)) {
           continue;
         }
@@ -4558,26 +4685,18 @@ public final class ScalaLower {
             aliasScopes.getOrDefault(source, ScalaTypeMapper.TypeAliasScope.empty());
         for (String parent : source.parents()) {
           String erased =
-              eraseType(
-                  parent, source.packageName(), source.typeParams(), sourceScope, sourceAliases);
-          erased =
-              preferKnownLocalParentType(
+              canonicalParentType(
                   parent,
-                  erased,
+                  eraseType(
+                      parent, source.packageName(), source.typeParams(), sourceScope, sourceAliases),
                   source.packageName(),
+                  source.typeParams(),
                   sourceScope,
+                  sourceAliases,
                   sourceTypesByBinary,
                   traitsByBinary,
-                  parentKindResolver);
-          erased =
-              preferLocalObjectParentType(
-                  parent,
-                  erased,
-                  source.packageName(),
                   packageObjectTypes,
-                  traitsByBinary,
                   parentKindResolver);
-          erased = normalizeParentBinary(erased);
           if (inheritsInterface(
               erased,
               iface,

@@ -1313,11 +1313,28 @@ public final class ScalaParser {
     ImmutableList.Builder<String> parents = ImmutableList.builder();
     if (token == LBRACE) {
       skipBlock();
+      if (token == WITH) {
+        next();
+      }
     }
-    parents.add(parseTypeText(parentStopTokens()));
+    while (token == NEWLINE || token == NEWLINES) {
+      next();
+    }
+    String firstParent = parseParentTypeText();
+    if (!firstParent.isEmpty()) {
+      parents.add(firstParent);
+    }
+    skipParentCtorArgsAndSeparators();
     while (token == WITH) {
       next();
-      parents.add(parseTypeText(parentStopTokens()));
+      while (token == NEWLINE || token == NEWLINES) {
+        next();
+      }
+      String parent = parseParentTypeText();
+      if (!parent.isEmpty()) {
+        parents.add(parent);
+      }
+      skipParentCtorArgsAndSeparators();
     }
     return parents.build();
   }
@@ -1888,6 +1905,55 @@ public final class ScalaParser {
       next();
     }
     return sb.toString().trim();
+  }
+
+  private String parseParentTypeText() {
+    StringBuilder sb = new StringBuilder();
+    int paren = 0;
+    int bracket = 0;
+    int brace = 0;
+    boolean sawTypeToken = false;
+    EnumSet<ScalaToken> stops = parentStopTokens();
+    while (token != EOF) {
+      if (paren == 0 && bracket == 0 && brace == 0) {
+        if (token == LPAREN && sawTypeToken) {
+          break;
+        }
+        if (stops.contains(token)) {
+          break;
+        }
+      }
+      if (sb.length() > 0) {
+        sb.append(' ');
+      }
+      appendTokenText(sb, token, value);
+      if (token.isIdentifier() || token.isLiteral()) {
+        sawTypeToken = true;
+      }
+      switch (token) {
+        case LPAREN -> paren++;
+        case RPAREN -> paren = Math.max(0, paren - 1);
+        case LBRACK -> bracket++;
+        case RBRACK -> bracket = Math.max(0, bracket - 1);
+        case LBRACE -> brace++;
+        case RBRACE -> brace = Math.max(0, brace - 1);
+        default -> {}
+      }
+      next();
+    }
+    return sb.toString().trim();
+  }
+
+  private void skipParentCtorArgsAndSeparators() {
+    while (token == NEWLINE || token == NEWLINES) {
+      next();
+    }
+    while (token == LPAREN) {
+      skipDelimited(LPAREN, RPAREN);
+      while (token == NEWLINE || token == NEWLINES) {
+        next();
+      }
+    }
   }
 
   private String parseName() {

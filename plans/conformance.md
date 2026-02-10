@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after parent fallback ranking for imports/core aliases/package-object parents)**
+**Current Snapshot (2026-02-10, latest local run after parent alias + extends-super constructor-arg parsing follow-up)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 38
+  - Mismatched members: 31
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -65,6 +65,20 @@ Spark (`--javac-release 17`)
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (parent class-shape conformance follow-up: Ordered/Equals/PartialFunction aliasing + qualified parent alias fallback + parent constructor-arg parsing + companion-alias precedence):
+  - `ScalaLower` parent canonicalization now adds parent-only alias candidates for `Ordered`, `Equals`, and `PartialFunction`, and resolves unresolved qualified parent aliases (for example `Owner$Alias`/`Owner.Alias`) before parent kind checks.
+  - Qualified alias collection now gives companion object aliases precedence over companion class/trait aliases for dotted owner lookups, preventing object-alias shadowing in parent lowering (`Actor.Receive`-style cases).
+  - `ScalaParser` parent extraction now records parent type heads only and skips superclass constructor argument lists, including block-argument lists, so value-expression tokens (for example `=>`) do not distort parent type lowering.
+  - Added `ScalaLowerSuite` regressions:
+    - `parent-prefers-scala-ordered-over-local-ordered-shadow`
+    - `parent-prefers-scala-equals-over-local-equals-shadow-and-prunes-via-product`
+    - `imported-owner-type-alias-parent-resolves-to-alias-rhs`
+    - `extends-super-with-multiple-block-argument-lists-keeps-correct-superclass`
+  - Measured delta vs previous run (`java-used`):
+    - Akka mismatches `38 -> 31`.
+    - Akka class-shape buckets dropped from `class-interfaces 5` / `class-superclass 2` to `class-interfaces 0` / `class-superclass 0`.
+    - Cleared from class-shape mismatches: `akka/actor/Deploy`, `akka/cluster/UniqueAddress`, `akka/persistence/query/Sequence`, `akka/testkit/TestActorRef`, `akka/event/LoggingReceive`.
+    - Spark unchanged at `25` mismatches with no class-shape buckets.
 - Latest update (parent fallback ranking for imports/core aliases/package-object parents):
   - `ScalaLower` parent resolution now treats speculative same-package fallback as lower-priority in parent positions, preferring known wildcard-import candidates, selected core aliases, and package-object member parents.
   - Added `ScalaLowerSuite` regressions:
@@ -159,8 +173,8 @@ Spark (`--javac-release 17`)
 - IDE/header fallback update:
   - Uninferred member outlines now default to `java/lang/Object` (instead of `Unit`) for non-constructor defs/vals to keep IDE/header compilation robust without inference expansion.
 - Latest measured effect with these generic fixes:
-  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 38`.
-    - Top buckets: `missing-method 30`, `class-interfaces 5`, `class-superclass 2`, `method-exceptions 1`.
+  - Akka `java-used`: `Missing 0 / Extra 0 / Mismatched 31`.
+    - Top buckets: `missing-method 30`, `method-exceptions 1`.
     - Filtered: `no-type-inference-public-members 17`.
   - Spark `java-used`: `Missing 0 / Extra 0 / Mismatched 25`.
     - Top buckets: `missing-method 22`, `method-access 1`, `method-exceptions 1`, `class-access 1`.

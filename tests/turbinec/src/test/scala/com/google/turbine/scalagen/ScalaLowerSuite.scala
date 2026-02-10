@@ -2219,6 +2219,115 @@ class ScalaLowerSuite extends FunSuite {
     assertEquals(header.interfaces, List("foo/target/WrappedMessage"))
   }
 
+  test("parent-prefers-scala-ordered-over-local-ordered-shadow") {
+    val source =
+      List(
+        "package foo",
+        "class C extends Ordered[Int]",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "foo/Ordered" || binaryName == "scala/math/Ordered"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/Ordered" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("scala/math/Ordered"))
+  }
+
+  test("parent-prefers-scala-equals-over-local-equals-shadow-and-prunes-via-product") {
+    val source =
+      List(
+        "package foo",
+        "trait Product extends scala.Equals",
+        "class C extends Product with Equals",
+      ).mkString("\n")
+
+    val resolver = new ScalaLower.ParentKindResolver {
+      override def isInterface(binaryName: String): Boolean =
+        binaryName == "foo/Equals" || binaryName == "scala/Equals"
+
+      override def superName(binaryName: String): String =
+        binaryName match {
+          case "foo/Equals" => "java/lang/Object"
+          case _ => null
+        }
+    }
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(
+        ImmutableList.of(unit),
+        LanguageVersion.createDefault().majorVersion(),
+        resolver,
+      )
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("foo/Product"))
+  }
+
+  test("imported-owner-type-alias-parent-resolves-to-alias-rhs") {
+    val source =
+      List(
+        "package bar {",
+        "  object Actor {",
+        "    type Receive = PartialFunction[Any, Unit]",
+        "  }",
+        "  trait Actor {",
+        "    type Receive = Actor.Receive",
+        "  }",
+        "}",
+        "package foo {",
+        "  import bar.Actor.Receive",
+        "  class C extends Actor.Receive",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "java/lang/Object")
+    assertEquals(header.interfaces, List("scala/PartialFunction"))
+  }
+
+  test("extends-super-with-multiple-block-argument-lists-keeps-correct-superclass") {
+    val source =
+      List(
+        "package foo",
+        "class Base(a: Any, b: Any)",
+        "class C extends Base(",
+        "  { (x: Int) => x },",
+        "  { (y: Int) => y }",
+        ")",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val header = readClassHeader(classes.get("foo/C"))
+    assertEquals(header.superName, "foo/Base")
+    assertEquals(header.interfaces, Nil)
+  }
+
   test("class-constructor-parses-newline-separated-parameter-lists") {
     val source =
       List(
