@@ -1584,7 +1584,10 @@ public final class ScalaParser {
     ImmutableList.Builder<String> mods = ImmutableList.builder();
     while (true) {
       if (token == AT) {
-        skipAnnotation();
+        String annotationModifier = parseAnnotationAndExtractModifier();
+        if (isBeanAnnotationModifier(annotationModifier)) {
+          mods.add(annotationModifier);
+        }
         continue;
       }
       String text = token == IDENTIFIER ? value : token.toString();
@@ -1648,6 +1651,7 @@ public final class ScalaParser {
       }
     }
     boolean varargsAnnotation = isVarargsAnnotationName(annotationName);
+    String beanModifier = beanAnnotationModifier(annotationName);
     if (token == LPAREN) {
       if ("throws".equals(annotationName)) {
         String throwsType = parseThrowsTypeArg();
@@ -1658,11 +1662,29 @@ public final class ScalaParser {
     if (varargsAnnotation) {
       return "varargs";
     }
+    if (beanModifier != null) {
+      return beanModifier;
+    }
     return null;
   }
 
   private static boolean isVarargsAnnotationName(@Nullable String annotationName) {
     return "varargs".equals(annotationName);
+  }
+
+  private static @Nullable String beanAnnotationModifier(@Nullable String annotationName) {
+    if ("BeanProperty".equals(annotationName)) {
+      return "bean-property";
+    }
+    if ("BooleanBeanProperty".equals(annotationName)) {
+      return "boolean-bean-property";
+    }
+    return null;
+  }
+
+  private static boolean isBeanAnnotationModifier(@Nullable String annotationModifier) {
+    return "bean-property".equals(annotationModifier)
+        || "boolean-bean-property".equals(annotationModifier);
   }
 
   private @Nullable String parseThrowsTypeArg() {

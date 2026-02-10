@@ -1623,6 +1623,103 @@ class ScalaLowerSuite extends FunSuite {
     assert(!cls.methods.contains("many([I)I"))
   }
 
+  test("bean-property-var-emits-getter-and-setter") {
+    val source =
+      List(
+        "package foo",
+        "import scala.beans.BeanProperty",
+        "class C {",
+        "  @BeanProperty var depth: Int = 0",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("getDepth()I"))
+    assert(cls.methods.contains("setDepth(I)V"))
+  }
+
+  test("bean-property-val-emits-getter-only") {
+    val source =
+      List(
+        "package foo",
+        "import scala.beans.BeanProperty",
+        "class C {",
+        "  @BeanProperty val label: String = \"x\"",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("getLabel()Ljava/lang/String;"))
+    assert(!cls.methods.contains("setLabel(Ljava/lang/String;)V"))
+  }
+
+  test("boolean-bean-property-emits-is-getter") {
+    val source =
+      List(
+        "package foo",
+        "import scala.beans.BooleanBeanProperty",
+        "class C {",
+        "  @BooleanBeanProperty var active: Boolean = false",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("isActive()Z"))
+    assert(cls.methods.contains("setActive(Z)V"))
+    assert(!cls.methods.contains("getActive()Z"))
+  }
+
+  test("bean-property-constructor-param-emits-java-accessors") {
+    val source =
+      List(
+        "package foo",
+        "import scala.beans.{BeanProperty, BooleanBeanProperty}",
+        "class C(@BeanProperty var depth: Int, @BooleanBeanProperty var active: Boolean)",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("getDepth()I"))
+    assert(cls.methods.contains("setDepth(I)V"))
+    assert(cls.methods.contains("isActive()Z"))
+    assert(cls.methods.contains("setActive(Z)V"))
+  }
+
+  test("bean-property-does-not-duplicate-explicit-accessor") {
+    val source =
+      List(
+        "package foo",
+        "import scala.beans.BeanProperty",
+        "class C {",
+        "  @BeanProperty var age: Int = 0",
+        "  def getAge(): Int = age",
+        "}",
+      ).mkString("\n")
+
+    val unit = ScalaParser.parse(new SourceFile(null, source))
+    val classes =
+      ScalaLower.lower(ImmutableList.of(unit), LanguageVersion.createDefault().majorVersion())
+
+    val cls = readMembers(classes.get("foo/C"))
+    assert(cls.methods.contains("getAge()I"))
+    assertEquals(methodOccurrences(classes.get("foo/C"), "getAge()I"), 1)
+  }
+
   test("companion-static-forwarder-emits-varargs-array-bridge") {
     val source =
       List(

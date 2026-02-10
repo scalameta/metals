@@ -1072,6 +1072,8 @@ public final class ScalaLower {
     String pkg = effectiveTypePackage(cls);
     Set<String> typeParams = ScalaTypeMapper.typeParamNames(cls.typeParams());
     Map<String, String> stableMemberTypes = stableMemberTypes(cls);
+    Set<String> reservedMethodKeys =
+        declaredMethodKeys(cls, pkg, typeParams, scope, aliasScope, stableMemberTypes, staticContext);
     for (Defn defn : cls.members()) {
       if (defn instanceof DefDef def) {
         if ("this".equals(def.name()) && cls.kind() == ClassDef.Kind.CLASS) {
@@ -1097,7 +1099,8 @@ public final class ScalaLower {
                 scope,
                 aliasScope,
                 staticContext,
-                cls.kind()));
+                cls.kind(),
+                reservedMethodKeys));
       }
     }
     // constructor params with val/var become accessors
@@ -1122,11 +1125,44 @@ public final class ScalaLower {
                   scope,
                   aliasScope,
                   staticContext,
-                  cls.kind()));
+                  cls.kind(),
+                  reservedMethodKeys));
         }
       }
     }
     return methods;
+  }
+
+  private static Set<String> declaredMethodKeys(
+      ClassDef cls,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      Map<String, String> stableMemberTypes,
+      boolean staticContext) {
+    Set<String> keys = new HashSet<>();
+    for (Defn defn : cls.members()) {
+      if (!(defn instanceof DefDef def)) {
+        continue;
+      }
+      if ("this".equals(def.name()) && cls.kind() == ClassDef.Kind.CLASS) {
+        continue;
+      }
+      for (ClassFile.MethodInfo method :
+          buildMethods(
+              def,
+              pkg,
+              typeParams,
+              scope,
+              aliasScope,
+              stableMemberTypes,
+              staticContext,
+              cls.kind())) {
+        keys.add(method.name() + method.descriptor());
+      }
+    }
+    return keys;
   }
 
   private static List<ClassFile.FieldInfo> memberFields(
@@ -2528,6 +2564,19 @@ public final class ScalaLower {
       ScalaTypeMapper.TypeAliasScope aliasScope,
       boolean staticContext,
       ClassDef.Kind ownerKind) {
+    return accessorsForVal(
+        val, pkg, typeParams, scope, aliasScope, staticContext, ownerKind, new HashSet<>());
+  }
+
+  private static List<ClassFile.MethodInfo> accessorsForVal(
+      ValDef val,
+      String pkg,
+      Set<String> typeParams,
+      ScalaTypeMapper.ImportScope scope,
+      ScalaTypeMapper.TypeAliasScope aliasScope,
+      boolean staticContext,
+      ClassDef.Kind ownerKind,
+      Set<String> reservedMethodKeys) {
     List<ClassFile.MethodInfo> methods = new ArrayList<>();
     String getterDesc =
         "()" + ScalaTypeMapper.descriptorForReturn(val.type(), pkg, typeParams, scope, aliasScope);
@@ -2543,7 +2592,9 @@ public final class ScalaLower {
             pkg,
             scope,
             aliasScope);
-    methods.add(
+    addMethodIfAbsent(
+        methods,
+        reservedMethodKeys,
         new ClassFile.MethodInfo(
             access,
             encodedName,
@@ -2555,6 +2606,39 @@ public final class ScalaLower {
             /* parameterAnnotations= */ ImmutableList.of(),
             /* typeAnnotations= */ ImmutableList.of(),
             /* parameters= */ ImmutableList.of()));
+
+    if (val.modifiers().contains("bean-property")) {
+      addMethodIfAbsent(
+          methods,
+          reservedMethodKeys,
+          new ClassFile.MethodInfo(
+              access,
+              encodeName(beanGetterName(val.name())),
+              getterDesc,
+              getterSignature,
+              /* exceptions= */ ImmutableList.of(),
+              /* defaultValue= */ null,
+              /* annotations= */ ImmutableList.of(),
+              /* parameterAnnotations= */ ImmutableList.of(),
+              /* typeAnnotations= */ ImmutableList.of(),
+              /* parameters= */ ImmutableList.of()));
+    }
+    if (val.modifiers().contains("boolean-bean-property") && "()Z".equals(getterDesc)) {
+      addMethodIfAbsent(
+          methods,
+          reservedMethodKeys,
+          new ClassFile.MethodInfo(
+              access,
+              encodeName(booleanBeanGetterName(val.name())),
+              getterDesc,
+              getterSignature,
+              /* exceptions= */ ImmutableList.of(),
+              /* defaultValue= */ null,
+              /* annotations= */ ImmutableList.of(),
+              /* parameterAnnotations= */ ImmutableList.of(),
+              /* typeAnnotations= */ ImmutableList.of(),
+              /* parameters= */ ImmutableList.of()));
+    }
 
     if (val.isVar()) {
       String setterDesc =
@@ -2572,7 +2656,9 @@ public final class ScalaLower {
               pkg,
               scope,
               aliasScope);
-      methods.add(
+      addMethodIfAbsent(
+          methods,
+          reservedMethodKeys,
           new ClassFile.MethodInfo(
               access,
               encodedName + "_$eq",
@@ -2584,8 +2670,56 @@ public final class ScalaLower {
               /* parameterAnnotations= */ ImmutableList.of(),
               /* typeAnnotations= */ ImmutableList.of(),
               /* parameters= */ ImmutableList.of()));
+      if (val.modifiers().contains("bean-property")
+          || val.modifiers().contains("boolean-bean-property")) {
+        addMethodIfAbsent(
+            methods,
+            reservedMethodKeys,
+            new ClassFile.MethodInfo(
+                access,
+                encodeName(beanSetterName(val.name())),
+                setterDesc,
+                setterSignature,
+                /* exceptions= */ ImmutableList.of(),
+                /* defaultValue= */ null,
+                /* annotations= */ ImmutableList.of(),
+                /* parameterAnnotations= */ ImmutableList.of(),
+                /* typeAnnotations= */ ImmutableList.of(),
+                /* parameters= */ ImmutableList.of()));
+      }
     }
     return methods;
+  }
+
+  private static void addMethodIfAbsent(
+      List<ClassFile.MethodInfo> methods,
+      Set<String> reservedMethodKeys,
+      ClassFile.MethodInfo method) {
+    String key = method.name() + method.descriptor();
+    if (reservedMethodKeys.contains(key)) {
+      return;
+    }
+    methods.add(method);
+    reservedMethodKeys.add(key);
+  }
+
+  private static String beanGetterName(String name) {
+    return "get" + beanAccessorSuffix(name);
+  }
+
+  private static String booleanBeanGetterName(String name) {
+    return "is" + beanAccessorSuffix(name);
+  }
+
+  private static String beanSetterName(String name) {
+    return "set" + beanAccessorSuffix(name);
+  }
+
+  private static String beanAccessorSuffix(String name) {
+    if (name == null || name.isEmpty()) {
+      return "";
+    }
+    return Character.toUpperCase(name.charAt(0)) + name.substring(1);
   }
 
   private static ClassFile.MethodInfo buildTraitImplMethod(

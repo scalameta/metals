@@ -14,7 +14,7 @@ Scope definitions:
 - Do **not** reimplement Scala type inference for ABI parity.
 - When public member inference is unavailable, emit `java/lang/Object` and classify under `no-type-inference-public-members` instead of failing core ABI goals.
 
-**Current Snapshot (2026-02-10, latest local run after implicit-evidence/varargs bridge parity pass)**
+**Current Snapshot (2026-02-10, latest local run after BeanProperty accessor parity pass)**
 Akka (`--javac-release 11`)
 - `java` scope:
   - Turbine classes: 4889
@@ -35,7 +35,7 @@ Akka (`--javac-release 11`)
   - Baseline classes: 3309
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 18
+  - Mismatched members: 17
   - Ignored baseline-only classes from skipped Scala sources: 7
   - Ignored baseline-only classes outside java-used ABI scope: 36
   - Filtered mismatches (no type inference on public members): 17
@@ -60,11 +60,28 @@ Spark (`--javac-release 17`)
   - Baseline classes: 3563
   - Missing classes: 0
   - Extra classes: 0
-  - Mismatched members: 15
+  - Mismatched members: 11
   - Ignored baseline-only classes from skipped Scala sources: 3
   - Filtered mismatches (no type inference on public members): 4
 
 **Current Change Summary (2026-02-10)**
+- Latest update (`@BeanProperty` / `@BooleanBeanProperty` Java accessor parity pass):
+  - `ScalaParser` now preserves bean annotations as internal modifiers (`bean-property`, `boolean-bean-property`) for both member vals/vars and constructor parameters.
+  - `ScalaLower` now synthesizes Java bean accessors from those modifiers:
+    - `@BeanProperty`: `getX()` and `setX(...)` (setter only for mutable members).
+    - `@BooleanBeanProperty`: `isX()` and `setX(...)` (setter only for mutable members).
+  - Bean accessors are now deduped against declared methods by erased JVM signature, preventing duplicate emission when explicit accessors already exist.
+  - Added `ScalaLowerSuite` regressions:
+    - `bean-property-var-emits-getter-and-setter`
+    - `bean-property-val-emits-getter-only`
+    - `boolean-bean-property-emits-is-getter`
+    - `bean-property-constructor-param-emits-java-accessors`
+    - `bean-property-does-not-duplicate-explicit-accessor`
+  - Measured delta vs previous recorded run (`java-used`):
+    - Akka mismatches `18 -> 17` (`missing-method 17 -> 16`, `method-exceptions 1` unchanged).
+    - Spark mismatches `15 -> 11` (`missing-method 13 -> 9`, `method-exceptions 1` unchanged, `class-access 1` unchanged).
+    - Akka/Spark class-shape remains zero (`class-superclass 0`, `class-interfaces 0`).
+    - Cleared targeted misses include Akka `Terminated.getActor` and Spark `setMaxDepth`, `setNumClasses`, `setNumIterations`, `getTreeStrategy`.
 - Latest update (implicit evidence params + `@varargs` bridge parity pass):
   - `ScalaLower` now emits JVM-visible evidence/implicit parameters from context/view bounds through a shared method parameter lowering path, used by regular methods, trait forwarders, and static forwarders.
   - `ScalaParser` now records `@varargs`/`@scala.annotation.varargs` as a method modifier, and varargs bridge emission is now annotation-gated with non-abstract array-bridge access matching baseline classfiles.
