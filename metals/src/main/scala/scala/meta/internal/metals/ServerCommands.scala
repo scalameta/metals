@@ -822,6 +822,7 @@ final case class ScalaTestSuitesDebugRequest(
 final case class ScalaTestSuites(
     suites: java.util.List[ScalaTestSuiteSelection],
     jvmOptions: java.util.List[String],
+    flags: java.util.List[String],
     environmentVariables: java.util.List[String],
 )
 

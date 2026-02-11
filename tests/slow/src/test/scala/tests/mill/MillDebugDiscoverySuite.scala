@@ -127,6 +127,7 @@ class MillDebugDiscoverySuite
             ).asJava,
             Nil.asJava,
             Nil.asJava,
+            Nil.asJava,
           ),
         )
         _ <- debugger.initialize
@@ -166,6 +167,7 @@ class MillDebugDiscoverySuite
           List(
             ScalaTestSuiteSelection("a.Foo", List("foo").asJava)
           ).asJava,
+          Nil.asJava,
           Nil.asJava,
           Nil.asJava,
         ),
