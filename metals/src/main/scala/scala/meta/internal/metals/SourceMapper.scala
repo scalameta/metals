@@ -48,7 +48,12 @@ final case class SourceMapper(
       ) {
         WorksheetProvider.worksheetScala3Adjustments(input)
       } else if (path.isTwirlTemplate) {
-        Some(TwirlAdjustments(input, scalaVersion))
+        val isPlayProject = buildTargets
+          .inverseSources(path)
+          .flatMap(buildTargets.targetJarClasspath)
+          .getOrElse(Nil)
+          .exists(_.filename.startsWith("play_"))
+        Some(TwirlAdjustments(input, scalaVersion, isPlayProject))
       } else None
 
     forScripts.getOrElse(default)

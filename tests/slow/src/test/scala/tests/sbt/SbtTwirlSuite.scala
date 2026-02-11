@@ -7,6 +7,25 @@ import tests.CompletionsAssertions
 class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
 
   val twirlVersion = "2.0.9"
+  val playVersion = "3.0.7"
+
+  /**
+   * Common build.sbt content for Play Framework test projects.
+   * Adds Play as a library dependency alongside sbt-twirl so that
+   * the `play_2.13` jar appears in the classpath, triggering Play
+   * detection in `SourceMapper`.
+   */
+  def playBuildSbt: String =
+    s"""|enablePlugins(SbtTwirl)
+        |Compile / unmanagedSourceDirectories := Seq(
+        |  (baseDirectory.value / "src" / "main" / "scala"),
+        |  (baseDirectory.value / "src" / "main" / "scala-3"),
+        |  (baseDirectory.value / "src" / "main" / "java"),
+        |  (baseDirectory.value / "src" / "main" / "twirl")
+        |)
+        |scalaVersion := "${V.scala213}"
+        |libraryDependencies += "org.playframework" %% "play" % "${playVersion}"
+        |""".stripMargin
 
   test("twirl-hover") {
     cleanWorkspace()
@@ -246,6 +265,63 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
         s"Expected definition on line 0, got ${res1.head.getRange.getStart.getLine}",
       )
 
+    } yield ()
+  }
+
+  // Uses unqualified Play types (Request, AnyContent) from play.api.mvc._
+  // which are only available when isPlayProject=true adds Play imports.
+  test("twirl-play-hover") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@()(implicit request: Request[AnyContent])
+            |<h1>Hello @request.method</h1>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |$playBuildSbt
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      _ <- server.assertHover(
+        "src/main/twirl/example.scala.html",
+        """|@()(implicit request: Request[AnyContent])
+           |<h1>Hello @request.me@@thod</h1>
+           |""".stripMargin,
+        """|```scala
+           |def method: String
+           |```""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // Verifies completions work for Play-specific types resolved via auto-imports.
+  test("twirl-play-completion") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@()(implicit request: Request[AnyContent])
+            |<h1>Hello @// @@</h1>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |$playBuildSbt
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "request.@@",
+        "method: String\n",
+        filename = Some("src/main/twirl/example.scala.html"),
+        filter = _.contains("method"),
+      )
     } yield ()
   }
 }

@@ -21,28 +21,24 @@ import play.twirl.compiler.TwirlCompiler
 
 object TwirlAdjustments {
 
-  def isPlayProject(implicit file: VirtualFile): Boolean =
-    file.path.contains("views/")
-
   /**
-   * Probably not the best solution, as ideally one should also be able to take configuration from
-   * the client's build.sbt files as TwirlKeys.templateImports. But this works nonetheless.
+   * Standard Play Framework imports added to Twirl templates in Play projects.
    */
-  private def playImports(
-      originalImports: Seq[String]
-  )(implicit file: VirtualFile): Seq[String] = {
-    if (isPlayProject)
-      originalImports ++ Seq(
-        "models._", "controllers._", "play.api.i18n._", "views.html._",
-        "play.api.templates.PlayMagic._", "play.api.mvc._", "play.api.data._",
-      )
-    else originalImports
-  }
+  private val defaultPlayImports: Seq[String] = Seq(
+    "models._", "controllers._", "play.api.i18n._", "views.html._",
+    "play.api.templates.PlayMagic._", "play.api.mvc._", "play.api.data._",
+  )
 
-  private def playDI(implicit file: VirtualFile): Seq[String] = {
+  private def playImports(
+      originalImports: Seq[String],
+      isPlayProject: Boolean,
+  ): Seq[String] =
+    if (isPlayProject) originalImports ++ defaultPlayImports
+    else originalImports
+
+  private def playDI(isPlayProject: Boolean): Seq[String] =
     if (isPlayProject) Seq("@javax.inject.Inject()")
     else Nil
-  }
 
   private def sourceFileFromPath(path: String): File =
     try {
@@ -60,9 +56,10 @@ object TwirlAdjustments {
    * @param the full Scala version string (used to resolve compatibility with Twirl)
    * @return the result of compiling the Twirl template
    */
-  def getCompiledString(implicit
+  def getCompiledString(
       file: VirtualFile,
       scalaVersion: String,
+      isPlayProject: Boolean,
   ): GeneratedSourceVirtual = {
     val sourceFile = sourceFileFromPath(file.path)
     val sourceDir = Option(sourceFile.getParentFile).getOrElse(new File("."))
@@ -73,9 +70,11 @@ object TwirlAdjustments {
         sourceDirectory = sourceDir,
         resultType = "play.twirl.api.Html",
         formatterType = "play.twirl.api.HtmlFormat.Appendable",
-        additionalImports =
-          playImports(TwirlCompiler.defaultImports(scalaVersion)),
-        constructorAnnotations = playDI,
+        additionalImports = playImports(
+          TwirlCompiler.defaultImports(scalaVersion),
+          isPlayProject,
+        ),
+        constructorAnnotations = playDI(isPlayProject),
         codec = Codec(
           scala.util.Properties.sourceEncoding
         ),
@@ -92,7 +91,7 @@ object TwirlAdjustments {
    * @return A `Position` object representing the line and column corresponding to the given index.
    */
   private def getPositionFromIndex(text: String, index: Int): Position = {
-    val lines = text.substring(0, index).split('\n')
+    val lines = text.substring(0, index).split("\n", -1)
     new Position(lines.length - 1, lines.last.length)
   }
 
@@ -145,10 +144,12 @@ object TwirlAdjustments {
   def apply(
       twirlFile: VirtualFile,
       rawScalaVersion: String,
+      isPlayProject: Boolean = false,
   ): (VirtualFile, Position => Position, AdjustLspData) = {
 
     val originalTwirl = twirlFile.value
-    val compiledSource = getCompiledString(twirlFile, rawScalaVersion)
+    val compiledSource =
+      getCompiledString(twirlFile, rawScalaVersion, isPlayProject)
     val compiledTwirl = compiledSource.content
     val newVirtualFile = twirlFile.copy(value = compiledTwirl)
     val matrix: Array[(Int, Int)] = getMatrix(compiledTwirl)
@@ -160,9 +161,13 @@ object TwirlAdjustments {
     def mapPosition(originalPos: Position): Position = {
       val originalIndex = getIndexFromPosition(originalTwirl, originalPos)
       val idx = matrix.indexWhere(_._1 >= originalIndex)
-      val (origBase, genBase) = matrix(idx - 1)
-      val mappedIndex = genBase + (originalIndex - origBase)
-      getPositionFromIndex(compiledTwirl, mappedIndex)
+      if (idx <= 0 || matrix.isEmpty) {
+        return originalPos
+      } else {
+        val (origBase, genBase) = matrix(idx - 1)
+        val mappedIndex = genBase + (originalIndex - origBase)
+        getPositionFromIndex(compiledTwirl, mappedIndex)
+      }
     }
 
     /**
