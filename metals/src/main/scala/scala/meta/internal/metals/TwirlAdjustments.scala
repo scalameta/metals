@@ -103,7 +103,7 @@ object TwirlAdjustments {
    * @return The absolute character index in the string corresponding to the position.
    */
   private def getIndexFromPosition(text: String, pos: Position): Int = {
-    val lines = text.split('\n')
+    val lines = text.split("\n", -1)
     lines
       .take(pos.getLine)
       .map(_.length + 1)
