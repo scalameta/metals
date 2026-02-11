@@ -15,4 +15,17 @@ class FallbackDownloadSuite extends BaseSuite {
     assertEquals(results.size, 37)
   }
 
+  test("download-mtags-jar-based") {
+    val dependency =
+      Embedded.dependencyOf("org.scalameta", "mtags_2.12.18", "1.4.0")
+    val results =
+      Embedded.fallbackDownload(dependency, useJarBasedCoursier = true)
+    println(results)
+    assert(
+      results.exists(_.toString.contains("mtags_2.12.18-1.4.0.jar")),
+      "Fallback should download mtags using local coursier",
+    )
+    assertEquals(results.size, 37)
+  }
+
 }

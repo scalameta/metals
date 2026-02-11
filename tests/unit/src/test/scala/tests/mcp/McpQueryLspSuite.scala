@@ -611,6 +611,364 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  // Smart fallback tests - no path provided, should auto-detect build target
+  test("inspect-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/MyClass.scala
+           |package com.test
+           |
+           |class MyClass {
+           |  def myMethod(x: Int): Int = x * 2
+           |}
+           |
+           |object MyClass {
+           |  def apply(): MyClass = new MyClass()
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/MyClass.scala")
+      _ = assertNoDiagnostics()
+      // Call inspect without path - should use smart fallback
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.MyClass",
+        path = None,
+        module = None,
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class MyClass
+           |	 - <init>(): MyClass
+           |	 - myMethod(x: Int): Int
+           |object MyClass
+           |	 - apply(): MyClass
+           |""".stripMargin,
+      )
+      // Verify primary target is detected
+      _ = assert(
+        res.primaryTarget.isDefined,
+        "Primary target should be detected via smart fallback",
+      )
+    } yield ()
+  }
+
+  test("docstrings-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/DocClass.scala
+           |package com.test
+           |
+           |class DocClass {
+           |  /**
+           |   * Multiplies the input by two.
+           |   * @param x the input value
+           |   * @return x multiplied by 2
+           |   */
+           |  def double(x: Int): Int = x * 2
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/DocClass.scala")
+      _ = assertNoDiagnostics()
+      // Call getDocumentation without path - should use smart fallback
+      res = server.headServer.queryEngine.getDocumentation(
+        "com.test.DocClass.double",
+        path = None,
+        module = None,
+      )
+      _ = assertNoDiff(
+        res.map(_.show).getOrElse(""),
+        """|Multiplies the input by two.
+           |
+           |@param x: the input value
+           |
+           |@returns x multiplied by 2
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/UsageClass.scala
+           |package com.test
+           |
+           |class UsageClass {
+           |  def helper(x: Int): Int = x + 1
+           |  def useHelper(x: Int): Int = helper(x) + 1
+           |}
+           |
+           |/a/src/main/scala/com/test/UsageConsumer.scala
+           |package com.test
+           |
+           |object UsageConsumer {
+           |  def foo = new UsageClass().helper(5)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/test/UsageClass.scala")
+      _ = assertNoDiagnostics()
+      // Call getUsages without path - should use smart fallback
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "com.test.UsageClass.helper",
+            path = None,
+            module = None,
+          )
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/test/UsageClass.scala")}:4
+            |${Path.of("a/src/main/scala/com/test/UsageClass.scala")}:5
+            |${Path.of("a/src/main/scala/com/test/UsageConsumer.scala")}:4
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // Test explicit module parameter
+  test("inspect-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/ModuleClass.scala
+           |package com.test
+           |
+           |class ModuleClass {
+           |  def moduleMethod(): String = "test"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/ModuleClass.scala")
+      _ = assertNoDiagnostics()
+      // Inspect with explicit module "a"
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.ModuleClass",
+        path = None,
+        module = Some("a"),
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class ModuleClass
+           |	 - <init>(): ModuleClass
+           |	 - moduleMethod(): String
+           |""".stripMargin,
+      )
+      _ = assertEquals(res.primaryTarget, Some("a"))
+    } yield ()
+  }
+
+  test("docstrings-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/a/src/main/scala/com/module_a/DocA.scala
+           |package com.module_a
+           |
+           |class DocA {
+           |  /**
+           |   * Method in module A.
+           |   * @return greeting from A
+           |   */
+           |  def greetA(): String = "Hello from A"
+           |}
+           |
+           |/b/src/main/scala/com/module_b/DocB.scala
+           |package com.module_b
+           |
+           |class DocB {
+           |  /**
+           |   * Method in module B.
+           |   * @return greeting from B
+           |   */
+           |  def greetB(): String = "Hello from B"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/module_a/DocA.scala")
+      _ <- server.didOpen("b/src/main/scala/com/module_b/DocB.scala")
+      _ = assertNoDiagnostics()
+      // Get docs for DocA using explicit module "a"
+      resA = server.headServer.queryEngine.getDocumentation(
+        "com.module_a.DocA.greetA",
+        path = None,
+        module = Some("a"),
+      )
+      _ = assertNoDiff(
+        resA.map(_.show).getOrElse(""),
+        """|Method in module A.
+           |
+           |@returns greeting from A
+           |""".stripMargin,
+      )
+      // Get docs for DocB using explicit module "b"
+      resB = server.headServer.queryEngine.getDocumentation(
+        "com.module_b.DocB.greetB",
+        path = None,
+        module = Some("b"),
+      )
+      _ = assertNoDiff(
+        resB.map(_.show).getOrElse(""),
+        """|Method in module B.
+           |
+           |@returns greeting from B
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"dependsOn": ["a"]}
+           |}
+           |/a/src/main/scala/com/shared/SharedUtil.scala
+           |package com.shared
+           |
+           |object SharedUtil {
+           |  def sharedMethod(x: Int): Int = x * 2
+           |}
+           |
+           |/a/src/main/scala/com/shared/SharedConsumer.scala
+           |package com.shared
+           |
+           |object SharedConsumer {
+           |  def useShared = SharedUtil.sharedMethod(5)
+           |}
+           |
+           |/b/src/main/scala/com/app/AppConsumer.scala
+           |package com.app
+           |
+           |import com.shared.SharedUtil
+           |
+           |object AppConsumer {
+           |  def useFromApp = SharedUtil.sharedMethod(10)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/shared/SharedUtil.scala")
+      _ <- server.didOpen("b/src/main/scala/com/app/AppConsumer.scala")
+      _ = assertNoDiagnostics()
+      // Get usages with explicit module "a"
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "com.shared.SharedUtil.sharedMethod",
+            path = None,
+            module = Some("a"),
+          )
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/shared/SharedConsumer.scala")}:4
+            |${Path.of("a/src/main/scala/com/shared/SharedUtil.scala")}:4
+            |${Path.of("b/src/main/scala/com/app/AppConsumer.scala")}:6
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("inspect-searchAllTargets") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/SearchClass.scala
+           |package com.test
+           |
+           |class SearchClass {
+           |  def searchMethod(): Int = 42
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/SearchClass.scala")
+      _ = assertNoDiagnostics()
+      // Inspect with searchAllTargets=true (single module)
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.SearchClass",
+        path = None,
+        module = None,
+        searchAllTargets = true,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class SearchClass
+           |	 - <init>(): SearchClass
+           |	 - searchMethod(): Int
+           |""".stripMargin,
+      )
+      // Verify at least one target was searched
+      _ = assert(
+        res.searchedTargets.nonEmpty,
+        s"Expected at least 1 searched target, got: ${res.searchedTargets}",
+      )
+    } yield ()
+  }
+
+  test("inspect-invalid-module-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/FallbackClass.scala
+           |package com.test
+           |
+           |class FallbackClass {
+           |  def fallbackMethod(): Int = 99
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/FallbackClass.scala")
+      _ = assertNoDiagnostics()
+      // Call with invalid module name - should fall back to smart fallback
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.FallbackClass",
+        path = None,
+        module = Some("nonexistent-module"),
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class FallbackClass
+           |	 - <init>(): FallbackClass
+           |	 - fallbackMethod(): Int
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   def timed[T](f: => T): T = {
     val start = System.currentTimeMillis()
     val res = f

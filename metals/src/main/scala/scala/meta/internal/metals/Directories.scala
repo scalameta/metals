@@ -32,6 +32,8 @@ object Directories {
     RelativePath(".metals").resolve("settings.json")
   def rules: RelativePath =
     RelativePath(".metals").resolve("rules")
+  def explainedDiagnostics: RelativePath =
+    RelativePath(".metals").resolve("explained-diagnostics")
 
   val stacktraceFilename = "stacktrace.scala"
   val dependenciesName = "dependencies"

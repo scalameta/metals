@@ -122,7 +122,9 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""|src/main/twirl/example.scala.html
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
             |@(name: String)
             |<h1>Hello @// @@</h1>
             |/project/plugins.sbt
@@ -135,6 +137,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
             |  (baseDirectory.value / "src" / "main" / "java"),
             |  (baseDirectory.value / "src" / "main" / "twirl")
             |)
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ <- server.didOpen("src/main/twirl/example.scala.html")
@@ -152,7 +155,9 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""|src/main/twirl/example.scala.html
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
             |@(name: String)
             |<h1>Hello @name @// @@</h1>
             |/project/plugins.sbt
@@ -165,6 +170,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
             |  (baseDirectory.value / "src" / "main" / "java"),
             |  (baseDirectory.value / "src" / "main" / "twirl")
             |)
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ <- server.didOpen("src/main/twirl/example.scala.html")
@@ -186,7 +192,9 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""|src/main/twirl/example.scala.html
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
             |@(name: String)
             |<h1>Hello @name.toInt</h1>
             |/project/plugins.sbt
@@ -199,6 +207,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
             |  (baseDirectory.value / "src" / "main" / "java"),
             |  (baseDirectory.value / "src" / "main" / "twirl")
             |)
+            |scalaVersion := "${V.scala213}"
             |""".stripMargin
       )
       _ <- server.didOpen("src/main/twirl/example.scala.html")
@@ -229,6 +238,12 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
           .getUri()
           .toString
           .contains("example.scala.html")
+      )
+
+      // Verify definition points to the `name` parameter declaration on line 0
+      _ = assert(
+        res1.head.getRange.getStart.getLine == 0,
+        s"Expected definition on line 0, got ${res1.head.getRange.getStart.getLine}",
       )
 
     } yield ()

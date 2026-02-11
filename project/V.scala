@@ -11,9 +11,9 @@ object V {
 
   val scala3 = "3.3.7"
 
-  val scala3ForSBT2 = "3.7.2"
+  val scala3ForSBT2 = "3.7.4"
 
-  val latestScala3Next = "3.8.0-RC4"
+  val latestScala3Next = "3.8.2-RC1"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.20"
@@ -25,13 +25,13 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.0.17"
+  val bloop = "2.0.19"
 
   val bloopConfig = "2.3.3"
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M22"
+  val coursier = "2.1.25-M23"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
@@ -49,21 +49,21 @@ object V {
 
   val javaSemanticdb = "0.11.2"
 
-  val jsoup = "1.21.2"
+  val jsoup = "1.22.1"
 
   val kindProjector = "0.13.4"
 
   val lsp4jV = "0.24.0"
 
-  val mavenBloop = "2.0.1"
+  val mavenBloop = "2.0.3"
 
-  val mill = "1.0.6"
+  val mill = "1.1.2"
 
   val mdoc = "2.8.2"
 
-  val modelContextProtocol = "0.17.0"
+  val modelContextProtocol = "0.17.2"
 
-  val munit = "1.2.0"
+  val munit = "1.2.2"
 
   val pprint = "0.7.3"
 
@@ -71,19 +71,19 @@ object V {
 
   val sbtJdiTools = "1.2.0"
 
-  val scalaCli = "1.11.0"
+  val scalaCli = "1.12.2"
 
   val scalafix = "0.14.5"
 
-  val scalafmt = "3.10.3"
+  val scalafmt = "3.10.6"
 
-  val scalameta = "4.14.3"
+  val scalameta = "4.14.7"
 
   val scribe = "3.17.0"
 
   val qdox = "2.2.0"
 
-  val sbt2Version = "2.0.0-RC6"
+  val sbt2Version = "2.0.0-RC8"
 
   val guava = "com.google.guava" % "guava" % "33.5.0-jre"
 

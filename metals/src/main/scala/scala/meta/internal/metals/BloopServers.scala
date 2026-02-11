@@ -531,4 +531,6 @@ object BloopServers {
   }
 
   def defaultBloopVersion = BloopRifleConfig.defaultVersion
+
+  def minimumBloopVersion = "2.0.17"
 }

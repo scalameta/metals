@@ -653,7 +653,11 @@ case class ScalafixProvider(
                 tables.dismissedNotifications.ScalafixConfAmend.dismissForever()
               case _ =>
             }
-            .withTimeout(15, ju.concurrent.TimeUnit.SECONDS)
+            .withTimeout(
+              15,
+              ju.concurrent.TimeUnit.SECONDS,
+              Some("amending the scalafix config"),
+            )
             .map(_ => confFile)
         }).getOrElse(Future.successful(confFile))
       case _ => Future.successful(confFile)

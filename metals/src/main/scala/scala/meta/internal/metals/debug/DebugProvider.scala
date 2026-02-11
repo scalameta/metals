@@ -260,7 +260,11 @@ class DebugProvider(
             clientConfig.initialConfig.debugServerStartTimeout
 
           conn
-            .withTimeout(startupTimeout, TimeUnit.SECONDS)
+            .withTimeout(
+              startupTimeout,
+              TimeUnit.SECONDS,
+              Some("starting the debug sessions"),
+            )
             .recover { case exception =>
               connectedToServer.tryFailure(exception)
               cancelPromise.trySuccess(())
@@ -759,10 +763,10 @@ class DebugProvider(
           result <- Future(f())
         } yield result
       case Failure(_: NoMainClassFoundException) =>
-        val allTargetIds = buildTargets.allBuildTargetIds
+        val activeTargetIds = buildTargets.activeBuildTargetIds
         for {
-          _ <- compilations.compileTargets(allTargetIds)
-          _ <- buildTargetClasses.rebuildIndex(allTargetIds)
+          _ <- compilations.compileTargets(activeTargetIds)
+          _ <- buildTargetClasses.rebuildIndex(activeTargetIds)
           result <- Future(f())
         } yield result
       case result => Future.successful(result)

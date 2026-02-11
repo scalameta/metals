@@ -285,23 +285,32 @@ object MetalsEnrichments
       }
     }
 
-    def withTimeout(length: Int, unit: TimeUnit)(implicit
-        ec: ExecutionContext
-    ): Future[A] = withTimeout(FiniteDuration(length, unit))
+    def withTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
+        implicit ec: ExecutionContext
+    ): Future[A] = withTimeout(FiniteDuration(length, unit), reason)
 
     def withTimeout(
-        duration: FiniteDuration
+        duration: FiniteDuration,
+        reason: Option[String],
     )(implicit ec: ExecutionContext): Future[A] = {
-      Future(Await.result(future, duration))
+      Future {
+        try { Await.result(future, duration) }
+        catch {
+          case e: TimeoutException =>
+            reason.foreach(r => scribe.error(s"Timeout while $r", e))
+            throw e
+        }
+      }
     }
 
-    def onTimeout(length: Int, unit: TimeUnit)(
+    def onTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
         action: => Unit
     )(implicit ec: ExecutionContext): Future[A] = {
       // schedule action to execute on timeout
-      future.withTimeout(length, unit).recoverWith { case e: TimeoutException =>
-        action
-        Future.failed(e)
+      future.withTimeout(length, unit, reason).recoverWith {
+        case e: TimeoutException =>
+          action
+          Future.failed(e)
       }
     }
 
@@ -977,8 +986,21 @@ object MetalsEnrichments
         occ.range.get.encloses(pos, includeLastCharacter)
   }
 
+  implicit class XtensionTextDocument(textDocument: s.TextDocument) {
+    def resolveUri(workspace: AbsolutePath): AbsolutePath = {
+      if (textDocument.uri.startsWith("file://")) {
+        textDocument.uri.toAbsolutePath
+      } else {
+        AbsolutePath(workspace.resolve(textDocument.uri).toNIO)
+      }
+    }
+  }
+
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLsp: l.Diagnostic = {
+    def toLsp(
+        path: AbsolutePath,
+        isVirtualDocumentSupported: Boolean,
+    ): l.Diagnostic = {
       val ld = new l.Diagnostic(
         diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
@@ -986,10 +1008,19 @@ object MetalsEnrichments
         else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
+      val explainUrl = FileDecoderProvider.createExplainURI(
+        path,
+        diag.getRange.toLsp.getStart.getLine(),
+        diag.getRange.toLsp.getStart.getCharacter(),
+      )
 
-      Option(diag.getCode()).foreach { code =>
-        ld.setCode(diag.getCode())
-      }
+      if (isVirtualDocumentSupported)
+        Option(diag.getCode()).foreach { code =>
+          ld.setCode("Explain the error")
+          ld.setCodeDescription(
+            new l.DiagnosticCodeDescription(explainUrl.toString())
+          )
+        }
 
       Option(diag.getTags()).foreach { tags =>
         val converted = tags.asScala.flatMap {

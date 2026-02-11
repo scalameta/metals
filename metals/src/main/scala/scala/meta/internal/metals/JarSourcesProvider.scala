@@ -148,7 +148,7 @@ object JarSourcesProvider {
       .addClassifiers(Classifier.sources)
       .future()
       .map(_.map(_.toPath()).toList)
-      .withTimeout(1, TimeUnit.MINUTES)
+      .withTimeout(1, TimeUnit.MINUTES, Some("fetching the dependency sources"))
   }
 
 }

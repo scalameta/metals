@@ -166,7 +166,7 @@ class SymbolHierarchyOps(
     for {
       symbol <- matchingSymbol
       parentDoc <- parentTextDocument
-      source = workspace.resolve(parentDoc.uri)
+      source = parentDoc.resolveUri(workspace)
       implOccurrence <- findDefOccurrence(
         parentDoc,
         symbol,

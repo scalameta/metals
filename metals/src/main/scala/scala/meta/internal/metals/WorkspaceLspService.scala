@@ -91,6 +91,10 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.TypeHierarchyItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
@@ -126,7 +130,7 @@ class WorkspaceLspService(
 
   private val languageClient = {
     val languageClient =
-      new ConfiguredLanguageClient(client, clientConfig, this)
+      new ConfiguredLanguageClient(client, clientConfig, Some(this))
     // Set the language client so that we can forward log messages to the client
     LanguageClientLogger.languageClient = Some(languageClient)
     cancelables.add(() => languageClient.shutdown())
@@ -583,6 +587,21 @@ class WorkspaceLspService(
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[ju.List[CallHierarchyOutgoingCall]] =
     getServiceFor(params.getItem.getUri).callHierarchyOutgoingCalls(params)
+
+  override def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[ju.List[TypeHierarchyItem]] =
+    getServiceFor(params.getTextDocument.getUri).prepareTypeHierarchy(params)
+
+  override def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[ju.List[TypeHierarchyItem]] =
+    getServiceFor(params.getItem.getUri).typeHierarchySupertypes(params)
+
+  override def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[ju.List[TypeHierarchyItem]] =
+    getServiceFor(params.getItem.getUri).typeHierarchySubtypes(params)
 
   override def completion(
       params: CompletionParams
@@ -1326,6 +1345,7 @@ class WorkspaceLspService(
           )
         )
         capabilities.setCallHierarchyProvider(true)
+        capabilities.setTypeHierarchyProvider(true)
         capabilities.setWorkspaceSymbolProvider(true)
         capabilities.setDocumentSymbolProvider(true)
         capabilities.setDocumentFormattingProvider(true)
@@ -1433,7 +1453,6 @@ class WorkspaceLspService(
         languageClient.underlying,
         () => server.reload(),
         clientConfig.icons(),
-        clientConfig,
       )
       render = () => newClient.renderHtml
       completeCommand = e => newClient.completeCommand(e)

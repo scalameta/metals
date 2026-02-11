@@ -79,40 +79,42 @@ class SbtBloopLspSuite
     } yield ()
   }
 
-  test("basic") {
-    cleanWorkspace()
-    // directory should not be used as sbt script
-    workspace.resolve("sbt").createDirectories()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala213}"
-            |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        importBuildMessage,
-      )
-      _ = client.messageRequests.clear() // restart
-      _ = assertStatus(_.isInstalled)
-      _ <- server.didChange("build.sbt")(_ + "\n// comment")
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sbt")
-      // Comment changes do not trigger "re-import project" request
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ = client.importBuildChanges = ImportBuildChanges.yes
-      _ <- server.didChange("build.sbt") { text =>
-        text + "\nversion := \"1.0.0\"\n"
+  for (sbtVersion <- List(V.sbtVersion, V.sbt2Version)) {
+    test(s"basic-$sbtVersion") {
+      cleanWorkspace()
+      // directory should not be used as sbt script
+      workspace.resolve("sbt").createDirectories()
+      for {
+        _ <- initialize(
+          s"""|/project/build.properties
+              |sbt.version=$sbtVersion
+              |/build.sbt
+              |scalaVersion := "${V.scala213}"
+              |""".stripMargin
+        )
+        _ = assertNoDiff(
+          client.workspaceMessageRequests,
+          importBuildMessage,
+        )
+        _ = client.messageRequests.clear() // restart
+        _ = assertStatus(_.isInstalled)
+        _ <- server.didChange("build.sbt")(_ + "\n// comment")
+        _ = assertNoDiff(client.workspaceMessageRequests, "")
+        _ <- server.didSave("build.sbt")
+        // Comment changes do not trigger "re-import project" request
+        _ = assertNoDiff(client.workspaceMessageRequests, "")
+        _ = client.importBuildChanges = ImportBuildChanges.yes
+        _ <- server.didChange("build.sbt") { text =>
+          text + "\nversion := \"1.0.0\"\n"
+        }
+        _ = assertNoDiff(client.workspaceMessageRequests, "")
+        _ <- server.didSave("build.sbt")
+      } yield {
+        assertNoDiff(
+          client.workspaceMessageRequests,
+          importBuildChangesMessage,
+        )
       }
-      _ = assertNoDiff(client.workspaceMessageRequests, "")
-      _ <- server.didSave("build.sbt")
-    } yield {
-      assertNoDiff(
-        client.workspaceMessageRequests,
-        importBuildChangesMessage,
-      )
     }
   }
 

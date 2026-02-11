@@ -34,7 +34,7 @@ class UnsupportedDebuggingLspSuite
       codeLenses <-
         server
           .codeLensesText("a/src/main/scala/Main.scala")(maxRetries = 3)
-          .withTimeout(5, TimeUnit.SECONDS)
+          .withTimeout(5, TimeUnit.SECONDS, reason = None)
           .transform(Success(_))
     } yield {
       codeLenses match {

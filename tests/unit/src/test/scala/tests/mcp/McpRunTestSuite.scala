@@ -175,6 +175,77 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
+  test("testng", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.testng:testng:7.7.1", "com.lihaoyi:mill-contrib-testng:0.12.1"]
+           |  }
+           |}
+           |/a/src/main/scala/a/b/TestNGSuite.scala
+           |package a.b
+           |
+           |import org.testng.annotations.Test
+           |
+           |class TestNGSuite {
+           |  @Test
+           |  def testOK(): Unit = {
+           |    println("TestNG output message")
+           |    assert(true)
+           |  }
+           |
+           |  @Test
+           |  def testFail(): Unit = {
+           |    println("This test will fail")
+           |    assert(false)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/scala/a/b/TestNGSuite.scala"
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/main/scala/a/b/TestNGSuite.scala")
+
+      // Test with explicit path and verbose output
+      res1 <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.b.TestNGSuite",
+          Some(path),
+          None,
+          verbose = true,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assertNoDiff(
+        res1.replaceAll("\\d+\\.?\\d*m?s", "x ms"),
+        """|SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+           |SLF4J: Defaulting to no-operation (NOP) logger implementation
+           |SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+           |a.b.TestNGSuite testFail This test will fail
+           |X
+           |a.b.TestNGSuite testOK TestNG output message
+           |+
+           |===============================================
+           |Command line suite
+           |Total tests run: 2, Passes: 1, Failures: 1, Skips: 0
+           |===============================================
+           |
+           |Execution took x ms
+           |2 tests, 1 passed, 1 failed
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("individual-test-execution", maxRetry = 3) {
     cleanWorkspace()
     for {

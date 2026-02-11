@@ -1,8 +1,10 @@
 package scala.meta.internal.metals
 
 import java.io.File
+import java.net.URI
 
 import scala.io.Codec
+import scala.util.matching.Regex
 
 import scala.meta.inputs.Input.VirtualFile
 
@@ -42,6 +44,13 @@ object TwirlAdjustments {
     else Nil
   }
 
+  private def sourceFileFromPath(path: String): File =
+    try {
+      new File(URI.create(path).getPath)
+    } catch {
+      case _: Exception => new File(path)
+    }
+
   /**
    * Compiles an in-memory Twirl template into a compiled representation using the Twirl compiler.
    *
@@ -54,12 +63,14 @@ object TwirlAdjustments {
   def getCompiledString(implicit
       file: VirtualFile,
       scalaVersion: String,
-  ): GeneratedSourceVirtual =
+  ): GeneratedSourceVirtual = {
+    val sourceFile = sourceFileFromPath(file.path)
+    val sourceDir = Option(sourceFile.getParentFile).getOrElse(new File("."))
     TwirlCompiler
       .compileVirtual(
         content = file.value,
-        source = new File("foo/bar/example.scala.html"),
-        sourceDirectory = new File("foo/bar"),
+        source = sourceFile,
+        sourceDirectory = sourceDir,
         resultType = "play.twirl.api.Html",
         formatterType = "play.twirl.api.HtmlFormat.Appendable",
         additionalImports =
@@ -71,6 +82,7 @@ object TwirlAdjustments {
         scalaVersion = Some(scalaVersion),
         inclusiveDot = true,
       )
+  }
 
   /**
    * Converts a character offset (index) in a string to an LSP `Position` (0 based - line number and character offset).
@@ -99,7 +111,7 @@ object TwirlAdjustments {
       .sum + pos.getCharacter
   }
 
-  val pattern = """(\d+)->(\d+)""".r
+  val pattern: Regex = """(\d+)->(\d+)""".r
 
   /**
    * Extracts a positional mapping matrix from the compiled Twirl template.
@@ -111,9 +123,9 @@ object TwirlAdjustments {
    * @return An array of tuples representing (originalIndex, generatedIndex) pairs
    */
   private def getMatrix(compiledTwirl: String): Array[(Int, Int)] = {
-    val number_matching =
+    val numberMatching =
       pattern.findAllIn(compiledTwirl).toArray
-    val chars = number_matching.take(number_matching.length / 2)
+    val chars = numberMatching.take(numberMatching.length / 2)
     chars.map { char =>
       val parts = char.split("->")
       val a = parts(0).toInt
@@ -158,8 +170,8 @@ object TwirlAdjustments {
      */
     def reverseMapPosition(compiledPos: Position): Position = {
       val compiledIndex = getIndexFromPosition(compiledTwirl, compiledPos)
-      val pos_tuple = compiledSource.mapPosition(compiledIndex)
-      getPositionFromIndex(originalTwirl, pos_tuple)
+      val mappedIndex = compiledSource.mapPosition(compiledIndex)
+      getPositionFromIndex(originalTwirl, mappedIndex)
     }
 
     (

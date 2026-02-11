@@ -13,6 +13,7 @@ import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
 import scala.meta.internal.metals.Folder
+import scala.meta.internal.metals.MemoryMonitor
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
@@ -63,6 +64,9 @@ class MetalsLanguageServer(
   private val cancelables = new MutableCancelable()
   private val isCancelled = new AtomicBoolean(false)
   private val isLanguageClientConnected = new AtomicBoolean(false)
+
+  // Memory monitor to warn users about high memory usage
+  private lazy val memoryMonitor = new MemoryMonitor(languageClient.get, sh)
 
   // it's fine to pass null to underlying service, it won't be used before initialize is called
   // and we set it to the correct value in initialize anyway
@@ -228,6 +232,8 @@ class MetalsLanguageServer(
     // we may have users on a fixed vim-lsc version but with -Dmetals.no-initialized=true
     // enabled.
     if (isInitialized.compareAndSet(false, true)) {
+      // Start monitoring memory usage
+      memoryMonitor.start()
       serverState.get match {
         case ServerState.Initialized(service) =>
           service.initialized()
@@ -245,6 +251,7 @@ class MetalsLanguageServer(
   override def shutdown(): CompletableFuture[Unit] = serverState.get match {
     case ServerState.Initialized(server) =>
       scribe.info("Shutting down server")
+      memoryMonitor.stop()
       server
         .shutdown()
         .thenApply(_ => serverState.set(ServerState.ShuttingDown(server)))

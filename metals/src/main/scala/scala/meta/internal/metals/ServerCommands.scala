@@ -483,6 +483,24 @@ object ServerCommands {
     """|MetalsPasteParams""".stripMargin,
   )
 
+  val ExplainDiagnostic = new ParametrizedCommand[TextDocumentPositionParams](
+    "explain-diagnostic",
+    "Explain Diagnostic",
+    """|Run the presentation compiler with -explain flag to get detailed error explanation.
+       |
+       |This command compiles the file with the -explain option and renders
+       |the expanded diagnostic message in a readable file.
+       |""".stripMargin,
+    """|Object with uri and diagnostic position info:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
       kind: String,
@@ -833,6 +851,7 @@ object ServerCommands {
       ZipReports,
       ResetWorkspace,
       ShowReportsForBuildTarget,
+      ExplainDiagnostic,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet
