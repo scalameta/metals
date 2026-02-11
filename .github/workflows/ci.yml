@@ -68,7 +68,8 @@ jobs:
         type:
           [
             gradle-mac,
-            sbt,
+            sbt-1,
+            sbt-2,
             maven,
             gradle,
             scalacli,
@@ -91,18 +92,27 @@ jobs:
             name: Gradle MacOS integration
             os: macOS-latest
             java: "17"
-          - type: sbt
+          - type: sbt-1
             command: |
               bin/test.sh +sbt-metals/publishLocal
               bin/test.sh 'slow/testOnly -- tests.sbt.*'
-            name: Sbt integration
+            name: Sbt integration 1/2
             os: ubuntu-latest
             java: "17"
+            shard: 1
+          - type: sbt-2
+            command: |
+              bin/test.sh +sbt-metals/publishLocal
+              bin/test.sh 'slow/testOnly -- tests.sbt.*'
+            name: Sbt integration 2/2
+            os: ubuntu-latest
+            java: "17"
+            shard: 2
           - type: sbt-metals jdk8
             command: bin/test.sh sbt-metals/scripted
-            name: Sbt-metals/scripted jdk11
+            name: sbt-metals/scripted jdk17
             os: ubuntu-latest
-            java: "11"
+            java: "17"
           - type: sbt-metals Sbt 2
             command: bin/test.sh '++3.x; sbt-metals/scripted'
             name: sbt-metals/scripted (Sbt 2)
@@ -183,6 +193,7 @@ jobs:
           ${{ matrix.command }}
         env:
           METALS_TEST: true
+          TEST_SHARD: ${{ matrix.shard }}
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
       - name: Upload test reports

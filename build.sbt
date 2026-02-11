@@ -704,17 +704,22 @@ lazy val javapc = project
   )
   .dependsOn(mtest, `mtags-java`)
 
-def isInTestShard(name: String, logger: Logger): Boolean = {
-  val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
+def isInTestShard(
+    name: String,
+    logger: Logger,
+    groups: List[Set[String]],
+    logFor: String => Boolean = _ => true,
+): Boolean = {
+  val groupIndex = groups.indexWhere(group => group(name))
   val shardId = System.getenv("TEST_SHARD")
-  if (groupIndex == -1) {
+  if (groupIndex == -1 && logFor(name)) {
     logger.warn(
       s"""|Test is not contained in a shard: $name
           |It will be executed by default in the first shard.
           |Please add it to "project/TestGroups.scala". """.stripMargin
     )
   }
-  if (!isCI || shardId == null) {
+  if (!isCI || shardId == null || shardId.isEmpty()) {
     true
   } else {
     val groupId = Math.max(0, groupIndex) + 1
@@ -752,7 +757,9 @@ lazy val unit = project
   .settings(
     testSettings,
     Test / testOptions ++= Seq(
-      Tests.Filter(name => isInTestShard(name, sLog.value))
+      Tests.Filter(name =>
+        isInTestShard(name, sLog.value, TestGroups.testGroups)
+      )
     ),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
@@ -785,6 +792,17 @@ lazy val slow = project
   .settings(
     testSettings,
     sharedSettings,
+    // Only sbt tests are sharded currently
+    Test / testOptions ++= Seq(
+      Tests.Filter(name =>
+        isInTestShard(
+          name,
+          sLog.value,
+          TestGroups.sbtTestGroups,
+          logFor = _.startsWith("tests.sbt."),
+        )
+      )
+    ),
     Test / testOnly := (Test / testOnly)
       .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
       .evaluated,
