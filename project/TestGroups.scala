@@ -143,4 +143,20 @@ object TestGroups {
     .grouped(Math.ceil(allTests.length.toDouble / numberOfShards).toInt)
     .map(_.toSet)
     .toList
+
+  val sbtTests = List(
+    "tests.sbt.ActivePlatformsSuite", "tests.sbt.CancelCompileSuite",
+    "tests.sbt.SbtBloopLspSuite", "tests.sbt.SbtBreakpointDapSuite",
+    "tests.sbt.SbtCrossDebugSuite", "tests.sbt.SbtEvaluationDapSuite",
+    "tests.sbt.SbtServerSuite", "tests.sbt.SbtStackFrameDapSuite",
+    "tests.sbt.SbtStepDapSuite", "tests.sbt.WorkspaceFolderSuite",
+  )
+
+  val sbtNumberOfShards = 2
+
+  val sbtTestGroups: List[Set[String]] = sbtTests
+    .grouped(Math.ceil(sbtTests.length.toDouble / numberOfShards).toInt)
+    .map(_.toSet)
+    .toList
+
 }

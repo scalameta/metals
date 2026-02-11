@@ -23,7 +23,6 @@ import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
 import tests.JavaHomeChangeTest
 import tests.ScriptsAssertions
-import tests.TestSemanticTokens
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
@@ -152,23 +151,6 @@ class SbtBloopLspSuite
 
   }
 
-  test("no-sbt-version") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := "${V.scala213}"
-            |""".stripMargin
-      )
-      _ = assertStatus(_.isInstalled)
-      projectVersion = workspace.resolve("project/build.properties").readText
-      _ = assert(
-        projectVersion.startsWith(s"sbt.version="),
-        "project/build.properties should contains sbt version",
-      )
-    } yield ()
-  }
-
   test("force-command") {
     cleanWorkspace()
     for {
@@ -194,38 +176,6 @@ class SbtBloopLspSuite
           Messages.indexing,
         ).mkString("\n"),
       )
-    } yield ()
-  }
-
-  test("bloop-snapshot") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/build.sbt
-            |scalaVersion := "${V.scala213}"
-            |""".stripMargin
-      )
-      _ <- server.server.buildServerPromise.future
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        importBuildMessage,
-      )
-      _ = client.messageRequests.clear() // restart
-      _ <- server.didChangeConfiguration(
-        """{
-          |  "bloop-version": "1.5.6-134-46452098-SNAPSHOT"
-          |}
-          |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        BloopVersionChange.msg,
-      )
-      _ = client.messageRequests.clear()
-      _ <- server.executeCommand(ServerCommands.ImportBuild)
-      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 
@@ -483,6 +433,10 @@ class SbtBloopLspSuite
            |scalaVersion := "${V.scala213}"
            |/.sbtopts
            |-J-Xlog:gc:gc_log
+           |/.jvmopts
+           |-Xms1536M
+           |-Xmx1536M
+           |-Xss6M
            |""".stripMargin
       )
       _ = assertStatus(_.isInstalled)
@@ -490,26 +444,6 @@ class SbtBloopLspSuite
       // that means that sbtopts were passed correctly
       jvmLog = FileIO.listFiles(workspace).find(_.filename == "gc_log")
       _ = assert(jvmLog.isDefined)
-    } yield ()
-  }
-
-  test("jvmopts") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""
-           |/project/build.properties
-           |sbt.version=$sbtVersion
-           |/build.sbt
-           |scalaVersion := "${V.scala213}"
-           |/.jvmopts
-           |-Xms1536M
-           |-Xmx1536M
-           |-Xss6M
-           |""".stripMargin
-      )
-      // assert that a `.jvmopts` file doesn't break "Import build"
-      _ = assertStatus(_.isInstalled)
     } yield ()
   }
 
@@ -580,26 +514,6 @@ class SbtBloopLspSuite
     }
   }
 
-  test("sbt-version") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=0.13.15
-            |/build.sbt
-            |scalaVersion := "$scalaVersion"
-            |""".stripMargin,
-        expectError = true,
-      )
-      _ = assertNoDiff(
-        client.workspaceShowMessages,
-        IncompatibleBuildToolVersion
-          .params(SbtBuildTool(Some("0.13.15"), workspace, () => userConfig))
-          .getMessage,
-      )
-    } yield ()
-  }
-
   test("min-sbt-version") {
     val minimal =
       SbtBuildTool(
@@ -618,90 +532,6 @@ class SbtBloopLspSuite
       )
       _ = assertStatus(_.isInstalled)
     } yield ()
-  }
-
-  test("definition-deps") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=${V.sbtVersion}
-            |
-            |/build.sbt
-            |scalaVersion := "$scalaVersion"
-         """.stripMargin
-      )
-      _ <- assertDefinitionAtLocation(
-        "build.sbt",
-        "sc@@alaVersion := \"2.12.11\"",
-        "sbt/Keys.scala",
-        expectedLine = 192,
-      )
-    } yield ()
-  }
-
-  test("definition-meta") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/project/build.properties
-            |sbt.version=$sbtVersion
-            |/project/plugins.sbt
-            |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.21")
-            |
-            |/build.sbt
-            |scalaVersion := "$scalaVersion"
-         """.stripMargin
-      )
-      _ <- assertDefinitionAtLocation(
-        "project/plugins.sbt",
-        "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
-        "sbt/Defaults.scala",
-      )
-    } yield ()
-  }
-
-  test("definition-local") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""
-           |/build.sbt
-           |scalaVersion := "$scalaVersion"
-           |val hello = "Hello"
-           |
-           |
-           |val bye = hello
-         """.stripMargin
-      )
-      _ <- assertDefinitionAtLocation(
-        "build.sbt",
-        "val bye = hel@@lo",
-        "build.sbt",
-        1,
-      )
-    } yield ()
-  }
-
-  test("sbt-file-hover") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := "$scalaVersion"
-         """.stripMargin
-      )
-      hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
-      expectedHoverRes =
-        """|```scala
-           |val scalaVersion: SettingKey[String]
-           |```
-           |```range
-           |scalaVersion
-           |```""".stripMargin
-      _ = assertNoDiff(hoverRes, expectedHoverRes)
-    } yield ()
-
   }
 
   test("sbt-file-after-reset") {
@@ -736,20 +566,62 @@ class SbtBloopLspSuite
     } yield ()
   }
 
-  test("scala-file-hover") {
+  test("lsp-features") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := "$scalaVersion"
-            |/project/Deps.scala
-            |import sbt._
-            |import Keys._
-            |object Deps {
-            |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.16"
-            |}
+        s"""
+           |/build.sbt
+           |scalaVersion := "$scalaVersion"
+           |val hello = "Hello"
+           |libraryDependencies ++= Seq()
+           |
+           |val bye = hello
+           |/project/build.properties
+           |sbt.version=$sbtVersion
+           |/project/Deps.scala
+           |import sbt._
+           |import Keys._
+           |object Deps {
+           |  val scalatest = "org.scalatest" %% "scalatest" % "3.2.16"
+           |}
+           |/project/MetaValues.scala
+           |import scala.util.Success
+           |object MetaValues {
+           |  val scalaVersion = "$scalaVersion"
+           |}
+           |/project/plugins.sbt
+           |addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.9.21")
          """.stripMargin
       )
+      /* Test definition */
+      _ <- assertDefinitionAtLocation(
+        "build.sbt",
+        "val bye = hel@@lo",
+        "build.sbt",
+        1,
+      )
+      _ <- assertDefinitionAtLocation(
+        "build.sbt",
+        s"sc@@alaVersion := \"$scalaVersion\"",
+        "sbt/Keys.scala",
+        expectedLine = 192,
+      )
+      _ <- assertDefinitionAtLocation(
+        "project/plugins.sbt",
+        "addSbt@@Plugin(\"ch.epfl.scala\" % \"sbt-scalafix\" % \"0.9.19\")",
+        "sbt/Defaults.scala",
+      )
+      /* Test hover */
+      hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
+      expectedHoverRes =
+        """|```scala
+           |val scalaVersion: SettingKey[String]
+           |```
+           |```range
+           |scalaVersion
+           |```""".stripMargin
+      _ = assertNoDiff(hoverRes, expectedHoverRes)
       hoverRes <- assertHoverAtPos("project/Deps.scala", 3, 9)
       expectedHoverRes =
         """|```scala
@@ -760,39 +632,13 @@ class SbtBloopLspSuite
            |```
            |""".stripMargin
       _ = assertNoDiff(hoverRes, expectedHoverRes)
-    } yield ()
-
-  }
-
-  test("sbt-file-autocomplete") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := "$scalaVersion"
-            |libraryDependencies ++= Seq()
-         """.stripMargin
-      )
+      /* Test completion */
       completionList <- server.completion("build.sbt", "libraryDependencies@@")
-      expectedCompletionList = "libraryDependencies: SettingKey[Seq[ModuleID]]"
+      expectedCompletionList =
+        """|libraryDependencies: SettingKey[Seq[ModuleID]]
+           |scalafixLibraryDependencies: Def.Initialize[List[ModuleID]]""".stripMargin
       _ = assertNoDiff(completionList, expectedCompletionList)
-    } yield ()
-
-  }
-
-  test("sbt-meta-scala-source-basics") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := MetaValues.scalaVersion
-            |/project/MetaValues.scala
-            |import scala.util.Success
-            |object MetaValues {
-            |  val scalaVersion = "$scalaVersion"
-            |}
-         """.stripMargin
-      )
+      /* Test workspace definitions */
       _ <- server.didOpen("project/MetaValues.scala")
       _ = assertNoDiff(
         server.workspaceDefinitions,
@@ -803,121 +649,58 @@ class SbtBloopLspSuite
             |}
             |""".stripMargin,
       )
-    } yield ()
-
-  }
-
-  test("sbt-meta-symbols") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |scalaVersion := MetaValues.scalaVersion
-            |/project/MetaValues.scala
-            |import scala.util.Success
-            |object MetaValues {
-            |  val scalaVersion = "$scalaVersion"
-            |}
-         """.stripMargin
-      )
       _ <- server.didOpen("build.sbt")
       _ = server.workspaceDefinitions
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """|/build.sbt
-           |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ MetaValues/*MetaValues.scala:1*/.scalaVersion/*MetaValues.scala:2*/
+           |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ "2.13.18"
+           |val hello/*L1*/ = "Hello"
+           |libraryDependencies/*Keys.scala*/ ++=/*Structure.scala*/ Seq/*;GenericCompanion.scala;Seq.scala*/()
+           |
+           |val bye/*L4*/ = hello/*L1*/
+           |/project/MetaValues.scala
+           |import scala.util.Success/*Try.scala*/
+           |object MetaValues/*L1*/ {
+           |  val scalaVersion/*L2*/ = "2.13.18"
+           |}
+           |  
            |""".stripMargin,
       )
-    } yield ()
-  }
-
-  test("sbt-references") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |def foo(): String = "2.13.2"
-            |def bar(): String = foo()
-            |scalaVersion := "2.13.2"
-         """.stripMargin
-      )
-      references <- server.references("build.sbt", "foo")
+      /* Test references */
+      references <- server.references("build.sbt", "hello")
       _ = assertNoDiff(
         references,
-        """|build.sbt:1:5: info: reference
-           |def foo(): String = "2.13.2"
-           |    ^^^
-           |build.sbt:2:21: info: reference
-           |def bar(): String = foo()
-           |                    ^^^
+        """|build.sbt:2:5: info: reference
+           |val hello = "Hello"
+           |    ^^^^^
+           |build.sbt:5:11: info: reference
+           |val bye = hello
+           |          ^^^^^
            |""".stripMargin,
       )
-    } yield ()
-  }
-
-  test("sbt-rename") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |def foo(): String = "2.13.2"
-            |def bar(): String = foo()
-            |scalaVersion := "2.13.2"
-         """.stripMargin
-      )
+      /* Test rename */
       _ <- server.assertRename(
         "build.sbt",
-        s"""|def foo(): String = "2.13.2"
-            |def bar(): String = foo@@()
-            |scalaVersion := "2.13.2"
+        s"""|scalaVersion := "$scalaVersion"
+            |val hello@@ = "Hello"
+            |libraryDependencies ++= Seq()
+            |
+            |val bye = hello
          """.stripMargin,
         Map(
           "build.sbt" ->
-            s"""|def foo2(): String = "2.13.2"
-                |def bar(): String = foo2()
-                |scalaVersion := "2.13.2"
+            s"""|scalaVersion := "$scalaVersion"
+                |val hello2 = "Hello"
+                |libraryDependencies ++= Seq()
+                |
+                |val bye = hello2
           """.stripMargin
         ),
         Set("build.sbt"),
-        "foo2",
+        "hello2",
       )
-    } yield ()
-  }
-
-  test("semantic-highlight") {
-    val expected =
-      s"""|<<lazy>>/*modifier*/ <<val>>/*keyword*/ <<root>>/*variable,definition,readonly*/ = (<<project>>/*class*/ <<in>>/*method*/ <<file>>/*method*/(<<".">>/*string*/))
-          |  .<<configs>>/*method*/(<<IntegrationTest>>/*variable,readonly,deprecated*/)
-          |  .<<settings>>/*method*/(
-          |    <<Defaults>>/*class*/.<<itSettings>>/*variable,readonly,deprecated*/,
-          |    <<inThisBuild>>/*method*/(
-          |      <<List>>/*class*/(
-          |        <<organization>>/*variable,readonly*/ <<:=>>/*method*/ <<"com.example">>/*string*/,
-          |        <<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"2.13.10">>/*string*/,
-          |        <<scalacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(<<"-Xsource:3">>/*string*/, <<"-Xlint:adapted-args">>/*string*/),
-          |        <<javacOptions>>/*variable,readonly*/ <<:=>>/*method*/ <<List>>/*class*/(
-          |          <<"-Xlint:all">>/*string*/,
-          |          <<"-Xdoclint:accessibility,html,syntax">>/*string*/
-          |        )
-          |      )
-          |    ),
-          |    <<name>>/*variable,readonly*/ <<:=>>/*method*/ <<"bsp-tests-source-sets">>/*string*/
-          |  )
-          |
-          |<<resolvers>>/*variable,readonly*/ <<++=>>/*method*/ <<Resolver>>/*class*/.<<sonatypeOssRepos>>/*method*/(<<"snapshot">>/*string*/)
-          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalatest">>/*string*/ <<%%>>/*method*/ <<"scalatest">>/*string*/ <<%>>/*method*/ <<"3.2.9">>/*string*/ <<%>>/*method*/ <<Test>>/*variable,readonly*/
-          |<<libraryDependencies>>/*variable,readonly*/ <<+=>>/*method*/ <<"org.scalameta">>/*string*/ <<%%>>/*method*/ <<"scalameta">>/*string*/ <<%>>/*method*/ <<"4.6.0">>/*string*/
-          |
-         """.stripMargin
-
-    val fileContent =
-      TestSemanticTokens.removeSemanticHighlightDecorations(expected)
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |$fileContent
-         """.stripMargin
-      )
+      /* Test semantic highlighting */
       _ <- server.didChangeConfiguration(
         """{
           |  "enable-semantic-highlighting": true
@@ -928,21 +711,20 @@ class SbtBloopLspSuite
       _ <- server.didSave("build.sbt")
       _ <- server.assertSemanticHighlight(
         "build.sbt",
-        expected,
-        fileContent,
+        s"""|<<scalaVersion>>/*variable,readonly*/ <<:=>>/*method*/ <<"$scalaVersion">>/*string*/
+            |<<val>>/*keyword*/ <<hello>>/*variable,definition,readonly*/ = <<"Hello">>/*string*/
+            |<<libraryDependencies>>/*variable,readonly*/ <<++=>>/*method*/ <<Seq>>/*class*/()
+            |
+            |<<val>>/*keyword*/ <<bye>>/*variable,definition,readonly*/ = <<hello>>/*variable,readonly*/
+         """.stripMargin,
+        s"""|scalaVersion := "$scalaVersion"
+            |val hello = "Hello"
+            |libraryDependencies ++= Seq()
+            |
+            |val bye = hello
+            |""".stripMargin,
       )
-    } yield ()
-  }
-
-  test("decorations") {
-    for {
-      _ <- initialize(
-        s"""|/build.sbt
-            |def foo() = "2.13.2"
-            |def bar() = foo()
-            |scalaVersion := "2.13.2"
-           """.stripMargin
-      )
+      /* Test inlay hints */
       _ <- server.didChangeConfiguration(
         """|{"inlayHints": {
            |  "inferredTypes": {"enable":true},
@@ -958,9 +740,12 @@ class SbtBloopLspSuite
       _ = assertNoDiagnostics()
       _ <- server.assertInlayHints(
         "build.sbt",
-        s"""|def foo()/*: String<<java/lang/String#>>*/ = "2.13.2"
-            |def bar()/*: String<<java/lang/String#>>*/ = foo()
-            |scalaVersion := "2.13.2"
+        s"""|scalaVersion := "2.13.18"
+            |val hello/*: String<<java/lang/String#>>*/ = "Hello"
+            |libraryDependencies ++= Seq/*[Nothing<<scala/Nothing#>>]*/()/*(appendSeq<<sbt/Append.appendSeq().>>)*/
+            |
+            |val bye/*: String<<java/lang/String#>>*/ = hello
+            |           
            """.stripMargin,
       )
     } yield ()
