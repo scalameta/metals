@@ -706,6 +706,7 @@ lazy val javapc = project
 
 def isInTestShard(name: String, logger: Logger): Boolean = {
   val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
+  val shardId = System.getenv("TEST_SHARD")
   if (groupIndex == -1) {
     logger.warn(
       s"""|Test is not contained in a shard: $name
@@ -713,11 +714,11 @@ def isInTestShard(name: String, logger: Logger): Boolean = {
           |Please add it to "project/TestGroups.scala". """.stripMargin
     )
   }
-  if (!isCI) {
+  if (!isCI || shardId == null) {
     true
   } else {
     val groupId = Math.max(0, groupIndex) + 1
-    System.getenv("TEST_SHARD").toInt == groupId
+    shardId.toInt == groupId
   }
 }
 

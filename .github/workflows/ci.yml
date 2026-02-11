@@ -11,14 +11,14 @@ concurrency:
 
 jobs:
   unit:
-    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 2
+    name: ${{ matrix.os }} jdk-${{ matrix.java }} unit tests ${{ matrix.shard }} / 4
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, macOS-latest, ubuntu-latest]
-        java: ["21"]
-        shard: [1, 2]
+        os: [windows-latest, ubuntu-latest]
+        java: ["25"]
+        shard: [1, 2, 3, 4]
         include:
           - os: ubuntu-latest
             java: "17"
@@ -27,11 +27,11 @@ jobs:
             java: "17"
             shard: 2
           - os: ubuntu-latest
-            java: "24"
-            shard: 1
+            java: "17"
+            shard: 3
           - os: ubuntu-latest
-            java: "24"
-            shard: 2
+            java: "17"
+            shard: 4
     steps:
       - uses: actions/checkout@v6
       - uses: coursier/setup-action@v2
@@ -80,6 +80,12 @@ jobs:
             scalafix,
           ]
         include:
+          # Run only a small subset since the MacOS tests are really slow
+          - type: macOS-slow
+            command: bin/test.sh 'unit/testOnly -- tests.codeactions.*'
+            name: MacOS Integration
+            os: macOS-latest
+            java: "17"
           - type: gradle-mac
             command: bin/test.sh 'slow/testOnly -- tests.gradle.*'
             name: Gradle MacOS integration
