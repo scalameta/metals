@@ -15,12 +15,15 @@ import scala.util.control.NonFatal
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.pc.SemanticdbCompilationUnit
 
+import com.google.turbine.binder.ClassPath
+
 class TurbineClasspathFileManager(
     delegate: JavaFileManager,
     workspaceClasspath: () => TurbineCompileResult,
     listSourcepath: String => java.lang.Iterable[JavaFileObject],
     isDeleted: String => Boolean,
     hasPendingSource: String => Boolean,
+    projectClasspath: ClassPath,
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
 
   override def contains(
@@ -102,7 +105,14 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        listPackageClasspath(cp, packageNames) { obj =>
+        val isAddedBinaryName = new ju.HashSet[String]()
+        for {
+          cp <- List(
+            // Prioritize the project classpath over the fallback classpath
+            projectClasspath,
+            cp.classpath,
+          )
+        } listPackageClasspath(cp, packageNames, isAddedBinaryName) { obj =>
           objects.add(obj)
         }
         objects
@@ -123,10 +133,11 @@ class TurbineClasspathFileManager(
       ju.Collections.emptyList()
   }
   private def listPackageClasspath(
-      cp: TurbineCompileResult,
+      projectClasspath: ClassPath,
       packageNames: Array[String],
+      isAddedBinaryName: ju.HashSet[String],
   )(fn: JavaFileObject => Unit): Unit = {
-    val pkgLookup = cp.classpath
+    val pkgLookup = projectClasspath
       .index()
       .lookupPackage(Buffer.from(packageNames).asJava)
     if (pkgLookup == null) {
@@ -135,9 +146,12 @@ class TurbineClasspathFileManager(
     val it = pkgLookup.classes().iterator()
     while (it.hasNext()) {
       val cls = it.next()
-      val lazyBytes = cp.classpath.env().get(cls)
+      val lazyBytes = projectClasspath.env().get(cls)
       if (lazyBytes != null) {
-        fn(new TurbineClassfileObject(cls.binaryName(), lazyBytes.bytes()))
+        val binaryName = cls.binaryName()
+        if (isAddedBinaryName.add(binaryName)) {
+          fn(new TurbineClassfileObject(binaryName, lazyBytes.bytes()))
+        }
       }
     }
   }

@@ -54,7 +54,8 @@ class JavaMetalsCompiler(
     javaFileManagerFactory,
     embedded,
     progressBars,
-    metalsConfig.javacServicesOverrides()
+    metalsConfig.javacServicesOverrides(),
+    classpath
   )
 
   def doSearch(query: String): Seq[String] = {

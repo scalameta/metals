@@ -111,9 +111,11 @@ object TurbineCompiler {
     TurbineCompileResult(boundClasspath, lowered)
   }
   private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
-    classpath.filter(path =>
-      Files.exists(path) && path.getFileName().toString().endsWith(".jar")
-    )
+    classpath.filter(isJarFile)
+  }
+  private def isJarFile(path: Path): Boolean = {
+    Files.isRegularFile(path) &&
+    path.getFileName().toString().endsWith(".jar")
   }
 }
 
@@ -284,14 +286,23 @@ class TurbineCompiler[T](
   }
 
   def createFileManager(
-      underlying: StandardJavaFileManager
+      underlying: StandardJavaFileManager,
+      classpath: ju.List[Path],
   ): JavaFileManager = {
+    val isGlobalClasspathEntry = this.classpath().toSet
+    val filteredProjectClasspath =
+      classpath.asScala.filter(file =>
+        !isGlobalClasspathEntry(file) && TurbineCompiler.isJarFile(file)
+      )
+    val projectClasspath =
+      ClassPathBinder.bindClasspath(filteredProjectClasspath.asJava)
     new TurbineClasspathFileManager(
       underlying,
       () => result,
       listSourcepath,
       isDeleted,
       hasPendingSource,
+      projectClasspath,
     )
   }
 

@@ -383,7 +383,8 @@ class MbtWorkspaceSymbolProvider(
   }
 
   override def createFileManager(
-      standardFileManager: StandardJavaFileManager
+      standardFileManager: StandardJavaFileManager,
+      classpath: ju.List[Path],
   ): JavaFileManager = {
     if (javaSymbolLoader().isJavacSourcepath) {
       new JavacSourcepathFileManager(
@@ -404,7 +405,7 @@ class MbtWorkspaceSymbolProvider(
         },
       )
     } else if (javaSymbolLoader().isTurbineClasspath) {
-      turbineCompiler.createFileManager(standardFileManager)
+      turbineCompiler.createFileManager(standardFileManager, classpath)
     } else {
       throw new IllegalArgumentException(
         s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"
