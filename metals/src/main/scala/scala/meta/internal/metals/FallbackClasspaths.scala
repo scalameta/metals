@@ -94,8 +94,8 @@ class FallbackClasspaths(
       id =>
         // Technically, we could pick jars from one of Scala 2.12/2.13 targets, but
         // we have no guarantee that the `scalaFallbackVersion` in the user's settings
-        // mirrors the Scala version that is allowed as a dependeny in Java targets.
-        buildTargets.javaTarget(id).isDefined,
+        // mirrors the Scala version that is allowed as a dependency in Java targets.
+        buildTargets.jvmTarget(id).isDefined,
       module => inferScalaBinaryVersion(module) == scalaBinaryVersion,
     )
     if (result.isEmpty) {
