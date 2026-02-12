@@ -11,6 +11,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.infra.AggregateFeatureFlagProvider
@@ -222,6 +223,36 @@ class MetalsLanguageServer(
           s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )
+
+        val baseInitializeEvent =
+          Event
+            .duration(
+              "initialize",
+              Duration.between(startInstant, Instant.now()),
+            )
+            .withLabel(
+              "clientName",
+              Option(params.getClientInfo()).fold("<unknown>")(_.getName()),
+            )
+            .withLabel(
+              "clientVersion",
+              Option(params.getClientInfo()).fold("<unknown>")(_.getVersion),
+            )
+        val initializeEvent =
+          folders.zipWithIndex.foldLeft(baseInitializeEvent) {
+            case (event, (folder, 0)) =>
+              event.withLabel(
+                "workspaceFolder",
+                folder.path.toString,
+              )
+            case (event, (folder, index)) =>
+              event.withLabel(
+                s"workspaceFolder-${index}",
+                folder.path.toString,
+              )
+          }
+
+        metrics.recordEvent(initializeEvent)
 
         serverState.set(ServerState.Initialized(service))
         metalsService.underlying = service
