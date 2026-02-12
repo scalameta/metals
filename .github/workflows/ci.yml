@@ -39,7 +39,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-          cache: 'sbt'
+      - uses: coursier/cache-action@v8
+        with:
+          ignoreJob: true
+          ignoreMatrix: true
       - uses: sbt/setup-sbt@v1
       - name: Run unit tests
         run: |
@@ -184,7 +187,10 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-          cache: 'sbt'
+      - uses: coursier/cache-action@v8
+        with:
+          ignoreJob: true
+          ignoreMatrix: true
       - uses: sbt/setup-sbt@v1
         with:
           sbt-runner-version: 1.10.3
