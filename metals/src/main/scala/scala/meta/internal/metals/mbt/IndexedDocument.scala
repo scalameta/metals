@@ -122,12 +122,20 @@ object IndexedDocument {
     )
   }
 
+  // Minimum bloom filter size to avoid sensitivity issues with very small filters.
+  // Small bloom filters (e.g., size=6) are extremely sensitive - adding 1 extra
+  // entry can push the FPP from 1% to 1.5%. Using a minimum threshold makes small
+  // files more robust to estimation inaccuracies.
+  private val MinBloomFilterSize = 256
+
   private def bloomFilterMBT(
       definitions: View[String],
       references: View[String],
   ): StringBloomFilter = {
     val symbolsSize = Fuzzy.estimateSizeOfSymbolStrings(definitions)
-    val bf = StringBloomFilter.forEstimatedSize(symbolsSize + references.size)
+    val estimatedSize =
+      math.max(MinBloomFilterSize, symbolsSize + references.size)
+    val bf = StringBloomFilter.forEstimatedSize(estimatedSize)
     Fuzzy.bloomFilterSymbolStrings(definitions, bf)
     references.foreach { sym =>
       bf.putCharSequence(FingerprintedCharSequence.fuzzyReference(sym))
