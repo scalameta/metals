@@ -56,9 +56,14 @@ class MetalsLanguageServer(
     serverInputs: MetalsServerInputs =
       MetalsServerInputs.productionConfiguration,
 ) extends LanguageServer {
-  // Record the start time of the MetalsLanguageServer constructor
+
+  private val startInstant =
+    MetalsLanguageServer.startInstant // 100% evaluate it even when debug is disabled
+  // Record the start time of the MetalsLanguageServer constructor so we can
+  // measure metrics like "Time to first intelligence", how long it takes for
+  // Metals to restart compilers with a repo-wide understanding.
   scribe.debug(
-    s"MetalsLanguageServer constructor called at ${MetalsLanguageServer.startInstant}"
+    s"MetalsLanguageServer constructor called at ${startInstant}"
   )
 
   import serverInputs._
