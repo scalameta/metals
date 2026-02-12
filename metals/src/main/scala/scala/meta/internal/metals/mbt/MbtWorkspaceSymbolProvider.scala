@@ -52,6 +52,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 import scala.meta.pc
 import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.SemanticdbFileManager
@@ -237,6 +238,10 @@ class MbtWorkspaceSymbolProvider(
       progress.endProgress(token)
       onIndexingDone()
     }
+
+    metrics.recordEvent(
+      Event.duration("mbt2_index_workspace_symbol_pre_write", timer.elapsed)
+    )
 
     // Step 4: Write the index to disk. It's technically fine to move writing
     // the index to a background job.  Might be worth doing someday.
@@ -714,14 +719,15 @@ class MbtWorkspaceSymbolProvider(
     newValue
   }
 
+  private val isIndexRead = new AtomicBoolean(false)
   // Reads .metals/index.mbt, which is a serialized Mbt.Index protobuf payload,
   // into memory and converts it into TrieMap[AbsolutePath, IndexedDocument].
   // For a very large repo (>100k Scala/Java files), this file still only takes
   // ~500mb of ram.
   private def readIndex(): TrieMap[AbsolutePath, IndexedDocument] = try {
     val result = TrieMap.empty[AbsolutePath, IndexedDocument]
+    val timer = new Timer(time)
     if (indexFile.exists) {
-      val timer = new Timer(time)
       val index = Mbt.Index.parseFrom(indexFile.readAllBytes)
       for {
         doc <- index.getDocumentsList().asScala.iterator
@@ -745,10 +751,30 @@ class MbtWorkspaceSymbolProvider(
       )
     }
     updateDocumentsKeys(result)
+    val indexDocumentsCount = documentsKeys.length.toString()
+    metrics.recordEvent(
+      Event
+        .duration("mbt2_index_workspace_symbol_read_index", timer.elapsed)
+        .withLabel("index_documents_count", indexDocumentsCount)
+    )
+    if (!isIndexRead.compareAndSet(false, true)) {
+      // This metric can be used as a "time to first intelligence" metric to
+      // measure how long it takes for Metals to start up and provide meaningful
+      // diagnostics/definitions.
+      metrics.recordEvent(
+        Event
+          .duration(
+            "mbt2_index_workspace_symbol_read_index_since_start",
+            MetalsLanguageServer.durationSinceStart(),
+          )
+          .withLabel("index_documents_count", indexDocumentsCount)
+      )
+    }
     result
   } catch {
     case NonFatal(e) =>
       scribe.error(s"Error reading repo-wide symbol index at '${indexFile}'", e)
+
       TrieMap.empty[AbsolutePath, IndexedDocument]
   }
 

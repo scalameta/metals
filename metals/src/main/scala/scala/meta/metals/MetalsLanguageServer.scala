@@ -1,5 +1,7 @@
 package scala.meta.metals
 
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
@@ -54,6 +56,11 @@ class MetalsLanguageServer(
     serverInputs: MetalsServerInputs =
       MetalsServerInputs.productionConfiguration,
 ) extends LanguageServer {
+  // Record the start time of the MetalsLanguageServer constructor
+  scribe.debug(
+    s"MetalsLanguageServer constructor called at ${MetalsLanguageServer.startInstant}"
+  )
+
   import serverInputs._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -296,4 +303,10 @@ class MetalsLanguageServer(
     case _ => throw new IllegalStateException("Server is not initialized")
   }
 
+}
+
+object MetalsLanguageServer {
+  @volatile var startInstant: Instant = Instant.now()
+  def durationSinceStart(): Duration =
+    Duration.between(startInstant, Instant.now())
 }
