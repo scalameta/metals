@@ -1,5 +1,7 @@
 package scala.meta.internal.pc
 
+import java.util.Optional
+
 import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -23,6 +25,14 @@ final class AutoImportsProvider(
       cursor = Some(params.offset())
     )
     val pos = unit.position(params.offset)
+    // macros might break it, see https://github.com/scalameta/metals/issues/2006
+    val shouldApplyNameEdit =
+      if (pos.start + name.length() < params.text().length()) {
+        val foundName =
+          params.text().substring(pos.start, pos.start + name.length())
+        foundName == name
+      } else false
+
     // make sure the compilation unit is loaded
     typedTreeAt(pos)
 
@@ -52,15 +62,36 @@ final class AutoImportsProvider(
       case _ => false
     }
 
+    def correctInTreeContext(sym: Symbol) = lastVisitedParentTrees match {
+      case (_: Ident) :: (sel: Select) :: _ =>
+        sym.info.members.exists(_.name == sel.name)
+      case (_: Ident) :: (_: Apply) :: _ if !sym.isMethod =>
+        def applyInObject =
+          sym.companionModule.info.members.exists(_.name == nme.apply)
+        def applyInClass = sym.info.members.exists(_.name == nme.apply)
+        applyInClass || applyInObject
+      case (_: Ident) :: SingletonTypeTree(_) :: _ =>
+        sym.isModuleOrModuleClass || sym.companionModule != NoSymbol
+      case (id: Ident) :: (df: ValOrDefDef) :: _ if df.tpt == id =>
+        !sym.isModuleOrModuleClass || sym.companionClass != NoSymbol
+      case (_: Ident) :: (_: TypTree) :: _ =>
+        !sym.isModuleOrModuleClass || sym.companionClass != NoSymbol
+      case _ =>
+        true
+    }
+
     def namePos: l.Range =
       pos.withEnd(pos.start + name.length()).toLsp
 
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
-    symbols.result().collect {
+    val all = symbols.result().collect {
       case sym
-          if isExactMatch(sym, name) && context.isAccessible(sym, sym.info) =>
+          if isExactMatch(sym, name) && context.isAccessible(
+            sym,
+            sym.info
+          ) && !sym.owner.isEmptyPackageClass =>
         val pkg = sym.owner.fullName
         val edits = importPosition match {
           // if we are in import section just specify full name
@@ -79,7 +110,12 @@ final class AutoImportsProvider(
               value
             )
             val nameEdit = new l.TextEdit(namePos, short)
-            nameEdit :: edits
+
+            if (short != name && shouldApplyNameEdit) {
+              nameEdit :: edits
+            } else {
+              edits
+            }
         }
         if (edits.isEmpty) {
           val trees = lastVisitedParentTrees
@@ -90,7 +126,30 @@ final class AutoImportsProvider(
             s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
           )
         }
-        AutoImportsResultImpl(pkg, edits.asJava)
+        (
+          AutoImportsResultImpl(
+            pkg,
+            edits.asJava,
+            Optional.of(semanticdbSymbol(sym))
+          ),
+          sym
+        )
+    }
+
+    all match {
+      case (onlyResult, _) :: Nil => List(onlyResult)
+      case Nil => Nil
+      case moreResults =>
+        val moreExact = moreResults.filter { case (_, sym) =>
+          correctInTreeContext(sym)
+        }
+        if (moreExact.nonEmpty) {
+          // Prefer context-appropriate results, but keep other matches as fallbacks
+          val exactSet = moreExact.map(_._2).toSet
+          moreExact.map(_._1) ++ moreResults.collect {
+            case (res, sym) if !exactSet(sym) => res
+          }
+        } else moreResults.map(_._1)
     }
   }
 

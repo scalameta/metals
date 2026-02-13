@@ -4,12 +4,17 @@ import java.net.URI
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.CancelToken
+import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
 import tests.BasePCSuite
 
 class DiagnosticsSuite extends BasePCSuite {
+
+  override protected def config: PresentationCompilerConfig =
+    PresentationCompilerConfigImpl(emitDiagnostics = true)
 
   check(
     "basic",
@@ -39,8 +44,7 @@ class DiagnosticsSuite extends BasePCSuite {
 
         override def token(): CancelToken = EmptyCancelToken
 
-        // if should return diagnostics
-        override def data(): Object = Some(true)
+        override def shouldReturnDiagnostics(): Boolean = true
       }
 
       val diags = presentationCompiler
