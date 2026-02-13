@@ -50,7 +50,7 @@ class DiagnosticsSuite extends BasePCSuite {
         .map { diag =>
           val start = diag.getRange().getStart()
           val end = diag.getRange().getEnd()
-          val message = diag.getMessage()
+          val message = diag.getMessage().getLeft()
           s"${start.getLine()}:${start.getCharacter()}-${end.getLine()}:${end.getCharacter()} - $message"
         }
         .toList

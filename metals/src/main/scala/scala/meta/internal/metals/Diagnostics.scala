@@ -343,12 +343,15 @@ final class Diagnostics(
       d <- syntaxError.get(path)
       // De-duplicate only the most common and basic syntax errors.
       isSameMessage = all.asScala.exists(diag =>
-        diag.getRange() == d.getRange() && diag.getMessage() == d.getMessage()
+        diag.getRange() == d
+          .getRange() && diag.getMessageAsString == d.getMessageAsString
       )
       isDuplicate =
-        d.getMessage.replace("`", "").startsWith("identifier expected but") &&
+        d.getMessageAsString
+          .replace("`", "")
+          .startsWith("identifier expected but") &&
           all.asScala.exists { other =>
-            other.getMessage
+            other.getMessageAsString
               .replace("`", "")
               .startsWith("identifier expected") &&
             other.getRange().getStart() == d.getRange().getStart()
@@ -385,7 +388,7 @@ final class Diagnostics(
           .map { range =>
             val ld = new l.Diagnostic(
               range,
-              d.getMessage,
+              d.getMessageAsString,
               d.getSeverity,
               d.getSource,
             )
@@ -408,7 +411,7 @@ final class Diagnostics(
           d.getRange.toMeta(snapshot).foreach { pos =>
             val message = pos.formatMessage(
               s"stale ${d.getSource} ${d.getSeverity.toString.toLowerCase()}",
-              d.getMessage,
+              d.getMessageAsString,
             )
             scribe.info(message)
           }
