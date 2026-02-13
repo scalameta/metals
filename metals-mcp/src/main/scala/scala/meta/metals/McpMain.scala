@@ -162,13 +162,17 @@ object McpMain {
   }
 
   private def runServer(config: Config): Unit = {
-    val workspace = config.workspace.get
+    val workspace = AbsolutePath(
+      config.workspace.get.toNIO.toAbsolutePath().normalize()
+    )
     val exec = Executors.newCachedThreadPool()
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
-    val metalsLog = workspace.resolve(".metals/metals.log")
-    MetalsLogger.redirectSystemOut(metalsLog)
+    if (config.transport == Transport.Stdio) {
+      val metalsLog = workspace.resolve(".metals/metals.log")
+      MetalsLogger.redirectSystemOut(metalsLog)
+    }
 
     scribe.info(
       s"Starting Metals MCP server ${BuildInfo.metalsVersion} for workspace: $workspace"
