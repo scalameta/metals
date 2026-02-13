@@ -200,18 +200,37 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    val noDiags = Seq[Diagnostic]().asJava
-    if (params.uri().toString.endsWith(".scala") && config.emitDiagnostics) {
-      compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
-        pc =>
-          val mGlobal = pc.compiler()
-          import mGlobal._
-          val sourceFile = new MetalsSourceFile(params)
-          metalsAsk[Unit](askReload(List(sourceFile), _))
+    compilerAccess.withInterruptableCompiler(
+      List.empty[Diagnostic].asJava,
+      params.token()
+    ) { pc =>
+      val compiler = pc.compiler(params)
+      if (params.shouldReturnDiagnostics()) {
+        import compiler._
+        val unit = addCompilationUnit(
+          params.text(),
+          params.uri().toString(),
+          cursor = None
+        )
+        typeCheck(unit)
 
-          mGlobal.diagnosticsOf(sourceFile).asJava
-      }(emptyQueryContext)
-    } else { CompletableFuture.completedFuture(noDiags) }
+        unit.problems.toList.flatMap { prob =>
+          if (prob.pos.isDefined) {
+            import org.eclipse.lsp4j.DiagnosticSeverity
+            val severity = prob.severityLevel match {
+              case scala.reflect.internal.Reporter.ERROR.id =>
+                DiagnosticSeverity.Error
+              case scala.reflect.internal.Reporter.WARNING.id =>
+                DiagnosticSeverity.Warning
+              case scala.reflect.internal.Reporter.INFO.id =>
+                DiagnosticSeverity.Information
+              case _ => DiagnosticSeverity.Hint
+            }
+            Some(new Diagnostic(prob.pos.toLsp, prob.msg, severity, "pc"))
+          } else None
+        }.asJava
+      } else List.empty[Diagnostic].asJava
+    }(params.toQueryContext)
   }
 
   def didClose(uri: URI): Unit = {
