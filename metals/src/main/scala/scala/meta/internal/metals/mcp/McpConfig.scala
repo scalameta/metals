@@ -237,6 +237,21 @@ object VSCodeEditor
       ),
     )
 
+object KiloCodeEditor
+    extends Client(
+      names = List(
+        "Visual Studio Code",
+        "Visual Studio Code - Insiders",
+        "VSCodium",
+        "VSCodium - Insiders",
+      ),
+      settingsPath = ".kilocode/",
+      serverField = "mcpServers",
+      additionalProperties = List(
+        "type" -> "streamable-http"
+      ),
+    )
+
 object CursorEditor
     extends Client(
       names = List("Cursor"),
@@ -267,5 +282,6 @@ object NoClient
     )
 
 object Client {
-  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude)
+  val allClients: List[Client] =
+    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude)
 }
