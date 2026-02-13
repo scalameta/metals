@@ -271,6 +271,117 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
     } yield ()
   }
 
+  test("twirl-definition-code-block") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@(name: String)
+            |@{
+            |  val n = name.toInt
+            |}
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+
+      res <- definitionsAt(
+        "src/main/twirl/example.scala.html",
+        """|@(name: String)
+           |@{
+           |  val n = name.toI@@nt
+           |}
+           |""".stripMargin,
+      )
+
+      res1 <- definitionsAt(
+        "src/main/twirl/example.scala.html",
+        """|@(name: String)
+           |@{
+           |  val n = na@@me.toInt
+           |}
+           |""".stripMargin,
+      )
+
+      _ = assert(
+        res.head
+          .getUri()
+          .toString
+          .contains("StringOps.scala"),
+        s"Expected definition of `toInt` in StringOps.scala, got ${res.head.getUri()}",
+      )
+
+      _ = assert(
+        res1.head
+          .getUri()
+          .toString
+          .contains("example.scala.html"),
+        s"Expected definition of `name` in example.scala.html, got ${res1.head.getUri()}",
+      )
+
+      _ = assert(
+        res1.head.getRange.getStart.getLine == 0,
+        s"Expected `name` definition on line 0, got ${res1.head.getRange.getStart.getLine}",
+      )
+
+    } yield ()
+  }
+
+  test("twirl-hover-code-block") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@(name: String)
+            |@{
+            |  val n = name.toInt
+            |}
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      _ <- server.assertHover(
+        "src/main/twirl/example.scala.html",
+        """|@(name: String)
+           |@{
+           |  val n = name.toI@@nt
+           |}
+           |""".stripMargin,
+        """|```scala
+           |def toInt: Int
+           |```
+           |Parse as an `Int` (string must contain only decimal digits and optional leading `-` or `+`).
+           |
+           |**Throws**
+           |- `java.lang.NumberFormatException`: If the string does not contain a parsable `Int`.""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("twirl-play-hover") {
     cleanWorkspace()
     for {
@@ -296,6 +407,39 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |def method: String
            |```
            |The HTTP method.""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("twirl-play-definition") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/example.scala.html
+            |@()(implicit request: Request[AnyContent])
+            |<h1>Hello @request.method</h1>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |$playBuildSbt
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/example.scala.html")
+      res <- definitionsAt(
+        "src/main/twirl/example.scala.html",
+        """|@()(implicit request: Request[AnyContent])
+           |<h1>Hello @request.me@@thod</h1>
+           |""".stripMargin,
+      )
+      _ = assert(
+        {
+          val uri = res.head.getUri().toString
+          uri.contains("play/api/mvc") &&
+          (uri.contains("RequestHeader.scala") || uri.contains("Request.scala"))
+        },
+        s"Expected definition in Play mvc sources (RequestHeader/Request), got ${res.head.getUri()}",
       )
     } yield ()
   }

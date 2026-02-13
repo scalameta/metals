@@ -161,10 +161,11 @@ object TwirlAdjustments {
     def mapPosition(originalPos: Position): Position = {
       val originalIndex = getIndexFromPosition(originalTwirl, originalPos)
       val idx = matrix.indexWhere(_._1 >= originalIndex)
-      if (idx <= 0 || matrix.isEmpty) {
+      if (matrix.isEmpty || idx == 0) {
         return originalPos
       } else {
-        val (origBase, genBase) = matrix(idx - 1)
+        val baseIdx = if (idx == -1) matrix.length - 1 else idx - 1
+        val (origBase, genBase) = matrix(baseIdx)
         val mappedIndex = genBase + (originalIndex - origBase)
         getPositionFromIndex(compiledTwirl, mappedIndex)
       }
