@@ -7,7 +7,7 @@ import tests.CompletionsAssertions
 class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
 
   val twirlVersion = "2.0.9"
-  val playVersion = "3.0.7"
+  val playVersion = "3.0.10"
 
   /**
    * Common build.sbt content for Play Framework test projects.
@@ -128,12 +128,12 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
         "src/main/twirl/example.scala.html",
         """|@(name: String)
            |<h1>Hello @na@@me!</h1>
-         """.stripMargin,
+           |""".stripMargin,
         Map(
           "src/main/twirl/example.scala.html" ->
-            s"""|@(address: String)
-                |<h1>Hello @address!</h1>
-          """.stripMargin
+            """|@(address: String)
+               |<h1>Hello @address!</h1>
+               |""".stripMargin
         ),
         Set("src/main/twirl/example.scala.html"),
         "address",
@@ -205,7 +205,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
           |@import java.io.File
           |@(name: String)
           |<h1>Hello @name @File</h1>
-        """.stripMargin,
+          |""".stripMargin,
         filenameOpt = Some("src/main/twirl/example.scala.html"),
       )
     } yield ()

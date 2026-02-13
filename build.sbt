@@ -786,6 +786,7 @@ lazy val slow = project
   .settings(
     testSettings,
     sharedSettings,
+    Test / javaOptions += "-Xmx2G",
     Test / testOnly := (Test / testOnly)
       .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
       .evaluated,
