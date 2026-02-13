@@ -865,10 +865,22 @@ object MetalsEnrichments
     }
   }
 
+  /** Converts diagnostic message from Either[String, MarkupContent] to String (LSP 1.0+) */
+  def diagnosticMessageAsString(d: l.Diagnostic): String = {
+    val msg = d.getMessage()
+    if (msg == null) ""
+    else if (msg.isLeft) msg.getLeft
+    else msg.getRight.getValue
+  }
+
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
+
+    /** Converts diagnostic message from Either[String, MarkupContent] to String (LSP 1.0+) */
+    def getMessageAsString: String = diagnosticMessageAsString(d)
+
     def formatMessage(uri: String, hint: String): String = {
       val severity = d.getSeverity.toString.toLowerCase()
-      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessage}"
+      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessageAsString}"
     }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])

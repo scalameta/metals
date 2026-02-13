@@ -133,8 +133,10 @@ class McpLanguageClient(workspace: AbsolutePath) extends MetalsLanguageClient {
             val path = uri.toAbsolutePath
 
             if (path.exists) {
-              val textEdits = textDocEdit.getEdits
-              updateFile(path, textEdits)
+              val textEdits = textDocEdit.getEdits.asScala
+                .flatMap(e => if (e.isLeft) Some(e.getLeft) else None)
+                .toList
+              updateFile(path, textEdits.asJava)
             }
           }
         }

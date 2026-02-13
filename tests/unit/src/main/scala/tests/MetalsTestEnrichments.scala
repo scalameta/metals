@@ -185,7 +185,7 @@ object MetalsTestEnrichments {
     def formatMessage(input: m.Input): String = {
       diag.getRange.formatMessage(
         diag.getSeverity.toString.toLowerCase(),
-        diag.getMessage,
+        diag.getMessageAsString,
         input,
       )
     }

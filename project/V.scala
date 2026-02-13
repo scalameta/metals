@@ -53,7 +53,7 @@ object V {
 
   val kindProjector = "0.13.4"
 
-  val lsp4jV = "0.24.0"
+  val lsp4jV = "1.0.0"
 
   val mavenBloop = "2.0.3"
 

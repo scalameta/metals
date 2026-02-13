@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mcp
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Diagnostic
@@ -124,6 +125,6 @@ object McpPrinter {
       case DiagnosticSeverity.Hint => "Hint"
       case _ => "Unknown"
     }
-    s"L$startLine:C$startColumn-L$endLine:C$endColumn: [$severityText]\n${diagnostic.getMessage()}"
+    s"L$startLine:C$startColumn-L$endLine:C$endColumn: [$severityText]\n${diagnostic.getMessageAsString}"
   }
 }
