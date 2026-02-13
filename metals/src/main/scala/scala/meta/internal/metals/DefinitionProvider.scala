@@ -92,7 +92,7 @@ final class DefinitionProvider(
     val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
 
     def fromCompiler() =
-      if (path.isScalaOrJava) {
+      if (path.isScalaOrJava || path.isTwirlTemplate) {
         compilers()
           .definition(params, token)
           .map {
