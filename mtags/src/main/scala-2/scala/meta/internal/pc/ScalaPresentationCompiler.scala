@@ -200,15 +200,18 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    compilerAccess.withInterruptableCompiler(
-      List.empty[Diagnostic].asJava,
-      params.token()
-    ) { pc =>
-      val compiler = pc.compiler(params)
-      if (params.shouldReturnDiagnostics()) {
-        DiagnosticsProvider.getDiagnostics(compiler, params).asJava
-      } else List.empty[Diagnostic].asJava
-    }(params.toQueryContext)
+    val noDiags = Seq[Diagnostic]().asJava
+    if (params.uri().toString.endsWith(".scala") && config.emitDiagnostics) {
+      compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
+        pc =>
+          val mGlobal = pc.compiler()
+          import mGlobal._
+          val sourceFile = new MetalsSourceFile(params)
+          metalsAsk[Unit](askReload(List(sourceFile), _))
+
+          mGlobal.diagnosticsOf(sourceFile).asJava
+      }(emptyQueryContext)
+    } else { CompletableFuture.completedFuture(noDiags) }
   }
 
   def didClose(uri: URI): Unit = {

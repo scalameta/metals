@@ -19,13 +19,11 @@ public interface VirtualFileParams {
     return Optional.empty();
   }
 
-  default boolean shouldReturnDiagnostics(){
+  default boolean shouldReturnDiagnostics() {
     return false;
   }
 
-  /**
-   * This can be used to pass some additional data to the compiler.
-   */
+  /** This can be used to pass some additional data to the compiler. */
   default Object data() {
     return null;
   }

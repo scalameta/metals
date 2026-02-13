@@ -293,7 +293,13 @@ object SourceAddMissingImports {
     "Add all missing imports that are unambiguous for the entire file"
 }
 
-class MissingSymbolDiagnostic(isScala3: Boolean, file: AbsolutePath) {
+class MissingSymbolDiagnostic(
+    isScala3: Boolean,
+    file: Option[AbsolutePath] = None,
+) {
+  def this(isScala3: Boolean) = this(isScala3, None)
+  def this(isScala3: Boolean, file: AbsolutePath) = this(isScala3, Some(file))
+
   def unapply(d: l.Diagnostic): Option[(String, Boolean)] =
     d match {
       case ScalacDiagnostic.SymbolNotFound(name) =>
@@ -304,7 +310,7 @@ class MissingSymbolDiagnostic(isScala3: Boolean, file: AbsolutePath) {
       case ScalacDiagnostic.NotAMember(name) if isScala3 =>
         Some(name, true)
       case JavacDiagnostic.CannotFindSymbol(err)
-          if file.toLanguage.isJava && err.isCantResolve =>
+          if file.exists(_.toLanguage.isJava) && err.isCantResolve =>
         Some(err.symbol, false)
       case _ => None
     }
