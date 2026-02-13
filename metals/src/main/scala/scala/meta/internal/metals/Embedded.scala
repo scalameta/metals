@@ -594,6 +594,29 @@ object Embedded {
   private val userHome = Paths.get(System.getProperty("user.home"))
 
   /**
+   * Validates that a given binary path is actually Coursier by running it with --version
+   * Returns true if the output looks like valid Coursier output
+   */
+  private def isValidCoursier(path: Path): Boolean = {
+    try {
+      implicit val ec: ExecutionContextExecutor = ExecutionContext.global
+      val result = ShellRunner.runSync(
+        List(path.toString(), "--version"),
+        AbsolutePath(userHome),
+        redirectErrorOutput = true,
+        additionalEnv = Map.empty,
+        processErr = _ => (),
+      )
+      result.exists(output =>
+        output.toLowerCase().contains("coursier") ||
+          output.matches("(?s).*\\d+\\.\\d+.*") // Contains version-like pattern
+      )
+    } catch {
+      case NonFatal(_) => false
+    }
+  }
+
+  /**
    * There are some cases where Metals wouldn't be able to download
    * dependencies using coursier, in those cases we can try to use a locally
    * installed coursier to fetch the dependency.
@@ -667,11 +690,18 @@ object Embedded {
       fromResourcesJar
     } else {
       val csPath = findInPath("cs")
-        .orElse(findInPath("coursier"))
-        .orElse(inVsCodeMetals)
+        .filter(isValidCoursier)
+        .orElse(findInPath("coursier").filter(isValidCoursier))
+        .orElse(inVsCodeMetals.filter(isValidCoursier))
       if (csPath.isDefined) {
+        scribe.info(
+          s"Using coursier binary at ${csPath.get}"
+        )
         csPath.map(_.toString()).toList
       } else {
+        scribe.warn(
+          "No valid coursier binary found in PATH, falling back to embedded JAR"
+        )
         fromResourcesJar
       }
     }
