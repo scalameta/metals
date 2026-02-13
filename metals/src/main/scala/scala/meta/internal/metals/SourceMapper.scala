@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.util.Try
+
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -53,7 +55,7 @@ final case class SourceMapper(
           .flatMap(buildTargets.targetJarClasspath)
           .getOrElse(Nil)
           .exists(_.filename.startsWith("play_"))
-        Some(TwirlAdjustments(input, scalaVersion, isPlayProject))
+        Try(TwirlAdjustments(input, scalaVersion, isPlayProject)).toOption
       } else None
 
     forScripts.getOrElse(default)
