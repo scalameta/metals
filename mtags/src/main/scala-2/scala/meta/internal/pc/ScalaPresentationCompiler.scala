@@ -206,7 +206,29 @@ case class ScalaPresentationCompiler(
     ) { pc =>
       val compiler = pc.compiler(params)
       if (params.shouldReturnDiagnostics()) {
-        DiagnosticsProvider.getDiagnostics(compiler, params).asJava
+        import compiler._
+        val unit = addCompilationUnit(
+          params.text(),
+          params.uri().toString(),
+          cursor = None
+        )
+        typeCheck(unit)
+
+        unit.problems.toList.flatMap { prob =>
+          if (prob.pos.isDefined) {
+            import org.eclipse.lsp4j.DiagnosticSeverity
+            val severity = prob.severityLevel match {
+              case scala.reflect.internal.Reporter.ERROR.id =>
+                DiagnosticSeverity.Error
+              case scala.reflect.internal.Reporter.WARNING.id =>
+                DiagnosticSeverity.Warning
+              case scala.reflect.internal.Reporter.INFO.id =>
+                DiagnosticSeverity.Information
+              case _ => DiagnosticSeverity.Hint
+            }
+            Some(new Diagnostic(prob.pos.toLsp, prob.msg, severity, "pc"))
+          } else None
+        }.asJava
       } else List.empty[Diagnostic].asJava
     }(params.toQueryContext)
   }

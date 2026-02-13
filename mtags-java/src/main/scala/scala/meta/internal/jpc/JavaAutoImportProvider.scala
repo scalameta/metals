@@ -23,6 +23,10 @@ class JavaAutoImportProvider(
       if fqn.endsWith(s".$toImportName")
       edit = new JavaAutoImportEditor(params.text(), fqn).textEdit()
       pkg = fqn.split('.').dropRight(1).mkString(".")
-    } yield AutoImportsResultImpl(pkg, List(edit).asJava)
+    } yield AutoImportsResultImpl(
+      pkg,
+      List(edit).asJava,
+      java.util.Optional.empty()
+    )
   }.toList
 }

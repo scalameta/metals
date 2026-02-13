@@ -376,4 +376,35 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
   )
+
+  check(
+    "mongo-dep",
+    """|package a
+       |import org.mongodb.scala.bson.codecs.Macros
+       |
+       |case class Test()
+       |
+       |object A{
+       |  val test = <<Macros.createCodecIgnoreNone[Test]()>> // trigger code action on this line
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("DocumentCodecProvider", "org.bson.codecs")}
+        |${ImportMissingSymbol.title("DocumentCodecProvider", "org.mongodb.scala.bson.codecs")}
+        |${CreateNewSymbol.title("DocumentCodecProvider")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    """|package a
+       |import org.mongodb.scala.bson.codecs.Macros
+       |import org.mongodb.scala.bson.codecs.DocumentCodecProvider
+       |
+       |case class Test()
+       |
+       |object A{
+       |  val test = Macros.createCodecIgnoreNone[Test]() // trigger code action on this line
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    expectNoDiagnostics = false,
+    dependencies = List("org.mongodb.scala::mongo-scala-driver:4.1.0"),
+  )
 }

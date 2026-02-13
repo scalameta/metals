@@ -1512,9 +1512,7 @@ abstract class MetalsLspService(
   ): Future[ApplyWorkspaceEditResponse] = {
     metalsPasteProvider
       .didPaste(params, EmptyCancelToken)
-      .flatMap(optEdit =>
-        applyEdits(params.textDocument.getUri(), optEdit.toList)
-      )
+      .flatMap(optEdit => applyEdits(params.textDocument.getUri(), optEdit))
   }
 
   protected def applyEdits(

@@ -39,8 +39,7 @@ class DiagnosticsSuite extends BasePCSuite {
 
         override def token(): CancelToken = EmptyCancelToken
 
-        // if should return diagnostics
-        override def data(): Object = Some(true)
+        override def shouldReturnDiagnostics(): Boolean = true
       }
 
       val diags = presentationCompiler
