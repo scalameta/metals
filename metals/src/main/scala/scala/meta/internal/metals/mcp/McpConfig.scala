@@ -238,10 +238,8 @@ object VSCodeEditor
 object KiloCodeEditor
     extends Client(
       names = List(
-        "Visual Studio Code",
-        "Visual Studio Code - Insiders",
-        "VSCodium",
-        "VSCodium - Insiders",
+        "Kilo",
+        "kilo",
       ),
       settingsPath = ".kilocode/",
       serverField = "mcpServers",
