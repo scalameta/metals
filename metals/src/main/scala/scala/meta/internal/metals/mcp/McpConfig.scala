@@ -34,6 +34,11 @@ object McpConfig {
     val config = if (configFile.exists) configFile.readText else "{ }"
     val newConfig = createConfig(config, port, serverName, client)
     configFile.writeText(newConfig)
+    client.extraExtentions
+      .filter(ext => projectPath.resolve(ext.settingsPath).isDirectory)
+      .foreach { ext =>
+        writeConfig(port, projectName, projectPath, ext)
+      }
   }
 
   def deleteConfig(
@@ -217,6 +222,7 @@ case class Client(
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
+    extraExtentions: List[Client] = Nil,
 ) {
   def projectName(project: String): String =
     serverEntry.getOrElse(s"$project-metals")
@@ -233,6 +239,7 @@ object VSCodeEditor
       additionalProperties = List(
         "type" -> "http"
       ),
+      extraExtentions = List(KiloCodeEditor),
     )
 
 object KiloCodeEditor
