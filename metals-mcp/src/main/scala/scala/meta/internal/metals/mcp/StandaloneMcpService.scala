@@ -36,7 +36,13 @@ class StandaloneMcpService(
     extends Cancelable {
   port match {
     case Some(port) =>
-      McpConfig.writeConfig(port, workspace.filename, workspace, NoClient)
+      McpConfig.writeConfig(
+        port,
+        workspace.filename,
+        workspace,
+        NoClient,
+        Set.empty,
+      )
     case None => // random port will be assigned by the system
   }
 
@@ -131,7 +137,13 @@ class StandaloneMcpService(
     (createdPort, client) match {
       case (_, NoClient) => // no client was set, nothing to do
       case (Some(port), client) =>
-        McpConfig.writeConfig(port, workspace.filename, workspace, client)
+        McpConfig.writeConfig(
+          port,
+          workspace.filename,
+          workspace,
+          client,
+          Set.empty,
+        )
       case (None, _) => scribe.error("No port was created")
     }
     scribe.info("MCP server started successfully")

@@ -25,6 +25,7 @@ object McpConfig {
       projectName: String,
       projectPath: AbsolutePath,
       client: Client = CursorEditor,
+      activeClientExtensionIds: Set[String],
   ): Unit = {
     val filename = client.fileName.getOrElse("mcp.json")
     val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
@@ -35,9 +36,15 @@ object McpConfig {
     val newConfig = createConfig(config, port, serverName, client)
     configFile.writeText(newConfig)
     client.extraExtensions
-      .filter(ext => projectPath.resolve(ext.settingsPath).isDirectory)
+      .collect { case (id, ext) if activeClientExtensionIds(id) => ext }
       .foreach { ext =>
-        writeConfig(port, projectName, projectPath, ext)
+        writeConfig(
+          port,
+          projectName,
+          projectPath,
+          ext,
+          activeClientExtensionIds,
+        )
       }
   }
 
@@ -222,7 +229,7 @@ case class Client(
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
-    extraExtensions: List[Client] = Nil,
+    extraExtensions: Map[String, Client] = Map.empty,
 ) {
   def projectName(project: String): String =
     serverEntry.getOrElse(s"$project-metals")
@@ -239,7 +246,7 @@ object VSCodeEditor
       additionalProperties = List(
         "type" -> "http"
       ),
-      extraExtensions = List(KiloCodeEditor),
+      extraExtensions = Map("kilocode.kilo-code" -> KiloCodeEditor),
     )
 
 object KiloCodeEditor

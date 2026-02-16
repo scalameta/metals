@@ -184,12 +184,31 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
+    val activeClientExtensionIds = sys.props
+      .get("metals.client-extensions")
+      .map(
+        _.split(",").map(_.trim).toSet
+      )
+      .getOrElse(Set.empty)
+
     if (savedConfigPort.isEmpty) {
-      McpConfig.writeConfig(port, projectName, projectPath, NoClient)
+      McpConfig.writeConfig(
+        port,
+        projectName,
+        projectPath,
+        NoClient,
+        activeClientExtensionIds,
+      )
     }
 
     if (savedClientConfigPort.isEmpty) {
-      McpConfig.writeConfig(port, projectName, projectPath, client)
+      McpConfig.writeConfig(
+        port,
+        projectName,
+        projectPath,
+        client,
+        activeClientExtensionIds,
+      )
     }
 
     McpConfig.rewriteOldEndpointIfNeeded(projectPath, projectName, client, port)

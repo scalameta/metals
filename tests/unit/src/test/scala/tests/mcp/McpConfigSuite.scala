@@ -145,7 +145,12 @@ class McpConfigSuite extends BaseSuite {
     val projectName = "test-project"
 
     // First generation
-    McpConfig.writeConfig(port, projectName, projectPath)
+    McpConfig.writeConfig(
+      port,
+      projectName,
+      projectPath,
+      activeClientExtensionIds = Set.empty,
+    )
     val configFile = projectPath.resolve(".cursor/mcp.json")
     assert(configFile.exists)
     val firstContent = new String(
@@ -164,7 +169,12 @@ class McpConfigSuite extends BaseSuite {
     )
 
     // Update with different port
-    McpConfig.writeConfig(5678, projectName, projectPath)
+    McpConfig.writeConfig(
+      5678,
+      projectName,
+      projectPath,
+      activeClientExtensionIds = Set.empty,
+    )
     val secondContent = new String(
       Files.readAllBytes(configFile.toNIO),
       StandardCharsets.UTF_8,
