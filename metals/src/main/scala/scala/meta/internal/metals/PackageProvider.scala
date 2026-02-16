@@ -19,6 +19,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.SnippetTextEdit
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
@@ -872,7 +873,10 @@ class PackageProvider(
         val textEdit = new TextEdit(range, replacement)
         val id =
           new VersionedTextDocumentIdentifier(path.toURI.toString, version)
-        val textDocEdit = new TextDocumentEdit(id, List(textEdit).asJava)
+        val textDocEdit = new TextDocumentEdit(
+          id,
+          List(JEither.forLeft[TextEdit, SnippetTextEdit](textEdit)).asJava,
+        )
         val changes = List(
           JEither.forLeft[TextDocumentEdit, ResourceOperation](textDocEdit)
         ).asJava
