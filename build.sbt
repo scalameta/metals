@@ -415,7 +415,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "12.0.0",
+      "org.flywaydb" % "flyway-core" % "12.0.1",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -706,20 +706,26 @@ lazy val javapc = project
   )
   .dependsOn(mtest, `mtags-java`)
 
-def isInTestShard(name: String, logger: Logger): Boolean = {
-  val groupIndex = TestGroups.testGroups.indexWhere(group => group(name))
-  if (groupIndex == -1) {
+def isInTestShard(
+    name: String,
+    logger: Logger,
+    groups: List[Set[String]],
+    logFor: String => Boolean = _ => true,
+): Boolean = {
+  val groupIndex = groups.indexWhere(group => group(name))
+  val shardId = System.getenv("TEST_SHARD")
+  if (groupIndex == -1 && logFor(name)) {
     logger.warn(
       s"""|Test is not contained in a shard: $name
           |It will be executed by default in the first shard.
           |Please add it to "project/TestGroups.scala". """.stripMargin
     )
   }
-  if (!isCI) {
+  if (!isCI || shardId == null || shardId.isEmpty()) {
     true
   } else {
     val groupId = Math.max(0, groupIndex) + 1
-    System.getenv("TEST_SHARD").toInt == groupId
+    shardId.toInt == groupId
   }
 }
 
@@ -753,7 +759,9 @@ lazy val unit = project
   .settings(
     testSettings,
     Test / testOptions ++= Seq(
-      Tests.Filter(name => isInTestShard(name, sLog.value))
+      Tests.Filter(name =>
+        isInTestShard(name, sLog.value, TestGroups.testGroups)
+      )
     ),
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
@@ -787,6 +795,17 @@ lazy val slow = project
     testSettings,
     sharedSettings,
     Test / javaOptions += "-Xmx2G",
+    // Only sbt tests are sharded currently
+    Test / testOptions ++= Seq(
+      Tests.Filter(name =>
+        isInTestShard(
+          name,
+          sLog.value,
+          TestGroups.sbtTestGroups,
+          logFor = _.startsWith("tests.sbt."),
+        )
+      )
+    ),
     Test / testOnly := (Test / testOnly)
       .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
       .evaluated,

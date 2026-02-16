@@ -66,7 +66,8 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (isJava24) 1545
+            if (isJava25) 1548
+            else if (isJava24) 1545
             else if (isJava21 && !isMacOS && !isWindows) 1476
             else if (isJava21) 1487
             else if (
@@ -76,15 +77,9 @@ class FindTextInDependencyJarsSuite
                 scala.util.Properties.javaVersion.replaceAll("(\\+|\\-).*", ""),
               )
             ) 1449
-            else if (isJava17) 1445
-            else if (isJava11) 626
-            else 578
+            else 1445
 
-          val pathPrefix =
-            if (isJava11) "/java.base/"
-            else "/"
-
-          s"""|src.zip${pathPrefix}java/lang/String.java:$line:5: info: result
+          s"""|src.zip/java.base/java/lang/String.java:$line:5: info: result
               |    public String(StringBuffer buffer) {
               |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
               |""".stripMargin

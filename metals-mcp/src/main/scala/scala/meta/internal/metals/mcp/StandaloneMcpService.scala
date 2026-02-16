@@ -24,20 +24,20 @@ import scala.meta.io.AbsolutePath
  *
  * @param workspace The workspace root path
  * @param port Optional port for HTTP transport
- * @param transport Transport type (HTTP or stdio, reserved for future use)
  * @param scheduledExecutor Scheduled executor for background tasks
+ * @param client Client to generate config for (defaults to NoClient)
  */
 class StandaloneMcpService(
     workspace: AbsolutePath,
     port: Option[Int],
     scheduledExecutor: ScheduledExecutorService,
+    client: Client = NoClient,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   port match {
     case Some(port) =>
       McpConfig.writeConfig(port, workspace.filename, workspace, NoClient)
-    case None =>
-    // random port will be assigned by the system
+    case None => // random port will be assigned by the system
   }
 
   private val cancelables = new MutableCancelable()
@@ -126,7 +126,14 @@ class StandaloneMcpService(
     Await.result(projectMetalsLspService.initialized(), 10.minutes)
     Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
     cancelables.add(projectMetalsLspService)
-
+    val createdPort =
+      McpConfig.readPort(workspace, workspace.filename, NoClient)
+    (createdPort, client) match {
+      case (_, NoClient) => // no client was set, nothing to do
+      case (Some(port), client) =>
+        McpConfig.writeConfig(port, workspace.filename, workspace, client)
+      case (None, _) => scribe.error("No port was created")
+    }
     scribe.info("MCP server started successfully")
   }
 

@@ -42,6 +42,13 @@ object ServerCommands {
     """Unconditionally cancel existing build server connection without reconnecting""",
   )
 
+  val DisconnectBuildServerAndShutdown = new Command(
+    "build-disconnect-and-shutdown",
+    "Disconnect from build server and shut it down",
+    """|Disconnect from the build server and shut it down so that its process exits.
+       |Use when closing the editor if you want no leftover Bloop (or other build server) process.""".stripMargin,
+  )
+
   val RestartBuildServer = new Command(
     "build-restart",
     "Restart build server",
@@ -835,6 +842,7 @@ object ServerCommands {
       ScalafixRunOnly,
       DecodeFile,
       DisconnectBuildServer,
+      DisconnectBuildServerAndShutdown,
       ListBuildTargets,
       ScanWorkspaceSources,
       StartDebugAdapter,

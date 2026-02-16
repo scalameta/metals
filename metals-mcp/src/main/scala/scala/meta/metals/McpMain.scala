@@ -10,6 +10,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.logging.MetalsLogger
+import scala.meta.internal.metals.mcp.Client
+import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.StandaloneMcpService
 import scala.meta.io.AbsolutePath
 
@@ -41,7 +43,11 @@ object McpMain {
       workspace: Option[AbsolutePath] = None,
       port: Option[Int] = None,
       transport: Transport = Transport.Http,
+      client: Client = NoClient,
   )
+
+  private val validClients: String =
+    Client.allClients.flatMap(_.names).mkString(", ")
 
   def main(args: Array[String]): Unit = {
     parseArgs(args.toList) match {
@@ -102,6 +108,16 @@ object McpMain {
               )
           }
 
+        case "--client" :: clientName :: rest =>
+          Client.allClients.find(c => c.names.contains(clientName)) match {
+            case Some(client) =>
+              parse(rest, config.copy(client = client))
+            case None =>
+              Left(
+                s"Invalid client: $clientName. Valid options: $validClients"
+              )
+          }
+
         case unknown :: _ =>
           Left(s"Unknown argument: $unknown")
       }
@@ -124,6 +140,7 @@ object McpMain {
          |  --workspace <path>      Path to the Scala project (required)
          |  --port <number>         HTTP port to listen on (default: auto-assign)
          |  --transport <type>      Transport type: http (default) or stdio (reserved for future use)
+         |  --client <name>         Client to generate config for: $validClients
          |  --help, -h              Show this help message
          |  --version, -v           Show version information
          |
@@ -134,6 +151,9 @@ object McpMain {
          |  # Start with specific port
          |  metals-mcp --workspace /path/to/project --port 8080
          |
+         |  # Generate config for Cursor editor
+         |  metals-mcp --workspace /path/to/project --client Cursor
+         |
          |  # Start in stdio mode for direct process integration
          |  metals-mcp --workspace /path/to/project --transport stdio
          |
@@ -142,13 +162,17 @@ object McpMain {
   }
 
   private def runServer(config: Config): Unit = {
-    val workspace = config.workspace.get
+    val workspace = AbsolutePath(
+      config.workspace.get.toNIO.toAbsolutePath().normalize()
+    )
     val exec = Executors.newCachedThreadPool()
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
-    val metalsLog = workspace.resolve(".metals/metals.log")
-    MetalsLogger.redirectSystemOut(metalsLog)
+    if (config.transport == Transport.Stdio) {
+      val metalsLog = workspace.resolve(".metals/metals.log")
+      MetalsLogger.redirectSystemOut(metalsLog)
+    }
 
     scribe.info(
       s"Starting Metals MCP server ${BuildInfo.metalsVersion} for workspace: $workspace"
@@ -159,6 +183,7 @@ object McpMain {
       workspace,
       config.port,
       sh,
+      config.client,
     )(ec)
 
     Runtime.getRuntime.addShutdownHook(new Thread(() => {

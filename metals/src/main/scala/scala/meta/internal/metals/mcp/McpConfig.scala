@@ -225,10 +225,8 @@ case class Client(
 object VSCodeEditor
     extends Client(
       names = List(
-        "Visual Studio Code",
-        "Visual Studio Code - Insiders",
-        "VSCodium",
-        "VSCodium - Insiders",
+        "Visual Studio Code", "Visual Studio Code - Insiders", "VSCodium",
+        "vscode", "VSCodium - Insiders",
       ),
       settingsPath = ".vscode/",
       serverField = "servers",
@@ -239,7 +237,7 @@ object VSCodeEditor
 
 object CursorEditor
     extends Client(
-      names = List("Cursor"),
+      names = List("Cursor", "cursor"),
       settingsPath = ".cursor/",
       serverField = "mcpServers",
       additionalProperties = Nil,
