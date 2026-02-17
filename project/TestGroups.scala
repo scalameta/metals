@@ -150,12 +150,13 @@ object TestGroups {
     "tests.sbt.SbtCrossDebugSuite", "tests.sbt.SbtEvaluationDapSuite",
     "tests.sbt.SbtServerSuite", "tests.sbt.SbtStackFrameDapSuite",
     "tests.sbt.SbtStepDapSuite", "tests.sbt.WorkspaceFolderSuite",
+    "tests.sbt.SbtTwirlSuite",
   )
 
-  val sbtNumberOfShards = 2
+  val sbtNumberOfShards = 3
 
   val sbtTestGroups: List[Set[String]] = sbtTests
-    .grouped(Math.ceil(sbtTests.length.toDouble / numberOfShards).toInt)
+    .grouped(Math.ceil(sbtTests.length.toDouble / sbtNumberOfShards).toInt)
     .map(_.toSet)
     .toList
 
