@@ -56,6 +56,7 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+import scala.meta.internal.metals.MetalsServerConfig
 
 class MetalsMcpServer(
     queryEngine: McpQueryEngine,
@@ -184,12 +185,8 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    val activeClientExtensionIds = sys.props
-      .get("metals.client-extensions")
-      .map(
-        _.split(",").map(_.trim).toSet
-      )
-      .getOrElse(Set.empty)
+    val activeClientExtensionIds =
+      MetalsServerConfig.default.activeClientExtensionIds
 
     if (savedConfigPort.isEmpty) {
       McpConfig.writeConfig(
