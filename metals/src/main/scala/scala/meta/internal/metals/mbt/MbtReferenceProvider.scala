@@ -82,6 +82,14 @@ class MbtReferenceProvider(
   // this timeout.
   private val timeout: FiniteDuration =
     if (sys.props.contains("metals.debug")) 20.minutes else 20.seconds
+  private val protobufReferences = new MbtProtobufReferenceProvider(
+    mbt,
+    buffers,
+    languageClient,
+    time,
+    groupSize,
+    timeout,
+  )
   def implementations(
       params: l.TextDocumentPositionParams
   ): Future[List[l.Location]] =
@@ -116,6 +124,32 @@ class MbtReferenceProvider(
     scribe.info(
       s"implementations: found ${enclosingOccurrences.length} occurrences"
     )
+
+    if (path.isProtoFilename) {
+      return protobufReferences.implementations(
+        path,
+        requestDoc,
+        enclosingOccurrences,
+        taskProgress,
+        timer,
+        cache.index,
+        commonPrefixLength,
+      )
+    }
+    doScalaJavaImplementations(
+      path,
+      enclosingOccurrences,
+      taskProgress,
+      timer,
+    )
+  }
+
+  private def doScalaJavaImplementations(
+      path: AbsolutePath,
+      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      taskProgress: TaskProgress,
+      timer: Timer,
+  ): (List[l.Location], Option[String]) = {
     val enclosingSymbols = enclosingOccurrences.map(_.symbol)
     val primarySymbol = enclosingSymbols.headOption
     val isOverridenSymbol = mutable.Set.from(enclosingSymbols)
@@ -280,7 +314,9 @@ class MbtReferenceProvider(
       enclosingOccurrences: Seq[s.SymbolOccurrence],
       taskProgress: TaskProgress,
   ): List[ReferencesResult] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
     val token = params.getPartialResultToken()
+
     val superMethods = for {
       enclosing <- enclosingOccurrences
       info <- requestDoc.symbols.find(_.symbol == enclosing.symbol).iterator
@@ -305,6 +341,20 @@ class MbtReferenceProvider(
     val toQuerySymbols =
       if (implementationMethods.nonEmpty) implementationMethods
       else enclosingOccurrences.map(_.symbol)
+
+    if (path.isProtoFilename) {
+      return protobufReferences.references(
+        path,
+        timer,
+        params,
+        requestDoc,
+        enclosingOccurrences,
+        toQuerySymbols,
+        taskProgress,
+        cache.index,
+      )
+    }
+
     // Expand symbols to include alternatives like companion objects/classes,
     // apply/copy params, constructor params, etc.
     val scalaMatchingOccurrence = (for {
@@ -332,6 +382,7 @@ class MbtReferenceProvider(
       } else {
         Nil
       }
+
     val candidatesList = externalDocumentCandidates.iterator
       .filterNot(_.filename.endsWith(".proto"))
       .distinct

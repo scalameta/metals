@@ -260,8 +260,12 @@ trait CommonMtagsEnrichments {
       doc.isScala || isScalaScript || isSbt || isMill
     def isScalaOrJavaFilename: Boolean =
       isScalaFilename || isJavaFilename
+    def isScalaOrJavaOrProtoFilename: Boolean =
+      isScalaFilename || isJavaFilename || isProtoFilename
     def isJavaFilename: Boolean =
       doc.endsWith(".java")
+    def isProtoFilename: Boolean =
+      doc.endsWith(".proto")
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".amm.sc.scala")
     def isScalaCLIGeneratedFile: Boolean =

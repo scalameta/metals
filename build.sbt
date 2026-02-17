@@ -162,8 +162,10 @@ commands ++= Seq(
       "jsemanticdb/publishLocal" ::
       "turbine/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
+      "semanticdb-protoc/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
+      "mtags-protobuf/publishLocal" ::
       publishMtags
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
@@ -473,7 +475,7 @@ lazy val mtags = project
     moduleName := "mtags",
     projectDependencies := projectDependencies.value,
   )
-  .dependsOn(mtagsShared)
+  .dependsOn(mtagsShared, `semanticdb-protoc`)
   .enablePlugins(BuildInfoPlugin)
 
 val toolchainJavaOptions = List(
@@ -542,6 +544,29 @@ lazy val `mtags-java` = project
   )
   .configure(JavaPcSettings.settings(sharedSettings))
   .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
+
+lazy val `semanticdb-protoc` = project
+  .settings(
+    moduleName := "semanticdb-protoc",
+    autoScalaLibrary := false,
+    crossPaths := false,
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    Compile / doc / sources := Seq.empty,
+    libraryDependencies ++= List(
+      V.guava,
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+    ),
+  )
+  .dependsOn(jsemanticdb)
+  .disablePlugins(ScalafixPlugin)
+
+lazy val `mtags-protobuf` = project
+  .settings(
+    sharedSettings,
+    libraryDependencies ++= pprintDebuggingDependency,
+  )
+  .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
 lazy val metals = project
   .settings(
@@ -682,7 +707,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, `mtags-protobuf`)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -937,6 +962,18 @@ lazy val javapc = project
     Compile / resourceGenerators += packageJavaHeaderCompiler,
   )
   .dependsOn(mtest, `mtags-java`)
+
+lazy val protopc = project
+  .in(file("tests/protopc"))
+  .settings(
+    testSettings,
+    sharedSettings,
+    libraryDependencies ++= List(
+      "com.outr" %% "scribe" % V.scribe,
+      "com.outr" %% "scribe-slf4j2" % V.scribe,
+    ),
+  )
+  .dependsOn(mtest, `mtags-protobuf`)
 
 def isInTestShard(name: String): Boolean = {
   (

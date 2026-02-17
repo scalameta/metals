@@ -1,0 +1,26 @@
+syntax = "proto3";
+package example;
+
+message MapExample {
+  map<string, int32> string_to_int = 1;
+  map<int32, Person> id_to_person = 2;
+}
+
+message Person {
+  string name = 1;
+}
+
+message OneofExample {
+  string always_present = 1;
+  
+  oneof contact_method {
+    string email = 2;
+    string phone = 3;
+    Address mail_address = 4;
+  }
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+}

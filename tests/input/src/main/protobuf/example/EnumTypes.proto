@@ -1,0 +1,13 @@
+syntax = "proto3";
+package example;
+
+enum Status {
+  UNKNOWN = 0;
+  ACTIVE = 1;
+  INACTIVE = 2;
+  DELETED = 3;
+}
+
+message StatusHolder {
+  Status current_status = 1;
+}

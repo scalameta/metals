@@ -372,20 +372,27 @@ final case class TestingServer(
     })
   }
 
-  def assertImplementationsSubquery(
+  def implementationsSubquery(
       filename: String,
       subquery: String,
-      expected: String,
-  )(implicit loc: munit.Location): Future[Unit] = {
+  ): Future[List[l.Location]] = {
     val path = toPath(filename)
     val params = new l.TextDocumentPositionParams(
       path.toTextDocumentIdentifier,
       subqueryPosition(path, subquery).toLspStartPosition,
     )
+    server.implementation(params).asScala.map(_.asScala.toList)
+  }
+
+  def assertImplementationsSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      locations <- server.implementation(params).asScala
+      locations <- implementationsSubquery(filename, subquery)
     } yield {
-      assertLocations(locations.asScala.toList, "implementation", expected)
+      assertLocations(locations, "implementation", expected)
     }
   }
 

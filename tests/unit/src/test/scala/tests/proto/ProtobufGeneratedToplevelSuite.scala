@@ -1,13 +1,19 @@
 package tests.proto
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
+import scala.meta.internal.mtags.MtagsIndexer
+import scala.meta.internal.mtags.proto.ProtoMtagsV1
+import scala.meta.internal.mtags.proto.ProtoMtagsV2
 
+/**
+ * Tests V1 indexer with includeGeneratedSymbols=true.
+ * This generates camelCase variations of proto field names (for ScalaPB).
+ */
 class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
   override def createMtagsIndexer(
       input: Input.VirtualFile
-  ): ProtobufToplevelMtags = {
-    new ProtobufToplevelMtags(input, includeGeneratedSymbols = true)
+  ): MtagsIndexer = {
+    new ProtoMtagsV1(input, includeGeneratedSymbols = true)
   }
 
   check(
@@ -82,4 +88,49 @@ class ProtobufGeneratedToplevelSuite extends BaseProtobufToplevelSuite {
        |""".stripMargin,
   )
 
+}
+
+/**
+ * Tests V2 indexer with generated symbols.
+ * V2 uses Language tags to distinguish Java vs Scala symbols.
+ */
+class ProtobufV2GeneratedToplevelSuite extends BaseProtobufToplevelSuite {
+  override def createMtagsIndexer(
+      input: Input.VirtualFile
+  ): MtagsIndexer = {
+    new ProtoMtagsV2(
+      input,
+      includeMembers = true,
+      includeGeneratedSymbols = true,
+    )
+  }
+
+  check(
+    "v2-basic",
+    """
+    syntax = "proto3";
+    package com.example;
+    
+    message User {
+      string name = 1;
+      int32 zip_code = 2;
+    }
+    """,
+    // V2 generates: proto field, camelCase (Scala), withX (Scala), getX/hasX/getXBytes (Java)
+    """|com/
+       |com/example/
+       |com/example/User#
+       |com/example/User#name().
+       |com/example/User#withName().
+       |com/example/User#getName().
+       |com/example/User#hasName().
+       |com/example/User#getNameBytes().
+       |com/example/User#zip_code().
+       |com/example/User#zipCode().
+       |com/example/User#withZipCode().
+       |com/example/User#getZipCode().
+       |com/example/User#hasZipCode().
+       |com/example/User#getZipCodeBytes().
+       |""".stripMargin,
+  )
 }

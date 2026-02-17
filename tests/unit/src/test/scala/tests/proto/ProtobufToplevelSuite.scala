@@ -1,14 +1,15 @@
 package tests.proto
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
+import scala.meta.internal.mtags.MtagsIndexer
+import scala.meta.internal.mtags.proto.ProtoMtagsV1
 
 import munit.TestOptions
 
 abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
-  def createMtagsIndexer(input: Input.VirtualFile): ProtobufToplevelMtags = {
-    new ProtobufToplevelMtags(input)
-  }
+
+  /** Override to customize indexer */
+  def createMtagsIndexer(input: Input.VirtualFile): MtagsIndexer
   def check(
       name: TestOptions,
       protoFileContent: String,
@@ -26,7 +27,19 @@ abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
       )
     }
 }
+
+/**
+ * Tests V1 indexer (scanner-based, handles malformed files).
+ * V1 is the default because it handles syntax errors gracefully.
+ */
 class ProtobufToplevelSuite extends BaseProtobufToplevelSuite {
+  override def createMtagsIndexer(input: Input.VirtualFile): MtagsIndexer = {
+    new ProtoMtagsV1(
+      input,
+      includeGeneratedSymbols = false,
+      includeFuzzyReferences = false,
+    )
+  }
 
   check(
     "basic",

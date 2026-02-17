@@ -1,0 +1,38 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   message Outer {
+//         ^^^^^ definition example/Outer# CLASS
+     string outer_field = 1;
+//          ^^^^^^^^^^^ definition example/Outer#outer_field(). METHOD(val)
+//          ^^^^^^^^^^^ definition example/Outer#outerField(). METHOD(val)
+//          ^^^^^^^^^^^ definition example/Outer#getOuterField(). METHOD(val)
+//          ^^^^^^^^^^^ definition example/Outer#withOuterField(). METHOD(val)
+  
+     message Inner {
+//           ^^^^^ definition example/Outer#Inner# CLASS
+       string inner_field = 1;
+//            ^^^^^^^^^^^ definition example/Outer#Inner#inner_field(). METHOD(val)
+//            ^^^^^^^^^^^ definition example/Outer#Inner#innerField(). METHOD(val)
+//            ^^^^^^^^^^^ definition example/Outer#Inner#getInnerField(). METHOD(val)
+//            ^^^^^^^^^^^ definition example/Outer#Inner#withInnerField(). METHOD(val)
+    
+       message DeepNested {
+//             ^^^^^^^^^^ definition example/Outer#Inner#DeepNested# CLASS
+         string deep_field = 1;
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#deep_field(). METHOD(val)
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#deepField(). METHOD(val)
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#getDeepField(). METHOD(val)
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#withDeepField(). METHOD(val)
+       }
+     }
+  
+     Inner nested = 2;
+//   ^^^^^ reference Inner:
+//         ^^^^^^ definition example/Outer#nested(). METHOD(val)
+//         ^^^^^^ definition example/Outer#getNested(). METHOD(val)
+//         ^^^^^^ definition example/Outer#withNested(). METHOD(val)
+     Inner.DeepNested deep = 3;
+//   ^^^^^ reference Inner:
+   }

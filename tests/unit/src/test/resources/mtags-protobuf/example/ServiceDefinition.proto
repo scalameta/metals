@@ -1,0 +1,61 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   message GetUserRequest {
+//         ^^^^^^^^^^^^^^ definition example/GetUserRequest# CLASS
+     string user_id = 1;
+//          ^^^^^^^ definition example/GetUserRequest#user_id(). METHOD(val)
+//          ^^^^^^^ definition example/GetUserRequest#userId(). METHOD(val)
+//          ^^^^^^^ definition example/GetUserRequest#getUserId(). METHOD(val)
+//          ^^^^^^^ definition example/GetUserRequest#withUserId(). METHOD(val)
+   }
+
+   message GetUserResponse {
+//         ^^^^^^^^^^^^^^^ definition example/GetUserResponse# CLASS
+     string name = 1;
+//          ^^^^ definition example/GetUserResponse#name(). METHOD(val)
+//          ^^^^ definition example/GetUserResponse#getName(). METHOD(val)
+//          ^^^^ definition example/GetUserResponse#withName(). METHOD(val)
+     string email = 2;
+//          ^^^^^ definition example/GetUserResponse#email(). METHOD(val)
+//          ^^^^^ definition example/GetUserResponse#getEmail(). METHOD(val)
+//          ^^^^^ definition example/GetUserResponse#withEmail(). METHOD(val)
+   }
+
+   message CreateUserRequest {
+//         ^^^^^^^^^^^^^^^^^ definition example/CreateUserRequest# CLASS
+     string name = 1;
+//          ^^^^ definition example/CreateUserRequest#name(). METHOD(val)
+//          ^^^^ definition example/CreateUserRequest#getName(). METHOD(val)
+//          ^^^^ definition example/CreateUserRequest#withName(). METHOD(val)
+     string email = 2;
+//          ^^^^^ definition example/CreateUserRequest#email(). METHOD(val)
+//          ^^^^^ definition example/CreateUserRequest#getEmail(). METHOD(val)
+//          ^^^^^ definition example/CreateUserRequest#withEmail(). METHOD(val)
+   }
+
+   message CreateUserResponse {
+//         ^^^^^^^^^^^^^^^^^^ definition example/CreateUserResponse# CLASS
+     string user_id = 1;
+//          ^^^^^^^ definition example/CreateUserResponse#user_id(). METHOD(val)
+//          ^^^^^^^ definition example/CreateUserResponse#userId(). METHOD(val)
+//          ^^^^^^^ definition example/CreateUserResponse#getUserId(). METHOD(val)
+//          ^^^^^^^ definition example/CreateUserResponse#withUserId(). METHOD(val)
+   }
+
+   service UserService {
+//         ^^^^^^^^^^^ definition example/UserService# INTERFACE
+     rpc GetUser(GetUserRequest) returns (GetUserResponse);
+//       ^^^^^^^ definition example/UserService#GetUser(). METHOD
+//       ^^^^^^^ definition example/UserService#getGetUser(). METHOD
+//       ^^^^^^^ definition example/UserService#withGetUser(). METHOD
+//               ^^^^^^^^^^^^^^ reference GetUserRequest:
+//                                        ^^^^^^^^^^^^^^^ reference GetUserResponse:
+     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+//       ^^^^^^^^^^ definition example/UserService#CreateUser(). METHOD
+//       ^^^^^^^^^^ definition example/UserService#getCreateUser(). METHOD
+//       ^^^^^^^^^^ definition example/UserService#withCreateUser(). METHOD
+//                  ^^^^^^^^^^^^^^^^^ reference CreateUserRequest:
+//                                              ^^^^^^^^^^^^^^^^^^ reference CreateUserResponse:
+   }

@@ -90,4 +90,10 @@ public enum FeatureFlag {
    * enable parallel processing with that many compiler instances.
    */
   BATCH_SEMANTICDB_COMPILER_INSTANCES,
+
+  /**
+   * If enabled, all Protobuf LSP features (diagnostics, hover, definition, completions, semantic
+   * tokens, semanticdb) are enabled.
+   */
+  PROTOBUF_LSP,
 }

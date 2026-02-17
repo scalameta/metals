@@ -35,6 +35,7 @@ import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
@@ -102,6 +103,11 @@ class MbtWorkspaceSymbolProvider(
     sleeper: Sleeper = Sleeper.TestingSleeper,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
       TurbineRecompileDelayConfig.fromConfig(None),
+    indexFilters: List[MbtIndexFilter] = List(
+      ProtobufVersionHistoryIndexFilter,
+      ProtobufTemplateAndTestIndexFilter,
+    ),
+    protobufLspConfig: () => ProtobufLspConfig = () => ProtobufLspConfig.default,
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
@@ -110,19 +116,33 @@ class MbtWorkspaceSymbolProvider(
 
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
-  private val turbineCompiler = new TurbineCompiler[AbsolutePath](
-    () => documentsKeys,
-    file =>
-      if (!file.toLanguage.isJava) None
-      else toInput(file).map(input => new SourceFile(input.path, input.text)),
-    () => fallbackClasspaths().javaCompilerClasspath(),
-    progress,
-    // We don't need to re-compile the workspace super regularly because we can
-    // load recently changed files from the sourcepath.
-    turbineRecompileDelay().duration,
-    sleeper = sleeper,
-    onIndexingDone = onIndexingDone,
+  private lazy val protobufWorkspace = new MbtProtobufWorkspaceSymbolProvider(
+    buffers,
+    protobufLspConfig,
+    clearAllProtobufCaches,
   )
+  private val turbineCompiler: TurbineCompiler[AbsolutePath] =
+    new TurbineCompiler[AbsolutePath](
+      () => documentsKeys,
+      file =>
+        if (!file.toLanguage.isJava) None
+        else toInput(file).map(input => new SourceFile(input.path, input.text)),
+      () => fallbackClasspaths().javaCompilerClasspath(),
+      progress,
+      // We don't need to re-compile the workspace super regularly because we can
+      // load recently changed files from the sourcepath.
+      turbineRecompileDelay().duration,
+      listProtoJavaOutlinesForPackage = pkg =>
+        protobufWorkspace.listProtoJavaOutlinesForPackage(
+          pkg,
+          documentsByPackage,
+          documents,
+        ),
+      sleeper = sleeper,
+      onIndexingDone = onIndexingDone,
+      onNewProjectClasspath = classpath =>
+        protobufWorkspace.onNewProjectClasspath(classpath),
+    )
 
   // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
   // in MetalsLspService.onUserConfigUpdate
@@ -131,6 +151,23 @@ class MbtWorkspaceSymbolProvider(
   }
 
   def close(): Unit = {}
+
+  /**
+   * Clears cached Java outlines for a specific proto file.
+   * Called when a proto file is saved and we need to regenerate outlines from buffers.
+   */
+  def didSave(path: AbsolutePath): Unit = {
+    if (path.isProtoFilename) {
+      documents.get(path).foreach(_.clearProtobufJavaOutlinesCache())
+    }
+  }
+  private def clearAllProtobufCaches(): Unit = {
+    documentsKeys.foreach { path =>
+      if (path.isProtoFilename) {
+        documents.get(path).foreach(_.clearProtobufJavaOutlinesCache())
+      }
+    }
+  }
 
   // The source of truth for what files belong to the workspace, and their attached indexed data.
   // DO NOT update this map directly since have a couple derivative collections.
@@ -197,6 +234,8 @@ class MbtWorkspaceSymbolProvider(
     val toIndex = ParArray.fromSpecific(for {
       file <- files
       path = workspace.resolve(file.path)
+      candidate = MbtFileCandidate(path, file.path)
+      if indexFilters.forall(_.decide(candidate) == MbtIndexDecision.Continue)
       isCached = documents.get(path).exists(_.oid == file.oid)
       if !isCached
     } yield path)
@@ -362,8 +401,16 @@ class MbtWorkspaceSymbolProvider(
       file: AbsolutePath,
       updateDocumentKeys: Boolean,
   ): Future[Unit] = try {
+    val enableProtoJavaPackage =
+      file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
     val mdoc =
-      IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
+      IndexedDocument.fromFile(
+        file,
+        mtags(),
+        buffers,
+        dialects.Scala213,
+        enableProtoJavaPackage = enableProtoJavaPackage,
+      )
     putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
   } catch {
     case _: NoSuchFileException =>
@@ -397,14 +444,27 @@ class MbtWorkspaceSymbolProvider(
         (pkg) => {
           documentsByPackage.get(pkg) match {
             case None =>
+              scribe.debug(s"mbt-v2: package not found in index: $pkg")
               ju.Collections.emptyList()
             case Some(paths) =>
+              scribe.debug(
+                s"mbt-v2: found ${paths.size()} files for package: $pkg"
+              )
               val result = for {
                 path <- paths.asScala.iterator
                 doc <- documents.get(AbsolutePath(path)).toList.iterator
-                if doc.language.isJava
-                input <- toInput(doc.file)
-              } yield doc.toSemanticdbCompilationUnit(input)
+                compilationUnit <- {
+                  if (doc.language.isJava) {
+                    toInput(doc.file)
+                      .map(doc.toSemanticdbCompilationUnit)
+                      .iterator
+                  } else if (doc.language.isProtobuf) {
+                    protobufWorkspace.generateProtoJavaOutlines(doc, pkg)
+                  } else {
+                    Iterator.empty
+                  }
+                }
+              } yield compilationUnit
               ArrayBuffer.from(result).asJava
           }
         },
@@ -457,6 +517,20 @@ class MbtWorkspaceSymbolProvider(
       )
     }).toList
     result
+  }
+
+  /**
+   * Finds the proto RPC definition for a gRPC stub method symbol.
+   *
+   * Maps from Java gRPC method symbol to proto RPC definition.
+   * e.g., "com/example/api/jproto/GreeterGrpc$GreeterImplBase#sayHello()."
+   *   -> rpc SayHello in greeter.proto
+   *
+   * This is used for goto-super functionality when a Java class overrides
+   * a gRPC ImplBase method.
+   */
+  def findProtoRpcDefinition(methodSymbol: String): List[l.Location] = {
+    protobufWorkspace.findProtoRpcDefinition(methodSymbol, documents)
   }
 
   def possibleReferences(
@@ -615,6 +689,7 @@ class MbtWorkspaceSymbolProvider(
       updateDocumentsKeys(documents)
     }
     addDocumentToPackages(doc.semanticdbPackages, file)
+
     if (
       updateDocumentKeys &&
       doc.language.isJava &&

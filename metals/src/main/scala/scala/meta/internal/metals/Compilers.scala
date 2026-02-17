@@ -36,6 +36,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
+import scala.meta.internal.protopc.ProtoPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.{semanticdb => s}
@@ -420,7 +421,7 @@ class Compilers(
 
   def didChange(path: AbsolutePath): Future[Unit] = {
     if (userConfig().presentationCompilerDiagnostics)
-      // Batch/debounce these requests since they can arrivein bursts
+      // Batch/debounce these requests since they can arrive in bursts
       fileDidChange(Seq(path))
     else
       didChangeBSPDiagnostics(path, shouldReturnDiagnostics = false).ignoreValue
@@ -490,6 +491,23 @@ class Compilers(
       )
     } {
       compiler.await.restart()
+    }
+  }
+
+  /**
+   * Restart all Java presentation compilers (both build-target-specific and fallback).
+   * This is needed when proto files change because the Java compiler caches resolved symbols
+   * and won't re-request them from the file manager until restarted.
+   */
+  def restartJavaCompilers(): Unit = {
+    for {
+      (key, lazyPc) <- cache
+      if key.isInstanceOf[PresentationCompilerKey.JavaBuildTarget] ||
+        (key.isInstanceOf[PresentationCompilerKey.Default] &&
+          key.asInstanceOf[PresentationCompilerKey.Default].language.isJava)
+    } {
+      scribe.debug(s"Restarting Java compiler for $key")
+      lazyPc.await.restart()
     }
   }
 
@@ -1387,7 +1405,8 @@ class Compilers(
       }
     }
 
-    if (!path.isScalaFilename && !path.isJavaFilename) None
+    if (path.isProtoFilename) loadProtoCompiler(path)
+    else if (!path.isScalaFilename && !path.isJavaFilename) None
     else if (path.isWorksheet)
       loadWorksheetCompiler(path).orElse(fromBuildTarget)
     else fromBuildTarget
@@ -1487,6 +1506,28 @@ class Compilers(
         )
         .await
     }
+  }
+
+  private def protoCompiler: PresentationCompiler = {
+    ProtoPresentationCompiler(
+      buildTargetId = "",
+      importPaths = Nil,
+      search = search,
+      ec = ec,
+      sh = Some(sh),
+      workspace = Some(workspace.toNIO),
+    ).withConfiguration(
+      config.initialConfig.compilers.copy(
+        emitDiagnostics = true,
+        protobufLspConfig = userConfig().protobufLspConfig,
+      )
+    )
+  }
+
+  private def loadProtoCompiler(
+      path: AbsolutePath
+  ): Option[PresentationCompiler] = {
+    Some(protoCompiler)
   }
 
   private def loadCompiler(

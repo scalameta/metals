@@ -1,0 +1,71 @@
+   syntax = "proto3";
+// ^ reference example/
+   package example;
+
+   message GetUserRequest {
+//         ^^^^^^^^^^^^^^ definition example/GetUserRequest# CLASS
+     string user_id = 1;
+//          ^^^^^^^ definition example/GetUserRequest#user_id(). METHOD
+//          ^^^^^^^ definition example/GetUserRequest#userId(). METHOD
+//          ^^^^^^^ definition example/GetUserRequest#withUserId(). METHOD
+//          ^^^^^^^ definition example/GetUserRequest#getUserId(). METHOD
+//          ^^^^^^^ definition example/GetUserRequest#hasUserId(). METHOD
+//          ^^^^^^^ definition example/GetUserRequest#getUserIdBytes(). METHOD
+   }
+
+   message GetUserResponse {
+//         ^^^^^^^^^^^^^^^ definition example/GetUserResponse# CLASS
+     string name = 1;
+//          ^^^^ definition example/GetUserResponse#name(). METHOD
+//          ^^^^ definition example/GetUserResponse#withName(). METHOD
+//          ^^^^ definition example/GetUserResponse#getName(). METHOD
+//          ^^^^ definition example/GetUserResponse#hasName(). METHOD
+//          ^^^^ definition example/GetUserResponse#getNameBytes(). METHOD
+     string email = 2;
+//          ^^^^^ definition example/GetUserResponse#email(). METHOD
+//          ^^^^^ definition example/GetUserResponse#withEmail(). METHOD
+//          ^^^^^ definition example/GetUserResponse#getEmail(). METHOD
+//          ^^^^^ definition example/GetUserResponse#hasEmail(). METHOD
+//          ^^^^^ definition example/GetUserResponse#getEmailBytes(). METHOD
+   }
+
+   message CreateUserRequest {
+//         ^^^^^^^^^^^^^^^^^ definition example/CreateUserRequest# CLASS
+     string name = 1;
+//          ^^^^ definition example/CreateUserRequest#name(). METHOD
+//          ^^^^ definition example/CreateUserRequest#withName(). METHOD
+//          ^^^^ definition example/CreateUserRequest#getName(). METHOD
+//          ^^^^ definition example/CreateUserRequest#hasName(). METHOD
+//          ^^^^ definition example/CreateUserRequest#getNameBytes(). METHOD
+     string email = 2;
+//          ^^^^^ definition example/CreateUserRequest#email(). METHOD
+//          ^^^^^ definition example/CreateUserRequest#withEmail(). METHOD
+//          ^^^^^ definition example/CreateUserRequest#getEmail(). METHOD
+//          ^^^^^ definition example/CreateUserRequest#hasEmail(). METHOD
+//          ^^^^^ definition example/CreateUserRequest#getEmailBytes(). METHOD
+   }
+
+   message CreateUserResponse {
+//         ^^^^^^^^^^^^^^^^^^ definition example/CreateUserResponse# CLASS
+     string user_id = 1;
+//          ^^^^^^^ definition example/CreateUserResponse#user_id(). METHOD
+//          ^^^^^^^ definition example/CreateUserResponse#userId(). METHOD
+//          ^^^^^^^ definition example/CreateUserResponse#withUserId(). METHOD
+//          ^^^^^^^ definition example/CreateUserResponse#getUserId(). METHOD
+//          ^^^^^^^ definition example/CreateUserResponse#hasUserId(). METHOD
+//          ^^^^^^^ definition example/CreateUserResponse#getUserIdBytes(). METHOD
+   }
+
+   service UserService {
+//         ^^^^^^^^^^^ definition example/UserService# INTERFACE
+//         ^^^^^^^^^^^ reference UserServiceImplBase:
+//         ^^^^^^^^^^^ reference UserServiceStub:
+//         ^^^^^^^^^^^ reference UserServiceBlockingStub:
+//         ^^^^^^^^^^^ reference UserServiceFutureStub:
+     rpc GetUser(GetUserRequest) returns (GetUserResponse);
+//       ^^^^^^^ definition example/UserService#GetUser(). METHOD
+//       ^^^^^^^ definition example/UserService#getUser(). METHOD
+     rpc CreateUser(CreateUserRequest) returns (CreateUserResponse);
+//       ^^^^^^^^^^ definition example/UserService#CreateUser(). METHOD
+//       ^^^^^^^^^^ definition example/UserService#createUser(). METHOD
+   }

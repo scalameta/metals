@@ -9,7 +9,6 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
-import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
@@ -109,15 +108,10 @@ object SemanticdbDefinition {
         Some(indexer)
       case Semanticdb.Language.PROTOBUF =>
         val indexer =
-          new ProtobufToplevelMtags(input, includeGeneratedSymbols = true) {
-            override def visitOccurrence(
-                occ: SymbolOccurrence,
-                info: SymbolInformation,
-                owner: String
-            ): Unit = {
-              fn(SemanticdbDefinition(info, occ, owner))
-            }
-          }
+          mtags.config.protoInstanceWithOccurrenceVisitor(
+            input,
+            includeGeneratedSymbols = true
+          )((occ, info, owner) => fn(SemanticdbDefinition(info, occ, owner)))
         try indexer.indexRoot()
         catch {
           case NonFatal(_) =>

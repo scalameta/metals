@@ -56,6 +56,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
       config: MetalsServerConfig = defaultMetalsServerConfig,
       userConfig: UserConfiguration = defaultUserConfig,
       removeCache: Boolean = false,
+      removeIndexMbt: Boolean = false,
       onSetup: AbsolutePath => Unit = _ => (),
   ): FunFixture[(TestingServer, TestingClient)] =
     FunFixture.async[(TestingServer, TestingClient)](
@@ -65,6 +66,10 @@ abstract class BaseManualSuite extends munit.FunSuite {
         onSetup(workspace)
         if (removeCache) {
           workspace.resolve(".metals").deleteRecursively()
+        }
+        if (removeIndexMbt) {
+          val indexMbt = workspace.resolve(".metals").resolve("index.mbt")
+          if (indexMbt.exists) indexMbt.delete()
         }
         val client = new TestingClient(workspace, buffers)
         val server = new TestingServer(

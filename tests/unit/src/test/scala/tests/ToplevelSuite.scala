@@ -6,6 +6,7 @@ import scala.meta.Dialect
 import scala.meta.dialects.Scala213
 import scala.meta.dialects.Scala3
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.io.PathIO
 import scala.meta.internal.mtags.Mtags
 
 /**
@@ -22,21 +23,22 @@ abstract class ToplevelSuite(
     val toplevels = ListBuffer.empty[String]
     val missingSymbols = ListBuffer.empty[String]
     def forInput(input: InputProperties, dialect: Dialect) = {
-      input.sourceDirectories.filter(_.isDirectory).foreach { dir =>
-        val ls = FileIO.listAllFilesRecursively(dir)
-        ls.files.foreach { relpath =>
-          val reluri = relpath.toURI(isDirectory = false).toString
-          val path = dir.resolve(relpath)
-          val fileSymtab = symtab(path)
-          Mtags.testingSingleton
-            .topLevelSymbols(path, dialect)
-            .foreach { toplevel =>
-              if (fileSymtab.info(toplevel).isEmpty) {
-                missingSymbols += toplevel
-              }
-              toplevels += s"$reluri -> $toplevel"
-            }
+      for {
+        dir <- input.sourceDirectories if dir.isDirectory
+        ls = FileIO.listAllFilesRecursively(dir)
+        // Filter to Scala and Java files only - proto files are tested in ProtobufToplevelSuite
+        relpath <- ls.files
+        ext = PathIO.extension(relpath.toNIO)
+        if ext == "scala" || ext == "java"
+        reluri = relpath.toURI(isDirectory = false).toString
+        path = dir.resolve(relpath)
+        fileSymtab = symtab(path)
+        toplevel <- Mtags.testingSingleton.topLevelSymbols(path, dialect)
+      } {
+        if (fileSymtab.info(toplevel).isEmpty) {
+          missingSymbols += toplevel
         }
+        toplevels += s"$reluri -> $toplevel"
       }
     }
     forInput(input, dialect)

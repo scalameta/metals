@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
@@ -56,6 +57,25 @@ class MetalsSymbolSearch(
   def definition(symbol: String, source: URI): ju.List[Location] = {
     val sourcePath = Option(source).map(AbsolutePath.fromAbsoluteUri)
     val result = defn.fromSymbol(symbol, sourcePath)
+
+    // Check if any location points to a proto-generated Java virtual file
+    // If so, redirect to the actual proto file via MBT index
+    val hasProtoJavaLocation = result.asScala.exists { loc =>
+      ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())
+    }
+
+    if (hasProtoJavaLocation) {
+      // Symbol comes from a proto-generated Java class - use MBT to find proto location
+      val mbtResult = mbt.definition(symbol)
+      if (mbtResult.nonEmpty) {
+        val nonProtoJava =
+          result.asScala.filterNot(loc =>
+            ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())
+          )
+        val merged = (nonProtoJava ++ mbtResult).distinct
+        return merged.asJava
+      }
+    }
 
     if (
       result.isEmpty() &&

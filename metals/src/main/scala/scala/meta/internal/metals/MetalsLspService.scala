@@ -145,6 +145,8 @@ abstract class MetalsLspService(
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   val wasInitialized = new AtomicBoolean(false)
+  // Tracks whether proto files have been saved since the last Java PC restart.
+  private val protoFilesHaveChanged = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -334,6 +336,11 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
+    indexFilters = List(
+      mbt.ProtobufVersionHistoryIndexFilter,
+      mbt.ProtobufTemplateAndTestIndexFilter,
+    ),
+    protobufLspConfig = () => userConfig.protobufLspConfig,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2
@@ -366,6 +373,7 @@ abstract class MetalsLspService(
     sourceMapper,
     () => userConfig.definitionProviders,
     mbt2,
+    () => userConfig.protobufLspConfig,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -610,6 +618,8 @@ abstract class MetalsLspService(
     languageClient,
     definitionProvider,
     symbolHierarchyOps,
+    mbtSymbolSearch,
+    () => userConfig.protobufLspConfig,
   )
 
   val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
@@ -936,6 +946,11 @@ abstract class MetalsLspService(
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
 
+    // Restart Java PCs if proto files have been saved since last Java file focus
+    if (path.isJavaFilename && protoFilesHaveChanged.getAndSet(false)) {
+      compilers.restartJavaCompilers()
+    }
+
     // when focusing on a new file, display updated diagnostics
     val future = for {
       // when focusing on a new file, display updated diagnostics
@@ -1027,6 +1042,11 @@ abstract class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
+    mbt2.didSave(path)
+    // Invalidate proto cache and track change so we restart Java PCs on next focus
+    if (path.isProtoFilename) {
+      protoFilesHaveChanged.set(true)
+    }
     Future
       .sequence(
         List(
@@ -1193,8 +1213,87 @@ abstract class MetalsLspService(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      compilers.typeDefinition(position, token).map(_.locations)
+      compilers.typeDefinition(position, token).map { result =>
+        // Check if any location points to a proto-java virtual file
+        val hasProtoJavaLocation = result.locations.asScala.exists { loc =>
+          mbt.ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())
+        }
+        if (hasProtoJavaLocation) {
+          // Redirect to proto service/message definition
+          val protoLocations = result.locations.asScala.flatMap { loc =>
+            if (mbt.ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())) {
+              // Extract proto path and find the service/message definition
+              mbt.ProtoJavaVirtualFile.extractProtoPath(loc.getUri()).flatMap {
+                protoPath =>
+                  findProtoTypeDefinition(protoPath, result.symbol)
+              }
+            } else {
+              Some(loc)
+            }
+          }
+          protoLocations.asJava
+        } else {
+          result.locations
+        }
+      }
     }
+
+  /**
+   * Finds the proto type definition for a proto-generated Java class.
+   *
+   * Maps the Java class symbol to the corresponding proto message/service definition.
+   */
+  private def findProtoTypeDefinition(
+      protoPath: AbsolutePath,
+      javaSymbol: String,
+  ): Option[Location] = {
+    import scala.meta.internal.mtags.proto.ProtoMtagsV2
+    import scala.util.control.NonFatal
+
+    try {
+      val sym = Symbol(javaSymbol)
+      // For gRPC stub classes, extract the service name
+      // e.g., "com/example/GreeterGrpc$GreeterBlockingStub#" -> "Greeter"
+      val className = sym.displayName
+      val serviceName = className
+        .stripSuffix("ImplBase")
+        .stripSuffix("BlockingStub")
+        .stripSuffix("FutureStub")
+        .stripSuffix("Stub")
+        .stripSuffix("Grpc")
+
+      val input = protoPath.toInputFromBuffers(buffers)
+      val protoMtags = new ProtoMtagsV2(input, includeMembers = false)
+      val doc = protoMtags.index()
+
+      // First try to find a service with this name
+      val serviceOcc = doc.occurrences.find { occ =>
+        occ.symbol.endsWith(s"$serviceName#") &&
+        occ.role == scala.meta.internal.semanticdb.SymbolOccurrence.Role.DEFINITION &&
+        doc.symbols.exists { info =>
+          info.symbol == occ.symbol && info.kind.isInterface
+        }
+      }
+
+      // If not a service, try to find a message with this name
+      val messageOcc = serviceOcc.orElse {
+        doc.occurrences.find { occ =>
+          occ.symbol.endsWith(s"$className#") &&
+          occ.role == scala.meta.internal.semanticdb.SymbolOccurrence.Role.DEFINITION
+        }
+      }
+
+      messageOcc.flatMap { occ =>
+        occ.range.map { range =>
+          new Location(protoPath.toURI.toString(), range.toLsp)
+        }
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.debug(s"Failed to find proto type definition for $javaSymbol", e)
+        None
+    }
+  }
 
   override def implementation(
       position: TextDocumentPositionParams
@@ -1920,8 +2019,10 @@ abstract class MetalsLspService(
       token: CancelToken = EmptyCancelToken,
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename || source.isJavaFilename) {
-      val timer = new Timer(time)
+    val timer = new Timer(time)
+    if (
+      source.isScalaFilename || source.isJavaFilename || source.isProtoFilename
+    ) {
       val result =
         timerProvider.timedThunk(
           "definition",

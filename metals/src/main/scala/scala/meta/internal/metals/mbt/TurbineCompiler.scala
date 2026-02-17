@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import com.google.common.collect.ImmutableSet
 import com.google.turbine.binder.Binder
+import com.google.turbine.binder.ClassPath
 import com.google.turbine.binder.ClassPathBinder
 import com.google.turbine.binder.JimageClassBinder
 import com.google.turbine.binder.Processing
@@ -130,8 +131,10 @@ class TurbineCompiler[T](
     classpath: () => Seq[Path],
     progressBars: ProgressBars,
     debounceDelay: FiniteDuration,
+    listProtoJavaOutlinesForPackage: String => Iterator[JavaFileObject],
     sleeper: Sleeper,
     onIndexingDone: () => Unit,
+    onNewProjectClasspath: ClassPath => Unit,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val sourcepathByPackageName =
     TrieMap.empty[String, ju.concurrent.ConcurrentLinkedDeque[
@@ -180,7 +183,7 @@ class TurbineCompiler[T](
     )
   }
 
-  private var result = TurbineCompiler.emptyResult
+  var result = TurbineCompiler.emptyResult
   def doCompileNow(): TurbineCompileResult = {
     result = TurbineCompiler.compileClassfiles(
       allCompilationUnits(),
@@ -252,25 +255,43 @@ class TurbineCompiler[T](
 
   def createFileManager(
       underlying: StandardJavaFileManager,
-      classpath: ju.List[Path],
+      projectClasspathJars: ju.List[Path],
   ): JavaFileManager = {
     val isGlobalClasspathEntry = this.classpath().toSet
     val filteredProjectClasspath =
-      classpath.asScala.filter(file =>
+      projectClasspathJars.asScala.filter(file =>
         !isGlobalClasspathEntry(file) && TurbineCompiler.isJarFile(file)
       )
     val projectClasspath =
       ClassPathBinder.bindClasspath(filteredProjectClasspath.asJava)
+    onNewProjectClasspath(projectClasspath)
     new TurbineClasspathFileManager(
       underlying,
       () => result,
-      listSourcepath,
+      listSourcepath = listCombinedSourcepath,
       isDeleted,
       projectClasspath,
     )
   }
 
-  private def listSourcepath(
+  // Combines normal Scala/Java files with on-the-fly generated Protobuf outlines.
+  private def listCombinedSourcepath(
+      packageName: String
+  ): java.lang.Iterable[JavaFileObject] = {
+    val turbineFiles = listSourcepath(packageName)
+    val protoPackage = packageName.replace('.', '/') + "/"
+    val protoFiles = listProtoJavaOutlinesForPackage(protoPackage)
+    if (protoFiles.isEmpty) {
+      turbineFiles
+    } else {
+      val combined = new ju.ArrayList[JavaFileObject]()
+      turbineFiles.forEach(combined.add(_))
+      protoFiles.foreach(combined.add(_))
+      combined
+    }
+  }
+
+  private[mbt] def listSourcepath(
       packageName: String
   ): java.lang.Iterable[JavaFileObject] = {
     sourcepathByPackageName.get(packageName) match {

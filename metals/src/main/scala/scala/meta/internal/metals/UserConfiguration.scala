@@ -20,6 +20,8 @@ import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
+import scala.meta.internal.metals.Configs.ProtoOutlineProviderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.ScalaImportsPlacementConfig
@@ -99,6 +101,8 @@ case class UserConfiguration(
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
+    protoOutlineProvider: ProtoOutlineProviderConfig =
+      ProtoOutlineProviderConfig.default,
     javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
     javaTurbineRecompileDelay: TurbineRecompileDelayConfig =
       TurbineRecompileDelayConfig.default,
@@ -114,6 +118,7 @@ case class UserConfiguration(
     batchSemanticdbCompilerInstances: BatchSemanticdbConfig =
       BatchSemanticdbConfig.default,
     promptBuildImport: Boolean = false,
+    protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -270,6 +275,12 @@ case class UserConfiguration(
         ),
         Some(
           (
+            "protoOutlineProvider",
+            protoOutlineProvider.value,
+          )
+        ),
+        Some(
+          (
             "javaSymbolLoader",
             javaSymbolLoader.value,
           )
@@ -318,6 +329,20 @@ case class UserConfiguration(
           (
             "promptBuildImport",
             promptBuildImport,
+          )
+        ),
+        Some(
+          (
+            "protobufLsp",
+            Map(
+              "diagnostics" -> protobufLspConfig.diagnostics,
+              "hover" -> protobufLspConfig.hover,
+              "definition" -> protobufLspConfig.definition,
+              "completions" -> protobufLspConfig.completions,
+              "semanticTokens" -> protobufLspConfig.semanticTokens,
+              "semanticdb" -> protobufLspConfig.semanticdb,
+              "javaPackagePrefix" -> protobufLspConfig.javaPackagePrefix,
+            ).asJava,
           )
         ),
       ).flatten
@@ -1091,6 +1116,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaOutlineProviderConfig.default)
+    val protoOutlineProvider = getParsedKey(
+      "proto-outline-provider",
+      value =>
+        ProtoOutlineProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(ProtoOutlineProviderConfig.default)
     val javaSymbolLoader = getParsedKey(
       "java-symbol-loader",
       value =>
@@ -1159,6 +1192,19 @@ object UserConfiguration {
       }
     val promptBuildImport =
       getBooleanKey("prompt-build-import").getOrElse(false)
+    val protobufLspConfig =
+      getKey(
+        "protobuf-lsp",
+        json,
+        { element =>
+          ProtobufLspConfig.fromJson(element) match {
+            case Right(ok) => Some(ok)
+            case Left(error) =>
+              errors += s"json error: $error"
+              None
+          }
+        },
+      ).getOrElse(ProtobufLspConfig.defaultFromFeatureFlags(featureFlags))
 
     if (errors.isEmpty) {
       Right(
@@ -1208,6 +1254,7 @@ object UserConfiguration {
           definitionProviders,
           definitionIndexStrategy,
           javaOutlineProvider,
+          protoOutlineProvider,
           javaSymbolLoader,
           javaTurbineRecompileDelay,
           javacServicesOverrides,
@@ -1217,6 +1264,7 @@ object UserConfiguration {
           scalaImportsPlacement,
           batchSemanticdbCompilerInstances,
           promptBuildImport,
+          protobufLspConfig,
         )
       )
     } else {

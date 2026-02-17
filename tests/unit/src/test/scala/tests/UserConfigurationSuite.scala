@@ -300,6 +300,24 @@ class UserConfigurationSuite extends BaseSuite {
     )
   }
 
+  checkOK(
+    "protobuf package prefix",
+    """
+      |{
+      |  "protobufLsp": {
+      |    "definition": true,
+      |    "javaPackagePrefix": "grpc_shaded."
+      |  }
+      |}
+      |""".stripMargin,
+  ) { obtained =>
+    assertEquals(obtained.protobufLspConfig.definition, true)
+    assertEquals(
+      obtained.protobufLspConfig.javaPackagePrefix,
+      "grpc_shaded.",
+    )
+  }
+
   test("check-print") {
     val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
     val fakePathString = fakePath.toString().replace("\\", "\\\\")
@@ -396,9 +414,7 @@ class UserConfigurationSuite extends BaseSuite {
   },
   "enableStripMarginOnTypeFormatting": false,
   "enableIndentOnPaste": true,
-  "rangeFormattingProviders": [
-    "scalafmt"
-  ],
+  "rangeFormattingProviders": [],
   "enableSemanticHighlighting": false,
   "excludedPackages": [
     "excluded"
@@ -426,17 +442,18 @@ class UserConfigurationSuite extends BaseSuite {
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
   "buildChangedAction": "none",
-  "buildOnChange": false,
-  "buildOnFocus": false,
+  "buildOnChange": true,
+  "buildOnFocus": true,
   "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
   "definitionProviders": [
     "mbt",
     "protobuf"
   ],
-  "definitionIndexStrategy": "classpath",
-  "javaOutlineProvider": "javac",
-  "javaSymbolLoader": "turbine-classpath",
+  "definitionIndexStrategy": "sources",
+  "javaOutlineProvider": "qdox",
+  "protoOutlineProvider": "v1",
+  "javaSymbolLoader": "javac-sourcepath",
   "javaTurbineRecompileDelay": "100 milliseconds",
   "javacServicesOverrides": {
     "names": false,
@@ -444,14 +461,23 @@ class UserConfigurationSuite extends BaseSuite {
     "typeEnter": true,
     "enter": true
   },
-  "compilerProgress": "enabled",
-  "referenceProvider": "mbt",
+  "compilerProgress": "disabled",
+  "referenceProvider": "bsp",
   "additionalPcChecks": [
     "refchecks"
   ],
   "scalaImportsPlacement": "smart",
   "batchSemanticdbCompilerInstances": 4,
-  "promptBuildImport": true
+  "promptBuildImport": true,
+  "protobufLsp": {
+    "hover": false,
+    "semanticdb": false,
+    "diagnostics": false,
+    "definition": false,
+    "javaPackagePrefix": "",
+    "completions": false,
+    "semanticTokens": false
+  }
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)

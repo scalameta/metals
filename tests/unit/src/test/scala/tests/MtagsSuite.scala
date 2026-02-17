@@ -39,7 +39,8 @@ abstract class MtagsSuite(
   }
 
   def testCases(): List[ExpectTestCase] = {
-    input.allFiles.map { file =>
+    // Filter to Scala and Java files only - proto files are tested in ProtobufMtagsExpectSuite
+    input.allFiles.filter(_.isScalaOrJava).map { file =>
       ExpectTestCase(
         file,
         { () =>

@@ -488,6 +488,7 @@ class CompilerConfiguration(
             scalaImportsPlacement = userConfig().scalaImportsPlacement,
             batchSemanticdbCompilerInstances =
               userConfig().batchSemanticdbCompilerInstances.instances,
+            protobufLspConfig = userConfig().protobufLspConfig,
           )
       }
 

@@ -147,4 +147,9 @@ public interface PresentationCompilerConfig {
   default int batchSemanticdbCompilerInstances() {
     return 1;
   }
+
+  /** Returns the Protobuf LSP configuration. */
+  default ProtobufLspConfig protobufLspConfig() {
+    return ProtobufLspConfig.DISABLED;
+  }
 }
