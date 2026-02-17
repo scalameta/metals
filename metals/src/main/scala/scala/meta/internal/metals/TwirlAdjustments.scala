@@ -169,7 +169,10 @@ object TwirlAdjustments {
           else if (idx == 0) 0
           else idx - 1
         val (origBase, genBase) = matrix(baseIdx)
-        val mappedIndex = math.max(0, genBase + (originalIndex - origBase))
+        val mappedIndex = math.min(
+          compiledTwirl.length,
+          math.max(0, genBase + (originalIndex - origBase)),
+        )
         getPositionFromIndex(compiledTwirl, mappedIndex)
       }
     }
@@ -179,7 +182,10 @@ object TwirlAdjustments {
      */
     def reverseMapPosition(compiledPos: Position): Position = {
       val compiledIndex = getIndexFromPosition(compiledTwirl, compiledPos)
-      val mappedIndex = compiledSource.mapPosition(compiledIndex)
+      val mappedIndex = math.min(
+        originalTwirl.length,
+        math.max(0, compiledSource.mapPosition(compiledIndex)),
+      )
       getPositionFromIndex(originalTwirl, mappedIndex)
     }
 
