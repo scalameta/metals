@@ -147,7 +147,7 @@ final class RunTestCodeLens(
    */
   private def isMainMethod(signature: Signature, textDocument: TextDocument) = {
     signature match {
-      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType) =>
+      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType, _) =>
         def isVoid = returnType match {
           case TypeRef(_, symbol, _) => symbol == "scala/Unit#"
           case _ => false
