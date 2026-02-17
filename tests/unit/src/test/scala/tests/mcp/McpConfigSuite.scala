@@ -191,6 +191,95 @@ class McpConfigSuite extends BaseSuite {
     )
   }
 
+  test("vscode-and-kilocode-generate-config-file") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val port = 1234
+    val projectName = "test-project"
+    val activeClientExtensionIds = Set("kilocode.kilo-code")
+    // First generation
+    McpConfig.writeConfig(
+      port,
+      projectName,
+      projectPath,
+      client = VSCodeEditor,
+      activeClientExtensionIds = activeClientExtensionIds,
+    )
+    val vscodeConfigFile = projectPath.resolve(".vscode/mcp.json")
+    val kiloConfigFile = projectPath.resolve(".kilocode/mcp.json")
+    assert(vscodeConfigFile.exists)
+    assert(kiloConfigFile.exists)
+    val vscodeFirstContent = new String(
+      Files.readAllBytes(vscodeConfigFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      vscodeFirstContent,
+      """{
+        |  "servers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:1234/mcp",
+        |      "type": "http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+    val kiloContent = new String(
+      Files.readAllBytes(kiloConfigFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      kiloContent,
+      """{
+        |  "mcpServers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:1234/mcp",
+        |      "type": "streamable-http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+
+    // Update with different port
+    McpConfig.writeConfig(
+      5678,
+      projectName,
+      projectPath,
+      client = VSCodeEditor,
+      activeClientExtensionIds = activeClientExtensionIds,
+    )
+    val vscodeSecondContent = new String(
+      Files.readAllBytes(vscodeConfigFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      vscodeSecondContent,
+      """{
+        |  "servers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:5678/mcp",
+        |      "type": "http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+    val kiloSecondContent = new String(
+      Files.readAllBytes(kiloConfigFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      kiloSecondContent,
+      """{
+        |  "mcpServers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:5678/mcp",
+        |      "type": "streamable-http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
   test("getPort - valid config with port") {
     val config = """{
       "mcpServers": {
