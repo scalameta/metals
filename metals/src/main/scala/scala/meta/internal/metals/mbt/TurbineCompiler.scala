@@ -23,7 +23,6 @@ import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
 import scala.meta.pc.ProgressBars
-import scala.meta.{pc => pc}
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
@@ -111,9 +110,11 @@ object TurbineCompiler {
     TurbineCompileResult(boundClasspath, lowered)
   }
   private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
-    classpath.filter(path =>
-      Files.exists(path) && path.getFileName().toString().endsWith(".jar")
-    )
+    classpath.filter(isJarFile)
+  }
+  private def isJarFile(path: Path): Boolean = {
+    Files.isRegularFile(path) &&
+    path.getFileName().toString().endsWith(".jar")
   }
 }
 
@@ -221,40 +222,6 @@ class TurbineCompiler[T](
     deletedBinaryNames.contains(binaryName)
   }
 
-  /**
-   * Check if a binary name has a pending source on the sourcepath that hasn't
-   * been compiled yet. Used to exclude stale classes from CLASS_PATH so javac
-   * falls back to SOURCE_PATH for the updated source.
-   */
-  def hasPendingSource(binaryName: String): Boolean = {
-    // binaryName is like "a/Helper", we need to check if there's a pending
-    // source file that defines this class
-    val packageName = {
-      val lastSlash = binaryName.lastIndexOf('/')
-      if (lastSlash >= 0) binaryName.substring(0, lastSlash).replace('/', '.')
-      else ""
-    }
-    sourcepathByPackageName.get(packageName) match {
-      case None => false
-      case Some(deque) =>
-        deque.asScala.exists { obj =>
-          // Only check sources that haven't been compiled or deleted yet
-          !obj.isCompiled.get() && !obj.isDeleted.get() && {
-            // Check if this source file defines the class we're looking for
-            obj.javaFileObject match {
-              case s: pc.SemanticdbCompilationUnit =>
-                // The binaryName from SemanticdbCompilationUnit uses dots, convert to slashes
-                s.binaryName().replace('.', '/') == binaryName ||
-                s.toplevelSymbols().asScala.exists { sym =>
-                  sym.stripSuffix("#").stripSuffix(".") == binaryName
-                }
-              case _ => false
-            }
-          }
-        }
-    }
-  }
-
   def compileNow(): Future[TurbineCompileResult] = Future {
     doCompileNow()
   }
@@ -284,14 +251,22 @@ class TurbineCompiler[T](
   }
 
   def createFileManager(
-      underlying: StandardJavaFileManager
+      underlying: StandardJavaFileManager,
+      classpath: ju.List[Path],
   ): JavaFileManager = {
+    val isGlobalClasspathEntry = this.classpath().toSet
+    val filteredProjectClasspath =
+      classpath.asScala.filter(file =>
+        !isGlobalClasspathEntry(file) && TurbineCompiler.isJarFile(file)
+      )
+    val projectClasspath =
+      ClassPathBinder.bindClasspath(filteredProjectClasspath.asJava)
     new TurbineClasspathFileManager(
       underlying,
       () => result,
       listSourcepath,
       isDeleted,
-      hasPendingSource,
+      projectClasspath,
     )
   }
 
