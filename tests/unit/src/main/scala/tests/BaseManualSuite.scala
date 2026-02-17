@@ -20,6 +20,8 @@ import scala.meta.io.AbsolutePath
 
 abstract class BaseManualSuite extends munit.FunSuite {
   Testing.enable()
+  Testing.disableFileWatching()
+
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
   private val sh = Executors.newSingleThreadScheduledExecutor()
