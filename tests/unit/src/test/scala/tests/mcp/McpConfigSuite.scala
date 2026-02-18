@@ -207,12 +207,9 @@ class McpConfigSuite extends BaseSuite {
     )
     val vscodeConfigFile = projectPath.resolve(".vscode/mcp.json")
     val kiloConfigFile = projectPath.resolve(".kilocode/mcp.json")
-    assert(vscodeConfigFile.exists)
-    assert(kiloConfigFile.exists)
-    val vscodeFirstContent = new String(
-      Files.readAllBytes(vscodeConfigFile.toNIO),
-      StandardCharsets.UTF_8,
-    )
+    assert(vscodeConfigFile.exists, "VSCode config file should exist")
+    assert(kiloConfigFile.exists, "KiloCode extension config file should exist")
+    val vscodeFirstContent = vscodeConfigFile.readText
     assertNoDiff(
       vscodeFirstContent,
       """{
@@ -224,10 +221,7 @@ class McpConfigSuite extends BaseSuite {
         |  }
         |}""".stripMargin,
     )
-    val kiloContent = new String(
-      Files.readAllBytes(kiloConfigFile.toNIO),
-      StandardCharsets.UTF_8,
-    )
+    val kiloContent = kiloConfigFile.readText
     assertNoDiff(
       kiloContent,
       """{
@@ -248,10 +242,7 @@ class McpConfigSuite extends BaseSuite {
       client = VSCodeEditor,
       activeClientExtensionIds = activeClientExtensionIds,
     )
-    val vscodeSecondContent = new String(
-      Files.readAllBytes(vscodeConfigFile.toNIO),
-      StandardCharsets.UTF_8,
-    )
+    val vscodeSecondContent = vscodeConfigFile.readText
     assertNoDiff(
       vscodeSecondContent,
       """{
@@ -263,10 +254,7 @@ class McpConfigSuite extends BaseSuite {
         |  }
         |}""".stripMargin,
     )
-    val kiloSecondContent = new String(
-      Files.readAllBytes(kiloConfigFile.toNIO),
-      StandardCharsets.UTF_8,
-    )
+    val kiloSecondContent = kiloConfigFile.readText
     assertNoDiff(
       kiloSecondContent,
       """{
@@ -278,6 +266,46 @@ class McpConfigSuite extends BaseSuite {
         |  }
         |}""".stripMargin,
     )
+  }
+
+  def testWithoutKiloExtension(ids: Set[String]): Unit = {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val port = 1234
+    val projectName = "test-project"
+    val activeClientExtensionIds = ids
+    // First generation
+    McpConfig.writeConfig(
+      port,
+      projectName,
+      projectPath,
+      client = VSCodeEditor,
+      activeClientExtensionIds = activeClientExtensionIds,
+    )
+    val vscodeConfigFile = projectPath.resolve(".vscode/mcp.json")
+    val kiloConfigFile = projectPath.resolve(".kilocode/mcp.json")
+    assert(vscodeConfigFile.exists, "VSCode config file should exist")
+    assert(!kiloConfigFile.exists, "KiloCode config file should not exist")
+    val vscodeFirstContent = vscodeConfigFile.readText
+    assertNoDiff(
+      vscodeFirstContent,
+      """{
+        |  "servers": {
+        |    "test-project-metals": {
+        |      "url": "http://localhost:1234/mcp",
+        |      "type": "http"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("vscode-and-no-extension-generate-config-file") {
+    testWithoutKiloExtension(Set.empty)
+  }
+
+  test("vscode-and-unlisted-extension-generate-config-file") {
+    testWithoutKiloExtension(Set("some.other.extension"))
   }
 
   test("getPort - valid config with port") {
