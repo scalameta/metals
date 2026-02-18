@@ -5,10 +5,12 @@ import java.util.Optional
 
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Tables
+import scala.meta.io.AbsolutePath
 
 import com.google.common.io.BaseEncoding
 
@@ -16,13 +18,17 @@ class BspErrorHandler(
     currentSession: () => Option[BspSession],
     tables: Tables,
     bspStatus: ConnectionBspStatus,
+    diagnostics: Diagnostics,
 )(implicit reportContext: ReportContext) {
   def onError(message: String): Unit = {
     if (shouldShowBspError) {
       for {
         report <- createReport(message).asScala
         if !tables.dismissedNotifications.BspErrors.isDismissed
-      } bspStatus.showError(message, report)
+      } {
+        bspStatus.showError(message, report)
+        diagnostics.onBuildTargetCompilationCrash(AbsolutePath(report), message)
+      }
     } else logError(message)
   }
 
