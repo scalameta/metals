@@ -23,6 +23,7 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -56,7 +57,6 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
-import scala.meta.internal.metals.MetalsServerConfig
 
 class MetalsMcpServer(
     queryEngine: McpQueryEngine,
