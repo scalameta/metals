@@ -268,12 +268,11 @@ class McpConfigSuite extends BaseSuite {
     )
   }
 
-  def testWithoutKiloExtension(ids: Set[String]): Unit = {
+  def testWithoutKiloExtension(activeClientExtensionIds: Set[String]): Unit = {
     val workspace = Files.createTempDirectory("metals-mcp-test")
     val projectPath = AbsolutePath(workspace)
     val port = 1234
     val projectName = "test-project"
-    val activeClientExtensionIds = ids
     // First generation
     McpConfig.writeConfig(
       port,
