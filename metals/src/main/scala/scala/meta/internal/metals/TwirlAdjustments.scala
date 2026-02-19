@@ -15,15 +15,12 @@ import play.twirl.compiler.TwirlCompiler
 /**
  * A utility object for adjusting and mapping positions between Twirl templates and their compiled Scala output.
  *
- * This is particularly useful for hover, completions and goto definition features between user-authored `.scala.html`
- * templates and their generated `.template.scala` counterparts.
+ * This is particularly useful for hover, completions and goto definition features between user-authored
+ * Twirl templates (`.scala.html`, `.scala.js`, `.scala.xml`, `.scala.txt`) and their generated `.template.scala` counterparts.
  */
 
 object TwirlAdjustments {
 
-  /**
-   * Standard Play Framework imports added to Twirl templates in Play projects.
-   */
   private val defaultPlayImports: Seq[String] = Seq(
     "models._", "controllers._", "play.api.i18n._", "views.html._",
     "play.api.templates.PlayMagic._", "play.api.mvc._", "play.api.data._",
@@ -31,13 +28,13 @@ object TwirlAdjustments {
 
   private def playImports(
       originalImports: Seq[String],
-      isPlayProject: Boolean,
+      playVersion: Option[String],
   ): Seq[String] =
-    if (isPlayProject) originalImports ++ defaultPlayImports
+    if (playVersion.isDefined) originalImports ++ defaultPlayImports
     else originalImports
 
-  private def playDI(isPlayProject: Boolean): Seq[String] =
-    if (isPlayProject) Seq("@javax.inject.Inject()")
+  private def playDI(playVersion: Option[String]): Seq[String] =
+    if (playVersion.isDefined) Seq("@javax.inject.Inject()")
     else Nil
 
   private def sourceFileFromPath(path: String): File =
@@ -47,34 +44,49 @@ object TwirlAdjustments {
       case _: Exception => new File(path)
     }
 
+  private def twirlFormat(path: String): (String, String) =
+    if (path.endsWith(".scala.js"))
+      (
+        "play.twirl.api.JavaScript",
+        "play.twirl.api.JavaScriptFormat.Appendable",
+      )
+    else if (path.endsWith(".scala.xml"))
+      ("play.twirl.api.Xml", "play.twirl.api.XmlFormat.Appendable")
+    else if (path.endsWith(".scala.txt"))
+      ("play.twirl.api.Txt", "play.twirl.api.TxtFormat.Appendable")
+    else
+      ("play.twirl.api.Html", "play.twirl.api.HtmlFormat.Appendable")
+
   /**
    * Compiles an in-memory Twirl template into a compiled representation using the Twirl compiler.
    *
    * This method uses a virtual file and a resolved Scala version to invoke `TwirlCompiler.compileVirtual`.
    *
-   * @param the virtual file representing the template content
-   * @param the full Scala version string (used to resolve compatibility with Twirl)
+   * @param file the virtual file representing the template content
+   * @param scalaVersion the full Scala version string (used to resolve compatibility with Twirl)
+   * @param playVersion the Play Framework version if this is a Play project, affects imports and DI annotations
    * @return the result of compiling the Twirl template
    */
   def getCompiledString(
       file: VirtualFile,
       scalaVersion: String,
-      isPlayProject: Boolean,
+      playVersion: Option[String],
   ): GeneratedSourceVirtual = {
     val sourceFile = sourceFileFromPath(file.path)
     val sourceDir = Option(sourceFile.getParentFile).getOrElse(new File("."))
+    val (resultType, formatterType) = twirlFormat(file.path)
     TwirlCompiler
       .compileVirtual(
         content = file.value,
         source = sourceFile,
         sourceDirectory = sourceDir,
-        resultType = "play.twirl.api.Html",
-        formatterType = "play.twirl.api.HtmlFormat.Appendable",
+        resultType = resultType,
+        formatterType = formatterType,
         additionalImports = playImports(
           TwirlCompiler.defaultImports(scalaVersion),
-          isPlayProject,
+          playVersion,
         ),
-        constructorAnnotations = playDI(isPlayProject),
+        constructorAnnotations = playDI(playVersion),
         codec = Codec(
           scala.util.Properties.sourceEncoding
         ),
@@ -86,9 +98,9 @@ object TwirlAdjustments {
   /**
    * Converts a character offset (index) in a string to an LSP `Position` (0 based - line number and character offset).
    *
-   * @param The full text content. Can be either the Twirl Source or the Compiled Twirl File
-   * @param The character offset within the text (0-based).
-   * @return A `Position` object representing the line and column corresponding to the given index.
+   * @param text the full text content, can be either the Twirl source or the compiled Twirl file
+   * @param index the character offset within the text (0-based)
+   * @return a `Position` object representing the line and column corresponding to the given index
    */
   private def getPositionFromIndex(text: String, index: Int): Position = {
     val lines = text.substring(0, index).split("\n", -1)
@@ -98,9 +110,9 @@ object TwirlAdjustments {
   /**
    * Converts an LSP `Position` (0 based - line number and character offset) into a character index.
    *
-   * @param The full text content. Can be either the Twirl Source or the Compiled Twirl File
-   * @param The LSP `Position` to convert (line and character).
-   * @return The absolute character index in the string corresponding to the position.
+   * @param text the full text content, can be either the Twirl source or the compiled Twirl file
+   * @param pos the LSP `Position` to convert (line and character)
+   * @return the absolute character index in the string corresponding to the position
    */
   private def getIndexFromPosition(text: String, pos: Position): Int = {
     val lines = text.split("\n", -1)
@@ -118,8 +130,8 @@ object TwirlAdjustments {
    * This method parses those mappings and builds a matrix of (original, generated) index pairs.
    * The mapping is later used for position translation between source and compiled files.
    *
-   * @param The compiled Twirl template content as a string
-   * @return An array of tuples representing (originalIndex, generatedIndex) pairs
+   * @param compiledTwirl the compiled Twirl template content as a string
+   * @return an array of tuples representing (originalIndex, generatedIndex) pairs
    */
   private def getMatrix(compiledTwirl: String): Array[(Int, Int)] = {
     val numberMatching =
@@ -144,12 +156,12 @@ object TwirlAdjustments {
   def apply(
       twirlFile: VirtualFile,
       rawScalaVersion: String,
-      isPlayProject: Boolean = false,
+      playVersion: Option[String] = None,
   ): (VirtualFile, Position => Position, AdjustLspData) = {
 
     val originalTwirl = twirlFile.value
     val compiledSource =
-      getCompiledString(twirlFile, rawScalaVersion, isPlayProject)
+      getCompiledString(twirlFile, rawScalaVersion, playVersion)
     val compiledTwirl = compiledSource.content
     val newVirtualFile = twirlFile.copy(value = compiledTwirl)
     val matrix: Array[(Int, Int)] = getMatrix(compiledTwirl)

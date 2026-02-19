@@ -495,7 +495,8 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     }
 
     def isTwirlTemplate: Boolean = {
-      filename.endsWith(".scala.html")
+      filename.endsWith(".scala.html") || filename.endsWith(".scala.js") ||
+      filename.endsWith(".scala.xml") || filename.endsWith(".scala.txt")
     }
 
     def isScalaFilename: Boolean = {

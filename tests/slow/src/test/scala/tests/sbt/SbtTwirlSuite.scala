@@ -1,5 +1,6 @@
 package tests.sbt
 
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.CompletionsAssertions
@@ -12,8 +13,7 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
   /**
    * Common build.sbt content for Play Framework test projects.
    * Adds Play as a library dependency alongside sbt-twirl so that
-   * the `play_2.13` jar appears in the classpath, triggering Play
-   * detection in `SourceMapper`.
+   * the `org.playframework:play` dependency module is detected by `SourceMapper`.
    */
   def playBuildSbt: String =
     s"""|enablePlugins(SbtTwirl)
@@ -249,18 +249,16 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |""".stripMargin,
       )
 
-      _ = assert(
-        res.head
-          .getUri()
-          .toString
-          .contains("StringOps.scala")
+      _ = assert(res.length == 1)
+      _ = assertNoDiff(
+        res.head.getUri().toAbsolutePath.filename,
+        "StringOps.scala",
       )
 
-      _ = assert(
-        res1.head
-          .getUri()
-          .toString
-          .contains("example.scala.html")
+      _ = assert(res1.length == 1)
+      _ = assertNoDiff(
+        res1.head.getUri().toAbsolutePath.filename,
+        "example.scala.html",
       )
 
       _ = assert(
@@ -315,20 +313,16 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |""".stripMargin,
       )
 
-      _ = assert(
-        res.head
-          .getUri()
-          .toString
-          .contains("StringOps.scala"),
-        s"Expected definition of `toInt` in StringOps.scala, got ${res.head.getUri()}",
+      _ = assert(res.length == 1)
+      _ = assertNoDiff(
+        res.head.getUri().toAbsolutePath.filename,
+        "StringOps.scala",
       )
 
-      _ = assert(
-        res1.head
-          .getUri()
-          .toString
-          .contains("example.scala.html"),
-        s"Expected definition of `name` in example.scala.html, got ${res1.head.getUri()}",
+      _ = assert(res1.length == 1)
+      _ = assertNoDiff(
+        res1.head.getUri().toAbsolutePath.filename,
+        "example.scala.html",
       )
 
       _ = assert(
@@ -378,6 +372,111 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |
            |**Throws**
            |- `java.lang.NumberFormatException`: If the string does not contain a parsable `Int`.""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("twirl-hover-js") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/helper.scala.js
+            |@(name: String)
+            |var x = "@name";
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/helper.scala.js")
+      _ <- server.assertHover(
+        "src/main/twirl/helper.scala.js",
+        """|@(name: String)
+           |var x = "@na@@me";
+           |""".stripMargin,
+        """|```scala
+           |name: String
+           |```""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("twirl-hover-xml") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/data.scala.xml
+            |@(name: String)
+            |<root>@name</root>
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/data.scala.xml")
+      _ <- server.assertHover(
+        "src/main/twirl/data.scala.xml",
+        """|@(name: String)
+           |<root>@na@@me</root>
+           |""".stripMargin,
+        """|```scala
+           |name: String
+           |```""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("twirl-hover-txt") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=${V.sbtVersion}
+            |/src/main/twirl/message.scala.txt
+            |@(name: String)
+            |Hello @name
+            |/project/plugins.sbt
+            |addSbtPlugin("org.playframework.twirl" % "sbt-twirl" % "${twirlVersion}")
+            |/build.sbt
+            |enablePlugins(SbtTwirl)
+            |Compile / unmanagedSourceDirectories := Seq(
+            |  (baseDirectory.value / "src" / "main" / "scala"),
+            |  (baseDirectory.value / "src" / "main" / "scala-3"),
+            |  (baseDirectory.value / "src" / "main" / "java"),
+            |  (baseDirectory.value / "src" / "main" / "twirl")
+            |)
+            |scalaVersion := "${V.scala213}"
+            |""".stripMargin
+      )
+      _ <- server.didOpen("src/main/twirl/message.scala.txt")
+      _ <- server.assertHover(
+        "src/main/twirl/message.scala.txt",
+        """|@(name: String)
+           |Hello @na@@me
+           |""".stripMargin,
+        """|```scala
+           |name: String
+           |```""".stripMargin,
       )
     } yield ()
   }
@@ -433,14 +532,14 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |<h1>Hello @request.me@@thod</h1>
            |""".stripMargin,
       )
-      _ = assert(
-        {
-          val uri = res.head.getUri().toString
-          uri.contains("play/api/mvc") &&
-          (uri.contains("RequestHeader.scala") || uri.contains("Request.scala"))
-        },
-        s"Expected definition in Play mvc sources (RequestHeader/Request), got ${res.head.getUri()}",
-      )
+      _ = assert(res.length == 1)
+      _ = {
+        val uri = res.head.getUri().toString
+        assert(
+          uri.contains("play/api/mvc/RequestHeader"),
+          s"Expected definition in play/api/mvc/RequestHeader, got $uri",
+        )
+      }
     } yield ()
   }
 }
