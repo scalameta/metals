@@ -40,7 +40,7 @@ class McpPortConfigSuite extends BaseLspSuite("mcp-port-config") {
     cleanWorkspace()
 
     val port = Random.nextInt(55535) + 10000
-    McpConfig.writeConfig(port, "root", workspace, NoClient)
+    McpConfig.writeConfig(port, "root", workspace, NoClient, Set.empty)
 
     val waitForMessage = Promise[Unit]
     client.showMessageHandler = {

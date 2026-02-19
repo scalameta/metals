@@ -25,6 +25,7 @@ object McpConfig {
       projectName: String,
       projectPath: AbsolutePath,
       client: Client = CursorEditor,
+      activeClientExtensionIds: Set[String],
   ): Unit = {
     val filename = client.fileName.getOrElse("mcp.json")
     val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
@@ -34,6 +35,17 @@ object McpConfig {
     val config = if (configFile.exists) configFile.readText else "{ }"
     val newConfig = createConfig(config, port, serverName, client)
     configFile.writeText(newConfig)
+    client.extraExtensions
+      .collect { case (id, ext) if activeClientExtensionIds(id) => ext }
+      .foreach { ext =>
+        writeConfig(
+          port,
+          projectName,
+          projectPath,
+          ext,
+          activeClientExtensionIds,
+        )
+      }
   }
 
   def deleteConfig(
@@ -217,6 +229,7 @@ case class Client(
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
+    extraExtensions: Map[String, Client] = Map.empty,
 ) {
   def projectName(project: String): String =
     serverEntry.getOrElse(s"$project-metals")
@@ -232,6 +245,20 @@ object VSCodeEditor
       serverField = "servers",
       additionalProperties = List(
         "type" -> "http"
+      ),
+      extraExtensions = Map("kilocode.kilo-code" -> KiloCodeEditor),
+    )
+
+object KiloCodeEditor
+    extends Client(
+      names = List(
+        "Kilo",
+        "kilo",
+      ),
+      settingsPath = ".kilocode/",
+      serverField = "mcpServers",
+      additionalProperties = List(
+        "type" -> "streamable-http"
       ),
     )
 
@@ -265,5 +292,6 @@ object NoClient
     )
 
 object Client {
-  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude)
+  val allClients: List[Client] =
+    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude)
 }

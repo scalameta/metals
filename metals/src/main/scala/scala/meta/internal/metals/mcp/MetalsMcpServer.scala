@@ -23,6 +23,7 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -184,12 +185,27 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
+    val activeClientExtensionIds =
+      MetalsServerConfig.default.activeClientExtensionIds
+
     if (savedConfigPort.isEmpty) {
-      McpConfig.writeConfig(port, projectName, projectPath, NoClient)
+      McpConfig.writeConfig(
+        port,
+        projectName,
+        projectPath,
+        NoClient,
+        activeClientExtensionIds,
+      )
     }
 
     if (savedClientConfigPort.isEmpty) {
-      McpConfig.writeConfig(port, projectName, projectPath, client)
+      McpConfig.writeConfig(
+        port,
+        projectName,
+        projectPath,
+        client,
+        activeClientExtensionIds,
+      )
     }
 
     McpConfig.rewriteOldEndpointIfNeeded(projectPath, projectName, client, port)

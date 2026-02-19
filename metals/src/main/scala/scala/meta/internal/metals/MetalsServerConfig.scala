@@ -13,6 +13,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * that instead you configure Metals via `InitializationOptions`.
  *
  * @param globSyntax pattern used for `DidChangeWatchedFilesRegistrationOptions`.
+ * @param activeClientExtensionIds the set of client extension IDs that are active.
  * @param statusBar how to handle metals/status notifications with {"statusType": "metals"}.
  * @param bspStatusBar how to handle metals/status notifications with {"statusType": "bsp"}.
  * @param moduleStatusBar how to handle metals/status notifications with {"statusType": "module"}.
@@ -52,6 +53,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
+    activeClientExtensionIds: Set[String] =
+      MetalsServerConfig.commaSeparatedProperty("metals.client-extensions"),
     statusBar: StatusBarConfig = StatusBarConfig.default,
     bspStatusBar: StatusBarConfig = StatusBarConfig.bspDefault,
     moduleStatusBar: StatusBarConfig = StatusBarConfig.moduleDefault,
@@ -149,6 +152,7 @@ final case class MetalsServerConfig(
   override def toString: String =
     List[String](
       s"glob-syntax=$globSyntax",
+      s"client-extensions=$activeClientExtensionIds",
       s"status-bar=$statusBar",
       s"open-files-on-rename=$openFilesOnRenames",
       s"rename-file-threshold=$renameFileThreshold",
@@ -176,6 +180,16 @@ final case class MetalsServerConfig(
 }
 object MetalsServerConfig {
   def isTesting: Boolean = "true" == System.getProperty("metals.testing")
+  def commaSeparatedProperty(key: String): Set[String] =
+    sys.props
+      .get(key)
+      .map(
+        _.split(",")
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .toSet
+      )
+      .getOrElse(Set.empty)
   def binaryOption(key: String, default: Boolean): Boolean =
     sys.props.get(key) match {
       case Some("true" | "on") => true
