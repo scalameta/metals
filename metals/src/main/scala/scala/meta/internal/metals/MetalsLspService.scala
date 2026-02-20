@@ -167,6 +167,9 @@ abstract class MetalsLspService(
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
 
+  val uriMapper: URIMapper =
+    URIMapper(buildTargets, () => userConfig.javaHome)
+
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
     _.flatMap { uri =>
@@ -602,6 +605,14 @@ abstract class MetalsLspService(
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
   protected def fileDecoderProvider: FileDecoderProvider
+
+  override lazy val lspFileSystemProvider: LSPFileSystemProvider =
+    new LSPFileSystemProvider(
+      languageClient,
+      uriMapper,
+      fileDecoderProvider,
+      clientConfig,
+    )
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()

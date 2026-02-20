@@ -127,6 +127,10 @@ class WorkspaceLspService(
       serverInputs.initialServerConfig,
       initializeParams,
     )
+  private def uriMapper: URIMapper =
+    folderServices.headOption
+      .map(_.uriMapper)
+      .getOrElse(fallbackService.uriMapper)
 
   private val languageClient = {
     val languageClient =
@@ -353,7 +357,7 @@ class WorkspaceLspService(
 
   def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
     // "metalsDecode" prefix is used for showing special files and is not an actual file system
-    val strippedUri = uri.stripPrefix("metalsDecode:")
+    val strippedUri = uriMapper.convertToLocal(uri).stripPrefix("metalsDecode:")
     for {
       path <- strippedUri.toAbsolutePathSafe()
       service <-
@@ -365,6 +369,176 @@ class WorkspaceLspService(
 
   def getServiceFor(uri: String): MetalsLspService =
     getServiceForOpt(uri).getOrElse(fallbackService)
+
+  private def toLocalUri(uri: String): String = uriMapper.convertToLocal(uri)
+
+  private def toMetalsFSUri(uri: String): String =
+    if (clientConfig.isLibraryFileSystemSupported())
+      uriMapper.convertToMetalsFS(uri)
+    else uri
+
+  private def toLocal(
+      params: TextDocumentPositionParams
+  ): TextDocumentPositionParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: CompletionParams): CompletionParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: lsp4j.InlayHintParams): lsp4j.InlayHintParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: ReferenceParams): ReferenceParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: HoverExtParams): HoverExtParams =
+    uriMapper.convertToLocal(params)
+
+  private def toLocal(params: CodeActionParams): CodeActionParams =
+    uriMapper.convertToLocal(params)
+
+  private def toLocal(
+      params: DidOpenTextDocumentParams
+  ): DidOpenTextDocumentParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DidChangeTextDocumentParams
+  ): DidChangeTextDocumentParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DidCloseTextDocumentParams
+  ): DidCloseTextDocumentParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DidSaveTextDocumentParams
+  ): DidSaveTextDocumentParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: DocumentSymbolParams): DocumentSymbolParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DocumentFormattingParams
+  ): DocumentFormattingParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DocumentOnTypeFormattingParams
+  ): DocumentOnTypeFormattingParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: DocumentRangeFormattingParams
+  ): DocumentRangeFormattingParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: RenameParams): RenameParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: CodeLensParams): CodeLensParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: FoldingRangeRequestParams
+  ): FoldingRangeRequestParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: SelectionRangeParams): SelectionRangeParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(params: SemanticTokensParams): SemanticTokensParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: CallHierarchyPrepareParams
+  ): CallHierarchyPrepareParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: CallHierarchyIncomingCallsParams
+  ): CallHierarchyIncomingCallsParams = {
+    params.getItem.setUri(toLocalUri(params.getItem.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: CallHierarchyOutgoingCallsParams
+  ): CallHierarchyOutgoingCallsParams = {
+    params.getItem.setUri(toLocalUri(params.getItem.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: TypeHierarchyPrepareParams
+  ): TypeHierarchyPrepareParams = {
+    params.getTextDocument.setUri(toLocalUri(params.getTextDocument.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: TypeHierarchySupertypesParams
+  ): TypeHierarchySupertypesParams = {
+    params.getItem.setUri(toLocalUri(params.getItem.getUri))
+    params
+  }
+
+  private def toLocal(
+      params: TypeHierarchySubtypesParams
+  ): TypeHierarchySubtypesParams = {
+    params.getItem.setUri(toLocalUri(params.getItem.getUri))
+    params
+  }
+
+  private def toMetalsFS(location: Location): Location =
+    if (clientConfig.isLibraryFileSystemSupported())
+      uriMapper.convertToMetalsFS(location)
+    else location
+
+  private def toMetalsFS(
+      symbolInformation: SymbolInformation
+  ): SymbolInformation =
+    if (clientConfig.isLibraryFileSystemSupported())
+      uriMapper.convertToMetalsFS(symbolInformation)
+    else symbolInformation
 
   def currentFolder: Option[MetalsLspService] =
     focusedDocument.get().flatMap(getServiceForOpt)
@@ -460,8 +634,9 @@ class WorkspaceLspService(
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
+    val localParams = toLocal(params)
     focusedDocument.get().foreach(recentlyFocusedFiles.add)
-    val uri = params.getTextDocument.getUri
+    val uri = localParams.getTextDocument.getUri
     val path = uri.toAbsolutePath
     if (!clientConfig.isDidFocusProvider() || focusedDocument.get().isEmpty)
       setFocusedDocument(Some(path))
@@ -473,13 +648,14 @@ class WorkspaceLspService(
         } else None
       }
       .getOrElse(fallbackService)
-    service.didOpen(params)
+    service.didOpen(localParams)
   }
 
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] = {
-    val uri = params.getTextDocument().getUri()
+    val localParams = toLocal(params)
+    val uri = localParams.getTextDocument().getUri()
     /* If a file changed that was most likely caused by the user,
      * we should consider it as the focused document.
      *
@@ -487,46 +663,62 @@ class WorkspaceLspService(
      */
     if (!clientConfig.isDidFocusProvider())
       setFocusedDocument(Some(uri.toAbsolutePath))
-    getServiceFor(uri).didChange(params)
+    getServiceFor(uri).didChange(localParams)
   }
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
+    val localParams = toLocal(params)
+    val path = localParams.getTextDocument.getUri.toAbsolutePath
     if (
       !clientConfig.isDidFocusProvider() && focusedDocument.get().contains(path)
     ) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
-    getServiceFor(params.getTextDocument().getUri()).didClose(params)
+    getServiceFor(localParams.getTextDocument().getUri()).didClose(localParams)
   }
 
   override def didSave(
       params: DidSaveTextDocumentParams
-  ): CompletableFuture[Unit] =
-    getServiceFor(params.getTextDocument().getUri()).didSave(params)
+  ): CompletableFuture[Unit] = {
+    val localParams = toLocal(params)
+    getServiceFor(localParams.getTextDocument().getUri()).didSave(localParams)
+  }
 
   override def definition(
       position: TextDocumentPositionParams
   ): CompletableFuture[ju.List[Location]] =
-    getServiceFor(position.getTextDocument().getUri()).definition(position)
+    getServiceFor(toLocal(position).getTextDocument.getUri)
+      .definition(toLocal(position))
+      .asScala
+      .map(_.asScala.map(toMetalsFS).asJava)
+      .asJava
 
   override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[ju.List[Location]] =
-    getServiceFor(position.getTextDocument().getUri()).typeDefinition(position)
+    getServiceFor(toLocal(position).getTextDocument.getUri)
+      .typeDefinition(toLocal(position))
+      .asScala
+      .map(_.asScala.map(toMetalsFS).asJava)
+      .asJava
 
   override def implementation(
       position: TextDocumentPositionParams
   ): CompletableFuture[ju.List[Location]] =
-    getServiceFor(position.getTextDocument().getUri()).implementation(position)
+    getServiceFor(toLocal(position).getTextDocument.getUri)
+      .implementation(toLocal(position))
+      .asScala
+      .map(_.asScala.map(toMetalsFS).asJava)
+      .asJava
 
   override def hover(params: HoverExtParams): CompletableFuture[Hover] =
-    getServiceFor(params.textDocument.getUri()).hover(params)
+    getServiceFor(toLocal(params).textDocument.getUri()).hover(toLocal(params))
 
   override def inlayHints(
       params: lsp4j.InlayHintParams
   ): CompletableFuture[java.util.List[lsp4j.InlayHint]] =
-    getServiceFor(params.getTextDocument.getUri()).inlayHints(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .inlayHints(toLocal(params))
 
   override def inlayHintResolve(
       inlayHint: lsp4j.InlayHint
@@ -538,75 +730,177 @@ class WorkspaceLspService(
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
-    getServiceFor(params.getTextDocument.getUri()).documentHighlights(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .documentHighlights(toLocal(params))
 
   override def documentSymbol(params: DocumentSymbolParams): CompletableFuture[
     messages.Either[ju.List[DocumentSymbol], ju.List[SymbolInformation]]
   ] =
-    getServiceFor(params.getTextDocument.getUri()).documentSymbol(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .documentSymbol(toLocal(params))
+      .asScala
+      .map { either =>
+        if (either.isLeft)
+          messages.Either.forLeft[
+            ju.List[DocumentSymbol],
+            ju.List[SymbolInformation],
+          ](either.getLeft)
+        else {
+          val updated = either.getRight.asScala.map(toMetalsFS).asJava
+          messages.Either.forRight[
+            ju.List[DocumentSymbol],
+            ju.List[SymbolInformation],
+          ](updated)
+        }
+      }
+      .asJava
 
   override def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[ju.List[TextEdit]] =
-    getServiceFor(params.getTextDocument.getUri()).formatting(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .formatting(toLocal(params))
 
   override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[ju.List[TextEdit]] =
-    getServiceFor(params.getTextDocument.getUri()).onTypeFormatting(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .onTypeFormatting(toLocal(params))
 
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[ju.List[TextEdit]] =
-    getServiceFor(params.getTextDocument.getUri()).rangeFormatting(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .rangeFormatting(toLocal(params))
 
   override def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[lsp4j.Range] =
-    getServiceFor(params.getTextDocument.getUri()).prepareRename(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .prepareRename(toLocal(params))
 
   override def rename(params: RenameParams): CompletableFuture[WorkspaceEdit] =
-    getServiceFor(params.getTextDocument.getUri()).rename(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .rename(toLocal(params))
 
   override def references(
       params: ReferenceParams
   ): CompletableFuture[ju.List[Location]] =
-    getServiceFor(params.getTextDocument.getUri()).references(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .references(toLocal(params))
+      .asScala
+      .map(_.asScala.map(toMetalsFS).asJava)
+      .asJava
 
   override def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
   ): CompletableFuture[ju.List[CallHierarchyItem]] =
-    getServiceFor(params.getTextDocument.getUri()).prepareCallHierarchy(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .prepareCallHierarchy(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { item =>
+            if (clientConfig.isLibraryFileSystemSupported())
+              item.setUri(toMetalsFSUri(item.getUri))
+            item
+          }
+          .asJava
+      )
+      .asJava
 
   override def callHierarchyIncomingCalls(
       params: CallHierarchyIncomingCallsParams
   ): CompletableFuture[ju.List[CallHierarchyIncomingCall]] =
-    getServiceFor(params.getItem.getUri).callHierarchyIncomingCalls(params)
+    getServiceFor(toLocal(params).getItem.getUri)
+      .callHierarchyIncomingCalls(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { call =>
+            if (clientConfig.isLibraryFileSystemSupported()) {
+              call.getFrom.setUri(toMetalsFSUri(call.getFrom.getUri))
+            }
+            call
+          }
+          .asJava
+      )
+      .asJava
 
   override def callHierarchyOutgoingCalls(
       params: CallHierarchyOutgoingCallsParams
   ): CompletableFuture[ju.List[CallHierarchyOutgoingCall]] =
-    getServiceFor(params.getItem.getUri).callHierarchyOutgoingCalls(params)
+    getServiceFor(toLocal(params).getItem.getUri)
+      .callHierarchyOutgoingCalls(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { call =>
+            if (clientConfig.isLibraryFileSystemSupported()) {
+              call.getTo.setUri(toMetalsFSUri(call.getTo.getUri))
+            }
+            call
+          }
+          .asJava
+      )
+      .asJava
 
   override def prepareTypeHierarchy(
       params: TypeHierarchyPrepareParams
   ): CompletableFuture[ju.List[TypeHierarchyItem]] =
-    getServiceFor(params.getTextDocument.getUri).prepareTypeHierarchy(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .prepareTypeHierarchy(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { item =>
+            if (clientConfig.isLibraryFileSystemSupported())
+              item.setUri(toMetalsFSUri(item.getUri))
+            item
+          }
+          .asJava
+      )
+      .asJava
 
   override def typeHierarchySupertypes(
       params: TypeHierarchySupertypesParams
   ): CompletableFuture[ju.List[TypeHierarchyItem]] =
-    getServiceFor(params.getItem.getUri).typeHierarchySupertypes(params)
+    getServiceFor(toLocal(params).getItem.getUri)
+      .typeHierarchySupertypes(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { item =>
+            if (clientConfig.isLibraryFileSystemSupported())
+              item.setUri(toMetalsFSUri(item.getUri))
+            item
+          }
+          .asJava
+      )
+      .asJava
 
   override def typeHierarchySubtypes(
       params: TypeHierarchySubtypesParams
   ): CompletableFuture[ju.List[TypeHierarchyItem]] =
-    getServiceFor(params.getItem.getUri).typeHierarchySubtypes(params)
+    getServiceFor(toLocal(params).getItem.getUri)
+      .typeHierarchySubtypes(toLocal(params))
+      .asScala
+      .map(
+        _.asScala
+          .map { item =>
+            if (clientConfig.isLibraryFileSystemSupported())
+              item.setUri(toMetalsFSUri(item.getUri))
+            item
+          }
+          .asJava
+      )
+      .asJava
 
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
-    getServiceFor(params.getTextDocument.getUri).completion(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .completion(toLocal(params))
 
   override def completionItemResolve(
       item: CompletionItem
@@ -618,12 +912,14 @@ class WorkspaceLspService(
   override def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    getServiceFor(params.getTextDocument.getUri).signatureHelp(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .signatureHelp(toLocal(params))
 
   override def codeAction(
       params: CodeActionParams
   ): CompletableFuture[ju.List[CodeAction]] =
-    getServiceFor(params.getTextDocument.getUri).codeAction(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .codeAction(toLocal(params))
 
   override def codeActionResolve(
       codeAction: CodeAction
@@ -637,28 +933,33 @@ class WorkspaceLspService(
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[ju.List[CodeLens]] =
-    getServiceFor(params.getTextDocument.getUri).codeLens(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .codeLens(toLocal(params))
 
   override def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[ju.List[FoldingRange]] =
-    getServiceFor(params.getTextDocument.getUri).foldingRange(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .foldingRange(toLocal(params))
 
   override def selectionRange(
       params: SelectionRangeParams
   ): CompletableFuture[ju.List[SelectionRange]] =
-    getServiceFor(params.getTextDocument.getUri).selectionRange(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .selectionRange(toLocal(params))
 
   override def semanticTokensFull(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] =
-    getServiceFor(params.getTextDocument.getUri).semanticTokensFull(params)
+    getServiceFor(toLocal(params).getTextDocument.getUri)
+      .semanticTokensFull(toLocal(params))
 
   override def workspaceSymbol(
       params: WorkspaceSymbolParams
   ): CompletableFuture[ju.List[lsp4j.SymbolInformation]] =
     CancelTokens.future { token =>
-      collectSeq(_.workspaceSymbol(params, token))(_.flatten.asJava)
+      collectSeq(_.workspaceSymbol(params, token))(_.flatten)
+        .map(_.map(toMetalsFS).asJava)
     }
 
   override def willRenameFiles(
@@ -765,10 +1066,11 @@ class WorkspaceLspService(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
     Future {
+      val localParams = toLocal(params)
       treeView
         .reveal(
-          params.getTextDocument().getUri().toAbsolutePath,
-          params.getPosition(),
+          localParams.getTextDocument().getUri().toAbsolutePath,
+          localParams.getPosition(),
         )
         .orNull
     }.asJava
@@ -776,7 +1078,9 @@ class WorkspaceLspService(
   override def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[ju.List[Location]] =
-    collectSeq(_.findTextInDependencyJars(params))(_.flatten.asJava).asJava
+    collectSeq(_.findTextInDependencyJars(params))(_.flatten)
+      .map(_.map(toMetalsFS).asJava)
+      .asJava
 
   override def didCancelWorkDoneProgress(
       params: lsp4j.WorkDoneProgressCancelParams
@@ -805,8 +1109,9 @@ class WorkspaceLspService(
     }
     uriOpt match {
       case Some(uri) =>
-        setFocusedDocument(Some(uri.toAbsolutePath))
-        getServiceFor(uri).didFocus(uri)
+        val localUri = toLocalUri(uri)
+        setFocusedDocument(Some(localUri.toAbsolutePath))
+        getServiceFor(localUri).didFocus(localUri)
       case None =>
         CompletableFuture.completedFuture(DidFocusResult.NoBuildTarget)
     }
@@ -895,6 +1200,18 @@ class WorkspaceLspService(
           .orElse(currentFolder)
           .getOrElse(fallbackService)
           .decodeFile(uri)
+          .asJavaObject
+      case ServerCommands.FileSystemStat(uri) =>
+        currentOrHeadOrFallback.lspFileSystemProvider
+          .getSystemStat(uri)
+          .asJavaObject
+      case ServerCommands.FileSystemReadDirectory(uri) =>
+        currentOrHeadOrFallback.lspFileSystemProvider
+          .readDirectory(uri)
+          .asJavaObject
+      case ServerCommands.FileSystemReadFile(uri) =>
+        currentOrHeadOrFallback.lspFileSystemProvider
+          .readFile(uri)
           .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {

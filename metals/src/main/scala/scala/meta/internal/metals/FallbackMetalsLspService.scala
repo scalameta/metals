@@ -68,6 +68,7 @@ class FallbackMetalsLspService(
       folder,
       compilers,
       buildTargets,
+      uriMapper,
       () => userConfig,
       shellRunner,
       optFileSystemSemanticdbs,
