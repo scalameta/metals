@@ -137,6 +137,30 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val FileSystemStat = new ParametrizedCommand[String](
+    "filesystem-stat",
+    "Get file system stat",
+    """|Get file system stat for the specified uri.
+       |""".stripMargin,
+    "[uri]",
+  )
+
+  val FileSystemReadDirectory = new ParametrizedCommand[String](
+    "filesystem-read-directory",
+    "Read directory",
+    """|Read directory for the specified uri.
+       |""".stripMargin,
+    "[uri]",
+  )
+
+  val FileSystemReadFile = new ParametrizedCommand[String](
+    "filesystem-read-file",
+    "Read file",
+    """|Read file for the specified uri.
+       |""".stripMargin,
+    "[uri]",
+  )
+
   val DiscoverMainClasses = new ParametrizedCommand[DebugDiscoveryParams](
     "discover-jvm-run-command",
     "Discover main classes to run and return the object",
@@ -842,6 +866,9 @@ object ServerCommands {
       RunScalafix,
       ScalafixRunOnly,
       DecodeFile,
+      FileSystemStat,
+      FileSystemReadDirectory,
+      FileSystemReadFile,
       DisconnectBuildServer,
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,

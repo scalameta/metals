@@ -86,6 +86,7 @@ final class FileDecoderProvider(
     workspace: AbsolutePath,
     compilers: Compilers,
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     userConfig: () => UserConfiguration,
     shellRunner: ShellRunner,
     optFileSystemSemanticdbs: () => Option[FileSystemSemanticdbs],
@@ -169,6 +170,8 @@ final class FileDecoderProvider(
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
+          case "metalsfs" =>
+            decodedFileContents(uriMapper.convertToLocal(uriAsStr))
           case _ =>
             Future.successful(
               DecoderResponse.failed(

@@ -137,7 +137,10 @@ class MetalsLanguageServer(
             .map(_.asScala)
             .toList
             .flatten
-        allFolders match {
+        val userFolders = allFolders.filterNot { folder =>
+          Option(folder.getUri()).exists(_.startsWith("metalsfs:"))
+        }
+        userFolders match {
           case Nil =>
             Option(params.getRootUri())
               .orElse(Option(params.getRootPath()))

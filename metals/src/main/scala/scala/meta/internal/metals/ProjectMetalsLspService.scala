@@ -129,6 +129,7 @@ class ProjectMetalsLspService(
       folder,
       compilers,
       buildTargets,
+      uriMapper,
       () => userConfig,
       shellRunner,
       optFileSystemSemanticdbs,
@@ -686,6 +687,7 @@ class ProjectMetalsLspService(
     new FolderTreeViewProvider(
       new Folder(folder, folderVisibleName, true),
       buildTargets,
+      uriMapper,
       definitionIndex,
       () => userConfig,
       scalaVersionSelector,
