@@ -1041,6 +1041,13 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       generateBuilderFieldMethods(sb, field, innerIndent, msg);
     }
 
+    // Generate oneof field setters/clearers
+    for (OneofDecl oneof : msg.oneofs()) {
+      for (FieldDecl field : oneof.fields()) {
+        generateBuilderFieldMethods(sb, field, innerIndent, msg);
+      }
+    }
+
     // Generate map field methods
     for (MapFieldDecl mapField : msg.mapFields()) {
       generateBuilderMapFieldMethods(sb, mapField, innerIndent);

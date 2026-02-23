@@ -449,6 +449,45 @@ class JavaOutlineParitySuite extends FunSuite {
     }
   }
 
+  test("oneof-builder-setter-compiles") {
+    val proto = """
+                  |syntax = "proto3";
+                  |option java_package = "com.example";
+                  |option java_outer_classname = "TestProtos";
+                  |message Sample {
+                  |  oneof choice {
+                  |    string text = 1;
+                  |    int32 number = 2;
+                  |  }
+                  |}
+                  |""".stripMargin
+
+    withTempDir { tempDir =>
+      val outlineDir = generateWithOutlineGenerator(proto, tempDir)
+      // Write a consumer that calls builder setters for oneof fields.
+      // This regresses PLAT-154279: spurious "method not found" error when
+      // setting a generated Protobuf oneof field.
+      writeFile(
+        outlineDir.resolve("com/example/Consumer.java"),
+        """|package com.example;
+           |class Consumer {
+           |  void test() {
+           |    TestProtos.Sample.Builder b = TestProtos.Sample.newBuilder();
+           |    b.setText("hello");
+           |    b.setNumber(42);
+           |  }
+           |}
+           |""".stripMargin,
+      )
+      val outlineClassDir = tempDir.resolve("outline-classes")
+      val compiled = compileJava(outlineDir, outlineClassDir)
+      assert(
+        compiled,
+        "calling builder setters for oneof fields should compile",
+      )
+    }
+  }
+
   test("multiple-files-compiles") {
     val proto = """
                   |syntax = "proto3";
