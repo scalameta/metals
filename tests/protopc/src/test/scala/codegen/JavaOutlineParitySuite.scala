@@ -525,6 +525,51 @@ class JavaOutlineParitySuite extends FunSuite {
     }
   }
 
+  test("service-implbase-toplevel-generated") {
+    // PLAT-154278: When java_multiple_files=true, also generate a standalone
+    // {ServiceName}ImplBase.java so that imports like
+    //   import com.example.FooServiceImplBase;
+    // resolve without a spurious "cannot find symbol" error.
+    val proto = """
+                  |syntax = "proto3";
+                  |option java_package = "com.example";
+                  |option java_outer_classname = "TestProtos";
+                  |option java_multiple_files = true;
+                  |message Request { string query = 1; }
+                  |message Response { string result = 1; }
+                  |service SearchService {
+                  |  rpc Search(Request) returns (Response);
+                  |}
+                  |""".stripMargin
+
+    withTempDir { tempDir =>
+      val outlineDir = generateWithOutlineGenerator(proto, tempDir)
+
+      val grpcFile = outlineDir.resolve("com/example/SearchServiceGrpc.java")
+      val implBaseFile =
+        outlineDir.resolve("com/example/SearchServiceImplBase.java")
+
+      assert(
+        Files.exists(grpcFile),
+        "SearchServiceGrpc.java should be generated",
+      )
+      assert(
+        Files.exists(implBaseFile),
+        "SearchServiceImplBase.java should be generated as a top-level file",
+      )
+
+      val implBaseContent =
+        new String(
+          Files.readAllBytes(implBaseFile),
+          java.nio.charset.StandardCharsets.UTF_8,
+        )
+      assert(
+        implBaseContent.contains("public abstract class SearchServiceImplBase"),
+        "ImplBase file should declare a top-level abstract class (not static)",
+      )
+    }
+  }
+
   test("service-compiles".ignore) { // Requires grpc on classpath
     val proto = """
                   |syntax = "proto3";

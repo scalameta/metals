@@ -48,6 +48,7 @@ public final class JavaOutlineGenerator implements CodeGenerator {
         } else if (decl instanceof ServiceDecl) {
           ServiceDecl svc = (ServiceDecl) decl;
           outputs.add(generateServiceFile(svc, javaPackage, packagePath));
+          outputs.add(generateImplBaseFile(svc, javaPackage, packagePath));
         }
       }
 
@@ -179,6 +180,91 @@ public final class JavaOutlineGenerator implements CodeGenerator {
     generateServiceClass(sb, svc, "");
 
     return outputFile(packagePath + serviceName + ".java", sb.toString());
+  }
+
+  /**
+   * Generate a standalone top-level {ServiceName}ImplBase.java file for multiple_files mode
+   * (PLAT-154278). Real grpc-java nests ImplBase inside {ServiceName}Grpc, but many Java files
+   * import it as a top-level class (e.g. {@code import
+   * com.example.jproto.PolicyEngineServiceImplBase}). Generating the standalone file lets Metals
+   * resolve that import without a spurious "cannot find symbol" error.
+   */
+  private OutputFile generateImplBaseFile(ServiceDecl svc, String javaPackage, String packagePath) {
+    StringBuilder sb = new StringBuilder();
+    String implBaseName = svc.name().value() + "ImplBase";
+
+    if (!javaPackage.isEmpty()) {
+      sb.append("package ").append(javaPackage).append(";\n\n");
+    }
+
+    generateImplBaseClass(sb, svc, "", false);
+
+    return outputFile(packagePath + implBaseName + ".java", sb.toString());
+  }
+
+  /** Generate the ImplBase abstract class, either static-nested or top-level. */
+  private void generateImplBaseClass(
+      StringBuilder sb, ServiceDecl svc, String indent, boolean isStatic) {
+    String serviceName = svc.name().value();
+    String modifier = isStatic ? "public static abstract class " : "public abstract class ";
+    sb.append(indent)
+        .append(modifier)
+        .append(serviceName)
+        .append("ImplBase implements io.grpc.BindableService {\n");
+    for (RpcDecl rpc : svc.rpcs()) {
+      String methodName = decapitalize(rpc.name().value());
+      String inputType = rpc.inputType().fullName();
+      String outputType = rpc.outputType().fullName();
+
+      if (rpc.clientStreaming() && rpc.serverStreaming()) {
+        // Bidi streaming
+        sb.append(indent)
+            .append("  public io.grpc.stub.StreamObserver<")
+            .append(inputType)
+            .append("> ");
+        sb.append(methodName)
+            .append("(io.grpc.stub.StreamObserver<")
+            .append(outputType)
+            .append("> responseObserver) {\n");
+        sb.append(indent).append("    ").append(STUB).append(";\n");
+        sb.append(indent).append("  }\n\n");
+      } else if (rpc.serverStreaming()) {
+        // Server streaming
+        sb.append(indent).append("  public void ").append(methodName).append("(");
+        sb.append(inputType)
+            .append(" request, io.grpc.stub.StreamObserver<")
+            .append(outputType)
+            .append("> responseObserver) {\n");
+        sb.append(indent).append("    ").append(STUB).append(";\n");
+        sb.append(indent).append("  }\n\n");
+      } else if (rpc.clientStreaming()) {
+        // Client streaming
+        sb.append(indent)
+            .append("  public io.grpc.stub.StreamObserver<")
+            .append(inputType)
+            .append("> ");
+        sb.append(methodName)
+            .append("(io.grpc.stub.StreamObserver<")
+            .append(outputType)
+            .append("> responseObserver) {\n");
+        sb.append(indent).append("    ").append(STUB).append(";\n");
+        sb.append(indent).append("  }\n\n");
+      } else {
+        // Unary
+        sb.append(indent).append("  public void ").append(methodName).append("(");
+        sb.append(inputType)
+            .append(" request, io.grpc.stub.StreamObserver<")
+            .append(outputType)
+            .append("> responseObserver) {\n");
+        sb.append(indent).append("    ").append(STUB).append(";\n");
+        sb.append(indent).append("  }\n\n");
+      }
+    }
+    sb.append(indent).append("  @Override\n");
+    sb.append(indent).append("  public io.grpc.ServerServiceDefinition bindService() {\n");
+    sb.append(indent).append("    ").append(STUB).append(";\n");
+    sb.append(indent).append("  }\n");
+    sb.append(indent).append("}\n\n");
   }
 
   /** Generate top-level OrBuilder interface for multiple_files mode. */
@@ -1781,64 +1867,7 @@ public final class JavaOutlineGenerator implements CodeGenerator {
     // Stub classes
 
     // ImplBase (abstract service implementation)
-    sb.append(indent)
-        .append("public static abstract class ")
-        .append(serviceName)
-        .append("ImplBase implements io.grpc.BindableService {\n");
-    for (RpcDecl rpc : svc.rpcs()) {
-      String methodName = decapitalize(rpc.name().value());
-      String inputType = rpc.inputType().fullName();
-      String outputType = rpc.outputType().fullName();
-
-      if (rpc.clientStreaming() && rpc.serverStreaming()) {
-        // Bidi streaming
-        sb.append(indent)
-            .append("  public io.grpc.stub.StreamObserver<")
-            .append(inputType)
-            .append("> ");
-        sb.append(methodName)
-            .append("(io.grpc.stub.StreamObserver<")
-            .append(outputType)
-            .append("> responseObserver) {\n");
-        sb.append(indent).append("    ").append(STUB).append(";\n");
-        sb.append(indent).append("  }\n\n");
-      } else if (rpc.serverStreaming()) {
-        // Server streaming
-        sb.append(indent).append("  public void ").append(methodName).append("(");
-        sb.append(inputType)
-            .append(" request, io.grpc.stub.StreamObserver<")
-            .append(outputType)
-            .append("> responseObserver) {\n");
-        sb.append(indent).append("    ").append(STUB).append(";\n");
-        sb.append(indent).append("  }\n\n");
-      } else if (rpc.clientStreaming()) {
-        // Client streaming
-        sb.append(indent)
-            .append("  public io.grpc.stub.StreamObserver<")
-            .append(inputType)
-            .append("> ");
-        sb.append(methodName)
-            .append("(io.grpc.stub.StreamObserver<")
-            .append(outputType)
-            .append("> responseObserver) {\n");
-        sb.append(indent).append("    ").append(STUB).append(";\n");
-        sb.append(indent).append("  }\n\n");
-      } else {
-        // Unary
-        sb.append(indent).append("  public void ").append(methodName).append("(");
-        sb.append(inputType)
-            .append(" request, io.grpc.stub.StreamObserver<")
-            .append(outputType)
-            .append("> responseObserver) {\n");
-        sb.append(indent).append("    ").append(STUB).append(";\n");
-        sb.append(indent).append("  }\n\n");
-      }
-    }
-    sb.append(indent).append("  @Override\n");
-    sb.append(indent).append("  public io.grpc.ServerServiceDefinition bindService() {\n");
-    sb.append(indent).append("    ").append(STUB).append(";\n");
-    sb.append(indent).append("  }\n");
-    sb.append(indent).append("}\n\n");
+    generateImplBaseClass(sb, svc, indent, true);
 
     // Stub (blocking client)
     sb.append(indent)
