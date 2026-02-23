@@ -32,6 +32,7 @@ class NewFileProvider(
     packageProvider: PackageProvider,
     selector: ScalaVersionSelector,
     icons: Icons,
+    isReadClipboardProvider: Boolean,
     onCreate: AbsolutePath => Future[Unit],
 )(implicit
     ec: ExecutionContext
@@ -92,33 +93,67 @@ class NewFileProvider(
   ) = {
     fileType match {
       case kind @ (Class | CaseClass | Object | Trait | Enum) =>
-        getName(kind, name)
+        getName(kind, name, None)
           .mapOption(
             createClass(directory, _, kind, ".scala")
           )
       case kind @ (JavaClass | JavaEnum | JavaInterface | JavaRecord) =>
-        getName(kind, name)
+        getName(kind, name, None)
           .mapOption(
             createClass(directory, _, kind, ".java")
           )
       case ScalaFile =>
-        getName(ScalaFile, name).mapOption(
+        getName(ScalaFile, name, None).mapOption(
           createEmptyFileWithPackage(directory, _)
         )
       case Worksheet =>
-        getName(Worksheet, name)
+        getName(Worksheet, name, None)
           .mapOption(
             createEmptyFile(directory, _, ".worksheet.sc")
           )
       case ScalaScript =>
-        getName(ScalaScript, name)
+        getName(ScalaScript, name, None)
           .mapOption(
             createEmptyFile(directory, _, ".sc")
           )
+      case FromClipboard =>
+        createFromClipboard(directory, name)
       case PackageObject =>
         createPackageObject(directory).liftOption
     }
   }
+
+  /** Suggests a filename from Scala snippet content (first class/object/trait/enum name). */
+  private def suggestNameFromScalaContent(content: String): String = {
+    val pattern =
+      """(?m)^\s*(?:(?:sealed|final|implicit|abstract)\s+)*(?:case\s+)?(?:class|object|trait|enum)\s+([A-Za-z_][A-Za-z0-9_]*)""".r
+    pattern.findFirstMatchIn(content).map(_.group(1)).getOrElse("Snippet")
+  }
+
+  private def createFromClipboard(
+      directory: AbsolutePath,
+      name: Option[String],
+  ): Future[Option[(AbsolutePath, Range)]] =
+    client.metalsReadClipboard().asScala.flatMap {
+      case Some(content) if content.trim.nonEmpty =>
+        val suggestedName = suggestNameFromScalaContent(content)
+        getName(FromClipboard, name, Some(suggestedName))
+          .mapOption { fileName =>
+            val path =
+              directory.resolve(fileNameWithExtension(fileName, ".scala"))
+            val text = packageProvider
+              .packageStatement(path)
+              .map(_.fileContent)
+              .getOrElse("") + content.trim + "\n"
+            createFileAndWriteText(path, NewFileTemplate.fromContent(text))
+          }
+      case _ =>
+        client.showMessage(
+          MessageType.Info,
+          "Clipboard is empty or not supported by this client.",
+        )
+        Future.successful(None)
+    }
 
   private def askForKind(
       kinds: List[NewFileType]
@@ -137,7 +172,7 @@ class NewFileProvider(
   private def askForScalaKind(
       isScala3: Boolean
   ): Future[Option[NewFileType]] = {
-    val allFileTypes = List(
+    val baseTypes = List(
       ScalaFile,
       Class,
       CaseClass,
@@ -147,8 +182,10 @@ class NewFileProvider(
       Worksheet,
       ScalaScript,
     )
+    val withClipboard =
+      if (isReadClipboardProvider) FromClipboard +: baseTypes else baseTypes
     val withEnum =
-      if (isScala3) allFileTypes :+ Enum else allFileTypes
+      if (isScala3) withClipboard :+ Enum else withClipboard
     askForKind(withEnum)
   }
 
@@ -164,10 +201,16 @@ class NewFileProvider(
     askForKind(withRecord)
   }
 
-  private def askForName(kind: String): Future[Option[String]] = {
+  private def askForName(
+      kind: String,
+      value: Option[String],
+  ): Future[Option[String]] = {
     client
       .metalsInputBox(
-        MetalsInputBoxParams(prompt = NewScalaFile.enterNameMessage(kind))
+        MetalsInputBoxParams(
+          prompt = NewScalaFile.enterNameMessage(kind),
+          value = value.orNull,
+        )
       )
       .asScala
       .mapOptionInside(_.value)
@@ -176,12 +219,17 @@ class NewFileProvider(
   private def getName(
       kind: NewFileType,
       name: Option[String],
+      suggestedValue: Option[String],
   ): Future[Option[String]] = {
     name match {
       case Some(v) if v.trim.length > 0 => Future.successful(name)
-      case _ => askForName(kind.label)
+      case _ => askForName(kind.label, suggestedValue)
     }
   }
+
+  /** Avoids double extension when user types "Foo.scala" or "Foo.java". */
+  private def fileNameWithExtension(name: String, ext: String): String =
+    if (name.endsWith(ext)) name else name + ext
 
   private def createClass(
       directory: AbsolutePath,
@@ -189,11 +237,10 @@ class NewFileProvider(
       kind: NewFileType,
       ext: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.resolve(name + ext)
-    // name can be actually be "foo/Name", where "foo" is a folder to create
-    val className = Identifier.backtickWrap(
-      directory.resolve(name).filename
-    )
+    val fileName = fileNameWithExtension(name, ext)
+    val path = directory.resolve(fileName)
+    // name can be "foo/Name" or "Foo.scala"; use path filename without ext for template
+    val className = Identifier.backtickWrap(path.filename.stripSuffix(ext))
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
       case Enum => enumTemplate(className)
@@ -213,7 +260,7 @@ class NewFileProvider(
       directory: AbsolutePath,
       name: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.resolve(name + ".scala")
+    val path = directory.resolve(fileNameWithExtension(name, ".scala"))
     val pkg = packageProvider
       .packageStatement(path)
       .map(_.fileContent)
@@ -240,7 +287,7 @@ class NewFileProvider(
       name: String,
       extension: String,
   ): Future[(AbsolutePath, Range)] = {
-    val path = directory.resolve(name + extension)
+    val path = directory.resolve(fileNameWithExtension(name, extension))
     createFileAndWriteText(path, NewFileTemplate.empty)
   }
 

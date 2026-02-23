@@ -16,6 +16,12 @@ object NewFileTypes {
     override val label: String = "Empty file"
   }
 
+  case object FromClipboard extends NewFileType {
+    override val id: String = "scala-file-from-clipboard"
+    override val syntax: Option[String] = None
+    override val label: String = "From clipboard"
+  }
+
   case object Class extends NewFileType {
     override val id: String = "scala-class"
     override val syntax: Option[String] = Some("class")
@@ -96,6 +102,7 @@ object NewFileTypes {
       case Object.id => Some(Object)
       case Trait.id => Some(Trait)
       case ScalaFile.id => Some(ScalaFile)
+      case FromClipboard.id => Some(FromClipboard)
       case PackageObject.id => Some(PackageObject)
       case Worksheet.id => Some(Worksheet)
       case ScalaScript.id => Some(ScalaScript)

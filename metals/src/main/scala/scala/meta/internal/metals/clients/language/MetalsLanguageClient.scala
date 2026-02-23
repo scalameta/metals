@@ -69,6 +69,15 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
     }
 
   /**
+   * Returns the current clipboard content. Used by "New Scala File > From clipboard".
+   * Clients that support this should set readClipboardProvider in InitializationOptions.
+   * @return clipboard text, or null if not available / not supported.
+   */
+  @JsonRequest("metals/readClipboard")
+  private[clients] def rawMetalsReadClipboard()
+      : CompletableFuture[RawMetalsReadClipboardResult]
+
+  /**
    * Opens an menu to ask the user to pick one of the suggested options. This method is used to deal with gson and existing extension protocol.
    * @return the user provided pick.
    */
@@ -76,6 +85,11 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
   private[clients] def rawMetalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[RawMetalsQuickPickResult]
+
+  final def metalsReadClipboard(): CompletableFuture[Option[String]] =
+    rawMetalsReadClipboard().thenApply { result =>
+      Option(result.value).filter(_.nonEmpty)
+    }
 
   /**
    * Opens an menu to ask the user to pick one of the suggested options.
@@ -117,6 +131,10 @@ case class RawMetalsInputBoxResult(
     @Nullable value: String = null,
     @Nullable cancelled: java.lang.Boolean = null,
 )
+case class RawMetalsReadClipboardResult(
+    @Nullable value: String = null
+)
+
 case class RawMetalsQuickPickResult(
     // value=null when cancelled=true
     @Nullable itemId: String = null,

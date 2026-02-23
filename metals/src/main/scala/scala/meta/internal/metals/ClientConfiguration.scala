@@ -112,6 +112,13 @@ final class ClientConfiguration(
       false,
     )
 
+  def isReadClipboardProvider(): Boolean =
+    extract(
+      initializationOptions.readClipboardProvider,
+      experimentalCapabilities.readClipboardProvider,
+      false,
+    )
+
   def isOpenFilesOnRenameProvider(): Boolean =
     extract(
       initializationOptions.openFilesOnRenameProvider,

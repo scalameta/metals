@@ -12,6 +12,7 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
+import scala.meta.internal.metals.clients.language.RawMetalsReadClipboardResult
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
@@ -43,6 +44,13 @@ import org.eclipse.lsp4j.WorkspaceFolder
  * @param workspace The workspace root path, used for resolving file paths
  */
 class McpLanguageClient(workspace: AbsolutePath) extends MetalsLanguageClient {
+
+  override def rawMetalsReadClipboard()
+      : CompletableFuture[RawMetalsReadClipboardResult] = {
+    CompletableFuture.completedFuture(
+      RawMetalsReadClipboardResult(value = null)
+    )
+  }
 
   override def telemetryEvent(value: Object): Unit = {
     scribe.debug(s"[MCP Telemetry] $value")
