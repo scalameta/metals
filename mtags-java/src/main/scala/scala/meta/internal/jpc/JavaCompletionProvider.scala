@@ -20,6 +20,7 @@ import scala.meta.pc.OffsetParams
 
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.MemberSelectTree
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree.Kind._
@@ -130,9 +131,14 @@ class JavaCompletionProvider(
     val select = path.getLeaf.asInstanceOf[MemberSelectTree]
     val newPath = new TreePath(path, select.getExpression)
     val memberType = typeAnalyzer.typeMirror(newPath)
+    val isSuperAccess = select.getExpression match {
+      case id: IdentifierTree => id.getName.toString == "super"
+      case _ => false
+    }
 
     memberType match {
-      case dt: DeclaredType => completeDeclaredTypeMembers(task, dt, path)
+      case dt: DeclaredType =>
+        completeDeclaredTypeMembers(task, dt, path, isSuperAccess)
       case _: ArrayType => completeArrayType()
       case tv: TypeVariable => completeTypeVariable(task, tv, path)
       case pkg: PackageType => completePackageType(task, pkg)
@@ -263,7 +269,8 @@ class JavaCompletionProvider(
   private def completeDeclaredTypeMembers(
       task: JavacTask,
       declaredType: DeclaredType,
-      path: TreePath
+      path: TreePath,
+      isSuperAccess: Boolean = false
   ): List[CompletionItem] = {
     val declaredElement = declaredType.asElement()
     val members = task.getElements
@@ -275,6 +282,16 @@ class JavaCompletionProvider(
     // For member select, get scope from parent path (the actual access location)
     val scopePath = if (path.getParentPath != null) path.getParentPath else path
     val scope = trees.getScope(scopePath)
+    // For `super.` access, also check accessibility through the enclosing
+    // class's type. Java's protected-access rule requires the receiver type to
+    // be the accessing class or a subtype, so protected members inherited from
+    // ancestors (e.g. Object.clone / Object.finalize) become visible when we
+    // use the enclosing class as the access type.
+    val superAccessType: Option[DeclaredType] =
+      if (isSuperAccess)
+        Option(scope.getEnclosingClass())
+          .map(_.asType().asInstanceOf[DeclaredType])
+      else None
     val identifier = extractIdentifier
 
     val completionItems = members.iterator
@@ -283,8 +300,14 @@ class JavaCompletionProvider(
       )
       // We can't call a constructor as a member
       .filter(member => member.getKind() != ElementKind.CONSTRUCTOR)
-      // Respect private/protected/package-private visibility
-      .filter(member => trees.isAccessible(scope, member, declaredType))
+      // Respect private/protected/package-private visibility.
+      // For `super.` access, also allow members accessible through the
+      // enclosing class's type (covers protected members from Object such as
+      // clone() and finalize()).
+      .filter(member =>
+        trees.isAccessible(scope, member, declaredType) ||
+          superAccessType.exists(trees.isAccessible(scope, member, _))
+      )
       .toList
       .sortBy { element =>
         memberScore(element, declaredElement)
