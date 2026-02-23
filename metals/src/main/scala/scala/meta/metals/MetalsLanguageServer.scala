@@ -24,6 +24,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
 import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StdReportContext
@@ -57,6 +58,11 @@ class MetalsLanguageServer(
     serverInputs: MetalsServerInputs =
       MetalsServerInputs.productionConfiguration,
 ) extends LanguageServer {
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
 
   private val startInstant =
     MetalsLanguageServer.startInstant // 100% evaluate it even when debug is disabled
@@ -219,7 +225,7 @@ class MetalsLanguageServer(
         val clientInfo = Option(params.getClientInfo()).fold("") { info =>
           s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
         }
-        scribe.info(
+        logInfoInProdDebugInTests(
           s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )

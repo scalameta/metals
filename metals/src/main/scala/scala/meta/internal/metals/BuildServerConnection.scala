@@ -62,6 +62,11 @@ class BuildServerConnection private (
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   private def timeout(minutes: Int) = Some(
     Timeout.default(FiniteDuration(minutes, TimeUnit.MINUTES))
   )
@@ -176,7 +181,7 @@ class BuildServerConnection private (
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
           conn.optLivenessMonitor.foreach(_.shutdown())
-          scribe.info("Shut down connection with build server.")
+          logInfoInProdDebugInTests("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
         }

@@ -722,7 +722,7 @@ final case class TestingServer(
       param: T,
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param)).asScala
   }
 
@@ -731,13 +731,13 @@ final case class TestingServer(
       param: T*
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
   }
 
   def executeCommand[T](command: Command): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams()).asScala
   }
 
@@ -762,7 +762,7 @@ final case class TestingServer(
       params: Seq[Object],
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [$command]")
+    scribe.debug(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
     fullServer.executeCommand(new ExecuteCommandParams(command, args)).asScala

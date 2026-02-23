@@ -62,6 +62,12 @@ class ConnectionProvider(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
     with Cancelable {
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   import Connect.connect
   import indexProviders._
 
@@ -491,7 +497,7 @@ class ConnectionProvider(
         session: BspSession,
         progress: TaskProgress,
     ): Future[BuildChange] = {
-      scribe.info(
+      logInfoInProdDebugInTests(
         s"Connected to Build server: ${session.main.name} v${session.version}"
       )
       cancelables.add(session)

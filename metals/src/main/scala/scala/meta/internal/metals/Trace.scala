@@ -18,6 +18,15 @@ import scala.meta.io.AbsolutePath
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.
  */
 object Trace {
+  private def verboseInfoLevel: scribe.Level =
+    if (MetalsServerConfig.isTesting) scribe.Level.Debug
+    else scribe.Level.Info
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   // jvm-directories can fail for less common OS versions: https://github.com/soc/directories-jvm/issues/17
   def globalDirectory(implicit ec: ExecutionContext): Option[AbsolutePath] =
     Try {
@@ -82,7 +91,7 @@ object Trace {
     def setupPrintWriter(paths: List[AbsolutePath]): Option[PrintWriter] =
       paths match {
         case head :: _ if head.isFile =>
-          LogOnce.info(TracingIsEnabled(head.toString))
+          LogOnce.log(verboseInfoLevel, TracingIsEnabled(head.toString))
           val fos = Files.newOutputStream(
             head.toNIO,
             StandardOpenOption.CREATE,
@@ -92,7 +101,7 @@ object Trace {
         case _ :: tail =>
           setupPrintWriter(tail)
         case Nil =>
-          scribe.info(
+          logInfoInProdDebugInTests(
             s"tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
               s"and outgoing JSON messages create an empty file at ${tracePaths.mkString(" or ")}"
           )

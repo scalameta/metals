@@ -114,6 +114,13 @@ class MbtWorkspaceSymbolProvider(
 ) extends SemanticdbFileManager
     with JavaFileManagerFactory {
 
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (scala.meta.internal.metals.MetalsServerConfig.isTesting)
+      scribe.debug(message)
+    else
+      scribe.info(message)
+  }
+
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
   private lazy val protobufWorkspace = new MbtProtobufWorkspaceSymbolProvider(
@@ -240,7 +247,7 @@ class MbtWorkspaceSymbolProvider(
       if !isCached
     } yield path)
     if (toIndex.nonEmpty) {
-      scribe.info(s"mbt-v2: indexing ${toIndex.length} files")
+      logInfoInProdDebugInTests(s"mbt-v2: indexing ${toIndex.length} files")
     }
 
     val (task, token) = progress.startProgress(
@@ -295,7 +302,7 @@ class MbtWorkspaceSymbolProvider(
     metrics.recordEvent(
       Event.duration("mbt2_index_workspace_symbol", timer.elapsed)
     )
-    scribe.info(
+    logInfoInProdDebugInTests(
       f"time: mbt-v2 loaded index for ${documents.size} files in ${timer}"
     )
 
@@ -821,7 +828,7 @@ class MbtWorkspaceSymbolProvider(
             scribe.error(s"Error reading index file ${doc.getUri()}", e)
         }
       }
-      scribe.info(
+      logInfoInProdDebugInTests(
         s"mbt-v2: read index for ${result.size} files in ${timer}"
       )
     }
