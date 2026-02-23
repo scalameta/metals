@@ -11,7 +11,14 @@ case class UserConfigurationOption(
     example: String,
     title: String,
     description: String,
+    isBoolean: Boolean = false,
+    isArray: Boolean = false,
 ) {
+  assert(
+    !(isArray && isBoolean),
+    "isArray and isBoolean cannot be true at the same time",
+  )
+
   def headerID: String = {
     title.toLowerCase().replace(' ', '-').replace("'", " ")
   }

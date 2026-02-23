@@ -26,12 +26,14 @@ import scala.meta.io.AbsolutePath
  * @param port Optional port for HTTP transport
  * @param scheduledExecutor Scheduled executor for background tasks
  * @param client Client to generate config for (defaults to NoClient)
+ * @param initialUserConfig Optional user configuration (e.g. from CLI); defaults to [[UserConfiguration.default]] if None
  */
 class StandaloneMcpService(
     workspace: AbsolutePath,
     port: Option[Int],
     scheduledExecutor: ScheduledExecutorService,
     client: Client = NoClient,
+    initialUserConfig: Option[UserConfiguration] = None,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
   port match {
@@ -45,7 +47,9 @@ class StandaloneMcpService(
       )
     case None => // random port will be assigned by the system
   }
-
+  initialUserConfig.foreach(uc =>
+    scribe.info(s"User configuration to use in MCP server: \n$uc")
+  )
   private val cancelables = new MutableCancelable()
   private val isCancelled = new AtomicBoolean(false)
 
@@ -89,10 +93,15 @@ class StandaloneMcpService(
     isBspStatusProvider = false,
   )
 
+  private val serverInputs: MetalsServerInputs =
+    MetalsServerInputs.productionConfiguration.copy(
+      initialUserConfig = initialUserConfig.getOrElse(UserConfiguration.default)
+    )
+
   lazy val projectMetalsLspService = new ProjectMetalsLspService(
     ec,
     scheduledExecutor,
-    MetalsServerInputs.productionConfiguration,
+    serverInputs,
     mcpClient,
     StandaloneMcpService.defaultInitializeParams,
     clientConfig,
