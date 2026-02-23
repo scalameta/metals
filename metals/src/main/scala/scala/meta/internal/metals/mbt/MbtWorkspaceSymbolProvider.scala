@@ -839,7 +839,7 @@ class MbtWorkspaceSymbolProvider(
         .duration("mbt2_index_workspace_symbol_read_index", timer.elapsed)
         .withLabel("index_documents_count", indexDocumentsCount)
     )
-    if (!isIndexRead.compareAndSet(false, true)) {
+    if (isIndexRead.compareAndSet(false, true)) {
       // This metric can be used as a "time to first intelligence" metric to
       // measure how long it takes for Metals to start up and provide meaningful
       // diagnostics/definitions.
@@ -851,6 +851,18 @@ class MbtWorkspaceSymbolProvider(
           )
           .withLabel("index_documents_count", indexDocumentsCount)
       )
+      MetalsLanguageServer
+        .durationSinceExtensionStart()
+        .foreach { extensionStartDuration =>
+          metrics.recordEvent(
+            Event
+              .duration(
+                "mbt2_index_workspace_symbol_read_index_since_extension_start",
+                extensionStartDuration,
+              )
+              .withLabel("index_documents_count", indexDocumentsCount)
+          )
+        }
     }
     result
   } catch {

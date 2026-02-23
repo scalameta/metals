@@ -30,6 +30,7 @@ import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.MavenCoordinates
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position
@@ -101,6 +102,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     tracked
   }
 
+  private val hasInitialIndexCompleted: ju.concurrent.atomic.AtomicBoolean =
+    new ju.concurrent.atomic.AtomicBoolean(false)
   private def indexWorkspace(
       check: () => Unit,
       progress: TaskProgress,
@@ -292,6 +295,35 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         languageClient.refreshModel()
       }
     progress.message = ""
+    if (hasInitialIndexCompleted.compareAndSet(false, true)) {
+      val kind = indexProviders match {
+        case _: FallbackMetalsLspService => "fallback"
+        case _: ProjectMetalsLspService => "project"
+        case _ => indexProviders.getClass().getSimpleName()
+      }
+      val folder = indexProviders.folder.toString()
+      metrics.recordEvent(
+        Event
+          .duration(
+            "first_index_workspace_since_start",
+            MetalsLanguageServer.durationSinceStart(),
+          )
+          .withLabel("kind", kind)
+          .withLabel("folder", folder)
+      )
+      MetalsLanguageServer.durationSinceExtensionStart().foreach { duration =>
+        metrics.recordEvent(
+          Event
+            .duration(
+              "first_index_workspace_since_extension_start",
+              duration,
+            )
+            .withLabel("kind", kind)
+            .withLabel("folder", folder)
+        )
+      }
+    }
+
   }
 
   /*

@@ -229,21 +229,19 @@ class MetalsLanguageServer(
           s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )
+        val clientNameLabel =
+          Option(params.getClientInfo()).fold("<unknown>")(_.getName())
+        val clientVersionLabel =
+          Option(params.getClientInfo()).fold("<unknown>")(_.getVersion)
 
         val baseInitializeEvent =
           Event
             .duration(
               "initialize",
-              Duration.between(startInstant, Instant.now()),
+              MetalsLanguageServer.durationSinceStart(),
             )
-            .withLabel(
-              "clientName",
-              Option(params.getClientInfo()).fold("<unknown>")(_.getName()),
-            )
-            .withLabel(
-              "clientVersion",
-              Option(params.getClientInfo()).fold("<unknown>")(_.getVersion),
-            )
+            .withLabel("clientName", clientNameLabel)
+            .withLabel("clientVersion", clientVersionLabel)
         val initializeEvent =
           folders.zipWithIndex.foldLeft(baseInitializeEvent) {
             case (event, (folder, 0)) =>
@@ -259,6 +257,18 @@ class MetalsLanguageServer(
           }
 
         metrics.recordEvent(initializeEvent)
+        MetalsLanguageServer.durationSinceExtensionStart().foreach { duration =>
+          // Interesting to track if the extension startup time varies between clients
+          metrics.recordEvent(
+            Event
+              .duration(
+                "initialize_since_extension_start",
+                duration,
+              )
+              .withLabel("clientName", clientNameLabel)
+              .withLabel("clientVersion", clientVersionLabel)
+          )
+        }
 
         serverState.set(ServerState.Initialized(service))
         metalsService.underlying = service
@@ -348,6 +358,24 @@ class MetalsLanguageServer(
 }
 
 object MetalsLanguageServer {
+  val extensionStartInstant: Option[Instant] =
+    for {
+      timestamp <- Option(System.getProperty("metals.activation-timestamp"))
+      instant <-
+        try {
+          Some(Instant.parse(timestamp))
+        } catch {
+          case NonFatal(e) =>
+            scribe.warn(
+              s"-Dmetals.activation-timestamp: '$timestamp' is not a valid instant",
+              e,
+            )
+            None
+        }
+    } yield instant
+  def durationSinceExtensionStart(): Option[Duration] =
+    extensionStartInstant.map(start => Duration.between(start, Instant.now()))
+
   @volatile var startInstant: Instant = Instant.now()
   def durationSinceStart(): Duration =
     Duration.between(startInstant, Instant.now())
