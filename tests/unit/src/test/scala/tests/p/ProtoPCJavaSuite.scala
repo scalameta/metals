@@ -1137,6 +1137,67 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
   // gRPC Service and RPC method tests
   // ========================================================================
 
+  // Regression test for PLAT-154012: Go to Definition not working for the
+  // XxxGrpc outer class import.
+  // Java code imports e.g. `CompatibilityServiceGrpc` (protoc-java's outer
+  // class name), but ProtoMtagsV2 emits `CompatibilityService#` (the bare
+  // service name from the .proto).  findProtoClassFromJavaSymbol was doing
+  // an exact name match and missing the "Grpc"-suffixed case.
+  test("grpc-outer-class-goto-definition") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/greeter.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message HelloRequest {
+           |  string name = 1;
+           |}
+           |message HelloReply {
+           |  string message = 1;
+           |}
+           |service Greeter {
+           |  rpc SayHello (HelloRequest) returns (HelloReply);
+           |}
+           |/a/src/main/java/com/example/GreeterService.java
+           |package com.example;
+           |import com.example.api.jproto.GreeterGrpc;
+           |import com.example.api.jproto.HelloRequest;
+           |import com.example.api.jproto.HelloReply;
+           |public class GreeterService {
+           |  public static Class<?> grpcClass() { return GreeterGrpc.class; }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/greeter.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/GreeterService.java")
+      _ <- server.didFocus("a/src/main/java/com/example/GreeterService.java")
+      _ = assertNoDiagnostics()
+      // Navigate from the GreeterGrpc import to the Greeter service in the proto
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/GreeterService.java",
+        "import com.example.api.jproto.GreeterGr@@pc;",
+        """|a/src/main/proto/greeter.proto:11:9: definition
+           |service Greeter {
+           |        ^^^^^^^
+           |""".stripMargin,
+      )
+      // Also navigate from GreeterGrpc used as a qualifier in a method body
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/GreeterService.java",
+        "return GreeterGr@@pc.class;",
+        """|a/src/main/proto/greeter.proto:11:9: definition
+           |service Greeter {
+           |        ^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("rpc-stub-method-goto-definition") {
     // Test: stub.sayHello(request) -> rpc SayHello in proto service
     cleanWorkspace()

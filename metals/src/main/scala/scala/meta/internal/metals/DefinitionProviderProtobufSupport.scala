@@ -159,11 +159,20 @@ final class DefinitionProviderProtobufSupport(
       val input = protoPath.toInputFromBuffers(buffers)
       val protoMtags = new ProtoMtagsV2(input, includeMembers = false)
       val doc = protoMtags.index()
-      val classSuffix = s"$className#"
+
+      // Candidate class-name suffixes to look for in proto symbols:
+      //  1. The exact Java class name (messages, enums, services)
+      //  2. The name with "Grpc" stripped — protoc-java wraps each gRPC service
+      //     in an outer class called XxxGrpc, but ProtoMtagsV2 emits the bare
+      //     service name (e.g. CompatibilityService#, not CompatibilityServiceGrpc#).
+      val candidates = Seq(s"$className#") ++
+        (if (className.endsWith("Grpc"))
+           Seq(s"${className.dropRight(4)}#")
+         else Nil)
 
       doc.occurrences
         .find { occ =>
-          occ.symbol.endsWith(classSuffix) &&
+          candidates.exists(occ.symbol.endsWith) &&
           occ.role == s.SymbolOccurrence.Role.DEFINITION
         }
         .flatMap { occ =>
