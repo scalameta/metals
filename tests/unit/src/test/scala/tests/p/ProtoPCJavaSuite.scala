@@ -769,9 +769,12 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
     } yield ()
   }
 
-  test("oneof-field-methods".ignore) {
-    // TODO: JavaOutlineGenerator doesn't generate oneof methods yet
-    // Test: getXxxCase(), hasXxx() for oneof fields -> proto oneof
+  test("oneof-field-methods") {
+    // Regression test for PLAT-154011: Go to Definition not working for
+    // Java->Protobuf on oneof fields.
+    // JavaOutlineGenerator was missing getXxx()/hasXxx() on the MESSAGE class
+    // for fields inside a oneof block (only the Builder had setters).
+    // Test: getXxx(), hasXxx(), setXxx() for oneof fields -> proto oneof field
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -837,6 +840,294 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
         """|a/src/main/proto/event.proto:8:12: definition
            |    string text_payload = 2;
            |           ^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // ========================================================================
+  // Comprehensive field-type coverage test
+  // ========================================================================
+  //
+  // This test is the systematic guard against the class of bugs where
+  //   (a) JavaOutlineGenerator is missing a method on the message class / builder, OR
+  //   (b) ProtoMtagsV2 is missing the corresponding symbol,
+  // either of which silently breaks goto-definition for that method variant.
+  //
+  // For every (field-type × accessor-kind) combination we verify the full
+  // round-trip: Java call site -> proto source location.
+  test("all-field-type-goto-definition") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/comprehensive.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message Address {
+           |  string street = 1;
+           |}
+           |message Item {
+           |  string label = 1;
+           |}
+           |message Comprehensive {
+           |  // scalar field
+           |  string title = 1;
+           |  // message field
+           |  Address address = 2;
+           |  // repeated scalar
+           |  repeated string tags = 3;
+           |  // repeated message
+           |  repeated Item items = 4;
+           |  // map field
+           |  map<string, int32> counts = 5;
+           |  // oneof with scalar and message fields
+           |  oneof payload {
+           |    string text_payload = 6;
+           |    Address location_payload = 7;
+           |  }
+           |  // optional field (proto3 explicit optional)
+           |  optional string note = 8;
+           |}
+           |/a/src/main/java/com/example/AllFieldTypes.java
+           |package com.example;
+           |import com.example.api.jproto.Comprehensive;
+           |import com.example.api.jproto.Address;
+           |import com.example.api.jproto.Item;
+           |import java.util.List;
+           |import java.util.Map;
+           |public class AllFieldTypes {
+           |  // --- scalar getter/setter ---
+           |  public String getTitle(Comprehensive m)     { return m.getTitle(); }
+           |  public Comprehensive setTitle(Comprehensive.Builder b) { return b.setTitle("x").build(); }
+           |  public Comprehensive clearTitle(Comprehensive.Builder b) { return b.clearTitle().build(); }
+           |  // --- message field getter/setter ---
+           |  public Address getAddress(Comprehensive m)  { return m.getAddress(); }
+           |  public boolean hasAddress(Comprehensive m)  { return m.hasAddress(); }
+           |  public Comprehensive setAddress(Comprehensive.Builder b) { return b.setAddress(Address.newBuilder().build()).build(); }
+           |  // --- repeated scalar ---
+           |  public List<String> getTags(Comprehensive m) { return m.getTagsList(); }
+           |  public int getTagsCount(Comprehensive m)    { return m.getTagsCount(); }
+           |  public Comprehensive addTag(Comprehensive.Builder b) { return b.addTags("t").build(); }
+           |  // --- repeated message ---
+           |  public List<Item> getItems(Comprehensive m) { return m.getItemsList(); }
+           |  public Comprehensive addItem(Comprehensive.Builder b) { return b.addItems(Item.newBuilder().build()).build(); }
+           |  // --- map field ---
+           |  public Map<String,Integer> getCounts(Comprehensive m) { return m.getCountsMap(); }
+           |  public boolean hasCounts(Comprehensive m, String k)   { return m.containsCounts(k); }
+           |  public Comprehensive putCount(Comprehensive.Builder b) { return b.putCounts("k",1).build(); }
+           |  // --- oneof scalar getter/setter ---
+           |  public String getText(Comprehensive m)      { return m.getTextPayload(); }
+           |  public boolean hasText(Comprehensive m)     { return m.hasTextPayload(); }
+           |  public Comprehensive setText(Comprehensive.Builder b) { return b.setTextPayload("t").build(); }
+           |  // --- oneof message getter/setter ---
+           |  public Address getLoc(Comprehensive m)       { return m.getLocationPayload(); }
+           |  public boolean hasLoc(Comprehensive m)       { return m.hasLocationPayload(); }
+           |  public Comprehensive setLoc(Comprehensive.Builder b) { return b.setLocationPayload(Address.newBuilder().build()).build(); }
+           |  // --- optional field ---
+           |  public String getNote(Comprehensive m)      { return m.getNote(); }
+           |  public boolean hasNote(Comprehensive m)     { return m.hasNote(); }
+           |  public Comprehensive setNote(Comprehensive.Builder b) { return b.setNote("n").build(); }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/comprehensive.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/AllFieldTypes.java")
+      _ <- server.didFocus("a/src/main/java/com/example/AllFieldTypes.java")
+      _ = assertNoDiagnostics()
+      // -- scalar (line 13) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getTitl@@e()",
+        """|a/src/main/proto/comprehensive.proto:13:10: definition
+           |  string title = 1;
+           |         ^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.setTitl@@e(\"x\")",
+        """|a/src/main/proto/comprehensive.proto:13:10: definition
+           |  string title = 1;
+           |         ^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.clearTitl@@e()",
+        """|a/src/main/proto/comprehensive.proto:13:10: definition
+           |  string title = 1;
+           |         ^^^^^
+           |""".stripMargin,
+      )
+      // -- message field (line 15) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getAddre@@ss()",
+        """|a/src/main/proto/comprehensive.proto:15:11: definition
+           |  Address address = 2;
+           |          ^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.hasAddre@@ss()",
+        """|a/src/main/proto/comprehensive.proto:15:11: definition
+           |  Address address = 2;
+           |          ^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.setAddre@@ss(",
+        """|a/src/main/proto/comprehensive.proto:15:11: definition
+           |  Address address = 2;
+           |          ^^^^^^^
+           |""".stripMargin,
+      )
+      // -- repeated scalar (line 17) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getTagsLi@@st()",
+        """|a/src/main/proto/comprehensive.proto:17:19: definition
+           |  repeated string tags = 3;
+           |                  ^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getTagsCou@@nt()",
+        """|a/src/main/proto/comprehensive.proto:17:19: definition
+           |  repeated string tags = 3;
+           |                  ^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.addTa@@gs(\"t\")",
+        """|a/src/main/proto/comprehensive.proto:17:19: definition
+           |  repeated string tags = 3;
+           |                  ^^^^
+           |""".stripMargin,
+      )
+      // -- repeated message (line 19) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getItemsLi@@st()",
+        """|a/src/main/proto/comprehensive.proto:19:17: definition
+           |  repeated Item items = 4;
+           |                ^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.addIte@@ms(",
+        """|a/src/main/proto/comprehensive.proto:19:17: definition
+           |  repeated Item items = 4;
+           |                ^^^^^
+           |""".stripMargin,
+      )
+      // -- map (line 21) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getCountsMa@@p()",
+        """|a/src/main/proto/comprehensive.proto:21:22: definition
+           |  map<string, int32> counts = 5;
+           |                     ^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.containsCoun@@ts(k)",
+        """|a/src/main/proto/comprehensive.proto:21:22: definition
+           |  map<string, int32> counts = 5;
+           |                     ^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.putCoun@@ts(\"k\",1)",
+        """|a/src/main/proto/comprehensive.proto:21:22: definition
+           |  map<string, int32> counts = 5;
+           |                     ^^^^^^
+           |""".stripMargin,
+      )
+      // -- oneof scalar (line 24, PLAT-154011) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getTextPaylo@@ad()",
+        """|a/src/main/proto/comprehensive.proto:24:12: definition
+           |    string text_payload = 6;
+           |           ^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.hasTextPaylo@@ad()",
+        """|a/src/main/proto/comprehensive.proto:24:12: definition
+           |    string text_payload = 6;
+           |           ^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.setTextPaylo@@ad(\"t\")",
+        """|a/src/main/proto/comprehensive.proto:24:12: definition
+           |    string text_payload = 6;
+           |           ^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      // -- oneof message (line 25, PLAT-154011) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getLocationPaylo@@ad()",
+        """|a/src/main/proto/comprehensive.proto:25:13: definition
+           |    Address location_payload = 7;
+           |            ^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.hasLocationPaylo@@ad()",
+        """|a/src/main/proto/comprehensive.proto:25:13: definition
+           |    Address location_payload = 7;
+           |            ^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.setLocationPaylo@@ad(",
+        """|a/src/main/proto/comprehensive.proto:25:13: definition
+           |    Address location_payload = 7;
+           |            ^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+      // -- optional (line 28) --
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.getNot@@e()",
+        """|a/src/main/proto/comprehensive.proto:28:19: definition
+           |  optional string note = 8;
+           |                  ^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "m.hasNot@@e()",
+        """|a/src/main/proto/comprehensive.proto:28:19: definition
+           |  optional string note = 8;
+           |                  ^^^^
+           |""".stripMargin,
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/AllFieldTypes.java",
+        "b.setNot@@e(\"n\")",
+        """|a/src/main/proto/comprehensive.proto:28:19: definition
+           |  optional string note = 8;
+           |                  ^^^^
            |""".stripMargin,
       )
     } yield ()

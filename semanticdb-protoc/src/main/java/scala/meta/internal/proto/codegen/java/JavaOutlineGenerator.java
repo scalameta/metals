@@ -282,6 +282,13 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       generateOrBuilderFieldMethods(sb, field, indent, className, msg);
     }
 
+    // Generate getter signatures for oneof fields
+    for (OneofDecl oneof : msg.oneofs()) {
+      for (FieldDecl field : oneof.fields()) {
+        generateOrBuilderFieldMethods(sb, field, indent, className, msg, true);
+      }
+    }
+
     // Generate getter signatures for map fields
     for (MapFieldDecl mapField : msg.mapFields()) {
       generateOrBuilderMapFieldMethods(sb, mapField, indent);
@@ -307,6 +314,13 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       generateOrBuilderFieldMethods(sb, field, innerIndent, fullClassName, msg);
     }
 
+    // Generate getter signatures for oneof fields
+    for (OneofDecl oneof : msg.oneofs()) {
+      for (FieldDecl field : oneof.fields()) {
+        generateOrBuilderFieldMethods(sb, field, innerIndent, fullClassName, msg, true);
+      }
+    }
+
     // Generate getter signatures for map fields
     for (MapFieldDecl mapField : msg.mapFields()) {
       generateOrBuilderMapFieldMethods(sb, mapField, innerIndent);
@@ -322,6 +336,17 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       String indent,
       String enclosingClass,
       MessageDecl parentMsg) {
+    generateOrBuilderFieldMethods(sb, field, indent, enclosingClass, parentMsg, false);
+  }
+
+  /** Generate field method signatures for OrBuilder interface. */
+  private void generateOrBuilderFieldMethods(
+      StringBuilder sb,
+      FieldDecl field,
+      String indent,
+      String enclosingClass,
+      MessageDecl parentMsg,
+      boolean isInOneof) {
     String fieldName = field.name().value();
     String typeName = field.type().fullName();
     String javaType = resolveFieldType(typeName, enclosingClass, parentMsg);
@@ -351,7 +376,9 @@ public final class JavaOutlineGenerator implements CodeGenerator {
             .append("OrBuilder(int index);\n");
       }
     } else {
-      if (field.modifier() == FieldModifier.OPTIONAL || !JavaTypeMapper.isScalarType(typeName)) {
+      if (isInOneof
+          || field.modifier() == FieldModifier.OPTIONAL
+          || !JavaTypeMapper.isScalarType(typeName)) {
         sb.append(indent).append("boolean ").append(hasName).append("();\n");
       }
       sb.append(indent).append(javaType).append(" ").append(getterName).append("();\n");
@@ -645,9 +672,16 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       generateMapFieldAccessors(sb, mapField, innerIndent);
     }
 
-    // Generate oneof accessors
+    // Generate oneof accessors (case enum + getXxxCase())
     for (OneofDecl oneof : msg.oneofs()) {
       generateOneofAccessors(sb, oneof, innerIndent);
+    }
+
+    // Generate getters for oneof fields on the message class
+    for (OneofDecl oneof : msg.oneofs()) {
+      for (FieldDecl field : oneof.fields()) {
+        generateFieldAccessors(sb, field, innerIndent, msg, true);
+      }
     }
 
     // Generate nested messages (OrBuilder first, then message class)
@@ -787,6 +821,11 @@ public final class JavaOutlineGenerator implements CodeGenerator {
 
   private void generateFieldAccessors(
       StringBuilder sb, FieldDecl field, String indent, MessageDecl parentMsg) {
+    generateFieldAccessors(sb, field, indent, parentMsg, false);
+  }
+
+  private void generateFieldAccessors(
+      StringBuilder sb, FieldDecl field, String indent, MessageDecl parentMsg, boolean isInOneof) {
     String fieldName = field.name().value();
     String typeName = field.type().fullName();
     String javaType = JavaTypeMapper.toJavaType(typeName);
@@ -841,8 +880,12 @@ public final class JavaOutlineGenerator implements CodeGenerator {
         sb.append(indent).append("}\n\n");
       }
     } else {
-      // Has method (for optional fields and message types)
-      if (field.modifier() == FieldModifier.OPTIONAL || !JavaTypeMapper.isScalarType(typeName)) {
+      // Has method (for optional fields, message types, and all oneof fields).
+      // In proto3 every field inside a oneof gets hasXxx() because the field is
+      // implicitly optional — only one oneof alternative can be set at a time.
+      if (isInOneof
+          || field.modifier() == FieldModifier.OPTIONAL
+          || !JavaTypeMapper.isScalarType(typeName)) {
         sb.append(indent).append("public boolean ").append(hasName).append("() {\n");
         sb.append(indent).append("  ").append(STUB).append(";\n");
         sb.append(indent).append("}\n\n");
@@ -1706,9 +1749,16 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       generateMapFieldAccessors(sb, mapField, indent);
     }
 
-    // Generate oneof accessors
+    // Generate oneof accessors (case enum + getXxxCase())
     for (OneofDecl oneof : msg.oneofs()) {
       generateOneofAccessors(sb, oneof, indent);
+    }
+
+    // Generate getters for oneof fields on the message class
+    for (OneofDecl oneof : msg.oneofs()) {
+      for (FieldDecl field : oneof.fields()) {
+        generateFieldAccessors(sb, field, indent, msg, true);
+      }
     }
 
     // Generate nested messages (as static nested classes)

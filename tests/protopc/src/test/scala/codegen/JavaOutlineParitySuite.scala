@@ -570,6 +570,48 @@ class JavaOutlineParitySuite extends FunSuite {
     }
   }
 
+  // PLAT-154011: Go to Definition not working for Java->Protobuf on oneof fields.
+  // The message class and OrBuilder interface were missing getters for fields
+  // declared inside a oneof block (only builder setters were generated).
+  test("oneof-message-getter-compiles") {
+    val proto = """
+                  |syntax = "proto3";
+                  |option java_package = "com.example";
+                  |option java_outer_classname = "TestProtos";
+                  |message Sample {
+                  |  oneof choice {
+                  |    string text = 1;
+                  |    int32 number = 2;
+                  |  }
+                  |}
+                  |""".stripMargin
+
+    withTempDir { tempDir =>
+      val outlineDir = generateWithOutlineGenerator(proto, tempDir)
+      // Write a consumer that calls getters on the message (not the builder).
+      // This regresses PLAT-154011: "go to definition" failed because the message
+      // class outline was missing getXxx() methods for oneof fields.
+      writeFile(
+        outlineDir.resolve("com/example/Consumer.java"),
+        """|package com.example;
+           |class Consumer {
+           |  void test(TestProtos.Sample message) {
+           |    String text = message.getText();
+           |    int number = message.getNumber();
+           |    TestProtos.Sample.ChoiceCase c = message.getChoiceCase();
+           |  }
+           |}
+           |""".stripMargin,
+      )
+      val outlineClassDir = tempDir.resolve("outline-classes")
+      val compiled = compileJava(outlineDir, outlineClassDir)
+      assert(
+        compiled,
+        "calling message getters for oneof fields should compile",
+      )
+    }
+  }
+
   test("service-compiles".ignore) { // Requires grpc on classpath
     val proto = """
                   |syntax = "proto3";
