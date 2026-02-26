@@ -110,6 +110,7 @@ case class UserConfiguration(
       AdditionalPcChecksConfig.default,
     scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacementConfig.default,
+    bazelNativePath: Option[String] = None,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -304,6 +305,7 @@ case class UserConfiguration(
             scalaImportsPlacement.name().toLowerCase().replace("_", "-"),
           )
         ),
+        optStringField("bazelNativePath", bazelNativePath),
       ).flatten
     )
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -1131,6 +1133,8 @@ object UserConfiguration {
         ),
     ).getOrElse(ScalaImportsPlacementConfig.default)
 
+    val bazelNativePath = getStringKey("bazel-native-path")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -1186,6 +1190,7 @@ object UserConfiguration {
           referenceProvider,
           additionalPcChecks,
           scalaImportsPlacement,
+          bazelNativePath,
         )
       )
     } else {

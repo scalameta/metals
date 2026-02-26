@@ -5,6 +5,7 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.builds.BazelNativeBuildTool
 import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.BuildTools
@@ -151,6 +152,16 @@ class BspConnector(
             } yield connection
           workDoneProgress
             .trackFuture("Connecting to sbt", connectionF)
+            .map(Some(_))
+        case ResolvedBspOne(details)
+            if details.getName() == BazelNativeBuildTool.bspName =>
+          tables.buildServers.chooseServer(details.getName())
+          optSetBuildTool(details.getName())
+          scribe.info(
+            "Connecting to Bazel Native in-process BSP server"
+          )
+          bspServers
+            .newBazelNativeServer(projectRoot, bspStatusOpt)
             .map(Some(_))
         case ResolvedBspOne(details) =>
           progress.message = s"connecting to ${details.getName()}"

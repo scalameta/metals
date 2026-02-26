@@ -615,6 +615,13 @@ lazy val metals = project
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
+      // For test frameworks
+      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
+      // For Bazel Native BSP (gRPC BES server)
+      "io.grpc" % "grpc-netty-shaded" % V.grpcVersion,
+      "io.grpc" % "grpc-stub" % V.grpcVersion,
+      "io.grpc" % "grpc-protobuf" % V.grpcVersion,
+      "com.google.api.grpc" % "proto-google-common-protos" % V.protoGoogleCommonProtos,
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
     Compile / resourceGenerators += Def.task {

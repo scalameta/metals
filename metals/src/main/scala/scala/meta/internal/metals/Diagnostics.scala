@@ -109,6 +109,21 @@ final class Diagnostics(
       downstreamTargets.remove(target)
     }
 
+    // Bazel doesn't clean diagnostics for paths with no errors, so instead we remove everything
+    // from previous compilations.
+    val isBazel = buildTargets
+      .buildServerOf(target)
+      .exists(c => c.isBazel || c.isBazelNative)
+    if (isBazel) {
+      diagnostics
+        .filter { case (path, _) =>
+          buildTargets.inverseSources(path).exists(target => target == target)
+        }
+        .foreach { case (path, _) =>
+          reset(Seq(path))
+          diagnostics.remove(path)
+        }
+    }
     publishDiagnosticsBuffer()
 
     compileTimer.remove(target)
