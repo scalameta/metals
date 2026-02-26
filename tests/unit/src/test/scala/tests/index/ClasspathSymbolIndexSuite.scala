@@ -68,7 +68,7 @@ class ClasspathDefinitionIndexSuite extends munit.FunSuite {
     // This test covers both 1) mismatching filename against toplevel symbol and
     // 2) synthetic symbol falling back to a non-synthetic symbol
     "scala/util/Left#copy().(value)",
-    """|/scala/util/Either.scala org.scala-lang:scala-library:2.13.16
+    """|/scala/util/Either.scala org.scala-lang:scala-library:2.13.18
        |final case class Left[+A, +B](value: A) extends Either[A, B] {
        |                              ^
        |""".stripMargin,

@@ -1020,6 +1020,11 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(3),
     compat = Map(
+      "2.13.18" ->
+        """|def hello1: Int
+           |def
+           |defaultArg - scala.annotation.meta
+           |""".stripMargin,
       "3" ->
         """|def hello1: Int
            |override val hello2: Int

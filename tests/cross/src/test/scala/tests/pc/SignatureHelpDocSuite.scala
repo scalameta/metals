@@ -30,6 +30,12 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |option map f getOrElse ifEmpty
        |```""".stripMargin
 
+  val foldLatestDocs21318: String =
+    foldLatestDocs.replace(
+      "option map f getOrElse ifEmpty",
+      "option.map(f).getOrElse(ifEmpty)"
+    )
+
   val foldOlderDocs1: String =
     """|Returns the result of applying `f` to this [scala.Option](scala.Option)'s
        | value if the [scala.Option](scala.Option) is nonempty.  Otherwise, evaluates
@@ -63,7 +69,29 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |                       ^^^^^^^^^^^
        |  @param ifEmpty the expression to evaluate if empty.
        |  @param f the function to apply if nonempty.
-        """.stripMargin
+        """.stripMargin,
+    compat = Map(
+      "2.13.17" ->
+        s"""$foldLatestDocs21318
+           |**Parameters**
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |- `f`: the function to apply if nonempty.
+           |fold[B](ifEmpty: => B)(f: Int => B): B
+           |                       ^^^^^^^^^^^
+           |  @param ifEmpty the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
+            """.stripMargin,
+      "2.13.18" ->
+        s"""$foldLatestDocs21318
+           |**Parameters**
+           |- `ifEmpty`: the expression to evaluate if empty.
+           |- `f`: the function to apply if nonempty.
+           |fold[B](ifEmpty: => B)(f: Int => B): B
+           |                       ^^^^^^^^^^^
+           |  @param ifEmpty the expression to evaluate if empty.
+           |  @param f the function to apply if nonempty.
+            """.stripMargin
+    )
   )
 
   checkDoc(
@@ -83,6 +111,26 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
         |  @param f the function to apply if nonempty.
         |""".stripMargin,
     compat = Map(
+      "2.13.17" ->
+        s"""|$foldLatestDocs21318
+            |**Parameters**
+            |- `ifEmpty`: the expression to evaluate if empty.
+            |- `f`: the function to apply if nonempty.
+            |fold[B](ifEmpty: => B)(f: Int => B): B
+            |        ^^^^^^^^^^^^^
+            |  @param ifEmpty String the expression to evaluate if empty.
+            |  @param f the function to apply if nonempty.
+            |""".stripMargin,
+      "2.13.18" ->
+        s"""|$foldLatestDocs21318
+            |**Parameters**
+            |- `ifEmpty`: the expression to evaluate if empty.
+            |- `f`: the function to apply if nonempty.
+            |fold[B](ifEmpty: => B)(f: Int => B): B
+            |        ^^^^^^^^^^^^^
+            |  @param ifEmpty String the expression to evaluate if empty.
+            |  @param f the function to apply if nonempty.
+            |""".stripMargin,
       "3" ->
         s"""|$foldLatestDocs
             |**Parameters**
@@ -201,6 +249,8 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       "2.13.14" -> docsAfter21313,
       "2.13.15" -> docsAfter21313,
       "2.13.16" -> docsAfter21313,
+      "2.13.17" -> docsAfter21313,
+      "2.13.18" -> docsAfter21313,
       "3" ->
         """|Applies the given binary operator `op` to the given initial value `z` and all
            | elements of this collection, going left to right. Returns the initial value if this collection
@@ -279,7 +329,7 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |             ^^^^^^^^^^^
        |""".stripMargin,
     compat = Map(
-      ">=2.13.0" ->
+      "2.13" ->
         """|Builds a new collection by applying a function to all elements of this collection.
            |
            |
@@ -290,6 +340,36 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
            |- `f`: the function to apply to each element.
            |
            |**Returns:** a new collection resulting from applying the given function
+           |               `f` to each element of this collection and collecting the results.
+           |map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin,
+      "2.13.17" ->
+        """|Builds a new $coll by applying a function to all elements of this collection.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the element type of the returned $coll.
+           |
+           |**Parameters**
+           |- `f`: the function to apply to each element.
+           |
+           |**Returns:** a new $coll resulting from applying the given function
+           |               `f` to each element of this collection and collecting the results.
+           |map[B](f: Int => B): List[B]
+           |       ^^^^^^^^^^^
+           |""".stripMargin,
+      "2.13.18" ->
+        """|Builds a new $coll by applying a function to all elements of this collection.
+           |
+           |
+           |**Type Parameters**
+           |- `B`: the element type of the returned $coll.
+           |
+           |**Parameters**
+           |- `f`: the function to apply to each element.
+           |
+           |**Returns:** a new $coll resulting from applying the given function
            |               `f` to each element of this collection and collecting the results.
            |map[B](f: Int => B): List[B]
            |       ^^^^^^^^^^^

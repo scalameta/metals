@@ -371,6 +371,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.concurrent.Future
            |scala.sys.process.ProcessImpl#Future
            |scala.jdk.FutureConverters.FutureOps
+           |scala.concurrent.Await.FutureValue
            |scala.jdk.FutureConverters
            |scala.jdk.javaapi.FutureConverters
            |scala.concurrent.impl.FutureConvertersImpl
