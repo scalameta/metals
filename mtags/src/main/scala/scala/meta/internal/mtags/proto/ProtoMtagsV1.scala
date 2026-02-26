@@ -477,13 +477,15 @@ class ProtoMtagsV1(
     }
 
     if (isFieldType(current)) {
-      // Emit fuzzy reference for user-defined types (IDENTIFIER)
+      // Emit fuzzy reference for user-defined types (IDENTIFIER).
       if (current.tpe == ProtobufToken.IDENTIFIER && includeFuzzyReferences) {
         emitTypeReference(current)
       }
       current = scanner.nextToken()
 
       // Consume dotted type segments in qualified user-defined types.
+      // Keep indexing intermediate segments so nested type qualifiers like
+      // `Outer.Inner` remain discoverable as references.
       while (current.tpe == ProtobufToken.DOT) {
         current = scanner.nextToken()
         if (current.tpe == ProtobufToken.IDENTIFIER) {

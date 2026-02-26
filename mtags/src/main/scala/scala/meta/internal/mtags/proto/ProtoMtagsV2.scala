@@ -468,9 +468,19 @@ class ProtoMtagsV2(
         }
       }
     }
-    // Generate from filename (convert snake_case to CamelCase)
+    // Generate from filename (convert snake_case to CamelCase).
+    // Match protoc behavior: use the filename-derived class name unless it
+    // collides with a top-level declaration, in which case append "OuterClass".
     val filename = input.path.split('/').last.stripSuffix(".proto")
-    snakeToCamel(filename) + "OuterClass"
+    val candidate = snakeToCamel(filename)
+    val collidesWithTopLevel = file.declarations().asScala.exists {
+      case msg: MessageDecl => msg.name().value() == candidate
+      case enum: EnumDecl => enum.name().value() == candidate
+      case svc: ServiceDecl => svc.name().value() == candidate
+      case _ => false
+    }
+    if (collidesWithTopLevel) candidate + "OuterClass"
+    else candidate
   }
 
   private def getJavaMultipleFiles(file: ProtoFile): Boolean = {

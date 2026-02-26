@@ -96,7 +96,10 @@ final class MbtProtobufWorkspaceSymbolProvider(
         scribe.warn(
           s"mbt-v2-turbine: javaPackagePrefix: ${javaPackagePrefix()}"
         )
-        val generator = new JavaOutlineGenerator(javaPackagePrefix())
+        val generator = new JavaOutlineGenerator(
+          javaPackagePrefix(),
+          defaultOuterClassName(input.path),
+        )
         val outputs = generator.generate(file)
 
         outputs.asScala.iterator.map { output =>
@@ -200,5 +203,17 @@ final class MbtProtobufWorkspaceSymbolProvider(
         )
         Nil
     }
+  }
+
+  private def defaultOuterClassName(protoPath: String): String = {
+    val filename =
+      protoPath.split('/').lastOption.getOrElse("").stripSuffix(".proto")
+    val camel = filename
+      .split('_')
+      .iterator
+      .filter(_.nonEmpty)
+      .map(part => part.head.toUpper + part.tail)
+      .mkString
+    if (camel.nonEmpty) camel else "OuterClass"
   }
 }

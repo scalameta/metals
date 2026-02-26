@@ -68,6 +68,8 @@ object ProtoJavaSymbolMapper {
 
       val javaPackage = protoMtags.javaPackage
       val protoPackage = protoMtags.protoPackage
+      val javaMultipleFiles = protoMtags.javaMultipleFiles
+      val outerClassName = protoMtags.outerClassName
 
       val symbolMapping = scala.collection.mutable.Map.empty[String, String]
       val accessorMethods =
@@ -87,9 +89,9 @@ object ProtoJavaSymbolMapper {
               sym,
               protoPackage,
               javaPackage,
-              javaDoc,
+              javaMultipleFiles,
+              outerClassName,
               symbolMapping,
-              accessorMethods,
             )
           } else {
             mapTypeSymbol(
@@ -97,6 +99,8 @@ object ProtoJavaSymbolMapper {
               sym,
               protoPackage,
               javaPackage,
+              javaMultipleFiles,
+              outerClassName,
               javaDoc,
               symbolMapping,
             )
@@ -113,6 +117,8 @@ object ProtoJavaSymbolMapper {
               sym,
               protoPackage,
               javaPackage,
+              javaMultipleFiles,
+              outerClassName,
               symbolMapping,
               accessorMethods,
             )
@@ -122,6 +128,8 @@ object ProtoJavaSymbolMapper {
               sym,
               protoPackage,
               javaPackage,
+              javaMultipleFiles,
+              outerClassName,
               javaDoc,
               symbolMapping,
               accessorMethods,
@@ -131,7 +139,14 @@ object ProtoJavaSymbolMapper {
           // Top-level term - map directly
           val javaSymbol =
             convertProtoSymbolToJava(protoSymbol, protoPackage, javaPackage)
-          symbolMapping(javaSymbol) = protoSymbol
+          addSymbolMapping(
+            symbolMapping,
+            javaSymbol,
+            protoSymbol,
+            javaPackage,
+            javaMultipleFiles,
+            outerClassName,
+          )
         }
       }
 
@@ -157,9 +172,9 @@ object ProtoJavaSymbolMapper {
       sym: Symbol,
       protoPackage: String,
       javaPackage: String,
-      javaDoc: scala.meta.internal.semanticdb.TextDocument,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
       result: scala.collection.mutable.Map[String, String],
-      accessorMethods: scala.collection.mutable.ListBuffer[String],
   ): Unit = {
     val serviceName = sym.displayName
     val javaOwner = convertProtoSymbolToJava(
@@ -171,11 +186,25 @@ object ProtoJavaSymbolMapper {
     // Map the service class itself
     val javaServiceSymbol =
       convertProtoSymbolToJava(protoSymbol, protoPackage, javaPackage)
-    result(javaServiceSymbol) = protoSymbol
+    addSymbolMapping(
+      result,
+      javaServiceSymbol,
+      protoSymbol,
+      javaPackage,
+      javaMultipleFiles,
+      outerClassName,
+    )
 
     // gRPC generates XxxGrpc outer class with nested classes
     val grpcClassName = s"${serviceName}Grpc"
-    result(s"$javaOwner$grpcClassName#") = protoSymbol
+    addSymbolMapping(
+      result,
+      s"$javaOwner$grpcClassName#",
+      protoSymbol,
+      javaPackage,
+      javaMultipleFiles,
+      outerClassName,
+    )
 
     // Nested stub classes
     val stubClasses = Seq(
@@ -185,7 +214,14 @@ object ProtoJavaSymbolMapper {
       s"${serviceName}FutureStub",
     )
     for (stubClass <- stubClasses) {
-      result(s"$javaOwner$grpcClassName#$stubClass#") = protoSymbol
+      addSymbolMapping(
+        result,
+        s"$javaOwner$grpcClassName#$stubClass#",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
     }
   }
 
@@ -198,6 +234,8 @@ object ProtoJavaSymbolMapper {
       sym: Symbol,
       protoPackage: String,
       javaPackage: String,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
       result: scala.collection.mutable.Map[String, String],
       accessorMethods: scala.collection.mutable.ListBuffer[String],
   ): Unit = {
@@ -226,15 +264,42 @@ object ProtoJavaSymbolMapper {
     // Map method in all stub classes
     for (stubClass <- stubClasses) {
       // Full symbol form for method
-      result(s"$javaOwner$grpcClassName#$stubClass#$javaMethodName().") =
-        protoSymbol
+      addSymbolMapping(
+        result,
+        s"$javaOwner$grpcClassName#$stubClass#$javaMethodName().",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
       // Short form for unresolved references
-      result(s"$stubClass#$javaMethodName().") = protoSymbol
-      result(s"$stubClass#$javaMethodName#") = protoSymbol
+      addSymbolMapping(
+        result,
+        s"$stubClass#$javaMethodName().",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
+      addSymbolMapping(
+        result,
+        s"$stubClass#$javaMethodName#",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
 
       // Also add the class symbol for implementation search (for find-refs override detection)
       // This maps the proto service/RPC symbol to the Java stub class
-      result(s"$javaOwner$grpcClassName#$stubClass#") = protoSymbol
+      addSymbolMapping(
+        result,
+        s"$javaOwner$grpcClassName#$stubClass#",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
     }
 
     // Add the method name to search for
@@ -269,19 +334,29 @@ object ProtoJavaSymbolMapper {
       sym: Symbol,
       protoPackage: String,
       javaPackage: String,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
       javaDoc: scala.meta.internal.semanticdb.TextDocument,
       result: scala.collection.mutable.Map[String, String],
   ): Unit = {
     val className = sym.displayName
     val javaClassSymbol =
       convertProtoSymbolToJava(protoSymbol, protoPackage, javaPackage)
-    result(javaClassSymbol) = protoSymbol
+    addSymbolMapping(
+      result,
+      javaClassSymbol,
+      protoSymbol,
+      javaPackage,
+      javaMultipleFiles,
+      outerClassName,
+    )
 
     // Also find all Java occurrences that reference this type
     javaDoc.occurrences.foreach { occ =>
       if (
         occ.symbol.contains(s"/$className#") ||
-        occ.symbol.startsWith(s"$className#")
+        occ.symbol.startsWith(s"$className#") ||
+        occ.symbol.contains(s"#$className#")
       ) {
         result(occ.symbol) = protoSymbol
       }
@@ -302,6 +377,8 @@ object ProtoJavaSymbolMapper {
       sym: Symbol,
       protoPackage: String,
       javaPackage: String,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
       javaDoc: scala.meta.internal.semanticdb.TextDocument,
       result: scala.collection.mutable.Map[String, String],
       accessorMethods: scala.collection.mutable.ListBuffer[String],
@@ -319,12 +396,40 @@ object ProtoJavaSymbolMapper {
     if (isEnumValue) {
       // Enum value - map to Java static field
       val javaEnumValueSymbol = s"$javaOwner$fieldName."
-      result(javaEnumValueSymbol) = protoSymbol
+      addSymbolMapping(
+        result,
+        javaEnumValueSymbol,
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
       // Also map method form just in case
-      result(s"$javaOwner$fieldName().") = protoSymbol
+      addSymbolMapping(
+        result,
+        s"$javaOwner$fieldName().",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
       // Short-name variants for unresolved references
-      result(s"$javaClassName#$fieldName.") = protoSymbol
-      result(s"$javaClassName#$fieldName#") = protoSymbol
+      addSymbolMapping(
+        result,
+        s"$javaClassName#$fieldName.",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
+      addSymbolMapping(
+        result,
+        s"$javaClassName#$fieldName#",
+        protoSymbol,
+        javaPackage,
+        javaMultipleFiles,
+        outerClassName,
+      )
     } else {
       // Regular field - map to Java getter/setter methods
       val javaMethodNames = protoFieldToJavaMethods(fieldName)
@@ -332,26 +437,86 @@ object ProtoJavaSymbolMapper {
 
       javaMethodNames.foreach { methodName =>
         // Method on message class: Message#getXxx()
-        result(s"$javaOwner$methodName().") = protoSymbol
+        addSymbolMapping(
+          result,
+          s"$javaOwner$methodName().",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
         // Method on builder class: Message#Builder#setXxx()
-        result(s"${javaOwner}Builder#$methodName().") = protoSymbol
+        addSymbolMapping(
+          result,
+          s"${javaOwner}Builder#$methodName().",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
 
         // Short-name variants for unresolved references (when proto-generated
         // classes don't exist on classpath, javac produces symbols like
         // `ClassName#methodName#` instead of fully qualified)
-        result(s"$javaClassName#$methodName().") = protoSymbol
-        result(s"$javaClassName#$methodName#") = protoSymbol
+        addSymbolMapping(
+          result,
+          s"$javaClassName#$methodName().",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
+        addSymbolMapping(
+          result,
+          s"$javaClassName#$methodName#",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
         // Also Builder variants
-        result(s"${javaClassName}Builder#$methodName().") = protoSymbol
-        result(s"${javaClassName}Builder#$methodName#") = protoSymbol
-        result(s"$javaClassName#Builder#$methodName().") = protoSymbol
-        result(s"$javaClassName#Builder#$methodName#") = protoSymbol
+        addSymbolMapping(
+          result,
+          s"${javaClassName}Builder#$methodName().",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
+        addSymbolMapping(
+          result,
+          s"${javaClassName}Builder#$methodName#",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
+        addSymbolMapping(
+          result,
+          s"$javaClassName#Builder#$methodName().",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
+        addSymbolMapping(
+          result,
+          s"$javaClassName#Builder#$methodName#",
+          protoSymbol,
+          javaPackage,
+          javaMultipleFiles,
+          outerClassName,
+        )
       }
 
       // Find actual occurrences in javaDoc that match this field
       javaDoc.occurrences.foreach { occ =>
+        val isOwnerMatch =
+          occ.symbol.contains(s"/$javaClassName#") ||
+            occ.symbol.startsWith(s"$javaClassName#") ||
+            occ.symbol.contains(s"#$javaClassName#")
         if (
-          occ.symbol.contains(s"/$javaClassName#") &&
+          isOwnerMatch &&
           javaMethodNames.exists(m =>
             occ.symbol.contains(s"#$m(") || occ.symbol.endsWith(s"#$m().")
           )
@@ -424,4 +589,47 @@ object ProtoJavaSymbolMapper {
    */
   private def snakeToCamel(snakeCase: String): String =
     snakeCase.split("_").map(_.capitalize).mkString
+
+  private def addSymbolMapping(
+      result: scala.collection.mutable.Map[String, String],
+      javaSymbol: String,
+      protoSymbol: String,
+      javaPackage: String,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
+  ): Unit = {
+    result(javaSymbol) = protoSymbol
+    singleFileOuterClassVariant(
+      javaSymbol,
+      javaPackage,
+      javaMultipleFiles,
+      outerClassName,
+    ).foreach { alt =>
+      result(alt) = protoSymbol
+    }
+  }
+
+  private def singleFileOuterClassVariant(
+      javaSymbol: String,
+      javaPackage: String,
+      javaMultipleFiles: Boolean,
+      outerClassName: String,
+  ): Option[String] = {
+    if (javaMultipleFiles || outerClassName.isEmpty) {
+      None
+    } else {
+      val javaPrefix =
+        if (javaPackage.nonEmpty) javaPackage.replace('.', '/') + "/"
+        else ""
+      if (javaSymbol.startsWith(javaPrefix)) {
+        val suffix = javaSymbol.stripPrefix(javaPrefix)
+        if (suffix.startsWith(s"$outerClassName#")) None
+        else Some(s"$javaPrefix$outerClassName#$suffix")
+      } else if (javaSymbol.startsWith(s"$outerClassName#")) {
+        None
+      } else {
+        Some(s"$outerClassName#$javaSymbol")
+      }
+    }
+  }
 }

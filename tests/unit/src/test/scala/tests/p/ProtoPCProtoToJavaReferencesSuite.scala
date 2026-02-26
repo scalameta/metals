@@ -366,6 +366,143 @@ class ProtoPCProtoToJavaReferencesSuite
     } yield ()
   }
 
+  test("proto-to-proto-qualified-type-references") {
+    // Find-refs on proto message should include qualified type usages in other proto files.
+    // Regression for semanticdb.proto -> mbt.proto references (e.g. Range).
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/semanticdb.proto
+           |syntax = "proto3";
+           |package scala.meta.internal.semanticdb;
+           |option java_package = "scala.meta.internal.jsemanticdb";
+           |message Range {
+           |  int32 start_line = 1;
+           |}
+           |/a/src/main/proto/mbt.proto
+           |syntax = "proto3";
+           |package scala.meta.internal.mbt;
+           |import "semanticdb.proto";
+           |message SymbolInformation {
+           |  scala.meta.internal.semanticdb.Range definition_range = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/semanticdb.proto")
+      _ <- server.didOpen("a/src/main/proto/mbt.proto")
+      _ <- server.assertReferencesSubquery(
+        "a/src/main/proto/semanticdb.proto",
+        "message Ran@@ge {",
+        """|a/src/main/proto/mbt.proto:5:34: reference
+           |  scala.meta.internal.semanticdb.Range definition_range = 1;
+           |                                 ^^^^^
+           |a/src/main/proto/semanticdb.proto:4:9: reference
+           |message Range {
+           |        ^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("proto-message-references-single-file-java-outer-class") {
+    // Find-refs on proto message should include Java references when java_multiple_files=false
+    // and Java symbols are nested under the generated outer class.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/semanticdb.proto
+           |syntax = "proto3";
+           |package scala.meta.internal.semanticdb;
+           |option java_package = "scala.meta.internal.jsemanticdb";
+           |option java_outer_classname = "Semanticdb";
+           |option java_multiple_files = false;
+           |message Signature {
+           |  string value = 1;
+           |}
+           |/a/src/main/java/com/example/SemanticdbConsumer.java
+           |package com.example;
+           |import scala.meta.internal.jsemanticdb.Semanticdb.Signature;
+           |public class SemanticdbConsumer {
+           |  public Signature consume(Signature value) {
+           |    return value;
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/semanticdb.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/SemanticdbConsumer.java")
+      _ <- server.assertReferencesSubquery(
+        "a/src/main/proto/semanticdb.proto",
+        "message Signat@@ure {",
+        """|a/src/main/java/com/example/SemanticdbConsumer.java:2:51: reference
+           |import scala.meta.internal.jsemanticdb.Semanticdb.Signature;
+           |                                                  ^^^^^^^^^
+           |a/src/main/java/com/example/SemanticdbConsumer.java:4:10: reference
+           |  public Signature consume(Signature value) {
+           |         ^^^^^^^^^
+           |a/src/main/java/com/example/SemanticdbConsumer.java:4:28: reference
+           |  public Signature consume(Signature value) {
+           |                           ^^^^^^^^^
+           |a/src/main/proto/semanticdb.proto:6:9: reference
+           |message Signature {
+           |        ^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("proto-message-references-single-file-java-default-outer-class") {
+    // Find-refs on proto message should include Java references when
+    // java_multiple_files=false and java_outer_classname is omitted.
+    // This mirrors semanticdb.proto-style setup where Java uses OuterClass.NestedType.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/semanticdb.proto
+           |syntax = "proto3";
+           |package scala.meta.internal.semanticdb;
+           |option java_package = "scala.meta.internal.jsemanticdb";
+           |message Signature {
+           |  string value = 1;
+           |}
+           |/a/src/main/java/com/example/SemanticdbConsumer.java
+           |package com.example;
+           |import scala.meta.internal.jsemanticdb.Semanticdb.Signature;
+           |public class SemanticdbConsumer {
+           |  public Signature consume(Signature value) {
+           |    return value;
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/semanticdb.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/SemanticdbConsumer.java")
+      _ <- server.assertReferencesSubquery(
+        "a/src/main/proto/semanticdb.proto",
+        "message Signat@@ure {",
+        """|a/src/main/java/com/example/SemanticdbConsumer.java:2:51: reference
+           |import scala.meta.internal.jsemanticdb.Semanticdb.Signature;
+           |                                                  ^^^^^^^^^
+           |a/src/main/java/com/example/SemanticdbConsumer.java:4:10: reference
+           |  public Signature consume(Signature value) {
+           |         ^^^^^^^^^
+           |a/src/main/java/com/example/SemanticdbConsumer.java:4:28: reference
+           |  public Signature consume(Signature value) {
+           |                           ^^^^^^^^^
+           |a/src/main/proto/semanticdb.proto:4:9: reference
+           |message Signature {
+           |        ^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("rpc-method-references") {
     // Find-refs on proto RPC should include Java stub method calls and ImplBase overrides
     cleanWorkspace()

@@ -17,13 +17,22 @@ public final class JavaOutlineGenerator implements CodeGenerator {
 
   private static final String STUB = "throw new UnsupportedOperationException(\"outline stub\")";
   private final String javaPackagePrefix;
+  private final String defaultOuterClassName;
 
   public JavaOutlineGenerator() {
-    this("");
+    this("", "OuterClass");
   }
 
   public JavaOutlineGenerator(String javaPackagePrefix) {
+    this(javaPackagePrefix, "OuterClass");
+  }
+
+  public JavaOutlineGenerator(String javaPackagePrefix, String defaultOuterClassName) {
     this.javaPackagePrefix = normalizePrefix(javaPackagePrefix);
+    this.defaultOuterClassName =
+        defaultOuterClassName == null || defaultOuterClassName.trim().isEmpty()
+            ? "OuterClass"
+            : defaultOuterClassName.trim();
   }
 
   @Override
@@ -1550,8 +1559,8 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       }
     }
 
-    // Generate from filename (not available here, use default)
-    return "OuterClass";
+    // Fall back to caller-provided default (typically derived from proto filename).
+    return defaultOuterClassName;
   }
 
   private boolean getJavaMultipleFiles(ProtoFile file) {

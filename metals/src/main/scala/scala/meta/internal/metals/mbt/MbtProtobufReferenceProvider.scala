@@ -278,7 +278,11 @@ final class MbtProtobufReferenceProvider(
     val javaMatchingOccurrenceBaseMap: Map[String, String] =
       (for {
         symbol <- toQuerySymbols.iterator
-        expanded = SymbolAlternatives.expand(Symbol(symbol))
+        original = Symbol(symbol)
+        expanded = SymbolAlternatives.expand(original).filter { alt =>
+          val altSymbol = Symbol(alt)
+          altSymbol.displayName == original.displayName || alt == symbol
+        }
         alternative <- expanded
       } yield alternative -> symbol).toMap
 
@@ -379,8 +383,37 @@ final class MbtProtobufReferenceProvider(
     var processedCandidates = 0
 
     def processDoc(doc: s.TextDocument): Unit = {
+      val isProtoDoc = doc.uri.toAbsolutePath.isProtoFilename
       val symbolInfos: Map[String, s.SymbolInformation] =
         doc.symbols.iterator.map(info => info.symbol -> info).toMap
+      val docLines: Array[String] =
+        if (isProtoDoc)
+          doc.uri.toAbsolutePath
+            .toInputFromBuffers(buffers)
+            .text
+            .linesIterator
+            .toArray
+        else
+          Array.empty[String]
+
+      def protobufTokenAt(range: s.Range): Option[String] = {
+        if (!isProtoDoc) None
+        else {
+          val line = range.startLine
+          if (
+            line < 0 || line >= docLines.length || range.startCharacter < 0 ||
+            range.endCharacter < range.startCharacter
+          ) None
+          else {
+            val lineText = docLines(line)
+            val end =
+              math.min(range.endCharacter, lineText.length)
+            val start =
+              math.min(range.startCharacter, end)
+            Some(lineText.substring(start, end))
+          }
+        }
+      }
 
       def addLocation(symbol: String, location: l.Location): Unit = {
         referenceResults.get(symbol).foreach { locations =>
@@ -424,6 +457,8 @@ final class MbtProtobufReferenceProvider(
             javaMatchingOccurrence.get(occ.symbol)
           }
         }
+        if !isProtoDoc || protobufTokenAt(range)
+          .contains(Symbol(matchSymbol).displayName)
         if occ.role.isReference || occ.symbol == matchSymbol
       } {
         val location = range.toLocation(doc.uri)

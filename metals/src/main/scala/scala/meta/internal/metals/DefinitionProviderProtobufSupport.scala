@@ -62,7 +62,7 @@ final class DefinitionProviderProtobufSupport(
         protoDoc.symbols.iterator.filter { protoSym =>
           val protoSymSuffix =
             symbolSuffixAfterPackage(Symbol(protoSym.getSymbol()))
-          symSuffix == protoSymSuffix
+          symbolSuffixMatches(symSuffix, protoSymSuffix)
         },
       ).iterator
     } yield new Location(
@@ -149,6 +149,22 @@ final class DefinitionProviderProtobufSupport(
       else loop(s.owner, s.displayName.toLowerCase :: acc)
     }
     loop(sym, Nil)
+  }
+
+  private def symbolSuffixMatches(
+      lhs: List[String],
+      rhs: List[String],
+  ): Boolean = {
+    lhs == rhs || endsWithSuffix(lhs, rhs) || endsWithSuffix(rhs, lhs)
+  }
+
+  private def endsWithSuffix(
+      full: List[String],
+      suffix: List[String],
+  ): Boolean = {
+    suffix.nonEmpty &&
+    full.lengthCompare(suffix.length) >= 0 &&
+    full.takeRight(suffix.length) == suffix
   }
 
   /**
