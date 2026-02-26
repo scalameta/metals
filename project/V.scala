@@ -83,6 +83,8 @@ object V {
 
   val qdox = "2.2.0"
 
+  val grpcVersion = "1.68.0"
+
   val sbt2Version = "2.0.0-RC8"
 
   val guava = "com.google.guava" % "guava" % "33.5.0-jre"

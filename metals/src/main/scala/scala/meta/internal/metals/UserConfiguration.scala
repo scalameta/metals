@@ -61,6 +61,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
+    bazelNativePath: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -159,6 +160,7 @@ case class UserConfiguration(
         )
       ),
       optStringField("mcpClient", mcpClient),
+      optStringField("bazelNativePath", bazelNativePath),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -887,6 +889,8 @@ object UserConfiguration {
 
     val mcpClient = getStringKey("mcp-client")
 
+    val bazelNativePath = getStringKey("bazel-native-path")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -923,6 +927,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
+          bazelNativePath,
         )
       )
     } else {

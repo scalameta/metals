@@ -135,6 +135,9 @@ object TestGroups {
     "tests.worksheets.Issue7090LspSuite",
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
+    "tests.bazelnative.BazelNativeBepTranslatorSuite",
+    "tests.bazelnative.BazelNativeBesServerSuite",
+    "tests.bazelnative.BazelNativeDiscoverySuite",
   )
 
   val numberOfShards = 4

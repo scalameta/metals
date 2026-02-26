@@ -143,6 +143,10 @@ final class BuildTools(
     BazelBuildTool.workspaceSupportsBsp(_)
   )
   def isBazel: Boolean = bazelProject.isDefined
+  def bazelNativeProject: Option[AbsolutePath] = searchForBuildTool(
+    BazelBuildTool.workspaceSupportsBsp(_)
+  )
+  def isBazelNative: Boolean = bazelNativeProject.isDefined
 
   def isInBsp(path: AbsolutePath): Boolean =
     path.isFile && path.parent.filename == ".bsp" &&
@@ -177,6 +181,7 @@ final class BuildTools(
       SbtBuildTool.name,
       MillBuildTool.bspName,
       BazelBuildTool.bspName,
+      BazelNativeBuildTool.bspName,
     ) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
@@ -208,6 +213,7 @@ final class BuildTools(
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
       BazelBuildTool(userConfig, workspace),
+      BazelNativeBuildTool(userConfig, workspace),
     )
   }
 
@@ -219,6 +225,7 @@ final class BuildTools(
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"
     if (isBazel) buf += "Bazel"
+    if (isBazelNative) buf += "Bazel Native"
     buf.result()
   }
 
@@ -235,6 +242,7 @@ final class BuildTools(
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
     bazelProject.foreach(buf += BazelBuildTool(userConfig, _))
+    bazelNativeProject.foreach(buf += BazelNativeBuildTool(userConfig, _))
     buf.addAll(customBsps)
 
     buf.result()
@@ -259,6 +267,12 @@ final class BuildTools(
       Some(MillBuildTool.name)
     else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
       Some(BazelBuildTool.name)
+    else if (
+      bazelNativeProject.exists(
+        BazelNativeBuildTool.isBazelNativeRelatedPath(_, path)
+      )
+    )
+      Some(BazelNativeBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
       if (knownBsps(name) && !ScalaCli.names(name)) None
@@ -309,5 +323,6 @@ object BuildTools {
     MillBuildTool.name,
     ScalaCliBuildTool.name,
     BazelBuildTool.name,
+    BazelNativeBuildTool.name,
   )
 }

@@ -206,6 +206,40 @@ object MillServerInitializer extends BuildServerInitializer {
   }
 }
 
+object BazelNativeServerInitializer extends BuildServerInitializer {
+  this: BaseLspSuite =>
+  override def initialize(
+      workspace: AbsolutePath,
+      server: TestingServer,
+      client: TestingClient,
+      expectError: Boolean,
+      userConfig: UserConfiguration,
+      workspaceFolders: Option[List[String]] = None,
+  )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    for {
+      initializeResult <- server.initialize()
+      _ = client.generateBspAndConnect = GenerateBspAndConnect.yes
+      _ = client.chooseBuildTool = { actions =>
+        actions
+          .find(_.getTitle == "bazel-native")
+          .getOrElse(actions.head)
+      }
+      _ = client.selectBspServer = { items =>
+        items
+          .find(_.getTitle().contains("bazel-native"))
+          .getOrElse(items.head)
+      }
+      _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
+    } yield {
+      if (!expectError) {
+        server.assertBuildServerConnection()
+      }
+      initializeResult
+    }
+  }
+}
+
 object BazelServerInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
