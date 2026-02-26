@@ -84,6 +84,7 @@ class ProtobufDefinitionLspSuite
             |    .withTags(List("tag1", "tag2"))
             |    .withExampleType(ExampleType.EXAMPLE_TYPE_1)
             |  def name = example.name
+            |  def typ = example.exampleType
             |  def handle(service: ExampleService): Unit = {
             |    service.getExample(GetExampleRequest())
             |  }
@@ -115,6 +116,16 @@ class ProtobufDefinitionLspSuite
         """|a/src/main/protobuf/example.proto:9:10: definition
            |  string name = 1;
            |         ^^^^
+           |""".stripMargin,
+        includeLocation = isProtobufLocation,
+      )
+      // Snake-case field (example_type -> exampleType): accessing via val
+      _ <- server.assertDefinition(
+        main,
+        "example.exampleTy@@pe",
+        """|a/src/main/protobuf/example.proto:11:15: definition
+           |  ExampleType example_type = 3;
+           |              ^^^^^^^^^^^^
            |""".stripMargin,
         includeLocation = isProtobufLocation,
       )

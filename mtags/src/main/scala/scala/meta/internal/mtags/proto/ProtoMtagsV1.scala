@@ -471,12 +471,28 @@ class ProtoMtagsV1(
   private def skipFieldType(token: ProtobufToken): ProtobufToken = {
     var current = token
 
+    // Support fully-qualified types like ".foo.bar.Baz".
+    if (current.tpe == ProtobufToken.DOT) {
+      current = scanner.nextToken()
+    }
+
     if (isFieldType(current)) {
       // Emit fuzzy reference for user-defined types (IDENTIFIER)
       if (current.tpe == ProtobufToken.IDENTIFIER && includeFuzzyReferences) {
         emitTypeReference(current)
       }
       current = scanner.nextToken()
+
+      // Consume dotted type segments in qualified user-defined types.
+      while (current.tpe == ProtobufToken.DOT) {
+        current = scanner.nextToken()
+        if (current.tpe == ProtobufToken.IDENTIFIER) {
+          if (includeFuzzyReferences) {
+            emitTypeReference(current)
+          }
+          current = scanner.nextToken()
+        }
+      }
 
       // Handle map<K, V> syntax
       if (current.tpe == ProtobufToken.LEFT_ANGLE) {

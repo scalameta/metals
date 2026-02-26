@@ -4,6 +4,7 @@ import java.{util => ju}
 
 import scala.util.control.NonFatal
 
+import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -56,9 +57,14 @@ final class DefinitionProviderProtobufSupport(
       protoDoc <- mbt.document(workspace.resolve(source)).iterator
       sym = Symbol(result.symbol.stripSuffix("apply()."))
       symSuffix = symbolSuffixAfterPackage(sym)
-      protoSym <- protoDoc.symbols.iterator
-      protoSymSuffix = symbolSuffixAfterPackage(Symbol(protoSym.getSymbol()))
-      if symSuffix == protoSymSuffix
+      protoSym <- selectBestProtoSymbol(
+        sym,
+        protoDoc.symbols.iterator.filter { protoSym =>
+          val protoSymSuffix =
+            symbolSuffixAfterPackage(Symbol(protoSym.getSymbol()))
+          symSuffix == protoSymSuffix
+        },
+      ).iterator
     } yield new Location(
       protoDoc.file.toURI.toString(),
       protoSym.getDefinitionRange().toLspRange,
@@ -144,6 +150,40 @@ final class DefinitionProviderProtobufSupport(
     }
     loop(sym, Nil)
   }
+
+  /**
+   * Proto symbol suffix matching can be ambiguous (for example, `exampleType`
+   * may match both enum type `ExampleType` and generated field accessor
+   * `exampleType`). Prefer the symbol whose kind and display name best match
+   * the original query symbol.
+   */
+  private def selectBestProtoSymbol(
+      querySym: Symbol,
+      candidates: Iterator[Mbt.SymbolInformation],
+  ): Option[Mbt.SymbolInformation] = {
+    val all = candidates.toList
+    if (all.isEmpty) None
+    else {
+      val queryName = normalizeName(querySym.displayName)
+      Some(all.maxBy { info =>
+        val candidate = Symbol(info.getSymbol())
+        val kindMatches =
+          (querySym.isMethod && candidate.isMethod) ||
+            (querySym.isType && candidate.isType)
+        val exactNameMatch = candidate.displayName == querySym.displayName
+        val normalizedNameMatch =
+          normalizeName(candidate.displayName) == queryName
+        (
+          if (kindMatches) 1 else 0,
+          if (exactNameMatch) 1 else 0,
+          if (normalizedNameMatch) 1 else 0,
+        )
+      })
+    }
+  }
+
+  private def normalizeName(name: String): String =
+    name.replace("_", "").toLowerCase(ju.Locale.ROOT)
 
   private def findProtoClassFromJavaSymbol(
       protoPath: AbsolutePath,

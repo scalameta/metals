@@ -35,4 +35,8 @@
 //         ^^^^^^ definition example/Outer#withNested(). METHOD(val)
      Inner.DeepNested deep = 3;
 //   ^^^^^ reference Inner:
+//         ^^^^^^^^^^ reference DeepNested:
+//                    ^^^^ definition example/Outer#deep(). METHOD(val)
+//                    ^^^^ definition example/Outer#getDeep(). METHOD(val)
+//                    ^^^^ definition example/Outer#withDeep(). METHOD(val)
    }

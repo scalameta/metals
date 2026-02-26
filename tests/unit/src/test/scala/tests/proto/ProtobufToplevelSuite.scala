@@ -278,6 +278,19 @@ class ProtobufToplevelSuite extends BaseProtobufToplevelSuite {
   )
 
   check(
+    "qualified-type-with-field-option",
+    """
+     syntax = "proto2";
+     message ExampleRequest {
+       optional org.example.shared.SyncConfig sync_config = 6 [(custom.data_label) = DATA_LABEL_PUBLIC];
+     }
+   """,
+    """|ExampleRequest#
+       |ExampleRequest#sync_config().
+       |""".stripMargin,
+  )
+
+  check(
     "deeplyNestedStructures",
     """
      message Organization {
