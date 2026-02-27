@@ -654,7 +654,7 @@ class SbtBloopLspSuite
       _ = assertNoDiff(
         server.workspaceDefinitions,
         """|/build.sbt
-           |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ "2.13.18"
+           |scalaVersion/*Keys.scala*/ :=/*Structure.scala*/ "3.8.2"
            |val hello/*L1*/ = "Hello"
            |libraryDependencies/*Keys.scala*/ ++=/*Structure.scala*/ Seq/*;GenericCompanion.scala;Seq.scala*/()
            |
@@ -662,7 +662,7 @@ class SbtBloopLspSuite
            |/project/MetaValues.scala
            |import scala.util.Success/*Try.scala*/
            |object MetaValues/*L1*/ {
-           |  val scalaVersion/*L2*/ = "2.13.18"
+           |  val scalaVersion/*L2*/ = "3.8.2"
            |}
            |  
            |""".stripMargin,
@@ -740,7 +740,7 @@ class SbtBloopLspSuite
       _ = assertNoDiagnostics()
       _ <- server.assertInlayHints(
         "build.sbt",
-        s"""|scalaVersion := "2.13.18"
+        s"""|scalaVersion := "3.8.2"
             |val hello/*: String<<java/lang/String#>>*/ = "Hello"
             |libraryDependencies ++= Seq/*[Nothing<<scala/Nothing#>>]*/()/*(appendSeq<<sbt/Append.appendSeq().>>)*/
             |
