@@ -18,7 +18,7 @@ by clicking on this badge
 [![Install Metals extension](https://img.shields.io/badge/metals-vscode-blue.png)](vscode:extension/scalameta.metals)
 or via the VS Code editor:
 
-![install stable version](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/Qew0fNH.png?raw=true)
+![install stable version](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/Qew0fNH.png)
 
 Next, open a directory containing your Scala code. The extension activates when
 the main directory contains `build.sbt` or `build.sc` file, a Scala file is
@@ -32,14 +32,14 @@ with [SNAPSHOT](#SNAPSHOT) releases of Metals server. Using pre-release versions
 may result in less stable experience and it is not intented for beginners.
 Pre-release versions follow `major.minor.PATCH` versioning.
 
-![Install the pre-release extension](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/CzOTleE.png?raw=true)
+![Install the pre-release extension](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/CzOTleE.png)
 
 ```scala mdoc:editor:vscode
 Update the "Sbt Script" setting to use a custom `sbt` script instead of the
 default Metals launcher if you need further customizations like reading environment
 variables.
 
-![Sbt Launcher](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/NuwEBe4.png?raw=true)
+![Sbt Launcher](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/NuwEBe4.png)
 ```
 
 ```scala mdoc:command-palette:vscode
@@ -79,7 +79,7 @@ variable, if the variable is not set is falls to using the Metals's JDK.
 - `Java Home` - path to project's JDK's Home. Note: this setting isn't respected
   for `Bazel`.
 
-![Java Home setting](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/sKrPKk2.png?raw=true)
+![Java Home setting](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/sKrPKk2.png)
 
 Note: Project's JDK version should be greater or equal to Metals's server JDK
 version for features like completions to work correctly.
@@ -143,15 +143,15 @@ to take effect.
 Run the "Explorer: Focus on Outline View" command to open the symbol outline for
 the current file in the sidebar.
 
-![Document Symbols Outline](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/T0kVJsr.gif?raw=true)
+![Document Symbols Outline](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/T0kVJsr.gif)
 
 Run the "Open Symbol in File" command to search for a symbol in the current file
 without opening the sidebar.
 
-![Document Symbols Command](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/0PJ4brd.png?raw=true)
+![Document Symbols Command](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/0PJ4brd.png)
 
 As you type, the symbol outline is also visible at the top of the file.
-![Document Symbols Outline](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/L217n4q.png?raw=true)
+![Document Symbols Outline](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/L217n4q.png)
 
 ```scala mdoc:parent-lenses:vscode
 
@@ -187,7 +187,7 @@ project's modules. From this panel it's possible to
 - run/debug test
 - navigate to test's definition.
 
-![test-explorer](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/Z3VtS0O.gif?raw=true)
+![test-explorer](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/Z3VtS0O.gif)
 
 ```scala mdoc:test-frameworks
 
@@ -196,11 +196,11 @@ project's modules. From this panel it's possible to
 If you encounter an error, create an
 [issue](https://github.com/scalameta/metals/issues).
 
-![test-explorer](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/Z3VtS0O.gif?raw=true)
+![test-explorer](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/Z3VtS0O.gif)
 
 ### via code lenses
 
-![lenses](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/5nTnrcS.png?raw=true)
+![lenses](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/5nTnrcS.png)
 
 For each main or test class Metals shows two code lenses `run | debug` or
 `test | test debug`, which show up above the definition as a kind of virtual
@@ -332,26 +332,26 @@ nativeConfig ~= { c =>
 
 ## On type formatting for multiline string formatting
 
-![on-type](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/a0O2vCs.gif?raw=true)
+![on-type](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/a0O2vCs.gif)
 
 To properly support adding `|` in multiline strings we are using the
 `onTypeFormatting` method. The functionality is enabled by default, but you can
 disable/enable `onTypeFormatting` inside Visual Studio Code settings by checking
 `Editor: Format On Type`:
 
-![on-type-setting](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/s6nT9rC.png?raw=true)
+![on-type-setting](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/s6nT9rC.png)
 
 ## Formatting on paste for multiline strings
 
 Whenever text is paste into a multiline string with `|` it will be properly
 formatted by Metals:
 
-![format-on-paste](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/fF0XWYC.gif?raw=true)
+![format-on-paste](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/fF0XWYC.gif)
 
 This feature is enabled by default. If you need to disable/enable formatting on
 paste in Visual Studio Code you can check the `Editor: Format On Paste` setting:
 
-![format-on-paste-setting](https://github.com/scalameta/gh-pages-images/blob/master/metals/vscode/rMrk27F.png?raw=true)
+![format-on-paste-setting](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/vscode/rMrk27F.png)
 
 ```scala mdoc:worksheet:vscode
 

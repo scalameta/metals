@@ -34,7 +34,7 @@ editor to abstract over various programming languages by a shared way to
 communicate to a language server, BSP allows IDE's to abstract over various
 build servers. A typical example of this can be illustrated like so:
 
-![LSP BSP example](https://github.com/scalameta/gh-pages-images/blob/master/metals/2020-11-06-sbt-BSP-support/0RRUDlU.png?raw=true)
+![LSP BSP example](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2020-11-06-sbt-BSP-support/0RRUDlU.png)
 
 You have your editor (Emacs) communicating with Metals via LSP, and then Metals
 communicating with a BSP server (Bloop) via BSP. This communication over BSP can
@@ -115,7 +115,7 @@ like this:
 
 ### `metals.generate-bsp-config`
 
-![generate-bsp-config](https://github.com/scalameta/gh-pages-images/blob/master/metals/2020-11-06-sbt-BSP-support/kBNbtzI.gif?raw=true)
+![generate-bsp-config](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2020-11-06-sbt-BSP-support/kBNbtzI.gif)
 
 ### `.bsp/sbt.json` already exists
 
@@ -125,7 +125,7 @@ and choose sbt. For example, using `coc-metals`, it looks like this:
 
 ### `metals.bsp-switch`
 
-![bsp-switch](https://github.com/scalameta/gh-pages-images/blob/master/metals/2020-11-06-sbt-BSP-support/6tY2ofL.gif?raw=true)
+![bsp-switch](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2020-11-06-sbt-BSP-support/6tY2ofL.gif)
 
 ### Switching back to Bloop
 
@@ -139,7 +139,7 @@ Doctor.
 
 ### Doctor reset
 
-![Doctor](https://github.com/scalameta/gh-pages-images/blob/master/metals/2020-11-06-sbt-BSP-support/YEGfEGB.png?raw=true)
+![Doctor](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2020-11-06-sbt-BSP-support/YEGfEGB.png)
 
 ## Conclusion
 

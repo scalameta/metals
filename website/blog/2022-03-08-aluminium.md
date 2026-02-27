@@ -84,7 +84,7 @@ in one view information such as:
 - projects classpath
 - and many more
 
-![display-build-target-info](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-03-08-aluminium/XGyJEsl.gif?raw=true)
+![display-build-target-info](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-03-08-aluminium/XGyJEsl.gif)
 
 ## [vscode] View source jar files as virtual docs
 
@@ -99,7 +99,7 @@ Together with Metals tab, this feature could be used to browse through your
 dependencies' sources. Just run the `Metals: Reveal Active File in Side Bar`
 command and browse through both dependencies and source code seamlessly.
 
-![virtual-docs-navigation](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-03-08-aluminium/HsuW8Hn.gif?raw=true)
+![virtual-docs-navigation](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-03-08-aluminium/HsuW8Hn.gif)
 
 Currently, `Metals: Reveal Active File in Side Bar` works only for Scala 2.
 
@@ -108,7 +108,7 @@ Currently, `Metals: Reveal Active File in Side Bar` works only for Scala 2.
 Completion suggestions for different Scala keywords now work with most of the
 Scala 3 keywords. This includes for example `given` and `enum`, it should also
 work even if defining things in toplevel without a wrapping class or object.
-![keyword-completions](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-03-08-aluminium/4BUxCDK.gif?raw=true)
+![keyword-completions](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-03-08-aluminium/4BUxCDK.gif)
 
 Another improvement for Scala 3 completions is better support for showing scope
 completions, when writing in an empty line. Previously, we would not show
@@ -135,7 +135,7 @@ JUnit4.
 Currently, this feature **only works when using Bloop as your build server**,
 but in a future release there will be support added for sbt as well.
 
-![test-explorer-single-tests](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-03-08-aluminium/FbgSTGr.gif?raw=true)
+![test-explorer-single-tests](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-03-08-aluminium/FbgSTGr.gif)
 
 ## [vscode] Add mirror setting to help coursier set up
 
@@ -147,7 +147,7 @@ repo1.maven.org.
 Thanks to [tgodzik](https://github.com/tgodzik)'s work from now on it's possible
 to define `metals.coursierMirror` property.
 
-![coursier-mirror](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-03-08-aluminium/iLB079M.png?raw=true)
+![coursier-mirror](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-03-08-aluminium/iLB079M.png)
 
 More information about mirrors can be found at
 [coursier documentation](https://get-coursier.io/blog/#mirrors).

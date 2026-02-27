@@ -67,7 +67,7 @@ possible to decompile class files using Lee Benfield's
 CFR decompiles class files to java, which is much more readable than using
 `javap`.
 
-![cfr](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-01-12-aluminium/exDFGyT.gif?raw=true)
+![cfr](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-01-12-aluminium/exDFGyT.gif)
 
 In the future this might help in go to definition for jars that do not have a
 corresponding source jar, which is what Metals uses today.
@@ -181,7 +181,7 @@ Lenses. The new UI adds a testing view, which shows all test suites declared in
 project's modules. From this panel it's also possible to run/debug test or to
 navigate to test's definition.
 
-![test-explorer](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-01-12-aluminium/Z3VtS0O.gif?raw=true)
+![test-explorer](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-01-12-aluminium/Z3VtS0O.gif)
 
 Code Lenses are still the default in other editors and can be brought back by
 setting `"metals.testUserInterface": "Code Lenses"`
@@ -200,7 +200,7 @@ limitation was mostly due to the lack of proper UI options in different editors.
 Recently, we've managed to work around it by using command links that can be
 rendered in the hover and will bring the user to the right definition.
 
-![synthetic-def](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-01-12-aluminium/YyHVmLX.gif?raw=true)
+![synthetic-def](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-01-12-aluminium/YyHVmLX.gif)
 
 Editor support: Visual Studio Code, Sublime Text
 
@@ -212,7 +212,7 @@ targets. Currently the biggest missing piece is interactive compiler that would
 allow us to properly support features such as completions, hover or signature
 help.
 
-![java](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-01-12-aluminium/SJvLTRL.gif?raw=true)
+![java](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-01-12-aluminium/SJvLTRL.gif)
 
 This was possible thanks to using the Java semanticdb plugin included in
 [lsif Java project](https://github.com/sourcegraph/lsif-java) from
