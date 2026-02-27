@@ -37,6 +37,7 @@ import org.eclipse.{lsp4j => l}
  * `*                    https://code.visualstudio.com/api/extension-guides/virtual-documents
  * @param openFilesOnRenameProvider whether or not the client supports opening files on rename.
  * @param quickPickProvider if the client implements `metals/quickPick`.
+ * @param readClipboardProvider if the client implements `metals/readClipboard` (e.g. for "New Scala File > From clipboard").
  * @param renameFileThreshold amount of files that should be opened during rename if client
  *                            is a `openFilesOnRenameProvider`.
  * @param statusBarProvider if the client implements `metals/status`.
@@ -70,6 +71,7 @@ final case class InitializationOptions(
     isVirtualDocumentSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
+    readClipboardProvider: Option[Boolean],
     renameFileThreshold: Option[Int],
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
@@ -99,6 +101,7 @@ object InitializationOptions {
 
   val Default: InitializationOptions = InitializationOptions(
     CompilerInitializationOptions.default,
+    None,
     None,
     None,
     None,
@@ -171,6 +174,7 @@ object InitializationOptions {
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
+      readClipboardProvider = jsonObj.getBooleanOption("readClipboardProvider"),
       renameFileThreshold = jsonObj.getIntOption("renameFileThreshold"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),

@@ -30,6 +30,7 @@ import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsQuickPickResult
+import scala.meta.internal.metals.clients.language.RawMetalsReadClipboardResult
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
@@ -141,6 +142,9 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   }
   var quickPickHandler: MetalsQuickPickParams => RawMetalsQuickPickResult = {
     (_: MetalsQuickPickParams) => RawMetalsQuickPickResult(cancelled = true)
+  }
+  var readClipboardHandler: () => RawMetalsReadClipboardResult = { () =>
+    RawMetalsReadClipboardResult(value = null)
   }
   var onMetalsStatus: MetalsStatusParams => Unit = { (_: MetalsStatusParams) =>
     ()
@@ -497,6 +501,11 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       messageRequests.addLast(params.prompt)
       inputBoxHandler(params)
     }
+  }
+
+  override def rawMetalsReadClipboard()
+      : CompletableFuture[RawMetalsReadClipboardResult] = {
+    CompletableFuture.completedFuture(readClipboardHandler())
   }
 
   override def rawMetalsQuickPick(

@@ -90,6 +90,11 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
     underlying.rawMetalsInputBox(params)
   }
 
+  override def rawMetalsReadClipboard()
+      : CompletableFuture[RawMetalsReadClipboardResult] = {
+    underlying.rawMetalsReadClipboard()
+  }
+
   override def rawMetalsQuickPick(
       params: MetalsQuickPickParams
   ): CompletableFuture[RawMetalsQuickPickResult] = {

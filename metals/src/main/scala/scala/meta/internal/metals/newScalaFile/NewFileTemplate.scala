@@ -39,4 +39,8 @@ object NewFileTemplate {
   }
 
   def empty = new NewFileTemplate(cursorMarker)
+
+  /** Template from raw content with cursor at end (e.g. for paste-from-clipboard). */
+  def fromContent(content: String): NewFileTemplate =
+    NewFileTemplate(content + cursorMarker)
 }

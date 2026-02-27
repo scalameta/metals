@@ -609,6 +609,7 @@ object ServerCommands {
         |The currently allowed Scala file types that can be passed in are:
         |
         | - ${NewFileTypes.ScalaFile.id} (${NewFileTypes.ScalaFile.label})
+        | - ${NewFileTypes.FromClipboard.id} (${NewFileTypes.FromClipboard.label})
         | - ${NewFileTypes.Class.id} (${NewFileTypes.Class.label})
         | - ${NewFileTypes.CaseClass.id} (${NewFileTypes.CaseClass.label})
         | - ${NewFileTypes.Enum.id} (${NewFileTypes.Enum.label})
