@@ -13,7 +13,7 @@ import scala.meta.internal.metals.mcp.MetalsMcpServer
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport
-import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper
+import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
 import io.modelcontextprotocol.spec.McpSchema.TextContent
