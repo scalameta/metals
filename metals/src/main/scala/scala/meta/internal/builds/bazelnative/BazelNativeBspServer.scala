@@ -376,10 +376,12 @@ class BazelNativeBspServer(
           val label = extractLabel(id)
           val info = targetData.get(label)
 
-          val opts = info
+          val rawOpts = info
             .flatMap(_.scalaTargetInfo)
             .map(_.scalacOpts)
             .getOrElse(Nil)
+
+          val opts = withSemanticdbTargetroot(rawOpts, label)
 
           val cp = info
             .flatMap(_.jvmTargetInfo)
@@ -757,6 +759,35 @@ class BazelNativeBspServer(
         java.nio.file.Paths.get(executionRoot).resolve(fl.path)
       else workspace.resolve(fl.path).toNIO
     resolved.getParent.toUri.toString
+  }
+
+  /**
+   * rules_scala with `enable_semanticdb = True` produces .semanticdb
+   * files under `bazel-bin/<pkg>/_semanticdb/<name>/` but does not
+   * expose that path through scalac options.  Inject the flag so
+   * Metals can locate them.
+   */
+  private def withSemanticdbTargetroot(
+      opts: List[String],
+      label: String,
+  ): List[String] = {
+    if (
+      bazelBinDir.isEmpty ||
+      opts.exists(_.startsWith("-P:semanticdb:targetroot:"))
+    )
+      return opts
+
+    val idx = label.indexOf(':')
+    if (idx < 0) return opts
+    val pkg = label.substring(0, idx).stripPrefix("//")
+    val name = label.substring(idx + 1)
+
+    val binPath = java.nio.file.Paths.get(bazelBinDir)
+    val sdbPath =
+      if (pkg.nonEmpty)
+        binPath.resolve(pkg).resolve("_semanticdb").resolve(name)
+      else binPath.resolve("_semanticdb").resolve(name)
+    opts :+ s"-P:semanticdb:targetroot:$sdbPath"
   }
 
   @SuppressWarnings(Array("unused"))
