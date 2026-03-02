@@ -964,13 +964,27 @@ abstract class MetalsLspService(
   }
 
   def sync(
-      uri: String
+      uri: String,
+      mode: String,
   ): Future[Unit] = {
-    syncStatusReporter.onSync(uri)
-    buildTargets
-      .bspInverseSources(uri.toAbsolutePath)
-      .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
-      .ignoreValue
+    syncStatusReporter.onSync(uri, mode)
+    val path = uri.toAbsolutePath
+    buildTargets.bspSync(path, mode) match {
+      case Some(syncFuture) =>
+        syncFuture
+          .map(result =>
+            onBuildTargetChanges(
+              new b.DidChangeBuildTarget(result.getChanges)
+            )
+          )
+          .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
+      case None =>
+        // TODO(apatti): fallback to using inverse sources, clean up once fully migrated
+        buildTargets
+          .bspInverseSources(path)
+          .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
+          .ignoreValue
+    }
   }
 
   protected def maybeCompileOnDidFocus(

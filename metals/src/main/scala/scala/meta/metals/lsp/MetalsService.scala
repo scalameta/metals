@@ -18,6 +18,11 @@ import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 
+case class MetalsSyncParams(
+    uri: String,
+    mode: String,
+)
+
 /**
  * Interface which describes metals specific LSP requests and notifications which are
  * implemented by Metals.
@@ -67,5 +72,4 @@ trait MetalsService {
   def sync(
       params: AnyRef
   ): CompletableFuture[Unit]
-
 }

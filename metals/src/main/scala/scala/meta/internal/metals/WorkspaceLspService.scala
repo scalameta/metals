@@ -49,6 +49,7 @@ import scala.meta.internal.tvp.TreeViewParentResult
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.lsp.MetalsSyncParams
 import scala.meta.metals.lsp.ScalaLspService
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
@@ -821,28 +822,38 @@ class WorkspaceLspService(
   override def sync(
       params: AnyRef
   ): CompletableFuture[Unit] = {
-    val uriOpt: Option[String] = params match {
+    val paramsOpt: Option[MetalsSyncParams] = params match {
       case string: String =>
-        Option(string)
-      case (h: String) :: Nil =>
-        Option(h)
-      case _ =>
-        scribe.warn(
-          s"Unexpected notification params received for didFocusTextDocument: $params"
-        )
-        None
+        // TODO(apatti): This is the legacy case with simple string, remove once fully migrated
+        Option(string).map(MetalsSyncParams(_, null))
+      case other =>
+        // New case with MetalsSyncParams
+        val gson = new Gson()
+        val obj = gson.toJsonTree(other).getAsJsonObject
+        (obj.get("uri"), obj.get("mode")) match {
+          case (uri: JsonPrimitive, mode: JsonPrimitive)
+              if uri.isString && mode.isString =>
+            Option(MetalsSyncParams(uri.getAsString, mode.getAsString))
+          case (uri: JsonPrimitive, _) if uri.isString =>
+            Option(MetalsSyncParams(uri.getAsString, null))
+          case _ => None
+        }
+      case _ => None
     }
-    uriOpt match {
-      case Some(uri) =>
-        if (uri.startsWith("file://")) {
-          getServiceFor(uri).sync(uri).asJava
+    paramsOpt match {
+      case Some(params) =>
+        if (params.uri.startsWith("file://")) {
+          getServiceFor(params.uri).sync(params.uri, params.mode).asJava
         } else {
           scribe.warn(
-            s"Can only sync file:// URIs, got $uri"
+            s"Can only sync file:// URIs, got ${params.uri}"
           )
           CompletableFuture.completedFuture(())
         }
       case None =>
+        scribe.warn(
+          s"Unexpected notification params received for sync: $params"
+        )
         CompletableFuture.completedFuture(())
     }
   }
@@ -977,7 +988,7 @@ class WorkspaceLspService(
         uri match {
           case Some(u) =>
             val connectFuture = (for {
-              _ <- getServiceFor(u).sync(u)
+              _ <- getServiceFor(u).sync(u, null)
               // NOTE(olafurpg): Trigger a "Connect to build server" here so
               // that this command returns only once we have successfully
               // connected to the synced build server. I'm not 100% sure how,

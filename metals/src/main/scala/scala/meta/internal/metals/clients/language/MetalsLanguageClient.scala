@@ -5,7 +5,6 @@ import javax.annotation.Nullable
 
 import scala.util.Try
 
-import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
@@ -118,7 +117,7 @@ case class RawMetalsQuickPickResult(
     @Nullable cancelled: java.lang.Boolean = null,
 )
 
-class MetalsSyncStatusParams private (
+class MetalsSyncStatusParams(
     val document: String,
     val status: String,
     @Nullable val kind: String,
@@ -126,77 +125,6 @@ class MetalsSyncStatusParams private (
     @Nullable val tooltip: String,
     @Nullable val command: String,
 )
-
-object MetalsSyncStatusParams {
-  sealed trait Status {
-    def name: String
-    def kind: String = null
-    def text: String = null
-    def tooltip: String = null
-    def command: String = null
-  }
-  case object Synced extends Status {
-    def name = "synced"
-    override def text = "$(check) Synced"
-    override def kind = "info"
-    override def tooltip =
-      "Document is synced with build server. Click to sync again."
-    override def command = ClientCommands.SyncFile.id
-  }
-  case object Syncing extends Status {
-    def name = "syncing"
-    override def text = "$(sync~spin) Syncing"
-    override def kind = "warning"
-    override def tooltip =
-      "Syncing document with build server. Click to see logs."
-    override def command = ClientCommands.ToggleLogs.id
-  }
-  case object Indexing extends Status {
-    def name = "indexing"
-    override def text = "$(sync~spin) Indexing"
-    override def kind = "warning"
-    override def tooltip =
-      "Indexing project. Click to see logs."
-    override def command = ClientCommands.ToggleLogs.id
-  }
-  case object Busy extends Status {
-    def name = "busy"
-    override def text = "$(sync~spin) Busy"
-    override def kind = "warning"
-    override def tooltip =
-      "The build server is busy importing the build. Click to see logs."
-    override def command = ClientCommands.ToggleLogs.id
-  }
-  case object Untracked extends Status {
-    def name = "untracked"
-    override def text = "$(alert) Untracked"
-    override def kind = "warning"
-    override def tooltip =
-      "Document is not synced with build server. Click to sync."
-    override def command = ClientCommands.SyncFile.id
-  }
-  case object Unknown extends Status {
-    def name = "unknown"
-    override def text = "$(circle-slash) Unknown"
-    override def kind = "error"
-    override def tooltip =
-      "File is not part of any build target. Click to try again."
-    override def command = ClientCommands.SyncFile.id
-  }
-  case object Hidden extends Status {
-    def name = "hidden"
-  }
-
-  def apply(document: String, status: Status): MetalsSyncStatusParams =
-    new MetalsSyncStatusParams(
-      document,
-      status.name,
-      status.kind,
-      status.text,
-      status.tooltip,
-      status.command,
-    )
-}
 
 /**
  * Arguments for the metals/status notification.
