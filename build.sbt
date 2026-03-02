@@ -53,7 +53,9 @@ inThisBuild(
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    javaHome := Some(
+      file(sys.env.getOrElse("JAVA_HOME", sys.props("java.home")))
+    ),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
     scalaVersion := V.scala213,
