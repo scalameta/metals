@@ -36,15 +36,14 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.StatusCode
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.modelcontextprotocol.json.jackson.JacksonMcpJsonMapper
+import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider
+import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult
 import io.modelcontextprotocol.spec.McpSchema.Content
-import io.modelcontextprotocol.spec.McpSchema.LoggingLevel
-import io.modelcontextprotocol.spec.McpSchema.LoggingMessageNotification
 import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 import io.modelcontextprotocol.spec.McpSchema.Tool
@@ -131,16 +130,6 @@ class MetalsMcpServer(
     asyncServer.addTool(createGenerateScalafixRuleTool()).subscribe()
     asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
     asyncServer.addTool(createListScalafixRulesTool()).subscribe()
-
-    // Log server initialization
-    asyncServer.loggingNotification(
-      LoggingMessageNotification
-        .builder()
-        .level(LoggingLevel.INFO)
-        .logger(serverName)
-        .data(s"Server initialized for project: $projectName")
-        .build()
-    )
 
     // serve servlet
     val servletDeployment = Servlets
@@ -250,24 +239,35 @@ class MetalsMcpServer(
           .slowConnectToBuildServer(forceImport = true)
           .map {
             case BuildChange.None =>
-              new CallToolResult(createContent("No changes detected"), false)
+              CallToolResult
+                .builder()
+                .content(createContent("No changes detected"))
+                .isError(false)
+                .build()
             case BuildChange.Reconnected =>
-              new CallToolResult(
-                createContent("Reconnected to build server"),
-                false,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent("Reconnected to build server"))
+                .isError(false)
+                .build()
             case BuildChange.Reloaded =>
-              new CallToolResult(createContent("Build reloaded"), false)
+              CallToolResult
+                .builder()
+                .content(createContent("Build reloaded"))
+                .isError(false)
+                .build()
             case BuildChange.Failed =>
-              new CallToolResult(
-                createContent("Failed to reimport build."),
-                false,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent("Failed to reimport build."))
+                .isError(true)
+                .build()
             case BuildChange.Cancelled =>
-              new CallToolResult(
-                createContent("Reimport cancelled by the user."),
-                false,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent("Reimport cancelled by the user."))
+                .isError(true)
+                .build()
           }
           .toMono
       },
@@ -299,7 +299,11 @@ class MetalsMcpServer(
               } else {
                 s"Compilation successful with warnings:\n$diagnosticsOutput"
               }
-            new CallToolResult(createContent(content), false)
+            CallToolResult
+              .builder()
+              .content(createContent(content))
+              .isError(false)
+              .build()
           }
           .toMono
       },
@@ -332,10 +336,15 @@ class MetalsMcpServer(
             .compileFile(path)
             .map {
               case c if c.getStatusCode == StatusCode.CANCELLED =>
-                new CallToolResult(
-                  createContent("Compilation cancelled or incorrect file path"),
-                  false,
-                )
+                CallToolResult
+                  .builder()
+                  .content(
+                    createContent(
+                      "Compilation cancelled or incorrect file path"
+                    )
+                  )
+                  .isError(true)
+                  .build()
               case _ =>
                 lazy val buildTarget = buildTargets.inverseSources(path)
 
@@ -381,16 +390,21 @@ class MetalsMcpServer(
                   .orElse(inUpstreamModulesErrors)
                   .getOrElse("Compilation successful.")
 
-                new CallToolResult(createContent(content), false)
+                CallToolResult
+                  .builder()
+                  .content(createContent(content))
+                  .isError(false)
+                  .build()
             }
             .toMono
         } else {
           Future
             .successful(
-              new CallToolResult(
-                createContent(s"Error: File not found: $path"),
-                true,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent(s"Error: File not found: $path"))
+                .isError(true)
+                .build()
             )
             .toMono
         }
@@ -440,12 +454,17 @@ class MetalsMcpServer(
                 }
                 .orElse(upstreamModulesErros(target.id, "module"))
                 .getOrElse("Compilation successful.")
-              new CallToolResult(createContent(result), false)
+              CallToolResult
+                .builder()
+                .content(createContent(result))
+                .isError(false)
+                .build()
             case None =>
-              new CallToolResult(
-                createContent(s"Error: Module not found: $module"),
-                true,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent(s"Error: Module not found: $module"))
+                .isError(true)
+                .build()
           }
         }.toMono
       },
@@ -537,11 +556,19 @@ class MetalsMcpServer(
         (result match {
           case Right(value) =>
             value.map(content =>
-              new CallToolResult(createContent(content), false)
+              CallToolResult
+                .builder()
+                .content(createContent(content))
+                .isError(false)
+                .build()
             )
           case Left(error) =>
             Future.successful(
-              new CallToolResult(createContent(s"Error: $error"), true)
+              CallToolResult
+                .builder()
+                .content(createContent(s"Error: $error"))
+                .isError(true)
+                .build()
             )
         }).toMono
       },
@@ -584,10 +611,11 @@ class MetalsMcpServer(
         queryEngine
           .globSearch(query, Set.empty, path)
           .map(result =>
-            new CallToolResult(
-              createContent(result.map(_.show).mkString("\n")),
-              false,
-            )
+            CallToolResult
+              .builder()
+              .content(createContent(result.map(_.show).mkString("\n")))
+              .isError(false)
+              .build()
           )
           .toMono
       },
@@ -650,10 +678,11 @@ class MetalsMcpServer(
         queryEngine
           .globSearch(query, symbolTypesSet, path)
           .map(result =>
-            new CallToolResult(
-              createContent(result.map(_.show).mkString("\n")),
-              false,
-            )
+            CallToolResult
+              .builder()
+              .content(createContent(result.map(_.show).mkString("\n")))
+              .isError(false)
+              .build()
           )
           .toMono
       },
@@ -713,10 +742,11 @@ class MetalsMcpServer(
         queryEngine
           .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
           .map(result =>
-            new CallToolResult(
-              createContent(result.show),
-              false,
-            )
+            CallToolResult
+              .builder()
+              .content(createContent(result.show))
+              .isError(false)
+              .build()
           )
           .toMono
       },
@@ -767,12 +797,17 @@ class MetalsMcpServer(
         Future {
           queryEngine.getDocumentation(fqcn, pathOpt, moduleOpt) match {
             case Some(result) =>
-              new CallToolResult(createContent(result.show), false)
+              CallToolResult
+                .builder()
+                .content(createContent(result.show))
+                .isError(false)
+                .build()
             case None =>
-              new CallToolResult(
-                createContent("Error: Symbol not found"),
-                false,
-              )
+              CallToolResult
+                .builder()
+                .content(createContent("Error: Symbol not found"))
+                .isError(true)
+                .build()
           }
         }.toMono
       },
@@ -822,7 +857,11 @@ class MetalsMcpServer(
         val moduleOpt = arguments.getOptNoEmptyString("module")
         Future {
           val result = queryEngine.getUsages(fqcn, pathOpt, moduleOpt)
-          new CallToolResult(createContent(result.show(projectPath)), false)
+          CallToolResult
+            .builder()
+            .content(createContent(result.show(projectPath)))
+            .isError(false)
+            .build()
         }.toMono
       },
     )
@@ -929,7 +968,11 @@ class MetalsMcpServer(
 
         Future
           .successful(
-            new CallToolResult(createContent(completions), false)
+            CallToolResult
+              .builder()
+              .content(createContent(completions))
+              .isError(false)
+              .build()
           )
           .toMono
       },
@@ -959,10 +1002,15 @@ class MetalsMcpServer(
             buildTargets.allBuildTargetIds.flatMap(
               buildTargets.jvmTarget(_).map(_.displayName)
             )
-          new CallToolResult(
-            s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}",
-            false,
-          )
+          CallToolResult
+            .builder()
+            .content(
+              createContent(
+                s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
+              )
+            )
+            .isError(false)
+            .build()
         }.toMono
       },
     )
@@ -1000,17 +1048,21 @@ class MetalsMcpServer(
             .flatMap {
               case Left(errorMessage) =>
                 Future.successful(
-                  new CallToolResult(
-                    createContent(errorMessage),
-                    true,
-                  )
+                  CallToolResult
+                    .builder()
+                    .content(createContent(errorMessage))
+                    .isError(true)
+                    .build()
                 )
               case Right(Nil) =>
                 Future.successful(
-                  new CallToolResult(
-                    createContent("File is already properly formatted."),
-                    false,
-                  )
+                  CallToolResult
+                    .builder()
+                    .content(
+                      createContent("File is already properly formatted.")
+                    )
+                    .isError(false)
+                    .build()
                 )
               case Right(formattedText) =>
                 languageClient
@@ -1025,22 +1077,26 @@ class MetalsMcpServer(
                   )
                   .asScala
                   .map { _ =>
-                    new CallToolResult(
-                      createContent(s"$path was formatted"),
-                      false,
-                    )
+                    CallToolResult
+                      .builder()
+                      .content(createContent(s"$path was formatted"))
+                      .isError(false)
+                      .build()
                   }
             }
             .toMono
         } else {
           Future
             .successful(
-              new CallToolResult(
-                createContent(
-                  s"Error: File not found or not a Scala file: $path"
-                ),
-                true,
-              )
+              CallToolResult
+                .builder()
+                .content(
+                  createContent(
+                    s"Error: File not found or not a Scala file: $path"
+                  )
+                )
+                .isError(true)
+                .build()
             )
             .toMono
         }
@@ -1143,17 +1199,21 @@ class MetalsMcpServer(
           )
         resultingFuture.map {
           case Right(res) =>
-            new CallToolResult(
-              createContent(
-                s"Created and ran Scalafix rule ${res.ruleName} successfully"
-              ),
-              false,
-            )
+            CallToolResult
+              .builder()
+              .content(
+                createContent(
+                  s"Created and ran Scalafix rule ${res.ruleName} successfully"
+                )
+              )
+              .isError(false)
+              .build()
           case Left(error) =>
-            new CallToolResult(
-              createContent(errorMessage(error)),
-              true,
-            )
+            CallToolResult
+              .builder()
+              .content(createContent(errorMessage(error)))
+              .isError(true)
+              .build()
         }.toMono
       },
     )
@@ -1197,13 +1257,18 @@ class MetalsMcpServer(
         }
         runResult
           .map { _ =>
-            new CallToolResult(
-              createContent("Scalafix rule run successfully"),
-              false,
-            )
+            CallToolResult
+              .builder()
+              .content(createContent("Scalafix rule run successfully"))
+              .isError(false)
+              .build()
           }
           .recover { case error =>
-            new CallToolResult(createContent(error.getMessage), true)
+            CallToolResult
+              .builder()
+              .content(createContent(error.getMessage))
+              .isError(true)
+              .build()
           }
           .toMono
       },
@@ -1234,12 +1299,15 @@ class MetalsMcpServer(
             allRules.toList.sortBy(_._1).map { case (ruleName, description) =>
               s"- $ruleName: $description"
             }
-          new CallToolResult(
-            createContent(
-              s"Available scalafix rules:\n${content.mkString("\n")}"
-            ),
-            false,
-          )
+          CallToolResult
+            .builder()
+            .content(
+              createContent(
+                s"Available scalafix rules:\n${content.mkString("\n")}"
+              )
+            )
+            .isError(false)
+            .build()
         }.toMono
       },
     )
@@ -1249,9 +1317,10 @@ class MetalsMcpServer(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
   ): BiFunction[
     McpAsyncServerExchange,
-    JMap[String, Object],
+    CallToolRequest,
     Mono[CallToolResult],
-  ] = { (exchange, arguments) =>
+  ] = { (exchange, request) =>
+    val arguments = request.arguments()
     try {
       f(exchange, arguments)
     } catch {
@@ -1261,12 +1330,15 @@ class MetalsMcpServer(
             e.getStackTrace.mkString("\n")
         )
         Mono.just(
-          new CallToolResult(
-            createContent(
-              s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
-            ),
-            true,
-          )
+          CallToolResult
+            .builder()
+            .content(
+              createContent(
+                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
+              )
+            )
+            .isError(true)
+            .build()
         )
     }
   }
