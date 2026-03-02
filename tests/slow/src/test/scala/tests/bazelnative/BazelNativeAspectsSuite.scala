@@ -187,6 +187,20 @@ class BazelNativeAspectsSuite
         item.getClassDirectory.nonEmpty,
         "Expected non-empty class directory",
       )
+      val opts = item.getOptions.asScala
+      assert(
+        opts.exists(_.startsWith("-P:semanticdb:targetroot:")),
+        s"Expected -P:semanticdb:targetroot: in options, got: ${opts.mkString(", ")}",
+      )
+      val targetroot = opts
+        .find(_.startsWith("-P:semanticdb:targetroot:"))
+        .get
+        .stripPrefix("-P:semanticdb:targetroot:")
+      assert(
+        targetroot.contains("_semanticdb") &&
+          targetroot.contains("mylib"),
+        s"Expected targetroot containing _semanticdb/mylib, got: $targetroot",
+      )
     }
   }
 
@@ -416,6 +430,20 @@ class BazelNativeAspectsSuite
         ),
         s"Expected scala-library in classpath, got: " +
           cp.take(5).mkString(", ") + "...",
+      )
+      val opts = item.getOptions.asScala
+      assert(
+        opts.exists(_.startsWith("-P:semanticdb:targetroot:")),
+        s"Expected -P:semanticdb:targetroot: in options, got: ${opts.mkString(", ")}",
+      )
+      val targetroot = opts
+        .find(_.startsWith("-P:semanticdb:targetroot:"))
+        .get
+        .stripPrefix("-P:semanticdb:targetroot:")
+      assert(
+        targetroot.contains("_semanticdb") &&
+          targetroot.contains("mylib"),
+        s"Expected targetroot containing _semanticdb/mylib, got: $targetroot",
       )
     }
   }
