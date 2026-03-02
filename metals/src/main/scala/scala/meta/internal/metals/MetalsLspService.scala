@@ -854,14 +854,6 @@ abstract class MetalsLspService(
       workspaceSymbols.indexClasspath()
     }
 
-    userConfig.fallbackScalaVersion.foreach { version =>
-      if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
-        val params =
-          Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(version)
-        languageClient.showMessage(params)
-      }
-    }
-
     if (userConfig.fallbackScalaVersion != old.fallbackScalaVersion) {
       compilers.restartFallbackCompilers()
     }
