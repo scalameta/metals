@@ -567,6 +567,12 @@ class JavaOutlineParitySuite extends FunSuite {
         implBaseContent.contains("public abstract class SearchServiceImplBase"),
         "ImplBase file should declare a top-level abstract class (not static)",
       )
+      assert(
+        implBaseContent.contains(
+          "extends SearchServiceGrpc.SearchServiceImplBase"
+        ),
+        "Top-level ImplBase should extend the nested gRPC ImplBase to preserve type compatibility",
+      )
     }
   }
 

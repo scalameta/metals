@@ -1198,6 +1198,47 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
     } yield ()
   }
 
+  // Regression test for PLAT-154771: we generate a standalone top-level
+  // GreeterImplBase for java_multiple_files=true, and it must stay assignment-
+  // compatible with the nested GreeterGrpc.GreeterImplBase type.
+  test("service-implbase-compatible-with-grpc-nested-type") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/greeter.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message HelloRequest {
+           |  string name = 1;
+           |}
+           |message HelloReply {
+           |  string message = 1;
+           |}
+           |service Greeter {
+           |  rpc SayHello (HelloRequest) returns (HelloReply);
+           |}
+           |/a/src/main/java/com/example/GreeterCompat.java
+           |package com.example;
+           |import com.example.api.jproto.GreeterGrpc;
+           |import com.example.api.jproto.GreeterImplBase;
+           |public class GreeterCompat {
+           |  public GreeterGrpc.GreeterImplBase upcast(GreeterImplBase impl) {
+           |    return impl;
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/greeter.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/GreeterCompat.java")
+      _ <- server.didFocus("a/src/main/java/com/example/GreeterCompat.java")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("rpc-stub-method-goto-definition") {
     // Test: stub.sayHello(request) -> rpc SayHello in proto service
     cleanWorkspace()

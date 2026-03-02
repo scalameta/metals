@@ -195,18 +195,27 @@ public final class JavaOutlineGenerator implements CodeGenerator {
    * Generate a standalone top-level {ServiceName}ImplBase.java file for multiple_files mode
    * (PLAT-154278). Real grpc-java nests ImplBase inside {ServiceName}Grpc, but many Java files
    * import it as a top-level class (e.g. {@code import
-   * com.example.jproto.PolicyEngineServiceImplBase}). Generating the standalone file lets Metals
-   * resolve that import without a spurious "cannot find symbol" error.
+   * com.example.jproto.PolicyEngineServiceImplBase}). We generate a top-level alias that extends
+   * the nested gRPC ImplBase so code mixing both forms stays assignment-compatible (PLAT-154771),
+   * while still resolving the top-level import.
    */
   private OutputFile generateImplBaseFile(ServiceDecl svc, String javaPackage, String packagePath) {
     StringBuilder sb = new StringBuilder();
-    String implBaseName = svc.name().value() + "ImplBase";
+    String serviceName = svc.name().value();
+    String implBaseName = serviceName + "ImplBase";
 
     if (!javaPackage.isEmpty()) {
       sb.append("package ").append(javaPackage).append(";\n\n");
     }
 
-    generateImplBaseClass(sb, svc, "", false);
+    sb.append("public abstract class ")
+        .append(implBaseName)
+        .append(" extends ")
+        .append(serviceName)
+        .append("Grpc.")
+        .append(implBaseName)
+        .append(" {\n");
+    sb.append("}\n");
 
     return outputFile(packagePath + implBaseName + ".java", sb.toString());
   }
