@@ -13,7 +13,6 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
 import com.google.gson.GsonBuilder
-import com.google.gson.JsonParser
 
 import scala.build.bsp.WrappedSourcesParams
 import scala.build.bsp.WrappedSourcesResult
@@ -21,15 +20,15 @@ import scala.build.bsp.WrappedSourcesItem
 
 /**
  * In-process BSP server that translates BSP requests into Bazel commands
- * and pushes BES events back as BSP notifications.
- *
- * This runs within the Metals JVM and communicates via piped streams.
+ * and uses aspect-collected metadata for rich IDE support.
  */
 class BazelNativeBspServer(
     workspace: AbsolutePath,
     process: BazelNativeProcess,
     besServer: BazelNativeBesServer,
     translator: BazelNativeBepTranslator,
+    aspectsManager: BazelNativeAspectsManager,
+    targetData: BazelNativeTargetData,
 )(implicit ec: ExecutionContext)
     extends MetalsBuildServer
     with BazelNativeBspClient {
@@ -38,70 +37,42 @@ class BazelNativeBspServer(
 
   private val gson = new GsonBuilder().create()
 
-  @volatile private var initialized = false
   @volatile private var bazelVersion = "unknown"
   @volatile private var detectedScalaVersion: Option[String] = None
   @volatile private var executionRoot: String = ""
-  @volatile private var outputBase: String = ""
   @volatile private var bazelBinDir: String = ""
   @volatile private var buildClient: Option[ch.epfl.scala.bsp4j.BuildClient] =
     None
-  private val discoveredTargets =
-    new java.util.concurrent.ConcurrentHashMap[
-      BuildTargetIdentifier,
-      BuildTarget,
-    ]()
-  private val sourceToTargets =
-    new java.util.concurrent.ConcurrentHashMap[
-      String,
-      java.util.Set[BuildTargetIdentifier],
-    ]()
-  private val targetClasspaths =
-    new java.util.concurrent.ConcurrentHashMap[
-      BuildTargetIdentifier,
-      List[String],
-    ]()
 
-  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit = {
+  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit =
     buildClient = Some(client)
-  }
 
-  // -- BazelNativeBspClient implementation (receives BSP notifications from translator) --
+  // -- BazelNativeBspClient implementation --
 
   override def onBuildTaskStart(params: TaskStartParams): Unit =
     buildClient.foreach(_.onBuildTaskStart(params))
-
   override def onBuildTaskFinish(params: TaskFinishParams): Unit =
     buildClient.foreach(_.onBuildTaskFinish(params))
-
   override def onBuildTaskProgress(params: TaskProgressParams): Unit =
     buildClient.foreach(_.onBuildTaskProgress(params))
-
   override def onBuildPublishDiagnostics(
       params: PublishDiagnosticsParams
   ): Unit =
     buildClient.foreach(_.onBuildPublishDiagnostics(params))
-
   override def onBuildLogMessage(params: LogMessageParams): Unit =
     buildClient.foreach(_.onBuildLogMessage(params))
 
-  // -- BSP Server interface implementation --
+  // -- BSP lifecycle --
 
   override def buildInitialize(
       params: InitializeBuildParams
   ): CompletableFuture[InitializeBuildResult] = {
-    scribe.debug(
-      s"[BazelNative BSP] Request: buildInitialize"
-    )
+    scribe.debug("[BazelNative BSP] Request: buildInitialize")
     CompletableFuture.supplyAsync(
       () => {
-        val versionFuture = process.version()
         bazelVersion = scala.concurrent.Await.result(
-          versionFuture,
+          process.version(),
           scala.concurrent.duration.Duration(30, "s"),
-        )
-        scribe.debug(
-          s"[BazelNative BSP] Bazel version: $bazelVersion"
         )
 
         val infoMap = scala.concurrent.Await.result(
@@ -109,10 +80,15 @@ class BazelNativeBspServer(
           scala.concurrent.duration.Duration(30, "s"),
         )
         executionRoot = infoMap.getOrElse("execution_root", "")
-        outputBase = infoMap.getOrElse("output_base", "")
         bazelBinDir = infoMap.getOrElse("bazel-bin", "")
         scribe.info(
-          s"[BazelNative BSP] execution_root: $executionRoot, output_base: $outputBase, bazel-bin: $bazelBinDir"
+          s"[BazelNative BSP] execution_root=$executionRoot, bazel-bin=$bazelBinDir"
+        )
+
+        val scalaRuleset = aspectsManager.detectScalaRulesetName()
+        aspectsManager.materialize(scalaRuleset, bazelVersion)
+        scribe.info(
+          s"[BazelNative BSP] Aspect materialized, scala ruleset=${scalaRuleset.getOrElse("none")}"
         )
 
         val capabilities = new BuildServerCapabilities()
@@ -123,32 +99,27 @@ class BazelNativeBspServer(
         capabilities.setDependencyModulesProvider(true)
         capabilities.setCanReload(true)
         capabilities.setInverseSourcesProvider(true)
+        capabilities.setResourcesProvider(true)
 
-        val result = new InitializeBuildResult(
+        new InitializeBuildResult(
           "Bazel Native",
           bazelVersion,
           "2.1.0",
           capabilities,
         )
-        scribe.debug(
-          s"[BazelNative BSP] InitializeBuildResult: displayName=Bazel Native, version=$bazelVersion"
-        )
-        result
       },
       executor,
     )
   }
 
   override def onBuildInitialized(): Unit = {
-    scribe.debug(s"[BazelNative BSP] Build initialized")
-    initialized = true
+    scribe.debug("[BazelNative BSP] Build initialized")
   }
 
   override def buildShutdown(): CompletableFuture[Object] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildShutdown")
+    scribe.debug("[BazelNative BSP] Request: buildShutdown")
     CompletableFuture.supplyAsync(
       () => {
-        initialized = false
         besServer.shutdown()
         process.shutdown()
         null: Object
@@ -157,72 +128,29 @@ class BazelNativeBspServer(
     )
   }
 
-  override def onBuildExit(): Unit = {
-    scribe.debug(s"[BazelNative BSP] onBuildExit")
-  }
+  override def onBuildExit(): Unit =
+    scribe.debug("[BazelNative BSP] onBuildExit")
+
+  // -- Workspace targets --
 
   override def workspaceBuildTargets()
       : CompletableFuture[WorkspaceBuildTargetsResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: workspaceBuildTargets")
+    scribe.debug("[BazelNative BSP] Request: workspaceBuildTargets")
     CompletableFuture.supplyAsync(
       () => {
-        if (detectedScalaVersion.isEmpty) {
-          detectedScalaVersion = detectScalaVersion()
-          scribe.debug(
-            s"[BazelNative BSP] Detected Scala version: ${detectedScalaVersion.getOrElse("none")}"
-          )
-        }
+        runInitialSync()
 
-        val queryResult = scala.concurrent.Await.result(
-          process.query(
-            "kind('scala_library|scala_binary|scala_test|java_library|java_binary|java_test', //...)"
-          ),
-          scala.concurrent.duration.Duration(60, "s"),
-        )
-        val labels = queryResult.linesIterator.filter(_.startsWith("//")).toList
+        if (detectedScalaVersion.isEmpty)
+          detectedScalaVersion = deriveScalaVersion()
+
+        val targets = targetData.allTargets.values
+          .filter(info => isUserTarget(info.id))
+          .map(info => buildTarget(info))
+          .toList
+
         scribe.info(
-          s"[BazelNative BSP] Discovered ${labels.size} targets: ${labels.mkString(", ")}"
+          s"[BazelNative BSP] Returning ${targets.size} build targets"
         )
-        sourceToTargets.clear()
-        targetClasspaths.clear()
-
-        val classpathsByLabel = resolveAllTargetClasspaths()
-
-        val targets = labels.map { label =>
-          val id = new BuildTargetIdentifier(s"${workspace.toURI}?$label")
-          val target = new BuildTarget(
-            id,
-            Collections.emptyList(),
-            List("scala", "java").asJava,
-            Collections.emptyList(),
-            new BuildTargetCapabilities(),
-          )
-          target.setDisplayName(label)
-          target.setBaseDirectory(workspace.toURI.toString)
-          target.getCapabilities.setCanCompile(true)
-          target.getCapabilities.setCanRun(true)
-          target.getCapabilities.setCanTest(true)
-
-          detectedScalaVersion.foreach { sv =>
-            val scalaBt = new ScalaBuildTarget(
-              "org.scala-lang",
-              sv,
-              scalaBinaryVersion(sv),
-              ScalaPlatform.JVM,
-              Collections.emptyList(),
-            )
-            target.setDataKind(BuildTargetDataKind.SCALA)
-            target.setData(gson.toJsonTree(scalaBt))
-          }
-
-          classpathsByLabel.get(label).foreach { cp =>
-            targetClasspaths.put(id, cp)
-          }
-
-          indexSourcesForTarget(label, id)
-          discoveredTargets.put(id, target)
-          target
-        }
         new WorkspaceBuildTargetsResult(targets.asJava)
       },
       executor,
@@ -230,10 +158,10 @@ class BazelNativeBspServer(
   }
 
   override def workspaceReload(): CompletableFuture[Object] = {
-    scribe.debug(s"[BazelNative BSP] Request: workspaceReload")
+    scribe.debug("[BazelNative BSP] Request: workspaceReload")
     CompletableFuture.supplyAsync(
       () => {
-        discoveredTargets.clear()
+        targetData.clear()
         buildClient.foreach { client =>
           client.onBuildTargetDidChange(
             new DidChangeBuildTarget(Collections.emptyList())
@@ -245,6 +173,8 @@ class BazelNativeBspServer(
     )
   }
 
+  // -- Compile --
+
   override def buildTargetCompile(
       params: CompileParams
   ): CompletableFuture[CompileResult] = {
@@ -253,80 +183,75 @@ class BazelNativeBspServer(
       s"[BazelNative BSP] Request: buildTargetCompile, targets=${targets.size}"
     )
 
-    if (targets.isEmpty) {
-      CompletableFuture.completedFuture(new CompileResult(StatusCode.OK))
-    } else {
-      CompletableFuture.supplyAsync(
-        () => {
-          val originId =
-            Option(params.getOriginId).getOrElse(UUID.randomUUID().toString)
-          translator.setOriginId(originId)
-          translator.setTargets(targets)
-          translator.notifyBuildStarted(originId)
-
-          val labels = targets.map(extractLabel)
-          val besPort = besServer.port
-
-          var exitCode = 1
-          try {
-            exitCode = scala.concurrent.Await.result(
-              process
-                .build(labels, besPort, onStderr = translator.onBuildStderr),
-              scala.concurrent.duration.Duration(10, "min"),
-            )
-          } catch {
-            case e: Exception =>
-              scribe.error(s"[BazelNative BSP] Build failed: ${e.getMessage}")
-          } finally {
-            translator.notifyBuildFinished(originId, exitCode)
-            translator.clearState()
-          }
-
-          if (exitCode == 0) {
-            refreshClasspaths()
-          }
-
-          val statusCode =
-            if (exitCode == 0) StatusCode.OK else StatusCode.ERROR
-          val result = new CompileResult(statusCode)
-          result.setOriginId(originId)
-          result
-        },
-        executor,
+    if (targets.isEmpty)
+      return CompletableFuture.completedFuture(
+        new CompileResult(StatusCode.OK)
       )
-    }
+
+    CompletableFuture.supplyAsync(
+      () => {
+        val originId =
+          Option(params.getOriginId).getOrElse(UUID.randomUUID().toString)
+        translator.setOriginId(originId)
+        translator.setTargets(targets)
+        translator.notifyBuildStarted(originId)
+
+        val labels = targets.map(extractLabel)
+        val besPort = besServer.port
+
+        var exitCode = 1
+        try {
+          exitCode = scala.concurrent.Await.result(
+            process.build(
+              labels,
+              besPort,
+              extraFlags = aspectsManager.extraCompileFlags,
+              onStderr = translator.onBuildStderr,
+            ),
+            scala.concurrent.duration.Duration(10, "min"),
+          )
+        } catch {
+          case e: Exception =>
+            scribe.error(s"[BazelNative BSP] Build failed: ${e.getMessage}")
+        } finally {
+          translator.notifyBuildFinished(originId, exitCode)
+          translator.clearState()
+        }
+
+        refreshTargetData()
+
+        val statusCode =
+          if (exitCode == 0) StatusCode.OK else StatusCode.ERROR
+        val result = new CompileResult(statusCode)
+        result.setOriginId(originId)
+        result
+      },
+      executor,
+    )
   }
+
+  // -- Sources --
 
   override def buildTargetSources(
       params: SourcesParams
   ): CompletableFuture[SourcesResult] = {
-    scribe.info(s"[BazelNative BSP] Request: buildTargetSources")
+    scribe.debug("[BazelNative BSP] Request: buildTargetSources")
     CompletableFuture.supplyAsync(
       () => {
         val items = params.getTargets.asScala.map { targetId =>
           val label = extractLabel(targetId)
-          val sources = try {
-            val result = scala.concurrent.Await.result(
-              process.query(s"labels(srcs, $label)"),
-              scala.concurrent.duration.Duration(30, "s"),
-            )
-            result.linesIterator
-              .filter(_.nonEmpty)
-              .map { srcLabel =>
-                val uri = labelToFileUri(srcLabel)
-                scribe.info(
-                  s"[BazelNative BSP] Source: $srcLabel -> $uri"
-                )
-                new SourceItem(uri, SourceItemKind.FILE, false)
+          val info = targetData.get(label)
+          val sources = info
+            .map { i =>
+              val regular = i.sources.map { fl =>
+                new SourceItem(resolveSourceUri(fl), SourceItemKind.FILE, false)
               }
-              .toList
-          } catch {
-            case e: Exception =>
-              scribe.warn(
-                s"[BazelNative BSP] Failed to query sources for $label: ${e.getMessage}"
-              )
-              Nil
-          }
+              val generated = i.generatedSources.map { fl =>
+                new SourceItem(resolveOutputUri(fl), SourceItemKind.FILE, true)
+              }
+              regular ++ generated
+            }
+            .getOrElse(Nil)
           new SourcesItem(targetId, sources.asJava)
         }
         new SourcesResult(items.asJava)
@@ -335,19 +260,46 @@ class BazelNativeBspServer(
     )
   }
 
-  override def buildTargetDependencySources(
-      params: DependencySourcesParams
-  ): CompletableFuture[DependencySourcesResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetDependencySources")
+  // -- Resources --
+
+  override def buildTargetResources(
+      params: ResourcesParams
+  ): CompletableFuture[ResourcesResult] = {
+    scribe.debug("[BazelNative BSP] Request: buildTargetResources")
     CompletableFuture.supplyAsync(
       () => {
         val items = params.getTargets.asScala.map { targetId =>
-          val cp = Option(targetClasspaths.get(targetId)).getOrElse(Nil)
-          val sourceUris = cp.flatMap(findSourceJar).distinct
-          scribe.info(
-            s"[BazelNative BSP] dependencySources(${extractLabel(targetId)}): ${sourceUris.size} source jars from ${cp.size} classpath entries"
-          )
-          new DependencySourcesItem(targetId, sourceUris.asJava)
+          val info = targetData.get(extractLabel(targetId))
+          val uris = info
+            .map(_.resources.map(fl => resolveSourceUri(fl)))
+            .getOrElse(Nil)
+          new ResourcesItem(targetId, uris.asJava)
+        }
+        new ResourcesResult(items.asJava)
+      },
+      executor,
+    )
+  }
+
+  // -- Dependency sources --
+
+  override def buildTargetDependencySources(
+      params: DependencySourcesParams
+  ): CompletableFuture[DependencySourcesResult] = {
+    scribe.debug("[BazelNative BSP] Request: buildTargetDependencySources")
+    CompletableFuture.supplyAsync(
+      () => {
+        val items = params.getTargets.asScala.map { targetId =>
+          val info = targetData.get(extractLabel(targetId))
+          val sourceJarUris = info
+            .flatMap(_.jvmTargetInfo)
+            .map { jvm =>
+              jvm.jars.flatMap(_.sourceJars.map(resolveOutputUri)) ++
+                jvm.generatedJars.flatMap(_.sourceJars.map(resolveOutputUri))
+            }
+            .getOrElse(Nil)
+            .distinct
+          new DependencySourcesItem(targetId, sourceJarUris.asJava)
         }
         new DependencySourcesResult(items.asJava)
       },
@@ -355,59 +307,61 @@ class BazelNativeBspServer(
     )
   }
 
+  // -- Inverse sources --
+
   override def buildTargetInverseSources(
       params: InverseSourcesParams
   ): CompletableFuture[InverseSourcesResult] = {
-    scribe.info(s"[BazelNative BSP] Request: buildTargetInverseSources")
+    scribe.debug("[BazelNative BSP] Request: buildTargetInverseSources")
     CompletableFuture.supplyAsync(
       () => {
         val docUri = params.getTextDocument.getUri
-        val targets = Option(sourceToTargets.get(docUri))
-          .map(_.asScala.toList.asJava)
-          .getOrElse(Collections.emptyList[BuildTargetIdentifier]())
-        scribe.info(
-          s"[BazelNative BSP] inverseSources($docUri) -> ${targets.size()} targets, keys=${sourceToTargets.keySet().asScala.take(5)}"
-        )
-        new InverseSourcesResult(targets)
+        val matching = targetData.allTargets.collect {
+          case (label, info)
+              if info.sources.exists(fl => resolveSourceUri(fl) == docUri) =>
+            labelToTargetId(label)
+        }.toList
+        new InverseSourcesResult(matching.asJava)
       },
       executor,
     )
   }
 
+  // -- Clean --
+
   override def buildTargetCleanCache(
       params: CleanCacheParams
   ): CompletableFuture[CleanCacheResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetCleanCache")
+    scribe.debug("[BazelNative BSP] Request: buildTargetCleanCache")
     CompletableFuture.completedFuture(new CleanCacheResult(false))
   }
+
+  // -- Run / Test --
 
   override def buildTargetRun(
       params: RunParams
   ): CompletableFuture[RunResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetRun")
+    scribe.debug("[BazelNative BSP] Request: buildTargetRun")
     CompletableFuture.completedFuture(new RunResult(StatusCode.OK))
   }
 
   override def buildTargetTest(
       params: TestParams
   ): CompletableFuture[TestResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetTest")
+    scribe.debug("[BazelNative BSP] Request: buildTargetTest")
     CompletableFuture.completedFuture(new TestResult(StatusCode.OK))
   }
 
   override def debugSessionStart(
       params: DebugSessionParams
   ): CompletableFuture[DebugSessionAddress] = {
-    scribe.debug(
-      s"[BazelNative BSP] Request: debugSessionStart (not supported)"
-    )
-    val future = new CompletableFuture[DebugSessionAddress]()
-    future.completeExceptionally(
+    val f = new CompletableFuture[DebugSessionAddress]()
+    f.completeExceptionally(
       new UnsupportedOperationException(
         "Bazel Native does not support debugging yet"
       )
     )
-    future
+    f
   }
 
   // -- Scala BSP --
@@ -415,22 +369,31 @@ class BazelNativeBspServer(
   override def buildTargetScalacOptions(
       params: ScalacOptionsParams
   ): CompletableFuture[ScalacOptionsResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetScalacOptions")
+    scribe.debug("[BazelNative BSP] Request: buildTargetScalacOptions")
     CompletableFuture.completedFuture(
       new ScalacOptionsResult(
         params.getTargets.asScala.map { id =>
           val label = extractLabel(id)
-          val classDir = resolveClassDirectory(label)
-          val cp = Option(targetClasspaths.get(id)).getOrElse(Nil)
-          scribe.info(
-            s"[BazelNative BSP] scalacOptions($label): ${cp.size} classpath entries, classDir=$classDir"
-          )
-          new ScalacOptionsItem(
-            id,
-            Collections.emptyList(),
-            cp.asJava,
-            classDir,
-          )
+          val info = targetData.get(label)
+
+          val opts = info
+            .flatMap(_.scalaTargetInfo)
+            .map(_.scalacOpts)
+            .getOrElse(Nil)
+
+          val cp = info
+            .flatMap(_.jvmTargetInfo)
+            .map(classpathUris)
+            .getOrElse(Nil)
+
+          val classDir = info
+            .flatMap(_.jvmTargetInfo)
+            .flatMap(_.jars.headOption)
+            .flatMap(_.binaryJars.headOption)
+            .map(fl => resolveOutputParentUri(fl))
+            .getOrElse(fallbackClassDir(label))
+
+          new ScalacOptionsItem(id, opts.asJava, cp.asJava, classDir)
         }.asJava
       )
     )
@@ -439,16 +402,35 @@ class BazelNativeBspServer(
   override def buildTargetScalaMainClasses(
       params: ScalaMainClassesParams
   ): CompletableFuture[ScalaMainClassesResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetScalaMainClasses")
-    CompletableFuture.completedFuture(
-      new ScalaMainClassesResult(Collections.emptyList())
+    scribe.debug("[BazelNative BSP] Request: buildTargetScalaMainClasses")
+    CompletableFuture.supplyAsync(
+      () => {
+        val items = params.getTargets.asScala.map { id =>
+          val info = targetData.get(extractLabel(id))
+          val mainClasses = info
+            .flatMap(_.jvmTargetInfo)
+            .filter(_.mainClass.nonEmpty)
+            .map { jvm =>
+              val mc = new ScalaMainClass(
+                jvm.mainClass,
+                jvm.args.asJava,
+                jvm.jvmFlags.asJava,
+              )
+              List(mc)
+            }
+            .getOrElse(Nil)
+          new ScalaMainClassesItem(id, mainClasses.asJava)
+        }
+        new ScalaMainClassesResult(items.asJava)
+      },
+      executor,
     )
   }
 
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams
   ): CompletableFuture[ScalaTestClassesResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetScalaTestClasses")
+    scribe.debug("[BazelNative BSP] Request: buildTargetScalaTestClasses")
     CompletableFuture.completedFuture(
       new ScalaTestClassesResult(Collections.emptyList())
     )
@@ -459,19 +441,31 @@ class BazelNativeBspServer(
   override def buildTargetJavacOptions(
       params: JavacOptionsParams
   ): CompletableFuture[JavacOptionsResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetJavacOptions")
+    scribe.debug("[BazelNative BSP] Request: buildTargetJavacOptions")
     CompletableFuture.completedFuture(
       new JavacOptionsResult(
         params.getTargets.asScala.map { id =>
           val label = extractLabel(id)
-          val classDir = resolveClassDirectory(label)
-          val cp = Option(targetClasspaths.get(id)).getOrElse(Nil)
-          new JavacOptionsItem(
-            id,
-            Collections.emptyList(),
-            cp.asJava,
-            classDir,
-          )
+          val info = targetData.get(label)
+
+          val opts = info
+            .flatMap(_.jvmTargetInfo)
+            .map(_.javacOpts)
+            .getOrElse(Nil)
+
+          val cp = info
+            .flatMap(_.jvmTargetInfo)
+            .map(classpathUris)
+            .getOrElse(Nil)
+
+          val classDir = info
+            .flatMap(_.jvmTargetInfo)
+            .flatMap(_.jars.headOption)
+            .flatMap(_.binaryJars.headOption)
+            .map(fl => resolveOutputParentUri(fl))
+            .getOrElse(fallbackClassDir(label))
+
+          new JavacOptionsItem(id, opts.asJava, cp.asJava, classDir)
         }.asJava
       )
     )
@@ -482,27 +476,50 @@ class BazelNativeBspServer(
   override def buildTargetJvmRunEnvironment(
       params: JvmRunEnvironmentParams
   ): CompletableFuture[JvmRunEnvironmentResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetJvmRunEnvironment")
-    CompletableFuture.completedFuture(
-      new JvmRunEnvironmentResult(Collections.emptyList())
+    scribe.debug("[BazelNative BSP] Request: buildTargetJvmRunEnvironment")
+    CompletableFuture.supplyAsync(
+      () => {
+        val items = params.getTargets.asScala.map { id =>
+          jvmEnvironmentItem(id)
+        }
+        new JvmRunEnvironmentResult(items.asJava)
+      },
+      executor,
     )
   }
 
   override def buildTargetJvmTestEnvironment(
       params: JvmTestEnvironmentParams
   ): CompletableFuture[JvmTestEnvironmentResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetJvmTestEnvironment")
-    CompletableFuture.completedFuture(
-      new JvmTestEnvironmentResult(Collections.emptyList())
+    scribe.debug("[BazelNative BSP] Request: buildTargetJvmTestEnvironment")
+    CompletableFuture.supplyAsync(
+      () => {
+        val items = params.getTargets.asScala.map { id =>
+          jvmEnvironmentItem(id)
+        }
+        new JvmTestEnvironmentResult(items.asJava)
+      },
+      executor,
     )
   }
 
   override def buildTargetJvmCompileClasspath(
       params: JvmCompileClasspathParams
   ): CompletableFuture[JvmCompileClasspathResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
-    CompletableFuture.completedFuture(
-      new JvmCompileClasspathResult(Collections.emptyList())
+    scribe.debug("[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
+    CompletableFuture.supplyAsync(
+      () => {
+        val items = params.getTargets.asScala.map { id =>
+          val info = targetData.get(extractLabel(id))
+          val cp = info
+            .flatMap(_.jvmTargetInfo)
+            .map(_.transitiveCompileTimeJars.map(resolveOutputUri))
+            .getOrElse(Nil)
+          new JvmCompileClasspathItem(id, cp.asJava)
+        }
+        new JvmCompileClasspathResult(items.asJava)
+      },
+      executor,
     )
   }
 
@@ -511,15 +528,19 @@ class BazelNativeBspServer(
   override def buildTargetDependencyModules(
       params: DependencyModulesParams
   ): CompletableFuture[DependencyModulesResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetDependencyModules")
+    scribe.debug("[BazelNative BSP] Request: buildTargetDependencyModules")
     CompletableFuture.supplyAsync(
       () => {
         val items = params.getTargets.asScala.map { targetId =>
-          val cp = Option(targetClasspaths.get(targetId)).getOrElse(Nil)
-          val modules = cp.flatMap(buildDependencyModule)
-          scribe.info(
-            s"[BazelNative BSP] dependencyModules(${extractLabel(targetId)}): ${modules.size} modules from ${cp.size} classpath entries"
-          )
+          val info = targetData.get(extractLabel(targetId))
+          val modules = info
+            .flatMap(_.jvmTargetInfo)
+            .map { jvm =>
+              (jvm.jars ++ jvm.generatedJars).flatMap { outputs =>
+                outputs.binaryJars.flatMap(buildDependencyModule)
+              }
+            }
+            .getOrElse(Nil)
           new DependencyModulesItem(targetId, modules.asJava)
         }
         new DependencyModulesResult(items.asJava)
@@ -528,345 +549,248 @@ class BazelNativeBspServer(
     )
   }
 
-  private def buildDependencyModule(
-      classpathUri: String
-  ): Option[DependencyModule] = {
-    try {
-      val jarPath = java.nio.file.Paths.get(java.net.URI.create(classpathUri))
-      val fileName = jarPath.getFileName.toString
-      val baseName = fileName
-        .stripSuffix(".jar")
-        .stripSuffix("-stamped")
-
-      val artifacts = new java.util.ArrayList[MavenDependencyModuleArtifact]()
-      val mainArtifact = new MavenDependencyModuleArtifact(classpathUri)
-      artifacts.add(mainArtifact)
-
-      findSourceJar(classpathUri).foreach { srcUri =>
-        val srcArtifact = new MavenDependencyModuleArtifact(srcUri)
-        srcArtifact.setClassifier("sources")
-        artifacts.add(srcArtifact)
-      }
-
-      val mavenModule = new MavenDependencyModule("", baseName, "", artifacts)
-
-      val depModule = new DependencyModule(baseName, "")
-      depModule.setDataKind(DependencyModuleDataKind.MAVEN)
-      depModule.setData(gson.toJsonTree(mavenModule))
-      Some(depModule)
-    } catch {
-      case e: Exception =>
-        scribe.debug(
-          s"[BazelNative BSP] Failed to build dependency module for $classpathUri: ${e.getMessage}"
-        )
-        None
-    }
-  }
+  // -- Output paths --
 
   override def buildTargetOutputPaths(
       params: OutputPathsParams
   ): CompletableFuture[OutputPathsResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetOutputPaths")
+    scribe.debug("[BazelNative BSP] Request: buildTargetOutputPaths")
     CompletableFuture.completedFuture(
       new OutputPathsResult(Collections.emptyList())
     )
   }
 
-  override def buildTargetResources(
-      params: ResourcesParams
-  ): CompletableFuture[ResourcesResult] = {
-    scribe.debug(s"[BazelNative BSP] Request: buildTargetResources")
-    CompletableFuture.completedFuture(
-      new ResourcesResult(Collections.emptyList())
-    )
-  }
-
-  override def onRunReadStdin(params: ReadParams): Unit = {
-    scribe.debug(s"[BazelNative BSP] onRunReadStdin (not supported)")
-  }
-
-  // -- Wrapped sources (Scala CLI specific, return empty) --
+  override def onRunReadStdin(params: ReadParams): Unit = ()
 
   override def buildTargetWrappedSources(
       params: WrappedSourcesParams
-  ): CompletableFuture[WrappedSourcesResult] = {
+  ): CompletableFuture[WrappedSourcesResult] =
     CompletableFuture.completedFuture(
       new WrappedSourcesResult(Collections.emptyList[WrappedSourcesItem]())
     )
-  }
 
-  private def refreshClasspaths(): Unit = {
+  // ---------------------------------------------------------------------------
+  // Internal helpers
+  // ---------------------------------------------------------------------------
+
+  private def runInitialSync(): Unit = {
+    if (!targetData.isEmpty) return
     try {
-      val updated = resolveAllTargetClasspaths()
-      updated.foreach { case (label, cp) =>
-        val id = new BuildTargetIdentifier(s"${workspace.toURI}?$label")
-        targetClasspaths.put(id, cp)
-      }
-      scribe.info(
-        s"[BazelNative BSP] Refreshed classpaths for ${updated.size} targets after build"
+      scribe.info("[BazelNative BSP] Running initial aspect sync...")
+      val exitCode = scala.concurrent.Await.result(
+        process.syncBuild(aspectsManager.extraSyncFlags),
+        scala.concurrent.duration.Duration(5, "min"),
       )
+      scribe.info(s"[BazelNative BSP] Sync completed (exit=$exitCode)")
+      refreshTargetData()
     } catch {
       case e: Exception =>
         scribe.warn(
-          s"[BazelNative BSP] Failed to refresh classpaths: ${e.getMessage}"
+          s"[BazelNative BSP] Initial sync failed: ${e.getMessage}"
         )
     }
   }
 
-  /**
-   * Runs a single `bazel aquery` to extract the Scalac compile classpath
-   * for every target in the workspace, returning a map of label -> classpath URIs.
-   */
-  private def resolveAllTargetClasspaths(): Map[String, List[String]] = {
-    if (executionRoot.isEmpty) {
-      scribe.warn(
-        "[BazelNative BSP] No execution_root; skipping classpath resolution"
+  private def refreshTargetData(): Unit = {
+    if (bazelBinDir.isEmpty) return
+    val raw = BazelNativeTargetInfoReader.readFromBazelBin(
+      java.nio.file.Paths.get(bazelBinDir)
+    )
+    val data = raw.map { case (label, info) =>
+      val normalized = normalizeLabel(label)
+      val normalizedDeps =
+        info.dependencies.map(d => d.copy(id = normalizeLabel(d.id)))
+      normalized -> info.copy(id = normalized, dependencies = normalizedDeps)
+    }
+    targetData.update(data)
+    scribe.info(
+      s"[BazelNative BSP] Loaded aspect data for ${data.size} targets"
+    )
+  }
+
+  /** Strip `@` / `@@` main-repo prefix so labels are always `//pkg:name`. */
+  private def normalizeLabel(label: String): String = {
+    val stripped = label.replaceFirst("^@+", "")
+    if (stripped.startsWith("//")) stripped
+    else label
+  }
+
+  private def isUserTarget(label: String): Boolean =
+    label.startsWith("//") &&
+      !label.startsWith("//.bazelbsp/") &&
+      !label.startsWith("//.metals-bsp/") &&
+      !label.contains("toolchain_impl")
+
+  private def buildTarget(info: BspTargetInfo): BuildTarget = {
+    val id = labelToTargetId(info.id)
+    val deps = info.dependencies.map(d => labelToTargetId(d.id)).asJava
+    val langs = List("scala", "java").asJava
+
+    val caps = new BuildTargetCapabilities()
+    caps.setCanCompile(true)
+    val kind = info.kind
+    caps.setCanRun(
+      info.executable ||
+        kind.endsWith("_binary")
+    )
+    caps.setCanTest(kind.endsWith("_test"))
+
+    val target = new BuildTarget(id, info.tags.asJava, langs, deps, caps)
+    target.setDisplayName(info.id)
+    target.setBaseDirectory(workspace.toURI.toString)
+
+    info.scalaTargetInfo.foreach { sti =>
+      val sv = deriveScalaVersionFromClasspath(sti.compilerClasspath)
+        .orElse(detectedScalaVersion)
+        .getOrElse("2.13.12")
+      val scalaBt = new ScalaBuildTarget(
+        "org.scala-lang",
+        sv,
+        scalaBinaryVersion(sv),
+        ScalaPlatform.JVM,
+        sti.compilerClasspath.map(resolveOutputUri).asJava,
       )
-      return Map.empty
-    }
-    try {
-      val raw = scala.concurrent.Await.result(
-        process.aquery("mnemonic('Scalac', //...)"),
-        scala.concurrent.duration.Duration(60, "s"),
-      )
-      parseAqueryClasspaths(raw)
-    } catch {
-      case e: Exception =>
-        scribe.warn(
-          s"[BazelNative BSP] Failed aquery classpath resolution: ${e.getMessage}"
-        )
-        Map.empty
-    }
-  }
-
-  private def parseAqueryClasspaths(
-      jsonStr: String
-  ): Map[String, List[String]] = {
-    val result = scala.collection.mutable.Map[String, List[String]]()
-    try {
-      val root = JsonParser.parseString(jsonStr).getAsJsonObject
-      val actions = root.getAsJsonArray("actions")
-      if (actions == null) return Map.empty
-
-      val execRoot = java.nio.file.Paths.get(executionRoot)
-
-      actions.forEach { elem =>
-        val action = elem.getAsJsonObject
-        val mnemonic =
-          Option(action.get("mnemonic")).map(_.getAsString).getOrElse("")
-        if (mnemonic == "Scalac") {
-          val argsArr = action.getAsJsonArray("arguments")
-          if (argsArr != null) {
-            val args = new java.util.ArrayList[String]()
-            argsArr.forEach(a => args.add(a.getAsString))
-
-            var targetLabel: String = null
-            var cpStart = -1
-            var cpEnd = args.size()
-
-            var i = 0
-            while (i < args.size()) {
-              val arg = args.get(i)
-              if (arg == "--CurrentTarget" && i + 1 < args.size()) {
-                targetLabel = args.get(i + 1)
-                i += 2
-              } else if (arg == "--Classpath") {
-                cpStart = i + 1
-                i += 1
-              } else if (cpStart >= 0 && arg.startsWith("--")) {
-                cpEnd = i
-                cpStart = -1 // done
-                i += 1
-              } else {
-                i += 1
-              }
-            }
-
-            if (targetLabel != null && cpStart >= 0) {
-              cpEnd = math.min(cpEnd, args.size())
-            }
-
-            if (targetLabel != null) {
-              val cpEntries = new java.util.ArrayList[String]()
-              // re-scan for classpath range
-              var inCp = false
-              var j = 0
-              while (j < args.size()) {
-                val arg = args.get(j)
-                if (arg == "--Classpath") {
-                  inCp = true
-                } else if (inCp && arg.startsWith("--")) {
-                  inCp = false
-                } else if (inCp) {
-                  cpEntries.add(arg)
-                }
-                j += 1
-              }
-
-              val resolvedCp = cpEntries.asScala.toList.flatMap { relPath =>
-                val fullJarPath = preferFullJar(relPath)
-                val resolved = execRoot.resolve(fullJarPath)
-                if (java.nio.file.Files.exists(resolved)) {
-                  Some(resolved.toUri.toString)
-                } else {
-                  val original = execRoot.resolve(relPath)
-                  if (java.nio.file.Files.exists(original))
-                    Some(original.toUri.toString)
-                  else {
-                    scribe.debug(
-                      s"[BazelNative BSP] Classpath jar not found: $relPath"
-                    )
-                    None
-                  }
-                }
-              }
-              scribe.info(
-                s"[BazelNative BSP] Classpath for $targetLabel: ${resolvedCp.size} jars"
-              )
-              result(targetLabel) = resolvedCp
-            }
-          }
-        }
+      info.javaToolchainInfo.foreach { jtc =>
+        val jvmBt = new JvmBuildTarget()
+        if (jtc.javaHome.isDefined)
+          jvmBt.setJavaHome(resolveOutputUri(jtc.javaHome.get))
+        jvmBt.setJavaVersion(jtc.sourceVersion)
+        scalaBt.setJvmBuildTarget(jvmBt)
       }
-    } catch {
-      case e: Exception =>
-        scribe.warn(
-          s"[BazelNative BSP] Failed to parse aquery JSON: ${e.getMessage}"
-        )
+      target.setDataKind(BuildTargetDataKind.SCALA)
+      target.setData(gson.toJsonTree(scalaBt))
     }
-    result.toMap
-  }
 
-  /**
-   * Convert ijar path to full jar path for richer classpath.
-   * e.g. "bazel-out/.../hello-lib-ijar.jar" -> "bazel-out/.../hello-lib.jar"
-   */
-  private def preferFullJar(relPath: String): String = {
-    if (relPath.endsWith("-ijar.jar"))
-      relPath.stripSuffix("-ijar.jar") + ".jar"
-    else
-      relPath
-  }
-
-  /**
-   * Given a classpath JAR URI, find its corresponding source JAR.
-   *
-   * For stamped JARs like:
-   *   .../bin/external/rules_scala++scala_deps+REPO/REPO.stamp/artifact-stamped.jar
-   * we look in output_base/external/REPO/ for *-src.jar or *-sources.jar.
-   *
-   * For regular external JARs we look for a sibling -src.jar.
-   */
-  private def findSourceJar(classpathUri: String): Option[String] = {
-    if (outputBase.isEmpty) return None
-    try {
-      val jarPath = java.nio.file.Paths.get(java.net.URI.create(classpathUri))
-      val jarStr = jarPath.toString
-      val externalBase = java.nio.file.Paths.get(outputBase, "external")
-
-      val repoName = extractExternalRepoName(jarStr)
-      repoName.flatMap { repo =>
-        val repoDir = externalBase.resolve(repo)
-        if (java.nio.file.Files.isDirectory(repoDir)) {
-          val srcJars = java.nio.file.Files
-            .list(repoDir)
-            .filter(p =>
-              p.toString.endsWith("-src.jar") ||
-                p.toString.endsWith("-sources.jar")
-            )
-            .toArray
-            .map(_.asInstanceOf[java.nio.file.Path])
-          srcJars.headOption.map(_.toUri.toString)
-        } else None
+    if (info.scalaTargetInfo.isEmpty) {
+      info.javaToolchainInfo.foreach { jtc =>
+        val jvmBt = new JvmBuildTarget()
+        if (jtc.javaHome.isDefined)
+          jvmBt.setJavaHome(resolveOutputUri(jtc.javaHome.get))
+        jvmBt.setJavaVersion(jtc.sourceVersion)
+        target.setDataKind("jvm")
+        target.setData(gson.toJsonTree(jvmBt))
       }
-    } catch {
-      case e: Exception =>
-        scribe.debug(
-          s"[BazelNative BSP] Failed to find source jar for $classpathUri: ${e.getMessage}"
-        )
-        None
     }
+
+    target
   }
 
-  /**
-   * Extract the external repo name from a JAR path.
-   * Handles both stamped paths (.../bin/external/REPO/...) and
-   * direct external paths (.../external/REPO/...).
-   */
-  private def extractExternalRepoName(path: String): Option[String] = {
-    val externalIdx = path.indexOf("/external/")
-    if (externalIdx < 0) return None
-    val afterExternal = path.substring(externalIdx + "/external/".length)
-    val slashIdx = afterExternal.indexOf('/')
-    if (slashIdx > 0) Some(afterExternal.substring(0, slashIdx))
-    else None
-  }
-
-  private def resolveClassDirectory(label: String): String = {
-    if (bazelBinDir.nonEmpty) {
-      val stripped = label.stripPrefix("@//").stripPrefix("//")
-      val colonIdx = stripped.indexOf(':')
-      val (pkg, name) =
-        if (colonIdx >= 0)
-          (stripped.substring(0, colonIdx), stripped.substring(colonIdx + 1))
-        else ("", stripped)
-      val binDir = java.nio.file.Paths.get(bazelBinDir)
-      val jarPath =
-        if (pkg.isEmpty) binDir.resolve(s"$name.jar")
-        else binDir.resolve(s"$pkg/$name.jar")
-      if (java.nio.file.Files.exists(jarPath))
-        jarPath.getParent.toUri.toString
-      else
-        binDir.toUri.toString
-    } else {
-      workspace.resolve("bazel-bin").toURI.toString
-    }
-  }
-
-  private def indexSourcesForTarget(
-      label: String,
-      id: BuildTargetIdentifier,
-  ): Unit = {
-    try {
-      val result = scala.concurrent.Await.result(
-        process.query(s"labels(srcs, $label)"),
-        scala.concurrent.duration.Duration(30, "s"),
-      )
-      result.linesIterator.filter(_.nonEmpty).foreach { srcLabel =>
-        val uri = labelToFileUri(srcLabel)
-        sourceToTargets
-          .computeIfAbsent(
-            uri,
-            _ => java.util.concurrent.ConcurrentHashMap.newKeySet(),
-          )
-          .add(id)
+  private def jvmEnvironmentItem(
+      id: BuildTargetIdentifier
+  ): JvmEnvironmentItem = {
+    val info = targetData.get(extractLabel(id))
+    val jvm = info.flatMap(_.jvmTargetInfo)
+    val cp = jvm.map(classpathUris).getOrElse(Nil)
+    val jvmFlags = jvm.map(_.jvmFlags).getOrElse(Nil)
+    val envVars = info.map(_.env).getOrElse(Map.empty)
+    val envMap = new java.util.HashMap[String, String]()
+    envVars.foreach { case (k, v) => envMap.put(k, v) }
+    info.foreach { i =>
+      i.envInherit.foreach { varName =>
+        val value = System.getenv(varName)
+        if (value != null) envMap.put(varName, value)
       }
+    }
+
+    new JvmEnvironmentItem(
+      id,
+      cp.asJava,
+      jvmFlags.asJava,
+      workspace.toString,
+      envMap,
+    )
+  }
+
+  private def classpathUris(jvm: BspJvmTargetInfo): List[String] = {
+    val jarUris = jvm.jars.flatMap { outputs =>
+      outputs.binaryJars.map(resolveOutputUri) ++
+        outputs.interfaceJars.map(resolveOutputUri)
+    }
+    val transitiveUris =
+      jvm.transitiveCompileTimeJars.map(resolveOutputUri)
+    (jarUris ++ transitiveUris).distinct
+  }
+
+  private def buildDependencyModule(
+      fl: BspFileLocation
+  ): Option[DependencyModule] = {
+    try {
+      val uri = resolveOutputUri(fl)
+      val name = java.nio.file.Paths
+        .get(fl.path)
+        .getFileName
+        .toString
+        .stripSuffix(".jar")
+      val artifacts = new java.util.ArrayList[MavenDependencyModuleArtifact]()
+      artifacts.add(new MavenDependencyModuleArtifact(uri))
+      val mavenModule = new MavenDependencyModule("", name, "", artifacts)
+      val depModule = new DependencyModule(name, "")
+      depModule.setDataKind(DependencyModuleDataKind.MAVEN)
+      depModule.setData(gson.toJsonTree(mavenModule))
+      Some(depModule)
     } catch {
-      case e: Exception =>
-        scribe.warn(
-          s"[BazelNative BSP] Failed to index sources for $label: ${e.getMessage}"
-        )
+      case _: Exception => None
     }
   }
 
-  private def labelToFilePath(label: String): String = {
-    val stripped = label.stripPrefix("@//").stripPrefix("//")
-    val colonIdx = stripped.indexOf(':')
-    if (colonIdx >= 0) {
-      val pkg = stripped.substring(0, colonIdx)
-      val name = stripped.substring(colonIdx + 1)
-      if (pkg.isEmpty) name else s"$pkg/$name"
-    } else stripped
+  private def resolveSourceUri(fl: BspFileLocation): String = {
+    val resolved =
+      if (fl.path.startsWith("/")) java.nio.file.Paths.get(fl.path)
+      else workspace.resolve(fl.path).toNIO
+    resolved.toUri.toString
   }
 
-  private def labelToFileUri(label: String): String =
-    workspace.resolve(labelToFilePath(label)).toURI.toString
+  private def resolveOutputUri(fl: BspFileLocation): String = {
+    if (fl.isSource) return resolveSourceUri(fl)
+    val resolved =
+      if (fl.path.startsWith("/")) java.nio.file.Paths.get(fl.path)
+      else if (executionRoot.nonEmpty)
+        java.nio.file.Paths.get(executionRoot).resolve(fl.path)
+      else workspace.resolve(fl.path).toNIO
+    resolved.toUri.toString
+  }
 
-  private def detectScalaVersion(): Option[String] = {
+  private def resolveOutputParentUri(fl: BspFileLocation): String = {
+    val resolved =
+      if (fl.path.startsWith("/")) java.nio.file.Paths.get(fl.path)
+      else if (executionRoot.nonEmpty)
+        java.nio.file.Paths.get(executionRoot).resolve(fl.path)
+      else workspace.resolve(fl.path).toNIO
+    resolved.getParent.toUri.toString
+  }
+
+  @SuppressWarnings(Array("unused"))
+  private def fallbackClassDir(@annotation.unused label: String): String =
+    if (bazelBinDir.nonEmpty)
+      java.nio.file.Paths.get(bazelBinDir).toUri.toString
+    else workspace.resolve("bazel-bin").toURI.toString
+
+  private def deriveScalaVersion(): Option[String] =
+    targetData.allTargets.values
+      .flatMap(_.scalaTargetInfo)
+      .flatMap(sti => deriveScalaVersionFromClasspath(sti.compilerClasspath))
+      .headOption
+      .orElse(detectScalaVersionFromFiles())
+
+  private def deriveScalaVersionFromClasspath(
+      cp: List[BspFileLocation]
+  ): Option[String] = {
+    val VersionPattern = """scala-library-(\d+\.\d+\.\d+)\.jar""".r
+    val Scala3Pattern = """scala3-library_3-(\d+\.\d+\.\d+)\.jar""".r
+    cp.map(_.path)
+      .collectFirst {
+        case path if path.contains("scala3-library") =>
+          Scala3Pattern.findFirstMatchIn(path).map(_.group(1))
+        case path if path.contains("scala-library") =>
+          VersionPattern.findFirstMatchIn(path).map(_.group(1))
+      }
+      .flatten
+  }
+
+  private def detectScalaVersionFromFiles(): Option[String] = {
     val ScalaVersionPattern =
       """scala_(?:config|version)\s*(?:\(scala_version\s*=\s*|=\s*)"([^"]+)"""".r
-    val candidates = List("WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel")
-    candidates.iterator
+    List("WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel").iterator
       .map(workspace.resolve)
       .filter(_.isFile)
       .flatMap { file =>
@@ -879,10 +803,12 @@ class BazelNativeBspServer(
       .nextOption()
   }
 
-  private def scalaBinaryVersion(scalaVersion: String): String = {
-    if (scalaVersion.startsWith("3.")) "3"
-    else scalaVersion.split('.').take(2).mkString(".")
-  }
+  private def scalaBinaryVersion(sv: String): String =
+    if (sv.startsWith("3.")) "3"
+    else sv.split('.').take(2).mkString(".")
+
+  private def labelToTargetId(label: String): BuildTargetIdentifier =
+    new BuildTargetIdentifier(s"${workspace.toURI}?$label")
 
   private def extractLabel(id: BuildTargetIdentifier): String = {
     val uri = id.getUri
