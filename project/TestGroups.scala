@@ -141,6 +141,9 @@ object TestGroups {
     "tests.bazelnative.BazelNativeBepTranslatorSuite",
     "tests.bazelnative.BazelNativeBesServerSuite",
     "tests.bazelnative.BazelNativeDiscoverySuite",
+    "tests.bazelnative.BazelNativeTargetInfoReaderSuite",
+    "tests.bazelnative.BazelNativeAspectsManagerSuite",
+    "tests.bazelnative.BazelNativeTargetDataSuite",
   )
 
   val numberOfShards = 4

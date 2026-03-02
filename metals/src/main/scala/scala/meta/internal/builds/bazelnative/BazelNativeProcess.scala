@@ -41,6 +41,17 @@ class BazelNativeProcess(
     runProcess(cmd, onStderr)
   }
 
+  /**
+   * Run a sync build (aspect-only, no BES) to collect target metadata.
+   * Used for the initial workspace sync before the first compile.
+   */
+  def syncBuild(
+      extraFlags: List[String] = Nil
+  ): Future[Int] = {
+    val cmd = List(bazelBinary, "build") ++ extraFlags ++ List("//...")
+    runProcess(cmd)
+  }
+
   def query(expr: String): Future[String] = {
     val output = new StringBuilder
     val cmd = List(bazelBinary, "query", expr, "--output=label")

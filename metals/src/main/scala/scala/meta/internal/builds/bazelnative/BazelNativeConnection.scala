@@ -28,8 +28,6 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
  * and `BazelNativeBspServer`.
  *
  * Uses piped streams for JSON-RPC communication within the same JVM.
- * Routes through `BuildServerConnection.fromSockets` so that the
- * `ServerLivenessMonitor` is properly wired.
  */
 object BazelNativeConnection {
 
@@ -50,16 +48,11 @@ object BazelNativeConnection {
     val serverName = BazelNativeBuildTool.bspName
 
     val process = new BazelNativeProcess(workspace, userConfiguration)
+    val aspectsManager = new BazelNativeAspectsManager(workspace)
+    val targetData = new BazelNativeTargetData()
 
     def createConnection(): Future[SocketConnection] = Future {
-      val translator = new BazelNativeBepTranslator(null)
-      val besServer = new BazelNativeBesServer(translator)
-
-      val bspServer =
-        new BazelNativeBspServer(workspace, process, besServer, translator)
-
-      // Wire the translator to push events to the BSP server
-      val wiredTranslator = new BazelNativeBepTranslator(bspServer)
+      val wiredTranslator = new BazelNativeBepTranslator(null)
       val wiredBesServer = new BazelNativeBesServer(wiredTranslator)
 
       val wiredBspServer =
@@ -68,24 +61,36 @@ object BazelNativeConnection {
           process,
           wiredBesServer,
           wiredTranslator,
+          aspectsManager,
+          targetData,
         )
 
-      val besPort = wiredBesServer.start()
+      val translatorWithClient = new BazelNativeBepTranslator(wiredBspServer)
+      val besServerWithClient = new BazelNativeBesServer(translatorWithClient)
+
+      val bspServer =
+        new BazelNativeBspServer(
+          workspace,
+          process,
+          besServerWithClient,
+          translatorWithClient,
+          aspectsManager,
+          targetData,
+        )
+
+      val besPort = besServerWithClient.start()
       scribe.debug(
         s"[BazelNative Connection] BES server started on port $besPort"
       )
 
-      // Set up piped streams for JSON-RPC communication
-      // Client writes to serverInput, reads from clientInput
       val serverInput = new PipedInputStream(65536)
       val clientOutput = new PipedOutputStream(serverInput)
       val clientInput = new PipedInputStream(65536)
       val serverOutput = new PipedOutputStream(clientInput)
 
-      // Start JSON-RPC launcher for the BSP server side
       val serverLauncher =
         new Launcher.Builder[ch.epfl.scala.bsp4j.BuildClient]()
-          .setLocalService(wiredBspServer)
+          .setLocalService(bspServer)
           .setRemoteInterface(classOf[ch.epfl.scala.bsp4j.BuildClient])
           .setInput(serverInput)
           .setOutput(serverOutput)
@@ -93,7 +98,6 @@ object BazelNativeConnection {
           .create()
 
       val remoteProxy = serverLauncher.getRemoteProxy
-      wiredBspServer.setClient(remoteProxy)
       bspServer.setClient(remoteProxy)
 
       val listening = serverLauncher.startListening()
@@ -110,7 +114,7 @@ object BazelNativeConnection {
 
       val cancelable = Cancelable { () =>
         listening.cancel(true)
-        wiredBesServer.shutdown()
+        besServerWithClient.shutdown()
         process.cancel()
       }
 
