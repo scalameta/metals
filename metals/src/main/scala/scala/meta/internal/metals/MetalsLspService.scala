@@ -77,6 +77,7 @@ import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
+import com.google.common.collect.HashBiMap
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
@@ -1785,6 +1786,13 @@ abstract class MetalsLspService(
         }
     }
 
+  private val terminals: HashBiMap[(String, String), String] =
+    HashBiMap.create()
+
+  def bspTaskForTerminal(terminalId: String): Option[(String, String)] = {
+    Option(terminals.inverse().get(terminalId))
+  }
+
   val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
@@ -1802,6 +1810,7 @@ abstract class MetalsLspService(
       },
       bspErrorHandler,
       workDoneProgress,
+      terminals,
     )
 
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(

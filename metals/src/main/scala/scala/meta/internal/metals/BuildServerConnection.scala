@@ -227,6 +227,10 @@ class BuildServerConnection private (
     )
   }
 
+  def sendStdin(params: ReadParams): Unit = {
+    connection.foreach(_.server.onRunReadStdin(params))
+  }
+
   def clean(params: CleanCacheParams): CompletableFuture[CleanCacheResult] = {
     register(server => server.buildTargetCleanCache(params))
   }

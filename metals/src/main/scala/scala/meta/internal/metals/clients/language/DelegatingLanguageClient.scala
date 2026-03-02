@@ -117,4 +117,17 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
 
   override def notifyProgress(params: ProgressParams): Unit =
     underlying.notifyProgress(params)
+
+  override def metalsCreateTerminal(
+      params: MetalsCreateTerminalParams
+  ): Unit =
+    underlying.metalsCreateTerminal(params)
+
+  override def metalsEndTerminal(params: MetalsEndTerminalParams): Unit =
+    underlying.metalsEndTerminal(params)
+
+  override def metalsTerminalOutput(
+      params: MetalsTerminalOutputParams
+  ): Unit =
+    underlying.metalsTerminalOutput(params)
 }

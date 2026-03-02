@@ -98,6 +98,15 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   override def notifyProgress(params: ProgressParams): Unit
 
+  @JsonNotification("metals/createTerminal")
+  def metalsCreateTerminal(params: MetalsCreateTerminalParams): Unit
+
+  @JsonNotification("metals/endTerminal")
+  def metalsEndTerminal(params: MetalsEndTerminalParams): Unit
+
+  @JsonNotification("metals/terminalOutput")
+  def metalsTerminalOutput(params: MetalsTerminalOutputParams): Unit
+
   def shutdown(): Unit = {}
 
 }
@@ -218,4 +227,25 @@ case class MetalsQuickPickItem(
     @Nullable detail: String = null,
     // Always show this item.
     @Nullable alwaysShow: java.lang.Boolean = null,
+)
+
+case class MetalsCreateTerminalParams(
+    terminalId: String,
+    name: String,
+    background: Boolean = false,
+)
+
+case class MetalsEndTerminalParams(
+    terminalId: String,
+    success: Boolean,
+)
+
+case class MetalsTerminalOutputParams(
+    terminalId: String,
+    message: String,
+)
+
+case class MetalsTerminalInputParams(
+    terminalId: String,
+    message: String,
 )

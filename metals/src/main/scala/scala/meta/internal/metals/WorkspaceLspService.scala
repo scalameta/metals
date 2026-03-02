@@ -27,6 +27,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsTerminalInputParams
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.DiscoveryFailures
@@ -856,6 +857,29 @@ class WorkspaceLspService(
         )
         CompletableFuture.completedFuture(())
     }
+  }
+
+  override def terminalInput(
+      params: MetalsTerminalInputParams
+  ): CompletableFuture[Unit] = {
+    val terminalId = params.terminalId
+    val message = params.message
+    val sent = folderServices.exists { service =>
+      service.bspTaskForTerminal(terminalId) match {
+        case Some((originId, taskId)) =>
+          service.bspSession.foreach { session =>
+            val readParams = new b.ReadParams(originId, message)
+            readParams.setTask(new b.TaskId(taskId))
+            session.mainConnection.sendStdin(readParams)
+          }
+          true
+        case None => false
+      }
+    }
+    if (!sent) {
+      scribe.warn(s"No active terminal found for terminalId: $terminalId")
+    }
+    CompletableFuture.completedFuture(())
   }
 
   private def failedRequest(

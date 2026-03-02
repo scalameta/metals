@@ -5,6 +5,7 @@ import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
+import scala.meta.internal.metals.clients.language.MetalsTerminalInputParams
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -228,5 +229,9 @@ class DelegatingScalaService(
   override def didCancelWorkDoneProgress(
       params: WorkDoneProgressCancelParams
   ): Unit = underlying.didCancelWorkDoneProgress(params)
+
+  override def terminalInput(
+      params: MetalsTerminalInputParams
+  ): CompletableFuture[Unit] = underlying.terminalInput(params)
 
 }

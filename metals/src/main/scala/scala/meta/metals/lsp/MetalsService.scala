@@ -4,6 +4,7 @@ import java.util
 import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.clients.language.MetalsTerminalInputParams
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -71,5 +72,10 @@ trait MetalsService {
   @JsonNotification("metals/sync")
   def sync(
       params: AnyRef
+  ): CompletableFuture[Unit]
+
+  @JsonNotification("metals/terminalInput")
+  def terminalInput(
+      params: MetalsTerminalInputParams
   ): CompletableFuture[Unit]
 }

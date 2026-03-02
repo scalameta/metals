@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.Collections
+import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
@@ -56,6 +57,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
     workDoneProgress: WorkDoneProgress,
+    terminals: java.util.Map[(String, String), String],
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -274,5 +276,30 @@ final class ForwardingMetalsBuildClient(
         }
       case _ =>
     }
+  }
+
+  @JsonNotification("run/printStdout")
+  def runPrintStdout(params: b.PrintParams): Unit =
+    runPrintOutput(params)
+
+  @JsonNotification("run/printStderr")
+  def runPrintStderr(params: b.PrintParams): Unit =
+    runPrintOutput(params)
+
+  def runPrintOutput(params: b.PrintParams): Unit = {
+    def createTerminal(name: String): String = {
+      val id = UUID.randomUUID().toString
+      languageClient.metalsCreateTerminal(MetalsCreateTerminalParams(id, name))
+      id
+    }
+
+    val oid = params.getOriginId
+    val tid = params.getTask().getId()
+    val message = params.getMessage
+    val terminal =
+      terminals.computeIfAbsent((oid, tid), _ => createTerminal(tid))
+    languageClient.metalsTerminalOutput(
+      MetalsTerminalOutputParams(terminal, message)
+    )
   }
 }
