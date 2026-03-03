@@ -92,10 +92,6 @@ final class MbtProtobufWorkspaceSymbolProvider(
         val input = doc.file.toInputFromBuffers(buffers)
         val source = new ProtoSourceFile(input.path, input.text)
         val file = ProtoParser.parse(source)
-
-        scribe.warn(
-          s"mbt-v2-turbine: javaPackagePrefix: ${javaPackagePrefix()}"
-        )
         val generator = new JavaOutlineGenerator(
           javaPackagePrefix(),
           defaultOuterClassName(input.path),

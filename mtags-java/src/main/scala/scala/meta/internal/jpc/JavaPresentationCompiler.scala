@@ -302,7 +302,6 @@ case class JavaPresentationCompiler(
   }
 
   override def restart(): Unit = try {
-    logger.info("javapc: restarting")
     compiler.shutdownCurrentCompiler()
   } catch {
     // Same reason as for `shutdown()`.
