@@ -63,7 +63,7 @@ To avoid repetition, common utilities of presentation compilers are in `mtags-sh
 Below diagram shows project structure and dependencies among modules. Note that
 `default-<suffix>` is a [default root project](https://www.scala-sbt.org/1.x/docs/Multi-Project.html#Default+root+project)
 created implicitly by sbt.
-![Projects diagram](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/oIhXd5l.png?raw=true)
+![Projects diagram](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/oIhXd5l.png)
 
 ## Related projects
 
@@ -188,11 +188,11 @@ Then you can attach IDE with opened Metals repository to the debugged instance:
 
   Then pick such a defined configuration and run debug.
 
-  ![Attach debugger](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/ySAo6Um.png?raw=true)
+  ![Attach debugger](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/ySAo6Um.png)
 
 - IntelliJ - Select Attach to the process and pick proper process from the list
 
-  ![Attach to the process](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/lHSl57l.png?raw=true)
+  ![Attach to the process](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/lHSl57l.png)
 
 ## Unit tests
 
@@ -282,7 +282,7 @@ Next, update the "Server version" setting under preferences to point to the
 version you published locally via `sbt publishLocal`. You'll notice that version has the format
 `<version>-SNAPSHOT`.
 
-![Metals server version setting](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/ogVWI1t.png?raw=true)
+![Metals server version setting](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/ogVWI1t.png)
 
 When you make changes in the Metals Scala codebase
 

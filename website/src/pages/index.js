@@ -36,14 +36,14 @@ const Features = (props) => {
     {
       title: "Simple installation",
       content: "Open a directory, import your build and start coding.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/L5CurFG.png?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/L5CurFG.png",
       imageAlign: "left",
     },
     {
       title: "Accurate diagnostics",
       content:
         "Compile on file save and see errors from the build tool directly inside the editor. No more switching focus to the console.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/JYLQGrc.gif?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/JYLQGrc.gif",
       imageAlign: "right",
     },
     {
@@ -59,7 +59,7 @@ const Features = (props) => {
       title: "Goto definition",
       content:
         "Jump to symbol definitions in your project sources and Scala/Java library dependencies.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/bCIhFof.gif?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/bCIhFof.gif",
       imageAlign: "right",
     },
     {
@@ -73,14 +73,14 @@ const Features = (props) => {
     {
       title: "Hover (aka. type at point)",
       content: "See the expression type and symbol signature under the cursor.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/2MfQvsM.gif?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/2MfQvsM.gif",
       imageAlign: "right",
     },
     {
       title: "Signature help (aka. parameter hints)",
       content:
         "View a method signature and method overloads as you fill in the arguments.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/DAWIrHu.gif?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/DAWIrHu.gif",
       imageAlign: "left",
     },
     {
@@ -93,7 +93,7 @@ const Features = (props) => {
     {
       title: "Fuzzy symbol search",
       content: "Search for symbols in the workspace or library dependencies.",
-      image: "https://github.com/scalameta/gh-pages-images/blob/master/metals/index/w5yrK1w.gif?raw=true",
+      image: "https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/index/w5yrK1w.gif",
       imageAlign: "left",
     },
   ];

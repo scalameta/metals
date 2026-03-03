@@ -58,11 +58,11 @@ case we offer to create a method instead.
 
 This will work both when the symbol is used as a parameter:
 
-![first-example](https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-12-16-palladium/9fWQ3Yg.gif?raw=true)
+![first-example](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2024-12-16-palladium/9fWQ3Yg.gif)
 
 as well as a standalone function call:
 
-![second-example](https://github.com/scalameta/gh-pages-images/blob/master/metals/2024-12-16-palladium/gizIjBB.gif?raw=true)
+![second-example](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2024-12-16-palladium/gizIjBB.gif)
 
 The feature has only been implemented for Scala 2 for the time being and there
 might be still some unsupported cases.

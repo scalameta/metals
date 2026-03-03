@@ -67,7 +67,7 @@ explanation and examples.
 If you want to add images to the release notes, you can add them to the separate
 folder in the `gh-pages-images` repository and reference them in the release
 notes using the
-`![image-name](https://github.com/scalameta/gh-pages-images/blob/master/metals/<release-name>/image-name.gif?raw=true)`
+`![image-name](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/<release-name>/image-name.gif)`
 format.
 
 ### Update Metals version
