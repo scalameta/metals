@@ -149,6 +149,32 @@ class ProtoPCDefinitionSuite extends BaseProtoPCSuite("proto-pc-definition") {
     } yield ()
   }
 
+  test("well-known-import-goto-definition-uses-jar-uri") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |import "google/protobuf/timestamp.proto";
+           |message Event {
+           |  google.protobuf.Timestamp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.assertDefinition(
+        "a/src/main/proto/event.proto",
+        "import \"google/protobuf/timest@@amp.proto\";",
+        """|protobuf-java-4.31.1.jar!/google/protobuf/timestamp.proto:1:1: definition
+           |// Protocol Buffers - Google's data interchange format
+           |^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("cross-file-fully-qualified-type") {
     cleanWorkspace()
     for {

@@ -101,6 +101,181 @@ class ProtoPCDiagnosticsSuite extends BaseProtoPCSuite("proto-pc-diagnostics") {
     } yield ()
   }
 
+  test("well-known-type-import-from-protobuf-java-jar") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |import "google/protobuf/timestamp.proto";
+           |message Event {
+           |  google.protobuf.Timestamp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.didFocus("a/src/main/proto/event.proto")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  test("well-known-multi-import-coverage-from-protobuf-java-jar") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/stdlib.proto
+           |syntax = "proto3";
+           |import "google/protobuf/any.proto";
+           |import "google/protobuf/api.proto";
+           |import "google/protobuf/duration.proto";
+           |import "google/protobuf/empty.proto";
+           |import "google/protobuf/field_mask.proto";
+           |import "google/protobuf/source_context.proto";
+           |import "google/protobuf/struct.proto";
+           |import "google/protobuf/timestamp.proto";
+           |import "google/protobuf/type.proto";
+           |import "google/protobuf/wrappers.proto";
+           |message StdlibCoverage {
+           |  google.protobuf.Any any_value = 1;
+           |  google.protobuf.Api api = 2;
+           |  google.protobuf.Duration duration = 3;
+           |  google.protobuf.Empty empty = 4;
+           |  google.protobuf.FieldMask mask = 5;
+           |  google.protobuf.SourceContext source_context = 6;
+           |  google.protobuf.Struct struct_value = 7;
+           |  google.protobuf.Timestamp timestamp = 8;
+           |  google.protobuf.Type type_value = 9;
+           |  google.protobuf.StringValue wrapper = 10;
+           |  google.protobuf.NullValue null_value = 11;
+           |}
+           |service StdlibService {
+           |  rpc Ping(google.protobuf.Empty) returns (google.protobuf.Empty);
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/stdlib.proto")
+      _ <- server.didFocus("a/src/main/proto/stdlib.proto")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  test("well-known-struct-types-from-protobuf-java-jar") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/json.proto
+           |syntax = "proto3";
+           |import "google/protobuf/struct.proto";
+           |message JsonLike {
+           |  google.protobuf.Value value = 1;
+           |  google.protobuf.ListValue values = 2;
+           |  google.protobuf.NullValue null_kind = 3;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/json.proto")
+      _ <- server.didFocus("a/src/main/proto/json.proto")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  test("well-known-short-import-path-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |import "timestamp.proto";
+           |message Event {
+           |  google.protobuf.Timestamp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.didFocus("a/src/main/proto/event.proto")
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  test("well-known-type-package-typo-errors") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |import "google/protobuf/timestamp.proto";
+           |message Event {
+           |  google.protobuff.Timestamp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.didFocus("a/src/main/proto/event.proto")
+      _ = assert(
+        clue(client.workspaceDiagnostics).contains(
+          "Unknown type: google.protobuff.Timestamp"
+        )
+      )
+    } yield ()
+  }
+
+  test("well-known-type-name-typo-errors") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |import "google/protobuf/timestamp.proto";
+           |message Event {
+           |  google.protobuf.Timestampp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.didFocus("a/src/main/proto/event.proto")
+      _ = assert(
+        clue(client.workspaceDiagnostics).contains(
+          "Unknown type: google.protobuf.Timestampp"
+        )
+      )
+    } yield ()
+  }
+
+  test("well-known-type-without-import-still-errors") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/event.proto
+           |syntax = "proto3";
+           |message Event {
+           |  google.protobuf.Timestamp created_at = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/event.proto")
+      _ <- server.didFocus("a/src/main/proto/event.proto")
+      _ = assert(
+        clue(client.workspaceDiagnostics).contains(
+          "Unknown type: google.protobuf.Timestamp"
+        )
+      )
+    } yield ()
+  }
+
   test("cross-file-import-missing") {
     cleanWorkspace()
     for {

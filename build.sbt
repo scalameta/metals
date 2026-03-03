@@ -567,6 +567,8 @@ lazy val `mtags-protobuf` = project
   .settings(
     sharedSettings,
     libraryDependencies ++= pprintDebuggingDependency,
+    libraryDependencies +=
+      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
   )
   .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
