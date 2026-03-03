@@ -795,6 +795,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
+  Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "--log=failure"),
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
