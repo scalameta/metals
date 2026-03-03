@@ -43,10 +43,13 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
       reportStatus: Boolean = false,
       onlyIf: Boolean = false,
       metricName: Option[String] = None,
+      transformEvent: infra.Event => infra.Event = identity,
   )(thunk: => Future[T]): Future[T] = {
     withTimer(didWhat, reportStatus, onlyIf)(thunk).map { case (timer, value) =>
       metricName.foreach { name =>
-        metrics.recordEvent(infra.Event.duration(name, timer.elapsed))
+        val baseEvent = infra.Event.duration(name, timer.elapsed)
+        val event = transformEvent(baseEvent)
+        metrics.recordEvent(event)
       }
       value
     }

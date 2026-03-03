@@ -1505,14 +1505,16 @@ abstract class MetalsLspService(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
     CancelTokens.future { token =>
-      val language = params.getTextDocument.getUri.toAbsolutePathSafe
-        .map(_.toLanguage)
-      metrics.recordEvent(
-        new Event()
-          .withLabel("name", "completion")
-          .withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE))
-      )
-      compilers.completions(params, token)
+      val language =
+        params.getTextDocument.getUri.toAbsolutePathSafe.map(_.toLanguage)
+      timerProvider.timed(
+        "completion",
+        metricName = Some("completion"),
+        transformEvent =
+          _.withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE)),
+      ) {
+        compilers.completions(params, token)
+      }
     }
 
   override def completionItemResolve(
