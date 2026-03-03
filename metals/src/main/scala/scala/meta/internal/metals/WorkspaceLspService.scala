@@ -175,9 +175,18 @@ class WorkspaceLspService(
     isBspStatusProvider = clientConfig.bspStatusBarState() == StatusBarState.On,
   )
 
+  val moduleStatus: ModuleStatus =
+    new ModuleStatus(
+      languageClient,
+      () => focusedDocument.get(),
+      (path) => getServiceFor(path),
+      clientConfig.icons(),
+    )
+
   def setFocusedDocument(newFocusedDocument: Option[AbsolutePath]): Unit = {
     focusedDocument.get().foreach(focused => recentlyFocusedFiles.add(focused))
-    focusedDocument.set(newFocusedDocument)
+    val prev = focusedDocument.getAndSet(newFocusedDocument)
+    if (prev != newFocusedDocument) moduleStatus.refresh()
     newFocusedDocument
       .flatMap(getServiceForOpt)
       .foreach(service => bspStatus.focus(service.path))
@@ -203,6 +212,7 @@ class WorkspaceLspService(
       bspStatus,
       featureFlags,
       metrics,
+      moduleStatus,
     )
   }
 
@@ -229,6 +239,7 @@ class WorkspaceLspService(
           maxScalaCliServers = 3,
           featureFlags,
           metrics,
+          moduleStatus,
         )
     }
 

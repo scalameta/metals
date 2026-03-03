@@ -44,6 +44,7 @@ class FallbackMetalsLspService(
     bspStatus: BspStatus,
     featureFlags: FeatureFlagProvider,
     metrics: MonitoringClient,
+    moduleStatus: ModuleStatus,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -63,6 +64,7 @@ class FallbackMetalsLspService(
       maxScalaCliServers = 10,
       featureFlags,
       metrics,
+      moduleStatus,
     ) {
 
   val buildServerPromise: Promise[Unit] = Promise.successful(())

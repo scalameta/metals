@@ -117,11 +117,10 @@ final class Diagnostics(
     if (isBazel) {
       diagnostics
         .filter { case (path, _) =>
-          buildTargets.inverseSources(path).exists(target => target == target)
+          buildTargets.inverseSources(path).contains(target)
         }
         .foreach { case (path, _) =>
           reset(Seq(path))
-          diagnostics.remove(path)
         }
     }
     publishDiagnosticsBuffer()
@@ -268,6 +267,15 @@ final class Diagnostics(
       .get(buildTarget)
       .map(status => status.code.isError || status.errors > 0)
       .getOrElse(false)
+  }
+
+  def upstreamTargetsWithCompilationErrors(
+      buildTarget: BuildTargetIdentifier
+  ): List[BuildTargetIdentifier] = {
+    buildTargets
+      .buildTargetTransitiveDependencies(buildTarget)
+      .filter(id => id != buildTarget && hasCompilationErrors(id))
+      .toList
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =

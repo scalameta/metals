@@ -16,6 +16,7 @@ import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ModuleStatus
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
@@ -56,6 +57,7 @@ final class ForwardingMetalsBuildClient(
     onBuildTargetDidChangeFunc: b.DidChangeBuildTarget => Unit,
     bspErrorHandler: BspErrorHandler,
     workDoneProgress: WorkDoneProgress,
+    moduleStatus: ModuleStatus,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -160,9 +162,6 @@ final class ForwardingMetalsBuildClient(
 
   @JsonNotification("build/taskStart")
   def buildTaskStart(params: b.TaskStartParams): Unit = {
-    scribe.info(
-      s"build/taskStart: dataKind=${params.getDataKind}, message=${params.getMessage}"
-    )
     params.getDataKind match {
       case b.TaskStartDataKind.COMPILE_TASK =>
         if (
@@ -170,14 +169,9 @@ final class ForwardingMetalsBuildClient(
         ) {
           scribe.info(params.getMessage.toLowerCase())
         }
-        val compileTaskOpt = params.asCompileTask
-        scribe.info(s"build/taskStart: compileTask=$compileTaskOpt")
         for {
-          task <- compileTaskOpt
+          task <- params.asCompileTask
           target = task.getTarget
-          _ = scribe.info(
-            s"build/taskStart: target=${target.getUri}, infoExists=${buildTargets.info(target).isDefined}"
-          )
         } {
           diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
@@ -203,6 +197,7 @@ final class ForwardingMetalsBuildClient(
           compilation <- compilations.remove(report.getTarget)
         } {
           diagnostics.onFinishCompileBuildTarget(report, params.getStatus())
+          moduleStatus.onFinishCompileBuildTarget(report.getTarget)
           try {
             didCompile(report)
           } catch {
@@ -258,17 +253,10 @@ final class ForwardingMetalsBuildClient(
         if uri.isString
       } yield new b.BuildTargetIdentifier(uri.getAsString)
 
-    scribe.info(
-      s"build/taskProgress: dataKind=${params.getDataKind}, progress=${params.getProgress}/${params.getTotal}"
-    )
     params.getDataKind match {
       case "bloop-progress" | "bazel-progress" =>
-        val targetOpt = buildTargetFromParams
-        scribe.info(
-          s"build/taskProgress: target=$targetOpt, compilationsHas=${targetOpt.flatMap(compilations.get).isDefined}"
-        )
         for {
-          buildTarget <- targetOpt
+          buildTarget <- buildTargetFromParams
           report <- compilations.get(buildTarget)
         } yield {
           report.updateProgress(params.getProgress, params.getTotal)
