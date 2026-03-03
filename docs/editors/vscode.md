@@ -138,6 +138,13 @@ to take effect.
 
 ```
 
+To have the Bloop server shut down when you close VS Code, enable the
+`metals.shutdownBloopOnEditorClose` setting (machine-scoped). Bloop is only shut
+down when the **last** VS Code window that had Metals open is closed; with
+multiple windows open, it keeps running until the last one closes. See
+[metals-feature-requests#129](https://github.com/scalameta/metals-feature-requests/issues/129)
+for more context.
+
 ## Show document symbols
 
 Run the "Explorer: Focus on Outline View" command to open the symbol outline for
