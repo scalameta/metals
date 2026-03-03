@@ -542,7 +542,7 @@ class MbtWorkspaceSymbolProvider(
 
   def possibleReferences(
       params: MbtPossibleReferencesParams
-  ): Iterable[AbsolutePath] = {
+  ): Set[AbsolutePath] = {
     val queries = HashSet.empty[String]
     params.implementations.foreach { symbol =>
       val sym = Symbol(symbol)
@@ -579,7 +579,7 @@ class MbtWorkspaceSymbolProvider(
     }
     val fingerprints =
       queries.iterator.map(FingerprintedCharSequence.fuzzyReference).toBuffer
-    val result = new ju.concurrent.ConcurrentLinkedDeque[AbsolutePath]()
+    val result = TrieMap.empty[AbsolutePath, Unit]
     for {
       path <- documentsKeys.toList
       doc <- documents.get(path).toList.iterator
@@ -589,13 +589,13 @@ class MbtWorkspaceSymbolProvider(
         scribe.warn(s"mbt-v2: bloom filter is full for ${path}")
       }
       if (path.exists) {
-        result.add(path)
+        result(path) = ()
       } else {
         // Clean up removed files
         documents.remove(path)
       }
     }
-    result.asScala
+    result.keysIterator.toSet
   }
 
   // Convenience method to avoid dealing with the visitor-based query API

@@ -75,6 +75,21 @@ class MbtReferenceProvider(
     }
     i
   }
+
+  /**
+   * Query MBT for possible references, filtering out proto files and sorting
+   *  results by proximity to the given path.
+   */
+  private def sortedCandidates(
+      params: MbtPossibleReferencesParams,
+      path: AbsolutePath,
+  ): Seq[AbsolutePath] =
+    mbt
+      .possibleReferences(params)
+      .filterNot(_.filename.endsWith(".proto"))
+      .toSeq
+      .sortBy(c => -commonPrefixLength(path, c))
+
   // We timebox the search because the user could do "Find References" on
   // java.lang.String and get matches in ALL files, which is always going to
   // take a long time to compute. We still stream results for clients that
@@ -210,15 +225,10 @@ class MbtReferenceProvider(
         if (sym.isMethod) isVisitedMethodName.contains(sym.displayName)
         else lastQueryRound.contains(s)
       }
-      val candidates = mbt
-        .possibleReferences(
-          MbtPossibleReferencesParams(implementations = toQuery)
-        )
-        .iterator
-        .filterNot(_.filename.endsWith(".proto"))
-        .distinct
-        .toSeq
-        .sortBy(c => -commonPrefixLength(path, c))
+      val candidates = sortedCandidates(
+        MbtPossibleReferencesParams(implementations = toQuery),
+        path,
+      )
 
       scribe.info(s"Found ${candidates.size} candidate files for depth $depth.")
       lastQueryRound = Set.from(isOverridenSymbol)
@@ -337,6 +347,7 @@ class MbtReferenceProvider(
         timeout.div(2),
         cache,
         superMethods,
+        path,
       ) ++ superMethods).distinct
     val toQuerySymbols =
       if (implementationMethods.nonEmpty) implementationMethods
@@ -374,19 +385,16 @@ class MbtReferenceProvider(
 
     val enclosingGlobalOccurrences =
       toQuerySymbols.filter(sym => sym.isGlobal)
-    val externalDocumentCandidates: Iterable[AbsolutePath] =
+    val candidatesList =
       if (enclosingGlobalOccurrences.nonEmpty) {
-        mbt.possibleReferences(
-          MbtPossibleReferencesParams(references = toQuerySymbols)
+        sortedCandidates(
+          MbtPossibleReferencesParams(references = toQuerySymbols),
+          path,
         )
       } else {
         Nil
       }
 
-    val candidatesList = externalDocumentCandidates.iterator
-      .filterNot(_.filename.endsWith(".proto"))
-      .distinct
-      .toSeq
     val totalCandidates = candidatesList.size
     scribe.info(
       s"references: found $totalCandidates external document candidates in $timer"
@@ -479,9 +487,11 @@ class MbtReferenceProvider(
       timeout: FiniteDuration,
       cache: TextDocumentCache,
       overriddenSymbols: Seq[String],
+      path: AbsolutePath,
   ): Seq[String] = {
-    val candidates = mbt.possibleReferences(
-      MbtPossibleReferencesParams(implementations = overriddenSymbols)
+    val candidates = sortedCandidates(
+      MbtPossibleReferencesParams(implementations = overriddenSymbols),
+      path,
     )
     if (candidates.isEmpty) {
       return Nil

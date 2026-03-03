@@ -92,9 +92,7 @@ final class MbtProtobufReferenceProvider(
           references = implBaseSymbols,
         )
       )
-      .iterator
       .filterNot(p => p.isProtoFilename || p.isScalaFilename)
-      .distinct
       .toSeq
       .sortBy(c => -commonPrefixLength(path, c))
 
