@@ -8,6 +8,7 @@ import scala.collection.mutable
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.PcQueryContext
+import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.SymbolSearch
@@ -422,7 +423,10 @@ class CompletionProvider(
       text
     )
 
-    val searchResults =
+    val searchResults = SimpleTimer.timedThunk(
+      "completion search results",
+      thresholdMillis = 2000
+    ) {
       if (kind == CompletionListKind.Scope) {
         workspaceSymbolListMembers(query, pos, visit)
       } else {
@@ -433,6 +437,7 @@ class CompletionProvider(
           case _ => SymbolSearch.Result.COMPLETE
         }
       }
+    }
 
     InterestingMembers(buf.result(), searchResults)
   }
@@ -541,11 +546,14 @@ class CompletionProvider(
       }
     }
     try {
-      val completions = completionsAt(pos) match {
-        case CompletionResult.NoResults =>
-          new DynamicFallbackCompletions(pos).print()
-        case r => r
-      }
+      val completions =
+        SimpleTimer.timedThunk("completionsAt", thresholdMillis = 1000) {
+          completionsAt(pos) match {
+            case CompletionResult.NoResults =>
+              new DynamicFallbackCompletions(pos).print()
+            case r => r
+          }
+        }
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope
