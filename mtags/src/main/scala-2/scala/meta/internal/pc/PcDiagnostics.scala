@@ -23,6 +23,10 @@ trait PcDiagnostics {
   /**
    * Return all problems issued by the presentation compiler for the given file. This method may block
    * waiting for a typechecking run to finish.
+   *
+   * This must only be called when the PC is running MetalsGlobalThreadNoBackgroundCompilation
+   * (i.e. when emitDiagnostics = true), because it calls backgroundCompile() directly which would
+   * race with MetalsGlobalThread's own Global.backgroundCompile().
    */
   def diagnosticsOf(
       source: SourceFile
@@ -38,6 +42,32 @@ trait PcDiagnostics {
       case None =>
         logger.warn(
           s"Missing unit for file ${source.file} when retrieving errors. Errors will not be shown in this file. Loaded units are: $unitOfFile"
+        )
+        Nil
+    }
+  }
+
+  /**
+   * Return diagnostics for a single file by delegating compilation to the PC thread via askLoadedTyped.
+   * Safe to call when the PC is running MetalsGlobalThread (backgroundCompilation mode), since
+   * compilation is performed by the PC thread itself rather than concurrently.
+   */
+  def onDemandDiagnostics(source: SourceFile): Seq[l.Diagnostic] = {
+    try {
+      metalsAsk[Tree](askLoadedTyped(source, keepLoaded = false, _))
+    } catch {
+      case ex: FreshRunReq => throw ex
+      case ShutdownReq => throw ShutdownReq
+      case ex: ControlThrowable => throw ex
+      case NonFatal(_) =>
+      // Type errors are expected for erroneous code; unit.problems will contain them
+    }
+    unitOfFile.get(source.file) match {
+      case Some(unit) =>
+        unit.problems.toList.flatMap(toLspDiagnostic)
+      case None =>
+        logger.warn(
+          s"Missing unit for file ${source.file} when retrieving on-demand errors."
         )
         Nil
     }

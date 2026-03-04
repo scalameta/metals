@@ -201,7 +201,13 @@ case class ScalaPresentationCompiler(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
     val noDiags = Seq[Diagnostic]().asJava
-    if (params.uri().toString.endsWith(".scala") && config.emitDiagnostics) {
+    if (
+      params
+        .uri()
+        .toString
+        .endsWith(".scala") && (config.emitDiagnostics || params
+        .shouldReturnDiagnostics())
+    ) {
       compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
         pc =>
           val mGlobal = pc.compiler()
@@ -209,7 +215,12 @@ case class ScalaPresentationCompiler(
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
-          mGlobal.diagnosticsOf(sourceFile).asJava
+          if (config.emitDiagnostics)
+            // MetalsGlobalThreadNoBackgroundCompilation: safe to compile directly
+            mGlobal.diagnosticsOf(sourceFile).asJava
+          else
+            // MetalsGlobalThread: delegate to the PC thread via askLoadedTyped to avoid race conditions
+            mGlobal.onDemandDiagnostics(sourceFile).asJava
       }(emptyQueryContext)
     } else { CompletableFuture.completedFuture(noDiags) }
   }

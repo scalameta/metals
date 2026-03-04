@@ -1215,6 +1215,9 @@ class WorkspaceLspService(
           .asJavaObject
       case ServerCommands.CopyWorksheetOutput(path) =>
         getServiceFor(path).copyWorksheetOutput(path.toAbsolutePath)
+      case ServerCommands.MetalsPaste(params) =>
+        val path = params.originDocument.getUri().toAbsolutePath
+        getServiceFor(path).didPaste(params).asJavaObject
       case actionCommand
           if currentOrHeadOrFallback.allActionCommandsIds(
             actionCommand.getCommand()

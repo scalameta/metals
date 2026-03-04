@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.Collections
@@ -335,11 +336,14 @@ class Compilers(
     )
 
   private def didChangeBSPDiagnostics(
-      path: AbsolutePath
+      path: AbsolutePath,
+      shouldReturnDiagnostics: Boolean,
+      content: Option[String] = None,
   ): Future[List[Diagnostic]] = {
     def originInput =
-      path
-        .toInputFromBuffers(buffers)
+      content.map(Input.VirtualFile(path.toURI.toString(), _)).getOrElse {
+        path.toInputFromBuffers(buffers)
+      }
 
     loadCompiler(path)
       .map { pc =>
@@ -361,7 +365,21 @@ class Compilers(
 
         outlineFilesProvider.didChange(pc.buildTargetId(), path)
 
-        Future.successful(Nil)
+        for {
+          ds <-
+            pc
+              .didChange(
+                Compilers.DidChangeCompilerFileParams(
+                  path.toNIO.toUri(),
+                  input.value,
+                  shouldReturnDiagnostics,
+                )
+              )
+              .asScala
+        } yield {
+          ds.asScala.map(adjust.adjustDiagnostic).toList
+
+        }
       }
       .getOrElse(Future.successful(Nil))
   }
@@ -371,7 +389,14 @@ class Compilers(
       // Batch/debounce these requests since they can arrivein bursts
       fileDidChange(Seq(path))
     else
-      didChangeBSPDiagnostics(path).ignoreValue
+      didChangeBSPDiagnostics(path, shouldReturnDiagnostics = false).ignoreValue
+  }
+
+  def didChangeWithDiagnostics(
+      path: AbsolutePath,
+      content: Option[String] = None,
+  ): Future[List[Diagnostic]] = {
+    didChangeBSPDiagnostics(path, shouldReturnDiagnostics = true, content)
   }
 
   def didCompile(report: CompileReport): Unit = {
@@ -1864,5 +1889,15 @@ object Compilers {
     final case class Default(language: s.Language)
         extends PresentationCompilerKey
   }
+
+  // To be removed in the future after:
+  // - https://github.com/scalameta/metals/pull/7430
+  // - https://github.com/scala/scala3/pull/22259
+  case class DidChangeCompilerFileParams(
+      uri: URI,
+      text: String,
+      override val shouldReturnDiagnostics: Boolean,
+      token: CancelToken = EmptyCancelToken,
+  ) extends VirtualFileParams
 
 }

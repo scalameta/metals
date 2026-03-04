@@ -4,6 +4,7 @@ import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
@@ -80,28 +81,29 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |object A {
-       |  val f = <<Future.successful(Instant.now)>>
+       |  val f = <<new Future(Instant.now)>>
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
-    s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
         |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${ImportMissingSymbol.title("Instant", "java.time")}
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
-        |${ExtractMethodCodeAction.title("object `A`")}
-        |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
        |
        |import scala.concurrent.Future
        |
        |object A {
-       |  val f = Future.successful(Instant.now)
+       |  val f = new Future(Instant.now)
        |  val b = ListBuffer.newBuilder[Int]
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    selectedActionIndex = 1,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   // Note: When importing multiple symbols, each is added relative to existing imports
@@ -375,5 +377,36 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+  )
+
+  check(
+    "mongo-dep",
+    """|package a
+       |import org.mongodb.scala.bson.codecs.Macros
+       |
+       |case class Test()
+       |
+       |object A{
+       |  val test = <<Macros.createCodecIgnoreNone[Test]()>> // trigger code action on this line
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("DocumentCodecProvider", "org.bson.codecs")}
+        |${ImportMissingSymbol.title("DocumentCodecProvider", "org.mongodb.scala.bson.codecs")}
+        |${CreateNewSymbol.title("DocumentCodecProvider")}
+        |${ExtractMethodCodeAction.title("object `A`")}
+        |""".stripMargin,
+    """|package a
+       |import org.mongodb.scala.bson.codecs.Macros
+       |import org.mongodb.scala.bson.codecs.DocumentCodecProvider
+       |
+       |case class Test()
+       |
+       |object A{
+       |  val test = Macros.createCodecIgnoreNone[Test]() // trigger code action on this line
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    expectNoDiagnostics = false,
+    dependencies = List("org.mongodb.scala::mongo-scala-driver:4.1.0"),
   )
 }
