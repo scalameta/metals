@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Supplier;
 
 /**
  * The public API of the presentation compiler.
@@ -273,6 +274,10 @@ public abstract class PresentationCompiler {
 		return this;
 	};
 
+	public PresentationCompiler withProgressBars(ProgressBars progressBars) {
+		return this;
+	}
+
 	/**
 	 * Provide a SymbolSearch to extract docstrings, java parameter names and Scala
 	 * default parameter values.
@@ -302,6 +307,10 @@ public abstract class PresentationCompiler {
 	 * Provide workspace root for features like ammonite script $file completions.
 	 */
 	public abstract PresentationCompiler withWorkspace(Path workspace);
+
+	public PresentationCompiler withSemanticdbFileManager(SemanticdbFileManager semanticdbFileManager) {
+		return this;
+	}
 
 	/**
 	 * Provide CompletionItemPriority for additional sorting completion items.
@@ -333,24 +342,26 @@ public abstract class PresentationCompiler {
 	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
 			List<String> options);
 
-	// =============================
-	// Intentionally missing methods
-	// =============================
-
-	// Metals uses diagnostics from the build. It is not on the roadmap to publish
-	// diagnostics
-	// from the presentation compiler because they are unreliable, especially for
-	// long-running
-	// compiler instances.
-	// def diagnostics(): List[Diagnostics]
-
-	// The presentation compiler does not have enough information to implement it
-	// standalone.
-	// def definition(params: OffsetParams): List[Location]
-
-	// The presentation compiler does not have enough information to implement it
-	// standalone.
-	// def references(params: OffsetParams): List[Location]
+	/**
+	 * Construct a new presentation compiler with the given parameters.
+	 *
+	 * @param buildTargetIdentifier the build target containing this source file.
+	 *                              This is needed for
+	 *                              {@link #completionItemResolve(CompletionItem, String)}.
+	 * @param classpath             the classpath of this build target.
+	 * @param options               the compiler flags for the new compiler.
+	 *                              Important, it is recommended to disable all
+	 *                              compiler plugins excluding
+	 *                              org.scalamacros:paradise, kind-projector and
+	 *                              better-monadic-for.
+	 * @param sourcePath            A supplier that returns the source path for this
+	 *                              build target, used by the PC to locate types
+	 *                              that have not been built yet.
+	 */
+	public PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options,
+			Supplier<List<Path>> sourcePath) {
+		return newInstance(buildTargetIdentifier, classpath, options);
+	}
 
 	// ==============================================
 	// Internal methods - not intended for public use
