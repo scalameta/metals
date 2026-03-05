@@ -206,6 +206,16 @@ class ParsedLogicalPackage(
    */
   def sources: Seq[String] = directSources.toSeq.distinct
 
+  /** Merge all packages and sources from `other` into this package. */
+  def mergeWith(other: LogicalPackage): Unit = {
+    for (source <- other.sources)
+      enterSource(source)
+    for (pkg <- other.packages) {
+      val target = enterPackage(pkg.name)
+      target.mergeWith(pkg)
+    }
+  }
+
   override def toString(): String =
     s"package $name(${packages.size} packages and ${sources.size} files)"
 }
@@ -247,7 +257,9 @@ object ParsedLogicalPackage {
     global.rootPackage
   }
 
-  def fromMbtIndex(packages: ju.Map[String, ju.Set[Path]]): LogicalPackage = {
+  def fromMbtIndex(
+      packages: ju.Map[String, ju.Set[Path]]
+  ): ParsedLogicalPackage = {
     val root = new ParsedLogicalPackage("", None)
 
     def isSupported(path: Path): Boolean = {

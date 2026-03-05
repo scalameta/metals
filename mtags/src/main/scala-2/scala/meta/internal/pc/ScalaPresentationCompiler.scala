@@ -3,6 +3,7 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.util
 import java.util.Optional
@@ -879,8 +880,39 @@ case class ScalaPresentationCompiler(
         ParsedLogicalPackage.fromMbtIndex(
           semanticdbFileManager.listAllPackages()
         )
-      } else
-        ParsedLogicalPackage.collectLogicalPackages(settings)
+      } else {
+        val packages = semanticdbFileManager.listAllPackages().asScala
+        val paths: Set[Path] = settings.sourcepath.value
+          .split(File.pathSeparator)
+          .filter(_.nonEmpty)
+          .map(Paths.get(_))
+          .toSet
+        val indexFiles: Set[Path] =
+          packages.values.flatMap(_.asScala).toSet
+
+        val filteredPackages =
+          packages.mapValues(ps => ps.asScala.filter(paths.contains).asJava)
+        val rootPkg =
+          ParsedLogicalPackage.fromMbtIndex(filteredPackages.toMap.asJava)
+
+        val missingFromIndex = paths -- indexFiles
+        if (missingFromIndex.nonEmpty) {
+          logger.info(
+            s"[$buildTargetIdentifier] Parsing ${missingFromIndex.size} additional source path files not in MBT index"
+          )
+          val augmentSettings = new Settings
+          augmentSettings.usejavacp.value = settings.usejavacp.value
+          augmentSettings.classpath.value = settings.classpath.value
+          augmentSettings.sourcepath.value =
+            missingFromIndex.mkString(File.pathSeparator)
+          augmentSettings.bootclasspath.value = settings.bootclasspath.value
+          val augmentedPackages =
+            ParsedLogicalPackage.collectLogicalPackages(augmentSettings)
+          rootPkg.mergeWith(augmentedPackages)
+        }
+
+        rootPkg
+      }
     }
     if (rootSrcPackage.packages.isEmpty && rootSrcPackage.sources.isEmpty) {
       logger.warn(
