@@ -1,8 +1,12 @@
 package scala.meta.internal.semver
 
+import java.util.logging.Logger
+
 import scala.util.Try
 
 object SemVer {
+
+  private val logger: Logger = Logger.getLogger(getClass.getName)
 
   case class Version(
       major: Int,
@@ -48,8 +52,19 @@ object SemVer {
   object Version {
     def fromString(version: String): Version = {
       val parts = version.split("\\.|-")
-      val Array(major, minor, patch) =
-        parts.take(3).map(tryToInt)
+      val parsed = parts.take(3).map(p => Try(p.toInt).toOption)
+      val (major, minor, patch) =
+        parsed match {
+          case Array(Some(major), Some(minor), Some(patch)) =>
+            (major, minor, patch)
+          case Array(Some(major), Some(minor), _*) =>
+            (major, minor, 0)
+          case Array(Some(major), _*) =>
+            (major, 0, 0)
+          case _ =>
+            logger.warning(s"Version $version is invalid.")
+            throw new IllegalArgumentException(s"Version $version is invalid")
+        }
       val (rc, milestone) = parts
         .lift(3)
         .map { v =>
