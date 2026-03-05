@@ -17,7 +17,6 @@ import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
@@ -118,7 +117,7 @@ class MbtReferenceProvider(
             metrics.recordEvent(
               Event
                 .duration("find_implementations", timer.elapsed)
-                .withLanguage(path.toLanguage)
+                .withLanguage(path.toJLanguage)
                 .withLabel("resultCount", results.size.toString)
                 .withOptional("symbol", symbol)
             )
@@ -309,7 +308,7 @@ class MbtReferenceProvider(
       metrics.recordEvent(
         Event
           .duration("find_references", timer.elapsed)
-          .withLanguage(path.toLanguage)
+          .withLanguage(path.toJLanguage)
           .withOptional("symbol", sym)
           .withLabel("resultCount", resultCount.toString)
       )

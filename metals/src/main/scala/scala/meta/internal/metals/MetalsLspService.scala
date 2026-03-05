@@ -30,7 +30,6 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
@@ -66,7 +65,6 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
-import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
@@ -1505,13 +1503,11 @@ abstract class MetalsLspService(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
     CancelTokens.future { token =>
-      val language =
-        params.getTextDocument.getUri.toAbsolutePathSafe.map(_.toLanguage)
       timerProvider.timed(
         "completion",
         metricName = Some("completion"),
         transformEvent =
-          _.withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE)),
+          _.withLanguage(params.getTextDocument.getUri.toJLanguage),
       ) {
         compilers.completions(params, token)
       }
@@ -2059,7 +2055,7 @@ abstract class MetalsLspService(
           metrics.recordEvent(
             Event
               .duration("definition", timer.elapsed)
-              .withLanguage(source.toLanguage)
+              .withLanguage(source.toJLanguage)
               .withLabel("symbol", value.symbol)
               .withLabel("success", (!value.isEmpty).toString)
           )
@@ -2067,7 +2063,7 @@ abstract class MetalsLspService(
           metrics.recordEvent(
             Event
               .duration("definition", timer.elapsed)
-              .withLanguage(source.toLanguage)
+              .withLanguage(source.toJLanguage)
               .withLabel("symbol", Symbols.None)
               .withLabel("success", "false")
           )

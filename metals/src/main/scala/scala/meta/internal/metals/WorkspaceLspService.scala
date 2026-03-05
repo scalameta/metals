@@ -19,8 +19,8 @@ import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -38,7 +38,6 @@ import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.pc
-import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
 import scala.meta.internal.tvp.MetalsTreeViewProvider
 import scala.meta.internal.tvp.NoopTreeViewProvider
@@ -920,26 +919,24 @@ class WorkspaceLspService(
       .flatMap(_.map(exec.tupled).getOrElse(onNotFound()))
 
   private def recordRunDebugEvent(
-      language: Option[Language],
+      language: Semanticdb.Language,
       testName: Option[String],
   ): Unit = {
     val event = new Event()
       .withLabel("name", "run_debug_session")
-      .withLanguage(language.getOrElse(Language.UNKNOWN_LANGUAGE))
+      .withLanguage(language)
     testName.foreach(event.withLabel("testName", _))
     metrics.recordEvent(event)
   }
 
   private def languageFromTargets(
       targets: Iterable[b.BuildTarget]
-  ): Option[Language] = {
+  ): Semanticdb.Language = {
     val languageIds = targets.iterator.flatMap(_.getLanguageIds.asScala).toList
-    Option.when(languageIds.nonEmpty) {
-      val normalized = languageIds.map(_.toLowerCase)
-      if (normalized.exists(_ == "scala")) Language.SCALA
-      else if (normalized.exists(_ == "java")) Language.JAVA
-      else Language.UNKNOWN_LANGUAGE
-    }
+    if (languageIds.contains("scala")) Semanticdb.Language.SCALA
+    else if (languageIds.contains("java")) Semanticdb.Language.JAVA
+    else if (languageIds.contains("protobuf")) Semanticdb.Language.PROTOBUF
+    else Semanticdb.Language.UNKNOWN_LANGUAGE
   }
 
   private def testNameFromSuites(
@@ -976,15 +973,15 @@ class WorkspaceLspService(
 
   private def languageFromMainClass(
       params: DebugUnresolvedMainClassParams
-  ): Option[Language] = {
+  ): Semanticdb.Language = {
     val byPath = Option(params.mainClass)
       .filter(value => value.endsWith(".scala") || value.endsWith(".java"))
       .flatMap(_.toAbsolutePathSafe)
-      .map(_.toLanguage)
+      .map(_.toJLanguage)
     val byTarget = Option(params.buildTarget)
       .flatMap(findBuildTargetByDisplayName)
-      .flatMap(target => languageFromTargets(List(target)))
-    byPath.orElse(byTarget)
+      .map(target => languageFromTargets(List(target)))
+    byPath.orElse(byTarget).getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
   }
 
   private def findBuildTargetByDisplayName(
@@ -1308,7 +1305,8 @@ class WorkspaceLspService(
         val language =
           Option(params.buildTarget)
             .flatMap(findBuildTargetByDisplayName)
-            .flatMap(target => languageFromTargets(List(target)))
+            .map(target => languageFromTargets(List(target)))
+            .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
         recordRunDebugEvent(language, Option(params.testClass))
         DebugProvider
           .getResultFromSearches(
@@ -1320,7 +1318,8 @@ class WorkspaceLspService(
         val language =
           Option(params.buildTarget)
             .flatMap(findBuildTargetByDisplayName)
-            .flatMap(target => languageFromTargets(List(target)))
+            .map(target => languageFromTargets(List(target)))
+            .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
         recordRunDebugEvent(language, testName = None)
         onFirstSatifying(service =>
           Future.successful(
@@ -1338,7 +1337,8 @@ class WorkspaceLspService(
       case ServerCommands.DiscoverAndRun(params) =>
         val language = Option(params.path)
           .flatMap(_.toAbsolutePathSafe)
-          .map(_.toLanguage)
+          .map(_.toJLanguage)
+          .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
         recordRunDebugEvent(language, testName = None)
         getServiceFor(params.path)
           .debugDiscovery(params)

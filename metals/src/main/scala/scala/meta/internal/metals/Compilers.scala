@@ -8,6 +8,7 @@ import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -27,7 +28,6 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
-import scala.meta.internal.metals.EventsOps._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metals.mbt.MbtBuild
@@ -311,7 +311,7 @@ class Compilers(
               metrics.recordEvent(
                 Event
                   .duration("diagnostics", timer.elapsed)
-                  .withLanguage(path.toLanguage)
+                  .withLanguage(path.toJLanguage)
               )
               result
             }
@@ -360,7 +360,7 @@ class Compilers(
                 metrics.recordEvent(
                   Event
                     .duration("diagnostics", timer.elapsed)
-                    .withLanguage(file.toLanguage)
+                    .withLanguage(file.toJLanguage)
                 )
               }
           }
@@ -1525,6 +1525,7 @@ class Compilers(
   }
 
   private def loadProtoCompiler(
+      @nowarn("cat=unused-params")
       path: AbsolutePath
   ): Option[PresentationCompiler] = {
     Some(protoCompiler)

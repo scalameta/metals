@@ -14,6 +14,7 @@ import scala.collection.AbstractIterator
 import scala.collection.mutable.ListBuffer
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.CompilerOffsetParams
@@ -266,6 +267,11 @@ trait CommonMtagsEnrichments {
       doc.endsWith(".java")
     def isProtoFilename: Boolean =
       doc.endsWith(".proto")
+    def toJLanguage: Semanticdb.Language =
+      if (isScalaFilename) Semanticdb.Language.SCALA
+      else if (isJavaFilename) Semanticdb.Language.JAVA
+      else if (isProtoFilename) Semanticdb.Language.PROTOBUF
+      else Semanticdb.Language.UNKNOWN_LANGUAGE
     def isAmmoniteGeneratedFile: Boolean =
       doc.endsWith(".amm.sc.scala")
     def isScalaCLIGeneratedFile: Boolean =
@@ -447,6 +453,14 @@ trait CommonMtagsEnrichments {
         new l.Position(range.getStartLine(), range.getStartCharacter()),
         new l.Position(range.getEndLine(), range.getEndCharacter())
       )
+  }
+
+  implicit class XtensionEvent(event: Event) {
+    def withLanguage(language: Semanticdb.Language): Event =
+      event.withLabel("language", language.toString.toLowerCase)
+
+    def withOptional(key: String, value: Option[String]): Event =
+      value.fold(event)(event.withLabel(key, _))
   }
 
 }
