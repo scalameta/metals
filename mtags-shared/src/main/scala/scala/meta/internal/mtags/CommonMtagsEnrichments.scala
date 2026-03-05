@@ -458,6 +458,15 @@ trait CommonMtagsEnrichments {
   implicit class XtensionEvent(event: Event) {
     def withLanguage(language: Semanticdb.Language): Event =
       event.withLabel("language", language.toString.toLowerCase)
+    def withLanguageTarget(languages: Iterable[l.Location]): Event =
+      event.withLabel(
+        "language_target",
+        languages.iterator
+          .map(_.getUri.toJLanguage.toString.toLowerCase)
+          .toSeq
+          .distinct
+          .mkString(",")
+      )
 
     def withOptional(key: String, value: Option[String]): Event =
       value.fold(event)(event.withLabel(key, _))

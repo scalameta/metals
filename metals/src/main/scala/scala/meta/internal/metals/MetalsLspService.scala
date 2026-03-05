@@ -2052,10 +2052,12 @@ abstract class MetalsLspService(
       }
       result.onComplete {
         case Success(value) =>
+
           metrics.recordEvent(
             Event
               .duration("definition", timer.elapsed)
               .withLanguage(source.toJLanguage)
+              .withLanguageTarget(value.locations.asScala)
               .withLabel("symbol", value.symbol)
               .withLabel("success", (!value.isEmpty).toString)
           )
