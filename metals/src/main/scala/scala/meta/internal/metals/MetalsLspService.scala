@@ -536,6 +536,16 @@ abstract class MetalsLspService(
     )
   )
 
+  if (initialServerConfig.telemetry.isMetricsEnabled)
+    register(
+      new MemoryMonitoring(
+        metrics,
+        () => compilers.loadedPresentationCompilerCount(),
+        folder.filename.toString,
+        sh,
+      )
+    )
+
   val mbtReferenceProvider = new MbtReferenceProvider(
     mbtSymbolSearch,
     compilers,
