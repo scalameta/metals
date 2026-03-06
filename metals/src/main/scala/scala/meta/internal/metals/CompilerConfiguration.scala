@@ -50,6 +50,7 @@ class CompilerConfiguration(
     embedded: Embedded,
     progressBars: ProgressBars,
     sh: ScheduledExecutorService,
+    time: Time,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     trees: Trees,
@@ -123,8 +124,13 @@ class CompilerConfiguration(
     userConfig().additionalPcChecks.isRefchecks
 
   sealed trait MtagsPresentationCompiler {
-    def await: PresentationCompiler
+    protected def awaitCompiler: PresentationCompiler
     def shutdown(): Unit
+    @volatile var lastAccessedMs: Long = time.currentMillis()
+    final def await: PresentationCompiler = {
+      lastAccessedMs = time.currentMillis()
+      awaitCompiler
+    }
   }
 
   case class StandaloneJavaCompiler(
@@ -139,7 +145,7 @@ class CompilerConfiguration(
           classpath.asJava,
           List.empty[String].asJava,
         )
-    def await: PresentationCompiler = pc
+    protected def awaitCompiler: PresentationCompiler = pc
     def shutdown(): Unit = pc.shutdown()
   }
   case class StandaloneCompiler(
@@ -183,7 +189,7 @@ class CompilerConfiguration(
     }
 
     def shutdown(): Unit = standalone.shutdown()
-    def await: PresentationCompiler = standalone
+    protected def awaitCompiler: PresentationCompiler = standalone
   }
 
   object StandaloneCompiler {
@@ -266,7 +272,7 @@ class CompilerConfiguration(
       newCompiler(embedded.scalaLibraries(scalaVersion), sourceItems _)
     }
 
-    def await: PresentationCompiler = {
+    protected def awaitCompiler: PresentationCompiler = {
       val compilerConfig = config.initialConfig.compilers
       try {
         val pc = presentationCompilerRef.get()

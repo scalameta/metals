@@ -6,6 +6,8 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
 import scala.annotation.nowarn
@@ -101,6 +103,7 @@ class Compilers(
     embedded: Embedded,
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
+    time: Time,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     scalaVersionSelector: ScalaVersionSelector,
@@ -130,6 +133,7 @@ class Compilers(
     embedded,
     progressBars,
     sh,
+    time,
     initializeParams,
     excludedPackages,
     trees,
@@ -164,6 +168,32 @@ class Compilers(
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
   private val cache = jcache.asScala
+
+  private val idleCompilerTimeoutMs = 30000L
+
+  private[metals] def evictIdleCompilers(): Unit = {
+    val now = time.currentMillis()
+    cache.foreach { case (key, lazyPc) =>
+      val idleMs = now - lazyPc.lastAccessedMs
+      if (idleMs > idleCompilerTimeoutMs) {
+        Option(jcache.remove(key)).foreach { removed =>
+          scribe.debug(
+            s"Shutting down idle presentation compiler for $key (idle for ${idleMs}ms)"
+          )
+          removed.shutdown()
+        }
+      }
+    }
+  }
+
+  private val idleCompilerEvictionTask: ScheduledFuture[_] =
+    sh.scheduleAtFixedRate(
+      (() => evictIdleCompilers()): Runnable,
+      10,
+      10,
+      TimeUnit.SECONDS,
+    )
+
   private def buildTargetPCFromCache(
       id: BuildTargetIdentifier
   ): Option[PresentationCompiler] =
@@ -237,6 +267,7 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
+    idleCompilerEvictionTask.cancel(false)
     Cancelable.cancelEach(cache.values)(_.shutdown())
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     // important not to leak presentation compilers, they come with

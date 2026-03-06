@@ -517,6 +517,7 @@ abstract class MetalsLspService(
       embedded,
       workDoneProgress,
       sh,
+      time,
       initializeParams,
       () => excludedPackageHandler,
       scalaVersionSelector,
@@ -717,6 +718,9 @@ abstract class MetalsLspService(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
+
+  def evictIdleCompilers(): Unit =
+    compilers.evictIdleCompilers()
 
   protected val findTextInJars: FindTextInDependencyJars =
     new FindTextInDependencyJars(
