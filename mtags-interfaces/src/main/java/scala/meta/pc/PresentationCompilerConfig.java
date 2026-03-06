@@ -7,6 +7,9 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
 /**
  * Configuration options used by the Metals presentation compiler.
  */
@@ -52,6 +55,16 @@ public interface PresentationCompilerConfig {
 		Ascii,
 		/** Render as "🔼". */
 		Unicode
+	}
+
+	/** Strategy for placing Scala imports when auto-importing symbols. */
+	enum ScalaImportsPlacement {
+		/** Append imports at the end of the import block. */
+		APPEND_LAST,
+		/**
+		 * Place imports intelligently based on prefix matching and alphabetical order.
+		 */
+		SMART
 	}
 
 	/**
@@ -133,4 +146,24 @@ public interface PresentationCompilerConfig {
 		return ContentType.MARKDOWN;
 	}
 
+	default boolean emitDiagnostics() {
+		return false;
+	}
+
+	default Path workspaceRoot() {
+		return Paths.get(System.getProperty("user.dir"));
+	}
+
+	/** Returns the mode of the source path to use. */
+	default SourcePathMode sourcePathMode() {
+		return SourcePathMode.PRUNED;
+	}
+
+	default boolean shouldRunRefchecks() {
+		return false;
+	}
+	/** Returns the Scala import placement strategy. */
+	default ScalaImportsPlacement scalaImportsPlacement() {
+		return ScalaImportsPlacement.APPEND_LAST;
+	}
 }
