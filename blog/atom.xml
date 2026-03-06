@@ -71,9 +71,10 @@ directly via the command line using <code>--&lt;key&gt; &lt;value&gt;</code> syn
 keys and boolean flags. This lets you customize the MCP server behavior
 independently of your editor.</li>
 </ul>
-<p>You should be able to install the standalone MCP server using the following
-command:</p>
+<p>You should be able to install the standalone MCP server using Coursier:</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">cs install metals-mcp</span><br></span></code></pre></div></div>
+<p>or Homebrew:</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><span class="token-line" style="color:#bfc7d5"><span class="token plain">brew install metals</span><br></span></code></pre></div></div>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="add-an-option-to-shutdown-bloop-build-server">Add an option to shutdown Bloop build server<a href="http://scalameta.org/metals/blog/2026/03/03/osmium#add-an-option-to-shutdown-bloop-build-server" class="hash-link" aria-label="Direct link to Add an option to shutdown Bloop build server" title="Direct link to Add an option to shutdown Bloop build server" translate="no">​</a></h2>
 <p>A long-standing request was to terminate the Bloop process when closing the
 editor, so you don't end up with leftover build server processes running in the
