@@ -37,11 +37,51 @@ class BazelNativeProcess(
     runProcess(cmd, onStderr)
   }
 
+  /** Query for Scala and Java rule labels (e.g. for Gazelle projects where //... is too large). */
+  def queryScalaAndJavaTargets(): Future[List[String]] = {
+    val query =
+      """kind("scala_.*", "//...") union kind("java_.*", "//...")"""
+    val output = new StringBuilder
+    val process = SystemProcess.run(
+      List(bazelBinary, "query", query, "--output=label"),
+      workspace,
+      redirectErrorOutput = false,
+      env = Map.empty,
+      processOut = Some(line => output.append(line).append("\n")),
+      processErr = Some(_ => ()),
+    )
+    val ref = Some(process)
+    activeProcess.set(ref)
+
+    process.complete.map { _ =>
+      activeProcess.compareAndSet(ref, None)
+      output
+        .toString()
+        .linesIterator
+        .map(_.trim)
+        .filter(_.nonEmpty)
+        .filter(l => l.startsWith("//") || l.startsWith("@"))
+        .toList
+    }
+  }
+
   def syncBuild(
       extraFlags: List[String] = Nil
   ): Future[Int] = {
     val cmd = List(bazelBinary, "build") ++ extraFlags ++ List("//...")
     runProcess(cmd)
+  }
+
+  /** Build only the given targets with the given flags (e.g. Scala/Java from query). */
+  def syncBuild(
+      targets: List[String],
+      extraFlags: List[String],
+  ): Future[Int] = {
+    if (targets.isEmpty) syncBuild(extraFlags)
+    else {
+      val cmd = List(bazelBinary, "build") ++ extraFlags ++ targets
+      runProcess(cmd)
+    }
   }
 
   def info(): Future[Map[String, String]] = {
