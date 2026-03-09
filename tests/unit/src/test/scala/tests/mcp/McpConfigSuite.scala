@@ -9,6 +9,7 @@ import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.VSCodeEditor
+import scala.meta.internal.metals.mcp.OpenCode
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
@@ -93,6 +94,24 @@ class McpConfigSuite extends BaseSuite {
       |  }
       |}""".stripMargin,
     client = Claude,
+  )
+
+  check(
+    "new-config-opencode",
+    "{ }",
+    1234,
+    "test-project",
+    """{
+      |  "$schema": "https://opencode.ai/config.json",
+      |  "mcp": {
+      |    "metals-lsp": {
+      |      "url": "http://localhost:1234/mcp",
+      |      "type": "remote",
+      |      "enabled": "true"
+      |    }
+      |  }
+      |}""".stripMargin,
+    client = OpenCode,
   )
 
   check(
@@ -185,6 +204,67 @@ class McpConfigSuite extends BaseSuite {
         |  "mcpServers": {
         |    "test-project-metals": {
         |      "url": "http://localhost:5678/mcp"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+  }
+
+  test("opencode-generate-config-file") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val port = 1234
+    val projectName = "test-project"
+
+    // First generation
+    McpConfig.writeConfig(
+      port,
+      projectName,
+      projectPath,
+      client = OpenCode,
+      activeClientExtensionIds = Set.empty,
+    )
+    val configFile = projectPath.resolve(".opencode/metals-mcp.jsonc")
+    assert(configFile.exists)
+    val firstContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      firstContent,
+      """{
+        |  "$schema": "https://opencode.ai/config.json",
+        |  "mcp": {
+        |    "metals-lsp": {
+        |      "url": "http://localhost:1234/mcp",
+        |      "type": "remote",
+        |      "enabled": "true"
+        |    }
+        |  }
+        |}""".stripMargin,
+    )
+
+    // Update with different port
+    McpConfig.writeConfig(
+      5678,
+      projectName,
+      projectPath,
+      client = OpenCode,
+      activeClientExtensionIds = Set.empty,
+    )
+    val secondContent = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+    assertNoDiff(
+      secondContent,
+      """{
+        |  "$schema": "https://opencode.ai/config.json",
+        |  "mcp": {
+        |    "metals-lsp": {
+        |      "url": "http://localhost:5678/mcp",
+        |      "type": "remote",
+        |      "enabled": "true"
         |    }
         |  }
         |}""".stripMargin,
@@ -379,6 +459,22 @@ class McpConfigSuite extends BaseSuite {
 
     assertEquals(
       McpConfig.getPort(config, "test-project", Claude),
+      Some(8080),
+    )
+  }
+
+  test("getPort - OpenCode client uses serverEntry") {
+    val config = """{
+      "$schema": "https://opencode.ai/config.json",
+      "mcp": {
+        "metals-lsp": {
+          "url": "http://localhost:8080/mcp"
+        }
+      }
+    }"""
+
+    assertEquals(
+      McpConfig.getPort(config, "test-project", OpenCode),
       Some(8080),
     )
   }

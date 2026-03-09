@@ -163,6 +163,11 @@ object McpConfig {
   ): String = {
     val config = JsonParser.parseString(inputConfig).getAsJsonObject
 
+    // Add root-level properties (e.g., $schema)
+    editor.rootProperties.foreach { case (key, value) =>
+      config.addProperty(key, value)
+    }
+
     // Get or create mcpServers object
     val mcpServers = if (config.has(editor.serverField)) {
       config.getAsJsonObject(editor.serverField)
@@ -230,6 +235,7 @@ case class Client(
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
     extraExtensions: Map[String, Client] = Map.empty,
+    rootProperties: List[(String, String)] = Nil,
 ) {
   def projectName(project: String): String =
     serverEntry.getOrElse(s"$project-metals")
@@ -283,6 +289,20 @@ object Claude
       fileName = Some(".mcp.json"),
     )
 
+object OpenCode
+    extends Client(
+      names = List("opencode", "OpenCode"),
+      settingsPath = ".opencode/",
+      serverField = "mcp",
+      additionalProperties = List(
+        "type" -> "remote",
+        "enabled" -> "true",
+      ),
+      serverEntry = Some("metals-lsp"),
+      fileName = Some("metals-mcp.jsonc"),
+      rootProperties = List("$schema" -> "https://opencode.ai/config.json"),
+    )
+
 object NoClient
     extends Client(
       names = Nil,
@@ -293,5 +313,5 @@ object NoClient
 
 object Client {
   val allClients: List[Client] =
-    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude)
+    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude, OpenCode)
 }
