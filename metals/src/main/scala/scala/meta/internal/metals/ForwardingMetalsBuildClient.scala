@@ -196,7 +196,11 @@ final class ForwardingMetalsBuildClient(
           report <- params.asCompileReport
           compilation <- compilations.remove(report.getTarget)
         } {
-          diagnostics.onFinishCompileBuildTarget(report, params.getStatus())
+          diagnostics.onFinishCompileBuildTarget(
+            report,
+            params.getStatus(),
+            params.getOriginId(),
+          )
           moduleStatus.onFinishCompileBuildTarget(report.getTarget)
           try {
             didCompile(report)

@@ -478,6 +478,7 @@ class WorksheetProvider(
       path,
       toPublish,
       isReset = true,
+      originId = "",
     )
     worksheetSnapshot
   }
