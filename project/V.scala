@@ -79,7 +79,7 @@ object V {
 
   val scalameta = "4.15.2"
 
-  val scribe = "3.17.0"
+  val scribe = "3.18.0"
 
   val qdox = "2.2.0"
 
