@@ -8,8 +8,8 @@ import scala.meta.internal.metals.mcp.Claude
 import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
-import scala.meta.internal.metals.mcp.VSCodeEditor
 import scala.meta.internal.metals.mcp.OpenCode
+import scala.meta.internal.metals.mcp.VSCodeEditor
 import scala.meta.io.AbsolutePath
 
 import munit.TestOptions
