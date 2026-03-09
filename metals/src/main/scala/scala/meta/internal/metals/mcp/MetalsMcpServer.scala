@@ -954,14 +954,14 @@ class MetalsMcpServer(
             completed = coursierComplete.complete(depString)
             if completed.nonEmpty
           } yield {
-            val completedOrLast =
-              if (key == FindDepKey.version && version.contains("latest"))
-                completed.headOption.toSeq
-              else completed
-            McpMessages.FindDep.dependencyReturnMessage(
-              key,
-              completedOrLast.distinct,
-            )
+            if (key == FindDepKey.version)
+              McpMessages.FindDep.versionMessage(completed.headOption)
+            else
+              McpMessages.FindDep.dependencyReturnMessage(
+                key,
+                completed.distinct,
+              )
+
           }
         }.headOption
           .getOrElse(McpMessages.FindDep.noCompletionsFound)
@@ -1427,6 +1427,12 @@ object MetalsMcpServer {
 object McpMessages {
 
   object FindDep {
+
+    def versionMessage(completed: Option[String]): String = {
+      s"""|Latest version found: ${completed.getOrElse("none")}
+          |""".stripMargin
+    }
+
     def dependencyReturnMessage(
         key: String,
         completed: Seq[String],

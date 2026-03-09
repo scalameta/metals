@@ -70,16 +70,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       _ = assertNoDiff(
         resultNameVersion.mkString("\n"),
         McpMessages.FindDep
-          .dependencyReturnMessage("version", Seq("4.10.2", "4.10.1", "4.10.0")),
-      )
-      resultNameVersion2 <- client.findDep(
-        "org.scalameta",
-        Some("parsers_2.13"),
-        None,
-      )
-      _ = assert(
-        resultNameVersion2.head.contains(", 4.13.0,"),
-        s"Expected to contain version 4.13.0, got ${resultNameVersion2.mkString("\n")}",
+          .versionMessage(Some("4.10.2")),
       )
       _ <- client.shutdown()
     } yield ()
