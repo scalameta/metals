@@ -71,7 +71,7 @@ object V {
 
   val sbtJdiTools = "1.2.0"
 
-  val scalaCli = "1.12.3"
+  val scalaCli = "1.12.4"
 
   val scalafix = "0.14.6"
 
