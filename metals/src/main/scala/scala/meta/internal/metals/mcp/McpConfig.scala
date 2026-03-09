@@ -185,7 +185,11 @@ object McpConfig {
       s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}",
     )
     editor.additionalProperties.foreach { case (key, value) =>
-      serverConfig.addProperty(key, value)
+      value match {
+        case v: String => serverConfig.addProperty(key, v)
+        case v: Boolean => serverConfig.addProperty(key, v)
+        case v: Number => serverConfig.addProperty(key, v)
+      }
     }
     mcpServers.add(serverEntry, serverConfig)
     gson.toJson(config)
@@ -231,7 +235,7 @@ case class Client(
     names: List[String],
     settingsPath: String,
     serverField: String,
-    additionalProperties: List[(String, String)],
+    additionalProperties: List[(String, Any)],
     serverEntry: Option[String] = None,
     fileName: Option[String] = None,
     shouldCleanUpServerEntry: Boolean = false,
@@ -297,7 +301,7 @@ object OpenCode
       serverField = "mcp",
       additionalProperties = List(
         "type" -> "remote",
-        "enabled" -> "true",
+        "enabled" -> true,
       ),
       serverEntry = Some("metals-lsp"),
       fileName = Some("metals-mcp.jsonc"),
