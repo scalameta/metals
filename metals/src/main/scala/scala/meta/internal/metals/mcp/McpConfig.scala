@@ -53,7 +53,8 @@ object McpConfig {
       projectName: String,
       client: Client,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${client.settingsPath}mcp.json")
+    val filename = client.fileName.getOrElse("mcp.json")
+    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
     if (configFile.exists) {
       val configContent = configFile.readText
       val updatedConfig = removeMetalsEntry(configContent, projectName, client)
@@ -131,7 +132,7 @@ object McpConfig {
 
       if (config.has(client.serverField)) {
         val mcpServers = config.getAsJsonObject(client.serverField)
-        val metalsKey = s"$projectName-metals"
+        val metalsKey = client.projectName(projectName)
 
         if (mcpServers.has(metalsKey)) {
           mcpServers.remove(metalsKey)
