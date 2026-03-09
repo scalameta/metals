@@ -27,8 +27,7 @@ object McpConfig {
       client: Client = CursorEditor,
       activeClientExtensionIds: Set[String],
   ): Unit = {
-    val filename = client.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
+    val (configFile, _) = resolveConfigFile(projectPath, client)
     val serverName = client.projectName(projectName)
 
     // Read existing config if it exists
@@ -48,14 +47,35 @@ object McpConfig {
       }
   }
 
+  /**
+   * Resolves the config file for a client.
+   * - Returns the first existing file from client.fileNames
+   * - If none exist, uses the last fileNames entry as the default for creation
+   */
+  private def resolveConfigFile(
+      projectPath: AbsolutePath,
+      client: Client,
+  ): (AbsolutePath, String) = {
+    val files = client.fileNames.map { name =>
+      projectPath.resolve(s"${client.settingsPath}$name") -> name
+    }
+
+    // Find first existing file, or use last one as default
+    files.find { case (file, _) => file.exists }.getOrElse(files.last)
+  }
+
   def deleteConfig(
       projectPath: AbsolutePath,
       projectName: String,
       client: Client,
   ): Unit = {
-    val filename = client.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
-    if (configFile.exists) {
+    // Check all possible config files for this client
+    val configFiles = client.fileNames
+      .map { name =>
+        projectPath.resolve(s"${client.settingsPath}$name")
+      }
+      .filter(_.exists)
+    configFiles.foreach { configFile =>
       val configContent = configFile.readText
       val updatedConfig = removeMetalsEntry(configContent, projectName, client)
 
@@ -76,14 +96,17 @@ object McpConfig {
    * Check if the config contains the old /sse endpoint for the given project
    * and rewrite it to use the new /mcp endpoint if needed.
    */
+  /**
+   * Check if the config contains the old /sse endpoint for the given project
+   * and rewrite it to use the new /mcp endpoint if needed.
+   */
   def rewriteOldEndpointIfNeeded(
       projectPath: AbsolutePath,
       projectName: String,
       client: Client,
       port: Int,
   ): Unit = {
-    val filename = client.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
+    val (configFile, _) = resolveConfigFile(projectPath, client)
     if (configFile.exists) {
       val configContent = configFile.readText
       rewriteOldEndpoint(configContent, projectName, client, port) match {
@@ -149,10 +172,29 @@ object McpConfig {
 
   private def isConfigEmpty(config: JsonObject, client: Client): Boolean = {
     Try {
-      config.size() == 0 ||
-      (config.has(client.serverField) && config
-        .getAsJsonObject(client.serverField)
-        .size() == 0 && config.size() == 1)
+      // Config is empty if it has no properties
+      if (config.size() == 0) return true
+
+      // Or if it only has the server field (empty) and root properties (like $schema)
+      val hasEmptyServerField =
+        config.has(client.serverField) &&
+          config.getAsJsonObject(client.serverField).size() == 0
+
+      if (hasEmptyServerField) {
+        // Count non-serverField properties using Java iterator
+        var count = 0
+        val iter = config.keySet().iterator()
+        while (iter.hasNext) {
+          if (iter.next() != client.serverField) count += 1
+        }
+        // Only root properties remain (e.g., $schema)
+        count <= client.rootProperties.size
+      } else if (!config.has(client.serverField)) {
+        // Server field was removed - check if only root properties remain
+        config.size() <= client.rootProperties.size
+      } else {
+        false
+      }
     }.getOrElse(false)
   }
 
@@ -200,8 +242,7 @@ object McpConfig {
       projectName: String,
       editor: Client,
   ): Option[Int] = {
-    val filename = editor.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${editor.settingsPath}$filename")
+    val (configFile, _) = resolveConfigFile(projectPath, editor)
     if (configFile.exists)
       getPort(configFile.readText, projectName, editor)
     else None
@@ -237,7 +278,7 @@ case class Client(
     serverField: String,
     additionalProperties: List[(String, Any)],
     serverEntry: Option[String] = None,
-    fileName: Option[String] = None,
+    fileNames: List[String] = List("mcp.json"),
     shouldCleanUpServerEntry: Boolean = false,
     extraExtensions: Map[String, Client] = Map.empty,
     rootProperties: List[(String, String)] = Nil,
@@ -291,20 +332,20 @@ object Claude
         "type" -> "http"
       ),
       serverEntry = Some("metals"),
-      fileName = Some(".mcp.json"),
+      fileNames = List(".mcp.json"),
     )
 
 object OpenCode
     extends Client(
       names = List("opencode", "OpenCode"),
-      settingsPath = ".opencode/",
+      settingsPath = "./",
       serverField = "mcp",
       additionalProperties = List(
         "type" -> "remote",
         "enabled" -> true,
       ),
       serverEntry = Some("metals-lsp"),
-      fileName = Some("metals-mcp.jsonc"),
+      fileNames = List("opencode.json", "opencode.jsonc"),
       rootProperties = List("$schema" -> "https://opencode.ai/config.json"),
     )
 
