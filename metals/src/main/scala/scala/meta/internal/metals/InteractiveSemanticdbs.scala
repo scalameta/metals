@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.charset.Charset
-import java.util.Collections
+import java.util.concurrent.ConcurrentHashMap
 
 import scala.util.Success
 import scala.util.Try
@@ -39,9 +39,8 @@ final class InteractiveSemanticdbs(
 ) extends Cancelable
     with Semanticdbs {
 
-  private val textDocumentCache = Collections.synchronizedMap(
-    new java.util.HashMap[AbsolutePath, s.TextDocument]()
-  )
+  private val textDocumentCache =
+    new ConcurrentHashMap[AbsolutePath, s.TextDocument]()
 
   private lazy val isInteractiveSemanticdbEnabled: Boolean =
     "true" == System.getProperty("metals.interactive.semanticdb", "false") ||
@@ -97,31 +96,36 @@ final class InteractiveSemanticdbs(
     if (isExcludedFile || !shouldTryCalculateInteractiveSemanticdb) {
       TextDocumentLookup.NotFound(source)
     } else {
-      val result = textDocumentCache.compute(
-        source,
-        (path, existingDoc) => {
-          unsavedContents.orElse(sourceText) match {
-            case None => null
-            case Some(text) =>
-              val adjustedText =
-                if (text.startsWith(Shebang.shebang))
-                  "//" + text.drop(2)
-                else text
-              val sha = MD5.compute(adjustedText)
-              if (existingDoc == null || existingDoc.md5 != sha) {
-                compile(path, adjustedText) match {
-                  case Success(doc) if doc != null =>
-                    if (!source.isDependencySource(workspace))
-                      semanticdbIndexer().onChange(source, doc)
-                    doc
-                  case _ => null
-                }
-              } else
-                existingDoc
+      // Don't hold the map lock during compilation to avoid blocking all
+      // threads. Instead, check the cache first and only compile outside
+      // the lock if needed.
+      val text = unsavedContents.orElse(sourceText)
+      val result = text match {
+        case None =>
+          textDocumentCache.remove(source)
+          null
+        case Some(rawText) =>
+          val adjustedText =
+            if (rawText.startsWith(Shebang.shebang))
+              "//" + rawText.drop(2)
+            else rawText
+          val sha = MD5.compute(adjustedText)
+          val existingDoc = textDocumentCache.get(source)
+          if (existingDoc != null && existingDoc.md5 == sha) {
+            existingDoc
+          } else {
+            compile(source, adjustedText) match {
+              case Success(doc) if doc != null =>
+                textDocumentCache.put(source, doc)
+                if (!source.isDependencySource(workspace))
+                  semanticdbIndexer().onChange(source, doc)
+                doc
+              case _ =>
+                textDocumentCache.remove(source)
+                null
+            }
           }
-
-        },
-      )
+      }
       TextDocumentLookup.fromOption(source, Option(result))
     }
   }

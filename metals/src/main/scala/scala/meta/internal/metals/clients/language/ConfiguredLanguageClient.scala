@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.concurrent.ExecutionContext
@@ -116,7 +117,7 @@ final class ConfiguredLanguageClient(
 
   override def refreshModel(): CompletableFuture[Unit] = {
     if (clientConfig.codeLenseRefreshSupport())
-      underlying.refreshCodeLenses.thenApply(_ => ())
+      withTimeout(underlying.refreshCodeLenses).thenApply(_ => ())
     else if (
       clientConfig.isExecuteClientCommandProvider() &&
       (clientConfig.isDebuggingProvider() || clientConfig.isRunProvider())
@@ -128,8 +129,7 @@ final class ConfiguredLanguageClient(
 
   override def refreshSemanticTokens(): CompletableFuture[Void] = {
     if (clientConfig.semanticTokensRefreshSupport()) {
-      underlying
-        .refreshSemanticTokens()
+      withTimeout(underlying.refreshSemanticTokens())
         .handle { (msg, ex) =>
           if (ex != null)
             scribe.warn(s"Error while refreshing semantic tokens: $msg", ex)
@@ -143,8 +143,7 @@ final class ConfiguredLanguageClient(
       clientConfig.isInlayHintsEnabled() && clientConfig
         .isInlayHintsRefreshEnabled()
     ) {
-      underlying
-        .refreshInlayHints()
+      withTimeout(underlying.refreshInlayHints())
         .handle { (msg, ex) =>
           if (ex != null)
             scribe.warn(s"Error while refreshing inlayHints: $msg", ex)
@@ -152,6 +151,18 @@ final class ConfiguredLanguageClient(
         }
     } else CompletableFuture.allOf()
   }
+
+  /**
+   * Add a timeout to outbound LSP requests so that entries in lsp4j's
+   * RemoteEndpoint.sentRequestMap don't accumulate indefinitely when the
+   * client never responds.
+   */
+  private def withTimeout[T](
+      future: CompletableFuture[T]
+  ): CompletableFuture[T] =
+    future.orTimeout(30, TimeUnit.SECONDS).exceptionally { _ =>
+      null.asInstanceOf[T]
+    }
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
@@ -201,7 +212,7 @@ final class ConfiguredLanguageClient(
       params: WorkDoneProgressCreateParams
   ): CompletableFuture[Void] =
     if (clientConfig.hasWorkDoneProgressCapability()) {
-      underlying.createProgress(params)
+      withTimeout(underlying.createProgress(params))
     } else CompletableFuture.completedFuture(null)
 
   override def notifyProgress(params: ProgressParams): Unit =
