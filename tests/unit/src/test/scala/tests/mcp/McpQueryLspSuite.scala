@@ -4,6 +4,7 @@ import java.nio.file.Path
 
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
+import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite
 
@@ -966,6 +967,41 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |	 - fallbackMethod(): Int
            |""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("get-source") {
+    cleanWorkspace()
+    def verifyResult(res: Option[(AbsolutePath, String)]) = res match {
+      case Some((path, contents)) =>
+        assertNoDiff(path.toString, "/scala/Option.scala")
+        assertContains(contents, "object Option {")
+      case None => fail("Source should be found for scala.Option")
+    }
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      path = server.toPath("a/src/main/scala/Main.scala")
+      // Get source for scala.Option from the Scala standard library
+      res = server.headServer.queryEngine.getSource(
+        "scala.Option",
+        Some(path),
+      )
+      _ = verifyResult(res)
+      // Get source via a method - should return the containing file
+      methodRes = server.headServer.queryEngine.getSource(
+        "scala.Option.map",
+        Some(path),
+      )
+      _ = verifyResult(methodRes)
     } yield ()
   }
 

@@ -301,6 +301,38 @@ class McpQueryEngine(
     getUsages(fqcn, Some(path), module = None)
   }
 
+  /**
+   * Get the source file contents for a symbol.
+   *
+   * @param fqcn Fully qualified class name (or symbol)
+   * @param path Optional path for build target context.
+   * @param module Optional module name to use for context. Takes precedence over path.
+   * @return The source file path and its contents, if found
+   */
+  def getSource(
+      fqcn: String,
+      path: Option[AbsolutePath] = None,
+      module: Option[String] = None,
+  ): Option[(AbsolutePath, String)] = {
+    val effectivePath = resolveEffectivePath(module, path)
+
+    val searchResults = mcpSearch.exactSearch(fqcn, effectivePath)
+
+    // For methods and other members, fall back to searching the owner type
+    val results =
+      if (searchResults.isEmpty && fqcn.lastIndexOf('.') > 0) {
+        val owner = fqcn.substring(0, fqcn.lastIndexOf('.'))
+        mcpSearch.exactSearch(owner, effectivePath)
+      } else {
+        searchResults
+      }
+
+    results.headOption.flatMap(_.definitionPath).map { defPath =>
+      val content = defPath.toInput.text
+      (defPath, content)
+    }
+  }
+
 }
 
 case class SymbolUsage(

@@ -62,7 +62,6 @@ class MetalsMcpServer(
     cancelable.add(() => asyncServer.close())
 
     registerAllTools(asyncServer)
-
     // serve servlet
     val servletDeployment = Servlets
       .deployment()
