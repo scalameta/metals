@@ -96,10 +96,6 @@ object McpConfig {
    * Check if the config contains the old /sse endpoint for the given project
    * and rewrite it to use the new /mcp endpoint if needed.
    */
-  /**
-   * Check if the config contains the old /sse endpoint for the given project
-   * and rewrite it to use the new /mcp endpoint if needed.
-   */
   def rewriteOldEndpointIfNeeded(
       projectPath: AbsolutePath,
       projectName: String,
@@ -172,29 +168,12 @@ object McpConfig {
 
   private def isConfigEmpty(config: JsonObject, client: Client): Boolean = {
     Try {
-      // Config is empty if it has no properties
-      if (config.size() == 0) return true
-
-      // Or if it only has the server field (empty) and root properties (like $schema)
-      val hasEmptyServerField =
-        config.has(client.serverField) &&
-          config.getAsJsonObject(client.serverField).size() == 0
-
-      if (hasEmptyServerField) {
-        // Count non-serverField properties using Java iterator
-        var count = 0
-        val iter = config.keySet().iterator()
-        while (iter.hasNext) {
-          if (iter.next() != client.serverField) count += 1
-        }
-        // Only root properties remain (e.g., $schema)
-        count <= client.rootProperties.size
-      } else if (!config.has(client.serverField)) {
-        // Server field was removed - check if only root properties remain
-        config.size() <= client.rootProperties.size
-      } else {
-        false
-      }
+      config.size() == 0 ||
+      (config.has(client.serverField) && config
+        .getAsJsonObject(client.serverField)
+        .size() == 0 && config.size() <= client.rootProperties.size + 1) ||
+      (!config
+        .has(client.serverField) && config.size() <= client.rootProperties.size)
     }.getOrElse(false)
   }
 
