@@ -11,6 +11,7 @@ import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 
 class MemoryMonitoring(
+    initialServerConfig: MetalsServerConfig,
     metrics: MonitoringClient,
     loadedCompilerCount: () => Int,
     workspaceName: String,
@@ -61,6 +62,16 @@ class MemoryMonitoring(
     lastGcTimeMillis = currentGcTime
     lastTickMillis = now
 
+    // memory statistics are not included in All because they are expensive to compute for indexes
+    // but these metrics are very cheap to collect
+    if (
+      initialServerConfig.statistics.isMemory || initialServerConfig.statistics.isAll
+    ) {
+      scribe.info(
+        s"MemoryMonitoring: workspace=$workspaceName, heapUsed=${Memory.approx(usedHeap)}, heapCommitted=${Memory.approx(committedHeap)}, " +
+          s"presentationCompilers=$compilerCount, pcThreads=$pcThreadCount, gcPercent=${"%.2f".format(gcPercent)}%"
+      )
+    }
     metrics.recordUsage(
       gauge("metals_heap_used", usedHeap.toFloat, Metric.UnitType.BYTES)
     )

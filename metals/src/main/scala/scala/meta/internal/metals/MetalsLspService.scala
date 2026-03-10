@@ -540,6 +540,7 @@ abstract class MetalsLspService(
   if (initialServerConfig.telemetry.isMetricsEnabled)
     register(
       new MemoryMonitoring(
+        initialServerConfig,
         metrics,
         () => compilers.loadedPresentationCompilerCount(),
         folder.filename.toString,

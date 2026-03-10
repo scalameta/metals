@@ -172,10 +172,14 @@ class Compilers(
   private val idleCompilerTimeoutMs = 30000L
 
   private[metals] def evictIdleCompilers(): Unit = {
-    val now = time.currentMillis()
-    cache.foreach { case (key, lazyPc) =>
-      val idleMs = now - lazyPc.lastAccessedMs
-      if (idleMs > idleCompilerTimeoutMs) {
+    try {
+      val now = time.currentMillis()
+      val toEvict = cache.collect {
+        case (key, lazyPc)
+            if now - lazyPc.lastAccessedMs > idleCompilerTimeoutMs =>
+          (key, now - lazyPc.lastAccessedMs)
+      }
+      for ((key, idleMs) <- toEvict) {
         Option(jcache.remove(key)).foreach { removed =>
           scribe.debug(
             s"Shutting down idle presentation compiler for $key (idle for ${idleMs}ms)"
@@ -183,9 +187,13 @@ class Compilers(
           removed.shutdown()
         }
       }
+    } catch {
+      case e: Throwable =>
+        scribe.error("Failed to evict idle compilers", e)
     }
   }
 
+  @nowarn("cat=unused")
   private val idleCompilerEvictionTask: ScheduledFuture[_] =
     sh.scheduleAtFixedRate(
       (() => evictIdleCompilers()): Runnable,
@@ -267,7 +275,9 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
-    idleCompilerEvictionTask.cancel(false)
+    // this may be tempting, but cancel is called after every sync/import,
+    // but the Compilers instance is reused, causing eviction to stop working
+    // idleCompilerEvictionTask.cancel(false)
     Cancelable.cancelEach(cache.values)(_.shutdown())
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     // important not to leak presentation compilers, they come with
