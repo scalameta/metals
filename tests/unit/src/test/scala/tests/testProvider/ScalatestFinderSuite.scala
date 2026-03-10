@@ -211,6 +211,50 @@ class ScalatestFinderSuite extends FunSuite {
   )
 
   check(
+    "any-flat-spec-with-behavior-dot-of",
+    """|import org.scalatest.flatspec.AnyFlatSpec
+       |
+       |class FlatSpec extends AnyFlatSpec {
+       |  behavior.of("An empty Set")
+       |
+       |  it should "have size 0" in {
+       |    assert(Set.empty.size == 0)
+       |  }
+       |
+       |  it should "produce NoSuchElementException when head is invoked" in {
+       |    assertThrows[NoSuchElementException] {
+       |      Set.empty.head
+       |    }
+       |  }
+       |
+       |  ignore should "have size 1" in {
+       |    assert(Set.empty.size == 1)
+       |  }
+       |
+       |  behavior of "Non-empty Set"
+       |
+       |  it should "have size greater than 0" in {
+       |    assert(Set(1).size > 0)
+       |  }
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("FlatSpec"),
+    Set(
+      ("An empty Set should have size 1", QuickRange(15, 2, 15, 29)),
+      (
+        "An empty Set should produce NoSuchElementException when head is invoked",
+        QuickRange(9, 2, 9, 65),
+      ),
+      ("An empty Set should have size 0", QuickRange(5, 2, 5, 25)),
+      (
+        "Non-empty Set should have size greater than 0",
+        QuickRange(21, 2, 21, 38),
+      ),
+    ),
+    ScalatestStyle.AnyFlatSpec,
+  )
+
+  check(
     "any-fun-spec",
     """|import org.scalatest.funspec.AnyFunSpec
        |
