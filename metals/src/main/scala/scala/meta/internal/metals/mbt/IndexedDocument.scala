@@ -206,7 +206,7 @@ object IndexedDocument {
       file = params.path,
       oid = OID.fromText(params.input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_SYMBOLS,
-      semanticdbPackages,
+      semanticdbPackages.distinct,
       bloomFilter = bloomFilterMBT(
         params.symbols.view.map(_.symbol),
         params.references.view,
