@@ -30,6 +30,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.doctor.Doctor
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
 
@@ -134,6 +135,15 @@ class ConnectionProvider(
             if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
               connect(CreateSession(), progress)
             else slowConnectToBuildServer(forceImport = false, progress)
+          _ <-
+            if (
+              bspSession.isEmpty && !MbtBuild
+                .fromWorkspace(folder)
+                .dependencyModules
+                .isEmpty()
+            )
+              connect(Index(check), progress)
+            else Future.unit
         } yield buildServerPromise.trySuccess(()),
       metricName = Some("initialize_build_server"),
     )
