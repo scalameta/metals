@@ -49,18 +49,27 @@ class FallbackClasspaths(
       includeBuildTarget: BuildTargetIdentifier => Boolean,
       includeModule: MavenDependencyModule => Boolean,
   ): Seq[Path] = {
-    if (fallbackClasspathsConfig().isAll3rdparty) {
-      Seq.from(
-        buildTargets
-          .allDependencyModuleArtifacts(includeBuildTarget, includeModule)
-          .map(_.toNIO)
+    val bspClasspath: Seq[Path] =
+      if (fallbackClasspathsConfig().isAll3rdparty) {
+        Seq.from(
+          buildTargets
+            .allDependencyModuleArtifacts(includeBuildTarget, includeModule)
+            .map(_.toNIO)
+        )
+      } else {
+        // Assumes we're auto-including scala-library from elsewhere. That logic
+        // should ideally be moved into this method so we have one source of truth
+        // for what's on the classpath of the fallback compiler.
+        Nil
+      }
+    if (bspClasspath.isEmpty) {
+      val paths = mbtClasspath
+      scribe.debug(
+        s"fallback-classpath: mbt contributed ${paths.size} jars"
       )
-    } else {
-      // Assumes we're auto-including scala-library from elsewhere. That logic
-      // should ideally be moved into this method so we have one source of truth
-      // for what's on the classpath of the fallback compiler.
-      Nil
-    }
+      paths
+    } else
+      bspClasspath
   }
   def javaCompilerClasspath(): Seq[Path] = {
     val scalaBinaryVersion = fallbackScalaBinaryVersion()
