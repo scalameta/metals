@@ -136,7 +136,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         data.addDependencyModules(
           importedBuild.dependencyModules
         )
-        if (indexProviders.userConfig.fallbackClasspath.isMbt) {
+        if (
+          indexProviders.userConfig.fallbackClasspath.isMbt || bspSession.isEmpty
+        ) {
           val build = MbtBuild.fromWorkspace(indexProviders.folder)
           data.addDependencyModules(build.asBsp)
         }
@@ -235,7 +237,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
             progress,
           )
         }
-        if (indexProviders.userConfig.fallbackClasspath.isMbt) {
+        if (
+          indexProviders.userConfig.fallbackClasspath.isMbt || bspSession.isEmpty
+        ) {
           val build = MbtBuild.fromWorkspace(indexProviders.folder)
           indexDependencyModules(build.asBsp, progress)
         }
