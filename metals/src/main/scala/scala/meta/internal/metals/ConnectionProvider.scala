@@ -58,8 +58,9 @@ class ConnectionProvider(
     mainBuildTargetsData: TargetData,
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
+    mbtBuild: () => MbtBuild,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
-    extends Indexer(indexProviders)
+    extends Indexer(indexProviders, mbtBuild)
     with Cancelable {
   import Connect.connect
   import indexProviders._
@@ -137,9 +138,7 @@ class ConnectionProvider(
             else slowConnectToBuildServer(forceImport = false, progress)
           _ <-
             if (
-              bspSession.isEmpty && !MbtBuild
-                .fromWorkspace(folder)
-                .dependencyModules
+              bspSession.isEmpty && !mbtBuild().dependencyModules
                 .isEmpty()
             )
               connect(Index(check), progress)

@@ -47,6 +47,7 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -128,6 +129,8 @@ abstract class MetalsLspService(
   def refreshTestSuites(): Unit = testProvider.refreshTestSuites.apply(())
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
+
+  @volatile protected var mbtBuild: MbtBuild = MbtBuild.fromWorkspace(folder)
   protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -197,6 +200,10 @@ abstract class MetalsLspService(
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
 
+  def containsJar(path: AbsolutePath): Boolean = {
+    buildTargets.inverseSources(path).nonEmpty ||
+    mbtBuild.dependencyModules.asScala.exists(_.jarPath.equals(path))
+  }
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
@@ -501,6 +508,7 @@ abstract class MetalsLspService(
       workDoneProgress,
       timerProvider,
       featureFlags,
+      () => mbtBuild,
     )
   )
 
@@ -1086,7 +1094,14 @@ abstract class MetalsLspService(
     futures ++= otherDeleteEvents.map(event =>
       onDelete(event.getUri().toAbsolutePath)
     )
-    futures += onChange(changeAndCreateEvents.map(_.getUri().toAbsolutePath))
+    val paths = changeAndCreateEvents.map(_.getUri().toAbsolutePath)
+    paths.find(path => path.filename == "mbt.json") match {
+      case Some(mbtJsonPath) =>
+        mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
+        compilers.clearFallbackCompilerCache()
+      case None =>
+    }
+    futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
   }
 

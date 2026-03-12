@@ -31,7 +31,9 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
       options: TestOptions
   )(body: => Any)(implicit loc: Location): Unit = {
     javaSymbolLoaderMode match {
-      case None =>
+      case None
+          if !options.tags.contains(TurbineClasspath) &&
+            !options.tags.contains(JavacSourcepath) =>
         // Run all tests with both turbine classpath and javac sourcepath since
         // javac-sourcepath needs to be a reliable fallback until we have enough
         // confidence in going all-in on turbine-classpath.
@@ -51,6 +53,8 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
           if (config.isTurbineClasspath) TurbineClasspath
           else JavacSourcepath
         super.test(options.tag(tag))(body)
+      case _ =>
+        super.test(options)(body)
     }
   }
 
