@@ -8,6 +8,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.pc.ContentType
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
+import scala.meta.pc.SourcePathMode
 
 case class PresentationCompilerConfigImpl(
     debug: Boolean = false,
@@ -29,7 +30,11 @@ case class PresentationCompilerConfigImpl(
     timeoutUnit: TimeUnit = TimeUnit.SECONDS,
     semanticdbCompilerOptions: util.List[String] =
       PresentationCompilerConfig.defaultSemanticdbCompilerOptions(),
-    override val hoverContentType: ContentType = ContentType.MARKDOWN
+    override val hoverContentType: ContentType = ContentType.MARKDOWN,
+    override val sourcePathMode: SourcePathMode = SourcePathMode.PRUNED,
+    override val shouldRunRefchecks: Boolean = false,
+    override val scalaImportsPlacement: PresentationCompilerConfig.ScalaImportsPlacement =
+      PresentationCompilerConfig.ScalaImportsPlacement.APPEND_LAST
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =
