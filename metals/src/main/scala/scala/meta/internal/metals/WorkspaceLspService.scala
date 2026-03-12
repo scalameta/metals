@@ -1354,6 +1354,10 @@ class WorkspaceLspService(
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
 
+      case ServerCommands.GotoTest(textDocumentPositionParams) =>
+        getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
+          .gotoTest(textDocumentPositionParams)
+
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
           .gotoSupermethod(textDocumentPositionParams)

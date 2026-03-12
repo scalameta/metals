@@ -405,6 +405,7 @@ class UserConfigurationSuite extends BaseSuite {
   ],
   "ammoniteEnabled": true,
   "superMethodLensesEnabled": true,
+  "gotoTestLensesEnabled": true,
   "inlayHintsOptions": {
     "HintsInPatternMatch": "true",
     "ImplicitArguments": "true",

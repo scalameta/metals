@@ -65,6 +65,7 @@ case class UserConfiguration(
     ammoniteJvmProperties: Option[List[String]] = None,
     ammoniteEnabled: Boolean = false,
     superMethodLensesEnabled: Boolean = false,
+    gotoTestLensesEnabled: Boolean = true,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
@@ -170,6 +171,7 @@ case class UserConfiguration(
         listField("ammoniteJvmProperties", ammoniteJvmProperties),
         Some(("ammoniteEnabled", ammoniteEnabled)),
         Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
+        Some(("gotoTestLensesEnabled", gotoTestLensesEnabled)),
         mapField("inlayHintsOptions", inlayHintsOptions.options),
         Some(
           (
@@ -963,6 +965,8 @@ object UserConfiguration {
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
+    val gotoTestLensesEnabled =
+      getBooleanKey("goto-test-lenses-enabled").getOrElse(true)
 
     // For old inlay hints settings
     def inlayHintsOptionsFallback: Map[InlayHintsOption, Boolean] = {
@@ -1225,6 +1229,7 @@ object UserConfiguration {
           ammoniteProperties,
           ammoniteEnabled,
           superMethodLensesEnabled,
+          gotoTestLensesEnabled,
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,

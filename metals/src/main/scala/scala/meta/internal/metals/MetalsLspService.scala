@@ -36,6 +36,7 @@ import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.codeactions.CodeActionProvider
+import scala.meta.internal.metals.codelenses.GotoTestCodeLens
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
@@ -397,7 +398,7 @@ abstract class MetalsLspService(
     folder,
   )
 
-  protected val codeLensProvider: CodeLensProvider = {
+  protected lazy val codeLensProvider: CodeLensProvider = {
     val runTestLensProvider =
       new RunTestCodeLens(
         buildTargetClasses,
@@ -416,6 +417,12 @@ abstract class MetalsLspService(
       trees,
     )
     val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
+    val gotoTestLensProvider = new GotoTestCodeLens(
+      buffers,
+      () => userConfig,
+      gotoTestProvider,
+      trees,
+    )
 
     new CodeLensProvider(
       codeLensProviders = List(
@@ -423,6 +430,7 @@ abstract class MetalsLspService(
         goSuperLensProvider,
         worksheetCodeLens,
         testProvider,
+        gotoTestLensProvider,
       ),
       semanticdbs,
       stacktraceAnalyzer,
@@ -485,6 +493,13 @@ abstract class MetalsLspService(
     mbt2,
     () => userConfig,
     () => mtags,
+  )
+
+  val gotoTestProvider: GotoTestProvider = new GotoTestProvider(
+    () => semanticdbs(),
+    symbolSearch,
+    workspaceSymbols,
+    languageClient,
   )
 
   val worksheetProvider: WorksheetProvider = register(
@@ -1709,6 +1724,11 @@ abstract class MetalsLspService(
       .fromSymbol(symbol, focusedDocument)
       .asScala
       .headOption
+
+  def gotoTest(
+      textDocumentPositionParams: TextDocumentPositionParams
+  ): CompletableFuture[Object] =
+    gotoTestProvider.goto(textDocumentPositionParams).asJavaObject
 
   def gotoSupermethod(
       textDocumentPositionParams: TextDocumentPositionParams
