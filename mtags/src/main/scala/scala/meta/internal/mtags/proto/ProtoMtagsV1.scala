@@ -221,6 +221,8 @@ class ProtoMtagsV1(
             token = processEnumDeclaration() // Nested enum
           case ProtobufToken.ONEOF =>
             token = processOneofDeclaration()
+          case ProtobufToken.OPTION =>
+            token = skipOptionBlock(token)
           case _ =>
             token = processFieldDeclaration(token)
         }
@@ -595,20 +597,38 @@ class ProtoMtagsV1(
   }
 
   private def skipToSemicolon(token: ProtobufToken): ProtobufToken = {
+    import ProtobufToken._
     var current = token
-    while (
-      current.tpe != ProtobufToken.SEMICOLON &&
-      current.tpe != ProtobufToken.EOF &&
-      current.tpe != ProtobufToken.RIGHT_BRACE
-    ) {
+    var braceDepth = 0
+    var bracketDepth = 0
+    var parenDepth = 0
+
+    while (current.tpe != EOF) {
+      current.tpe match {
+        case LEFT_BRACE =>
+          braceDepth += 1
+        case RIGHT_BRACE =>
+          if (braceDepth > 0) {
+            braceDepth -= 1
+          } else if (bracketDepth == 0 && parenDepth == 0) {
+            return current
+          }
+        case LEFT_BRACKET =>
+          bracketDepth += 1
+        case RIGHT_BRACKET =>
+          if (bracketDepth > 0) bracketDepth -= 1
+        case LEFT_PAREN =>
+          parenDepth += 1
+        case RIGHT_PAREN =>
+          if (parenDepth > 0) parenDepth -= 1
+        case SEMICOLON
+            if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 =>
+          return scanner.nextToken()
+        case _ =>
+      }
       current = scanner.nextToken()
     }
-
-    if (current.tpe == ProtobufToken.SEMICOLON) {
-      scanner.nextToken() // Skip semicolon
-    } else {
-      current
-    }
+    current
   }
 
   private def skipOptionBlock(token: ProtobufToken): ProtobufToken = {

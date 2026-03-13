@@ -73,6 +73,66 @@ class ProtoPCReferencesSuite extends BaseProtoPCSuite("proto-pc-references") {
     } yield ()
   }
 
+  test("cross-file-imported-type-with-option-block") {
+    // Regression: ProtoMtagsV1 could stop indexing a message after encountering
+    // `}` inside an option block, which dropped later field type references from
+    // bloom-filter candidates and made find-references miss valid proto usages.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/common.proto
+           |syntax = "proto2";
+           |package demo.common;
+           |message SharedSettings {
+           |  optional string shared_key_id = 1;
+           |}
+           |/a/src/main/proto/service_a.proto
+           |syntax = "proto2";
+           |package demo.common;
+           |import "common.proto";
+           |message ServiceAInfo {
+           |  option (custom.message_options) = {
+           |    note: "keep-scanning"
+           |  };
+           |  optional SharedSettings settings = 1;
+           |}
+           |/a/src/main/proto/service_b.proto
+           |syntax = "proto2";
+           |package demo.module;
+           |import "common.proto";
+           |message ServiceBInfo {
+           |  option (custom.node_type) = {
+           |    id: 1
+           |  };
+           |  optional demo.common.SharedSettings settings = 1;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/common.proto")
+      _ <- server.didOpen("a/src/main/proto/service_a.proto")
+      _ <- server.didOpen("a/src/main/proto/service_b.proto")
+      refs <- server.references(
+        "a/src/main/proto/common.proto",
+        "message SharedSettings",
+      )
+      _ = assertNoDiff(
+        refs,
+        """|a/src/main/proto/common.proto:3:9: info: reference
+           |message SharedSettings {
+           |        ^^^^^^^^^^^^^^
+           |a/src/main/proto/service_a.proto:8:12: info: reference
+           |  optional SharedSettings settings = 1;
+           |           ^^^^^^^^^^^^^^
+           |a/src/main/proto/service_b.proto:8:24: info: reference
+           |  optional demo.common.SharedSettings settings = 1;
+           |                       ^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("cross-package-same-name-no-false-positive") {
     // Regression test: find-references should NOT match messages with the same
     // simple name but different fully-qualified names (different packages)

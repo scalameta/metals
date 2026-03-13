@@ -1,0 +1,19 @@
+syntax = "proto2";
+package example;
+
+message SharedSettings {
+  optional string shared_key = 1;
+}
+
+message SettingsHolder {
+  option (custom.message_options) = {
+    note: "message-option"
+  };
+
+  optional SharedSettings primary_settings = 1 [
+    (custom.field_options) = { label: "primary" }
+  ];
+
+  optional SharedSettings backup_settings = 2;
+  optional example.SharedSettings qualified_settings = 3;
+}
