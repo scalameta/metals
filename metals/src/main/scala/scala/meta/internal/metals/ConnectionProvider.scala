@@ -29,6 +29,7 @@ import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -430,6 +431,12 @@ class ConnectionProvider(
           case Some(session) =>
             bspSession = None
             mainBuildTargetsData.resetConnections(List.empty)
+            languageClient.metalsSyncModes(
+              new MetalsSyncModesParams(
+                false,
+                java.util.Collections.emptyList(),
+              )
+            )
             session.shutdown().map(_ => Some(session.main.name))
         }
         _ <-
@@ -466,6 +473,15 @@ class ConnectionProvider(
           }
           mainBuildTargetsData.resetConnections(idToConnection)
           saveProjectReferencesInfo(bspBuilds)
+        }
+        _ = {
+          val hasSyncSupport = bspBuilds.exists(_.connection.supportsSyncMethod)
+          languageClient.metalsSyncModes(
+            new MetalsSyncModesParams(
+              hasSyncSupport,
+              buildTargets.syncModes.toList.asJava,
+            )
+          )
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)

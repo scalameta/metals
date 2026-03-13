@@ -5,6 +5,7 @@ import javax.annotation.Nullable
 
 import scala.util.Try
 
+import scala.meta.internal.bsp.sync.SyncMode
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.tvp._
 
@@ -31,6 +32,9 @@ trait MetalsLanguageClient extends LanguageClient with TreeViewClient {
 
   @JsonNotification("metals/syncStatus")
   def metalsSyncStatus(params: MetalsSyncStatusParams): Unit
+
+  @JsonNotification("metals/syncModes")
+  def metalsSyncModes(params: MetalsSyncModesParams): Unit
 
   @JsonNotification("metals/executeClientCommand")
   def metalsExecuteClientCommand(params: ExecuteCommandParams): Unit
@@ -248,4 +252,9 @@ case class MetalsTerminalOutputParams(
 case class MetalsTerminalInputParams(
     terminalId: String,
     message: String,
+)
+
+class MetalsSyncModesParams(
+    val supported: Boolean,
+    val modes: java.util.List[SyncMode],
 )

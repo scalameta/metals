@@ -28,6 +28,7 @@ import scala.meta.internal.metals.WorkspaceChoicePopup
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
+import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.clients.language.MetalsSyncStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
@@ -433,6 +434,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def metalsSyncStatus(params: MetalsSyncStatusParams): Unit = {
     syncStatusParams.add(params)
   }
+
+  override def metalsSyncModes(params: MetalsSyncModesParams): Unit = {}
 
   override def createProgress(
       params: WorkDoneProgressCreateParams
