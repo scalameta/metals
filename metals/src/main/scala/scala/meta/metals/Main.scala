@@ -8,6 +8,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Trace
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.logging.MetalsLogger
 
@@ -40,6 +41,10 @@ object Main extends SupportedScalaVersions {
             |}
             |""".stripMargin
       )
+      sys.exit(0)
+    }
+    if (args.exists(Set("--list-settings"))) {
+      UserConfiguration.options.foreach(opt => println(opt.oneLiner))
       sys.exit(0)
     }
     val systemIn = System.in

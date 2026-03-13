@@ -13,6 +13,8 @@ case class UserConfigurationOption(
     description: String,
     isBoolean: Boolean = false,
     isArray: Boolean = false,
+    values: Option[List[String]] = None,
+    defaultDescription: Option[String] = None,
 ) {
   assert(
     !(isArray && isBoolean),
@@ -27,4 +29,16 @@ case class UserConfigurationOption(
       case head :: tail => head ++ tail.flatMap(_.capitalize)
       case _ => key
     }
+
+  def oneLiner: String = {
+    val tpe = values match {
+      case Some(vs) => vs.mkString("[", ",", "]")
+      case None =>
+        if (isBoolean) "boolean"
+        else if (isArray) "array"
+        else "string"
+    }
+    val displayDefault = if (default.isEmpty) "\"\"" else default
+    f"$key%-44s $tpe%-30s $displayDefault%-30s $title"
+  }
 }
