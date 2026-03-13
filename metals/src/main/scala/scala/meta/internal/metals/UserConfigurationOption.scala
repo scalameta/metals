@@ -20,6 +20,14 @@ case class UserConfigurationOption(
     !(isArray && isBoolean),
     "isArray and isBoolean cannot be true at the same time",
   )
+  assert(
+    values.forall(vs => vs.contains(default)),
+    "default must be one of values when values is defined",
+  )
+  assert(
+    values.isEmpty || (!isArray && !isBoolean),
+    "values cannot be combined with isArray/isBoolean flags",
+  )
 
   def headerID: String = {
     title.toLowerCase().replace(' ', '-').replace("'", " ")
@@ -39,6 +47,6 @@ case class UserConfigurationOption(
         else "string"
     }
     val displayDefault = if (default.isEmpty) "\"\"" else default
-    f"$key%-44s $tpe%-30s $displayDefault%-30s $title"
+    f"$key%-44s $tpe%-30s $displayDefault%-15s $title"
   }
 }
