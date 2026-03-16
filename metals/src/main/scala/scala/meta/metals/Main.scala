@@ -44,7 +44,7 @@ object Main extends SupportedScalaVersions {
       sys.exit(0)
     }
     if (args.exists(Set("--list-settings"))) {
-      UserConfiguration.options.foreach(opt => println(opt.oneLiner))
+      println(UserConfiguration.listOptions)
       sys.exit(0)
     }
     val systemIn = System.in

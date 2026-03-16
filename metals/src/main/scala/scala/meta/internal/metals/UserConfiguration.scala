@@ -598,6 +598,9 @@ object UserConfiguration {
       ),
     )
 
+  def listOptions: String =
+    options.map(_.oneLiner).mkString("\n")
+
   def fromJson(
       json: JsonObject,
       clientConfiguration: ClientConfiguration,
