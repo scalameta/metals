@@ -39,5 +39,8 @@ Then run:
 ```
 ./bin/scalafmt --diff --diff-branch databricks
 ```
+## Working with Scala code
 
-source .envrc
+- Don't use `.iterator` unless really necessary. Prefer working with higher order functions, like filter, map, flatmap directly on collections
+- Prefer for-loops over map/flatmap, unless they fit in one line (one or maximum two calls)
+- don't call `.toList` unless it's necessary
