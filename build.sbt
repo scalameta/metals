@@ -280,7 +280,7 @@ lazy val interfaces = project
     ),
     crossPaths := false,
     libraryDependencies ++= List(
-      "org.slf4j" % "slf4j-api" % "1.7.36",
+      "org.slf4j" % "slf4j-api" % "2.0.16",
       V.lsp4j,
     ),
     javacOptions := Seq("--release", "8"),
