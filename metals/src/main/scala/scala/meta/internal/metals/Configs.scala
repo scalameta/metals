@@ -54,6 +54,9 @@ object Configs {
           new FileSystemWatcher(
             JEither.forLeft(s"$root/.metals/.reports/bloop/*/*")
           ),
+          new FileSystemWatcher(
+            JEither.forLeft(s"$root/.metals/mbt.json")
+          ),
           new FileSystemWatcher(JEither.forLeft(s"$root/**/.bsp/*.json")),
         ) ++ bazelPaths(root)).asJava
       )

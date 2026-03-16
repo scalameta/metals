@@ -314,28 +314,31 @@ class WorkspaceLspService(
 
   def getServiceForOpt(path: AbsolutePath): Option[ProjectMetalsLspService] =
     getFolderForOpt(path, folderServices).orElse {
-      folderServices.find { service =>
-        if (path.isJarFileSystem) {
-          service.buildTargets.inferBuildTarget(path).nonEmpty
-        } else {
-          service.buildTargets.all
-            .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+      folderServices
+        .find { service =>
+          if (path.isJarFileSystem) {
+            service.containsJar(path)
+          } else {
+            service.buildTargets.all
+              .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+          }
         }
-      }
     }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
 
-  def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
+  private def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
     // "metalsDecode" prefix is used for showing special files and is not an actual file system
     val strippedUri = uri.stripPrefix("metalsDecode:")
     for {
       path <- strippedUri.toAbsolutePathSafe()
       service <-
-        if (strippedUri.startsWith("jar:"))
-          folderServices.find(_.buildTargets.inverseSources(path).nonEmpty)
-        else getServiceForOpt(path)
+        if (strippedUri.startsWith("jar:")) {
+          folderServices
+            .find(_.containsJar(path))
+            .orElse(Some(folderServices.head))
+        } else getServiceForOpt(path)
     } yield service
   }
 

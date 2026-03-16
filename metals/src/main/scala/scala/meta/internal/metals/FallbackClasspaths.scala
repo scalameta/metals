@@ -44,6 +44,7 @@ class FallbackClasspaths(
     fallbackClasspathsConfig: () => FallbackClasspathConfig = () =>
       FallbackClasspathConfig.default,
     scalaVersionSelector: ScalaVersionSelector = ScalaVersionSelector.default,
+    mbtBuild: () => MbtBuild,
 ) extends BaseFallbackClasspaths {
   private def fallbackCompilerClasspath(
       includeBuildTarget: BuildTargetIdentifier => Boolean,
@@ -63,7 +64,7 @@ class FallbackClasspaths(
         Nil
       }
     if (bspClasspath.isEmpty) {
-      val paths = mbtClasspath
+      val paths = mbtClasspath()
       scribe.debug(
         s"fallback-classpath: mbt contributed ${paths.size} jars"
       )
@@ -127,8 +128,7 @@ class FallbackClasspaths(
     if (!fallbackClasspathsConfig().isMbt) {
       return Nil
     }
-    val mbtBuildFile = workspace.resolve(".metals/mbt.json")
-    val build = MbtBuild.fromFile(mbtBuildFile.toNIO)
+    val build = mbtBuild()
     build.dependencyModules.asScala.iterator.map(_.jarPath).toSeq
   }
 

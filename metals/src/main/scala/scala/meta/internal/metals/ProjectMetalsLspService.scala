@@ -191,6 +191,7 @@ class ProjectMetalsLspService(
     mainBuildTargetsData,
     this,
     syncStatusReporter,
+    () => mbtBuild,
   )
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =

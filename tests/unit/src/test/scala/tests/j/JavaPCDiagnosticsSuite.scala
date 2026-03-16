@@ -1,5 +1,11 @@
 package tests.j
 
+import scala.meta.internal.metals.MetalsEnrichments._
+
+import coursierapi.Dependency
+import coursierapi.Fetch
+import org.eclipse.{lsp4j => l}
+
 class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
 
   test("no-errors") {
@@ -266,6 +272,81 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
            |                                    ^^^^^^
            |""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("mbt-java-deps".tag(JavacSourcepath)) {
+    cleanWorkspace()
+    val mainFile = "Main.java"
+    // Resolve the Guava dependency jars using Coursier
+    val guavaDep = Dependency.of("com.google.guava", "guava", "33.5.0-jre")
+    val fetched = Fetch
+      .create()
+      .withMainArtifacts()
+      .addClassifiers("sources")
+      .withDependencies(guavaDep)
+      .fetch()
+      .asScala
+      .map(_.toPath)
+      .toList
+    val (sourceJars, classJars) =
+      fetched.partition(_.getFileName.toString.endsWith("-sources.jar"))
+
+    val mbtJson =
+      s"""|{
+          |  "dependencyModules": [
+          |    {
+          |      "id": "com.google.guava:guava:33.5.0-jre",
+          |      "jar": "${classJars.head.toString}",
+          |      "sources": "${sourceJars.head.toString}"
+          |    }
+          |  ]
+          |}""".stripMargin
+    val fileInput =
+      """|package a;
+         |
+         |import com.google.common.collect.ImmutableList;
+         |
+         |public class Main {
+         |  public static ImmutableList<String> names = ImmutableList.of("Alice", "Bob");
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/$mainFile
+            |$fileInput
+            |""".stripMargin,
+        expectError = true,
+      )
+      _ <- server.didOpen(mainFile)
+      _ <- server.didFocus(mainFile)
+      // Without the dependency, the import should fail
+      _ = assert(
+        client.workspaceDiagnostics.nonEmpty,
+        "Expected diagnostics for missing com.google.common.collect dependency",
+      )
+      mbtJsonPath = workspace.resolve(".metals").resolve("mbt.json")
+      _ = {
+        workspace.resolve(".metals").toNIO.toFile.mkdirs()
+        mbtJsonPath.writeText(mbtJson)
+      }
+      _ <- server.didChangeWatchedFiles(
+        ".metals/mbt.json",
+        l.FileChangeType.Created,
+      )
+      _ <- server.didClose(mainFile)
+      _ <- server.didOpen(mainFile)
+      // Trigger recompilation by making a change
+      _ <- server.didChange(mainFile)(code => code + "\n// updated")
+      _ <- server.assertHover(
+        mainFile,
+        fileInput.replace("ImmutableList.of", "Immutabl@@eList.of"),
+        """|```java
+           |public abstract class com.google.common.collect.ImmutableList<E> extends com.google.common.collect.ImmutableCollection<E> implements java.util.List<E>, java.util.RandomAccess
+           |```
+           |""".stripMargin,
+      )
+      _ = assertNoDiagnostics()
     } yield ()
   }
 

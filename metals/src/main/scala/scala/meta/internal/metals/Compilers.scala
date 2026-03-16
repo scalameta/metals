@@ -26,6 +26,7 @@ import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.DecompileBytecode
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
@@ -109,6 +110,7 @@ class Compilers(
     progressBars: ProgressBars,
     timerProvider: TimerProvider,
     featureFlags: FeatureFlagProvider,
+    mbtBuild: () => MbtBuild,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -131,6 +133,7 @@ class Compilers(
     semanticdbFileManager,
     javaFileManagerFactory,
     featureFlags,
+    mbtBuild,
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 
@@ -430,6 +433,20 @@ class Compilers(
         compiler <- buildTargetPCFromCache(target)
       } {
         compiler.restart()
+      }
+    }
+  }
+
+  def clearFallbackCompilerCache(): Unit = {
+    for {
+      language <- List(s.Language.SCALA, s.Language.JAVA)
+    } yield {
+      val default = Option(
+        jcache.get(PresentationCompilerKey.Default(language))
+      )
+      default.foreach { pc =>
+        pc.await.shutdown()
+        jcache.remove(PresentationCompilerKey.Default(language))
       }
     }
   }

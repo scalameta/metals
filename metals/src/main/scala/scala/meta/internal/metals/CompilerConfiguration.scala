@@ -19,6 +19,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
@@ -55,6 +56,7 @@ class CompilerConfiguration(
     semanticdbFileManager: SemanticdbFileManager,
     javaFileManagerFactory: JavaFileManagerFactory,
     featureFlags: FeatureFlagProvider,
+    mbtBuild: () => MbtBuild,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -63,6 +65,7 @@ class CompilerConfiguration(
     buildTargets,
     () => userConfig().fallbackClasspath,
     scalaVersionSelector,
+    mbtBuild,
   )
 
   /**

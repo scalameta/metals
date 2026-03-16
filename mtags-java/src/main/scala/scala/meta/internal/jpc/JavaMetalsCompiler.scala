@@ -3,7 +3,6 @@ package scala.meta.internal.jpc
 import java.io.Closeable
 import java.io.File
 import java.io.StringWriter
-import java.io.Writer
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.concurrent.ScheduledExecutorService
@@ -11,7 +10,6 @@ import java.{util => ju}
 import javax.lang.model.element.Element
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.TypeElement
-import javax.tools.DiagnosticListener
 import javax.tools.JavaCompiler
 import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager
@@ -155,24 +153,6 @@ class JavaMetalsCompiler(
     prune.close()
   }
 
-  def classpathCompilationTask(
-      javaFileObject: List[JavaFileObject],
-      out: Option[Writer],
-      allOptions: List[String],
-      diagnosticListener: Option[DiagnosticListener[JavaFileObject]] = None
-  ): JavacTask = {
-    prune.compiler
-      .getTask(
-        out.orNull,
-        null,
-        diagnosticListener.getOrElse(NoopDiagnosticListener),
-        allOptions.asJava,
-        null,
-        javaFileObject.asJava
-      )
-      .asInstanceOf[JavacTask]
-  }
-
   def documentation(
       task: JavacTask,
       element: Element
@@ -271,22 +251,6 @@ object JavaMetalsCompiler {
     val files =
       STANDARD_FILE_MANAGER.getJavaFileObjectsFromFiles(List(file).asJava)
     files.iterator().next()
-  }
-  def classpathCompilationTask(
-      javaFileObject: JavaFileObject,
-      out: Option[Writer],
-      allOptions: List[String]
-  ): JavacTask = {
-    COMPILER
-      .getTask(
-        out.orNull,
-        null,
-        NoopDiagnosticListener,
-        allOptions.asJava,
-        null,
-        List(javaFileObject).asJava
-      )
-      .asInstanceOf[JavacTask]
   }
 
 }
