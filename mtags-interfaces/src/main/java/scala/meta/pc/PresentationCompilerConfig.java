@@ -3,6 +3,7 @@ package scala.meta.pc;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,14 @@ public interface PresentationCompilerConfig {
   Optional<String> completionCommand();
 
   Map<String, String> symbolPrefixes();
+
+  default List<String> shimGlobs() {
+    return defaultShimGlobs();
+  }
+
+  static List<String> defaultShimGlobs() {
+    return Collections.emptyList();
+  }
 
   static Map<String, String> defaultSymbolPrefixes() {
     HashMap<String, String> map = new HashMap<>();

@@ -57,6 +57,7 @@ case class UserConfiguration(
     scalafixConfigPath: Option[AbsolutePath] = None,
     symbolPrefixes: Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
+    shimGlobs: Map[String, List[String]] = UserConfiguration.defaultShimGlobs,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
@@ -135,6 +136,15 @@ case class UserConfiguration(
       }
       Some((key, serializable.asJava))
     }
+    def mapListField[K, T](
+        key: String,
+        opts: Map[K, List[T]],
+    ): Option[(String, java.util.Map[String, java.util.List[String]])] = {
+      val serializable = opts.map { case (k, values) =>
+        (k.toString(), values.map(_.toString()).asJava)
+      }
+      Some((key, serializable.asJava))
+    }
 
     def listField[T](key: String, list: Option[List[String]]) = {
       list match {
@@ -163,6 +173,7 @@ case class UserConfiguration(
         optStringField("scalafixConfigPath", scalafixConfigPath),
         optStringField("scalafixConfigPath", scalafixConfigPath),
         mapField("symbolPrefixes", symbolPrefixes),
+        mapListField("shimGlobs", shimGlobs),
         Some(("worksheetScreenWidth", worksheetScreenWidth)),
         Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
         Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
@@ -379,6 +390,8 @@ case class UserConfiguration(
 object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
+  val defaultShimGlobs: Map[String, List[String]] =
+    Map.empty
 
   private val defaultExclusion =
     ExcludedPackagesHandler.defaultExclusions
@@ -454,6 +467,17 @@ object UserConfiguration {
           |It should be a path (relative or absolute - though an absolute path is recommended) and use
           |forward slashes `/` for file separators (even on Windows).
           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "shim-globs",
+        """`{}`.""",
+        """{ "default": ["shims.scala", "**/shims/*.scala"] }""",
+        "Shim file globs",
+        """|Named groups of file glob patterns used to detect shim files in the presentation compiler.
+           |Entries follow the 'glob' syntax of FileSystem.getPathMatcher, e.g. use `**/shims.scala` to
+           |match all shims.scala files in the workspace.
+           |Values from all groups are combined into a single list.
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "excluded-packages",
@@ -903,6 +927,45 @@ object UserConfiguration {
         },
       )
 
+    def getStringListMap(key: String): Option[Map[String, List[String]]] =
+      getKey(
+        key,
+        json,
+        { value =>
+          Try {
+            value.getAsJsonObject
+              .entrySet()
+              .asScala
+              .map { entry =>
+                val values = entry.getValue
+                if (!values.isJsonArray) {
+                  throw new IllegalArgumentException(
+                    s"Expected array value for '${entry.getKey}'"
+                  )
+                }
+                val strings = values.getAsJsonArray.asScala.map { elem =>
+                  if (
+                    !elem.isJsonPrimitive || !elem.getAsJsonPrimitive.isString
+                  ) {
+                    throw new IllegalArgumentException(
+                      s"Expected string value in array for '${entry.getKey}'"
+                    )
+                  }
+                  elem.getAsString
+                }.toList
+                entry.getKey -> strings
+              }
+              .toMap
+          }.fold(
+            _ => {
+              errors += s"json error: key '$key' should have be object with array string values but obtained $value"
+              None
+            },
+            entries => Some(entries),
+          ).filter(_.nonEmpty)
+        },
+      )
+
     def getInlayHints =
       getKey(
         "inlay-hints",
@@ -947,6 +1010,9 @@ object UserConfiguration {
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
+    val shimGlobs =
+      getStringListMap("shim-globs")
+        .getOrElse(default.shimGlobs)
     errors ++= symbolPrefixes.keys.flatMap { sym =>
       Symbol.validated(sym).left.toOption
     }
@@ -1221,6 +1287,7 @@ object UserConfiguration {
           scalafmtConfigPath,
           scalafixConfigPath,
           symbolPrefixes,
+          shimGlobs,
           worksheetScreenWidth,
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,

@@ -21,6 +21,8 @@ case class PresentationCompilerConfigImpl(
     _completionCommand: Option[String] = None,
     _symbolPrefixes: collection.Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala,
+    _shimGlobs: collection.Seq[String] =
+      PresentationCompilerConfig.defaultShimGlobs().asScala.toSeq,
     overrideDefFormat: OverrideDefFormat = OverrideDefFormat.Ascii,
     isCompletionItemDetailEnabled: Boolean = true,
     isCompletionItemDocumentationEnabled: Boolean = true,
@@ -56,6 +58,8 @@ case class PresentationCompilerConfigImpl(
     _isStripMarginOnTypeFormattingEnabled()
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava
+  override def shimGlobs(): util.List[String] =
+    _shimGlobs.asJava
   override def parameterHintsCommand: Optional[String] =
     Optional.ofNullable(_parameterHintsCommand.orNull)
   override def completionCommand: Optional[String] =

@@ -119,6 +119,40 @@ class CompilersLspSuite
     } yield ()
   }
 
+  test("restart-on-shim-globs-update") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |object A {
+          |  val abc = 1
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.didFocus("a/src/main/scala/a/A.scala")
+      count = server.server.loadedPresentationCompilerCount()
+      _ = assert(clue(count) > 0)
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "shimGlobs": {
+          |    "custom": ["**/my-shims/*.scala"]
+          |  }
+          |}
+          |""".stripMargin
+      )
+      countAfter = server.server.loadedPresentationCompilerCount()
+      _ = assertEquals(0, countAfter)
+    } yield ()
+  }
+
   test("fallback-compiler-exclusion") {
     cleanWorkspace()
     for {

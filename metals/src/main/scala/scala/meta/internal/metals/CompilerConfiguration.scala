@@ -479,6 +479,7 @@ class CompilerConfiguration(
           .update(options)
           .copy(
             _symbolPrefixes = userConfig().symbolPrefixes,
+            _shimGlobs = userConfig().shimGlobs.values.flatten.toSeq,
             isCompletionSnippetsEnabled =
               initializeParams.supportsCompletionSnippets,
             _isStripMarginOnTypeFormattingEnabled =

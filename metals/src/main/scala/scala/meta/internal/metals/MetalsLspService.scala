@@ -889,6 +889,7 @@ abstract class MetalsLspService(
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.shimGlobs != old.shimGlobs ||
       userConfig.javaHome != old.javaHome
     ) {
       compilers.restartAll()

@@ -107,6 +107,7 @@ class UserConfigurationSuite extends BaseSuite {
       obtained.scalafixConfigPath ==
         UserConfiguration.default.scalafixConfigPath
     )
+    assertEquals(obtained.shimGlobs, Map.empty[String, List[String]])
   }
 
   checkOK(
@@ -199,6 +200,38 @@ class UserConfigurationSuite extends BaseSuite {
     "invalid SemanticDB symbol 'a.b': missing descriptor, " +
       "did you mean `a.b/` or `a.b.`? " +
       "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)",
+  )
+
+  checkOK(
+    "shim-globs",
+    """
+      |{
+      | "shim-globs": {
+      |   "default": ["shims.scala", "**/shims/*.scala"],
+      |   "db": ["**/db-shims/*.scala"]
+      | }
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assertEquals(
+      obtained.shimGlobs,
+      Map(
+        "default" -> List("shims.scala", "**/shims/*.scala"),
+        "db" -> List("**/db-shims/*.scala"),
+      ),
+    )
+  }
+
+  checkError(
+    "invalid shim-globs",
+    """
+      |{
+      | "shim-globs": {
+      |   "default": "shims.scala"
+      | }
+      |}
+    """.stripMargin,
+    """json error: key 'shim-globs' should have be object with array string values but obtained {"default":"shims.scala"}""",
   )
 
   checkError(
@@ -332,6 +365,10 @@ class UserConfigurationSuite extends BaseSuite {
       scalafixConfigPath = Some(fakePath),
       javaFormatter = Some(JavaFormatterConfig("eclipse")),
       symbolPrefixes = Map("java/util/" -> "hello."),
+      shimGlobs = Map(
+        "default" -> List("shims.scala", "**/shims/*.scala"),
+        "db" -> List("**/db-shims/*.scala"),
+      ),
       worksheetScreenWidth = 140,
       worksheetCancelTimeout = 10,
       bloopSbtAlreadyInstalled = true,
@@ -388,6 +425,15 @@ class UserConfigurationSuite extends BaseSuite {
   "scalafixConfigPath": "$fakePathString",
   "symbolPrefixes": {
     "java/util/": "hello."
+  },
+  "shimGlobs": {
+    "default": [
+      "shims.scala",
+      "**/shims/*.scala"
+    ],
+    "db": [
+      "**/db-shims/*.scala"
+    ]
   },
   "worksheetScreenWidth": 140,
   "worksheetCancelTimeout": 10,
