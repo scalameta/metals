@@ -105,7 +105,6 @@ class TurbineClasspathFileManager(
         listPackageClasspath(cp, packageNames) { obj =>
           objects.add(obj)
         }
-
         objects
       case StandardLocation.SOURCE_PATH =>
         listSourcepath(packageName)

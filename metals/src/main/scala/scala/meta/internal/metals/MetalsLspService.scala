@@ -1095,12 +1095,14 @@ abstract class MetalsLspService(
       onDelete(event.getUri().toAbsolutePath)
     )
     val paths = changeAndCreateEvents.map(_.getUri().toAbsolutePath)
-    paths.find(path => path.filename == "mbt.json") match {
-      case Some(mbtJsonPath) =>
-        mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
-        compilers.clearFallbackCompilerCache()
-      case None =>
-    }
+    futures += Future {
+      paths.find(path => path.filename == "mbt.json") match {
+        case Some(mbtJsonPath) =>
+          mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
+          compilers.clearFallbackCompilerCache()
+        case None =>
+      }
+    }.ignoreValue
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
   }
