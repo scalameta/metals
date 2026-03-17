@@ -356,6 +356,54 @@ class UserConfigurationSuite extends BaseSuite {
     assertEquals(roundtrip, nonDefault)
   }
 
+  test("list-options") {
+    val obtained = UserConfiguration.listOptions
+    val bloopVersion = scala.meta.internal.metals.BuildInfo.bloopVersion
+    val scala3 = scala.meta.internal.metals.BuildInfo.scala3
+    val bloopVersionPadded = f"$bloopVersion%-15s"
+    val scala3Padded = f"$scala3%-15s"
+    val expected =
+      s"""|java-home                                    string                         ""              Java Home directory
+          |sbt-script                                   string                         ""              sbt script
+          |gradle-script                                string                         ""              Gradle script
+          |maven-script                                 string                         ""              Maven script
+          |mill-script                                  string                         ""              Mill script
+          |scalafmt-config-path                         string                         ""              Scalafmt config path
+          |scalafix-config-path                         string                         ""              Scalafix config path
+          |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
+          |excluded-packages                            array                          []              Excluded Packages
+          |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
+          |bloop-version                                string                         $bloopVersionPadded Version of Bloop
+          |bloop-jvm-properties                         array                          ["-Xmx1G"]      Bloop JVM Properties
+          |super-method-lenses-enabled                  boolean                        false           Should display lenses with links to super methods
+          |inlay-hints.inferred-types.enable            boolean                        false           Should display type annotations for inferred types
+          |inlay-hints.named-parameters.enable          boolean                        false           Should display parameter names next to arguments
+          |inlay-hints.by-name-parameters.enable        boolean                        false           Should display if a parameter is by-name at usage sites
+          |inlay-hints.implicit-arguments.enable        boolean                        false           Should display implicit parameter at usage sites
+          |inlay-hints.implicit-conversions.enable      boolean                        false           Should display implicit conversion at usage sites
+          |inlay-hints.type-parameters.enable           boolean                        false           Should display type annotations for type parameters
+          |inlay-hints.hints-in-pattern-match.enable    boolean                        false           Should display type annotations in pattern matches
+          |inlay-hints.hints-x-ray-mode.enable          boolean                        false           Should display type annotations for intermediate types of multi-line expressions
+          |inlay-hints.closing-labels.enable            boolean                        false           Should display closing label hints for methods/classes/objects next to their closing braces
+          |enable-semantic-highlighting                 boolean                        true            Use semantic tokens highlight
+          |enable-indent-on-paste                       boolean                        false           Indent snippets when pasted.
+          |fallback-scala-version                       string                         $scala3Padded Default fallback Scala version
+          |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
+          |java-format.eclipse-config-path              string                         ""              Eclipse Java formatter config path
+          |java-format.eclipse-profile                  string                         ""              Eclipse Java formatting profile
+          |scala-cli-launcher                           string                         ""              Scala CLI launcher
+          |custom-project-root                          string                         ""              Custom project root
+          |verbose-compilation                          boolean                        false           Show all compilation debugging information
+          |auto-import-builds                           [off,initial,all]              off             Import build when changes detected without prompting
+          |target-build-tool                            string                         ""              Preferred build tool when multiple are detected
+          |default-bsp-to-build-tool                    boolean                        false           Default to using build tool as your build server.
+          |enable-best-effort                           boolean                        false           Use best effort compilation for Scala 3.
+          |default-shell                                string                         ""              Full path to the shell executable to be used as the default
+          |start-mcp-server                             boolean                        false           Start MCP server
+          |mcp-client                                   string                         ""              MCP Client Name""".stripMargin
+    assertNoDiff(obtained, expected)
+  }
+
   checkOK(
     "bloop-jvm-properties-uninitialized",
     """
