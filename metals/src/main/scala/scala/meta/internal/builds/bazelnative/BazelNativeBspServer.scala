@@ -146,6 +146,7 @@ class BazelNativeBspServer(
   override def workspaceReload(): CompletableFuture[Object] = {
     async {
       targetData.clear()
+      refreshTargetData()
       buildClient.foreach { client =>
         client.onBuildTargetDidChange(
           new DidChangeBuildTarget(Collections.emptyList())
