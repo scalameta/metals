@@ -1231,6 +1231,10 @@ trait MetalsMcpTools extends Cancelable {
           "module": {
             "type": "string",
             "description": "Explicit module (build target) name to use for context, e.g. 'core', 'services'. Takes precedence over fileInFocus."
+          },
+          "detailed": {
+            "type": "boolean",
+            "description": "If true, return full method/val/var bodies. If false (default), method bodies are shortened to ??? to reduce token usage."
           }
         },
         "required": ["fqcn"]
@@ -1244,6 +1248,9 @@ trait MetalsMcpTools extends Cancelable {
            |of the file containing the symbol, allowing you to read the implementation.
            |Useful for understanding library code, inspecting dependencies, and code analysis.
            |
+           |By default, method/val/var bodies are shortened to ??? and scaladoc removed to reduce token usage.
+           |Set detailed=true to receive full original source content.
+           |
            |When no fileInFocus is provided, automatically uses the first available
            |build target for context.""".stripMargin
       )
@@ -1255,13 +1262,14 @@ trait MetalsMcpTools extends Cancelable {
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
+        val detailed = arguments.getOptAs[Boolean]("detailed").getOrElse(false)
         Future {
-          queryEngine.getSource(fqcn, pathOpt, moduleOpt) match {
-            case Some((filePath, content)) =>
+          queryEngine.getSource(fqcn, pathOpt, moduleOpt, detailed) match {
+            case Some((_, content)) =>
               CallToolResult
                 .builder()
                 .content(
-                  createContent(s"// Source file: $filePath\n$content")
+                  createContent(content)
                 )
                 .isError(false)
                 .build()
