@@ -333,7 +333,7 @@ class JavaCompletionProvider(
           if (CompletionFuzzy.matches(identifier, simpleName)) {
             val item = completionItem(element)
             val className = element.toString
-            val edits = AutoImports.computeAutoImportEdits(
+            val edits = JavaAutoImports.computeAutoImportEdits(
               compiler,
               task,
               root,

@@ -38,7 +38,7 @@ class JavaAutoImportsProvider(
           val packageName = extractPackageName(fullName)
 
           val identifierRange = computeIdentifierRange()
-          val edits = AutoImports.computeAutoImportEdits(
+          val edits = JavaAutoImports.computeAutoImportEdits(
             compiler,
             task,
             root,
