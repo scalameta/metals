@@ -48,6 +48,27 @@ class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
       }
     })
   }
+
+  override def readStringList(
+      flag: FeatureFlag
+  ): java.util.List[String] = {
+    underlying.foldLeft(java.util.Collections.emptyList[String]())(
+      (acc, provider) => {
+        if (!acc.isEmpty) acc
+        else {
+          try provider.readStringList(flag)
+          catch {
+            case NonFatal(e) =>
+              scribe.error(
+                s"error reading feature flag $flag from provider ${provider.getClass.getName}",
+                e,
+              )
+              java.util.Collections.emptyList()
+          }
+        }
+      }
+    )
+  }
 }
 
 object AggregateFeatureFlagProvider {

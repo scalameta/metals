@@ -11,4 +11,7 @@ object NoopFeatureFlagProvider extends FeatureFlagProvider {
 
   override def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
     Optional.empty()
+
+  override def readStringList(flag: FeatureFlag): java.util.List[String] =
+    java.util.Collections.emptyList()
 }

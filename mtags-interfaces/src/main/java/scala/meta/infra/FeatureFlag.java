@@ -96,4 +96,7 @@ public enum FeatureFlag {
    * tokens, semanticdb) are enabled.
    */
   PROTOBUF_LSP,
+
+  /** Default shim file glob patterns, controlled via feature flag. */
+  SHIM_GLOBS,
 }

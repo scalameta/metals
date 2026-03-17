@@ -8,6 +8,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
@@ -1010,9 +1011,14 @@ object UserConfiguration {
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
-    val shimGlobs =
-      getStringListMap("shim-globs")
-        .getOrElse(default.shimGlobs)
+    val shimGlobs = {
+      val userGlobs =
+        getStringListMap("shim-globs").getOrElse(default.shimGlobs)
+      val fflagGlobs =
+        featureFlags.readStringList(FeatureFlag.SHIM_GLOBS).asScala.toList
+      if (fflagGlobs.isEmpty) userGlobs
+      else userGlobs + ("_default" -> fflagGlobs)
+    }
     errors ++= symbolPrefixes.keys.flatMap { sym =>
       Symbol.validated(sym).left.toOption
     }
