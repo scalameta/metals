@@ -72,6 +72,7 @@ class StandaloneMcpSuite extends BaseLspSuite("standalone-metals-suite") {
     val service = new StandaloneMcpService(
       workspace = workspace,
       port = Some(portToUse),
+      useStdio = false,
       scheduledExecutor = scheduledExecutor,
     )
 

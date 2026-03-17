@@ -28,6 +28,7 @@ import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
 import scala.meta.internal.metals.mcp.MetalsMcpServer
+import scala.meta.internal.metals.mcp.MetalsMcpStdioServer
 import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
@@ -275,28 +276,58 @@ class ProjectMetalsLspService(
   )
 
   def startMcpServer(): Future[Unit] =
+    startMcpServer(useStdio = false)
+
+  def startMcpStdioServer(): Future[Unit] =
+    startMcpServer(useStdio = true)
+
+  private def startMcpServer(useStdio: Boolean): Future[Unit] =
     Future {
-      if (!isMcpServerRunning.getAndSet(true))
-        register(
-          new MetalsMcpServer(
-            queryEngine,
-            folder,
-            compilations,
-            () => focusedDocument,
-            diagnostics,
-            buildTargets,
-            mcpTestRunner,
-            userConfig.mcpClient.getOrElse(
-              initializeParams.getClientInfo().getName()
-            ),
-            getVisibleName,
-            languageClient,
-            connectionProvider,
-            scalaVersionSelector,
-            formattingProvider,
-            scalafixLlmRuleProvider,
-          )
-        ).run()
+      if (!isMcpServerRunning.getAndSet(true)) {
+        if (useStdio) {
+          register(
+            new MetalsMcpStdioServer(
+              queryEngine,
+              folder,
+              compilations,
+              () => focusedDocument,
+              diagnostics,
+              buildTargets,
+              mcpTestRunner,
+              userConfig.mcpClient.getOrElse(
+                initializeParams.getClientInfo().getName()
+              ),
+              getVisibleName,
+              languageClient,
+              connectionProvider,
+              scalaVersionSelector,
+              formattingProvider,
+              scalafixLlmRuleProvider,
+            )
+          ).run()
+        } else {
+          register(
+            new MetalsMcpServer(
+              queryEngine,
+              folder,
+              compilations,
+              () => focusedDocument,
+              diagnostics,
+              buildTargets,
+              mcpTestRunner,
+              userConfig.mcpClient.getOrElse(
+                initializeParams.getClientInfo().getName()
+              ),
+              getVisibleName,
+              languageClient,
+              connectionProvider,
+              scalaVersionSelector,
+              formattingProvider,
+              scalafixLlmRuleProvider,
+            )
+          ).run()
+        }
+      }
     }.recover { case e: Exception =>
       scribe.error("Error starting MCP server", e)
     }

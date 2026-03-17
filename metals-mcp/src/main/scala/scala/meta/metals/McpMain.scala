@@ -214,7 +214,7 @@ object McpMain {
          |Options:
          |  --workspace <path>      Path to the Scala project (required)
          |  --port <number>         HTTP port to listen on (default: auto-assign)
-         |  --transport <type>      Transport type: http (default) or stdio (reserved for future use)
+         |  --transport <type>      Transport type: http (default) or stdio
          |  --client <name>         Client to generate config for: $validClients
          |  --<key> [value]         UserConfiguration override. Use kebab-case (e.g. --java-home /path, --bloop-version 1.4.0).
          |                          For boolean options, value is optional: omit for true, or use --key true/false.
@@ -276,6 +276,7 @@ object McpMain {
     val service = new StandaloneMcpService(
       workspace,
       config.port,
+      config.transport == Transport.Stdio,
       sh,
       config.client,
       userConfig,
