@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextEdit
 
-object AutoImports {
+object JavaAutoImports {
 
   case class AutoImportEdits(
       identifierEdit: Option[TextEdit],
