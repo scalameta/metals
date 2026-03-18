@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.jdk.CollectionConverters._
 
-import scala.meta.infra.Metric
+import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
 
 class MemoryMonitoring(
@@ -33,15 +33,6 @@ class MemoryMonitoring(
       IntervalSeconds,
       TimeUnit.SECONDS,
     )
-
-  private def gauge(
-      name: String,
-      value: Float,
-      unit: Metric.UnitType,
-  ): Metric =
-    new Metric(name)
-      .setValue(value, unit, Metric.MetricType.GAUGE)
-      .addLabel("workspace", workspaceName)
 
   private def publishMetrics(): Unit = {
     val runtime = Runtime.getRuntime
@@ -72,32 +63,35 @@ class MemoryMonitoring(
           s"presentationCompilers=$compilerCount, pcThreads=$pcThreadCount, gcPercent=${"%.2f".format(gcPercent)}%"
       )
     }
-    metrics.recordUsage(
-      gauge("metals_heap_used", usedHeap.toFloat, Metric.UnitType.BYTES)
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "heap_used_bytes")
+        .withLabel("value", usedHeap.toString)
+        .withLabel("workspace", workspaceName)
     )
-    metrics.recordUsage(
-      gauge(
-        "metals_heap_committed",
-        committedHeap.toFloat,
-        Metric.UnitType.BYTES,
-      )
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "heap_committed_bytes")
+        .withLabel("value", committedHeap.toString)
+        .withLabel("workspace", workspaceName)
     )
-    metrics.recordUsage(
-      gauge(
-        "metals_live_presentation_compilers",
-        compilerCount.toFloat,
-        Metric.UnitType.COUNT,
-      )
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "live_presentation_compilers")
+        .withLabel("value", compilerCount.toString)
+        .withLabel("workspace", workspaceName)
     )
-    metrics.recordUsage(
-      gauge(
-        "metals_scala_pc_threads",
-        pcThreadCount.toFloat,
-        Metric.UnitType.COUNT,
-      )
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "scala_pc_threads")
+        .withLabel("value", pcThreadCount.toString)
+        .withLabel("workspace", workspaceName)
     )
-    metrics.recordUsage(
-      gauge("metals_gc_percent", gcPercent, Metric.UnitType.RATIO)
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "gc_percent")
+        .withLabel("value", gcPercent.toString)
+        .withLabel("workspace", workspaceName)
     )
   }
 
