@@ -290,7 +290,13 @@ class BazelNativeBspServer(
   override def buildTargetRun(
       params: RunParams
   ): CompletableFuture[RunResult] = {
-    CompletableFuture.completedFuture(new RunResult(StatusCode.OK))
+    val f = new CompletableFuture[RunResult]()
+    f.completeExceptionally(
+      new UnsupportedOperationException(
+        "Bazel Native does not support run via BSP yet"
+      )
+    )
+    f
   }
 
   override def buildTargetTest(
