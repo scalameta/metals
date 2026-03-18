@@ -1181,6 +1181,35 @@ trait MetalsMcpTools extends Cancelable {
     )
   }
 
+  protected def registerAllTools(
+      asyncServer: io.modelcontextprotocol.server.McpAsyncServer
+  ): Unit = {
+    asyncServer.addTool(createFileCompileTool()).subscribe()
+    asyncServer.addTool(createCompileModuleTool()).subscribe()
+    asyncServer.addTool(createCompileTool()).subscribe()
+    asyncServer.addTool(createTestTool()).subscribe()
+    asyncServer.addTool(createGlobSearchTool()).subscribe()
+    asyncServer.addTool(createTypedGlobSearchTool()).subscribe()
+    asyncServer.addTool(createInspectTool()).subscribe()
+    asyncServer.addTool(createGetDocsTool()).subscribe()
+    asyncServer.addTool(createGetUsagesTool()).subscribe()
+    asyncServer.addTool(importBuildTool()).subscribe()
+    asyncServer.addTool(createFindDepTool()).subscribe()
+    asyncServer.addTool(createListModulesTool()).subscribe()
+    asyncServer.addTool(createFormatTool()).subscribe()
+    asyncServer.addTool(createGenerateScalafixRuleTool()).subscribe()
+    asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
+    asyncServer.addTool(createListScalafixRulesTool()).subscribe()
+  }
+
+  protected def buildCapabilities()
+      : io.modelcontextprotocol.spec.McpSchema.ServerCapabilities =
+    io.modelcontextprotocol.spec.McpSchema.ServerCapabilities
+      .builder()
+      .tools(true)
+      .logging()
+      .build()
+
   // Helper methods
   protected def withErrorHandling(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]

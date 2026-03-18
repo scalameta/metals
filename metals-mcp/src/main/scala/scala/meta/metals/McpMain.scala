@@ -38,11 +38,12 @@ object McpMain {
     case object Http extends Transport
     case object Stdio extends Transport
 
-    def fromString(s: String): Option[Transport] = s.toLowerCase match {
-      case "http" => Some(Http)
-      case "stdio" => Some(Stdio)
-      case _ => None
-    }
+    def fromString(s: String): Option[Transport] =
+      s.toLowerCase match {
+        case "http" => Some(Http)
+        case "stdio" => Some(Stdio)
+        case _ => None
+      }
   }
 
   case class Config(
@@ -57,11 +58,12 @@ object McpMain {
     Client.allClients.flatMap(_.names).mkString(", ")
 
   // Skipped config keys that do not make sense in MCP context
-  private def skippedConfigKeys(key: String): Boolean = key match {
-    case "start-mcp-server" => true
-    case option if option.startsWith("inlay-hints.") => true
-    case _ => false
-  }
+  private def skippedConfigKeys(key: String): Boolean =
+    key match {
+      case "start-mcp-server" => true
+      case option if option.startsWith("inlay-hints.") => true
+      case _ => false
+    }
 
   /** Set of all config keys (kebab-case) for direct CLI parsing (e.g. --key value). */
   private val configKeys: Set[String] =
@@ -259,11 +261,12 @@ object McpMain {
         }
     }
 
+    val useStdio = config.transport == Transport.Stdio
     val exec = Executors.newCachedThreadPool()
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
-    if (config.transport == Transport.Stdio) {
+    if (useStdio) {
       val metalsLog = workspace.resolve(".metals/metals.log")
       MetalsLogger.configureFileLogging(metalsLog)
     }
@@ -276,7 +279,7 @@ object McpMain {
     val service = new StandaloneMcpService(
       workspace,
       config.port,
-      config.transport == Transport.Stdio,
+      useStdio,
       sh,
       config.client,
       userConfig,

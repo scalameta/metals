@@ -17,7 +17,6 @@ import scala.meta.io.AbsolutePath
 
 import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.transport.HttpServletStreamableServerTransportProvider
-import io.modelcontextprotocol.spec.McpSchema.ServerCapabilities
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
@@ -59,41 +58,16 @@ class MetalsMcpServer(
       .mcpEndpoint(MetalsMcpServer.mcpEndpoint)
       .build()
 
-    val capabilities = ServerCapabilities
-      .builder()
-      .tools(true) // Tool support with list changes notifications
-      .logging() // Enable logging support (enabled by default with logging level INFO)
-      .build();
-
-    // Create server with configuration
-    // Include project name in server info to help LLM distinguish between servers
-    // when multiple projects are open in the same workspace
     val serverName = s"$projectName-metals"
     val asyncServer = McpServer
       .async(servlet)
       .serverInfo(serverName, BuildInfo.metalsVersion)
-      .capabilities(capabilities)
+      .capabilities(buildCapabilities())
       .build()
 
     cancelable.add(() => asyncServer.close())
 
-    // Register tools
-    asyncServer.addTool(createFileCompileTool()).subscribe()
-    asyncServer.addTool(createCompileModuleTool()).subscribe()
-    asyncServer.addTool(createCompileTool()).subscribe()
-    asyncServer.addTool(createTestTool()).subscribe()
-    asyncServer.addTool(createGlobSearchTool()).subscribe()
-    asyncServer.addTool(createTypedGlobSearchTool()).subscribe()
-    asyncServer.addTool(createInspectTool()).subscribe()
-    asyncServer.addTool(createGetDocsTool()).subscribe()
-    asyncServer.addTool(createGetUsagesTool()).subscribe()
-    asyncServer.addTool(importBuildTool()).subscribe()
-    asyncServer.addTool(createFindDepTool()).subscribe()
-    asyncServer.addTool(createListModulesTool()).subscribe()
-    asyncServer.addTool(createFormatTool()).subscribe()
-    asyncServer.addTool(createGenerateScalafixRuleTool()).subscribe()
-    asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
-    asyncServer.addTool(createListScalafixRulesTool()).subscribe()
+    registerAllTools(asyncServer)
 
     // serve servlet
     val servletDeployment = Servlets
