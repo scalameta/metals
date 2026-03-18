@@ -27,7 +27,7 @@ class BazelNativeAspectsManager(workspace: AbsolutePath) {
 
   @volatile private var _bazelMajor: Int = 0
 
-  /** Write aspect files to disk.  Idempotent. */
+  /** Write aspect files to disk. Idempotent. */
   def materialize(
       scalaRulesetName: Option[String],
       bazelVersion: String = "",
