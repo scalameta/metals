@@ -555,13 +555,7 @@ class BazelNativeBspServer(
 
     val caps = new BuildTargetCapabilities()
     caps.setCanCompile(true)
-    val kind = info.kind
-    caps.setCanRun(
-      info.executable ||
-        kind.endsWith("_binary")
-    )
-    caps.setCanTest(kind.endsWith("_test"))
-    caps.setCanDebug(caps.getCanRun() || caps.getCanTest())
+    caps.setCanDebug(false)
 
     val target = new BuildTarget(id, info.tags.asJava, langs, deps, caps)
     target.setDisplayName(info.id)
