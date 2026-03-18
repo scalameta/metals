@@ -13,7 +13,6 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 
-import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.{lsp4j => l}
 
@@ -37,7 +36,7 @@ final class GotoTestCodeLens(
 
     for {
       occurrence <- textDocument.occurrences
-      if occurrence.role.isDefinition && occurrence.symbol.isType
+      if occurrence.role.isDefinition && (occurrence.symbol.isType || occurrence.symbol.isTerm)
       if gotoTestProvider.hasTarget(occurrence.symbol, path)
       name = Symbol(occurrence.symbol).displayName
       title =
@@ -47,11 +46,9 @@ final class GotoTestCodeLens(
         .flatMap(r => distance.toRevisedStrict(r).map(_.toLsp))
         .toList
     } yield {
-      val pos =
-        new l.Position(range.getStart.getLine, range.getStart.getCharacter)
       val params = new TextDocumentPositionParams(
-        new TextDocumentIdentifier(path.toURI.toString),
-        pos,
+        path.toTextDocumentIdentifier,
+        range.getStart,
       )
       val command = ServerCommands.GotoTest.toLsp(params)
       command.setTitle(title)

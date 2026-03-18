@@ -1693,6 +1693,18 @@ final case class TestingServer(
     input.toOffsetPosition(offset)
   }
 
+  def textDocumentPositionParams(
+      filename: String,
+      substringQuery: String,
+  ): TextDocumentPositionParams = {
+    val abspath = toPath(filename)
+    val pos = subqueryPosition(abspath, substringQuery)
+    new TextDocumentPositionParams(
+      abspath.toTextDocumentIdentifier,
+      pos.toLspStartPosition,
+    )
+  }
+
   // Does a goto-definition from a substring AND it does not trigger a didChange
   // notification.
   def definitionSubstringQuery(

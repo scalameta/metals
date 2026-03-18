@@ -14,6 +14,7 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location
+import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
@@ -44,15 +45,22 @@ class GotoTestProvider(
           Messages.noTestClassFound(path.filename)
         )
       case Some(classSymbol) =>
-        val className = Symbol(classSymbol).displayName
-        val candidateSymbols = findCandidateSymbols(classSymbol)
+        val symbol = Symbol(classSymbol)
+        val resolved =
+          if (symbol.isToplevel) symbol
+          else symbol.toplevel
+        val className = resolved.displayName
+        val candidateSymbols = findCandidateSymbols(resolved.value)
 
         val results = (for {
           candidateSymbol <- candidateSymbols
           loc <- symbolSearch
             .definition(candidateSymbol, path.toURI)
             .asScala
-        } yield (candidateSymbol, loc)).distinctBy(_._2.getUri())
+          container = Symbol(candidateSymbol).owner.value
+            .replace('/', '.')
+            .stripSuffix(".")
+        } yield (candidateSymbol, loc, container)).distinctBy(_._2.getUri())
 
         val finalResults =
           if (results.nonEmpty) results
@@ -66,7 +74,7 @@ class GotoTestProvider(
             languageClient.showMessage(
               Messages.noTestClassFound(className)
             )
-          case (_, location) :: Nil =>
+          case (_, location, _) :: Nil =>
             gotoLocation(location)
           case multiple =>
             showQuickPick(multiple)
@@ -75,6 +83,7 @@ class GotoTestProvider(
   }
 
   def hasTarget(classSymbol: String, path: AbsolutePath): Boolean = {
+    if (!Symbol(classSymbol).isToplevel) return false
     val candidateSymbols = findCandidateSymbols(classSymbol)
     val hasDefinition = candidateSymbols.exists { candidate =>
       !symbolSearch.definition(candidate, path.toURI).isEmpty
@@ -85,13 +94,18 @@ class GotoTestProvider(
   private def searchByClassName(
       candidateSymbols: List[String],
       path: AbsolutePath,
-  ): List[(String, Location)] = {
+  ): List[(String, Location, String)] = {
+    val wantedKinds =
+      Set(SymbolKind.Interface, SymbolKind.Class, SymbolKind.Object)
     val candidateNames = candidateSymbols.map(Symbol(_).displayName).distinct
     (for {
       name <- candidateNames
       info <- workspaceSymbols.search(name, Some(path))
       if candidateNames.contains(info.getName())
-    } yield (info.getName(), info.getLocation())).distinctBy(_._2.getUri())
+      if wantedKinds.contains(info.getKind())
+      container = Option(info.getContainerName()).getOrElse("")
+    } yield (info.getName(), info.getLocation(), container))
+      .distinctBy(_._2.getUri())
   }
 
   private def gotoLocation(location: Location): Unit =
@@ -105,11 +119,11 @@ class GotoTestProvider(
     )
 
   private def showQuickPick(
-      results: List[(String, Location)]
+      results: List[(String, Location, String)]
   ): Unit = {
-    val items = results.map { case (symbol, loc) =>
-      val name = Symbol(symbol).displayName
-      MetalsQuickPickItem(loc.getUri(), name, symbol)
+    val items = results.map { case (name, loc, container) =>
+      scribe.info(s"quick pick item: $name, $container")
+      MetalsQuickPickItem(loc.getUri(), name, container)
     }
     languageClient
       .metalsQuickPick(
@@ -123,7 +137,7 @@ class GotoTestProvider(
         case Some(result) =>
           results
             .find(_._2.getUri() == result.itemId)
-            .foreach { case (_, loc) => gotoLocation(loc) }
+            .foreach { case (_, loc, _) => gotoLocation(loc) }
         case None => // cancelled
       }
   }
@@ -150,7 +164,7 @@ class GotoTestProvider(
   ): Option[String] = {
     // Find all class/trait/object definition occurrences
     val classDefinitions = doc.occurrences.filter { occ =>
-      occ.role.isDefinition && occ.symbol.isType
+      occ.role.isDefinition && (occ.symbol.isType || occ.symbol.isTerm)
     }
 
     // Find the innermost class definition that encloses the position
