@@ -15,7 +15,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.modelcontextprotocol.client.McpClient
+import io.modelcontextprotocol.client.{McpAsyncClient, McpClient}
 import io.modelcontextprotocol.client.transport.ServerParameters
 import io.modelcontextprotocol.client.transport.StdioClientTransport
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
@@ -42,26 +42,37 @@ class TestMcpStdioClient(
   private val objectMapper = new ObjectMapper()
   private val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
 
-  // Create temp directory for server output
   private val tempDir = Files.createTempDirectory("metals-mcp-stdio-test")
 
-  // Build server parameters
-  private val params = ServerParameters
-    .builder("java")
-    .args(
-      "-cp",
-      classpath,
-      mainClass,
-      "--workspace",
-      workspacePath.toString,
-      "--transport",
-      "stdio",
-    )
-    .build()
+  private var _client: McpAsyncClient = _
+  private var _transport: StdioClientTransport = _
 
-  private val transport = new StdioClientTransport(params, jsonMapper)
-  private val client =
-    McpClient.async(transport).requestTimeout(Duration.ofMinutes(5)).build()
+  private def buildServerParameters(): ServerParameters = {
+    ServerParameters
+      .builder("java")
+      .args(
+        "-cp",
+        classpath,
+        mainClass,
+        "--workspace",
+        workspacePath.toString,
+        "--transport",
+        "stdio",
+      )
+      .build()
+  }
+
+  private def createFreshClient(): McpAsyncClient = {
+    val params = buildServerParameters()
+    _transport = new StdioClientTransport(params, jsonMapper)
+    _client = McpClient
+      .async(_transport)
+      .requestTimeout(Duration.ofMinutes(5))
+      .build()
+    _client
+  }
+
+  private def client: McpAsyncClient = _client
 
   private def callTool(
       toolName: String,
@@ -85,6 +96,7 @@ class TestMcpStdioClient(
   }
 
   def initialize(): Future[InitializeResult] = {
+    createFreshClient()
     client.initialize().toFuture().asScala
   }
 
@@ -132,12 +144,14 @@ class TestMcpStdioClient(
   def typedGlobSearch(
       query: String,
       symbolTypes: List[String],
+      fileInFocus: Option[String] = None,
   ): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("query", query)
     val symbolTypeArray = objectMapper.createArrayNode()
     symbolTypes.foreach(symbolTypeArray.add)
     params.set("symbolType", symbolTypeArray)
+    fileInFocus.foreach(f => params.put("fileInFocus", f))
     callTool("typed-glob-search", params).map(_.mkString)
   }
 
