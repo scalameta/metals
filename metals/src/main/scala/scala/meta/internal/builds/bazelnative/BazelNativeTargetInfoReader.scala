@@ -8,6 +8,29 @@ import com.google.gson.JsonParser
 
 object BazelNativeTargetInfoReader {
 
+  /**
+   * Removes aspect-emitted `.bsp-info.json` files under `bazel-bin`.
+   * Does not run `bazel clean`; other build outputs are untouched.
+   */
+  def deleteAspectInfoFiles(bazelBin: Path): Boolean =
+    if (!Files.isDirectory(bazelBin)) true
+    else
+      try {
+        val stream = Files.walk(bazelBin)
+        try {
+          stream
+            .filter(p => p.getFileName.toString.endsWith(".bsp-info.json"))
+            .forEach(Files.deleteIfExists(_))
+        } finally stream.close()
+        true
+      } catch {
+        case e: Exception =>
+          scribe.warn(
+            s"[BazelNative] Failed deleting aspect outputs: ${e.getMessage}"
+          )
+          false
+      }
+
   def readFromBazelBin(bazelBin: Path): Map[String, BspTargetInfo] = {
     if (!Files.isDirectory(bazelBin)) return Map.empty
     val builder = Map.newBuilder[String, BspTargetInfo]

@@ -276,7 +276,15 @@ class BazelNativeBspServer(
   override def buildTargetCleanCache(
       params: CleanCacheParams
   ): CompletableFuture[CleanCacheResult] = {
-    CompletableFuture.completedFuture(new CleanCacheResult(true))
+    async {
+      if (bazelBinDir.nonEmpty) {
+        val ok = BazelNativeTargetInfoReader.deleteAspectInfoFiles(
+          java.nio.file.Paths.get(bazelBinDir)
+        )
+        if (ok) targetData.clear()
+        new CleanCacheResult(ok)
+      } else new CleanCacheResult(true)
+    }
   }
 
   override def buildTargetRun(
