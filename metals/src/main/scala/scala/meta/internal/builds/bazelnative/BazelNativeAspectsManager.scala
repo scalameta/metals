@@ -147,9 +147,10 @@ class BazelNativeAspectsManager(workspace: AbsolutePath) {
   }
 
   private def bazelMajorVersion(bazelVersion: String): Int = {
-    if (bazelVersion.isEmpty) return 0
-    try bazelVersion.takeWhile(_.isDigit).toInt
-    catch { case _: NumberFormatException => 0 }
+    if (bazelVersion.isEmpty) 0
+    else
+      try bazelVersion.takeWhile(_.isDigit).toInt
+      catch { case _: NumberFormatException => 0 }
   }
 
   private val TemplateResource = "bazelnative/bsp_target_info.bzl.template"
