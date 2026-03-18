@@ -265,7 +265,7 @@ object McpMain {
     val sh = Executors.newSingleThreadScheduledExecutor()
     if (config.transport == Transport.Stdio) {
       val metalsLog = workspace.resolve(".metals/metals.log")
-      MetalsLogger.redirectSystemOut(metalsLog)
+      MetalsLogger.configureFileLogging(metalsLog)
     }
 
     scribe.info(

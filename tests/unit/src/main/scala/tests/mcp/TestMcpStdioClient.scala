@@ -146,6 +146,100 @@ class TestMcpStdioClient(
     callTool("list-scalafix-rules", params).map(_.mkString)
   }
 
+  def generateScalafixRule(
+      ruleImplementation: String,
+      description: String,
+      sampleCode: Option[String] = None,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("ruleImplementation", ruleImplementation)
+    params.put("description", description)
+    sampleCode.foreach(code => params.put("sampleCode", code))
+    callTool("generate-scalafix-rule", params).map(_.mkString)
+  }
+
+  def runScalafixRule(
+      ruleName: String,
+      filePath: Option[String] = None,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("ruleName", ruleName)
+    filePath.foreach(path => params.put("fileToRunOn", path))
+    callTool("run-scalafix-rule", params).map(_.mkString)
+  }
+
+  def compileFull(): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    callTool("compile-full", params).map(_.mkString)
+  }
+
+  def globSearch(
+      query: String,
+      fileInFocus: Option[String] = None,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("query", query)
+    fileInFocus.foreach(f => params.put("fileInFocus", f))
+    callTool("glob-search", params).map(_.mkString)
+  }
+
+  def inspect(
+      fqcn: String,
+      fileInFocus: Option[String] = None,
+      module: Option[String] = None,
+      searchAllTargets: Boolean = false,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("fqcn", fqcn)
+    fileInFocus.foreach(f => params.put("fileInFocus", f))
+    module.foreach(m => params.put("module", m))
+    if (searchAllTargets) params.put("searchAllTargets", true)
+    callTool("inspect", params).map(_.mkString)
+  }
+
+  def getDocs(
+      fqcn: String,
+      fileInFocus: Option[String] = None,
+      module: Option[String] = None,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("fqcn", fqcn)
+    fileInFocus.foreach(f => params.put("fileInFocus", f))
+    module.foreach(m => params.put("module", m))
+    callTool("get-docs", params).map(_.mkString)
+  }
+
+  def getUsages(
+      fqcn: String,
+      fileInFocus: Option[String] = None,
+      module: Option[String] = None,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("fqcn", fqcn)
+    fileInFocus.foreach(f => params.put("fileInFocus", f))
+    module.foreach(m => params.put("module", m))
+    callTool("get-usages", params).map(_.mkString)
+  }
+
+  def importBuild(): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    callTool("import-build", params).map(_.mkString)
+  }
+
+  def runTest(
+      testClass: String,
+      testFile: Option[String] = None,
+      testName: Option[String] = None,
+      verbose: Boolean = false,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("testClass", testClass)
+    testFile.foreach(f => params.put("testFile", f))
+    testName.foreach(n => params.put("testName", n))
+    if (verbose) params.put("verbose", true)
+    callTool("test", params).map(_.mkString)
+  }
+
   /** Clean up temp directory */
   def cleanup(): Unit = {
     try {
@@ -166,7 +260,7 @@ object TestMcpStdioClient {
    * This is useful for tests running in sbt where the classpath is already set up.
    */
   def apply(
-      workspacePath: Path,
+      workspacePath: Path
   )(implicit ec: ExecutionContext): TestMcpStdioClient = {
     val classpath = System.getProperty("java.class.path")
     new TestMcpStdioClient(workspacePath, classpath)
