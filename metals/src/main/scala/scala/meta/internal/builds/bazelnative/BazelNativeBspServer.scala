@@ -9,6 +9,7 @@ import scala.build.bsp.WrappedSourcesItem
 import scala.build.bsp.WrappedSourcesParams
 import scala.build.bsp.WrappedSourcesResult
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsBuildServer
@@ -61,16 +62,13 @@ class BazelNativeBspServer(
   override def buildInitialize(
       params: InitializeBuildParams
   ): CompletableFuture[InitializeBuildResult] = {
+    val initTimeout: FiniteDuration = Duration(30, SECONDS)
     async {
-      bazelVersion = scala.concurrent.Await.result(
-        process.version(),
-        scala.concurrent.duration.Duration(30, "s"),
+      val (ver, infoMap) = scala.concurrent.Await.result(
+        process.version().zip(process.info()),
+        initTimeout,
       )
-
-      val infoMap = scala.concurrent.Await.result(
-        process.info(),
-        scala.concurrent.duration.Duration(30, "s"),
-      )
+      bazelVersion = ver
       executionRoot = infoMap.getOrElse("execution_root", "")
       bazelBinDir = infoMap.getOrElse("bazel-bin", "")
       scribe.info(
