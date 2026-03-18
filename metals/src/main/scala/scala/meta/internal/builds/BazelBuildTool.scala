@@ -4,7 +4,6 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import coursier.Dependency
@@ -84,10 +83,27 @@ object BazelBuildTool {
     }
   }
 
-  def getScalaRulesName(projectRoot: AbsolutePath): String = {
-    val version = resolveBazelVersion(projectRoot)
-    if (SemVer.isLaterVersion("8.0.0", version)) "rules_scala"
-    else "io_bazel_rules_scala"
+  def getScalaRulesName(projectRoot: AbsolutePath): Option[String] = {
+    val candidates = {
+      for {
+        relative <- List(
+          "MODULE.bazel",
+          "WORKSPACE",
+          "WORKSPACE.bazel",
+        ).iterator
+        file = projectRoot.resolve(relative)
+        if file.isFile
+        content <- file.readTextOpt
+        ruleName <-
+          if (content.contains("io_bazel_rules_scala"))
+            Some("io_bazel_rules_scala")
+          else if (content.contains("rules_scala")) Some("rules_scala")
+          else None
+      } yield {
+        ruleName
+      }
+    }
+    candidates.headOption
   }
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
@@ -105,7 +121,7 @@ object BazelBuildTool {
 
   def enabledRules(projectRoot: AbsolutePath): List[String] = {
     val scalaRules = getScalaRulesName(projectRoot)
-    List(scalaRules, "rules_java", "rules_jvm")
+    List(scalaRules.getOrElse("rules_scala"), "rules_java", "rules_jvm")
   }
 
   def fallbackProjectView: String = {
