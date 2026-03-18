@@ -3,6 +3,7 @@ package tests.mcp
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.util.Comparator
 
@@ -47,9 +48,15 @@ class TestMcpStdioClient(
   private var _client: McpAsyncClient = _
   private var _transport: StdioClientTransport = _
 
+  private def javaExecutable: String = {
+    val javaHome = System.getProperty("java.home")
+    val execName = if (File.separatorChar == '\\') "java.exe" else "java"
+    Paths.get(javaHome, "bin", execName).toString
+  }
+
   private def buildServerParameters(): ServerParameters = {
     ServerParameters
-      .builder("java")
+      .builder(javaExecutable)
       .args(
         "-cp",
         classpath,
@@ -101,8 +108,13 @@ class TestMcpStdioClient(
   }
 
   def shutdown(): Future[Unit] = {
-    client.closeGracefully().toFuture().asScala.map(_ => ()).recover {
-      case NonFatal(_) => ()
+    Option(_client) match {
+      case Some(c) =>
+        c.closeGracefully().toFuture().asScala.map(_ => ()).recover {
+          case NonFatal(_) => ()
+        }
+      case None =>
+        Future.successful(())
     }
   }
 

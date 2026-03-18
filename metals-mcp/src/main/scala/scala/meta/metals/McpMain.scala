@@ -262,6 +262,14 @@ object McpMain {
     }
 
     val useStdio = config.transport == Transport.Stdio
+
+    // Warn about conflicting options
+    if (useStdio && config.port.isDefined) {
+      scribe.warn(
+        "--port is ignored when using stdio transport. Port option is only applicable to HTTP transport."
+      )
+    }
+
     val exec = Executors.newCachedThreadPool()
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)

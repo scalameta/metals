@@ -60,19 +60,25 @@ class McpStdioCompileToolsSuite
     val workspacePath = createTestWorkspace("stdio-compile-file-test")
     val client = createStdioClient(workspacePath)
 
-    for {
+    val result = for {
       _ <- client.initialize()
-      result <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
-      _ <- client.shutdown()
-      _ = client.cleanup()
-    } yield {
-      try {
-        RecursivelyDelete(workspacePath)
-      } catch {
-        case NonFatal(_) =>
-      }
+      r <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
+    } yield r
 
-      assert(result.nonEmpty, s"Should return compile result, got: $result")
+    result.transformWith { res =>
+      for {
+        _ <- client.shutdown().recover { case NonFatal(_) => () }
+        _ = client.cleanup()
+      } yield {
+        try RecursivelyDelete(workspacePath)
+        catch { case NonFatal(_) => }
+        res match {
+          case scala.util.Success(r) =>
+            assert(r.nonEmpty, s"Should return compile result, got: $r")
+          case scala.util.Failure(e) =>
+            throw e
+        }
+      }
     }
   }
 
@@ -80,19 +86,25 @@ class McpStdioCompileToolsSuite
     val workspacePath = createTestWorkspace("stdio-compile-module-test")
     val client = createStdioClient(workspacePath)
 
-    for {
+    val result = for {
       _ <- client.initialize()
-      result <- client.compileModule("a")
-      _ <- client.shutdown()
-      _ = client.cleanup()
-    } yield {
-      try {
-        RecursivelyDelete(workspacePath)
-      } catch {
-        case NonFatal(_) =>
-      }
+      r <- client.compileModule("a")
+    } yield r
 
-      assert(result.nonEmpty, s"Should return compile result, got: $result")
+    result.transformWith { res =>
+      for {
+        _ <- client.shutdown().recover { case NonFatal(_) => () }
+        _ = client.cleanup()
+      } yield {
+        try RecursivelyDelete(workspacePath)
+        catch { case NonFatal(_) => }
+        res match {
+          case scala.util.Success(r) =>
+            assert(r.nonEmpty, s"Should return compile result, got: $r")
+          case scala.util.Failure(e) =>
+            throw e
+        }
+      }
     }
   }
 
@@ -100,19 +112,25 @@ class McpStdioCompileToolsSuite
     val workspacePath = createTestWorkspace("stdio-compile-full-test")
     val client = createStdioClient(workspacePath)
 
-    for {
+    val result = for {
       _ <- client.initialize()
-      result <- client.compileFull()
-      _ <- client.shutdown()
-      _ = client.cleanup()
-    } yield {
-      try {
-        RecursivelyDelete(workspacePath)
-      } catch {
-        case NonFatal(_) =>
-      }
+      r <- client.compileFull()
+    } yield r
 
-      assert(result.nonEmpty, s"Should return compile result, got: $result")
+    result.transformWith { res =>
+      for {
+        _ <- client.shutdown().recover { case NonFatal(_) => () }
+        _ = client.cleanup()
+      } yield {
+        try RecursivelyDelete(workspacePath)
+        catch { case NonFatal(_) => }
+        res match {
+          case scala.util.Success(r) =>
+            assert(r.nonEmpty, s"Should return compile result, got: $r")
+          case scala.util.Failure(e) =>
+            throw e
+        }
+      }
     }
   }
 }

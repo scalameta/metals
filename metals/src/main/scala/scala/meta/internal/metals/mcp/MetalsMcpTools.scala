@@ -19,7 +19,6 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FormattingProvider
-import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -944,12 +943,24 @@ trait MetalsMcpTools extends Cancelable {
                     )
                   )
                   .asScala
-                  .map { _ =>
-                    CallToolResult
-                      .builder()
-                      .content(createContent(s"$path was formatted"))
-                      .isError(false)
-                      .build()
+                  .map { response =>
+                    if (response.isApplied()) {
+                      CallToolResult
+                        .builder()
+                        .content(createContent(s"$path was formatted"))
+                        .isError(false)
+                        .build()
+                    } else {
+                      CallToolResult
+                        .builder()
+                        .content(
+                          createContent(
+                            s"Failed to format $path: ${Option(response.getFailureReason()).getOrElse("unknown error")}"
+                          )
+                        )
+                        .isError(true)
+                        .build()
+                    }
                   }
             }
             .toMono
@@ -1220,21 +1231,25 @@ trait MetalsMcpTools extends Cancelable {
   ] = { (exchange, request) =>
     val arguments = request.arguments()
     try {
-      f(exchange, arguments)
-    } catch {
-      case NonFatal(e) =>
-        scribe.warn(
-          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
-            e.getStackTrace.mkString("\n")
-        )
+      f(exchange, arguments).onErrorResume { e =>
+        scribe.warn(s"Error while processing request: ${e.getMessage}")
+        scribe.debug(e.getStackTrace.mkString("\n"))
         Mono.just(
           CallToolResult
             .builder()
-            .content(
-              createContent(
-                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
-              )
-            )
+            .content(createContent(s"Error: ${e.getMessage}"))
+            .isError(true)
+            .build()
+        )
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(s"Error while processing request: ${e.getMessage}")
+        scribe.debug(e.getStackTrace.mkString("\n"))
+        Mono.just(
+          CallToolResult
+            .builder()
+            .content(createContent(s"Error: ${e.getMessage}"))
             .isError(true)
             .build()
         )

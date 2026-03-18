@@ -328,8 +328,12 @@ class ProjectMetalsLspService(
           ).run()
         }
       }
-    }.recover { case e: Exception =>
-      scribe.error("Error starting MCP server", e)
+    }.transform { result =>
+      result.recover { case e: Exception =>
+        isMcpServerRunning.set(false)
+        scribe.error("Error starting MCP server", e)
+      }
+      result
     }
 
   override def didChange(
