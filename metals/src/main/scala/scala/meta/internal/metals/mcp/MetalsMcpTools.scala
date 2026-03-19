@@ -1234,24 +1234,36 @@ trait MetalsMcpTools extends Cancelable {
     val arguments = request.arguments()
     try {
       f(exchange, arguments).onErrorResume { e =>
-        scribe.warn(s"Error while processing request: ${e.getMessage}")
-        scribe.debug(e.getStackTrace.mkString("\n"))
+        scribe.warn(
+          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
+            e.getStackTrace.mkString("\n")
+        )
         Mono.just(
           CallToolResult
             .builder()
-            .content(createContent(s"Error: ${e.getMessage}"))
+            .content(
+              createContent(
+                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
+              )
+            )
             .isError(true)
             .build()
         )
       }
     } catch {
       case NonFatal(e) =>
-        scribe.warn(s"Error while processing request: ${e.getMessage}")
-        scribe.debug(e.getStackTrace.mkString("\n"))
+        scribe.warn(
+          s"Error while processing request: ${e.getMessage}, arguments: ${arguments.toJson}, stacktrace:" +
+            e.getStackTrace.mkString("\n")
+        )
         Mono.just(
           CallToolResult
             .builder()
-            .content(createContent(s"Error: ${e.getMessage}"))
+            .content(
+              createContent(
+                s"Error: ${e.getMessage}, arguments: ${arguments.toJson}"
+              )
+            )
             .isError(true)
             .build()
         )
@@ -1327,5 +1339,12 @@ trait MetalsMcpTools extends Cancelable {
     def getFileInFocus: AbsolutePath =
       getFileInFocusOpt
         .getOrElse(throw MissingFileInFocusException)
+
+    /**
+     * Serialize arguments to JSON string for error reporting.
+     */
+    def toJson: String = {
+      objectMapper.writeValueAsString(arguments)
+    }
   }
 }
