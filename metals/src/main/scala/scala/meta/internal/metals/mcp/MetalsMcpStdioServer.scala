@@ -3,11 +3,11 @@ package scala.meta.internal.metals.mcp
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FormattingProvider
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.io.AbsolutePath

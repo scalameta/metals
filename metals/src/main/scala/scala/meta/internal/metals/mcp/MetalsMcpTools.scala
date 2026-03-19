@@ -72,7 +72,7 @@ trait MetalsMcpTools extends Cancelable {
   protected val cancelable = new MutableCancelable()
 
   // Shared fields - lazy because clientName is provided by subclass constructor
-  protected lazy val client =
+  protected lazy val client: Client =
     Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
 
   protected val objectMapper = new ObjectMapper()
@@ -340,7 +340,9 @@ trait MetalsMcpTools extends Cancelable {
     )
   }
 
-  protected def inModuleErrors(buildTarget: BuildTargetIdentifier) = {
+  protected def inModuleErrors(
+      buildTarget: BuildTargetIdentifier
+  ): Option[String] = {
     val moduleDiagnostics =
       diagnostics.allDiagnostics.filter { case (path, _) =>
         buildTargets.inverseSources(path).contains(buildTarget)
@@ -356,7 +358,7 @@ trait MetalsMcpTools extends Cancelable {
   protected def upstreamModulesErros(
       buildTarget: BuildTargetIdentifier,
       fileOrModule: String,
-  ) = {
+  ): Option[String] = {
     val upstreamModules = diagnostics
       .upstreamTargetsWithCompilationErrors(buildTarget)
     if (upstreamModules.nonEmpty) {

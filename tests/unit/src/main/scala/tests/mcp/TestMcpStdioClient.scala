@@ -16,7 +16,8 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.modelcontextprotocol.client.{McpAsyncClient, McpClient}
+import io.modelcontextprotocol.client.McpAsyncClient
+import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.ServerParameters
 import io.modelcontextprotocol.client.transport.StdioClientTransport
 import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
