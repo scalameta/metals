@@ -74,17 +74,6 @@ object MetalsLogger {
     configureRootLogger(logfiles)
   }
 
-  def redirectLogsToFile(logfile: AbsolutePath): Unit = redirectLogsToFile(
-    List(logfile)
-  )
-
-  def redirectLogsToFile(logfiles: List[AbsolutePath]): Unit = {
-    logfiles.foreach(logfile =>
-      Files.createDirectories(logfile.toNIO.getParent)
-    )
-    configureRootLogger(logfiles)
-  }
-
   def configureFileLogging(logfile: AbsolutePath): Unit = {
     Files.createDirectories(logfile.toNIO.getParent)
     configureFileLogging(List(logfile))
