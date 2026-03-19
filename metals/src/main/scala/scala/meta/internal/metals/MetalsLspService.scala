@@ -886,12 +886,28 @@ abstract class MetalsLspService(
           onChange(List(path)),
         )
       )
-      .ignoreValue
+      .flatMap(_ => runScalafixLint(path))
       .asJava
   }
 
   protected def didCompileTarget(report: CompileReport): Unit = {
     compilers.didCompile(report)
+  }
+
+  private def runScalafixLint(path: AbsolutePath): Future[Unit] = {
+    if (!userConfig.scalafixLintEnabled || !path.isScalaFilename)
+      return Future.successful(())
+    val result = for {
+      target <- buildTargets.inverseSources(path)
+      scalaTarget <- buildTargets.scalaTarget(target)
+    } yield {
+      scalafixProvider
+        .runLintDiagnostics(path, scalaTarget)
+        .map { diags =>
+          diagnostics.onScalafixLint(path, diags)
+        }
+    }
+    result.getOrElse(Future.successful(()))
   }
 
   def didChangeWatchedFiles(

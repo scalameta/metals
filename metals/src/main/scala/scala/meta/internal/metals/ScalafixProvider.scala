@@ -34,9 +34,11 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
 import scalafix.interfaces.Scalafix
+import scalafix.interfaces.ScalafixDiagnostic
 import scalafix.interfaces.ScalafixEvaluation
 import scalafix.interfaces.ScalafixException
 import scalafix.interfaces.ScalafixFileEvaluationError
+import scalafix.interfaces.ScalafixSeverity
 import scalafix.internal.interfaces.ScalafixCoursier
 import scalafix.internal.interfaces.ScalafixInterfacesClassloader
 
@@ -242,6 +244,74 @@ case class ScalafixProvider(
             }
           }
       }
+  }
+
+  private def convertToLspDiagnostic(
+      diag: ScalafixDiagnostic
+  ): l.Diagnostic = {
+    val severity = diag.severity() match {
+      case ScalafixSeverity.INFO => l.DiagnosticSeverity.Information
+      case ScalafixSeverity.WARNING => l.DiagnosticSeverity.Warning
+      case ScalafixSeverity.ERROR =>
+        if (userConfig().scalafixLintCapSeverity) l.DiagnosticSeverity.Warning
+        else l.DiagnosticSeverity.Error
+    }
+
+    val range = diag.position().asScala match {
+      case Some(pos) =>
+        new l.Range(
+          new l.Position(pos.startLine(), pos.startColumn()),
+          new l.Position(pos.endLine(), pos.endColumn()),
+        )
+      case None =>
+        new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+    }
+
+    val message = {
+      val explanation = diag.explanation()
+      if (explanation != null && explanation.nonEmpty)
+        s"${diag.message()}\n${explanation}"
+      else diag.message()
+    }
+
+    val lspDiag = new l.Diagnostic(range, message, severity, "scalafix")
+    diag.lintID().asScala.foreach { lintId =>
+      lspDiag.setCode(s"${lintId.ruleName()}.${lintId.categoryID()}")
+    }
+    lspDiag
+  }
+
+  def runLintDiagnostics(
+      file: AbsolutePath,
+      scalaTarget: ScalaTarget,
+  ): Future[List[l.Diagnostic]] = {
+    val rules = rulesFromScalafixConf().toList
+    if (rules.isEmpty) return Future.successful(Nil)
+
+    val fromDisk = file.toInput
+    scalafixEvaluate(
+      file,
+      scalaTarget,
+      fromDisk.value,
+      produceSemanticdb = false,
+      rules,
+      suggestConfigAmend = false,
+    ).map { results =>
+      if (scalafixSucceded(results)) {
+        results
+          .getFileEvaluations()
+          .headOption
+          .map { fileEval =>
+            fileEval.getDiagnostics().toList.map(convertToLspDiagnostic)
+          }
+          .getOrElse(Nil)
+      } else {
+        Nil
+      }
+    }.recover { case NonFatal(e) =>
+      scribe.warn(s"Scalafix lint failed for $file: ${e.getMessage}")
+      Nil
+    }
   }
 
   private def createTemporarySemanticdb(

@@ -57,6 +57,8 @@ final class Diagnostics(
     TrieMap.empty[AbsolutePath, ju.Queue[DiagnosticWithOrigin]]
   private val syntaxError =
     TrieMap.empty[AbsolutePath, Diagnostic]
+  private val scalafixDiagnostics =
+    TrieMap.empty[AbsolutePath, List[Diagnostic]]
   private val snapshots =
     TrieMap.empty[AbsolutePath, Input.VirtualFile]
   private val lastPublished =
@@ -84,6 +86,7 @@ final class Diagnostics(
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()
+    scalafixDiagnostics.clear()
     keys.foreach { key => publishDiagnostics(key) }
   }
 
@@ -160,6 +163,7 @@ final class Diagnostics(
       diagnostics.remove(path).toList.flatMap(_.asScala) ++
         syntaxError.remove(path)
     } else syntaxError.remove(path).toList
+    scalafixDiagnostics.remove(path)
     diags match {
       case Nil =>
         () // Do nothing, there was no previous error.
@@ -171,6 +175,7 @@ final class Diagnostics(
   def didDelete(path: AbsolutePath): Unit = {
     diagnostics.remove(path)
     syntaxError.remove(path)
+    scalafixDiagnostics.remove(path)
     languageClient.publishDiagnostics(
       new PublishDiagnosticsParams(
         path.toURI.toString(),
@@ -307,6 +312,15 @@ final class Diagnostics(
       .toList
   }
 
+  def onScalafixLint(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
+    if (diags.nonEmpty) {
+      scalafixDiagnostics(path) = diags
+    } else {
+      scalafixDiagnostics.remove(path)
+    }
+    publishDiagnostics(path)
+  }
+
   def hasSyntaxError(path: AbsolutePath): Boolean =
     syntaxError.contains(path)
 
@@ -359,6 +373,9 @@ final class Diagnostics(
       if !isDuplicate && !isSameMessage
     } {
       all.add(d)
+    }
+    for (scalafixDiag <- scalafixDiagnostics.getOrElse(path, Nil)) {
+      all.add(scalafixDiag)
     }
     languageClient.publishDiagnostics(new PublishDiagnosticsParams(uri, all))
   }

@@ -51,6 +51,8 @@ case class UserConfiguration(
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     javaFormatConfig: Option[JavaFormatConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
+    scalafixLintEnabled: Boolean = false,
+    scalafixLintCapSeverity: Boolean = false,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
@@ -132,6 +134,8 @@ case class UserConfiguration(
         "scalafixRulesDependencies",
         Some(scalafixRulesDependencies),
       ),
+      Some(("scalafixLintEnabled", scalafixLintEnabled)),
+      Some(("scalafixLintCapSeverity", scalafixLintCapSeverity)),
       optStringField("customProjectRoot", customProjectRoot),
       Some(("verboseCompilation", verboseCompilation)),
       Some(
@@ -276,6 +280,28 @@ object UserConfiguration {
         "Scalafix rules dependencies",
         """Optional list of Scalafix rules dependencies to use for running `scalafix --rules`.""",
         isArray = true,
+      ),
+      UserConfigurationOption(
+        "scalafix-lint-enabled",
+        "false",
+        "false",
+        "Enable Scalafix lint diagnostics",
+        """When enabled, Scalafix rules from `.scalafix.conf` will be run after each
+          |successful compilation and lint diagnostics will be published alongside
+          |compiler diagnostics. Only lint diagnostics are shown; no code rewrites are applied.
+          |""".stripMargin,
+        isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "scalafix-lint-cap-severity",
+        "false",
+        "true",
+        "Cap Scalafix lint severity to warning",
+        """When enabled, Scalafix lint diagnostics will never be shown as errors,
+          |only as warnings at most. This is useful since Scalafix errors can be confusing
+          |as the code still compiles successfully.
+          |""".stripMargin,
+        isBoolean = true,
       ),
       UserConfigurationOption(
         "excluded-packages",
@@ -861,6 +887,12 @@ object UserConfiguration {
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
+    val scalafixLintEnabled =
+      getBooleanKey("scalafix-lint-enabled").getOrElse(false)
+
+    val scalafixLintCapSeverity =
+      getBooleanKey("scalafix-lint-cap-severity").getOrElse(false)
+
     val customProjectRoot = getStringKey("custom-project-root")
     val verboseCompilation =
       getBooleanKey("verbose-compilation").getOrElse(false)
@@ -921,6 +953,8 @@ object UserConfiguration {
           disableTestCodeLenses,
           javaFormatConfig,
           scalafixRulesDependencies,
+          scalafixLintEnabled,
+          scalafixLintCapSeverity,
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,
