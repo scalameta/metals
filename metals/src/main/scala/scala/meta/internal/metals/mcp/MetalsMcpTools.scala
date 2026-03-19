@@ -71,8 +71,8 @@ trait MetalsMcpTools extends Cancelable {
   // Shared mutable state
   protected val cancelable = new MutableCancelable()
 
-  // Shared fields
-  protected val client =
+  // Shared fields - lazy because clientName is provided by subclass constructor
+  protected lazy val client =
     Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
 
   protected val objectMapper = new ObjectMapper()
@@ -1282,13 +1282,7 @@ trait MetalsMcpTools extends Cancelable {
     def getOptAs[T](key: String): Option[T] =
       arguments.get(key) match {
         case null => None
-        case value =>
-          Try(value.asInstanceOf[T]).toOption.orElse(
-            throw new IncorrectArgumentTypeException(
-              key,
-              value.getClass.getName,
-            )
-          )
+        case value => Try(value.asInstanceOf[T]).toOption
       }
 
     def getAsList[T](key: String)(implicit ct: ClassTag[T]): List[T] =
