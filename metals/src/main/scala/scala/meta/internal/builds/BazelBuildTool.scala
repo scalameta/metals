@@ -84,26 +84,7 @@ object BazelBuildTool {
   }
 
   def getScalaRulesName(projectRoot: AbsolutePath): Option[String] = {
-    val candidates = {
-      for {
-        relative <- List(
-          "MODULE.bazel",
-          "WORKSPACE",
-          "WORKSPACE.bazel",
-        ).iterator
-        file = projectRoot.resolve(relative)
-        if file.isFile
-        content <- file.readTextOpt
-        ruleName <-
-          if (content.contains("io_bazel_rules_scala"))
-            Some("io_bazel_rules_scala")
-          else if (content.contains("rules_scala")) Some("rules_scala")
-          else None
-      } yield {
-        ruleName
-      }
-    }
-    candidates.headOption
+    ScalaRulesetFinderHeuristic(projectRoot).guessRulesetName()
   }
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
