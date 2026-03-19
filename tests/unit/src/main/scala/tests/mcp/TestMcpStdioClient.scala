@@ -16,7 +16,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
 
 import com.fasterxml.jackson.databind.ObjectMapper
-import io.modelcontextprotocol.client.McpAsyncClient
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.ServerParameters
 import io.modelcontextprotocol.client.transport.StdioClientTransport
@@ -46,16 +45,13 @@ class TestMcpStdioClient(
 
   private val tempDir = Files.createTempDirectory("metals-mcp-stdio-test")
 
-  private var _client: McpAsyncClient = _
-  private var _transport: StdioClientTransport = _
-
-  private def javaExecutable: String = {
+  private val javaExecutable: String = {
     val javaHome = System.getProperty("java.home")
     val execName = if (File.separatorChar == '\\') "java.exe" else "java"
     Paths.get(javaHome, "bin", execName).toString
   }
 
-  private def buildServerParameters(): ServerParameters = {
+  private val serverParameters: ServerParameters =
     ServerParameters
       .builder(javaExecutable)
       .args(
@@ -68,19 +64,14 @@ class TestMcpStdioClient(
         "stdio",
       )
       .build()
-  }
 
-  private def createFreshClient(): McpAsyncClient = {
-    val params = buildServerParameters()
-    _transport = new StdioClientTransport(params, jsonMapper)
-    _client = McpClient
-      .async(_transport)
+  private val transport = new StdioClientTransport(serverParameters, jsonMapper)
+  private val client =
+    McpClient
+      .async(transport)
       .requestTimeout(Duration.ofMinutes(5))
+      .initializationTimeout(Duration.ofMinutes(5))
       .build()
-    _client
-  }
-
-  private def client: McpAsyncClient = _client
 
   private def callTool(
       toolName: String,
@@ -103,21 +94,13 @@ class TestMcpStdioClient(
       )
   }
 
-  def initialize(): Future[InitializeResult] = {
-    createFreshClient()
+  def initialize(): Future[InitializeResult] =
     client.initialize().toFuture().asScala
-  }
 
-  def shutdown(): Future[Unit] = {
-    Option(_client) match {
-      case Some(c) =>
-        c.closeGracefully().toFuture().asScala.map(_ => ()).recover {
-          case NonFatal(_) => ()
-        }
-      case None =>
-        Future.successful(())
+  def shutdown(): Future[Unit] =
+    client.closeGracefully().toFuture().asScala.map(_ => ()).recover {
+      case NonFatal(_) => ()
     }
-  }
 
   def listModules(): Future[String] = {
     val params = objectMapper.createObjectNode()
