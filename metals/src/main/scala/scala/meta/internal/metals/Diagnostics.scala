@@ -86,7 +86,7 @@ final class Diagnostics(
     }
 
   def reset(): Unit = {
-    val keys = diagnostics.keys ++ scalafixDiagnostics.keys
+    val keys = (diagnostics.keySet ++ scalafixDiagnostics.keySet).toSet
     diagnostics.clear()
     scalafixDiagnostics.clear()
     scalafixSnapshots.clear()
