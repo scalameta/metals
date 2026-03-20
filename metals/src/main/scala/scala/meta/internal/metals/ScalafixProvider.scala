@@ -252,9 +252,7 @@ case class ScalafixProvider(
     val severity = diag.severity() match {
       case ScalafixSeverity.INFO => l.DiagnosticSeverity.Information
       case ScalafixSeverity.WARNING => l.DiagnosticSeverity.Warning
-      case ScalafixSeverity.ERROR =>
-        if (userConfig().scalafixLintCapSeverity) l.DiagnosticSeverity.Warning
-        else l.DiagnosticSeverity.Error
+      case ScalafixSeverity.ERROR => l.DiagnosticSeverity.Warning
     }
 
     val range = diag.position().asScala match {
