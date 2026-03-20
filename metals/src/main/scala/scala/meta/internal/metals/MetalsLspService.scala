@@ -895,8 +895,10 @@ abstract class MetalsLspService(
   }
 
   private def runScalafixLint(path: AbsolutePath): Future[Unit] = {
-    if (!userConfig.scalafixLintEnabled || !path.isScalaFilename)
+    if (!userConfig.scalafixLintEnabled || !path.isScalaFilename) {
+      diagnostics.onScalafixLint(path, Nil)
       return Future.successful(())
+    }
     val result = for {
       target <- buildTargets.inverseSources(path)
       scalaTarget <- buildTargets.scalaTarget(target)
@@ -907,7 +909,10 @@ abstract class MetalsLspService(
           diagnostics.onScalafixLint(path, diags)
         }
     }
-    result.getOrElse(Future.successful(()))
+    result.getOrElse {
+      diagnostics.onScalafixLint(path, Nil)
+      Future.successful(())
+    }
   }
 
   def didChangeWatchedFiles(

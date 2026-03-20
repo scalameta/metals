@@ -322,6 +322,8 @@ class UserConfigurationSuite extends BaseSuite {
           |    "rule1",
           |    "rule2"
           |  ],
+          |  "scalafixLintEnabled": false,
+          |  "scalafixLintCapSeverity": false,
           |  "testUserInterface": "test explorer",
           |  "bloopVersion": "1.2.3",
           |  "fallbackScalaVersion": "3.2.1",
@@ -371,6 +373,8 @@ class UserConfigurationSuite extends BaseSuite {
           |scalafmt-config-path                         string                         ""              Scalafmt config path
           |scalafix-config-path                         string                         ""              Scalafix config path
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
+          |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
+          |scalafix-lint-cap-severity                   boolean                        false           Cap Scalafix lint severity to warning
           |excluded-packages                            array                          []              Excluded Packages
           |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
