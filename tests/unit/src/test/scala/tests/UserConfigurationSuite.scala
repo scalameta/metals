@@ -287,7 +287,6 @@ class UserConfigurationSuite extends BaseSuite {
       json,
       s"""|{
           |  "enableIndentOnPaste": true,
-          |  "customProjectRoot": "customs",
           |  "millScript": "mill",
           |  "javaFormat": {
           |    "eclipseConfigPath": "$fakePathString",
@@ -307,6 +306,8 @@ class UserConfigurationSuite extends BaseSuite {
           |  "scalafixConfigPath": "$fakePathString",
           |  "superMethodLensesEnabled": true,
           |  "startMcpServer": false,
+          |  "customProjectRoot": "customs",
+          |  "scalafixLintEnabled": false,
           |  "bloopSbtAlreadyInstalled": true,
           |  "symbolPrefixes": {
           |    "java/util/": "hello."
@@ -322,7 +323,6 @@ class UserConfigurationSuite extends BaseSuite {
           |    "rule1",
           |    "rule2"
           |  ],
-          |  "scalafixLintEnabled": false,
           |  "testUserInterface": "test explorer",
           |  "bloopVersion": "1.2.3",
           |  "fallbackScalaVersion": "3.2.1",
