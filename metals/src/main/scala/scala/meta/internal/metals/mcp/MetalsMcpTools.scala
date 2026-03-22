@@ -8,6 +8,7 @@ import java.util.{Map => JMap}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.reflect.ClassTag
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -66,6 +67,7 @@ trait MetalsMcpTools extends Cancelable {
   protected def scalaVersionSelector: ScalaVersionSelector
   protected def formattingProvider: FormattingProvider
   protected def scalafixLlmRuleProvider: ScalafixLlmRuleProvider
+  protected def indexingPromise: Promise[Unit]
   protected implicit def ec: ExecutionContext
 
   // Shared mutable state
@@ -303,39 +305,54 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val module = arguments.getAs[String]("module")
-        Future {
-          (buildTargets.allScala ++ buildTargets.allJava).find(
-            _.displayName == module
-          ) match {
-            case Some(target) =>
-              val result = inModuleErrors(target.id)
-                .map { diagnosticsOutput =>
-                  val moduleDiagnostics =
-                    diagnostics.allDiagnostics.filter { case (path, _) =>
-                      buildTargets.inverseSources(path).contains(target.id)
+        (buildTargets.allScala ++ buildTargets.allJava).find(
+          _.displayName == module
+        ) match {
+          case Some(target) =>
+            compilations
+              .compileTarget(target.id)
+              .map { compileResult =>
+                if (compileResult.getStatusCode == StatusCode.CANCELLED) {
+                  CallToolResult
+                    .builder()
+                    .content(createContent("Compilation cancelled"))
+                    .isError(true)
+                    .build()
+                } else {
+                  val result = inModuleErrors(target.id)
+                    .map { diagnosticsOutput =>
+                      val moduleDiagnostics =
+                        diagnostics.allDiagnostics.filter { case (path, _) =>
+                          buildTargets.inverseSources(path).contains(target.id)
+                        }
+                      val prefix = if (moduleDiagnostics.hasErrors) {
+                        "Found errors in the module"
+                      } else {
+                        "Found warnings in the module"
+                      }
+                      s"$prefix:\n$diagnosticsOutput"
                     }
-                  val prefix = if (moduleDiagnostics.hasErrors) {
-                    "Found errors in the module"
-                  } else {
-                    "Found warnings in the module"
-                  }
-                  s"$prefix:\n$diagnosticsOutput"
+                    .orElse(upstreamModulesErros(target.id, "module"))
+                    .getOrElse("Compilation successful.")
+                  CallToolResult
+                    .builder()
+                    .content(createContent(result))
+                    .isError(false)
+                    .build()
                 }
-                .orElse(upstreamModulesErros(target.id, "module"))
-                .getOrElse("Compilation successful.")
-              CallToolResult
-                .builder()
-                .content(createContent(result))
-                .isError(false)
-                .build()
-            case None =>
-              CallToolResult
-                .builder()
-                .content(createContent(s"Error: Module not found: $module"))
-                .isError(true)
-                .build()
-          }
-        }.toMono
+              }
+              .toMono
+          case None =>
+            Future
+              .successful(
+                CallToolResult
+                  .builder()
+                  .content(createContent(s"Error: Module not found: $module"))
+                  .isError(true)
+                  .build()
+              )
+              .toMono
+        }
       },
     )
   }
@@ -479,16 +496,17 @@ trait MetalsMcpTools extends Cancelable {
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
-        queryEngine
-          .globSearch(query, Set.empty, path)
-          .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.map(_.show).mkString("\n")))
-              .isError(false)
-              .build()
-          )
-          .toMono
+        indexingPromise.future.flatMap { _ =>
+          queryEngine
+            .globSearch(query, Set.empty, path)
+            .map(result =>
+              CallToolResult
+                .builder()
+                .content(createContent(result.map(_.show).mkString("\n")))
+                .isError(false)
+                .build()
+            )
+        }.toMono
       },
     )
   }
@@ -546,16 +564,17 @@ trait MetalsMcpTools extends Cancelable {
         val symbolTypesSet =
           symbolTypes.flatMap(s => SymbolType.values.find(_.name == s)).toSet
 
-        queryEngine
-          .globSearch(query, symbolTypesSet, path)
-          .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.map(_.show).mkString("\n")))
-              .isError(false)
-              .build()
-          )
-          .toMono
+        indexingPromise.future.flatMap { _ =>
+          queryEngine
+            .globSearch(query, symbolTypesSet, path)
+            .map(result =>
+              CallToolResult
+                .builder()
+                .content(createContent(result.map(_.show).mkString("\n")))
+                .isError(false)
+                .build()
+            )
+        }.toMono
       },
     )
   }
@@ -610,16 +629,17 @@ trait MetalsMcpTools extends Cancelable {
         val searchAllTargets = arguments
           .getOptAs[Boolean]("searchAllTargets")
           .getOrElse(false)
-        queryEngine
-          .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
-          .map(result =>
-            CallToolResult
-              .builder()
-              .content(createContent(result.show))
-              .isError(false)
-              .build()
-          )
-          .toMono
+        indexingPromise.future.flatMap { _ =>
+          queryEngine
+            .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
+            .map(result =>
+              CallToolResult
+                .builder()
+                .content(createContent(result.show))
+                .isError(false)
+                .build()
+            )
+        }.toMono
       },
     )
   }
@@ -665,7 +685,7 @@ trait MetalsMcpTools extends Cancelable {
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
-        Future {
+        indexingPromise.future.map { _ =>
           queryEngine.getDocumentation(fqcn, pathOpt, moduleOpt) match {
             case Some(result) =>
               CallToolResult
@@ -726,7 +746,7 @@ trait MetalsMcpTools extends Cancelable {
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
-        Future {
+        indexingPromise.future.map { _ =>
           val result = queryEngine.getUsages(fqcn, pathOpt, moduleOpt)
           CallToolResult
             .builder()

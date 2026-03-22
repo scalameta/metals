@@ -303,6 +303,7 @@ class ProjectMetalsLspService(
               scalaVersionSelector,
               formattingProvider,
               scalafixLlmRuleProvider,
+              indexingPromise,
             )
           ).run()
         } else {
@@ -324,6 +325,7 @@ class ProjectMetalsLspService(
               scalaVersionSelector,
               formattingProvider,
               scalafixLlmRuleProvider,
+              indexingPromise,
             )
           ).run()
         }

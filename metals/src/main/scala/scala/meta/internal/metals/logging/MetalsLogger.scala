@@ -74,47 +74,33 @@ object MetalsLogger {
     configureRootLogger(logfiles)
   }
 
-  def configureFileLogging(logfile: AbsolutePath): Unit = {
-    Files.createDirectories(logfile.toNIO.getParent)
+  def configureFileLogging(logfile: AbsolutePath): Unit =
     configureFileLogging(List(logfile))
-  }
 
   def configureFileLogging(logfiles: List[AbsolutePath]): Unit = {
     logfiles.foreach(logfile =>
       Files.createDirectories(logfile.toNIO.getParent)
     )
-    logfiles
-      .foldLeft(
-        Logger.root
-          .clearModifiers()
-          .clearHandlers()
-      ) { (logger, logfile) =>
-        logger
-          .withHandler(
-            writer = newFileWriter(logfile),
-            formatter = defaultFormat,
-            minimumLevel = Some(level),
-            modifiers = List(MetalsFilter()),
-          )
-      }
-      .replace()
+    configureWithFileHandlers(logfiles).replace()
   }
 
-  private def configureRootLogger(logfile: List[AbsolutePath]): Unit = {
-    logfile
-      .foldLeft(
-        Logger.root
-          .clearModifiers()
-          .clearHandlers()
-      ) { (logger, logfile) =>
-        logger
-          .withHandler(
-            writer = newFileWriter(logfile),
-            formatter = defaultFormat,
-            minimumLevel = Some(level),
-            modifiers = List(MetalsFilter()),
-          )
-      }
+  private def configureWithFileHandlers(
+      logfiles: List[AbsolutePath]
+  ): Logger = {
+    logfiles.foldLeft(
+      Logger.root.clearModifiers().clearHandlers()
+    ) { (logger, logfile) =>
+      logger.withHandler(
+        writer = newFileWriter(logfile),
+        formatter = defaultFormat,
+        minimumLevel = Some(level),
+        modifiers = List(MetalsFilter()),
+      )
+    }
+  }
+
+  private def configureRootLogger(logfiles: List[AbsolutePath]): Unit = {
+    configureWithFileHandlers(logfiles)
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,

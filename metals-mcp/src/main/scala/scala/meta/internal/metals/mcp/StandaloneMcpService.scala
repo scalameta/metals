@@ -142,14 +142,20 @@ class StandaloneMcpService(
 
   def start(): Unit = {
     scribe.info("Starting MCP server...")
-    Await.result(projectMetalsLspService.initialized(), 10.minutes)
+
     if (useStdio) {
       Await.result(projectMetalsLspService.startMcpStdioServer(), 2.minutes)
     } else {
       Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
     }
     cancelables.add(projectMetalsLspService)
+
+    val initFuture = projectMetalsLspService.initialized().map { _ =>
+      scribe.info("Metals initialization completed")
+    }
+
     if (!useStdio) {
+      Await.result(initFuture, 10.minutes)
       val createdPort =
         McpConfig.readPort(workspace, workspace.filename, NoClient)
       (createdPort, client) match {

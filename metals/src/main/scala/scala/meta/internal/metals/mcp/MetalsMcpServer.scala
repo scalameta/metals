@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mcp
 import java.net.InetSocketAddress
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildTargets
@@ -24,14 +25,6 @@ import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
 
-/**
- * MCP server implementation using HTTP transport.
- *
- * This server uses Undertow with a servlet-based transport, making it suitable
- * for integration with MCP clients that support HTTP/SSE transport.
- *
- * @see [[MetalsMcpStdioServer]] for stdio transport variant
- */
 class MetalsMcpServer(
     protected val queryEngine: McpQueryEngine,
     protected val projectPath: AbsolutePath,
@@ -47,6 +40,7 @@ class MetalsMcpServer(
     protected val scalaVersionSelector: ScalaVersionSelector,
     protected val formattingProvider: FormattingProvider,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
+    protected val indexingPromise: Promise[Unit],
 )(implicit
     protected val ec: ExecutionContext
 ) extends MetalsMcpTools {

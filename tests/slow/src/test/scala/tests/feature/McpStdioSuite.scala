@@ -1,7 +1,6 @@
 package tests.feature
 
 import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
@@ -12,27 +11,17 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
-import tests.BaseLspSuite
+import tests.BaseSuite
 import tests.FileLayout
 import tests.SbtBuildLayout
+import tests.WorkspaceHelper
 import tests.mcp.TestMcpStdioClient
 
-class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
+class McpStdioSuite extends BaseSuite with WorkspaceHelper {
+  def suiteName: String = "mcp-stdio-suite"
 
-  implicit val ec: ExecutionContextExecutorService =
+  implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
-
-  override def afterAll(): Unit = {
-    ec.shutdown()
-    try {
-      if (!ec.awaitTermination(5, TimeUnit.SECONDS)) {
-        ec.shutdownNow()
-      }
-    } catch {
-      case _: InterruptedException =>
-        ec.shutdownNow()
-    }
-  }
 
   private def createTestWorkspace(name: String): AbsolutePath = {
     val layout = SbtBuildLayout(
@@ -117,6 +106,7 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
       val filePath = "a/src/main/scala/com/example/Hello.scala"
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
         result <- client.typedGlobSearch(
           "Hello",
           List("class", "object"),
@@ -179,6 +169,7 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
       val filePath = "a/src/main/scala/com/example/Hello.scala"
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
         result <- client.globSearch("Hello", Some(filePath))
         _ <- client.shutdown()
       } yield {
@@ -194,6 +185,7 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
     withStdioClient("stdio-inspect-test") { client =>
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
         result <- client.inspect("com.example.Hello")
         _ <- client.shutdown()
       } yield {
@@ -211,6 +203,7 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
     withStdioClient("stdio-getdocs-test") { client =>
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
         result <- client.getDocs("com.example.Hello")
         _ <- client.shutdown()
       } yield {
@@ -226,6 +219,7 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
     withStdioClient("stdio-getusages-test") { client =>
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
         result <- client.getUsages("com.example.Hello.add")
         _ <- client.shutdown()
       } yield {
@@ -271,7 +265,13 @@ class McpStdioSuite extends BaseLspSuite("mcp-stdio-suite") {
         result <- client.importBuild()
         _ <- client.shutdown()
       } yield {
-        assert(result != null, s"Should return import-build result")
+        val isSuccess = result.contains("No changes detected") ||
+          result.contains("Build reloaded") ||
+          result.contains("Reimport cancelled")
+        assert(
+          isSuccess,
+          s"Import build should succeed, got: $result",
+        )
       }
     }
   }

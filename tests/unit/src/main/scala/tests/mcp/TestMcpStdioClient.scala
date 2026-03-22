@@ -1,11 +1,9 @@
 package tests.mcp
 
 import java.io.File
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
-import java.util.Comparator
 
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
@@ -15,7 +13,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.ServerParameters
 import io.modelcontextprotocol.client.transport.StdioClientTransport
@@ -24,26 +21,15 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 
-/**
- * Test client for MCP servers using stdio transport.
- *
- * This client spawns the metals-mcp server as a subprocess and communicates
- * with it via stdin/stdout using the MCP protocol.
- *
- * @param workspacePath The workspace path to pass to the server
- * @param classpath The classpath for running the metals-mcp server
- * @param mainClass The main class to run (default: scala.meta.metals.McpMain)
- */
+/** Spawns metals-mcp server as a subprocess and communicates via stdin/stdout. */
 class TestMcpStdioClient(
     workspacePath: Path,
     classpath: String,
     mainClass: String = "scala.meta.metals.McpMain",
-)(implicit ec: ExecutionContext) {
+)(implicit ec: ExecutionContext)
+    extends TestMcpBaseClient {
 
-  private val objectMapper = new ObjectMapper()
   private val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
-
-  private val tempDir = Files.createTempDirectory("metals-mcp-stdio-test")
 
   private val javaExecutable: String = {
     val javaHome = System.getProperty("java.home")
@@ -73,7 +59,7 @@ class TestMcpStdioClient(
       .initializationTimeout(Duration.ofMinutes(5))
       .build()
 
-  private def callTool(
+  override protected def callTool(
       toolName: String,
       params: com.fasterxml.jackson.databind.node.ObjectNode,
   ): Future[List[String]] = {
@@ -94,48 +80,13 @@ class TestMcpStdioClient(
       )
   }
 
-  def initialize(): Future[InitializeResult] =
+  override def initialize(): Future[InitializeResult] =
     client.initialize().toFuture().asScala
 
-  def shutdown(): Future[Unit] =
+  override def shutdown(): Future[Unit] =
     client.closeGracefully().toFuture().asScala.map(_ => ()).recover {
       case NonFatal(_) => ()
     }
-
-  def listModules(): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    callTool("list-modules", params).map(_.mkString)
-  }
-
-  def compileModule(module: String): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("module", module)
-    callTool("compile-module", params).map(_.mkString)
-  }
-
-  def compileFile(filePath: String): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("fileInFocus", filePath)
-    callTool("compile-file", params).map(_.mkString)
-  }
-
-  def formatFile(filePath: String): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("fileInFocus", filePath)
-    callTool("format-file", params).map(_.mkString)
-  }
-
-  def findDep(
-      organization: String,
-      name: Option[String] = None,
-      version: Option[String] = None,
-  ): Future[List[String]] = {
-    val params = objectMapper.createObjectNode()
-    params.put("organization", organization)
-    name.foreach(n => params.put("name", n))
-    version.foreach(v => params.put("version", v))
-    callTool("find-dep", params)
-  }
 
   def typedGlobSearch(
       query: String,
@@ -149,38 +100,6 @@ class TestMcpStdioClient(
     params.set("symbolType", symbolTypeArray)
     fileInFocus.foreach(f => params.put("fileInFocus", f))
     callTool("typed-glob-search", params).map(_.mkString)
-  }
-
-  def listScalafixRules(): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    callTool("list-scalafix-rules", params).map(_.mkString)
-  }
-
-  def generateScalafixRule(
-      ruleImplementation: String,
-      description: String,
-      sampleCode: Option[String] = None,
-  ): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("ruleImplementation", ruleImplementation)
-    params.put("description", description)
-    sampleCode.foreach(code => params.put("sampleCode", code))
-    callTool("generate-scalafix-rule", params).map(_.mkString)
-  }
-
-  def runScalafixRule(
-      ruleName: String,
-      filePath: Option[String] = None,
-  ): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("ruleName", ruleName)
-    filePath.foreach(path => params.put("fileToRunOn", path))
-    callTool("run-scalafix-rule", params).map(_.mkString)
-  }
-
-  def compileFull(): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    callTool("compile-full", params).map(_.mkString)
   }
 
   def globSearch(
@@ -236,6 +155,34 @@ class TestMcpStdioClient(
     callTool("import-build", params).map(_.mkString)
   }
 
+  /** Polls list-modules until the expected module appears (build server needs time to index). */
+  def waitForIndexing(
+      expectedModule: String,
+      maxAttempts: Int = 60,
+      delayMs: Long = 500,
+  ): Future[Unit] = {
+    def poll(attempt: Int): Future[Unit] = {
+      if (attempt >= maxAttempts) {
+        Future.failed(
+          new java.util.concurrent.TimeoutException(
+            s"Indexing timeout: module '$expectedModule' not found after ${maxAttempts * delayMs}ms"
+          )
+        )
+      } else {
+        listModules().flatMap { modules =>
+          if (modules.contains(expectedModule)) {
+            Future.successful(())
+          } else {
+            Future {
+              Thread.sleep(delayMs)
+            }.flatMap(_ => poll(attempt + 1))
+          }
+        }
+      }
+    }
+    poll(0)
+  }
+
   def runTest(
       testClass: String,
       testFile: Option[String] = None,
@@ -250,25 +197,13 @@ class TestMcpStdioClient(
     callTool("test", params).map(_.mkString)
   }
 
-  /** Clean up temp directory */
-  def cleanup(): Unit = {
-    try {
-      Files
-        .walk(tempDir)
-        .sorted(Comparator.reverseOrder[Path]())
-        .forEach(Files.delete)
-    } catch {
-      case NonFatal(_) =>
-    }
-  }
+  /** Workspace cleanup is handled by test suites; this method is kept for API compatibility. */
+  def cleanup(): Unit = {}
 }
 
 object TestMcpStdioClient {
 
-  /**
-   * Create a TestMcpStdioClient using the current classpath.
-   * This is useful for tests running in sbt where the classpath is already set up.
-   */
+  /** Creates a client using the current classpath (for tests running in sbt). */
   def apply(
       workspacePath: Path
   )(implicit ec: ExecutionContext): TestMcpStdioClient = {
@@ -276,9 +211,6 @@ object TestMcpStdioClient {
     new TestMcpStdioClient(workspacePath, classpath)
   }
 
-  /**
-   * Create a TestMcpStdioClient using a specific classpath from built artifacts.
-   */
   def withClasspath(
       workspacePath: Path,
       classpath: String,
