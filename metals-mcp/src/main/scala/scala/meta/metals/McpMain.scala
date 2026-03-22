@@ -16,6 +16,7 @@ import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.StandaloneMcpService
+import scala.meta.internal.metals.mcp.Transport
 import scala.meta.io.AbsolutePath
 
 import com.google.gson
@@ -32,19 +33,6 @@ import com.google.gson
  *   Any UserConfiguration option can be passed as --key value. Booleans: --key true|false or --key (omit value = true).
  */
 object McpMain {
-
-  sealed trait Transport
-  object Transport {
-    case object Http extends Transport
-    case object Stdio extends Transport
-
-    def fromString(s: String): Option[Transport] =
-      s.toLowerCase match {
-        case "http" => Some(Http)
-        case "stdio" => Some(Stdio)
-        case _ => None
-      }
-  }
 
   case class Config(
       workspace: Option[AbsolutePath] = None,
@@ -261,10 +249,8 @@ object McpMain {
         }
     }
 
-    val useStdio = config.transport == Transport.Stdio
-
     // Warn about conflicting options
-    if (useStdio && config.port.isDefined) {
+    if (config.transport == Transport.Stdio && config.port.isDefined) {
       scribe.warn(
         "--port is ignored when using stdio transport. Port option is only applicable to HTTP transport."
       )
@@ -274,7 +260,7 @@ object McpMain {
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
-    if (useStdio) {
+    if (config.transport == Transport.Stdio) {
       val metalsLog = workspace.resolve(".metals/metals.log")
       MetalsLogger.configureFileLogging(metalsLog)
     }
@@ -287,7 +273,7 @@ object McpMain {
     val service = new StandaloneMcpService(
       workspace,
       config.port,
-      useStdio,
+      config.transport,
       sh,
       config.client,
       userConfig,

@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.mcp.Transport
 import scala.meta.io.AbsolutePath
 
 /**
@@ -24,7 +25,7 @@ import scala.meta.io.AbsolutePath
  *
  * @param workspace The workspace root path
  * @param port Optional port for HTTP transport
- * @param useStdio Whether to use stdio transport instead of HTTP
+ * @param transport Transport type (Http or Stdio)
  * @param scheduledExecutor Scheduled executor for background tasks
  * @param client Client to generate config for (defaults to NoClient)
  * @param initialUserConfig Optional user configuration (e.g. from CLI); defaults to [[UserConfiguration.default]] if None
@@ -32,13 +33,13 @@ import scala.meta.io.AbsolutePath
 class StandaloneMcpService(
     workspace: AbsolutePath,
     port: Option[Int],
-    useStdio: Boolean,
+    transport: Transport,
     scheduledExecutor: ScheduledExecutorService,
     client: Client = NoClient,
     initialUserConfig: Option[UserConfiguration] = None,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
-  if (!useStdio) {
+  if (transport == Transport.Http) {
     port match {
       case Some(port) =>
         McpConfig.writeConfig(
@@ -143,7 +144,7 @@ class StandaloneMcpService(
   def start(): Unit = {
     scribe.info("Starting MCP server...")
 
-    if (useStdio) {
+    if (transport == Transport.Stdio) {
       Await.result(projectMetalsLspService.startMcpStdioServer(), 2.minutes)
     } else {
       Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
@@ -154,8 +155,7 @@ class StandaloneMcpService(
       scribe.info("Metals initialization completed")
     }
 
-    if (!useStdio) {
-      Await.result(initFuture, 10.minutes)
+    if (transport == Transport.Http) {
       val createdPort =
         McpConfig.readPort(workspace, workspace.filename, NoClient)
       (createdPort, client) match {
