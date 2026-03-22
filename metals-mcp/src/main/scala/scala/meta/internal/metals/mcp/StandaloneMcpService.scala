@@ -151,7 +151,7 @@ class StandaloneMcpService(
     }
     cancelables.add(projectMetalsLspService)
 
-    val initFuture = projectMetalsLspService.initialized().map { _ =>
+    projectMetalsLspService.initialized().map { _ =>
       scribe.info("Metals initialization completed")
     }
 

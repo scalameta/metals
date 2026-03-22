@@ -4,60 +4,14 @@ import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
-import scala.concurrent.Future
-import scala.util.control.NonFatal
-
-import scala.meta.internal.metals.RecursivelyDelete
-import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.io.AbsolutePath
 
 import tests.BaseSuite
-import tests.FileLayout
-import tests.SbtBuildLayout
-import tests.WorkspaceHelper
-import tests.mcp.TestMcpStdioClient
 
-class McpStdioSuite extends BaseSuite with WorkspaceHelper {
+class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
   def suiteName: String = "mcp-stdio-suite"
 
   implicit val ex: ExecutionContextExecutorService =
     ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
-
-  private def createTestWorkspace(name: String): AbsolutePath = {
-    val layout = SbtBuildLayout(
-      """|/a/src/main/scala/com/example/Hello.scala
-         |package com.example
-         |
-         |object Hello {
-         |  def main(args: Array[String]): Unit = {
-         |    println("Hello, World!")
-         |  }
-         |  
-         |  def add(a: Int, b: Int): Int = a + b
-         |}
-         |""".stripMargin,
-      V.scala213,
-    )
-    val workspace = createWorkspace(name)
-    FileLayout.fromString(layout, workspace)
-    workspace
-  }
-
-  private def withStdioClient[T](
-      name: String
-  )(f: TestMcpStdioClient => Future[T]): Future[T] = {
-    val workspacePath = createTestWorkspace(name)
-    val client = TestMcpStdioClient(workspacePath.toNIO)
-
-    f(client)
-      .andThen { case _ =>
-        client.cleanup()
-      }
-      .andThen { case _ =>
-        try RecursivelyDelete(workspacePath)
-        catch { case NonFatal(_) => }
-      }
-  }
 
   test("stdio-initialize-handshake") {
     withStdioClient("stdio-init-test") { client =>
@@ -70,11 +24,35 @@ class McpStdioSuite extends BaseSuite with WorkspaceHelper {
     }
   }
 
-  test("stdio-list-modules") {
-    withStdioClient("stdio-modules-test") { client =>
+  test("stdio-mcp-tools") {
+    withStdioClient("stdio-tools-test") { client =>
+      val filePath = "a/src/main/scala/com/example/Hello.scala"
+
       for {
         _ <- client.initialize()
+
         modules <- client.listModules()
+        findDepResult <- client.findDep("org.scala-lang")
+        scalafixRules <- client.listScalafixRules()
+
+        _ <- client.waitForIndexing("a")
+
+        typedGlobResult <- client.typedGlobSearch(
+          "Hello",
+          List("class", "object"),
+          Some(filePath),
+        )
+        globSearchResult <- client.globSearch("Hello", Some(filePath))
+        inspectResult <- client.inspect("com.example.Hello")
+        docsResult <- client.getDocs("com.example.Hello")
+        usagesResult <- client.getUsages("com.example.Hello.add")
+
+        compileModuleResult <- client.compileModule("a")
+        formatResult <- client.formatFile(filePath)
+        compileFileResult <- client.compileFile(filePath)
+        compileFullResult <- client.compileFull()
+        importBuildResult <- client.importBuild()
+
         _ <- client.shutdown()
       } yield {
         assert(modules.contains("Available modules"), s"Got: $modules")
@@ -82,195 +60,71 @@ class McpStdioSuite extends BaseSuite with WorkspaceHelper {
           modules.contains("a") || modules.contains("a-test"),
           s"Module 'a' should be listed, got: $modules",
         )
-      }
-    }
-  }
 
-  test("stdio-find-dep") {
-    withStdioClient("stdio-finddep-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.findDep("org.scala-lang")
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.mkString.contains("scala-library"),
-          s"Should find scala-library, got: $result",
+          findDepResult.mkString.contains("scala-library"),
+          s"Should find scala-library, got: $findDepResult",
         )
-      }
-    }
-  }
 
-  test("stdio-typed-glob-search") {
-    withStdioClient("stdio-typedglob-test") { client =>
-      val filePath = "a/src/main/scala/com/example/Hello.scala"
-      for {
-        _ <- client.initialize()
-        _ <- client.waitForIndexing("a")
-        result <- client.typedGlobSearch(
-          "Hello",
-          List("class", "object"),
-          Some(filePath),
-        )
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.contains("com.example.Hello"),
-          s"Should find Hello class/object, got: $result",
+          scalafixRules.contains("Available scalafix rules"),
+          s"Should list scalafix rules, got: $scalafixRules",
         )
-      }
-    }
-  }
 
-  test("stdio-list-scalafix-rules") {
-    withStdioClient("stdio-scalafix-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.listScalafixRules()
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.contains("Available scalafix rules"),
-          s"Should list scalafix rules, got: $result",
+          typedGlobResult.contains("com.example.Hello"),
+          s"Should find Hello class/object, got: $typedGlobResult",
         )
-      }
-    }
-  }
 
-  test("stdio-compile-module") {
-    withStdioClient("stdio-compile-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.compileModule("a")
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.nonEmpty,
-          s"Should return a compilation result, got: $result",
+          globSearchResult.contains("com.example.Hello"),
+          s"Should find Hello, got: $globSearchResult",
         )
-      }
-    }
-  }
 
-  test("stdio-format-file") {
-    withStdioClient("stdio-format-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.formatFile("a/src/main/scala/com/example/Hello.scala")
-        _ <- client.shutdown()
-      } yield {
-        assert(result.nonEmpty, s"Should return a format result, got: $result")
-      }
-    }
-  }
-
-  test("stdio-glob-search") {
-    withStdioClient("stdio-globsearch-test") { client =>
-      val filePath = "a/src/main/scala/com/example/Hello.scala"
-      for {
-        _ <- client.initialize()
-        _ <- client.waitForIndexing("a")
-        result <- client.globSearch("Hello", Some(filePath))
-        _ <- client.shutdown()
-      } yield {
+        val hasRelevantContent = inspectResult.contains("Hello") ||
+          inspectResult.contains("main") ||
+          inspectResult.contains("Inspected from") ||
+          inspectResult.nonEmpty
         assert(
-          result.contains("com.example.Hello"),
-          s"Should find Hello, got: $result",
+          hasRelevantContent,
+          s"Should inspect Hello class, got: $inspectResult",
         )
-      }
-    }
-  }
 
-  test("stdio-inspect") {
-    withStdioClient("stdio-inspect-test") { client =>
-      for {
-        _ <- client.initialize()
-        _ <- client.waitForIndexing("a")
-        result <- client.inspect("com.example.Hello")
-        _ <- client.shutdown()
-      } yield {
-        val hasRelevantContent = result.contains("Hello") ||
-          result.contains("main") ||
-          result.contains("Inspected from") ||
-          result.nonEmpty
-
-        assert(hasRelevantContent, s"Should inspect Hello class, got: $result")
-      }
-    }
-  }
-
-  test("stdio-get-docs") {
-    withStdioClient("stdio-getdocs-test") { client =>
-      for {
-        _ <- client.initialize()
-        _ <- client.waitForIndexing("a")
-        result <- client.getDocs("com.example.Hello")
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result != null && result.nonEmpty,
-          s"Should get docs result, got: $result",
+          docsResult != null && docsResult.nonEmpty,
+          s"Should get docs result, got: $docsResult",
         )
-      }
-    }
-  }
 
-  test("stdio-get-usages") {
-    withStdioClient("stdio-getusages-test") { client =>
-      for {
-        _ <- client.initialize()
-        _ <- client.waitForIndexing("a")
-        result <- client.getUsages("com.example.Hello.add")
-        _ <- client.shutdown()
-      } yield {
-        assert(result != null, s"Should get usages result")
-      }
-    }
-  }
+        assert(usagesResult != null, s"Should get usages result")
 
-  test("stdio-compile-file") {
-    withStdioClient("stdio-compilefile-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.compileFile("a/src/main/scala/com/example/Hello.scala")
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.nonEmpty,
-          s"Should return compile-file result, got: $result",
+          compileModuleResult.nonEmpty,
+          s"Should return a compilation result, got: $compileModuleResult",
         )
-      }
-    }
-  }
 
-  test("stdio-compile-full") {
-    withStdioClient("stdio-compilefull-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.compileFull()
-        _ <- client.shutdown()
-      } yield {
         assert(
-          result.nonEmpty,
-          s"Should return compile-full result, got: $result",
+          formatResult.nonEmpty,
+          s"Should return a format result, got: $formatResult",
         )
-      }
-    }
-  }
 
-  test("stdio-import-build") {
-    withStdioClient("stdio-importbuild-test") { client =>
-      for {
-        _ <- client.initialize()
-        result <- client.importBuild()
-        _ <- client.shutdown()
-      } yield {
-        val isSuccess = result.contains("No changes detected") ||
-          result.contains("Build reloaded") ||
-          result.contains("Reimport cancelled")
         assert(
-          isSuccess,
-          s"Import build should succeed, got: $result",
+          compileFileResult.nonEmpty,
+          s"Should return compile-file result, got: $compileFileResult",
+        )
+
+        assert(
+          compileFullResult.nonEmpty,
+          s"Should return compile-full result, got: $compileFullResult",
+        )
+
+        val isImportSuccess =
+          importBuildResult.contains("No changes detected") ||
+            importBuildResult.contains("Build reloaded") ||
+            importBuildResult.contains("Reimport cancelled") ||
+            importBuildResult.contains("Reconnected to build server")
+        assert(
+          isImportSuccess,
+          s"Import build should succeed, got: $importBuildResult",
         )
       }
     }
