@@ -151,9 +151,9 @@ class StandaloneMcpService(
     }
     cancelables.add(projectMetalsLspService)
 
-    projectMetalsLspService.initialized().map { _ =>
-      scribe.info("Metals initialization completed")
-    }
+    // Block until initialization completes (BSP connects, build targets discovered)
+    Await.result(projectMetalsLspService.initialized(), 2.minutes)
+    scribe.info("Metals initialization completed")
 
     if (transport == Transport.Http) {
       val createdPort =
