@@ -11,22 +11,28 @@ class ScalafixLintDiagnosticsSuite
   override def userConfig: UserConfiguration =
     super.userConfig.copy(scalafixLintEnabled = true)
 
+  private def scalafixInitPayload(mainScalaContent: String): String =
+    s"""/metals.json
+       |{"a":{"scalaVersion": "${V.scala213}"}}
+       |/.scalafix.conf
+       |rules = [
+       |  DisableSyntax
+       |]
+       |DisableSyntax.noVars = true
+       |/a/src/main/scala/Main.scala
+       |$mainScalaContent
+       |""".stripMargin
+
   test("lint-diagnostics-published") {
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""/metals.json
-           |{"a":{"scalaVersion": "${V.scala213}"}}
-           |/.scalafix.conf
-           |rules = [
-           |  DisableSyntax
-           |]
-           |DisableSyntax.noVars = true
-           |/a/src/main/scala/Main.scala
-           |object Main {
-           |  var x = 1
-           |}
-           |""".stripMargin
+        scalafixInitPayload(
+          """|object Main {
+             |  var x = 1
+             |}
+             |""".stripMargin
+        )
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")
@@ -44,18 +50,12 @@ class ScalafixLintDiagnosticsSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""/metals.json
-           |{"a":{"scalaVersion": "${V.scala213}"}}
-           |/.scalafix.conf
-           |rules = [
-           |  DisableSyntax
-           |]
-           |DisableSyntax.noVars = true
-           |/a/src/main/scala/Main.scala
-           |object Main {
-           |  var x = 1
-           |}
-           |""".stripMargin
+        scalafixInitPayload(
+          """|object Main {
+             |  var x = 1
+             |}
+             |""".stripMargin
+        )
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")
@@ -84,24 +84,18 @@ class ScalafixLintDiagnosticsSuite
     cleanWorkspace()
     for {
       _ <- initialize(
-        s"""/metals.json
-           |{"a":{"scalaVersion": "${V.scala213}"}}
-           |/.scalafix.conf
-           |rules = [
-           |  DisableSyntax
-           |]
-           |DisableSyntax.noVars = true
-           |/a/src/main/scala/Main.scala
-           |sealed trait Animal
-           |case class Dog(name: String) extends Animal
-           |case class Cat(name: String) extends Animal
-           |object Main {
-           |  var x = 1
-           |  def greet(a: Animal): String = a match {
-           |    case Dog(n) => n
-           |  }
-           |}
-           |""".stripMargin
+        scalafixInitPayload(
+          """|sealed trait Animal
+             |case class Dog(name: String) extends Animal
+             |case class Cat(name: String) extends Animal
+             |object Main {
+             |  var x = 1
+             |  def greet(a: Animal): String = a match {
+             |    case Dog(n) => n
+             |  }
+             |}
+             |""".stripMargin
+        )
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ <- server.didSave("a/src/main/scala/Main.scala")
