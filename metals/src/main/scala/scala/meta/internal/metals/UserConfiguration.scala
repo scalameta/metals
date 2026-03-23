@@ -284,8 +284,8 @@ object UserConfiguration {
         "false",
         "false",
         "Enable Scalafix lint diagnostics",
-        """When enabled, Scalafix rules from `.scalafix.conf` will be run after each
-          |successful compilation and lint diagnostics will be published alongside
+        """When enabled, Scalafix rules from `.scalafix.conf` will be run on
+          |semanticdb updates and lint diagnostics will be published alongside
           |compiler diagnostics. Only lint diagnostics are shown; no code rewrites are applied.
           |""".stripMargin,
         isBoolean = true,

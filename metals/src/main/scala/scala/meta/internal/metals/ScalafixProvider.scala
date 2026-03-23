@@ -53,12 +53,58 @@ case class ScalafixProvider(
     interactive: InteractiveSemanticdbs,
     tables: Tables,
     buildHasErrors: AbsolutePath => Boolean,
+    diagnostics: Diagnostics,
     statusBar: StatusBar,
-)(implicit ec: ExecutionContext, rc: ReportContext) {
+)(implicit ec: ExecutionContext, rc: ReportContext)
+    extends SemanticdbFeatureProvider {
   import ScalafixProvider._
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
+  private val lintedFiles = TrieMap.empty[AbsolutePath, Unit]
+
+  override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    if (!userConfig().scalafixLintEnabled || !path.isScalaFilename) {
+      clearLintDiagnostics(path)
+      return
+    }
+
+    runLintDiagnosticsForPath(path).foreach { diags =>
+      if (diags.nonEmpty) lintedFiles.put(path, ())
+      else lintedFiles.remove(path)
+      diagnostics.onScalafixLint(path, diags)
+    }
+  }
+
+  override def onDelete(path: AbsolutePath): Unit =
+    clearLintDiagnostics(path)
+
+  override def reset(): Unit = {
+    val files = lintedFiles.keys.toList
+    lintedFiles.clear()
+    files.foreach(path => diagnostics.onScalafixLint(path, Nil))
+  }
+
+  private def runLintDiagnosticsForPath(
+      path: AbsolutePath
+  ): Future[List[l.Diagnostic]] = {
+    val result = for {
+      target <- buildTargets.inverseSources(path)
+      scalaTarget <- buildTargets.scalaTarget(target)
+    } yield runLintDiagnostics(path, scalaTarget)
+
+    result.getOrElse {
+      scribe.warn(
+        s"Skipping Scalafix lint diagnostics for $path: no Scala build target found"
+      )
+      Future.successful(Nil)
+    }
+  }
+
+  private def clearLintDiagnostics(path: AbsolutePath): Unit = {
+    lintedFiles.remove(path)
+    diagnostics.onScalafixLint(path, Nil)
+  }
 
   def runAllRules(file: AbsolutePath): Future[List[l.TextEdit]] = {
     val definedRules = rulesFromScalafixConf()
@@ -303,6 +349,11 @@ case class ScalafixProvider(
             fileEval.getDiagnostics().toList.map(convertToLspDiagnostic)
           }
           .getOrElse(Nil)
+      } else if (hasStaleOrMissingSemanticdb(results)) {
+        scribe.warn(
+          s"Skipping Scalafix lint diagnostics for $file: missing or stale semanticdb"
+        )
+        Nil
       } else {
         Nil
       }

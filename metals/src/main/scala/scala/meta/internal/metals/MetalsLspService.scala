@@ -517,12 +517,28 @@ abstract class MetalsLspService(
     symbolHierarchyOps,
   )
 
+  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
+    buffers,
+    () => userConfig,
+    folder,
+    workDoneProgress,
+    compilations,
+    languageClient,
+    buildTargets,
+    interactiveSemanticdbs,
+    tables,
+    buildHasErrors,
+    diagnostics,
+    statusBar,
+  )
+
   val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       testProvider,
       buildTargetClasses,
+      scalafixProvider,
     ),
     buildTargets,
     folder,
@@ -564,20 +580,6 @@ abstract class MetalsLspService(
 
   def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
     buildClient.buildHasErrors(path)
-
-  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
-    buffers,
-    () => userConfig,
-    folder,
-    workDoneProgress,
-    compilations,
-    languageClient,
-    buildTargets,
-    interactiveSemanticdbs,
-    tables,
-    buildHasErrors,
-    statusBar,
-  )
 
   protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(
     compilers,
@@ -886,33 +888,12 @@ abstract class MetalsLspService(
           onChange(List(path)),
         )
       )
-      .flatMap(_ => runScalafixLint(path))
+      .map(_ => ())
       .asJava
   }
 
   protected def didCompileTarget(report: CompileReport): Unit = {
     compilers.didCompile(report)
-  }
-
-  private def runScalafixLint(path: AbsolutePath): Future[Unit] = {
-    if (!userConfig.scalafixLintEnabled || !path.isScalaFilename) {
-      diagnostics.onScalafixLint(path, Nil)
-      return Future.successful(())
-    }
-    val result = for {
-      target <- buildTargets.inverseSources(path)
-      scalaTarget <- buildTargets.scalaTarget(target)
-    } yield {
-      scalafixProvider
-        .runLintDiagnostics(path, scalaTarget)
-        .map { diags =>
-          diagnostics.onScalafixLint(path, diags)
-        }
-    }
-    result.getOrElse {
-      diagnostics.onScalafixLint(path, Nil)
-      Future.successful(())
-    }
   }
 
   def didChangeWatchedFiles(
