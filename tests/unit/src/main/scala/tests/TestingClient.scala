@@ -358,7 +358,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
       condition: Seq[Diagnostic] => Boolean = _ => true,
   ): Future[Unit] = {
     val promise = Promise[Unit]()
-    diagnosticsPromises(path) = (promise, condition)
+    diagnosticsPromises.put(path, (promise, condition)).foreach {
+      case (oldPromise, _) =>
+        oldPromise.tryFailure(
+          new Exception("Replaced by a newer nextDiagnosticsFor call")
+        )
+    }
     promise.future
   }
   override def showMessage(params: MessageParams): Unit = {
