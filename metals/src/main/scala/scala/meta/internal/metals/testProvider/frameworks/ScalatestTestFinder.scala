@@ -276,7 +276,8 @@ object ScalatestTestFinder {
         // collect test entry from it
         case Term.Apply(appl @ Term.Apply(Term.Name("it"), (name: Lit.String) :: Nil), _) =>
         // format: on
-          val testname = s"$prefix ${name.value}"
+          val testname =
+            if (prefix.isEmpty) name.value else s"$prefix ${name.value}"
           val test =
             TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
           test :: acc
