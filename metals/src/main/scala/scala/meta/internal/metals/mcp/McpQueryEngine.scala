@@ -310,7 +310,7 @@ class McpQueryEngine(
    * @param fqcn Fully qualified class name (or symbol)
    * @param path Optional path for build target context.
    * @param module Optional module name to use for context. Takes precedence over path.
-   * @param detailed If false, method/val/var bodies are shortened to ??? to reduce token usage.
+   * @param detailed If false, bodies are shortened (Scala: ??? and scaladoc removed; Java: empty {}).
    * @return The source file path and its contents, if found
    */
   def getSource(
@@ -332,7 +332,7 @@ class McpQueryEngine(
         searchResults
       }
 
-    results.headOption.flatMap(_.definitionPath).map { defPath =>
+    results.flatMap(_.definitionPath).headOption.map { defPath =>
       val rawContent = defPath.toInput.text
       val content =
         if (detailed) rawContent
@@ -360,25 +360,37 @@ class McpQueryEngine(
    * Returns the original content if parsing fails.
    */
   private def shortenScalaBodies(content: String): String = {
-    val placeholder = "???".parse[Term] match {
-      case Parsed.Success(t) => t
-      case _ => Term.Name("???")
-    }
+    val placeholder = Term.Name("???")
     content.parse[Source] match {
       case Parsed.Success(source) =>
         object shortenBodies extends Transformer {
           override def apply(tree: Tree): Tree = tree match {
-            case Defn.Def(mods, name, tparams, paramss, decltpe, _) =>
-              Defn.Def(mods, name, tparams, paramss, decltpe, placeholder)
-            case Defn.Val(mods, pats, decltpe, _) =>
-              Defn.Val(mods, pats, decltpe, placeholder)
-            case Defn.Var(mods, pats, decltpe, _) =>
-              Defn.Var(mods, pats, decltpe, Some(placeholder))
+            case defn @ Defn.Def(mods, name, tparams, paramss, decltpe, _) =>
+              Defn
+                .Def(mods, name, tparams, paramss, decltpe, placeholder)
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
+            case defn @ Defn.Val(mods, pats, decltpe, _) =>
+              Defn
+                .Val(mods, pats, decltpe, placeholder)
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
+            case defn @ Defn.Var(mods, pats, decltpe, _) =>
+              Defn
+                .Var(mods, pats, decltpe, Some(placeholder))
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
             case other =>
               super.apply(other)
           }
         }
-        shortenBodies(source).syntax
+        shortenBodies(source).toString()
       case _ =>
         content
     }

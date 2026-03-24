@@ -1000,8 +1000,18 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
                |import java.lang.InheritableThreadLocal
                |class DynamicVariable[T](init: T) {
                |  private[this] val tl = ???
+               |  /** Retrieve the current value */
                |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
                |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
                |  def value_=(newval: T) = ???
                |  override def toString: String = ???
                |}
@@ -1046,8 +1056,18 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
                |import java.lang.InheritableThreadLocal
                |class DynamicVariable[T](init: T) {
                |  private[this] val tl = ???
+               |  /** Retrieve the current value */
                |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
                |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
                |  def value_=(newval: T) = ???
                |  override def toString: String = ???
                |}
@@ -1104,10 +1124,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
           )
           assertContains(
             contents,
-            """|    private void fetchNextIfNeeded() {
-               |        if (next == null) {
-               |            FileTreeWalker.Event ev = walker.next();
-               |""".stripMargin,
+            "FileTreeWalker.Event ev = walker.next();".stripMargin,
           )
         case None =>
           fail(

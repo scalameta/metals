@@ -37,7 +37,10 @@ object JavaSourceShortener {
         val collector = new BodyRangeCollector(unit, positions)
         collector.scan(unit, null)
         val ranges =
-          collector.ranges.result().reverse // replace from end to start
+          dropNestedRanges(collector.ranges.result())
+            .sortBy { case (start, end) =>
+              (-start, -end)
+            } // highest offsets first
         if (ranges.isEmpty) Some(source)
         else {
           val result = ranges.foldLeft(source) { case (acc, (start, end)) =>
@@ -47,6 +50,22 @@ object JavaSourceShortener {
         }
       }
     }.toOption.flatten
+  }
+
+  /**
+   * Drops ranges nested inside another range. Nested ranges from the tree walk would otherwise
+   * be applied in offset order and corrupt the source after the first removal.
+   */
+  private def dropNestedRanges(ranges: List[(Int, Int)]): List[(Int, Int)] = {
+    ranges
+      .sortBy(_._1)
+      .foldLeft((List.empty[(Int, Int)], -1)) {
+        case ((kept, lastKeptEnd), (start, end)) =>
+          if (start >= lastKeptEnd) ((start, end) :: kept, end)
+          else (kept, lastKeptEnd)
+      }
+      ._1
+      .reverse
   }
 
   private class BodyRangeCollector(

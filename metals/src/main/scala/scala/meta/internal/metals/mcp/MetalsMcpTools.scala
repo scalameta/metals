@@ -1234,7 +1234,7 @@ trait MetalsMcpTools extends Cancelable {
           },
           "detailed": {
             "type": "boolean",
-            "description": "If true, return full method/val/var bodies. If false (default), method bodies are shortened to ??? to reduce token usage."
+            "description": "If true, return the full original source (bodies, scaladoc, comments). If false (default), Scala bodies become ??? and Java method/constructor bodies become empty {}."
           }
         },
         "required": ["fqcn"]
@@ -1244,12 +1244,14 @@ trait MetalsMcpTools extends Cancelable {
       .builder()
       .name("get-source")
       .description(
-        """|Get the source file contents for a given Scala symbol. Returns the full content
-           |of the file containing the symbol, allowing you to read the implementation.
+        """|Get the source file contents for a given Scala or Java symbol. Returns the full file
+           |containing the symbol, allowing you to read the implementation.
            |Useful for understanding library code, inspecting dependencies, and code analysis.
            |
-           |By default, method/val/var bodies are shortened to ??? and scaladoc removed to reduce token usage.
-           |Set detailed=true to receive full original source content.
+           |By default, method/val/var bodies are removed to reduce token usage:
+           |for Scala, bodies are replaced with ???; for Java, method and
+           |constructor bodies use empty blocks {}. Set detailed=true to receive the full original
+           |source content.
            |
            |When no fileInFocus is provided, automatically uses the first available
            |build target for context.""".stripMargin
@@ -1263,7 +1265,7 @@ trait MetalsMcpTools extends Cancelable {
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
         val detailed = arguments.getOptAs[Boolean]("detailed").getOrElse(false)
-        Future {
+        indexingPromise.future.map { _ =>
           queryEngine.getSource(fqcn, pathOpt, moduleOpt, detailed) match {
             case Some((_, content)) =>
               CallToolResult
