@@ -255,6 +255,29 @@ class ScalatestFinderSuite extends FunSuite {
   )
 
   check(
+    "any-fun-spec-without-describe",
+    """|import org.scalatest.funspec.AnyFunSpec
+       |
+       |class FunSpec extends AnyFunSpec {
+       |
+       |  it("random test") {
+       |    assert(1 + 1 == 2)
+       |  }
+       |
+       |  it("another test") {
+       |    assert(2 + 2 == 4)
+       |  }
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("FunSpec"),
+    Set(
+      ("random test", QuickRange(4, 2, 4, 19)),
+      ("another test", QuickRange(8, 2, 8, 20)),
+    ),
+    ScalatestStyle.AnyFunSpec,
+  )
+
+  check(
     "any-fun-spec",
     """|import org.scalatest.funspec.AnyFunSpec
        |
