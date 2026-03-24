@@ -59,7 +59,7 @@ class McpLanguageClient(workspace: AbsolutePath) extends MetalsLanguageClient {
   override def publishDiagnostics(
       diagnostics: PublishDiagnosticsParams
   ): Unit = {
-    // diagnotics are server via the compile request
+    // diagnostics are served via the compile request
   }
 
   override def showMessage(message: MessageParams): Unit = {
@@ -173,7 +173,7 @@ class McpLanguageClient(workspace: AbsolutePath) extends MetalsLanguageClient {
     }
   }
 
-  // Execute client command - no-op,
+  // Execute client command - no-op
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
   ): Unit = {

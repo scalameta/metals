@@ -74,21 +74,33 @@ object MetalsLogger {
     configureRootLogger(logfiles)
   }
 
-  private def configureRootLogger(logfile: List[AbsolutePath]): Unit = {
-    logfile
-      .foldLeft(
-        Logger.root
-          .clearModifiers()
-          .clearHandlers()
-      ) { (logger, logfile) =>
-        logger
-          .withHandler(
-            writer = newFileWriter(logfile),
-            formatter = defaultFormat,
-            minimumLevel = Some(level),
-            modifiers = List(MetalsFilter()),
-          )
-      }
+  def configureFileLogging(logfile: AbsolutePath): Unit =
+    configureFileLogging(List(logfile))
+
+  def configureFileLogging(logfiles: List[AbsolutePath]): Unit = {
+    logfiles.foreach(logfile =>
+      Files.createDirectories(logfile.toNIO.getParent)
+    )
+    configureWithFileHandlers(logfiles).replace()
+  }
+
+  private def configureWithFileHandlers(
+      logfiles: List[AbsolutePath]
+  ): Logger = {
+    logfiles.foldLeft(
+      Logger.root.clearModifiers().clearHandlers()
+    ) { (logger, logfile) =>
+      logger.withHandler(
+        writer = newFileWriter(logfile),
+        formatter = defaultFormat,
+        minimumLevel = Some(level),
+        modifiers = List(MetalsFilter()),
+      )
+    }
+  }
+
+  private def configureRootLogger(logfiles: List[AbsolutePath]): Unit = {
+    configureWithFileHandlers(logfiles)
       .withHandler(
         writer = LanguageClientLogger,
         formatter = MetalsLogger.defaultFormat,

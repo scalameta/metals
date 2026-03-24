@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.mcp.StandaloneMcpService
+import scala.meta.internal.metals.mcp.Transport
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite
@@ -72,6 +73,7 @@ class StandaloneMcpSuite extends BaseLspSuite("standalone-metals-suite") {
     val service = new StandaloneMcpService(
       workspace = workspace,
       port = Some(portToUse),
+      transport = Transport.Http,
       scheduledExecutor = scheduledExecutor,
     )
 

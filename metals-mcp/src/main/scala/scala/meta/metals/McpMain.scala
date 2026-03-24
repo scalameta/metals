@@ -16,6 +16,7 @@ import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.StandaloneMcpService
+import scala.meta.internal.metals.mcp.Transport
 import scala.meta.io.AbsolutePath
 
 import com.google.gson
@@ -33,18 +34,6 @@ import com.google.gson
  */
 object McpMain {
 
-  sealed trait Transport
-  object Transport {
-    case object Http extends Transport
-    case object Stdio extends Transport
-
-    def fromString(s: String): Option[Transport] = s.toLowerCase match {
-      case "http" => Some(Http)
-      case "stdio" => Some(Stdio)
-      case _ => None
-    }
-  }
-
   case class Config(
       workspace: Option[AbsolutePath] = None,
       port: Option[Int] = None,
@@ -57,11 +46,12 @@ object McpMain {
     Client.allClients.flatMap(_.names).mkString(", ")
 
   // Skipped config keys that do not make sense in MCP context
-  private def skippedConfigKeys(key: String): Boolean = key match {
-    case "start-mcp-server" => true
-    case option if option.startsWith("inlay-hints.") => true
-    case _ => false
-  }
+  private def skippedConfigKeys(key: String): Boolean =
+    key match {
+      case "start-mcp-server" => true
+      case option if option.startsWith("inlay-hints.") => true
+      case _ => false
+    }
 
   /** Set of all config keys (kebab-case) for direct CLI parsing (e.g. --key value). */
   private val configKeys: Set[String] =
@@ -214,7 +204,7 @@ object McpMain {
          |Options:
          |  --workspace <path>      Path to the Scala project (required)
          |  --port <number>         HTTP port to listen on (default: auto-assign)
-         |  --transport <type>      Transport type: http (default) or stdio (reserved for future use)
+         |  --transport <type>      Transport type: http (default) or stdio
          |  --client <name>         Client to generate config for: $validClients
          |  --<key> [value]         UserConfiguration override. Use kebab-case (e.g. --java-home /path, --bloop-version 1.4.0).
          |                          For boolean options, value is optional: omit for true, or use --key true/false.
@@ -259,13 +249,20 @@ object McpMain {
         }
     }
 
+    // Warn about conflicting options
+    if (config.transport == Transport.Stdio && config.port.isDefined) {
+      scribe.warn(
+        "--port is ignored when using stdio transport. Port option is only applicable to HTTP transport."
+      )
+    }
+
     val exec = Executors.newCachedThreadPool()
     implicit val ec: ExecutionContextExecutorService =
       ExecutionContext.fromExecutorService(exec)
     val sh = Executors.newSingleThreadScheduledExecutor()
     if (config.transport == Transport.Stdio) {
       val metalsLog = workspace.resolve(".metals/metals.log")
-      MetalsLogger.redirectSystemOut(metalsLog)
+      MetalsLogger.configureFileLogging(metalsLog)
     }
 
     scribe.info(
@@ -276,6 +273,7 @@ object McpMain {
     val service = new StandaloneMcpService(
       workspace,
       config.port,
+      config.transport,
       sh,
       config.client,
       userConfig,

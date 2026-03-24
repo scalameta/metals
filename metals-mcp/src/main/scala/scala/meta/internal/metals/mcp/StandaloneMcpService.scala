@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.mcp.Transport
 import scala.meta.io.AbsolutePath
 
 /**
@@ -24,6 +25,7 @@ import scala.meta.io.AbsolutePath
  *
  * @param workspace The workspace root path
  * @param port Optional port for HTTP transport
+ * @param transport Transport type (Http or Stdio)
  * @param scheduledExecutor Scheduled executor for background tasks
  * @param client Client to generate config for (defaults to NoClient)
  * @param initialUserConfig Optional user configuration (e.g. from CLI); defaults to [[UserConfiguration.default]] if None
@@ -31,21 +33,24 @@ import scala.meta.io.AbsolutePath
 class StandaloneMcpService(
     workspace: AbsolutePath,
     port: Option[Int],
+    transport: Transport,
     scheduledExecutor: ScheduledExecutorService,
     client: Client = NoClient,
     initialUserConfig: Option[UserConfiguration] = None,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
-  port match {
-    case Some(port) =>
-      McpConfig.writeConfig(
-        port,
-        workspace.filename,
-        workspace,
-        NoClient,
-        Set.empty,
-      )
-    case None => // random port will be assigned by the system
+  if (transport == Transport.Http) {
+    port match {
+      case Some(port) =>
+        McpConfig.writeConfig(
+          port,
+          workspace.filename,
+          workspace,
+          NoClient,
+          Set.empty,
+        )
+      case None => // random port will be assigned by the system
+    }
   }
   initialUserConfig.foreach(uc =>
     scribe.info(s"User configuration to use in MCP server: \n$uc")
@@ -138,22 +143,33 @@ class StandaloneMcpService(
 
   def start(): Unit = {
     scribe.info("Starting MCP server...")
-    Await.result(projectMetalsLspService.initialized(), 10.minutes)
-    Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
+
+    if (transport == Transport.Stdio) {
+      Await.result(projectMetalsLspService.startMcpStdioServer(), 2.minutes)
+    } else {
+      Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
+    }
     cancelables.add(projectMetalsLspService)
-    val createdPort =
-      McpConfig.readPort(workspace, workspace.filename, NoClient)
-    (createdPort, client) match {
-      case (_, NoClient) => // no client was set, nothing to do
-      case (Some(port), client) =>
-        McpConfig.writeConfig(
-          port,
-          workspace.filename,
-          workspace,
-          client,
-          Set.empty,
-        )
-      case (None, _) => scribe.error("No port was created")
+
+    // Block until initialization completes (BSP connects, build targets discovered)
+    Await.result(projectMetalsLspService.initialized(), 2.minutes)
+    scribe.info("Metals initialization completed")
+
+    if (transport == Transport.Http) {
+      val createdPort =
+        McpConfig.readPort(workspace, workspace.filename, NoClient)
+      (createdPort, client) match {
+        case (_, NoClient) => // no client was set, nothing to do
+        case (Some(port), client) =>
+          McpConfig.writeConfig(
+            port,
+            workspace.filename,
+            workspace,
+            client,
+            Set.empty,
+          )
+        case (None, _) => scribe.error("No port was created")
+      }
     }
     scribe.info("MCP server started successfully")
   }
