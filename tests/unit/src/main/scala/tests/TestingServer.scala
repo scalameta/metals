@@ -700,6 +700,16 @@ final case class TestingServer(
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
+  def awaitNextDiagnostics(
+      filename: String,
+      condition: Seq[l.Diagnostic] => Boolean = _ => true,
+  ): Future[Unit] = {
+    val path = toPath(filename)
+    client
+      .nextDiagnosticsFor(path, condition)
+      .withTimeout(30, util.concurrent.TimeUnit.SECONDS, reason = None)
+  }
+
   /**
    * @param target the build target to debug, like "myproject.test"
    * @param kind one of the constants in [[ch.epfl.scala.bsp4j.TestParamsDataKind]] or [[ch.epfl.scala.bsp4j.DebugSessionParamsDataKind]].

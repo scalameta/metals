@@ -11,6 +11,13 @@ class ScalafixLintDiagnosticsSuite
   override def userConfig: UserConfiguration =
     super.userConfig.copy(scalafixLintEnabled = true)
 
+  private val mainFile = "a/src/main/scala/Main.scala"
+
+  private def hasScalafixDiag(
+      diags: Seq[org.eclipse.lsp4j.Diagnostic]
+  ): Boolean =
+    diags.exists(d => d.getSource == "scalafix")
+
   private def scalafixInitPayload(mainScalaContent: String): String =
     s"""/metals.json
        |{"a":{"scalaVersion": "${V.scala213}"}}
@@ -34,8 +41,13 @@ class ScalafixLintDiagnosticsSuite
              |""".stripMargin
         )
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")
+      _ <- server.didOpen(mainFile)
+      diagnosticsPromise = server.awaitNextDiagnostics(
+        mainFile,
+        hasScalafixDiag,
+      )
+      _ <- server.didSave(mainFile)
+      _ <- diagnosticsPromise
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/Main.scala:2:3: warning: mutable state should be avoided
@@ -57,8 +69,13 @@ class ScalafixLintDiagnosticsSuite
              |""".stripMargin
         )
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")
+      _ <- server.didOpen(mainFile)
+      diagnosticsPromise = server.awaitNextDiagnostics(
+        mainFile,
+        hasScalafixDiag,
+      )
+      _ <- server.didSave(mainFile)
+      _ <- diagnosticsPromise
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/Main.scala:2:3: warning: mutable state should be avoided
@@ -66,13 +83,18 @@ class ScalafixLintDiagnosticsSuite
            |  ^^^
            |""".stripMargin,
       )
-      _ <- server.didChange("a/src/main/scala/Main.scala") { _ =>
+      _ <- server.didChange(mainFile) { _ =>
         """|object Main {
            |  val x = 1
            |}
            |""".stripMargin
       }
-      _ <- server.didSave("a/src/main/scala/Main.scala")
+      clearedPromise = server.awaitNextDiagnostics(
+        mainFile,
+        !hasScalafixDiag(_),
+      )
+      _ <- server.didSave(mainFile)
+      _ <- clearedPromise
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         "",
@@ -97,8 +119,13 @@ class ScalafixLintDiagnosticsSuite
              |""".stripMargin
         )
       )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ <- server.didSave("a/src/main/scala/Main.scala")
+      _ <- server.didOpen(mainFile)
+      diagnosticsPromise = server.awaitNextDiagnostics(
+        mainFile,
+        hasScalafixDiag,
+      )
+      _ <- server.didSave(mainFile)
+      _ <- diagnosticsPromise
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/Main.scala:5:3: warning: mutable state should be avoided

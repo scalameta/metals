@@ -152,6 +152,8 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
 
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
+  private val diagnosticsPromises =
+    TrieMap.empty[AbsolutePath, (Promise[Unit], Seq[Diagnostic] => Boolean)]
 
   val testExplorerUpdates: Promise[List[JsonObject]] =
     Promise[List[JsonObject]]()
@@ -343,6 +345,21 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     diagnosticsCount
       .getOrElseUpdate(path, new AtomicInteger())
       .incrementAndGet()
+    diagnosticsPromises.get(path).foreach { case (promise, condition) =>
+      if (condition(params.getDiagnostics.asScala.toSeq)) {
+        diagnosticsPromises.remove(path)
+        promise.trySuccess(())
+      }
+    }
+  }
+
+  def nextDiagnosticsFor(
+      path: AbsolutePath,
+      condition: Seq[Diagnostic] => Boolean = _ => true,
+  ): Future[Unit] = {
+    val promise = Promise[Unit]()
+    diagnosticsPromises(path) = (promise, condition)
+    promise.future
   }
   override def showMessage(params: MessageParams): Unit = {
     showMessageHandler(params)

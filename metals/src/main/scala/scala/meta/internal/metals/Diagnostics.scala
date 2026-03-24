@@ -314,10 +314,14 @@ final class Diagnostics(
       .toList
   }
 
-  def onScalafixLint(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
+  def onScalafixLint(
+      path: AbsolutePath,
+      diags: List[Diagnostic],
+      snapshot: Option[Input.VirtualFile] = None,
+  ): Unit = {
     if (diags.nonEmpty) {
       scalafixDiagnostics(path) = diags
-      scalafixSnapshots(path) = path.toInput
+      snapshot.foreach(scalafixSnapshots(path) = _)
     } else {
       scalafixDiagnostics.remove(path)
       scalafixSnapshots.remove(path)

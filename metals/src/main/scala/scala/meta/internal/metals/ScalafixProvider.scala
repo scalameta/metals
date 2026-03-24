@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.atomic.AtomicLong
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
@@ -62,17 +63,26 @@ case class ScalafixProvider(
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
   private val lintedFiles = TrieMap.empty[AbsolutePath, Unit]
+  private val lintVersions = TrieMap.empty[AbsolutePath, AtomicLong]
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     if (!userConfig().scalafixLintEnabled || !path.isScalaFilename) {
-      clearLintDiagnostics(path)
+      if (lintedFiles.contains(path)) clearLintDiagnostics(path)
       return
     }
 
+    val version = lintVersions
+      .getOrElseUpdate(path, new AtomicLong(0))
+      .incrementAndGet()
+    val snapshot = path.toInput
+
     runLintDiagnosticsForPath(path).foreach { diags =>
-      if (diags.nonEmpty) lintedFiles.put(path, ())
-      else lintedFiles.remove(path)
-      diagnostics.onScalafixLint(path, diags)
+      val currentVersion = lintVersions.get(path).map(_.get()).getOrElse(0L)
+      if (version == currentVersion) {
+        if (diags.nonEmpty) lintedFiles.put(path, ())
+        else lintedFiles.remove(path)
+        diagnostics.onScalafixLint(path, diags, Some(snapshot))
+      }
     }
   }
 
@@ -82,6 +92,7 @@ case class ScalafixProvider(
   override def reset(): Unit = {
     val files = lintedFiles.keys.toList
     lintedFiles.clear()
+    lintVersions.clear()
     files.foreach(path => diagnostics.onScalafixLint(path, Nil))
   }
 
@@ -103,6 +114,7 @@ case class ScalafixProvider(
 
   private def clearLintDiagnostics(path: AbsolutePath): Unit = {
     lintedFiles.remove(path)
+    lintVersions.remove(path)
     diagnostics.onScalafixLint(path, Nil)
   }
 
