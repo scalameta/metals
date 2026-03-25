@@ -5,6 +5,7 @@ import java.{util => ju}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta._
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
@@ -12,9 +13,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.pc.JavaSourceShortener
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
 import scala.meta.pc.ParentSymbols
+import scala.meta.transversers.Transformer
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.SymbolKind
@@ -301,6 +304,105 @@ class McpQueryEngine(
     getUsages(fqcn, Some(path), module = None)
   }
 
+  /**
+   * Get the source file contents for a symbol.
+   *
+   * @param fqcn Fully qualified class name (or symbol)
+   * @param path Optional path for build target context.
+   * @param module Optional module name to use for context. Takes precedence over path.
+   * @param detailed If false, bodies are shortened (Scala: ??? and scaladoc removed; Java: empty {}).
+   * @return The source file path and its contents, if found
+   */
+  def getSource(
+      fqcn: String,
+      path: Option[AbsolutePath] = None,
+      module: Option[String] = None,
+      detailed: Boolean = false,
+  ): Option[(AbsolutePath, String)] = {
+    val effectivePath = resolveEffectivePath(module, path)
+
+    val searchResults = mcpSearch.exactSearch(fqcn, effectivePath)
+
+    // For methods and other members, fall back to searching the owner type
+    val results =
+      if (searchResults.isEmpty && fqcn.lastIndexOf('.') > 0) {
+        val owner = fqcn.substring(0, fqcn.lastIndexOf('.'))
+        mcpSearch.exactSearch(owner, effectivePath)
+      } else {
+        searchResults
+      }
+
+    results.flatMap(_.definitionPath).headOption.map { defPath =>
+      val rawContent = defPath.toInput.text
+      val content =
+        if (detailed) rawContent
+        else shortenSourceBodies(rawContent, defPath)
+      (defPath, content)
+    }
+  }
+
+  /**
+   * Shortens source by reducing method/body content: Scala uses ??? for bodies;
+   * Java keeps only signatures (empty bodies). Returns the original content on failure.
+   */
+  private def shortenSourceBodies(
+      content: String,
+      path: AbsolutePath,
+  ): String = {
+    val pathStr = path.toString
+    if (pathStr.endsWith(".scala")) shortenScalaBodies(content)
+    else if (pathStr.endsWith(".java")) shortenJavaBodies(content)
+    else content
+  }
+
+  /**
+   * Replaces every method, val, and var body/rhs with ??? in Scala source.
+   * Returns the original content if parsing fails.
+   */
+  private def shortenScalaBodies(content: String): String = {
+    val placeholder = Term.Name("???")
+    content.parse[Source] match {
+      case Parsed.Success(source) =>
+        object shortenBodies extends Transformer {
+          override def apply(tree: Tree): Tree = tree match {
+            case defn @ Defn.Def(mods, name, tparams, paramss, decltpe, _) =>
+              Defn
+                .Def(mods, name, tparams, paramss, decltpe, placeholder)
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
+            case defn @ Defn.Val(mods, pats, decltpe, _) =>
+              Defn
+                .Val(mods, pats, decltpe, placeholder)
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
+            case defn @ Defn.Var(mods, pats, decltpe, _) =>
+              Defn
+                .Var(mods, pats, decltpe, Some(placeholder))
+                .fullCopy(
+                  begComment = defn.begComment,
+                  endComment = defn.endComment,
+                )
+            case other =>
+              super.apply(other)
+          }
+        }
+        shortenBodies(source).toString()
+      case _ =>
+        content
+    }
+  }
+
+  /**
+   * Replaces every method, constructor, and initializer body in Java source with an empty block,
+   * leaving only signatures. Uses the javac Compiler Tree API for accurate parsing.
+   * Returns the original content if the source does not parse as valid Java.
+   */
+  private def shortenJavaBodies(content: String): String =
+    JavaSourceShortener.shortenBodies(content).getOrElse(content)
 }
 
 case class SymbolUsage(

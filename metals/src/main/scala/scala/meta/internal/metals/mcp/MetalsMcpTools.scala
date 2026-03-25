@@ -40,6 +40,7 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult
 import io.modelcontextprotocol.spec.McpSchema.Content
 import io.modelcontextprotocol.spec.McpSchema.TextContent
+import io.modelcontextprotocol.spec.McpSchema.Tool
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
@@ -94,7 +95,7 @@ trait MetalsMcpTools extends Cancelable {
   // Tool creation methods
   protected def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("import-build")
       .description(
@@ -148,7 +149,7 @@ trait MetalsMcpTools extends Cancelable {
 
   protected def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("compile-full")
       .description("Compile the whole Scala project")
@@ -192,7 +193,7 @@ trait MetalsMcpTools extends Cancelable {
          |    }
          |  }
          |}""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("compile-file")
       .description("Compile a chosen Scala file")
@@ -295,7 +296,7 @@ trait MetalsMcpTools extends Cancelable {
          |  },
          |  "required": ["module"]
          |}""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("compile-module")
       .description("Compile a chosen Scala module")
@@ -414,7 +415,7 @@ trait MetalsMcpTools extends Cancelable {
          |  },
          |  "required": ["testClass"]
          |}""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("test")
       .description(
@@ -480,7 +481,7 @@ trait MetalsMcpTools extends Cancelable {
         "required": ["query"]
       }
     """
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("glob-search")
       .description(
@@ -536,7 +537,7 @@ trait MetalsMcpTools extends Cancelable {
         "required": ["query", "symbolType"]
       }
     """
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("typed-glob-search")
       .description(
@@ -605,7 +606,7 @@ trait MetalsMcpTools extends Cancelable {
         "required": ["fqcn"]
       }
     """
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("inspect")
       .description(
@@ -665,7 +666,7 @@ trait MetalsMcpTools extends Cancelable {
         "required": ["fqcn"]
       }
     """
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("get-docs")
       .description(
@@ -726,7 +727,7 @@ trait MetalsMcpTools extends Cancelable {
         "required": ["fqcn"]
       }
     """
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("get-usages")
       .description(
@@ -789,7 +790,7 @@ trait MetalsMcpTools extends Cancelable {
         |  "required": ["organization"]
         |}
         |""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("find-dep")
       .description(
@@ -875,7 +876,7 @@ trait MetalsMcpTools extends Cancelable {
         |  "properties": { }
         |} 
         |""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("list-modules")
       .description(
@@ -916,7 +917,7 @@ trait MetalsMcpTools extends Cancelable {
          |    }
          |  }
          |}""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("format-file")
       .description("Format a Scala file and return the formatted text")
@@ -1037,7 +1038,7 @@ trait MetalsMcpTools extends Cancelable {
         |  "required": ["description", "ruleImplementation"]
         |} 
         |""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("generate-scalafix-rule")
       .description(
@@ -1137,7 +1138,7 @@ trait MetalsMcpTools extends Cancelable {
         |  "required": ["ruleName"]
         |} 
         |""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("run-scalafix-rule")
       .description(
@@ -1183,7 +1184,7 @@ trait MetalsMcpTools extends Cancelable {
         |  "properties": { }
         |} 
         |""".stripMargin
-    val tool = io.modelcontextprotocol.spec.McpSchema.Tool
+    val tool = Tool
       .builder()
       .name("list-scalafix-rules")
       .description(
@@ -1214,6 +1215,80 @@ trait MetalsMcpTools extends Cancelable {
     )
   }
 
+  private def createGetSourceTool(): AsyncToolSpecification = {
+    val schema = """
+      {
+        "type": "object",
+        "properties": {
+          "fqcn": {
+            "type": "string",
+            "description": "Fully qualified name of the symbol to get source for"
+          },
+          "fileInFocus": {
+            "type": "string",
+            "description": "The current file in focus for context. If not provided, will use first available build target."
+          },
+          "module": {
+            "type": "string",
+            "description": "Explicit module (build target) name to use for context, e.g. 'core', 'services'. Takes precedence over fileInFocus."
+          },
+          "detailed": {
+            "type": "boolean",
+            "description": "If true, return the full original source (bodies, scaladoc, comments). If false (default), Scala bodies become ??? and Java method/constructor bodies become empty {}."
+          }
+        },
+        "required": ["fqcn"]
+      }
+    """
+    val tool = Tool
+      .builder()
+      .name("get-source")
+      .description(
+        """|Get the source file contents for a given Scala or Java symbol. Returns the full file
+           |containing the symbol, allowing you to read the implementation.
+           |Useful for understanding library code, inspecting dependencies, and code analysis.
+           |
+           |By default, method/val/var bodies are removed to reduce token usage:
+           |for Scala, bodies are replaced with ???; for Java, method and
+           |constructor bodies use empty blocks {}. Set detailed=true to receive the full original
+           |source content.
+           |
+           |When no fileInFocus is provided, automatically uses the first available
+           |build target for context.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
+      withErrorHandling { (_, arguments) =>
+        val fqcn = arguments.getFqcn
+        val pathOpt = arguments.getFileInFocusOpt
+        val moduleOpt = arguments.getOptNoEmptyString("module")
+        val detailed = arguments.getOptAs[Boolean]("detailed").getOrElse(false)
+        indexingPromise.future.map { _ =>
+          queryEngine.getSource(fqcn, pathOpt, moduleOpt, detailed) match {
+            case Some((_, content)) =>
+              CallToolResult
+                .builder()
+                .content(
+                  createContent(content)
+                )
+                .isError(false)
+                .build()
+            case None =>
+              CallToolResult
+                .builder()
+                .content(
+                  createContent(s"Error: Source not found for symbol: $fqcn")
+                )
+                .isError(true)
+                .build()
+          }
+        }.toMono
+      },
+    )
+  }
+
   protected def registerAllTools(
       asyncServer: io.modelcontextprotocol.server.McpAsyncServer
   ): Unit = {
@@ -1233,6 +1308,7 @@ trait MetalsMcpTools extends Cancelable {
     asyncServer.addTool(createGenerateScalafixRuleTool()).subscribe()
     asyncServer.addTool(createRunScalafixRuleTool()).subscribe()
     asyncServer.addTool(createListScalafixRulesTool()).subscribe()
+    asyncServer.addTool(createGetSourceTool()).subscribe()
   }
 
   protected def buildCapabilities()

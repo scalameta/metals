@@ -969,6 +969,171 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("get-source") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      path = server.toPath("a/src/main/scala/Main.scala")
+      // Default (detailed=false): shortened bodies with ???
+      resShort = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable",
+        Some(path),
+        module = None,
+        detailed = false,
+      )
+      _ = resShort match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            """|package scala
+               |package util
+               |import java.lang.InheritableThreadLocal
+               |class DynamicVariable[T](init: T) {
+               |  private[this] val tl = ???
+               |  /** Retrieve the current value */
+               |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
+               |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
+               |  def value_=(newval: T) = ???
+               |  override def toString: String = ???
+               |}
+               |""".stripMargin,
+          )
+        case None =>
+          fail(
+            "Source should be found for scala.util.DynamicVariable (detailed)"
+          )
+      }
+      // detailed=true: full method bodies
+      resFull = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable",
+        Some(path),
+        module = None,
+        detailed = true,
+      )
+      _ = resFull match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            fullDynamicVariableSource,
+          )
+        case None =>
+          fail(
+            "Source should be found for scala.util.DynamicVariable (detailed)"
+          )
+      }
+      // Get source via a method - should return the containing file
+      methodRes = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable.value",
+        Some(path),
+      )
+      _ = methodRes match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            """|package scala
+               |package util
+               |import java.lang.InheritableThreadLocal
+               |class DynamicVariable[T](init: T) {
+               |  private[this] val tl = ???
+               |  /** Retrieve the current value */
+               |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
+               |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
+               |  def value_=(newval: T) = ???
+               |  override def toString: String = ???
+               |}
+               |""".stripMargin,
+          )
+        case None =>
+          fail("Source should be found for scala.util.DynamicVariable.value")
+      }
+    } yield ()
+  }
+
+  test("get-source-java-dependency-shortened") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      res = server.headServer.queryEngine.getSource(
+        "java.nio.file.FileTreeIterator",
+        Some(server.toPath("a/src/main/scala/Main.scala")),
+        module = None,
+        detailed = false,
+      )
+      _ = res match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(
+            resPath.toString,
+            "/java.base/java/nio/file/FileTreeIterator.java",
+          )
+          assertContains(contents, "private void fetchNextIfNeeded() {}")
+        case None =>
+          fail(
+            "Source should be found for java.nio.file.FileTreeIterator"
+          )
+      }
+      res2 = server.headServer.queryEngine.getSource(
+        "java.nio.file.FileTreeIterator",
+        Some(server.toPath("a/src/main/scala/Main.scala")),
+        module = None,
+        detailed = true,
+      )
+      _ = res2 match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(
+            resPath.toString,
+            "/java.base/java/nio/file/FileTreeIterator.java",
+          )
+          assertContains(
+            contents,
+            "FileTreeWalker.Event ev = walker.next();".stripMargin,
+          )
+        case None =>
+          fail(
+            "Source should be found for java.nio.file.FileTreeIterator"
+          )
+      }
+    } yield ()
+  }
+
   def timed[T](f: => T): T = {
     val start = System.currentTimeMillis()
     val res = f
@@ -976,4 +1141,77 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     scribe.info(s"Time taken: ${time}ms")
     res
   }
+
+  private val fullDynamicVariableSource =
+    """|/*
+       | * Scala (https://www.scala-lang.org)
+       | *
+       | * Copyright EPFL and Lightbend, Inc. dba Akka
+       | *
+       | * Licensed under Apache License 2.0
+       | * (http://www.apache.org/licenses/LICENSE-2.0).
+       | *
+       | * See the NOTICE file distributed with this work for
+       | * additional information regarding copyright ownership.
+       | */
+       |
+       |package scala
+       |package util
+       |
+       |import java.lang.InheritableThreadLocal
+       |
+       |/** `DynamicVariables` provide a binding mechanism where the current
+       | *  value is found through dynamic scope, but where access to the
+       | *  variable itself is resolved through static scope.
+       | *
+       | *  The current value can be retrieved with the value method. New values
+       | *  should be pushed using the `withValue` method. Values pushed via
+       | *  `withValue` only stay valid while the `withValue`'s second argument, a
+       | *  parameterless closure, executes. When the second argument finishes,
+       | *  the variable reverts to the previous value.
+       | *
+       | *  {{{
+       | *  someDynamicVariable.withValue(newValue) {
+       | *    // ... code called in here that calls value ...
+       | *    // ... will be given back the newValue ...
+       | *  }
+       | *  }}}
+       | *
+       | *  Each thread gets its own stack of bindings.  When a
+       | *  new thread is created, the `DynamicVariable` gets a copy
+       | *  of the stack of bindings from the parent thread, and
+       | *  from then on the bindings for the new thread
+       | *  are independent of those for the original thread.
+       | */
+       |class DynamicVariable[T](init: T) {
+       |  private[this] val tl = new InheritableThreadLocal[T] {
+       |    override def initialValue: T with AnyRef = init.asInstanceOf[T with AnyRef]
+       |  }
+       |
+       |  /** Retrieve the current value */
+       |  def value: T = tl.get.asInstanceOf[T]
+       |
+       |  /** Set the value of the variable while executing the specified
+       |    * thunk.
+       |    *
+       |    * @param newval The value to which to set the variable
+       |    * @param thunk The code to evaluate under the new setting
+       |    */
+       |  def withValue[S](newval: T)(thunk: => S): S = {
+       |    val oldval = value
+       |    tl set newval
+       |
+       |    try thunk
+       |    finally tl set oldval
+       |  }
+       |
+       |  /** Change the currently bound value, discarding the old value.
+       |    * Usually withValue() gives better semantics.
+       |    */
+       |  def value_=(newval: T) = tl set newval
+       |
+       |  override def toString: String = "DynamicVariable(" + value + ")"
+       |}
+       |""".stripMargin
+
 }
