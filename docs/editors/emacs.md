@@ -81,6 +81,15 @@ To use Metals in Emacs, place this snippet in your Emacs configuration (for exam
 ;; Add metals backend for lsp-mode
 (use-package lsp-metals)
 
+;; Enable navigating to dependency sources via M-. (xref-find-definitions).
+;; Metals returns jar:file: URIs for symbols defined in external libraries.
+;; Without jarchive, Emacs has no file-name-handler for these URIs and will
+;; fail to open them.
+(use-package jarchive
+  :ensure t
+  :config
+  (jarchive-mode 1))
+
 ;; Enable nice rendering of documentation on hover
 ;;   Warning: on some systems this package can reduce your emacs responsiveness significally.
 ;;   (See: https://emacs-lsp.github.io/lsp-mode/page/performance/)
@@ -234,6 +243,15 @@ To configure Eglot with Metals:
   :pin melpa-stable
   ;; (optional) Automatically start metals for Scala files.
   :hook (scala-mode . eglot-ensure))
+
+;; Enable navigating to dependency sources via M-. (xref-find-definitions).
+;; Metals returns jar:file: URIs for symbols defined in external libraries.
+;; Without jarchive, Emacs has no file-name-handler for these URIs and will
+;; fail to open them.
+(use-package jarchive
+  :ensure t
+  :config
+  (jarchive-mode 1))
 ```
 
 If you start Emacs now then it will fail since the `metals-emacs` binary does
