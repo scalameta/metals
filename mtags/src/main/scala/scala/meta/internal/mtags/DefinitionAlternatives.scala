@@ -9,14 +9,14 @@ object DefinitionAlternatives {
    */
   def apply(symbol: Symbol): List[Symbol] = {
     List(
-      stripSyntheticPackageObjectFromObject(symbol),
-      caseClassCompanionToType(symbol),
-      caseClassApplyOrCopy(symbol),
-      caseClassApplyOrCopyParams(symbol),
-      initParamToValue(symbol),
-      varGetter(symbol),
-      methodOwner(symbol),
-      objectInsteadOfAny(symbol)
+      emptyOnInvalidSymbol(symbol, stripSyntheticPackageObjectFromObject),
+      emptyOnInvalidSymbol(symbol, caseClassCompanionToType),
+      emptyOnInvalidSymbol(symbol, caseClassApplyOrCopy),
+      emptyOnInvalidSymbol(symbol, caseClassApplyOrCopyParams),
+      emptyOnInvalidSymbol(symbol, initParamToValue),
+      emptyOnInvalidSymbol(symbol, varGetter),
+      emptyOnInvalidSymbol(symbol, methodOwner),
+      emptyOnInvalidSymbol(symbol, objectInsteadOfAny)
     ).flatten
   }
 
@@ -151,5 +151,15 @@ object DefinitionAlternatives {
       case _ =>
         None
     }
-
+  private def emptyOnInvalidSymbol(
+      symbol: Symbol,
+      f: Symbol => Option[Symbol]
+  ): Option[Symbol] =
+    try {
+      f(symbol)
+    } catch {
+      case e: RuntimeException
+          if e.getMessage().toLowerCase().contains("invalid symbol") =>
+        None
+    }
 }
