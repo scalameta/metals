@@ -888,7 +888,7 @@ abstract class MetalsLspService(
           onChange(List(path)),
         )
       )
-      .map(_ => ())
+      .ignoreValue
       .asJava
   }
 

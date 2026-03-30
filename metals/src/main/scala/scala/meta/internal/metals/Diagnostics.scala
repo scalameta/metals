@@ -59,8 +59,6 @@ final class Diagnostics(
     TrieMap.empty[AbsolutePath, Diagnostic]
   private val scalafixDiagnostics =
     TrieMap.empty[AbsolutePath, List[Diagnostic]]
-  private val scalafixSnapshots =
-    TrieMap.empty[AbsolutePath, Input.VirtualFile]
   private val snapshots =
     TrieMap.empty[AbsolutePath, Input.VirtualFile]
   private val lastPublished =
@@ -89,7 +87,6 @@ final class Diagnostics(
     val keys = diagnostics.keys ++ scalafixDiagnostics.keys
     diagnostics.clear()
     scalafixDiagnostics.clear()
-    scalafixSnapshots.clear()
     keys.foreach { key => publishDiagnostics(key) }
   }
 
@@ -166,7 +163,7 @@ final class Diagnostics(
       diagnostics.remove(path).toList.flatMap(_.asScala) ++
         syntaxError.remove(path)
     } else syntaxError.remove(path).toList
-    scalafixSnapshots.remove(path)
+
     val hadScalafixDiags = scalafixDiagnostics.remove(path).isDefined
     if (diags.nonEmpty || hadScalafixDiags) {
       publishDiagnostics(path)
@@ -177,7 +174,7 @@ final class Diagnostics(
     diagnostics.remove(path)
     syntaxError.remove(path)
     scalafixDiagnostics.remove(path)
-    scalafixSnapshots.remove(path)
+
     languageClient.publishDiagnostics(
       new PublishDiagnosticsParams(
         path.toURI.toString(),
@@ -314,18 +311,11 @@ final class Diagnostics(
       .toList
   }
 
-  def onScalafixLint(
-      path: AbsolutePath,
-      diags: List[Diagnostic],
-      snapshot: Option[Input.VirtualFile] = None,
-  ): Unit = {
-    if (diags.nonEmpty) {
+  def onScalafixLint(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
+    if (diags.nonEmpty)
       scalafixDiagnostics(path) = diags
-      snapshot.foreach(scalafixSnapshots(path) = _)
-    } else {
+    else
       scalafixDiagnostics.remove(path)
-      scalafixSnapshots.remove(path)
-    }
     publishDiagnostics(path)
   }
 
@@ -382,17 +372,8 @@ final class Diagnostics(
     } {
       all.add(d)
     }
-    for {
-      scalafixDiag <- scalafixDiagnostics.getOrElse(path, Nil)
-      freshDiag <- toFreshDiagnostic(
-        path,
-        scalafixDiag,
-        snapshot = scalafixSnapshots.get(path),
-        fallbackToNearest = true,
-      )
-    } {
-      all.add(freshDiag)
-    }
+    for (scalafixDiag <- scalafixDiagnostics.getOrElse(path, Nil))
+      all.add(scalafixDiag)
     languageClient.publishDiagnostics(new PublishDiagnosticsParams(uri, all))
   }
 
@@ -406,15 +387,8 @@ final class Diagnostics(
       path: AbsolutePath,
       d: Diagnostic,
       fallbackToNearest: Boolean = true,
-  ): Option[Diagnostic] =
-    toFreshDiagnostic(path, d, snapshots.get(path), fallbackToNearest)
-
-  private def toFreshDiagnostic(
-      path: AbsolutePath,
-      d: Diagnostic,
-      snapshot: Option[Input.VirtualFile],
-      fallbackToNearest: Boolean,
   ): Option[Diagnostic] = {
+    val snapshot = snapshots.get(path)
     snapshot match {
       case Some(snapshot) =>
         val edit =
