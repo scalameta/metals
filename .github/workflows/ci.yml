@@ -34,7 +34,7 @@ jobs:
             shard: 4
     steps:
       - uses: actions/checkout@v6
-      - uses: coursier/setup-action@v2
+      - uses: coursier/setup-action@v3
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
