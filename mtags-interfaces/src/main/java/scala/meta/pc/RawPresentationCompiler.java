@@ -16,13 +16,15 @@ import org.eclipse.lsp4j.SelectionRange;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.function.Supplier;
 import java.util.List;
 import java.util.Optional;
 
 /**
- * The raw public API of the presentation compiler that does not handle synchronisation.
- * Scala compiler can't run concurrent code at that point, so we need to enforce sequential, single threaded execution.
- * It has to be implemented by the consumer of this API.
+ * The raw public API of the presentation compiler that does not handle
+ * synchronisation. Scala compiler can't run concurrent code at that point, so
+ * we need to enforce sequential, single threaded execution. It has to be
+ * implemented by the consumer of this API.
  *
  * This API should remain binary compatible
  */
@@ -103,7 +105,8 @@ public abstract class RawPresentationCompiler {
 	public abstract List<DocumentHighlight> documentHighlight(OffsetParams params);
 
 	/**
-	 * Returns the references of the symbol under the current position in the target files.
+	 * Returns the references of the symbol under the current position in the target
+	 * files.
 	 */
 	public abstract List<ReferencesResult> references(ReferencesRequest params);
 
@@ -114,7 +117,8 @@ public abstract class RawPresentationCompiler {
 			Optional<T> codeActionPayload);
 
 	/**
-	 * Returns the list of code actions supported by the current presentation compiler.
+	 * Returns the list of code actions supported by the current presentation
+	 * compiler.
 	 */
 	public abstract List<String> supportedCodeActions();
 
@@ -127,8 +131,7 @@ public abstract class RawPresentationCompiler {
 	/**
 	 * Return the necessary imports for a symbol at the given position.
 	 */
-	public abstract List<AutoImportsResult> autoImports(String name, OffsetParams params,
-			Boolean isExtension);
+	public abstract List<AutoImportsResult> autoImports(String name, OffsetParams params, Boolean isExtension);
 
 	/**
 	 * Return the missing implements and imports for the symbol at the given
@@ -159,8 +162,7 @@ public abstract class RawPresentationCompiler {
 	 * Return named arguments for the apply method that encloses the given position.
 	 * May fail with a DisplayableException.
 	 */
-	public abstract List<TextEdit> convertToNamedArguments(OffsetParams params,
-			List<Integer> argIndices);
+	public abstract List<TextEdit> convertToNamedArguments(OffsetParams params, List<Integer> argIndices);
 
 	/**
 	 * The text contents of the given file changed.
@@ -211,6 +213,10 @@ public abstract class RawPresentationCompiler {
 	 */
 	public abstract RawPresentationCompiler withBuildTargetName(String buildTargetName);
 
+	public RawPresentationCompiler withProgressBars(ProgressBars progressBars) {
+		return this;
+	}
+
 	/**
 	 * Provide a SymbolSearch to extract docstrings, java parameter names and Scala
 	 * default parameter values.
@@ -227,6 +233,10 @@ public abstract class RawPresentationCompiler {
 	 * Provide workspace root for features like ammonite script $file completions.
 	 */
 	public abstract RawPresentationCompiler withWorkspace(Path workspace);
+
+	public RawPresentationCompiler withSemanticdbFileManager(SemanticdbFileManager semanticdbFileManager) {
+		return this;
+	}
 
 	/**
 	 * Provide CompletionItemPriority for additional sorting completion items.
@@ -253,6 +263,27 @@ public abstract class RawPresentationCompiler {
 	 */
 	public abstract RawPresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
 			List<String> options);
+
+	/**
+	 * Construct a new presentation compiler with the given parameters.
+	 *
+	 * @param buildTargetIdentifier the build target containing this source file.
+	 *                              This is needed for
+	 *                              {@link #completionItemResolve(CompletionItem, String)}.
+	 * @param classpath             the classpath of this build target.
+	 * @param options               the compiler flags for the new compiler.
+	 *                              Important, it is recommended to disable all
+	 *                              compiler plugins excluding
+	 *                              org.scalamacros:paradise, kind-projector and
+	 *                              better-monadic-for.
+	 * @param sourcePath            A supplier that returns the source path for this
+	 *                              build target, used by the PC to locate types
+	 *                              that have not been built yet.
+	 */
+	public RawPresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath, List<String> options,
+			Supplier<List<Path>> sourcePath) {
+		return newInstance(buildTargetIdentifier, classpath, options);
+	}
 
 	/**
 	 * Scala version for the current presentation compiler
