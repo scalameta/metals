@@ -178,8 +178,6 @@ def template(
       |${contributors.mkString("\n")}
       |```
       |
-      |## Merged PRs
-      |
       |## [$lastTag](https://github.com/scalameta/metals/tree/$lastTag) (${today})
       |
       |[Full Changelog](https://github.com/scalameta/metals/compare/$firstTag...$lastTag)
