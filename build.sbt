@@ -12,7 +12,7 @@ Global / resolvers += "scala-nightlies" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.7"
+val forkBaseVersion = "1.6.8"
 
 val currentVersion = "2.0.0"
 
