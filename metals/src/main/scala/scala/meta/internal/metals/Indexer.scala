@@ -591,9 +591,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
                 )
                 .map(_.getScalaVersion())
                 .getOrElse(
-                  scalaVersionSelector.fallbackScalaVersion(
-                    source.isAmmoniteScript
-                  )
+                  scalaVersionSelector.fallbackScalaVersion()
                 )
             ScalaVersions.dialectForScalaVersion(
               scalaVersion,

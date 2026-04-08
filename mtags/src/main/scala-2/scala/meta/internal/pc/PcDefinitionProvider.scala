@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util => ju}
 
+import scala.reflect.internal.util.Position
+
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._

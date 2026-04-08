@@ -1333,7 +1333,7 @@ class Compilers(
         case None =>
           val tmpDirectory = workspace.resolve(Directories.tmp)
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
           if (
             !path.toNIO.startsWith(tmpDirectory.toNIO)
             // don't spam the log with the same message about the same file

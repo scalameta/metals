@@ -914,6 +914,11 @@ abstract class MetalsLspService(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
+    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
+      buildTargets
+        .inverseSources(path)
+        .getOrElse(current)
+    }
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
 
@@ -1130,16 +1135,13 @@ abstract class MetalsLspService(
           // proceed by compiling on save, as is the default in the upstream OSS project
           if (Testing.isEnabled && !userConfigPromise.isCompleted)
             compilations
-              .compileFiles(paths, Option(focusedDocumentBuildTarget.get()))
+              .compileFiles(pathsWithFingerPrints)
           else
             userConfigPromise.future
               .flatMap { _ =>
                 if (userConfig.buildOnChange)
                   compilations
-                    .compileFiles(
-                      paths,
-                      Option(focusedDocumentBuildTarget.get()),
-                    )
+                    .compileFiles(pathsWithFingerPrints)
                 else Future.successful(())
               },
         ) ++ paths.map(f => Future(interactiveSemanticdbs.textDocument(f)))
@@ -1153,18 +1155,12 @@ abstract class MetalsLspService(
         List(
           // See comments above about hanging tests. Same issue here.
           if (Testing.isEnabled && !userConfigPromise.isCompleted)
-            compilations.compileFiles(
-              List(path),
-              Option(focusedDocumentBuildTarget.get()),
-            )
+            compilations.compileFiles(List((path, Fingerprint.empty)))
           else
             userConfigPromise.future.flatMap { _ =>
               if (userConfig.buildOnChange)
                 compilations
-                  .compileFiles(
-                    List(path),
-                    Option(focusedDocumentBuildTarget.get()),
-                  )
+                  .compileFiles(List((path, Fingerprint.empty)))
               else Future.successful(())
             },
           Future {
@@ -1832,6 +1828,69 @@ abstract class MetalsLspService(
         // we need to refresh tokens for worksheets since dependencies could have been added
         languageClient.refreshSemanticTokens().asScala.map(_ => ())
       }
+  }
+
+  def definitionOrReferences(
+      positionParams: TextDocumentPositionParams,
+      token: CancelToken = EmptyCancelToken,
+      definitionOnly: Boolean = false,
+  ): Future[DefinitionResult] = {
+    val source = positionParams.getTextDocument.getUri.toAbsolutePath
+    if (source.isScalaFilename || source.isJavaFilename) {
+      val semanticDBDoc =
+        semanticdbs().textDocument(source).documentIncludingStale
+      (for {
+        doc <- semanticDBDoc
+        positionOccurrence = definitionProvider.positionOccurrence(
+          source,
+          positionParams.getPosition,
+          doc,
+        )
+        occ <- positionOccurrence.occurrence
+      } yield occ) match {
+        case Some(occ) =>
+          if (occ.role.isDefinition && !definitionOnly)
+            getReferencesForGoToDefinition(positionParams, token)
+          else definitionResult(positionParams, token)
+        case None =>
+          definitionResult(positionParams, token).flatMap { definition =>
+            def isOnDefinition = definition.locations.asScala.exists(
+              _.getRange().encloses(positionParams.getPosition())
+            )
+            if (!definitionOnly && isOnDefinition)
+              getReferencesForGoToDefinition(positionParams, token)
+            else Future.successful(definition)
+          }
+      }
+    } else {
+      Future.successful(DefinitionResult.empty)
+    }
+  }
+
+  private def getReferencesForGoToDefinition(
+      positionParams: TextDocumentPositionParams,
+      token: CancelToken,
+  ) = {
+    val refParams = new ReferenceParams(
+      positionParams.getTextDocument(),
+      positionParams.getPosition(),
+      new ReferenceContext(false),
+    )
+    referencesResult(refParams).flatMap { results =>
+      if (results.flatMap(_.locations).isEmpty) {
+        definitionResult(positionParams, token)
+      } else {
+        Future.successful(
+          DefinitionResult(
+            locations = getSortedLocations(results),
+            symbol = results.head.symbol,
+            definition = None,
+            semanticdb = None,
+            querySymbol = results.head.symbol,
+          )
+        )
+      }
+    }
   }
 
   /**

@@ -196,7 +196,7 @@ final class InferredMethodProvider(
       case (edit: TextEdit) :: _ =>
         edit.getNewText().stripPrefix(": ")
       case _ =>
-        logger.warning(
+        logger.warn(
           "infer-method: could not infer type of argument, defaulting to Any"
         )
         "Any"

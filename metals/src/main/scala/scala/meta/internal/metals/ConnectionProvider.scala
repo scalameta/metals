@@ -540,7 +540,7 @@ class ConnectionProvider(
                 if (userConfig.buildOnFocus) {
                   progress.message = "compiling open files"
                   compilations
-                    .compileFiles(buffers.open.toSeq, None)
+                    .compileFiles(buffers.open.toSeq.map((_, Fingerprint.empty)))
                     .ignoreValue
                 } else {
                   Future.successful(())

@@ -13,6 +13,8 @@ object V {
   val sbtScala = "2.12.21"
   val ammonite212Version = "2.12.19"
   val ammonite213Version = "2.13.14"
+  val ammonite3Version = "3.3.4"
+  val ammonite = "3.0.0-2-6342755f"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
