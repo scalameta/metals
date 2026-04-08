@@ -17,7 +17,6 @@ trait PcCollector[T] { self: WithCompilationUnit =>
   def resultWithSought(soughtSet: Set[Symbol]): List[T] = {
     // fast track for empty results
     if (soughtSet.isEmpty) return List()
-    val sought = new SoughtSymbols(soughtSet, semanticdbSymbol)
     val owners = soughtSet
       .map(_.owner)
       .flatMap(o => symbolAlternatives(o))
@@ -44,8 +43,15 @@ trait PcCollector[T] { self: WithCompilationUnit =>
       } else false
     }
 
-    def soughtOrOverride(sym: Symbol) =
-      sought(sym) || sym.allOverriddenSymbols.exists(sought(_))
+    def soughtOrOverride(sym: Symbol) = {
+      // can happen sometimes when code is not compiling
+      lazy val fallbackSameSymbol =
+        sym.pos.isDefined && soughtNames(sym.name) && soughtSet.exists(
+          _.pos == sym.pos
+        )
+      soughtSet(sym) || fallbackSameSymbol ||
+      sym.allOverriddenSymbols.exists(soughtSet(_))
+    }
 
     def soughtTreeFilter(tree: Tree): Boolean =
       tree match {
@@ -54,7 +60,7 @@ trait PcCollector[T] { self: WithCompilationUnit =>
               isForComprehensionOwner(ident)) =>
           true
         case tpe: TypeTree =>
-          sought(tpe.original.symbol)
+          soughtSet(tpe.original.symbol)
         case sel: Select =>
           soughtOrOverride(sel.symbol)
         case df: MemberDef =>
@@ -355,9 +361,4 @@ abstract class WithSymbolSearchCollector[T](
   def result(): List[T] = soughtSymbols
     .map { case (sought, _) => resultWithSought(sought) }
     .getOrElse(Nil)
-}
-
-class SoughtSymbols[T](val symbols: Set[T], semanticdbSymbol: T => String) {
-  val set: Set[String] = symbols.map(semanticdbSymbol)
-  def apply(sym: T): Boolean = set(semanticdbSymbol(sym))
 }

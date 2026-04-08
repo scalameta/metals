@@ -61,7 +61,7 @@ object NewFileTypes {
   case object ScalaScript extends NewFileType {
     override val id: String = "scala-script"
     override val syntax: Option[String] = None
-    override val label: String = "Scala Script(Ammonite or Scala CLI)"
+    override val label: String = "Scala Script(Scala CLI)"
   }
 
   case object JavaClass extends NewFileType {

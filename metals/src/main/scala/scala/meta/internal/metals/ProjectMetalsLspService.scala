@@ -21,7 +21,6 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -392,7 +391,7 @@ class ProjectMetalsLspService(
   ): Future[Unit] = {
     def isScalaCli = bspSession.exists(_.main.isScalaCLI)
     def isScalaFile =
-      file.toString.isScala || file.isJava || file.isAmmoniteScript
+      file.toString.isScala || file.isJava
     if (
       isScalaCli && isScalaFile &&
       buildTargets.inverseSources(file).isEmpty &&
@@ -485,6 +484,7 @@ class ProjectMetalsLspService(
     amm
   }
 
+
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     tables,
     languageClient,
@@ -529,9 +529,6 @@ class ProjectMetalsLspService(
       JavaInfo.getInfo(userJavaHome)
     }
   }
-
-  def ammoniteStart(): Future[Unit] = ammonite.start()
-  def ammoniteStop(): Future[Unit] = ammonite.stop()
 
   def switchBspServer(): Future[Unit] =
     connectionProvider.switchBspServer()
@@ -649,11 +646,7 @@ class ProjectMetalsLspService(
   ): Unit = {
     // Make sure that no compilation is running, if it is it might not get completed properly
     compilations.cancel()
-    val (ammoniteChanges, otherChanges) =
-      params.getChanges.asScala.partition { change =>
-        val connOpt = buildTargets.buildServerOf(change.getTarget)
-        connOpt.nonEmpty && connOpt == ammonite.buildServer
-      }
+    val otherChanges = params.getChanges.asScala
 
     val scalaCliServers = scalaCli.servers
     val groupedByServer = otherChanges.groupBy { change =>
@@ -664,13 +657,6 @@ class ProjectMetalsLspService(
       case (Some(server), _) => server
     }
     val mainConnectionChanges = groupedByServer.get(None)
-
-    if (ammoniteChanges.nonEmpty)
-      ammonite.importBuild().onComplete {
-        case Success(()) =>
-        case Failure(exception) =>
-          scribe.error("Error re-importing Ammonite build", exception)
-      }
 
     importAfterScalaCliChanges(scalaCliAffectedServers)
 
@@ -731,20 +717,6 @@ class ProjectMetalsLspService(
                 updateBspJavaHome(session)
               } else Future.unit
             }
-        } else if (
-          userConfig.ammoniteJvmProperties != old.ammoniteJvmProperties && buildTargets.allBuildTargetIds
-            .exists(Ammonite.isAmmBuildTarget)
-        ) {
-          languageClient
-            .showMessageRequest(Messages.AmmoniteJvmParametersChange.params())
-            .asScala
-            .flatMap {
-              case item
-                  if item == Messages.AmmoniteJvmParametersChange.restart =>
-                ammonite.reload()
-              case _ =>
-                Future.unit
-            }
         } else if (userConfig.javaHome != old.javaHome) {
           updateBspJavaHome(session)
         } else Future.unit
@@ -760,9 +732,8 @@ class ProjectMetalsLspService(
   def maybeImportScript(path: AbsolutePath): Option[Future[Unit]] = {
     val scalaCliPath = scalaCliDirOrFile(path)
     if (
-      !path.isAmmoniteScript ||
+      !path.isScalaScript ||
       !buildTargets.inverseSources(path).isEmpty ||
-      ammonite.loaded(path) ||
       scalaCli.loaded(scalaCliPath) ||
       isMillBuildFile(path)
     )
@@ -782,23 +753,7 @@ class ProjectMetalsLspService(
             )
             scribe.warn(s"Error importing Scala CLI project $scalaCliPath", e)
           }
-      def doImportAmmonite(): Future[Unit] =
-        ammonite
-          .start(Some(path))
-          .map { _ =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportedAmmonite
-            )
-          }
-          .recover { e =>
-            languageClient.showMessage(
-              Messages.ImportScalaScript.ImportFailed(path.toString)
-            )
-            scribe.warn(s"Error importing Ammonite script $path", e)
-          }
 
-      val autoImportAmmonite =
-        tables.dismissedNotifications.AmmoniteImportAuto.isDismissed
       val autoImportScalaCli =
         tables.dismissedNotifications.ScalaCliImportAuto.isDismissed
 
@@ -820,9 +775,7 @@ class ProjectMetalsLspService(
           }
 
       val futureRes =
-        if (autoImportAmmonite) {
-          doImportAmmonite()
-        } else if (autoImportScalaCli) {
+        if (autoImportScalaCli) {
           doImportScalaCli()
         } else {
           languageClient
@@ -831,11 +784,6 @@ class ProjectMetalsLspService(
             .flatMap { response =>
               if (response != null)
                 response.getTitle match {
-                  case Messages.ImportScalaScript.doImportAmmonite =>
-                    askAutoImport(
-                      tables.dismissedNotifications.AmmoniteImportAuto
-                    )
-                    doImportAmmonite()
                   case Messages.ImportScalaScript.doImportScalaCli =>
                     askAutoImport(
                       tables.dismissedNotifications.ScalaCliImportAuto

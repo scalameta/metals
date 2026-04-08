@@ -204,6 +204,10 @@ abstract class MetalsLspService(
     buildTargets.inverseSources(path).nonEmpty ||
     mbtBuild.dependencyModules.asScala.exists(_.jarPath.equals(path))
   }
+
+  val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
+
+
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
@@ -222,7 +226,6 @@ abstract class MetalsLspService(
   val compilations: Compilations = new Compilations(
     buildTargets,
     buildTargetClasses,
-    () => folder,
     languageClient,
     refreshTestSuites,
     () => {
@@ -230,11 +233,12 @@ abstract class MetalsLspService(
         headDoctor.executeRefreshDoctor()
       else ()
     },
-    buildTarget => focusedDocumentBuildTarget.get() == buildTarget,
+    () => Option(focusedDocumentBuildTarget.get()),
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
     () => userConfig,
     downstreamTargets,
+    fileChanges,
     clientConfig.initialConfig.enableBestEffort,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
@@ -854,11 +858,9 @@ abstract class MetalsLspService(
     // In some cases like peeking definition didOpen might be followed up by close
     // and we would lose the notion of the focused document
     recentlyOpenedFiles.add(path)
-    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
-      buildTargets
-        .inverseSources(path)
-        .getOrElse(current)
-    }
+    focusedDocumentBuildTarget.set(
+      buildTargets.inverseSources(path).getOrElse(null)
+    )
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -890,7 +892,7 @@ abstract class MetalsLspService(
           Future
             .sequence(
               List(
-                maybeCompileOnDidFocus(path, prevBuildTarget),
+                compilations.compileFile(path, assumeDidNotChange = true),
                 compilers.load(List(path)),
                 parser,
                 testProvider.didOpen(path),
@@ -912,11 +914,6 @@ abstract class MetalsLspService(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
     val path = uri.toAbsolutePath
-    val prevBuildTarget = focusedDocumentBuildTarget.getAndUpdate { current =>
-      buildTargets
-        .inverseSources(path)
-        .getOrElse(current)
-    }
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
 
@@ -978,6 +975,7 @@ abstract class MetalsLspService(
       }
     }
   }
+
 
   override def didChange(
       params: DidChangeTextDocumentParams
@@ -1117,9 +1115,11 @@ abstract class MetalsLspService(
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
-    paths.foreach { path =>
-      fingerprints.add(path, FileIO.slurp(path, charset))
-    }
+    val pathsWithFingerPrints =
+      paths.map { path =>
+        val fingerprint = fingerprints.add(path, FileIO.slurp(path, charset))
+        (path, fingerprint)
+      }
 
     Future
       .sequence(

@@ -403,7 +403,7 @@ update this you'll want to do the following:
   - Update the `def version` in `MavenBuildTool.scala` to the latest version
       that you just updated to.
   - Run the specific maven tests and ensure they pass: `./bin/test.sh
-      'slow/testOnly -- tests.maven.*`
+      'slow/testOnly -- tests.maven.*'`
 
 
 ## Git hooks

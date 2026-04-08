@@ -8,6 +8,7 @@ import scala.util.Try
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.DebugProxy.DebugMode
 
+import ch.epfl.scala.debugadapter.TestResultEvent
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.CompletionsArguments
 import org.eclipse.lsp4j.debug.DisconnectArguments
@@ -217,6 +218,17 @@ object DebugProtocol {
     ): Option[OutputEventArguments] = {
       if (notification.getMethod != "output") None
       else parse[OutputEventArguments](notification.getParams).toOption
+    }
+  }
+
+  object TestResults {
+    def unapply(
+        notification: NotificationMessage
+    ): Option[TestResultEvent] = {
+      if (notification.getMethod != "testResult") None
+      else {
+        parse[TestResultEvent](notification.getParams).toOption
+      }
     }
   }
 

@@ -126,6 +126,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         data.reset()
         buildTargetClasses.clear()
         data.addWorkspaceBuildTargets(importedBuild.workspaceBuildTargets)
+        fileChanges.addAllDirty(
+          importedBuild.workspaceBuildTargets
+            .getTargets()
+            .map(_.getId())
+            .asScala
+        )
         data.addScalacOptions(
           importedBuild.scalacOptions,
           bspSession.map(_.mainConnection),

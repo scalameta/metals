@@ -92,7 +92,11 @@ class HoverTermSuite extends BaseJavaHoverSuite {
       |        List<Integer> list = Li@@st.of(1, 2, 3);
       |    }
       |}
-      |""".stripMargin,
-    """public interface java.util.List<E> extends java.util.Collection<E>""".javaHover,
+      |""".stripMargin, {
+      if (isJava21)
+        "public interface java.util.List<E> extends java.util.SequencedCollection<E>".javaHover
+      else
+        """public interface java.util.List<E> extends java.util.Collection<E>""".javaHover
+    },
   )
 }

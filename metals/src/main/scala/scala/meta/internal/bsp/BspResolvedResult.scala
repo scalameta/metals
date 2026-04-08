@@ -1,7 +1,5 @@
 package scala.meta.internal.bsp
 
-import scala.meta.internal.metals.BloopServers
-
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 
 /**
@@ -16,11 +14,3 @@ case class ResolvedBspOne(details: BspConnectionDetails)
     extends BspResolvedResult
 case class ResolvedMultiple(md5: String, details: List[BspConnectionDetails])
     extends BspResolvedResult
-
-object BspResolvedResult {
-  def fromDetails(details: BspConnectionDetails): BspResolvedResult =
-    details.getName() match {
-      case BloopServers.name => ResolvedBloop
-      case _ => ResolvedBspOne(details)
-    }
-}

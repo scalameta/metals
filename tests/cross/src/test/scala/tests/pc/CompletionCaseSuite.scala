@@ -165,8 +165,6 @@ class CompletionCaseSuite extends BaseCompletionSuite {
        |""".stripMargin
   )
 
-  // TODO: `Left` has conflicting name in Scope, we should fix it so the result is the same as for scala 2
-  // Issue: https://github.com/scalameta/metals/issues/4368
   check(
     "sealed-conflict",
     """
@@ -858,6 +856,78 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |}
       |""".stripMargin,
     ""
+  )
+
+  checkEdit(
+    "underscore-autoimport",
+    """
+      |object Outer {
+      |  class Cls
+      |}
+      |object A {
+      |  val t: Outer.Cls = ???
+      |  t match {
+      |    case@@
+      |  }
+      |}""".stripMargin,
+    """
+      |import Outer.Cls
+      |
+      |object Outer {
+      |  class Cls
+      |}
+      |object A {
+      |  val t: Outer.Cls = ???
+      |  t match {
+      |    case _: Cls => $0
+      |  }
+      |}""".stripMargin
+  )
+
+  checkEdit(
+    "case-class-autoimport",
+    """
+      |object Outer {
+      |  case class Cls(i: Int)
+      |}
+      |object A {
+      |  val t: Outer.Cls = ???
+      |  t match {
+      |    case@@
+      |  }
+      |}""".stripMargin,
+    """
+      |import Outer.Cls
+      |
+      |object Outer {
+      |  case class Cls(i: Int)
+      |}
+      |object A {
+      |  val t: Outer.Cls = ???
+      |  t match {
+      |    case Cls(i) => $0
+      |  }
+      |}""".stripMargin
+  )
+
+  check(
+    "underscore-and-object",
+    """package myPackage1 {
+      |  class MyClass
+      |  object MyClass {
+      |    val TheValue = new MyClass
+      |  }
+      |}
+      |object Test {
+      |  val x = myPackage1.MyClass.TheValue
+      |  x match {
+      |    case My@@
+      |  }
+      |}
+      |""".stripMargin,
+    """_: MyClass myPackage1
+      |MyClass - myPackage1
+      |""".stripMargin
   )
 
 }

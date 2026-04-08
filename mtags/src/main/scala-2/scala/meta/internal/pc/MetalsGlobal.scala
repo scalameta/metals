@@ -47,8 +47,6 @@ class MetalsGlobal(
     val rootSrcPackage: LogicalPackage
 ) extends Global(settings, reporter)
     with completions.Completions
-    with completions.AmmoniteFileCompletions
-    with completions.AmmoniteIvyCompletions
     with completions.ArgCompletions
     with completions.FilenameCompletions
     with completions.InterpolatorCompletions
@@ -61,6 +59,7 @@ class MetalsGlobal(
     with completions.DependencyCompletions
     with completions.ScalaCliCompletions
     with completions.MillIvyCompletions
+    with completions.WorksheetIvyCompletions
     with completions.SbtLibCompletions
     with completions.MultilineCommentCompletions
     with Signatures
@@ -165,7 +164,10 @@ class MetalsGlobal(
 
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
-    symbol.toSemantic
+    val semantic = symbol.toSemantic
+    if (symbol == null) ""
+    else if (semantic.isEmpty()) symbol.nameString
+    else semantic
   }
 
   def pretty(pos: Position): String = {
@@ -618,10 +620,12 @@ class MetalsGlobal(
                 case Descriptor.None =>
                   Nil
                 case Descriptor.Type(value) =>
-                  val member = owner.info.decl(TypeName(value).encode) :: Nil
-                  if (sym.isJava)
-                    owner.info.decl(TermName(value).encode) :: member
-                  else member
+                  val members =
+                    if (sym.isJava)
+                      owner.info.decl(TermName(value).encode) :: Nil
+                    else Nil
+                  // Put the type ahead of the Java-induced term for `inverseSemanticdbSymbol`
+                  owner.info.decl(TypeName(value).encode) :: members
                 case Descriptor.Term(value) =>
                   owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Package(value) =>
@@ -753,14 +757,24 @@ class MetalsGlobal(
         !tpe.isErroneous
   }
   implicit class XtensionImportMetals(imp: Import) {
+    private def importSelector(pos: Position): Option[ImportSelector] =
+      imp.selectors.reverseIterator.find(_.namePos <= pos.start)
+
+    private def selectorSymbol(sel: ImportSelector): Symbol =
+      imp.expr.symbol.info.member(sel.name)
+
     def selector(pos: Position): Option[Symbol] =
-      for {
-        sel <- imp.selectors.reverseIterator.find(_.namePos <= pos.start)
-      } yield {
-        val info = imp.expr.symbol.info
-        // imports are usually term names, but in case there is no term, try the type name
-        info.member(sel.name).orElse(info.member(sel.name.toTypeName))
+      importSelector(pos).map(selectorSymbol)
+
+    def selectorIdent(pos: Position): Option[Ident] = {
+      importSelector(pos).map { sel =>
+        val sym = selectorSymbol(sel)
+        val start = sel.namePos
+        val end = start + sel.name.decoded.trim.length()
+        val pos = Position.range(imp.pos.source, start, start, end)
+        Ident(sym.name).setSymbol(sym).setPos(pos)
       }
+    }
   }
   implicit class XtensionPositionMetals(pos: Position) {
     // Same as `Position.includes` except handles an off-by-one bug when other.point > pos.end
@@ -877,6 +891,10 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+    def isLocallyDefined: Boolean =
+      sym.ownersIterator
+        .drop(1)
+        .exists(owner => owner.isMethod || owner.isAnonymousFunction)
     def foreachKnownDirectSubClass(fn: Symbol => Unit): Unit = {
       // NOTE(olafur) The logic in this method is fairly involved because `knownDirectSubClasses`
       // returns a lot of redundant and unrelevant symbols in long-running sessions. For example,
@@ -976,9 +994,25 @@ class MetalsGlobal(
       } else {
         other.dealiased == sym.dealiased ||
         other.companion == sym.dealiased ||
-        semanticdbSymbol(other.dealiased) == semanticdbSymbol(sym.dealiased)
+        semanticdbSymbol(other.dealiased) == semanticdbSymbol(sym.dealiased) ||
+        isScalaPackageObjectReexport(other)
       }
     }
+
+    /**
+     * Check if the symbol is a `scala.*` `val` re-export of `other`
+     *
+     * @param other
+     * @return
+     */
+    private def isScalaPackageObjectReexport(other: Symbol): Boolean =
+      sym.tpe match {
+        case NullaryMethodType(resultType: SingleType) =>
+          sym.isDefinedInPackage && sym.isStable &&
+          sym.effectiveOwner.name.toTermName == termNames.scala_ &&
+          resultType =:= other.tpe
+        case _ => false
+      }
 
     def snippetCursor: String =
       sym.paramss match {

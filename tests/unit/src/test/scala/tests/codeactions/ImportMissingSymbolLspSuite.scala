@@ -2,7 +2,6 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.ConvertToNamedArguments
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
-import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 
@@ -18,7 +17,6 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
@@ -32,6 +30,64 @@ class ImportMissingSymbolLspSuite
   )
 
   check(
+    "all-mixed",
+    """|package a
+       |
+       |object A {
+       |  <<val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent.impl")}
+        |${CreateNewSymbol.title("Future")}
+        |${CreateNewSymbol.title("Promise")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.concurrent.Future
+       |
+       |object A {
+       |  val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "all-mixed-rename",
+    """|package a
+       |
+       |import scala.{concurrent => cu}
+       |
+       |object A {
+       |  <<val f = Future.successful(2)
+       |  val t: Future[Unit] = Promise[Unit]().future>>
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.allSymbolsTitle}
+        |${ImportMissingSymbol.title("Future", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent")}
+        |${ImportMissingSymbol.title("Promise", "scala.concurrent.impl")}
+        |${CreateNewSymbol.title("Future")}
+        |${CreateNewSymbol.title("Promise")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import scala.{concurrent => cu}
+       |
+       |object A {
+       |  val f = cu.Future.successful(2)
+       |  val t: cu.Future[Unit] = Promise[Unit]().future
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+  )
+
+  check(
     "enclosed-range",
     """|package a
        |
@@ -40,7 +96,6 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.title("Future", "scala.concurrent")}
-        |${ImportMissingSymbol.title("Future", "java.util.concurrent")}
         |${CreateNewSymbol.title("Future")}
         |""".stripMargin,
     """|package a
@@ -144,7 +199,8 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |object A {
-       |  val f = <<Future.successful(Instant.now)
+       |  <<val f: Future[Int] = ???
+       |  val i = Instant.now
        |  val a = "  " + "  " + "  "
        |  val b = ListBuffer.newBuilder[Int]>>
        |}
@@ -157,7 +213,6 @@ class ImportMissingSymbolLspSuite
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
-        |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
        |
@@ -165,7 +220,8 @@ class ImportMissingSymbolLspSuite
        |import scala.collection.mutable.ListBuffer
        |
        |object A {
-       |  val f = Future.successful(Instant.now)
+       |  val f: Future[Int] = ???
+       |  val i = Instant.now
        |  val a = "  " + "  " + "  "
        |  val b = ListBuffer.newBuilder[Int]
        |}
@@ -178,9 +234,10 @@ class ImportMissingSymbolLspSuite
     """|package a
        |
        |object A {
-       |  val f = <<Future.successful(Instant.now)
+       |  <<val f: Future[Int] = ???
+       |  val i = Instant.now
        |  val b = ListBuffer.newBuilder[Int]
-       |  val t = Future.successful(ListBuffer.empty)>>
+       |  val t: Future[ListBuffer] = ???>>
        |}
        |""".stripMargin,
     s"""|${ImportMissingSymbol.allSymbolsTitle}
@@ -191,7 +248,6 @@ class ImportMissingSymbolLspSuite
         |${CreateNewSymbol.title("Future")}
         |${CreateNewSymbol.title("Instant")}
         |${CreateNewSymbol.title("ListBuffer")}
-        |${ConvertToNamedArguments.title("successful(...)")}
         |""".stripMargin,
     """|package a
        |
@@ -199,9 +255,10 @@ class ImportMissingSymbolLspSuite
        |import scala.collection.mutable.ListBuffer
        |
        |object A {
-       |  val f = Future.successful(Instant.now)
+       |  val f: Future[Int] = ???
+       |  val i = Instant.now
        |  val b = ListBuffer.newBuilder[Int]
-       |  val t = Future.successful(ListBuffer.empty)
+       |  val t: Future[ListBuffer] = ???
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,

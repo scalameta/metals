@@ -426,7 +426,17 @@ class DebugProtocolSuite
           }
     } yield assertNoDiff(
       result.toString(),
-      WorkspaceErrorsException.getMessage(),
+      """
+        |ShowMessageRequestParams [
+        |  actions = SeqWrapper (
+        |    MessageActionItem [
+        |      title = "View Problems"
+        |    ]
+        |  )
+        |  type = Error
+        |  message = "Cannot launch due to compile errors."
+        |]
+      """.stripMargin,
     )
   }
 
@@ -504,6 +514,49 @@ class DebugProtocolSuite
     } yield assertNoDiff(
       result.toString(),
       WorkspaceErrorsException.getMessage(),
+    )
+  }
+
+  test("assert-location") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Foo.scala
+           |package a
+           |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+           |  test("foo") {
+           |    println("foo")
+           |    println("foo")
+           |    println("foo")
+           |    assert(1 == 2)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      debugger <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedTestClassParams(
+              "a.Foo"
+            ).toJson
+          )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allTestEvents
+    } yield assertNoDiff(
+      output,
+      """|a.Foo
+         |  foo - failed at Foo.scala, line 6
+         |""".stripMargin,
     )
   }
 }

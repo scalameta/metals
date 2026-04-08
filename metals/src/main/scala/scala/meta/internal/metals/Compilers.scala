@@ -177,7 +177,7 @@ class Compilers(
         PresentationCompilerKey.Default(language),
         (_, value) => {
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
 
           Option(value) match {
             case Some(lazyPc) =>
@@ -1424,7 +1424,7 @@ class Compilers(
       jworksheetsCache.put(
         path, {
           val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+            scalaVersionSelector.fallbackScalaVersion()
           StandaloneCompiler(
             scalaVersion,
             classpath,

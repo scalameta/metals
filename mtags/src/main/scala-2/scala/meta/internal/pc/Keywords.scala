@@ -14,8 +14,7 @@ trait Keywords { this: MetalsGlobal =>
       editRange: l.Range,
       latestEnclosing: List[Tree],
       completion: CompletionPosition,
-      text: String,
-      isAmmoniteScript: Boolean
+      text: String
   ): List[Member] = {
 
     lazy val notInComment = checkIfNotInComment(pos, text, latestEnclosing)
@@ -71,7 +70,7 @@ trait Keywords { this: MetalsGlobal =>
                 isScala3 = false,
                 isSelect = isSelect,
                 isImport = isImport,
-                allowToplevel = isAmmoniteScript,
+                allowToplevel = false,
                 canBeExtended =
                   KeywordCompletionsUtils.canBeExtended(reverseTokens),
                 canDerive = KeywordCompletionsUtils.canDerive(reverseTokens),

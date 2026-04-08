@@ -13,6 +13,8 @@ class BreakpointScalaCliDapSuite
       ScalaCliBuildLayout,
     ) {
 
+  override protected val retryTimes: Int = 3
+
   private val scalaCliScriptPath = "a/src/main/scala/a/script.sc"
   assertBreakpoints(
     "script",

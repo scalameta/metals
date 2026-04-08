@@ -29,7 +29,8 @@ trait BuildServerProvider extends BuildTool {
       )
     }
 
-  def shouldRegenerateBspJson(currentVersion: String) = false
+  def shouldRegenerateBspJson(currentVersion: String, workspace: AbsolutePath) =
+    false
 
   /**
    * Args necessary for build tool to generate the bsp config file

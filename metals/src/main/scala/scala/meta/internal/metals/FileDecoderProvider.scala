@@ -17,6 +17,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.cli.Reporter
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.io.FileIO
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -155,9 +156,11 @@ final class FileDecoderProvider(
         uri.getScheme() match {
           case "jar" =>
             val jarURI = convertJarStrToURI(uriAsStr)
-            if (supportedExtensions.exists(uriAsStr.endsWith))
+            if (
+              metalsDecodeExtensions.exists(ext => uriAsStr.endsWith(s".$ext"))
+            ) {
               decodeMetalsFile(jarURI)
-            else
+            } else
               Future { decodeJar(jarURI, uriAsStr) }
           case "file" => decodeMetalsFile(uri)
           case "metalsDecode" =>
@@ -200,10 +203,9 @@ final class FileDecoderProvider(
     }
   }
 
-  private val semanticdbExtensions = Set(
-    "semanticdb-compact",
-    "semanticdb-detailed",
-    "semanticdb-proto",
+  private val metalsDecodeExtensions = Set(
+    "javap", "javap-verbose", "tasty-decoded", "cfr", "semanticdb-compact",
+    "semanticdb-detailed", "semanticdb-proto",
   )
 
   val supportedExtensions: Set[String] = Set(
@@ -214,27 +216,34 @@ final class FileDecoderProvider(
       uri: URI
   ): Future[DecoderResponse] = {
     val additionalExtension = uri.toString().split('.').toList.last
-    if (supportedExtensions(additionalExtension)) {
+    if (metalsDecodeExtensions(additionalExtension)) {
       val stripped = toFile(uri, s".$additionalExtension")
-      stripped
-        .orElse(
-          Try(uri.toAbsolutePath)
-            .filter(_.exists)
-            .toOption
-            .toRight(DecoderResponse.failed(uri, s"File $uri doesn't exist"))
-        ) match {
+      val jar = if (uri.getScheme() == "jar") {
+        val jarPath = uri.getSchemeSpecificPart().split("!").head
+        Some(URI.create(jarPath).toAbsolutePath)
+      } else None
+      stripped match {
         case Left(value) => Future.successful(value)
         case Right(path) =>
           additionalExtension match {
             case "javap" =>
-              decodeJavaOrScalaOrClass(path, decodeJavapFromClassFile(false))
+              decodeJavaOrScalaOrClass(
+                path,
+                jar,
+                decodeJavapFromClassFile(false),
+              )
             case "javap-verbose" =>
-              decodeJavaOrScalaOrClass(path, decodeJavapFromClassFile(true))
+              decodeJavaOrScalaOrClass(
+                path,
+                jar,
+                decodeJavapFromClassFile(true),
+              )
             case "cfr" =>
-              decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
+              decodeJavaOrScalaOrClass(path, jar, decodeCFRFromClassFile)
             case "class" =>
-              decodeJavaOrScalaOrClass(path, decodeCFRFromClassFile)
-            case "tasty-decoded" => decodeTasty(path)
+              decodeJavaOrScalaOrClass(path, jar, decodeCFRFromClassFile)
+            case "tasty-decoded" =>
+              decodeTasty(path, jar)
             case "semanticdb-compact" =>
               Future.successful(
                 decodeSemanticDb(path, Format.Compact)
@@ -278,12 +287,13 @@ final class FileDecoderProvider(
 
   private def decodeJavaOrScalaOrClass(
       path: AbsolutePath,
-      decode: AbsolutePath => Future[DecoderResponse],
+      jar: Option[AbsolutePath],
+      decode: (AbsolutePath, Option[AbsolutePath]) => Future[DecoderResponse],
   ): Future[DecoderResponse] = {
-    if (path.isClassfile) decode(path)
+    if (path.isClassfile) decode(path, jar)
     else if (path.isJava) {
       findPathInfoFromJavaSource(path, "class")
-        .map(p => decode(p.path)) match {
+        .map(p => decode(p.path, jar)) match {
         case Left(err) =>
           Future.successful(DecoderResponse.failed(path.toURI, err))
         case Right(response) => response
@@ -293,7 +303,7 @@ final class FileDecoderProvider(
         path.toURI,
         path,
         ClassFinderGranularity.ClassFiles,
-      )(p => decode(p.path))
+      )(p => decode(p.path, jar))
     else
       Future.successful(
         DecoderResponse.failed(
@@ -346,7 +356,8 @@ final class FileDecoderProvider(
   }
 
   private def decodeTasty(
-      path: AbsolutePath
+      path: AbsolutePath,
+      jar: Option[AbsolutePath],
   ): Future[DecoderResponse] = {
     if (path.isScala && isScala3(path)) {
       selectClassFromScalaFileAndDecode(
@@ -364,7 +375,7 @@ final class FileDecoderProvider(
         )
       )
     } else if (path.isTasty) {
-      findPathInfoForClassesPathFile(path) match {
+      findPathInfoForClassesPathFile(path, jar) match {
         case Some(pathInfo) => decodeFromTastyFile(pathInfo)
         case None =>
           Future.successful(
@@ -395,13 +406,14 @@ final class FileDecoderProvider(
       })
 
   private def findPathInfoForClassesPathFile(
-      path: AbsolutePath
+      path: AbsolutePath,
+      jar: Option[AbsolutePath],
   ): Option[PathInfo] = {
     val pathInfos = for {
       targetId <- buildTargets.allBuildTargetIds
       classDir <- buildTargets.targetClassDirectories(targetId)
       classPath = classDir.toAbsolutePath
-      if (path.isInside(classPath))
+      if (jar.getOrElse(path).isInside(classPath))
     } yield PathInfo(targetId, path)
     pathInfos.toList.headOption
   }
@@ -432,7 +444,15 @@ final class FileDecoderProvider(
               DecoderResponse.failed(requestedURI, _)
             )
           } yield {
-            val pathToResource = buildMetadata.classDir.resolve(resourcePath)
+            val pathToResource =
+              if (buildMetadata.classDir.isJar) {
+                FileIO.withJarFileSystem(
+                  buildMetadata.classDir,
+                  create = false,
+                ) { root =>
+                  root.resolve(resourcePath)
+                }
+              } else buildMetadata.classDir.resolve(resourcePath)
             PathInfo(buildMetadata.targetId, pathToResource)
           }
           response match {
@@ -547,19 +567,22 @@ final class FileDecoderProvider(
 
   private def decodeJavapFromClassFile(
       verbose: Boolean
-  )(path: AbsolutePath): Future[DecoderResponse] = {
+  )(path: AbsolutePath, jar: Option[AbsolutePath]): Future[DecoderResponse] = {
     try {
       val defaultArgs = List("-private")
       val args = if (verbose) "-verbose" :: defaultArgs else defaultArgs
       val sbOut = new StringBuilder()
       val sbErr = new StringBuilder()
+      val classArgs = jar
+        .map(jar =>
+          List("-classpath", jar.toString, getClassNameFromPath(path))
+        )
+        .getOrElse(List(path.filename))
       shellRunner
         .run(
           "Decode using javap",
-          JavaBinary(userConfig().javaHome, "javap") :: args ::: List(
-            path.filename
-          ),
-          path.parent,
+          JavaBinary(userConfig().javaHome, "javap") :: args ::: classArgs,
+          jar.map(_ => workspace).getOrElse(path.parent),
           redirectErrorOutput = false,
           userConfig().javaHome,
           Map.empty,
@@ -600,24 +623,27 @@ final class FileDecoderProvider(
   }
 
   private def decodeCFRFromClassFile(
-      path: AbsolutePath
+      path: AbsolutePath,
+      jar: Option[AbsolutePath],
   ): Future[DecoderResponse] = {
     if (path.isJarFileSystem)
       return decodeCFRFromClassFileInJar(path)
 
+    val filesystemPath = jar.getOrElse(path)
+
     val buildTarget = buildTargets
-      .inferBuildTarget(path)
+      .inferBuildTarget(filesystemPath)
       .orElse(
         buildTargets.allScala
           .find(buildTarget =>
-            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+            filesystemPath.isInside(buildTarget.classDirectory.toAbsolutePath)
           )
           .map(_.id)
       )
       .orElse(
         buildTargets.allJava
           .find(buildTarget =>
-            path.isInside(buildTarget.classDirectory.toAbsolutePath)
+            filesystemPath.isInside(buildTarget.classDirectory.toAbsolutePath)
           )
           .map(_.id)
       )
@@ -631,7 +657,11 @@ final class FileDecoderProvider(
             buildTargets.targetClassDirectories(id).toAbsoluteClasspath.toList
           )
           .getOrElse(Nil)
-        val extraClassPaths = classesDirs ::: classpaths
+        val extraClassPaths0 = classesDirs ::: classpaths
+        val extraClassPaths =
+          if (jar.nonEmpty && !extraClassPaths0.contains(jar))
+            jar.get :: extraClassPaths0
+          else extraClassPaths0
 
         val decompiler = DecompileBytecode.cfr
         val decompiledCode = decompiler.decompilePath(path, extraClassPaths)
@@ -640,6 +670,12 @@ final class FileDecoderProvider(
           case Right(code) => DecoderResponse.success(path.toURI, code)
         }
       }
+  }
+
+  private def getClassNameFromPath(path: AbsolutePath): String = {
+    val className = path.filename.stripSuffix(".class")
+    (path.parent.toNIO.iterator().asScala.map(_.filename) ++ List(className))
+      .mkString(".")
   }
 
   private def decodeFromSemanticDB(
@@ -728,7 +764,7 @@ final class FileDecoderProvider(
   def getTastyForURI(
       uri: URI
   ): Future[Either[String, String]] = {
-    decodeTasty(AbsolutePath.fromAbsoluteUri(uri)).map(response =>
+    decodeTasty(AbsolutePath.fromAbsoluteUri(uri), None).map(response =>
       if (response.value != null) Right(response.value)
       else Left(response.error)
     )
