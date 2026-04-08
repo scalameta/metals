@@ -60,7 +60,13 @@ abstract class BaseLspSuite(
       buildOnFocus = true,
       workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.bsp,
       referenceProvider = Configs.ReferenceProviderConfig.bsp,
+      javaTurbineRecompileDelay = turbineRecompileDelayConfig,
     )
+
+  /** Override to customize the turbine recompile delay */
+  def turbineRecompileDelayConfig: Configs.TurbineRecompileDelayConfig =
+    Configs.TurbineRecompileDelayConfig.testing
+
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default
   def time: Time = Time.system
