@@ -169,18 +169,52 @@ class JavaToplevelMtags(
   private def fetchToken: Token = {
 
     @tailrec
-    def quotedLiteral(quote: Char): Token = {
-      reader.nextChar()
-
+    def quotedLiteralFromCurrent(quote: Char): Token = {
       if (reader.endCharOffset >= reader.buf.length)
         throw new RuntimeException("Broken file, quote doesn't end.")
-
       reader.ch match {
-        case `quote` => Token.Literal
+        case `quote` =>
+          Token.Literal
         case '\\' =>
           reader.nextChar()
-          quotedLiteral(quote)
-        case _ => quotedLiteral(quote)
+          reader.ch match {
+            case `quote` =>
+              reader.nextChar()
+            case '\\' =>
+              reader.nextChar()
+            case _ =>
+          }
+          quotedLiteralFromCurrent(quote)
+        case _ =>
+          reader.nextChar()
+          quotedLiteralFromCurrent(quote)
+      }
+    }
+
+    def quotedLiteral(quote: Char): Token = {
+      reader.nextChar()
+      quotedLiteralFromCurrent(quote)
+    }
+
+    /**
+     * Skip until the closing `"""` of a Java text block (JLS 3.10.6). On return, [[reader.ch]] is
+     * the third `"` of the closing delimiter (same convention as [[quotedLiteralFromCurrent]]).
+     */
+    @tailrec
+    def skipTextBlockUntilClosingDelimiter(): Unit = {
+      if (reader.ch == Chars.SU || reader.endCharOffset >= reader.buf.length) ()
+      else if (
+        reader.ch == '"' &&
+        reader.endCharOffset < reader.buf.length &&
+        reader.buf(reader.endCharOffset) == '"' &&
+        reader.endCharOffset + 1 < reader.buf.length &&
+        reader.buf(reader.endCharOffset + 1) == '"'
+      ) {
+        reader.nextChar()
+        reader.nextChar()
+      } else {
+        reader.nextChar()
+        skipTextBlockUntilClosingDelimiter()
       }
     }
 
@@ -227,7 +261,20 @@ class JavaToplevelMtags(
         case ']' => (Token.RBracket, false)
         case '<' => (Token.LessThan, false)
         case '>' => (Token.GreaterThan, false)
-        case '"' => (quotedLiteral('"'), false)
+        case '"' =>
+          reader.nextChar()
+          if (
+            reader.ch == '"' &&
+            reader.endCharOffset < reader.buf.length &&
+            reader.buf(reader.endCharOffset) == '"'
+          ) {
+            reader.nextChar()
+            reader.nextChar()
+            skipTextBlockUntilClosingDelimiter()
+            (Token.Literal, false)
+          } else {
+            (quotedLiteralFromCurrent('"'), false)
+          }
         case '\'' => (quotedLiteral('\''), false)
         case '/' =>
           reader.nextChar()

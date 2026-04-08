@@ -4,7 +4,10 @@ import java.nio.file.Files
 
 import scala.meta.Dialect
 import scala.meta.dialects
+import scala.meta.internal.metals.EmptyReporter
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ReportContext
+import scala.meta.internal.metals.Reporter
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.ToplevelMember
@@ -24,8 +27,10 @@ abstract class BaseToplevelSuite extends BaseSuite {
       expected: List[String],
       mode: Mode = Toplevel,
       dialect: Dialect = dialects.Scala3,
+      errorExpected: Boolean = false,
   )(implicit location: munit.Location): Unit = {
     test(options) {
+      implicit val testReportContext = new TestReportContext()
       if (!allowedModes(mode)) {
         throw new Exception(s"Mode $mode is not allowed.")
       }
@@ -68,6 +73,11 @@ abstract class BaseToplevelSuite extends BaseSuite {
         obtained.sorted.mkString("\n"),
         expected.sorted.mkString("\n"),
       )
+      if (!errorExpected)
+        assert(
+          !testReportContext.wasErrorReported(),
+          "Error should not be reported",
+        )
     }
   }
 
@@ -78,6 +88,25 @@ abstract class BaseToplevelSuite extends BaseSuite {
     assertNoDiff(obtained.sorted.mkString("\n"), expected.sorted.mkString("\n"))
   }
 
+  class TestReportContext extends ReportContext {
+    def wasErrorReported(): Boolean = wasReported
+    private var wasReported = false
+    override def unsanitized(): Reporter = {
+      wasReported = true
+      EmptyReporter
+    }
+
+    override def incognito(): Reporter = {
+      wasReported = true
+      EmptyReporter
+    }
+
+    override def bloop(): Reporter = {
+      wasReported = true
+      EmptyReporter
+    }
+
+  }
   sealed trait Mode
   // includeInnerClasses = false
   // includeMembers = false
