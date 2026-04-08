@@ -16,13 +16,13 @@ object Configs {
   final case class GlobSyntaxConfig(value: String) {
     import GlobSyntaxConfig._
     def isUri: Boolean = this == uri
-    def isVscode: Boolean = this == vscode
+    def isPath: Boolean = this == path
     def registrationOptions(
         workspace: AbsolutePath
     ): DidChangeWatchedFilesRegistrationOptions = {
       val root: String =
-        if (isVscode) workspace.toString()
-        else workspace.toURI.toString.stripSuffix("/")
+        if (isUri) workspace.toURI.toString.stripSuffix("/")
+        else workspace.toString()
       new DidChangeWatchedFilesRegistrationOptions(
         (List(
           new FileSystemWatcher(Either.forLeft(s"$root/*.sbt")),
@@ -58,14 +58,17 @@ object Configs {
 
   object GlobSyntaxConfig {
     def uri = new GlobSyntaxConfig("uri")
-    def vscode = new GlobSyntaxConfig("vscode")
+    def path = new GlobSyntaxConfig("vscode")
     def default =
       new GlobSyntaxConfig(
-        System.getProperty("metals.glob-syntax", uri.value)
+        // Default to plain path globs (LSP 3.17); URI-prefixed patterns break strict
+        // clients (e.g. Neovim 0.12). Override with -Dmetals.glob-syntax=uri if needed.
+        System.getProperty("metals.glob-syntax", path.value)
       )
     def fromString(value: String): Option[GlobSyntaxConfig] =
       value match {
-        case "vscode" => Some(vscode)
+        case "vscode" => Some(path)
+        case "path" => Some(path)
         case "uri" => Some(uri)
         case _ => None
       }

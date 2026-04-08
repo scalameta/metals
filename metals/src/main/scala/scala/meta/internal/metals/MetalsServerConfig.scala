@@ -222,7 +222,7 @@ object MetalsServerConfig {
       case MetalsClientType.vscode =>
         base.copy(
           icons = Icons.vscode,
-          globSyntax = GlobSyntaxConfig.vscode,
+          globSyntax = GlobSyntaxConfig.path,
           compilers = base.compilers.copy(
             _parameterHintsCommand =
               Some("editor.action.triggerParameterHints"),
