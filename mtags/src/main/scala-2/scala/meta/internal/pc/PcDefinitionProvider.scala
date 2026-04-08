@@ -140,7 +140,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
 
           symbol.alternatives.flatMap { sym =>
             if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
-              List(sym.owner.companionClass)
+              List(sym.owner.companionClass, sym.owner)
             else
               List(sym, qual.symbol)
           }.distinct

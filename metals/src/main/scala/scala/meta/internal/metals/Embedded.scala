@@ -232,16 +232,17 @@ object Embedded {
   }
 
   lazy val repositories: List[Repository] =
-    (Repository.defaults().asScala.toList ++
-      List(
-        mavenLocal,
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/public/"
-        ),
-        MavenRepository.of(
-          "https://oss.sonatype.org/content/repositories/snapshots/"
-        ),
-      ))
+    (List(
+      Repository.central(),
+      Repository.ivy2Local(),
+      mavenLocal,
+      MavenRepository.of(
+        "https://oss.sonatype.org/content/repositories/public/"
+      ),
+      MavenRepository.of(
+        "https://oss.sonatype.org/content/repositories/snapshots/"
+      ),
+    ) ++ Repository.defaults().asScala.toList)
       .distinctBy {
         case m: MavenRepository => m.getBase()
         case i: IvyRepository => i.getPattern()

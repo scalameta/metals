@@ -234,7 +234,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
             |    this.age = age;
             |  }
             |  public static String greeting() {
-            |    return b.Main.greet();
+            |    return "hello";
             |  }
             |}
             |/$main
@@ -251,7 +251,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
       _ <- server.didOpen(main)
       _ = assertNoDiagnostics()
       _ <- server.didChange(person)(
-        _.replace("greet()", "greet2()")
+        _.replace("return \"hello\";", "return b.Main.greet2();")
       )
       _ <- server.didChange(main)(
         _.replace(".name", ".name2")
