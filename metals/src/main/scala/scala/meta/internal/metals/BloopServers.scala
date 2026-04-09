@@ -363,9 +363,15 @@ final class BloopServers(
         bspStderr = bloopLogger.bloopBspStderr,
       )
 
+    val additionalProperties = List(
+      Properties
+        .propOrNone("coursier.credentials")
+        .map(value => s"-Dcoursier.credentials=$value")
+    ).flatten
     userConfig.map(_.bloopJvmProperties.properties).flatten match {
-      case Some(opts) if opts.nonEmpty => config.copy(javaOpts = opts)
-      case _ => config
+      case Some(opts) if opts.nonEmpty =>
+        config.copy(javaOpts = opts ++ additionalProperties)
+      case _ => config.copy(javaOpts = config.javaOpts ++ additionalProperties)
     }
   }
 
