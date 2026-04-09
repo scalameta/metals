@@ -382,7 +382,7 @@ class CompletionProvider(
             case _ =>
               semanticdbSymbol(head.sym)
           }
-      }
+        }
 
       def isIgnoredWorkspace: Boolean =
         head.isInstanceOf[WorkspaceMember] &&

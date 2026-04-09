@@ -207,7 +207,6 @@ abstract class MetalsLspService(
 
   val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
 
-
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
@@ -980,7 +979,6 @@ abstract class MetalsLspService(
       }
     }
   }
-
 
   override def didChange(
       params: DidChangeTextDocumentParams

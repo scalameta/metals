@@ -177,8 +177,7 @@ final class Ammonite(
       .getOrElse(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
-          scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(),
+          scalaVersion = scalaVersionSelector.fallbackScalaVersion(),
         )
       )
     val res = Try {

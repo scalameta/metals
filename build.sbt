@@ -462,7 +462,6 @@ val pprintDebuggingDependency: List[ModuleID] =
   // use println anymore for debugging because pprint.log is 100 times better.
   else List("com.lihaoyi" %% "pprint" % V.pprint)
 
-
 lazy val mtags = project
   .settings(
     sharedSettings,

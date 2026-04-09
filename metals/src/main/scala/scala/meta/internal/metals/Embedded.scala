@@ -249,7 +249,6 @@ object Embedded {
       }
       .map(setCredentials)
 
-
   private[Embedded] def scala3CompilerDependencies(version: String) = List(
     Dependency.of("org.scala-lang", "scala3-library_3", version),
     Dependency.of("org.scala-lang", "scala3-compiler_3", version),

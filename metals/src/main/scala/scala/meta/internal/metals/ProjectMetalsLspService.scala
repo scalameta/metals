@@ -485,7 +485,6 @@ class ProjectMetalsLspService(
     amm
   }
 
-
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     tables,
     languageClient,

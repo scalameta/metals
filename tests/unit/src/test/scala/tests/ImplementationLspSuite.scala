@@ -768,7 +768,9 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
   )
 
   checkSymbols(
-    "self-type-in-lib".ignore.pending("requires definitionIndexStrategy=sources"),
+    "self-type-in-lib".ignore.pending(
+      "requires definitionIndexStrategy=sources"
+    ),
     """|trait A extends Ite@@rable[_]
        |""".stripMargin,
     "scala/collection/generic/DefaultSerializable#",
