@@ -1035,6 +1035,12 @@ class CompletionSuite extends BaseCompletionSuite {
         """|Some(x) scala
            |Some scala
            |""".stripMargin,
+      "2.12" ->
+        """|Some(value) scala
+           |""".stripMargin,
+      "2.13" ->
+        """|Some(value) scala
+           |""".stripMargin,
       "3" ->
         """|Some(value) scala
            |Some scala

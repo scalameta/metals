@@ -761,8 +761,8 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   check(
     "i7267-3",
     """|package c
-       |case class <<Bar()>>
-       |object <<Bar>>
+       |case class <<Bar>>()
+       |object Bar
        |object O {
        |  val a = B@@ar()
        |}
@@ -788,7 +788,7 @@ class PcDefinitionSuite extends BasePcDefinitionSuite {
   check(
     "i7267-4",
     """|package d
-       |class <<Bar>>()
+       |class Bar()
        |object <<Bar>> {
        |  def <<apply>>(): Bar = new Bar()
        |}

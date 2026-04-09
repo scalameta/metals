@@ -760,8 +760,11 @@ class MetalsGlobal(
     private def importSelector(pos: Position): Option[ImportSelector] =
       imp.selectors.reverseIterator.find(_.namePos <= pos.start)
 
-    private def selectorSymbol(sel: ImportSelector): Symbol =
-      imp.expr.symbol.info.member(sel.name)
+    private def selectorSymbol(sel: ImportSelector): Symbol = {
+      val info = imp.expr.symbol.info
+      // imports are usually term names, but in case there is no term, try the type name
+      info.member(sel.name).orElse(info.member(sel.name.toTypeName))
+    }
 
     def selector(pos: Position): Option[Symbol] =
       importSelector(pos).map(selectorSymbol)

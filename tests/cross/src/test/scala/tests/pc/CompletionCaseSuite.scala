@@ -927,7 +927,17 @@ class CompletionCaseSuite extends BaseCompletionSuite {
       |""".stripMargin,
     """_: MyClass myPackage1
       |MyClass - myPackage1
-      |""".stripMargin
+      |""".stripMargin,
+    compat = Map(
+      // In Scala 2, the scope completion for MyClass object doesn't appear
+      // alongside the case pattern completion
+      "2.12" ->
+        """_: MyClass myPackage1
+          |""".stripMargin,
+      "2.13" ->
+        """_: MyClass myPackage1
+          |""".stripMargin
+    )
   )
 
 }

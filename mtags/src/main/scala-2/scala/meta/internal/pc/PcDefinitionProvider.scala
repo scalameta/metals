@@ -95,7 +95,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         val allSyms = targetSymbols(tree, symbol, findTypeDef)
         val sourceBasedDefs = DefinitionResultImpl(
           semanticdbSymbol(symbol),
-          allSyms.flatMap(findDefinitionLocationsForSymbol(unit, _)).asJava
+          allSyms.flatMap(findDefinitionLocationsForSymbol(unit, _)).distinct.asJava
         )
 
         if (sourceBasedDefs.locations.isEmpty && symbol.associatedFile.exists) {
@@ -133,17 +133,18 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       }
     } else {
       tree match {
-        case Select(qual, nme.apply)
+        case Select(qual, name)
             if !findTypeDef
+              && (name == nme.apply || name == nme.unapply)
               && qual.pos.sameRange(tree.pos)
               && qual.hasExistingSymbol =>
 
           symbol.alternatives.flatMap { sym =>
-            if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
-              List(sym.owner.companionClass, sym.owner)
+            if (sym.isCaseApplyOrUnapply) // navigate to the case class only
+              List(sym.owner.companionClass)
             else
               List(sym, qual.symbol)
-          }.distinct
+          }.filter(_.exists).distinct
 
         case _ =>
           // in case of some errors, if the compiler didn't manage to resolve
