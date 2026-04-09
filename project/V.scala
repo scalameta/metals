@@ -46,6 +46,9 @@ object V {
   val scalafmt = "3.7.15"
   val scalameta = "4.14.4"
   val scribe = "3.16.0"
+  // scribe dropped Scala 2.12 support after 3.15.2
+  def scribe(scalaVersion: String): String =
+    if (scalaVersion.startsWith("2.12")) "3.15.2" else "3.16.0"
   val qdox = "2.2.0"
   val protobuf = "4.31.1"
 

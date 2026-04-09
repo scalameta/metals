@@ -874,8 +874,8 @@ lazy val mtest = project
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
           else V.munit
         },
-        "com.outr" %% "scribe" % V.scribe,
-        "com.outr" %% "scribe-slf4j2" % V.scribe,
+        "com.outr" %% "scribe" % V.scribe(scalaVersion.value),
+        "com.outr" %% "scribe-slf4j2" % V.scribe(scalaVersion.value),
         "io.get-coursier" % "interface" % V.coursierInterfaces,
       ),
     dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
