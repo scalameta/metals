@@ -3,7 +3,41 @@ package tests
 class JavaToplevelSuite extends BaseToplevelSuite {
 
   override def filename: String = "Test.java"
-  override def allowedModes: Set[Mode] = Set(Toplevel, ToplevelWithInner)
+  override def allowedModes: Set[Mode] = Set(All, Toplevel, ToplevelWithInner)
+
+  check(
+    "text-block-with-embedded-quotes-i8293",
+    s"""|package sample;
+        |
+        |public class HtmlConfiguration {
+        |  void m() {
+        |    String s = ${"\"\"\""}
+        |    ["']${"\"\"\""};
+        |    
+        |  }
+        |  class InnerClass {}
+        |}
+        |""".stripMargin,
+    List(
+      "sample/",
+      "sample/HtmlConfiguration#",
+      "sample/HtmlConfiguration#InnerClass#",
+    ),
+    mode = ToplevelWithInner,
+  )
+
+  check(
+    "multiple-slashes",
+    s"""|package sample;
+        |
+        |public class HtmlConfiguration {
+        |  void m() {
+        |    String s = "\\\\\\\\"
+        |  }
+        |}
+        |""".stripMargin,
+    List("sample/HtmlConfiguration#"),
+  )
 
   check(
     "base",
@@ -75,6 +109,7 @@ class JavaToplevelSuite extends BaseToplevelSuite {
        |}
        |""".stripMargin,
     List("dot/enum/Abc#"),
+    errorExpected = true,
   )
 
   check(
