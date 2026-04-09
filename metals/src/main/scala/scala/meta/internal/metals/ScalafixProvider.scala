@@ -5,7 +5,6 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.util.concurrent.atomic.AtomicLong
 import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
@@ -62,30 +61,23 @@ case class ScalafixProvider(
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]
-  private val lintVersions = TrieMap.empty[AbsolutePath, AtomicLong]
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
-    if (!userConfig().scalafixLintEnabled || !path.isScalaFilename) {
-      clearLintDiagnostics(path)
-      return
-    }
-
-    val version = lintVersions
-      .getOrElseUpdate(path, new AtomicLong(0))
-      .incrementAndGet()
-
-    runLintDiagnosticsForPath(path).foreach { diags =>
-      val currentVersion = lintVersions.get(path).map(_.get()).getOrElse(0L)
-      if (version == currentVersion)
-        diagnostics.onScalafixLint(path, diags)
+    if (path.isScalaFilename) {
+      if (!userConfig().scalafixLintEnabled) {
+        clearLintDiagnostics(path)
+      } else {
+        runLintDiagnosticsForPath(path).foreach { diags =>
+          diagnostics.onScalafixLint(path, diags)
+        }
+      }
     }
   }
 
   override def onDelete(path: AbsolutePath): Unit =
     clearLintDiagnostics(path)
 
-  override def reset(): Unit =
-    lintVersions.clear()
+  override def reset(): Unit = ()
 
   private def runLintDiagnosticsForPath(
       path: AbsolutePath
@@ -104,7 +96,6 @@ case class ScalafixProvider(
   }
 
   private def clearLintDiagnostics(path: AbsolutePath): Unit = {
-    lintVersions.remove(path)
     diagnostics.onScalafixLint(path, Nil)
   }
 
