@@ -517,12 +517,28 @@ abstract class MetalsLspService(
     symbolHierarchyOps,
   )
 
+  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
+    buffers,
+    () => userConfig,
+    folder,
+    workDoneProgress,
+    compilations,
+    languageClient,
+    buildTargets,
+    interactiveSemanticdbs,
+    tables,
+    buildHasErrors,
+    diagnostics,
+    statusBar,
+  )
+
   val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       testProvider,
       buildTargetClasses,
+      scalafixProvider,
     ),
     buildTargets,
     folder,
@@ -564,20 +580,6 @@ abstract class MetalsLspService(
 
   def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
     buildClient.buildHasErrors(path)
-
-  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
-    buffers,
-    () => userConfig,
-    folder,
-    workDoneProgress,
-    compilations,
-    languageClient,
-    buildTargets,
-    interactiveSemanticdbs,
-    tables,
-    buildHasErrors,
-    statusBar,
-  )
 
   protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(
     compilers,
