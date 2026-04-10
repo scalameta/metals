@@ -410,6 +410,27 @@ class DebugProvider(
       }
     }
 
+  /**
+   * JVM flags for in-Metals test runs ([[TestSuiteDebugAdapter]], MCP `runTests`):
+   * workspace / env-based options from [[JvmOpts.fromWorkspaceOrEnvForTest]] (e.g. `.test-jvmopts`,
+   * `TEST_JVM_OPTS`, filtered `.jvmopts`) plus `buildTarget/jvmTestEnvironment` from the BSP server
+   * (e.g. sbt `Test / javaOptions`).
+   */
+  def scalaTestJvmOptionsForLocalRun(
+      buildTargetId: BuildTargetIdentifier
+  )(implicit ec: ExecutionContext): Future[List[String]] = {
+    val workspaceOpts =
+      JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+    buildTargetClasses.jvmRunEnvironment(buildTargetId, isTests = true).map {
+      envOpt =>
+        val bspOpts = envOpt
+          .flatMap(env => Option(env.getJvmOptions()))
+          .map(_.asScala.toList)
+          .getOrElse(Nil)
+        (workspaceOpts ++ bspOpts).distinct
+    }
+  }
+
   def discoverTests(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,

@@ -97,6 +97,56 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
+  // Regression for https://github.com/scalameta/metals/issues/8305 — MCP test runs
+  // must pass workspace `.test-jvmopts` into the forked test JVM (alongside BSP options).
+  test("mcp-run-tests-respects-test-jvmopts", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/.test-jvmopts
+           |-Dmetals.issue8305.jvmopts=from-test-jvmopts
+           |/a/src/test/scala/a/JvmOptsMcpSuite.scala
+           |package a
+           |
+           |class JvmOptsMcpSuite extends munit.FunSuite {
+           |  test("sees -D from .test-jvmopts in forked mcp test jvm") {
+           |    assertEquals(
+           |      System.getProperty("metals.issue8305.jvmopts"),
+           |      "from-test-jvmopts",
+           |    )
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/test/scala/a/JvmOptsMcpSuite.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/JvmOptsMcpSuite.scala")
+      result <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.JvmOptsMcpSuite",
+          Some(path),
+          None,
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        result.contains("1 tests, 1 passed, 0 failed"),
+        s"Expected munit to pass when forked JVM receives -D from .test-jvmopts; got:\n$result",
+      )
+    } yield ()
+  }
+
   test("zio-test", maxRetry = 3) {
     cleanWorkspace()
     for {

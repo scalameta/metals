@@ -38,11 +38,6 @@ class McpTestRunner(
       case None =>
         new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
     }
-    val testSuites = new b.ScalaTestSuites(
-      List(testSelection).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
     val cancelPromise = Promise[Unit]()
     for {
       path <- optPath
@@ -57,20 +52,27 @@ class McpTestRunner(
         isTests = true,
       )
     } yield {
-      for {
-        discovered <- debugProvider.discoverTests(id, testSuites)
-        project <- projectInfo
-        adapter = new TestSuiteDebugAdapter(
-          workspace,
-          testSuites,
-          project,
-          userConfig().javaHome,
-          discovered,
-          isDebug = false,
+      debugProvider.scalaTestJvmOptionsForLocalRun(id).flatMap { jvmOpts =>
+        val testSuites = new b.ScalaTestSuites(
+          List(testSelection).asJava,
+          jvmOpts.asJava,
+          Nil.asJava,
         )
-        listener = new McpDebuggeeListener(verbose)
-        _ <- adapter.run(listener).future
-      } yield listener.result
+        for {
+          discovered <- debugProvider.discoverTests(id, testSuites)
+          project <- projectInfo
+          adapter = new TestSuiteDebugAdapter(
+            workspace,
+            testSuites,
+            project,
+            userConfig().javaHome,
+            discovered,
+            isDebug = false,
+          )
+          listener = new McpDebuggeeListener(verbose)
+          _ <- adapter.run(listener).future
+        } yield listener.result
+      }
     }
   }
 
