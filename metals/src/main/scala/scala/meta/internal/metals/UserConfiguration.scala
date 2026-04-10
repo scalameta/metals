@@ -82,6 +82,7 @@ case class UserConfiguration(
     javaFormatConfig: Option[JavaFormatConfig] = None,
     javaFormatter: Option[JavaFormatterConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
+    scalafixLintEnabled: Boolean = false,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
@@ -220,6 +221,7 @@ case class UserConfiguration(
           "scalafixRulesDependencies",
           Some(scalafixRulesDependencies),
         ),
+        Some(("scalafixLintEnabled", scalafixLintEnabled)),
         optStringField("customProjectRoot", customProjectRoot),
         Some(("verboseCompilation", verboseCompilation)),
         Some(
@@ -509,6 +511,17 @@ object UserConfiguration {
         "Scalafix rules dependencies",
         """Optional list of Scalafix rules dependencies to use for running `scalafix --rules`.""",
         isArray = true,
+      ),
+      UserConfigurationOption(
+        "scalafix-lint-enabled",
+        "false",
+        "false",
+        "Enable Scalafix lint diagnostics",
+        """When enabled, Scalafix rules from `.scalafix.conf` will be run on
+          |semanticdb updates and lint diagnostics will be published alongside
+          |compiler diagnostics. Only lint diagnostics are shown; no code rewrites are applied.
+          |""".stripMargin,
+        isBoolean = true,
       ),
       UserConfigurationOption(
         "excluded-packages",
@@ -1285,6 +1298,9 @@ object UserConfiguration {
     val scalafixRulesDependencies =
       getStringListKey("scalafix-rules-dependencies").getOrElse(Nil)
 
+    val scalafixLintEnabled =
+      getBooleanKey("scalafix-lint-enabled").getOrElse(false)
+
     val customProjectRoot = getStringKey("custom-project-root")
     val verboseCompilation =
       getBooleanKey("verbose-compilation").getOrElse(false)
@@ -1486,6 +1502,7 @@ object UserConfiguration {
           javaFormatConfig,
           javaFormatter,
           scalafixRulesDependencies,
+          scalafixLintEnabled,
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,

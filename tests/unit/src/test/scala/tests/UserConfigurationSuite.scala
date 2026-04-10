@@ -478,6 +478,7 @@ class UserConfigurationSuite extends BaseSuite {
     "rule2"
   ],
   "customProjectRoot": "customs",
+  "scalafixLintEnabled": false,
   "verboseCompilation": true,
   "autoImportBuilds": "all",
   "scalaCliLauncher": "scala-cli",
@@ -561,6 +562,7 @@ class UserConfigurationSuite extends BaseSuite {
           |scalafix-config-path                         string                         ""              Scalafix config path
           |shim-globs                                   string                         `{}`.           Shim file globs
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
+          |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
           |excluded-packages                            array                          []              Excluded Packages
           |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
