@@ -160,6 +160,34 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
     } yield ()
   }
 
+  test("multiple-scalafmt-files") {
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a":{"scalaVersion" : ${V.scala3}}}
+            |/.scalafmt.conf
+            |include "./helper.conf"
+            |/helper.conf
+            |maxColumn=100
+            |version=${V.scalafmtVersion}
+            |runner.dialect = scala3
+            |/a/src/main/scala/a/Main.scala
+            |object FormatMe {
+            | val x = 1  }
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.formatting("a/src/main/scala/a/Main.scala")
+      _ = assertEmpty(client.workspaceMessageRequests)
+      _ = assertNoDiff(
+        server.bufferContents("a/src/main/scala/a/Main.scala"),
+        """|object FormatMe {
+           |  val x = 1
+           |}""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("version") {
     for {
       _ <- initialize(

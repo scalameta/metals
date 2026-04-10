@@ -85,8 +85,8 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case abc @ @@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
-       |Some(value) scala
+    """|Some(value) scala
+       |None scala
        |""".stripMargin,
     topLines = Some(2)
   )
@@ -111,7 +111,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case _: @@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
+    """|Some[_] scala
        |""".stripMargin,
     compat = Map(
       "3" ->
@@ -141,7 +141,7 @@ class CompletionPatternSuite extends BaseCompletionSuite {
       |    case ab: @@ =>
       |  }
       |}""".stripMargin,
-    """|None scala
+    """|Some[_] scala
        |""".stripMargin,
     compat = Map(
       "3" ->

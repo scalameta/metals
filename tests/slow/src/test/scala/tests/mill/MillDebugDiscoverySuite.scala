@@ -2,14 +2,15 @@ package tests.mill
 
 import java.util.concurrent.TimeUnit
 
+import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.DebugDiscoveryParams
+import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
-import scala.meta.internal.metals.debug.JUnit4
-import scala.meta.internal.metals.debug.Scalatest
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseDapSuite
 import tests.BaseMillServerSuite
@@ -35,8 +36,7 @@ class MillDebugDiscoverySuite
   // mill sometimes hangs and doesn't return main classes
   override protected val retryTimes: Int = 2
 
-  // Needs LTS 3.3.5
-  for (scala <- List(scalaVersion, "3.3.3")) {
+  for (scala <- List(scalaVersion, BuildInfo.scala3)) {
 
     test(s"testTarget-$scala") {
       cleanWorkspace()
@@ -64,7 +64,7 @@ class MillDebugDiscoverySuite
                |}
                |""".stripMargin,
             scala,
-            Some(Scalatest),
+            Some(TestFramework.ScalaTest),
           )
         )
         _ <- server.didOpen("a/src/Main.scala")
@@ -112,7 +112,7 @@ class MillDebugDiscoverySuite
                 |}
                 |""".stripMargin,
             scala,
-            Some(JUnit4),
+            Some(TestFramework.JUnit),
           )
         )
         _ <- server.didOpen(fooPath)
@@ -153,7 +153,7 @@ class MillDebugDiscoverySuite
              |}
              |""".stripMargin,
           scalaVersion,
-          Some(Scalatest),
+          Some(TestFramework.ScalaTest),
         )
       )
       _ <- server.didOpen(fooPath)
@@ -183,6 +183,48 @@ class MillDebugDiscoverySuite
          |Execution took xxx
          |1 tests, 1 passed
          |All tests in a.Foo passed
+         |""".stripMargin,
+    )
+  }
+
+  test("assert-location") {
+    cleanCompileCache("a")
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        MillBuildLayout(
+          s"""
+             |/${fooPath}
+             |package a
+             |class Foo extends org.scalatest.funsuite.AnyFunSuite {
+             |  test("foo") {
+             |    println("foo")
+             |    println("foo")
+             |    println("foo")
+             |    assert(1 == 2)
+             |  }
+             |}
+             |""".stripMargin,
+          scalaVersion,
+          Some(TestFramework.ScalaTest),
+        )
+      )
+      debugger <-
+        server
+          .startDebuggingUnresolved(
+            new DebugUnresolvedTestClassParams(
+              "a.Foo"
+            ).toJson
+          )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allTestEvents
+    } yield assertNoDiff(
+      output,
+      """|a.Foo
+         |  foo - failed at Foo.scala, line 6
          |""".stripMargin,
     )
   }

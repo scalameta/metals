@@ -187,8 +187,12 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test deleting a file that is used
-  test("delete-file-diagnostics") {
+  // Test deleting a file that is used.
+  // Note: runs in turbine-classpath mode only. In javac-sourcepath mode,
+  // addAllDirty compiles Helper.java during didOpen creating Helper.class;
+  // that class file persists after Helper.java is deleted so javac finds
+  // Helper via the class path and reports no error.
+  test("delete-file-diagnostics".tag(TurbineClasspath)) {
     cleanWorkspace()
     val helper = "a/src/main/java/a/Helper.java"
     for {

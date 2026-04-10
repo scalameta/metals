@@ -37,16 +37,24 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     withoutVirtualDocs = true,
   )
 
+  val expectedResult: String =
+    if (isJava21)
+      s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
+          |abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
+          |                      ^^^^^^^^^^^^^^^^^^^^^
+          |""".stripMargin
+    else
+      s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
+          |abstract class AbstractStringBuilder implements Appendable, CharSequence {
+          |               ^^^^^^^^^^^^^^^^^^^^^
+          |""".stripMargin
   check(
     "jdk-String-patch-module",
     "java.lang.String",
     s"""|${javaBasePrefix}java/lang/String.java
         |private boolean nonSyncContentEquals(@@AbstractStringBuilder sb) {
         |""".stripMargin,
-    s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
-        |abstract class AbstractStringBuilder implements Appendable, CharSequence {
-        |               ^^^^^^^^^^^^^^^^^^^^^
-        |""".stripMargin,
+    expectedResult,
   )
 
   check(
@@ -55,10 +63,7 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
     s"""|${javaBasePrefix}java/lang/String.java
         |private boolean nonSyncContentEquals(@@AbstractStringBuilder sb) {
         |""".stripMargin,
-    s"""|src.zip/${javaBasePrefix}java/lang/AbstractStringBuilder.java info: result
-        |abstract class AbstractStringBuilder implements Appendable, CharSequence {
-        |               ^^^^^^^^^^^^^^^^^^^^^
-        |""".stripMargin,
+    expectedResult,
   )
 
   check(

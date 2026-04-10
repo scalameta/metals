@@ -7,7 +7,7 @@ import java.nio.file.Path
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
@@ -28,7 +28,7 @@ case class GradleBuildTool(
   private def initScript = {
     s"""
        |initscript {
-       |${GradleBuildTool.toGradleRepositories(Repository.defaults.asScala.toList)}
+       |${GradleBuildTool.toGradleRepositories(Embedded.repositories)}
        |  dependencies {
        |    classpath 'ch.epfl.scala:gradle-bloop_2.12:$gradleBloopVersion'
        |  }

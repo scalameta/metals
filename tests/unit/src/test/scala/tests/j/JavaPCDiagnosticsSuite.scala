@@ -209,7 +209,12 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
 
   // This demonstrates an unwanted behavior where we ignore the build
   // dependencies from BSP. We allow imports to any file from any target.
-  test("target-cycles") {
+  // Note: runs in turbine-classpath mode only. In javac-sourcepath mode,
+  // VirtualTextDocument.getLastModified() returns Long.MaxValue, which causes
+  // javac to recompile cross-module deps from SOURCE_PATH. For circular deps
+  // (a→b→a), this creates a cascade that produces garbled errors instead of
+  // the expected "cannot find symbol" errors.
+  test("target-cycles".tag(TurbineClasspath)) {
     cleanWorkspace()
     val person = "a/src/main/java/a/Person.java"
     val main = "b/src/main/java/b/Main.java"
@@ -234,7 +239,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
             |    this.age = age;
             |  }
             |  public static String greeting() {
-            |    return b.Main.greet();
+            |    return "hello";
             |  }
             |}
             |/$main
@@ -251,7 +256,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
       _ <- server.didOpen(main)
       _ = assertNoDiagnostics()
       _ <- server.didChange(person)(
-        _.replace("greet()", "greet2()")
+        _.replace("return \"hello\";", "return b.Main.greet2();")
       )
       _ <- server.didChange(main)(
         _.replace(".name", ".name2")

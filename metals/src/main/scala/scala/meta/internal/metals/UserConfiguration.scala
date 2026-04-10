@@ -413,15 +413,6 @@ object UserConfiguration {
           |""".stripMargin,
       ),
       UserConfigurationOption(
-        "ammonite-jvm-properties",
-        """`[]`.""",
-        """["-Xmx1G"]""",
-        "Ammonite JVM Properties",
-        """|Optional list of JVM properties to pass along to the Ammonite server.
-           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`"
-           |""".stripMargin,
-      ),
-      UserConfigurationOption(
         "excluded-packages",
         """`[]`.""",
         """["akka.actor.typed.javadsl"]""",
@@ -551,7 +542,7 @@ object UserConfiguration {
         "Default fallback Scala version",
         """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
-           |This applies to standalone Scala files, worksheets, and Ammonite scripts.
+           |This applies to standalone Scala files, worksheets and Scala CLI scripts.
         """.stripMargin,
       ),
       UserConfigurationOption(

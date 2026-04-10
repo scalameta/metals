@@ -6,7 +6,7 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
-import org.eclipse.lsp4j.SelectionRange
+import org.eclipse.{lsp4j => l}
 
 /**
  * Provides the functionality necessary for the `textDocument/selectionRange` request.
@@ -20,11 +20,11 @@ class SelectionRangeProvider(
 ) {
 
   /**
-   * Get the seletion ranges for the provider params
+   * Get the selection ranges for the provider params
    *
    * @return selection ranges
    */
-  def selectionRange(): List[SelectionRange] = {
+  def selectionRange(): List[l.SelectionRange] = {
     import compiler._
 
     val selectionRanges = params.asScala.toList.map { param =>
@@ -42,29 +42,51 @@ class SelectionRangeProvider(
       val _ = locateUntyped(pos)
 
       val bareRanges = lastVisitedParentTrees
-        .map { (tree: Tree) =>
-          val selectionRange = new SelectionRange()
-          selectionRange.setRange(tree.pos.toLsp)
-          selectionRange
+        .flatMap {
+          case tree: DefDef =>
+            val paramsSelectionRange = (tree.tparams :: tree.vparamss)
+              .filter { paramList =>
+                paramList.exists(_.pos.encloses(pos)) && paramList.length >= 2
+              }
+              .map { paramList =>
+                new l.SelectionRange() {
+                  setRange(
+                    new l.Range(
+                      paramList.head.pos.toLsp.getStart,
+                      paramList.last.pos.toLsp.getEnd
+                    )
+                  )
+                }
+              }
+            val defSelectionRange = new l.SelectionRange() {
+              setRange(tree.pos.toLsp)
+            }
+            paramsSelectionRange :+ defSelectionRange
+
+          case tree =>
+            val selectionRange = new l.SelectionRange() {
+              setRange(tree.pos.toLsp)
+            }
+            List(selectionRange)
         }
 
       val commentRanges =
         getCommentRanges(pos, lastVisitedParentTrees, param.text()).map { x =>
-          new SelectionRange() { setRange(x.toLsp) }
+          new l.SelectionRange() { setRange(x.toLsp) }
         }.toList
 
       (commentRanges ++ bareRanges)
         .reduceRightOption(setParent)
-        .getOrElse(new SelectionRange())
+        .getOrElse(new l.SelectionRange())
     }
 
     selectionRanges
   }
 
   private def setParent(
-      child: SelectionRange,
-      parent: SelectionRange
-  ): SelectionRange = {
+      child: l.SelectionRange,
+      parent: l.SelectionRange
+  ): l.SelectionRange = {
     // If the parent and the child have the same exact range we just skip it.
     // This happens in a lot of various places. For example:
     //

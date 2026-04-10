@@ -3,9 +3,9 @@ package scala.meta.internal.pc
 import java.net.URI
 import java.{util => ju}
 
-import scala.jdk.CollectionConverters._
 import scala.reflect.internal.util.Position
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.pc.DefinitionResult
@@ -59,8 +59,8 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  private def definition(findTypeDef: Boolean): DefinitionResult = {
-    if (params.isWhitespace || params.isDelimiter || params.offset() == 0) {
+  private def definition(findTypeDef: Boolean): DefinitionResult =
+    if (params.offset() == 0) {
       DefinitionResultImpl.empty
     } else {
       val unit = addCompilationUnit(
@@ -70,7 +70,13 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       )
       typeCheck(unit)
       val pos = unit.position(params.offset())
-      val tree = definitionTypedTreeAt(pos)
+      val tree = definitionTypedTreeAt(pos) match {
+        case ident: Ident if !ident.namePosition.includes(pos) =>
+          EmptyTree
+        case select: Select if !select.namePosition.includes(pos) =>
+          EmptyTree
+        case other => other
+      }
       val symbol =
         if (findTypeDef) typeSymbol(tree, pos)
         else namedParamSymbol(tree, pos).getOrElse(tree.symbol)
@@ -89,7 +95,10 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         val allSyms = targetSymbols(tree, symbol, findTypeDef)
         val sourceBasedDefs = DefinitionResultImpl(
           semanticdbSymbol(symbol),
-          allSyms.flatMap(findSymbolLocations(_, unit)).asJava
+          allSyms
+            .flatMap(findDefinitionLocationsForSymbol(unit, _))
+            .distinct
+            .asJava
         )
 
         if (sourceBasedDefs.locations.isEmpty && symbol.associatedFile.exists) {
@@ -110,7 +119,6 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         } else sourceBasedDefs
       }
     }
-  }
 
   private def targetSymbols(
       tree: Tree,
@@ -128,17 +136,21 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
       }
     } else {
       tree match {
-        case Select(qual, nme.apply)
+        case Select(qual, name)
             if !findTypeDef
+              && (name == nme.apply || name == nme.unapply)
               && qual.pos.sameRange(tree.pos)
               && qual.hasExistingSymbol =>
 
-          symbol.alternatives.flatMap { sym =>
-            if (sym.isCaseApplyOrUnapply) // no symbol to navigate to
-              List(sym.owner.companionClass)
-            else
-              List(sym, qual.symbol)
-          }.distinct
+          symbol.alternatives
+            .flatMap { sym =>
+              if (sym.isCaseApplyOrUnapply) // navigate to the case class only
+                List(sym.owner.companionClass)
+              else
+                List(sym, qual.symbol)
+            }
+            .filter(_.exists)
+            .distinct
 
         case _ =>
           // in case of some errors, if the compiler didn't manage to resolve
@@ -150,30 +162,22 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  private def findSymbolLocations(
-      symbol: Symbol,
-      unit: CompilationUnit
-  ): List[Location] = {
+  private def findDefinitionLocationsForSymbol(
+      unit: RichCompilationUnit,
+      symbol: Symbol
+  ): List[Location] =
     if (
       symbol.pos != null &&
-      symbol.pos.isDefined
+      symbol.pos.isDefined &&
+      symbol.pos.source.eq(unit.source)
     ) {
-      if (symbol.pos.source.eq(unit.source)) {
-        val focused = symbol.pos.focus
-        val actualName = symbol.decodedName.stripSuffix("_=").trim
-        val namePos =
-          if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
-          else focused.withEnd(focused.start + actualName.length())
-        val adjusted = namePos.adjust(unit.source.content)._1
-        List(new Location(params.uri().toString(), adjusted.toLsp))
-      } else {
-        val path = URI.create(symbol.pos.source.file.path)
-        val uri =
-          if (path.getScheme() == null) s"file://$path" else path.toString()
-        List(
-          new Location(uri, findNamePos(symbol).toLsp)
-        )
-      }
+      val focused = symbol.pos.focus
+      val actualName = symbol.decodedName.stripSuffix("_=").trim
+      val namePos =
+        if (symbol.name.startsWith("x$") && symbol.isSynthetic) focused
+        else focused.withEnd(focused.start + actualName.length())
+      val adjusted = namePos.adjust(unit.source.content)._1
+      List(new Location(params.uri().toString(), adjusted.toLsp))
     } else {
       symbol.alternatives
         .map(semanticdbSymbol)
@@ -184,7 +188,6 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
           } else Nil
         }
     }
-  }
 
   def findNamePos(symbol: Symbol): Position = {
     val pos0 = symbol.pos
@@ -219,12 +222,12 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
     }
   }
 
-  def definitionTypedTreeAt(pos: Position): Tree = {
+  private def definitionTypedTreeAt(pos: Position): Tree = {
     def loop(tree: Tree): Tree = {
       tree match {
         case Select(qualifier, name) =>
           if (
-            name == termNames.apply &&
+            (name == termNames.apply || name == termNames.unapply) &&
             qualifier.pos.includes(pos)
           ) {
             if (definitions.isFunctionSymbol(tree.symbol.owner)) loop(qualifier)
@@ -273,10 +276,7 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         if (expr.pos.includes(pos)) {
           expr.findSubtree(pos)
         } else {
-          i.selector(pos) match {
-            case None => EmptyTree
-            case Some(sym) => Ident(sym.name).setSymbol(sym)
-          }
+          i.selectorIdent(pos).getOrElse(EmptyTree)
         }
       case sel @ Select(_, name) if sel.tpe == ErrorType =>
         val symbols = tree.tpe.member(name)
@@ -289,5 +289,4 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         loop(tree)
     }
   }
-
 }

@@ -38,6 +38,11 @@ final case class VirtualTextDocument(
   override def getName(): String = uri.toString
   override def getCharContent(ignoreEncodingErrors: Boolean): CharSequence =
     text
+  // Always report a far-future modification time so javac prefers this source
+  // file over any compiled class file on the classpath. Without this, javac's
+  // SimpleJavaFileObject returns 0L ("unknown"), causing it to prefer class
+  // files — including stale ones created by Bloop's addAllDirty compilation.
+  override def getLastModified(): Long = Long.MaxValue
   def widen: SimpleJavaFileObject = this
 }
 object VirtualTextDocument {

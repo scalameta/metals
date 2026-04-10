@@ -15,6 +15,9 @@ import scala.util.Success
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.MetalsEnrichments._
 
+import ch.epfl.scala.debugadapter.TestResultEvent
+import ch.epfl.scala.debugadapter.testing.SingleTestResult
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.OutputEventArguments
 import org.eclipse.lsp4j.debug.SetBreakpointsResponse
@@ -22,6 +25,7 @@ import org.eclipse.lsp4j.debug.Source
 import org.eclipse.lsp4j.debug.SourceBreakpoint
 import org.eclipse.lsp4j.debug.StackTraceResponse
 import org.eclipse.lsp4j.debug.StoppedEventArguments
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 final class TestDebugger(
     connect: RemoteServer.Listener => Debugger,
@@ -33,6 +37,8 @@ final class TestDebugger(
   @volatile private var terminated: Promise[Unit] = Promise()
   @volatile private var output = new DebuggeeOutput
   @volatile private var breakpoints = new DebuggeeBreakpoints()
+  private val events =
+    scala.collection.mutable.ListBuffer.empty[TestResultEvent]
 
   @volatile private var failure: Option[Throwable] = None
 
@@ -60,13 +66,13 @@ final class TestDebugger(
       source: Source,
       positions: List[Int],
   ): Future[SetBreakpointsResponse] = {
-    val breakpoints = positions.map { line =>
+    val failed = positions.map { line =>
       val breakpoint = new SourceBreakpoint
       breakpoint.setLine(line + 1) // breakpoints are 1-based
       breakpoint.setColumn(0)
       breakpoint
     }.toArray
-    ifNotFailed(debugger.setBreakpoints(source, breakpoints))
+    ifNotFailed(debugger.setBreakpoints(source, failed))
       .map { response =>
         // the breakpoint notification we receive does not contain the source
         // hence we have to register breakpoints here
@@ -134,6 +140,43 @@ final class TestDebugger(
   def allOutput: Future[String] = {
     terminated.future.map(_ => output())
   }
+  def allTestEvents: Future[String] = {
+    terminated.future.map { _ =>
+      events.toList
+        .map { event =>
+          val results = event.data.tests.asScala
+            .map {
+              case passed: SingleTestResult.Passed =>
+                s"  ${passed.testName} - passed"
+              case failed: SingleTestResult.Failed if failed.location != null =>
+                s"  ${failed.testName} - failed at ${failed.location.file.toAbsolutePath.filename}, line ${failed.location.line}"
+              case failed: SingleTestResult.Failed =>
+                s"  ${failed.testName} - failed"
+              case skipped: SingleTestResult.Skipped =>
+                s"  ${skipped.testName} - skipped"
+            }
+            .mkString("\n")
+          s"""|
+              |${event.data.suiteName}
+              |${results}
+              |""".stripMargin
+        }
+        .mkString("\n")
+    }
+  }
+
+  override def onEvent(event: NotificationMessage): Unit = {
+    import DapJsonParser._
+    if (event.getMethod() == "testResult") {
+      Debug.printEnclosing()
+      event.getParams match {
+        case elem: JsonElement =>
+          val testEvent = elem.as[TestResultEvent].get
+          events += testEvent
+        case _ =>
+      }
+    }
+  }
 
   override def onOutput(event: OutputEventArguments): Unit = {
     Debug.printEnclosing()
@@ -144,7 +187,10 @@ final class TestDebugger(
       case Category.STDERR =>
         val output = event.getOutput()
         // This might sometimes be printed in the JVM, but does not cause any actual issues
-        if (!output.contains("Picked up JAVA_TOOL_OPTIONS"))
+        if (
+          !output.contains("Picked up JAVA_TOOL_OPTIONS") &&
+          !output.contains("transport error 202: send failed: Broken pipe")
+        )
           fail(new IllegalStateException(output))
       case _ =>
       // ignore

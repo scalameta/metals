@@ -23,15 +23,15 @@ import ch.epfl.scala.{bsp4j => b}
 final class Compilations(
     buildTargets: BuildTargets,
     classes: BuildTargetClasses,
-    workspace: () => AbsolutePath,
     languageClient: MetalsLanguageClient,
     refreshTestSuites: () => Unit,
     afterSuccessfulCompilation: () => Unit,
-    isCurrentlyFocused: b.BuildTargetIdentifier => Boolean,
+    buildtargetInFocus: () => Option[b.BuildTargetIdentifier],
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
+    fileChanges: FileChanges,
     bestEffortEnabled: Boolean,
 )(implicit ec: ExecutionContext) {
   private val compileTimeout: Timeout =
@@ -88,13 +88,16 @@ final class Compilations(
       source: AbsolutePath,
       compileInverseDependencies: Boolean,
   ): Future[Unit] =
-    expand(source).flatMap(targets =>
-      compilationFinished(targets.toSeq, compileInverseDependencies)
-    )
+    fileChanges
+      .expand(source)
+      .flatMap(targets =>
+        compilationFinished(targets.toSeq, compileInverseDependencies)
+      )
 
   def compileTarget(
       target: b.BuildTargetIdentifier
   ): Future[b.CompileResult] = {
+    fileChanges.willCompile(List(target))
     compileBatch(target).map { results =>
       results.getOrElse(target, new b.CompileResult(b.StatusCode.CANCELLED))
     }
@@ -103,13 +106,22 @@ final class Compilations(
   def compileTargets(
       targets: Seq[b.BuildTargetIdentifier]
   ): Future[Unit] = {
+    fileChanges.willCompile(targets.toList)
     compileBatch(targets).ignoreValue
   }
 
-  def compileFile(path: AbsolutePath): Future[b.CompileResult] = {
+  def compileFile(
+      path: AbsolutePath,
+      fingerprint: Option[Fingerprint] = None,
+      assumeDidNotChange: Boolean = false,
+  ): Future[Option[b.CompileResult]] = {
     def empty = new b.CompileResult(b.StatusCode.CANCELLED)
     for {
-      targetOpt <- expand(path)
+      targetOpt <- fileChanges.buildTargetToCompile(
+        path,
+        fingerprint,
+        assumeDidNotChange,
+      )
       result <- targetOpt match {
         case None => Future.successful(empty)
         case Some(target) =>
@@ -117,30 +129,21 @@ final class Compilations(
             .map(res => res.getOrElse(target, empty))
       }
       _ <- compileWorksheets(Seq(path))
-    } yield result
+    } yield Some(result)
   }
 
-  def compileFiles(
-      paths: Seq[AbsolutePath],
-      focusedDocumentBuildTarget: Option[BuildTargetIdentifier],
-  ): Future[Unit] = {
+  def compileFiles(paths: Seq[(AbsolutePath, Fingerprint)]): Future[Unit] = {
     for {
-      targets <- expand(paths)
+      targets <- fileChanges.buildTargetsToCompile(paths, buildtargetInFocus())
       _ <- compileBatch(targets)
-      _ <- focusedDocumentBuildTarget match {
-        case Some(bt)
-            if !targets.contains(bt) &&
-              buildTargets.isInverseDependency(bt, targets.toList) =>
-          compileBatch(bt)
-        case _ => Future.successful(())
-      }
-      _ <- compileWorksheets(paths)
+      _ <- compileWorksheets(paths.map(_._1))
     } yield ()
   }
 
   def cascadeCompile(targets: Seq[BuildTargetIdentifier]): Future[Unit] = {
     val inverseDependencyLeaves =
       targets.flatMap(buildTargets.inverseDependencyLeaves).distinct
+    fileChanges.willCompile(inverseDependencyLeaves.toList)
     cascadeBatch(inverseDependencyLeaves).map(_ => ())
   }
 
@@ -194,28 +197,8 @@ final class Compilations(
       .ignoreValue
   }
 
-  private def expand(
-      path: AbsolutePath
-  ): Future[Option[b.BuildTargetIdentifier]] = {
-    val isCompilable =
-      (path.isScalaOrJava || path.isSbt) &&
-        !path.isDependencySource(workspace()) &&
-        !path.isInTmpDirectory(workspace())
-
-    if (isCompilable) {
-      val targetOpt = buildTargets.inverseSourcesBsp(path)
-      targetOpt.foreach {
-        case tgts if tgts.isEmpty => scribe.warn(s"no build target for: $path")
-        case _ =>
-      }
-
-      targetOpt
-    } else
-      Future.successful(None)
-  }
-
   def expand(paths: Seq[AbsolutePath]): Future[Seq[b.BuildTargetIdentifier]] = {
-    val expansions = paths.map(expand)
+    val expansions = paths.map(fileChanges.expand)
     Future.sequence(expansions).map(_.flatten)
   }
 
@@ -291,7 +274,7 @@ final class Compilations(
           targets,
           () => {
             refreshTestSuites()
-            if (targets.exists(isCurrentlyFocused)) {
+            if (targets.exists(buildtargetInFocus().contains)) {
               languageClient.refreshModel()
             }
           },

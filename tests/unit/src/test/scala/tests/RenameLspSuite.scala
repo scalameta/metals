@@ -922,6 +922,33 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     nonOpened = Set("b/src/main/scala/b/B.scala"),
   )
 
+  renamed(
+    "i7251",
+    """|/a/src/main/scala/a/Main.scala
+       |sealed trait TA {
+       |  type <<S@@omeType>>
+       |}
+       |
+       |trait TB extends TA {
+       |  override type <<SomeType>> = Nothing
+       |}
+       |""".stripMargin,
+    newName = "OtherType",
+  )
+
+  renamed(
+    "i7251-2",
+    """|/a/src/main/scala/a/Main.scala
+       |trait A { self =>
+       |  trait <<B@@ar>>
+       |  object O2 {
+       |    class Bar extends self.<<Bar>>
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "Foo",
+  )
+
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
 

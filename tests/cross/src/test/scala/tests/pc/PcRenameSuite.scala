@@ -41,6 +41,32 @@ class PcRenameSuite extends BasePcRenameSuite {
   )
 
   check(
+    "apply-rename",
+    """|object B{
+       |  def locally = {
+       |    object A{ def app@@ly(a: Int) = ??? }
+       |    A(123)
+       |    A.apply(123)
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false
+  )
+
+  check(
+    "constructor-rename",
+    """|object B{
+       |  def locally = {
+       |    class A(a : String){ def th@@is(a: Int) = this(a.toString) }
+       |    A(123)
+       |    A.apply(123)
+       |  }
+       |}  
+       |""".stripMargin,
+    wrap = false
+  )
+
+  check(
     "generics",
     """|trait S1[X] { def <<torename>>(p: X): String = "" }
        |trait T1[Z] extends S1[Z] { override def <<torename>>(p: Z): String = super.<<torename>>(p) }
@@ -466,23 +492,27 @@ class PcRenameSuite extends BasePcRenameSuite {
     "for-comp-bind",
     """
       |case class Bar(fooBar: Int, goo: Int)
-      |val abc = for {
+      |object B {
+      | val abc = for {
       |  foo <- List(1)
       |  _ = Option(1)
       |  Bar(<<fooBar>>, goo) <- List(Bar(foo, 123))
       |  baz = <<fooBar>> + goo
-      |} yield {
+      | } yield {
       |  val x = foo + <<foo@@Bar>> + baz
       |  x
+      | }
       |}""".stripMargin
   )
 
   check(
     "for-comprehension",
-    """|val a = for {
+    """|object B {
+       | val a = for {
        |  <<ab@@c>> <- List("a", "b", "c")
        |  _ = println("print!")
-       |} yield <<a@@bc>>
+       | } yield <<a@@bc>>
+       |}
        |""".stripMargin
   )
 

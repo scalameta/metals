@@ -65,7 +65,7 @@ case class MavenBuildTool(
 
   override def recommendedVersion: String = version
 
-  override def version: String = "3.8.6"
+  override def version: String = "3.9.9"
 
   override def toString(): String = "Maven"
 
