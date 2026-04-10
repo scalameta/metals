@@ -61,6 +61,7 @@ class ProjectMetalsLspService(
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
     metrics: MonitoringClient,
+    moduleStatus: ModuleStatus,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -80,6 +81,7 @@ class ProjectMetalsLspService(
       maxScalaCliServers,
       featureFlags,
       metrics,
+      moduleStatus,
     ) {
 
   scribe.debug(clientConfig.toString())
@@ -170,29 +172,33 @@ class ProjectMetalsLspService(
     sh,
   )
 
-  val connectionProvider: ConnectionProvider = new ConnectionProvider(
-    buildToolProvider,
-    compilations,
-    buildTools,
-    buffers,
-    compilers,
-    scalaCli,
-    bloopServers,
-    shellRunner,
-    bspConfigGenerator,
-    check,
-    doctor,
-    initTreeView,
-    diagnostics,
-    charset,
-    buildClient,
-    bspGlobalDirectories,
-    connectionBspStatus,
-    mainBuildTargetsData,
-    this,
-    syncStatusReporter,
-    () => mbtBuild,
-  )
+  val connectionProvider: ConnectionProvider = {
+    val provider = new ConnectionProvider(
+      buildToolProvider,
+      compilations,
+      buildTools,
+      buffers,
+      compilers,
+      scalaCli,
+      bloopServers,
+      shellRunner,
+      bspConfigGenerator,
+      check,
+      doctor,
+      initTreeView,
+      diagnostics,
+      charset,
+      buildClient,
+      bspGlobalDirectories,
+      connectionBspStatus,
+      mainBuildTargetsData,
+      this,
+      syncStatusReporter,
+      () => mbtBuild,
+    )
+    provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
+    provider
+  }
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =
     BatchedFunction.fromFuture[AbsolutePath, Unit](

@@ -28,6 +28,8 @@ private final case class CompilationStatus(
     errors: Int,
 )
 
+case class DiagnosticWithOrigin(diagnostic: Diagnostic, originId: String)
+
 /**
  * Converts diagnostics from the build server and Scalameta parser into LSP diagnostics.
  *
@@ -53,7 +55,7 @@ final class Diagnostics(
     userConfig: () => UserConfiguration,
 ) {
   private val diagnostics =
-    TrieMap.empty[AbsolutePath, ju.Queue[Diagnostic]]
+    TrieMap.empty[AbsolutePath, ju.Queue[DiagnosticWithOrigin]]
   private val syntaxError =
     TrieMap.empty[AbsolutePath, Diagnostic]
   private val snapshots =
@@ -94,6 +96,7 @@ final class Diagnostics(
   def onFinishCompileBuildTarget(
       report: bsp4j.CompileReport,
       statusCode: bsp4j.StatusCode,
+      originId: String,
   ): Unit = {
     val target = report.getTarget()
 
@@ -109,6 +112,25 @@ final class Diagnostics(
       downstreamTargets.remove(target)
     }
 
+    val isBazel = buildTargets
+      .buildServerOf(target)
+      .exists(c => c.isBazel || c.isBazelNative)
+    if (isBazel) {
+      diagnostics
+        .filter { case (path, _) =>
+          buildTargets.inverseSources(path).exists(target => target == target)
+        }
+        .foreach { case (path, queue) =>
+          val updatedQueue = queue.asScala.filter {
+            case DiagnosticWithOrigin(_, diagOriginId) =>
+              diagOriginId == originId
+          }
+          if (updatedQueue.isEmpty) {
+            reset(Seq(path))
+          }
+          diagnostics.remove(path)
+        }
+    }
     publishDiagnosticsBuffer()
 
     compileTimer.remove(target)
@@ -172,6 +194,7 @@ final class Diagnostics(
         path,
         diagnostics,
         params.getReset(),
+        params.getOriginId(),
       )
 
     publish.getOrElse {
@@ -188,12 +211,13 @@ final class Diagnostics(
       path: AbsolutePath,
       diagnostics: Seq[Diagnostic],
       isReset: Boolean,
+      originId: String,
   ): Unit = {
     val isSamePathAsLastDiagnostic = path == lastPublished.get()
     lastPublished.set(path)
     val queue = this.diagnostics.getOrElseUpdate(
       path,
-      new ConcurrentLinkedQueue[Diagnostic](),
+      new ConcurrentLinkedQueue[DiagnosticWithOrigin](),
     )
     if (isReset) {
       queue.clear()
@@ -202,7 +226,9 @@ final class Diagnostics(
     if (queue.isEmpty && !diagnostics.isEmpty) {
       snapshots(path) = path.toInput
     }
-    diagnostics.foreach { diagnostic => queue.add(diagnostic) }
+    diagnostics.foreach { diagnostic =>
+      queue.add(DiagnosticWithOrigin(diagnostic, originId))
+    }
 
     // NOTE(olafur): we buffer up several diagnostics for the same path before forwarding
     // them to the editor client. Without buffering, we risk publishing an exponential number
@@ -244,7 +270,7 @@ final class Diagnostics(
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,
-      diagnostics.getOrElse(path, new ju.LinkedList[Diagnostic]()),
+      diagnostics.getOrElse(path, new ju.LinkedList[DiagnosticWithOrigin]()),
     )
   }
 
@@ -253,6 +279,15 @@ final class Diagnostics(
       .get(buildTarget)
       .map(status => status.code.isError || status.errors > 0)
       .getOrElse(false)
+  }
+
+  def upstreamTargetsWithCompilationErrors(
+      buildTarget: BuildTargetIdentifier
+  ): List[BuildTargetIdentifier] = {
+    buildTargets
+      .buildTargetTransitiveDependencies(buildTarget)
+      .filter(id => id != buildTarget && hasCompilationErrors(id))
+      .toList
   }
 
   def hasSyntaxError(path: AbsolutePath): Boolean =
@@ -265,7 +300,7 @@ final class Diagnostics(
     fileDiagnostics match {
       case Some(diagnostics) =>
         diagnostics.asScala.exists(
-          _.getSeverity() == l.DiagnosticSeverity.Error
+          _.diagnostic.getSeverity() == l.DiagnosticSeverity.Error
         )
       case None => false
     }
@@ -273,14 +308,14 @@ final class Diagnostics(
 
   private def publishDiagnostics(
       path: AbsolutePath,
-      queue: ju.Queue[Diagnostic],
+      queue: ju.Queue[DiagnosticWithOrigin],
   ): Unit = {
     if (!path.isFile) return didDelete(path)
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(path, diagnostic)
+      freshDiagnostic <- toFreshDiagnostic(path, diagnostic.diagnostic)
     } {
       all.add(freshDiagnostic)
     }
