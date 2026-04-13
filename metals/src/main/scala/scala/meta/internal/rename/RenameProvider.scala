@@ -40,8 +40,6 @@ import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.ReferenceContext
-import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.ResourceOperation
@@ -225,10 +223,8 @@ final class RenameProvider(
                            * isJava - in Java we can include declarations safely and we
                            * also need to include contructors.
                            */
-                          toReferenceParams(
-                            txtParams,
-                            includeDeclaration = isJava,
-                          ),
+                          txtParams
+                            .toReferenceParams(includeDeclaration = isJava),
                           findRealRange = AdjustRange(findRealRange(newName)),
                           includeSynthetic,
                         )
@@ -459,7 +455,7 @@ final class RenameProvider(
     } yield {
       referenceProvider
         .references(
-          toReferenceParams(loc, includeDeclaration = false),
+          loc.toReferenceParams(includeDeclaration = false),
           findRealRange = AdjustRange(findRealRange(newName)),
         )
         .map(_.flatMap(_.locations :+ loc))
@@ -510,7 +506,7 @@ final class RenameProvider(
         result <- {
           val result = for {
             implLoc <- implLocs
-            locParams = toReferenceParams(implLoc, includeDeclaration = true)
+            locParams = implLoc.toReferenceParams(includeDeclaration = true)
           } yield {
             referenceProvider
               .references(
@@ -707,44 +703,6 @@ final class RenameProvider(
     } else {
       default
     }
-  }
-
-  private def toReferenceParams(
-      textDoc: TextDocumentIdentifier,
-      pos: Position,
-      includeDeclaration: Boolean,
-  ): ReferenceParams = {
-    val referenceParams = new ReferenceParams()
-    referenceParams.setPosition(pos)
-    referenceParams.setTextDocument(textDoc)
-    val context = new ReferenceContext()
-    context.setIncludeDeclaration(includeDeclaration)
-    referenceParams.setContext(context)
-    referenceParams
-  }
-
-  private def toReferenceParams(
-      location: Location,
-      includeDeclaration: Boolean,
-  ): ReferenceParams = {
-    val textDoc = new TextDocumentIdentifier()
-    textDoc.setUri(location.getUri())
-    toReferenceParams(
-      textDoc,
-      location.getRange().getStart(),
-      includeDeclaration,
-    )
-  }
-
-  private def toReferenceParams(
-      params: TextDocumentPositionParams,
-      includeDeclaration: Boolean,
-  ): ReferenceParams = {
-    toReferenceParams(
-      params.getTextDocument(),
-      params.getPosition(),
-      includeDeclaration,
-    )
   }
 
   private def toTextParams(location: Location): TextDocumentPositionParams = {
