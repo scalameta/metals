@@ -694,7 +694,6 @@ case class ScalaPresentationCompiler(
       } else
         ParsedLogicalPackage.collectLogicalPackages(settings)
     }
-
     if (rootSrcPackage.packages.isEmpty && rootSrcPackage.sources.isEmpty) {
       logger.warn(
         s"[$buildTargetIdentifier] no logical packages found in source path (mode: ${config.sourcePathMode()})"
