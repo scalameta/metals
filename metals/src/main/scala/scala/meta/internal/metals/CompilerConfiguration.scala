@@ -82,33 +82,43 @@ class CompilerConfiguration(
    * When `fallbackSourcepath` is enabled (see `shouldUseFullSourcepathForFallback`), supplies
    * tracked workspace `.scala` / `.java` paths (via `git ls-files`, or a disk walk if git is
    * unavailable) for the fallback presentation compiler's `-sourcepath`.
-   *
-   * If MBT  symbol provider is enabled then the indexing has happened before.
    */
   def fallbackPresentationCompilerSourcepathSupplier(
       scalaVersion: String
-  ): Supplier[ju.List[Path]] =
+  ): Supplier[ju.List[Path]] = {
+    def isScala2 = !ScalaVersions.isScala3Version(
+      scalaVersion
+    )
     if (
       !shouldUseFullSourcepathForFallback ||
-      !ScalaVersions.isScala3Version(
-        scalaVersion
-      ) && userConfig().workspaceSymbolProvider.isMBT
+      // uses symbols from MBT for Scala 2
+      isScala2 && userConfig().workspaceSymbolProvider.isMBT
     ) () => ju.Collections.emptyList()
     else
       () => {
-        val blobs = GitVCS.lsFilesStage(
-          workspace,
-          blob =>
-            MbtWorkspaceSymbolProvider.isRelevantPath(blob.path) &&
-              (blob.path.endsWith(".scala") || blob.path.endsWith(".java")),
-        )
-        blobs.iterator
-          .map(b => workspace.resolve(b.path).toNIO)
-          .filter(Files.exists(_))
-          .toSeq
-          .asJava
-      }
+        def defaultSourcepath(): ju.List[Path] = {
+          val blobs = GitVCS.lsFilesStage(
+            workspace,
+            blob =>
+              MbtWorkspaceSymbolProvider.isRelevantPath(blob.path) &&
+                (blob.path.endsWith(".scala") || blob.path.endsWith(".java")),
+          )
+          blobs.iterator
+            .map(b => workspace.resolve(b.path).toNIO)
+            .filter(Files.exists(_))
+            .toSeq
+            .asJava
+        }
+        semanticdbFileManager match {
+          case mbt: MbtWorkspaceSymbolProvider =>
+            val all = mbt.allFiles()
+            if (all.nonEmpty) all.map(_.toNIO).asJava else defaultSourcepath()
+          case _ =>
+            defaultSourcepath()
+        }
 
+      }
+  }
   def shouldRunRefchecks: Boolean =
     userConfig().additionalPcChecks.isRefchecks
 
