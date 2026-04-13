@@ -4,7 +4,6 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input

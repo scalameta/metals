@@ -1,6 +1,5 @@
 package scala.meta.internal.pc
 
-import java.net.URI
 import java.{util => ju}
 
 import scala.reflect.internal.util.Position

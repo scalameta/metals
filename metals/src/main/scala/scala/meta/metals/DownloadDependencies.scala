@@ -21,7 +21,6 @@ import coursier.LocalRepositories
 import coursier.paths.CoursierPaths
 import coursierapi.Dependency
 import coursierapi.error.SimpleResolutionError
-
 import scalafix.interfaces.Scalafix
 
 object DownloadDependencies {
