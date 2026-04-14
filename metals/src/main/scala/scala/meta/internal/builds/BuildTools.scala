@@ -52,6 +52,7 @@ final class BuildTools(
       maybeProjectRoot: Option[AbsolutePath] = None
   ): Boolean = {
     maybeProjectRoot.map(isBloop).getOrElse(isBloop) ||
+    isMbt ||
     (isBsp && all.isEmpty) ||
     (isBsp && explicitChoiceMade()) ||
     (isBsp && userConfig().preferredBuildServer.isDefined)
@@ -66,6 +67,7 @@ final class BuildTools(
     ) ||
     bspGlobalDirectories.exists(hasJsonFile)
   }
+  def isMbt: Boolean = workspace.resolve(".metals/mbt.json").isFile
   private def hasJsonFile(dir: AbsolutePath): Boolean = {
     dir.list.exists(_.extension == "json")
   }

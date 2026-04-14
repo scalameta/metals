@@ -202,7 +202,7 @@ abstract class MetalsLspService(
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
-    mbtBuild.dependencyModules.asScala.exists(_.jarPath.equals(path))
+    mbtBuild.getDependencyModules.asScala.exists(_.jarPath.equals(path))
   }
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
@@ -301,6 +301,14 @@ abstract class MetalsLspService(
       tables,
       connectionBspStatus,
     )
+
+  /**
+   * When `.metals/mbt.json` changes and the active BSP connection is the
+   * built-in MBT server, subclasses reconnect so imported build metadata
+   * refreshes.
+   */
+  protected def reconnectAfterMbtJsonChange(): Future[Unit] =
+    Future.successful(())
 
   private val sleeper: Sleeper =
     new Sleeper.ScheduledExecutorServiceSleeper(sh)
@@ -1095,14 +1103,15 @@ abstract class MetalsLspService(
       onDelete(event.getUri().toAbsolutePath)
     )
     val paths = changeAndCreateEvents.map(_.getUri().toAbsolutePath)
-    futures += Future {
-      paths.find(path => path.filename == "mbt.json") match {
-        case Some(mbtJsonPath) =>
+    futures += (paths.find(_.filename == "mbt.json") match {
+      case Some(mbtJsonPath) =>
+        Future {
           mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
           compilers.clearFallbackCompilerCache()
-        case None =>
-      }
-    }.ignoreValue
+        }.flatMap(_ => reconnectAfterMbtJsonChange())
+      case None =>
+        Future.successful(())
+    })
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
   }

@@ -1,78 +1,151 @@
 package scala.meta.internal.metals.mbt
 
-import java.net.URI
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.ArrayList
+import java.util.LinkedHashMap
 import java.{util => ju}
 import javax.annotation.Nullable
 
-import scala.jdk.CollectionConverters._
-
-import scala.meta.internal.mtags
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
-import com.google.gson.Gson
 
 case class MbtBuild(
-    var dependencyModules: ju.List[MbtDependencyModule]
+    @Nullable dependencyModules: ju.List[MbtDependencyModule],
+    @Nullable namespaces: ju.Map[String, MbtNamespace],
 ) {
-  def asBsp: bsp4j.DependencyModulesResult =
+
+  def getDependencyModules(): ju.List[MbtDependencyModule] =
+    if (this.dependencyModules != null) this.dependencyModules
+    else ju.Collections.emptyList()
+
+  def getNamespaces: ju.Map[String, MbtNamespace] =
+    if (this.namespaces != null) this.namespaces else ju.Collections.emptyMap()
+
+  def isEmpty: Boolean =
+    (dependencyModules == null || dependencyModules.isEmpty) &&
+      (namespaces == null || namespaces.isEmpty)
+
+  def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
-      List(
-        new bsp4j.DependencyModulesItem(
-          new bsp4j.BuildTargetIdentifier("mbt.json"),
-          dependencyModules.asScala
-            .map(m => {
-              val module = new bsp4j.DependencyModule(m.id, m.version)
-              val artifacts =
-                new ArrayList[bsp4j.MavenDependencyModuleArtifact]()
-              artifacts.add(
-                new bsp4j.MavenDependencyModuleArtifact(m.jarUriString)
-              )
-              if (m.sources != null) {
-                val sources =
-                  new bsp4j.MavenDependencyModuleArtifact(
-                    m.sourcesUriString.get
-                  )
-                sources.setClassifier("sources")
-                artifacts.add(sources)
-              }
-              module.setDataKind(bsp4j.DependencyModuleDataKind.MAVEN)
-              module.setData(
-                new bsp4j.MavenDependencyModule(
-                  m.organization,
-                  m.name,
-                  m.version,
-                  artifacts,
+      mbtTargets
+        .filter(_.dependencyModules.nonEmpty)
+        .map { target =>
+          new bsp4j.DependencyModulesItem(
+            target.id,
+            target.dependencyModules.map(_.asBsp).asJava,
+          )
+        }
+        .asJava
+    )
+
+  def mbtTargets: Seq[MbtTarget] =
+    if (getNamespaces.isEmpty) {
+      Option
+        .when(!getDependencyModules().isEmpty) {
+          MbtTarget(
+            name = MbtBuild.LegacyTargetName,
+            id = new bsp4j.BuildTargetIdentifier(MbtBuild.LegacyTargetName),
+            sources = Nil,
+            globMatchers = Nil,
+            compilerOptions = Nil,
+            dependencyModules = dependencyModules.asScala.toSeq,
+          )
+        }
+        .toSeq
+    } else {
+      val knownNamespaces = getNamespaces.keySet.asScala.toSet
+      getNamespaces.asScala.toSeq.map { case (name, namespace) =>
+        val dependsOnIds =
+          namespace.getDependsOn.asScala.toSeq.distinct.flatMap { depName =>
+            if (knownNamespaces.contains(depName)) {
+              Some(
+                new bsp4j.BuildTargetIdentifier(
+                  MbtBuild.namespaceTargetId(depName)
                 )
               )
-              module
-            })
-            .asJava,
+            } else {
+              scribe.warn(
+                s"mbt-build: namespace '$name' dependsOn unknown namespace '$depName'."
+              )
+              None
+            }
+          }
+        val globPatterns = namespace.getSources.asScala.toSeq.filter(isGlob)
+        val (validNsModules, invalidNsModules) =
+          namespace.getDependencyModules.asScala.partition(_.isValid)
+        invalidNsModules.foreach { module =>
+          scribe.warn(
+            s"mbt-build: ignoring invalid dependency module ID '${module.id}' in namespace '$name'. Expected format: 'organization:name:version'."
+          )
+        }
+        MbtTarget(
+          name = name,
+          id =
+            new bsp4j.BuildTargetIdentifier(MbtBuild.namespaceTargetId(name)),
+          sources = namespace.getSources.asScala.toSeq
+            .filterNot(isGlob),
+          globMatchers = globPatterns.map(pattern =>
+            MbtGlobMatcher(
+              pattern = pattern,
+              prefix = globPrefix(pattern),
+              matcher = FileSystems.getDefault.getPathMatcher(
+                "glob:" + globPatternForMatcher(pattern)
+              ),
+            )
+          ),
+          compilerOptions = namespace.getCompilerOptions.asScala.toSeq,
+          dependencyModules = validNsModules.toSeq,
+          scalaVersion = Option(namespace.scalaVersion),
+          javaHome = Option(namespace.javaHome),
+          dependsOn = dependsOnIds,
         )
-      ).asJava
-    )
-  def asMtags: Seq[mtags.DependencyModule] =
-    dependencyModules.asScala.iterator
-      .map(module =>
-        mtags.DependencyModule(
-          mtags
-            .MavenCoordinates(module.organization, module.name, module.version),
-          AbsolutePath(module.jar),
-          Option(module.sources).map(AbsolutePath(_)),
-        )
-      )
+      }
+    }
+
+  private def isGlob(pattern: String): Boolean = {
+    val n = normalizeSlashes(pattern)
+    n.exists(c => c == '*' || c == '?' || c == '[' || c == '{')
+  }
+
+  private def normalizeSlashes(s: String): String =
+    s.trim.replace('\\', '/')
+
+  /** Leading `./` is stripped so matchers align with workspace-relative paths. */
+  private def globPatternForMatcher(pattern: String): String = {
+    val n = normalizeSlashes(pattern)
+    if (n.startsWith("./")) n.substring(2) else n
+  }
+
+  private def globPrefix(pattern: String): Option[Path] = {
+    val literalSegments = globPatternForMatcher(pattern)
+      .split('/')
       .toSeq
+      .filter(_.nonEmpty)
+      .takeWhile(segment => !isGlob(segment))
+    literalSegments match {
+      case head +: tail => Some(Paths.get(head, tail: _*))
+      case _ => None
+    }
+  }
 }
 
 object MbtBuild {
-  val gson = new Gson()
-  def empty: MbtBuild = MbtBuild(ju.Collections.emptyList())
+  private val gson = new com.google.gson.Gson()
+  val LegacyTargetName = "default"
+
+  def empty: MbtBuild =
+    MbtBuild(
+      ju.Collections.emptyList(),
+      new LinkedHashMap[String, MbtNamespace](),
+    )
+
   def fromWorkspace(workspace: AbsolutePath): MbtBuild =
     fromFile(workspace.resolve(".metals/mbt.json").toNIO)
+
   def fromFile(file: Path): MbtBuild = try {
     if (!Files.isRegularFile(file)) {
       return MbtBuild.empty
@@ -80,7 +153,7 @@ object MbtBuild {
     val text = Files.readString(file)
     val build = gson.fromJson(text, classOf[MbtBuild])
     val (validModules, invalidModules) =
-      build.dependencyModules.asScala.partition(_.isValid)
+      build.getDependencyModules.asScala.partition(_.isValid)
     invalidModules.foreach { module =>
       scribe.warn(
         s"mbt-build: ignoring invalid dependency module ID '${module.id}'. Expected format: 'organization:name:version'."
@@ -92,23 +165,9 @@ object MbtBuild {
       scribe.warn(s"Failed to parse MBT build from JSON file '$file'", e)
       MbtBuild.empty
   }
-}
-case class MbtDependencyModule(
-    var id: String, // e.g. "com.google.guava:guava:30.0-jre"
-    var jar: String,
-    @Nullable var sources: String = null,
-) {
-  def jarPath: Path = Paths.get(jar)
-  def jarUri: URI = Paths.get(jar).toUri
-  def jarUriString: String = jarUri.toString
-  def sourcesUri: Option[URI] = Option(sources).map(Paths.get(_).toUri)
-  def sourcesUriString: Option[String] = sourcesUri.map(_.toString)
-  private def idParts: Array[String] = id.split(":", 3)
-  def isValid: Boolean = idParts.length == 3
-  def organization: String =
-    idParts.lift(0).getOrElse(s"INVALID_ORGANIZATION=$id")
-  def name: String =
-    idParts.lift(1).getOrElse(s"INVALID_NAME=$id")
-  def version: String =
-    idParts.lift(2).getOrElse(s"INVALID_VERSION=$id")
+
+  def namespaceTargetId(name: String): String = {
+    s"mbt://namespace/$name"
+  }
+
 }
