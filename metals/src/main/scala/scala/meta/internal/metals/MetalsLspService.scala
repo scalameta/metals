@@ -118,10 +118,12 @@ abstract class MetalsLspService(
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
     val metrics: MonitoringClient,
+    moduleStatus: ModuleStatus,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
-    with IndexProviders {
+    with IndexProviders
+    with ModulesService {
   import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
@@ -285,6 +287,8 @@ abstract class MetalsLspService(
     initialServerConfig,
     () => userConfig,
   )
+
+  def modulesDiagnostics: Diagnostics = diagnostics
 
   protected def semanticdbs(): Semanticdbs
 
@@ -1684,6 +1688,7 @@ abstract class MetalsLspService(
       },
       bspErrorHandler,
       workDoneProgress,
+      moduleStatus,
     )
 
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(

@@ -79,7 +79,7 @@ class DebugDiscovery(
   ): Try[ValidRunType.Value] = {
 
     val runType = RunType.fromString(params.runType)
-    val pathOpt = Option(params.path).map(_.toAbsolutePath)
+    val pathOpt = Option(params.path).flatMap(_.toAbsolutePathSafe)
     val buildTarget = pathOpt.flatMap(buildTargets.inverseSources(_)).orElse {
       Option(params.buildTarget)
         .flatMap(buildTargets.findByDisplayName)

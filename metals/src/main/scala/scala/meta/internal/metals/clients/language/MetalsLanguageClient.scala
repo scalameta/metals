@@ -233,7 +233,7 @@ case class MetalsStatusParams(
 
 object StatusType extends Enumeration {
   type StatusType = Value
-  val metals, bsp = Value
+  val metals, bsp, module = Value
 }
 
 case class MetalsInputBoxParams(
