@@ -197,6 +197,10 @@ class Compilers(
                     search,
                     fallbackClasspaths.scalaCompilerClasspath(),
                     completionItemPriority(),
+                    fallbackPresentationCompilerSourcepathSupplier(
+                      scalaVersion
+                    ),
+                    serverConfig.compilers.sourcePathMode,
                   )
                 }
               }
@@ -213,6 +217,8 @@ class Compilers(
                   search,
                   fallbackClasspaths.scalaCompilerClasspath(),
                   completionItemPriority(),
+                  fallbackPresentationCompilerSourcepathSupplier(scalaVersion),
+                  serverConfig.compilers.sourcePathMode,
                 )
               }
           }
@@ -1415,6 +1421,7 @@ class Compilers(
             sources,
             search,
             completionItemPriority(),
+            serverConfig.compilers.sourcePathMode,
           )
         },
       )
@@ -1431,6 +1438,7 @@ class Compilers(
             sources,
             Some(search),
             completionItemPriority(),
+            serverConfig.compilers.sourcePathMode,
           )
         },
       )
@@ -1501,6 +1509,7 @@ class Compilers(
                 mtags,
                 search,
                 completionItemPriority(),
+                serverConfig.compilers.sourcePathMode,
               )
             }
           val key =
