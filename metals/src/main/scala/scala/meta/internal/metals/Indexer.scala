@@ -391,8 +391,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
     try {
       if (!path.exists) {
         scribe.warn(s"dependency missing at absolute path: $path")
-      }
-      else if (path.isJar) {
+      } else if (path.isJar) {
         usedJars += path
         addSourceJarSymbols(path)
       } else if (path.isDirectory) {
