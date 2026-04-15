@@ -28,7 +28,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
 
   /**
    * @param isTests whether the build target is a test target
-   * @param jvmRunEnvironmentOverride when set, this future is used instead of calling
+   * @param jvmRunEnvironmentFuture when set, this future is used instead of calling
    *        `buildTarget/jvmTestEnvironment` or `buildTarget/jvmRunEnvironment` again
    *        (for example after the same future was used to assemble ScalaTest JVM options and env).
    */
@@ -36,8 +36,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
       id: BuildTargetIdentifier,
       cancelPromise: Promise[Unit],
       isTests: Boolean,
-      jvmRunEnvironmentOverride: Option[Future[Option[JvmEnvironmentItem]]] =
-        None,
+      jvmRunEnvironmentFuture: Option[Future[Option[JvmEnvironmentItem]]] = None,
   )(implicit ec: ExecutionContext): Either[String, Future[DebugeeProject]] = {
     for {
       target <- buildTargets
@@ -63,14 +62,13 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
       val includedInLibsOrModules =
         debugLibs.map(_.absolutePath).toSet ++ modules.map(_.absolutePath).toSet
 
-      val jvmRunEnvFuture = jvmRunEnvironmentOverride.getOrElse(
-        buildTargetClasses.jvmRunEnvironment(id, isTests = isTests)
-      )
       for {
         classpathString <- buildTargets
           .targetClasspath(id, cancelPromise)
           .getOrElse(Future.successful(Nil))
-        jvmRunEnv <- jvmRunEnvFuture
+        jvmRunEnv <- jvmRunEnvironmentFuture.getOrElse(
+          buildTargetClasses.jvmRunEnvironment(id, isTests = isTests)
+        )
       } yield {
 
         val classpath = classpathString.map(_.toAbsolutePath)
