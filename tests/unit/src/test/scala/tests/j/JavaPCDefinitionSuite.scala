@@ -89,9 +89,7 @@ class JavaPCDefinitionSuite extends BaseJavaPCSuite("java-pc-definition") {
       _ <- server.didOpen(a)
       _ = assertNoDiagnostics()
       // Introduce the cross-target reference via didChange so Bloop (triggered
-      // by addAllDirty on didOpen) has already compiled 'a' without the
-      // reference. didChange only triggers the PC (buildOnChange=false),
-      // which resolves whatever.Foo via the workspace source path.
+      // by addAllDirty on didOpen) compiles 'a' without it first.
       _ <- server.didChange(a)(
         _.replace("\"placeholder\"", "whatever.Foo.alice")
       )

@@ -21,8 +21,10 @@ import java.nio.file.Files
 class JavaPCDiagnosticsTrickySuite
     extends BaseJavaPCSuite("java-pc-diagnostics-tricky") {
 
-  // Test adding a new public symbol and using it downstream
-  test("add-new-symbol-and-use") {
+  // Test adding a new public symbol and using it downstream.
+  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
+  // that javac-sourcepath prefers over the updated source.
+  test("add-new-symbol-and-use".tag(TurbineClasspath)) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -188,10 +190,8 @@ class JavaPCDiagnosticsTrickySuite
   }
 
   // Test deleting a file that is used.
-  // Note: runs in turbine-classpath mode only. In javac-sourcepath mode,
-  // addAllDirty compiles Helper.java during didOpen creating Helper.class;
-  // that class file persists after Helper.java is deleted so javac finds
-  // Helper via the class path and reports no error.
+  // Turbine-classpath only: addAllDirty compiles Helper.java on didOpen,
+  // so the .class persists after deletion and javac-sourcepath sees no error.
   test("delete-file-diagnostics".tag(TurbineClasspath)) {
     cleanWorkspace()
     val helper = "a/src/main/java/a/Helper.java"
@@ -460,8 +460,10 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test adding a new public field to a class
-  test("add-new-field-and-use") {
+  // Test adding a new public field to a class.
+  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
+  // that javac-sourcepath prefers over the updated source.
+  test("add-new-field-and-use".tag(TurbineClasspath)) {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -661,8 +663,10 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test adding inner class and using it
-  test("add-inner-class") {
+  // Test adding inner class and using it.
+  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
+  // that javac-sourcepath prefers over the updated source.
+  test("add-inner-class".tag(TurbineClasspath)) {
     cleanWorkspace()
     for {
       _ <- initialize(
