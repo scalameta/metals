@@ -120,7 +120,7 @@ case class UserConfiguration(
       ScalaImportsPlacementConfig.default,
     batchSemanticdbCompilerInstances: BatchSemanticdbConfig =
       BatchSemanticdbConfig.default,
-    promptBuildImport: Boolean = false,
+    promptBuildImport: Boolean = true,
     protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
 ) {
 
@@ -472,7 +472,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "shim-globs",
         """`{}`.""",
-        """{ "default": ["shims.scala", "**/shims/*.scala"] }""",
+        """{ "default": [] }""",
         "Shim file globs",
         """|Named groups of file glob patterns used to detect shim files in the presentation compiler.
            |Entries follow the 'glob' syntax of FileSystem.getPathMatcher, e.g. use `**/shims.scala` to

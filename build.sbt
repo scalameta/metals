@@ -257,7 +257,8 @@ val sharedSettings = sharedScalacOptions ++ List(
     val org = organization.value
     val name = moduleName.value
     val ver = version.value
-    val f = (Compile / resourceManaged).value / "META-INF" / "maven" / org / name / "pom.properties"
+    val f =
+      (Compile / resourceManaged).value / "META-INF" / "maven" / org / name / "pom.properties"
     IO.write(f, s"artifactId=$name\ngroupId=$org\nversion=$ver\n")
     Seq(f)
   }.taskValue,
