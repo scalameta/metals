@@ -45,7 +45,6 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CleanCacheParams
 import ch.epfl.scala.bsp4j.CleanCacheResult
 import ch.epfl.scala.bsp4j.CompileParams
-import ch.epfl.scala.bsp4j.CompileProvider
 import ch.epfl.scala.bsp4j.CompileResult
 import ch.epfl.scala.bsp4j.DebugSessionAddress
 import ch.epfl.scala.bsp4j.DebugSessionParams
@@ -87,6 +86,7 @@ import ch.epfl.scala.bsp4j.TestParams
 import ch.epfl.scala.bsp4j.TestResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import ch.epfl.scala.bsp4j.CompileProvider
 
 final class MbtBuildServer(
     workspace: AbsolutePath,
