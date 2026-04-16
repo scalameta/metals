@@ -164,13 +164,13 @@ final class MbtBuildServer(
   ): CompletableFuture[InitializeBuildResult] =
     CompletableFuture.completedFuture {
       val capabilities = new BuildServerCapabilities
-      capabilities.setCompileProvider(
-        new CompileProvider(List("scala", "java").asJava)
-      )
       capabilities.setCanReload(true)
       capabilities.setDependencySourcesProvider(true)
       capabilities.setDependencyModulesProvider(true)
       capabilities.setInverseSourcesProvider(true)
+      capabilities.setCompileProvider(
+        new CompileProvider(List("scala", "java").asJava)
+      )
       capabilities.setResourcesProvider(false)
       capabilities.setJvmCompileClasspathProvider(true)
       new InitializeBuildResult(

@@ -40,7 +40,10 @@ class MbtBuildServerLspSuite
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()
     val scalaLibJar =
-      Library.getScalaLibraryJarPath(BuildInfo.scalaVersion).toString()
+      Library
+        .getScalaLibraryJarPath(BuildInfo.scalaVersion)
+        .toString()
+        .replace("\\", "\\\\")
 
     val mbtJson =
       s"""{
