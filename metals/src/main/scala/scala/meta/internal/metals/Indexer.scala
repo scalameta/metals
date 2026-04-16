@@ -543,7 +543,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     var cacheHits = 0
     var cacheMisses = 0
     try {
-      if (path.isJar && path.exists) {
+      if (!path.exists) {
+        scribe.warn(s"dependency missing at absolute path: $path")
+      } else if (path.isJar) {
         if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
           usedJars += path
           if (addSourceJarSymbols(path)) cacheHits += 1
