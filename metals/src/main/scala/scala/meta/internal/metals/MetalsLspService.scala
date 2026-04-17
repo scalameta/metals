@@ -205,7 +205,8 @@ abstract class MetalsLspService(
     mbtBuild.dependencyModules.asScala.exists(_.jarPath.equals(path))
   }
 
-  val fileChanges: FileChanges = new FileChanges(buildTargets, () => folder)
+  val fileChanges: FileChanges =
+    new FileChanges(buildTargets, () => folder, () => userConfig)
 
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)

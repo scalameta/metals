@@ -82,17 +82,12 @@ class JavaPCDefinitionSuite extends BaseJavaPCSuite("java-pc-definition") {
             |package a;
             |
             |public class Example {
-            |  public static String name = "placeholder";
+            |  public static String name = whatever.Foo.alice;
             |}
             |""".stripMargin
       )
       _ <- server.didOpen(a)
       _ = assertNoDiagnostics()
-      // Introduce the cross-target reference via didChange so Bloop (triggered
-      // by addAllDirty on didOpen) compiles 'a' without it first.
-      _ <- server.didChange(a)(
-        _.replace("\"placeholder\"", "whatever.Foo.alice")
-      )
       decodeURI =
         s"metalsDecode:${server.toPath(a).toURI}.semanticdb-detailed"
       _ <- server.executeDecodeFileCommand(decodeURI)

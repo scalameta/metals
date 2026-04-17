@@ -21,10 +21,8 @@ import java.nio.file.Files
 class JavaPCDiagnosticsTrickySuite
     extends BaseJavaPCSuite("java-pc-diagnostics-tricky") {
 
-  // Test adding a new public symbol and using it downstream.
-  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
-  // that javac-sourcepath prefers over the updated source.
-  test("add-new-symbol-and-use".tag(TurbineClasspath)) {
+  // Test adding a new public symbol and using it downstream
+  test("add-new-symbol-and-use") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -189,10 +187,8 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test deleting a file that is used.
-  // Turbine-classpath only: addAllDirty compiles Helper.java on didOpen,
-  // so the .class persists after deletion and javac-sourcepath sees no error.
-  test("delete-file-diagnostics".tag(TurbineClasspath)) {
+  // Test deleting a file that is used
+  test("delete-file-diagnostics") {
     cleanWorkspace()
     val helper = "a/src/main/java/a/Helper.java"
     for {
@@ -460,10 +456,8 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test adding a new public field to a class.
-  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
-  // that javac-sourcepath prefers over the updated source.
-  test("add-new-field-and-use".tag(TurbineClasspath)) {
+  // Test adding a new public field to a class
+  test("add-new-field-and-use") {
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -663,10 +657,8 @@ class JavaPCDiagnosticsTrickySuite
     } yield ()
   }
 
-  // Test adding inner class and using it.
-  // Turbine-classpath only: addAllDirty creates stale .class files on didOpen
-  // that javac-sourcepath prefers over the updated source.
-  test("add-inner-class".tag(TurbineClasspath)) {
+  // Test adding inner class and using it
+  test("add-inner-class") {
     cleanWorkspace()
     for {
       _ <- initialize(

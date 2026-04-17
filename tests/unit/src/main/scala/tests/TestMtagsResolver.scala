@@ -24,11 +24,7 @@ class TestMtagsResolver(checkCoursier: Boolean) extends MtagsResolver {
   override def resolve(
       scalaVersion: String
   )(implicit ec: ExecutionContext): Option[MtagsBinaries] = {
-    // Only use Coursier for versions that are locally supported. Without this guard,
-    // after `publishLocal`, `default.resolve("2.12.4")` would succeed (maps to
-    // mtags_2.12.21:1.5.1-SNAPSHOT in ivy2Local), making isSupportedScalaVersion("2.12.4")
-    // return true and suppressing the UnsupportedScalaVersion warning in tests.
-    if (checkCoursier && localCheck(scalaVersion).isDefined)
+    if (checkCoursier)
       default.resolve(scalaVersion).orElse(localCheck(scalaVersion))
     else localCheck(scalaVersion)
   }

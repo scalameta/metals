@@ -209,9 +209,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
 
   // This demonstrates an unwanted behavior where we ignore the build
   // dependencies from BSP. We allow imports to any file from any target.
-  // Turbine-classpath only: circular deps (a→b→a) produce garbled errors
-  // in javac-sourcepath mode.
-  test("target-cycles".tag(TurbineClasspath)) {
+  test("target-cycles") {
     cleanWorkspace()
     val person = "a/src/main/java/a/Person.java"
     val main = "b/src/main/java/b/Main.java"
@@ -236,7 +234,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
             |    this.age = age;
             |  }
             |  public static String greeting() {
-            |    return "hello";
+            |    return b.Main.greet();
             |  }
             |}
             |/$main
@@ -253,7 +251,7 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
       _ <- server.didOpen(main)
       _ = assertNoDiagnostics()
       _ <- server.didChange(person)(
-        _.replace("return \"hello\";", "return b.Main.greet2();")
+        _.replace("greet()", "greet2()")
       )
       _ <- server.didChange(main)(
         _.replace(".name", ".name2")

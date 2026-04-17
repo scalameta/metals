@@ -10,8 +10,12 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 
-class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
-    implicit ec: ExecutionContext
+class FileChanges(
+    buildTargets: BuildTargets,
+    workspace: () => AbsolutePath,
+    userConfig: () => UserConfiguration,
+)(implicit
+    ec: ExecutionContext
 ) {
   private val previousSignatures = TrieMap[AbsolutePath, String]()
   private val dirtyBuildTargets = mutable.Set[BuildTargetIdentifier]()
@@ -76,7 +80,7 @@ class FileChanges(buildTargets: BuildTargets, workspace: () => AbsolutePath)(
   ): Future[Option[BuildTargetIdentifier]] = {
     expand(path).map(
       _.filter(bt =>
-        dirtyBuildTargets.contains(
+        userConfig().buildOnFocus && dirtyBuildTargets.contains(
           bt
         ) || (!assumeDidNotChange && didContentChange(path, fingerprint, bt))
       )

@@ -187,12 +187,17 @@ object DownloadDependencies {
   def downloadScala3PresentationCompiler(
       filterVersions: String => Boolean
   ): Seq[Path] = {
+    // depend on unavailable snapshot versions
+    val ignoredVersions = Set("3.4.0", "3.4.1", "3.4.2", "3.4.3", "3.5.0")
     scribe.info("Downloading Scala 3 presentation compiler")
-    allSupportedScala3Versions.filter(filterVersions).flatMap { scalaVersion =>
-      Embedded.downloadScala3PresentationCompiler(
-        scalaVersion
-      ) ++ Embedded.downloadScala3Sources(scalaVersion)
-    }
+    allSupportedScala3Versions
+      .filter(filterVersions)
+      .filterNot(ignoredVersions)
+      .flatMap { scalaVersion =>
+        Embedded.downloadScala3PresentationCompiler(
+          scalaVersion
+        ) ++ Embedded.downloadScala3Sources(scalaVersion)
+      }
   }
 
   def downloadSemanticDBScalac(filterVersions: String => Boolean): Seq[Path] = {
