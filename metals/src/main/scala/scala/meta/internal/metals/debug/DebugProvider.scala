@@ -21,6 +21,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -58,6 +59,7 @@ import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -65,8 +67,11 @@ import ch.epfl.scala.{bsp4j => b}
 import ch.epfl.scala.{debugadapter => dap}
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 /**
  * @param supportsTestSelection test selection hasn't been defined in BSP spec yet.
@@ -392,7 +397,7 @@ class DebugProvider(
   private def discoverTests(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
-  ): Future[Map[TestFramework, List[Discovered]]] = {
+  ): Future[Map[Config.TestFramework, List[Discovered]]] = {
     val symbolInfosList =
       for {
         selection <- testClasses.getSuites().asScala.toList
@@ -483,6 +488,29 @@ class DebugProvider(
   )(implicit ec: ExecutionContext): Future[b.DebugSessionParams] = {
     val result = foundClasses match {
       case (_, target) :: _ if buildClient.buildHasErrors(target.getId()) =>
+        val msg = "Cannot launch due to compile errors."
+        if (clientConfig.isExecuteClientCommandProvider()) {
+          val params = new ShowMessageRequestParams
+          params.setMessage(msg)
+          params.setType(MessageType.Error)
+          params.setActions(List(new MessageActionItem("View Problems")).asJava)
+          languageClient
+            .showMessageRequest(params)
+            .asScala
+            .foreach(_ =>
+              languageClient.metalsExecuteClientCommand(
+                new ExecuteCommandParams(
+                  ClientCommands.FocusDiagnostics.id,
+                  Nil.asJava,
+                )
+              )
+            )
+        } else {
+          val params = new MessageParams
+          params.setMessage(msg)
+          params.setType(MessageType.Error)
+          languageClient.showMessage(params)
+        }
         Future.failed(WorkspaceErrorsException)
       case (clazz, target) :: others =>
         if (others.nonEmpty) {
@@ -595,7 +623,8 @@ class DebugProvider(
             request.requestData.copy(
               suites = request.requestData.suites.map { suite =>
                 testProvider.getFramework(buildTarget, suite) match {
-                  case JUnit4 | MUnit =>
+                  case Config.TestFramework.JUnit |
+                      Config.TestFramework.munit =>
                     suite.copy(tests = suite.tests.map(escapeTestName))
                   case _ => suite
                 }

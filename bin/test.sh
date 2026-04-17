@@ -8,14 +8,14 @@ function run_with_restart_loop {
   local max_attempts=5
   local timeout_seconds=20
   local attempt=1
-  
+
   while [ $attempt -le $max_attempts ]; do
     echo "Attempt $attempt/$max_attempts: Running bloop command..."
-    
+
     # Run the command with timeout
     timeout $timeout_seconds ./coursier launch -M bloop.cli.Bloop -r sonatype:snapshots ch.epfl.scala:bloop-cli_2.13:$(bloop_version) -- about
     local exit_code=$?
-    
+
     if [ $exit_code -eq 0 ]; then
       echo "Bloop command completed successfully"
       return 0
@@ -29,10 +29,10 @@ function run_with_restart_loop {
       echo "Bloop command failed with exit code $exit_code (attempt $attempt/$max_attempts)"
       sleep 2
     fi
-    
+
     attempt=$((attempt + 1))
   done
-  
+
   echo "All $max_attempts attempts failed. Continuing with script..."
   return 1
 }

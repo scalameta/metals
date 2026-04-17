@@ -85,4 +85,17 @@ class ImplementationCrossLspSuite
     scalaVersion = Some(V.scala3),
   )
 
+  check(
+    "self-type-intersection",
+    """|/a/src/main/scala/a/Main.scala
+       |trait C
+       |trait A:
+       |  def a@@a: Unit
+       |trait B:
+       | this : A & C =>
+       |  override def <<aa>>: Unit = ()
+       |""".stripMargin,
+    scalaVersion = Some("3.3.5"),
+  )
+
 }

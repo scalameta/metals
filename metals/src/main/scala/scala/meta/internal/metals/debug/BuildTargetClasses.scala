@@ -12,6 +12,7 @@ import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.{bsp4j => b}
 
 /**
@@ -186,7 +187,7 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
         )
     } {
       // item.getFramework() can return null!
-      val framework = TestFramework(Option(item.getFramework()))
+      val framework = TestFrameworkUtils.from(Option(item.getFramework()))
       val testInfo = BuildTargetClasses.TestSymbolInfo(className, framework)
       classes(target).testClasses.put(symbol, testInfo)
     }
@@ -225,44 +226,32 @@ final class BuildTargetClasses(val buildTargets: BuildTargets)(implicit
   }
 }
 
-sealed abstract class TestFramework(val canResolveChildren: Boolean) {
-  def names: List[String]
-}
+object TestFrameworkUtils {
+  val WeaverTestFramework: TestFramework = TestFramework(
+    List("weaver.framework.CatsEffect")
+  )
+  private lazy val supportedFrameworks = Set(
+    TestFramework.JUnit,
+    TestFramework.munit,
+    TestFramework.ScalaTest,
+    WeaverTestFramework,
+    TestFramework.TestNG,
+  )
 
-object TestFramework {
-  def apply(framework: Option[String]): TestFramework = framework
+  def from(framework: Option[String]): TestFramework = framework
     .map {
-      case "JUnit" => JUnit4
-      case "munit" => MUnit
-      case "ScalaTest" => Scalatest
-      case "weaver-cats-effect" => WeaverCatsEffect
-      case _ => Unknown
+      case "JUnit" => TestFramework.JUnit
+      case "munit" => TestFramework.munit
+      case "ScalaTest" => TestFramework.ScalaTest
+      case "weaver-cats-effect" => WeaverTestFramework
+      case "TestNG" => TestFramework.TestNG
+      case _ => TestFramework(Nil)
     }
-    .getOrElse(Unknown)
-}
+    .getOrElse(TestFramework(Nil))
 
-case object JUnit4 extends TestFramework(true) {
-  def names: List[String] = List("com.novocode.junit.JUnitFramework")
-}
-
-case object MUnit extends TestFramework(true) {
-  def names: List[String] = List("munit.Framework")
-}
-
-case object Scalatest extends TestFramework(true) {
-  def names: List[String] =
-    List(
-      "org.scalatest.tools.Framework",
-      "org.scalatest.tools.ScalaTestFramework",
-    )
-}
-
-case object WeaverCatsEffect extends TestFramework(true) {
-  def names: List[String] = List("weaver.BaseCatsSuite")
-}
-
-case object Unknown extends TestFramework(false) {
-  def names: List[String] = Nil
+  def canResolveTests(framework: TestFramework): Boolean = supportedFrameworks(
+    framework
+  )
 }
 
 object BuildTargetClasses {

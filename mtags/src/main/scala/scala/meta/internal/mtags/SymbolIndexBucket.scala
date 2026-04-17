@@ -149,7 +149,7 @@ class SymbolIndexBucket(
         .filterNot(_.symbol.isPackage)
         .map(_.symbol)
     val topLevels =
-      if (source.isAmmoniteScript) sourceTopLevels.toList
+      if (source.isScalaScript) sourceTopLevels.toList
       else if (isJava) {
         sourceTopLevels.toList.headOption
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))

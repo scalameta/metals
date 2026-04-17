@@ -2,19 +2,10 @@ package tests.rangeFormatting
 
 import scala.meta.internal.metals.UserConfiguration
 
-import munit.Location
-import munit.TestOptions
-import org.eclipse.lsp4j.FormattingOptions
-import tests.BaseLspSuite
+import tests.BaseRangeFormatterSuite
 
 class MultilineStringRangeFormattingWhenPastingSuite
-    extends BaseLspSuite("rangeFormatting") {
-  val formattingOptions: FormattingOptions = new FormattingOptions(
-    /** tabSize: */
-    2,
-    /** insertSpaces */
-    true,
-  )
+    extends BaseRangeFormatterSuite("rangeFormatting") {
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(enableIndentOnPaste = true)
@@ -352,37 +343,4 @@ class MultilineStringRangeFormattingWhenPastingSuite
         |}""".stripMargin,
   )
 
-  def check(
-      name: TestOptions,
-      testCase: String,
-      paste: String,
-      expectedCase: String,
-  )(implicit loc: Location): Unit = {
-    val tripleQuote = "\"\"\""
-    def unmangle(string: String): String =
-      string.replaceAll("'''", tripleQuote)
-
-    val testCode = unmangle(testCase)
-    val base = testCode.replaceAll("(@@)", "")
-    val expected = unmangle(expectedCase)
-    test(name) {
-      for {
-        _ <- initialize(
-          s"""/metals.json
-             |{"a":{}}
-             |/a/src/main/scala/a/Main.scala
-             |""".stripMargin + base
-        )
-        _ <- server.didOpen("a/src/main/scala/a/Main.scala")
-        _ <- server.rangeFormatting(
-          "a/src/main/scala/a/Main.scala",
-          testCode, // bez @@
-          expected,
-          unmangle(paste),
-          workspace,
-          Some(formattingOptions),
-        )
-      } yield ()
-    }
-  }
 }

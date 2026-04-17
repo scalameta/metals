@@ -55,7 +55,7 @@ final class Ammonite(
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
 
-  val buildTargetsData = new TargetData(isAmmonite = true)
+  val buildTargetsData = new TargetData()
 
   def buildServer: Option[BuildServerConnection] =
     buildServer0
@@ -177,8 +177,7 @@ final class Ammonite(
       .getOrElse(
         AmmVersions(
           ammoniteVersion = BuildInfo.ammoniteVersion,
-          scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion(isAmmonite = true),
+          scalaVersion = scalaVersionSelector.fallbackScalaVersion(),
         )
       )
     val res = Try {

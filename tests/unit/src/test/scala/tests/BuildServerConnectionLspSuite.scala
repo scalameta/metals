@@ -57,7 +57,7 @@ class BuildServerConnectionLspSuite
       )
       _ <- server.didChangeConfiguration(
         s"""|{
-            |  "bloopVersion": "${scala.meta.internal.metals.BuildInfo.bloopVersion}"
+            |  "bloopVersion": "${server.server.bspSession.map(_.version).getOrElse(scala.meta.internal.metals.BuildInfo.bloopVersion)}"
             |}
             |""".stripMargin
       )

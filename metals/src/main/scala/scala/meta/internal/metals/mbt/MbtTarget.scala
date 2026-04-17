@@ -70,7 +70,7 @@ case class MbtTarget(
     capabilities.setCanTest(false)
 
     val scalaVersion = this.scalaVersion.getOrElse(
-      scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+      scalaVersionSelector.fallbackScalaVersion()
     )
     val scalaTarget = new bsp4j.ScalaBuildTarget(
       "org.scala-lang",

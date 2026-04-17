@@ -395,4 +395,39 @@ class TypeDefinitionSuite extends BasePcDefinitionSuite {
        |""".stripMargin
   )
 
+  check(
+    "backticked identifier",
+    """|
+       |class Main {
+       |  def `Foo /*scala/Int# Int.scala*/@@ Bar` = 1 + 2
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "whitespace",
+    """|
+       |class Main {
+       |  def x = 1 @@ + 2
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "delimiters-1",
+    """|
+       |class Main {
+       |  def x = (1 )@@ + 2
+       |}
+       |""".stripMargin
+  )
+
+  check(
+    "delimiters-2",
+    """|
+       |class Main {
+       |  def x = (1 @@) + 2
+       |}
+       |""".stripMargin
+  )
 }

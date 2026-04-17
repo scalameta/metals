@@ -45,6 +45,12 @@ object Developers {
       url("https://github.com/kasiaMarek)"),
     ),
     Developer(
+      "majk-p",
+      "Michał Pawlik",
+      "admin@michalp.net",
+      url("https://github.com/majk-p"),
+    ),
+    Developer(
       "olafurpg",
       "Ólafur Páll Geirsson",
       "olafurpg@gmail.com",

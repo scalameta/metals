@@ -106,7 +106,7 @@ class FallbackClasspaths(
   }
   private def fallbackScalaBinaryVersion(): String = {
     val scalaVersion =
-      scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+      scalaVersionSelector.fallbackScalaVersion()
     ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
   }
   def scalaCompilerClasspath(): Seq[Path] = {

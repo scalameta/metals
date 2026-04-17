@@ -577,4 +577,39 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("package-object") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": { "scalaVersion": "${V.scala213}" }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main extends App {
+           |  def foo(n: FancyInt, k: Int): Unit = {
+           |    // @@
+           |  }
+           |}
+           |/a/src/main/scala/a/package.scala
+           |package object a {
+           |  type FancyInt = Int
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "n.max@@",
+        """|max(that: Double): Double
+           |max(that: Float): Float
+           |max(that: Int): Int
+           |max(that: Long): Long
+           |""".stripMargin,
+        filename = Some("a/src/main/scala/a/Main.scala"),
+      )
+    } yield ()
+  }
 }

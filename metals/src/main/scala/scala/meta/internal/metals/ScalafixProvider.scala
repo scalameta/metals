@@ -28,7 +28,6 @@ import scala.meta.io.AbsolutePath
 
 import com.typesafe.config.ConfigFactory
 import coursierapi.Dependency
-import coursierapi.Repository
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.{lsp4j => l}
@@ -430,9 +429,16 @@ case class ScalafixProvider(
         if (produceSemanticdb) {
           // Clean up created file and semanticdbs from `.metals/.tmp` directory
           targetRoot.foreach { root =>
-            if (diskFilePath.toNIO.startsWith(root))
-              diskFilePath.deleteWithEmptyParents()
-            AbsolutePath(root.resolve("META-INF")).deleteRecursively()
+            try {
+              if (diskFilePath.toNIO.startsWith(root))
+                diskFilePath.deleteWithEmptyParents()
+              AbsolutePath(root.resolve("META-INF")).deleteRecursively()
+            } catch {
+              case NonFatal(e) =>
+                scribe.error(
+                  s"Failed to clean up temporary files after scalafix evaluation: $e"
+                )
+            }
           }
         }
         evaluated
@@ -595,7 +601,7 @@ case class ScalafixProvider(
     // last version that supports Scala 2.11.12
     val latestSupporting = "0.10.4"
     val jars = ScalafixCoursier.scalafixCliJars(
-      Repository.defaults(),
+      Embedded.repositories.asJava,
       latestSupporting,
       V.scala211,
     )

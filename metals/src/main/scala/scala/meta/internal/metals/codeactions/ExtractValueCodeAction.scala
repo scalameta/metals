@@ -50,9 +50,9 @@ class ExtractValueCodeAction(
         term <- allTrees
         names = MetalsNames(term, "newValue")
         stats <- lastEnclosingStatsList(term)
-        argument <- findRangeEnclosing(term, range)
+        extractedValue <- findRangeEnclosing(term, range)
         // avoid extracting lambdas (this needs actual type information)
-        if isNotLambda(argument)
+        if isNotLambda(extractedValue)
         stat <- stats.find(stat => stat.pos.encloses(term.pos))
         name = names.createNewName()
         source <- buffers.get(path)
@@ -65,13 +65,17 @@ class ExtractValueCodeAction(
         val replacementText =
           term match {
             case apply: Term.Apply
-                if argument.is[Term.Block] && !applyHasParens(apply) =>
+                if extractedValue.is[Term.Block] && !applyHasParens(apply) =>
               s"($name)"
             case _ => name
           }
-        val valueText = s"$keyword$name = ${argument.toString()}"
+
+        val redactedValue = ExtractValueCodeAction.removeFewerBracesBlock(
+          extractedValue.toString()
+        )
+        val valueText = s"$keyword$name = ${redactedValue}"
         val replacedArgument =
-          new l.TextEdit(argument.pos.toLsp, replacementText)
+          new l.TextEdit(extractedValue.pos.toLsp, replacementText)
         // we will insert `val newValue = ???` before the existing statement containing apply
         (
           withInsertNewValueDef(
@@ -81,7 +85,7 @@ class ExtractValueCodeAction(
             blank,
             replacedArgument,
           ),
-          argument.toString(),
+          extractedValue.toString(),
         )
       }
 
@@ -94,6 +98,7 @@ class ExtractValueCodeAction(
     }
 
   }
+
   private def applyArgument(argument: Term): Term =
     argument match {
       // named parameter
@@ -350,9 +355,14 @@ class ExtractValueCodeAction(
 
 object ExtractValueCodeAction {
   def title(expr: String): String = {
-    val trimmed = expr.trim.stripPrefix("{").stripSuffix("}").trim()
+    val trimmed = removeFewerBracesBlock.andThen(stripBraces)(expr.trim)
     if (trimmed.length <= 10) s"Extract `$trimmed` as value"
     else s"Extract `${trimmed.take(10)}` ... as value"
   }
 
+  private def removeFewerBracesBlock(extractedValue: String): String =
+    extractedValue.toString().dropWhile(_ == ' ').stripPrefix(":")
+
+  private def stripBraces(input: String): String =
+    input.stripPrefix("{").stripSuffix("}").trim()
 }

@@ -799,4 +799,54 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
     mode = All,
   )
 
+  check(
+    "i3808",
+    """|package a
+       |trait B
+       |trait A {
+       | self: B =>
+       |
+       |}
+       |""".stripMargin,
+    List("a/", "a/A# -> B", "a/B#"),
+    mode = All,
+  )
+
+  check(
+    "i3808-2",
+    """|package a
+       |trait B
+       |trait A:
+       | this: B =>
+       |""".stripMargin,
+    List("a/", "a/A# -> B", "a/B#"),
+    mode = All,
+    dialect = dialects.Scala3,
+  )
+
+  check(
+    "i3808-3",
+    """|package a
+       |trait B[T]
+       |trait C
+       |trait A:
+       | this: B[Int] & C =>
+       |""".stripMargin,
+    List("a/", "a/A# -> C, B", "a/B#", "a/C#"),
+    mode = All,
+    dialect = dialects.Scala3,
+  )
+
+  check(
+    "i3808-4",
+    """|package a
+       |trait B[T]
+       |trait C
+       |trait A:
+       | this: B[Int] | C =>
+       |""".stripMargin,
+    List("a/", "a/A#", "a/B#", "a/C#"),
+    mode = All,
+    dialect = dialects.Scala3,
+  )
 }

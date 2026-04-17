@@ -200,6 +200,12 @@ final class PcInlayHintsProvider(
     }
 
     def partsFromImplicitArgs(trees: List[Tree]): List[LabelPart] = {
+      def safeLabel(t: Tree, treeLabel: String) =
+        if (t.symbol != null) labelPart(t.symbol, t.symbol.decodedName)
+        else if (t.tpe != null)
+          LabelPart(s"(?$treeLabel: ${t.tpe.toLongString})")
+        else LabelPart(s"(?$treeLabel: ???)")
+
       @tailrec
       def recurseImplicitArgs(
           currentArgs: List[Tree],
@@ -247,55 +253,38 @@ final class PcInlayHintsProvider(
                     LabelPart(", ") :: label :: parts
                   )
               case Apply(fun, args) =>
-                if (fun.symbol != null) {
-                  val applyLabel = labelPart(fun.symbol, fun.symbol.decodedName)
-                  recurseImplicitArgs(
-                    args,
-                    remainingArgs :: remainingArgsLists,
-                    LabelPart("(") :: applyLabel :: parts
-                  )
-                } else {
-                  recurseImplicitArgs(
-                    args,
-                    remainingArgs :: remainingArgsLists,
-                    parts
-                  )
-                }
+                val applyLabel = safeLabel(fun, "apply")
+                recurseImplicitArgs(
+                  args,
+                  remainingArgs :: remainingArgsLists,
+                  LabelPart("(") :: applyLabel :: parts
+                )
               case t @ Function(vparams, body) =>
                 val funLabels =
-                  if (t.symbol != null && t.symbol.isSynthetic)
-                    reversedLabelPartsFromParams(vparams)
-                  else if (t.symbol != null)
-                    List(labelPart(t.symbol, t.symbol.decodedName))
-                  else
-                    reversedLabelPartsFromParams(vparams)
+                  if (t.symbol != null)
+                    if (t.symbol.isSynthetic)
+                      reversedLabelPartsFromParams(vparams)
+                    else List(labelPart(t.symbol, t.symbol.decodedName))
+                  else safeLabel(t, "function") :: Nil
                 recurseImplicitArgs(
                   List(body),
                   remainingArgs :: remainingArgsLists,
                   LabelPart(" => ") :: funLabels ::: parts
                 )
               case t if t.isTerm =>
-                if (t.symbol != null) {
-                  val termLabel = labelPart(t.symbol, t.symbol.decodedName)
-                  if (remainingArgs.isEmpty)
-                    recurseImplicitArgs(
-                      remainingArgs,
-                      remainingArgsLists,
-                      termLabel :: parts
-                    )
-                  else
-                    recurseImplicitArgs(
-                      remainingArgs,
-                      remainingArgsLists,
-                      LabelPart(", ") :: termLabel :: parts
-                    )
-                } else {
+                val termLabel = safeLabel(t, "term")
+                if (remainingArgs.isEmpty)
                   recurseImplicitArgs(
                     remainingArgs,
                     remainingArgsLists,
-                    parts
+                    termLabel :: parts
                   )
-                }
+                else
+                  recurseImplicitArgs(
+                    remainingArgs,
+                    remainingArgsLists,
+                    LabelPart(", ") :: termLabel :: parts
+                  )
               case _ =>
                 recurseImplicitArgs(
                   remainingArgs,
@@ -304,6 +293,7 @@ final class PcInlayHintsProvider(
                 )
             }
         }
+
       (LabelPart(")") :: recurseImplicitArgs(
         trees,
         Nil,

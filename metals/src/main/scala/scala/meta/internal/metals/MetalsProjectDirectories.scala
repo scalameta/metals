@@ -12,6 +12,10 @@ import dev.dirs.ProjectDirectories
 
 object MetalsProjectDirectories {
 
+  def isNotBroken(path: String): Boolean = {
+    !path.contains("null") && !path.contains("PowerShell")
+  }
+
   def from(
       qualifier: String,
       organization: String,

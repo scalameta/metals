@@ -143,13 +143,8 @@ final class AutoImportsProvider(
         val moreExact = moreResults.filter { case (_, sym) =>
           correctInTreeContext(sym)
         }
-        if (moreExact.nonEmpty) {
-          // Prefer context-appropriate results, but keep other matches as fallbacks
-          val exactSet = moreExact.map(_._2).toSet
-          moreExact.map(_._1) ++ moreResults.collect {
-            case (res, sym) if !exactSet(sym) => res
-          }
-        } else moreResults.map(_._1)
+        if (moreExact.nonEmpty) moreExact.map(_._1)
+        else moreResults.map(_._1)
     }
   }
 
