@@ -207,10 +207,13 @@ class ConnectionProvider(
       .flatMap { item =>
         if (item == null) Future.unit
         else if (item == Messages.ChooseBuildServer.mbt) {
-          tables.buildServers.chooseServer(MbtBuildServer.name)
           mbtImport
             .runUnconditionally(mbtImporters, isMbtImportInProcess)
-            .ignoreValue
+            .flatMap { importStatus =>
+              if (importStatus.isInstalled)
+                tables.buildServers.chooseServer(MbtBuildServer.name)
+              Future.unit
+            }
         } else if (item == Messages.ChooseBuildServer.bloop) {
           tables.buildServers.chooseServer(BloopServers.name)
           slowConnectToBuildServer(forceImport = true, progress).ignoreValue
@@ -876,8 +879,14 @@ class ConnectionProvider(
                     if (isMbtPreferred) {
                       val importers =
                         buildTools.mbtImporters(shellRunner, () => userConfig)
-                      mbtImport
-                        .runUnconditionally(importers, isMbtImportInProcess)
+                      if (importers.isEmpty) {
+                        scribe.warn(
+                          "mbt-import: no MBT importers discovered during server switch"
+                        )
+                        Future.successful(WorkspaceLoadedStatus.Failed(-1))
+                      } else
+                        mbtImport
+                          .runUnconditionally(importers, isMbtImportInProcess)
                     } else Future.successful(WorkspaceLoadedStatus.Installed)
                   _ <-
                     if (importStatus.isInstalled) connect(request, progress)
