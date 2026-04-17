@@ -7,27 +7,14 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.CfrDecompiler
 import scala.meta.internal.mtags.BuildInfo
-import scala.meta.io.AbsolutePath
 
-import coursierapi.Dependency
-import coursierapi.Fetch
 import tests.BaseSuite
+import tests.Library
 
 class CfrDecompilerSuite extends BaseSuite {
   test("decompile-scala-library-class") {
-    // Get scala-library jar path using coursier (similar to Library.fetch)
     val scalaVersion = BuildInfo.scalaCompilerVersion
-    val scalaLibraryDep =
-      Dependency.of("org.scala-lang", "scala-library", scalaVersion)
-
-    val scalaLibraryJar = Fetch
-      .create()
-      .withDependencies(scalaLibraryDep.withTransitive(false))
-      .fetch()
-      .asScala
-      .headOption
-      .map(f => AbsolutePath(f.toPath))
-      .getOrElse(fail("Could not fetch scala-library jar"))
+    val scalaLibraryJar = Library.getScalaLibraryJarPath(scalaVersion)
 
     // Decompile a well-known Scala class (e.g., scala.Option)
     val optionClassUri = URI.create(

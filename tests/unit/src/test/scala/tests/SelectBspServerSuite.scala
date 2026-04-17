@@ -53,4 +53,19 @@ class SelectBspServerSuite extends BaseSuite {
       |Mill
       |""".stripMargin,
   )
+
+  check(
+    "with-mbt",
+    None,
+    List(
+      name("Bloop"),
+      name("MBT"),
+      name("sbt"),
+    ),
+    """
+      |Bloop
+      |MBT
+      |sbt
+      |""".stripMargin,
+  )
 }

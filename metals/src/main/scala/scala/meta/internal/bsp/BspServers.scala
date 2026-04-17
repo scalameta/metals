@@ -23,12 +23,15 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsProjectDirectories
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.process.SystemProcess
@@ -51,7 +54,9 @@ final class BspServers(
     bspGlobalInstallDirectories: List[AbsolutePath],
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
+    mbtBuild: () => MbtBuild,
     workDoneProgress: WorkDoneProgress,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit ec: ExecutionContextExecutorService) {
   private def customProjectRoot =
     userConfig().getCustomProjectRoot(mainWorkspace)
@@ -156,29 +161,46 @@ final class BspServers(
         )
       }
     }
-
-    BuildServerConnection.fromSockets(
-      projectDirectory,
-      bspTraceRoot,
-      buildClient,
-      client,
-      newConnection,
-      tables.dismissedNotifications.ReconnectBsp,
-      tables.dismissedNotifications.RequestTimeout,
-      config,
-      details.getName(),
-      bspStatusOpt,
-      workDoneProgress = workDoneProgress,
-    )
+    if (MbtBuildServer.isMbtServer(details.getName())) {
+      MbtBuildServer.newServer(
+        projectDirectory,
+        buildClient,
+        client,
+        config,
+        tables.dismissedNotifications.RequestTimeout,
+        tables.dismissedNotifications.ReconnectBsp,
+        bspStatusOpt,
+        mbtBuild,
+        workDoneProgress,
+        scalaVersionSelector,
+      )
+    } else {
+      BuildServerConnection.fromSockets(
+        projectDirectory,
+        bspTraceRoot,
+        buildClient,
+        client,
+        newConnection,
+        tables.dismissedNotifications.RequestTimeout,
+        tables.dismissedNotifications.ReconnectBsp,
+        config,
+        details.getName(),
+        bspStatusOpt,
+        workDoneProgress = workDoneProgress,
+      )
+    }
   }
 
   /**
    * Returns a list of BspConnectionDetails from reading the .bsp/
    *  entries. Notes that this will not return Bloop even though it
    *  may be a server in the current workspace
+   *
+   *  Additionally, also returns the MBT server details if the mbt.json build file is not empty.
    */
   def findAvailableServers(): List[BspConnectionDetails] =
-    findJsonFiles().flatMap(readInBspConfig(_, charset))
+    (findJsonFiles().flatMap(readInBspConfig(_, charset)) :::
+      Option.when(!mbtBuild().isEmpty)(MbtBuildServer.details).toList)
 
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]
