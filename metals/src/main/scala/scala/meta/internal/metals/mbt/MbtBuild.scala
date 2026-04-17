@@ -4,7 +4,6 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.util.LinkedHashMap
 import java.{util => ju}
 import javax.annotation.Nullable
 
@@ -19,15 +18,14 @@ case class MbtBuild(
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
-    if (this.dependencyModules != null) this.dependencyModules
-    else ju.Collections.emptyList()
+    Option(this.dependencyModules).getOrElse(ju.Collections.emptyList())
 
   def getNamespaces: ju.Map[String, MbtNamespace] =
-    if (this.namespaces != null) this.namespaces else ju.Collections.emptyMap()
+    Option(this.namespaces).getOrElse(ju.Collections.emptyMap())
 
   def isEmpty: Boolean =
-    (dependencyModules == null || dependencyModules.isEmpty) &&
-      (namespaces == null || namespaces.isEmpty)
+    Option(this.dependencyModules).forall(_.isEmpty) &&
+      Option(this.namespaces).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
@@ -144,7 +142,7 @@ object MbtBuild {
   def empty: MbtBuild =
     MbtBuild(
       ju.Collections.emptyList(),
-      new LinkedHashMap[String, MbtNamespace](),
+      new ju.LinkedHashMap[String, MbtNamespace](),
     )
 
   def fromWorkspace(workspace: AbsolutePath): MbtBuild =
@@ -188,7 +186,7 @@ object MbtBuild {
         .asJava
 
     val mergedNamespaces =
-      new LinkedHashMap[String, MbtNamespace](a.getNamespaces)
+      new ju.LinkedHashMap[String, MbtNamespace](a.getNamespaces)
     b.getNamespaces.asScala.foreach { case (key, ns) =>
       if (mergedNamespaces.containsKey(key))
         scribe.warn(

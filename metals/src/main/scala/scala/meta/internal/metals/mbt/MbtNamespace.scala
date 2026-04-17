@@ -13,13 +13,11 @@ case class MbtNamespace(
     @Nullable dependsOn: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =
-    if (this.sources != null) this.sources else ju.Collections.emptyList()
+    Option(this.sources).getOrElse(ju.Collections.emptyList())
   def getCompilerOptions: ju.List[String] =
-    if (this.compilerOptions != null) this.compilerOptions
-    else ju.Collections.emptyList()
+    Option(this.compilerOptions).getOrElse(ju.Collections.emptyList())
   def getDependencyModules: ju.List[MbtDependencyModule] =
-    if (this.dependencyModules != null) this.dependencyModules
-    else ju.Collections.emptyList()
+    Option(this.dependencyModules).getOrElse(ju.Collections.emptyList())
   def getDependsOn: ju.List[String] =
-    if (this.dependsOn != null) this.dependsOn else ju.Collections.emptyList()
+    Option(this.dependsOn).getOrElse(ju.Collections.emptyList())
 }
