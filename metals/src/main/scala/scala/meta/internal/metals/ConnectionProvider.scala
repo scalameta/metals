@@ -31,6 +31,9 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.importer.MbtImport
+import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
 
@@ -118,6 +121,16 @@ class ConnectionProvider(
     () => userConfig,
   )
 
+  private val mbtImport: MbtImport = new MbtImport(
+    folder,
+    languageClient,
+    tables,
+    () => userConfig,
+  )
+
+  private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
+  private val buildServerPromptShown: AtomicBoolean = new AtomicBoolean(false)
+
   val cancelables = new MutableCancelable
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
@@ -134,17 +147,79 @@ class ConnectionProvider(
       "Sync",
       progress =>
         for {
+          _ <- fullConnectStep(progress)
           _ <-
-            if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
+            if (bspSession.isEmpty && buildTools.isMbt)
               connect(CreateSession(), progress)
-            else slowConnectToBuildServer(forceImport = false, progress)
-          _ <-
-            if (bspSession.isEmpty && !mbtBuild().isEmpty)
-              connect(Index(check), progress)
             else Future.unit
         } yield buildServerPromise.trySuccess(()),
       metricName = Some("initialize_build_server"),
     )
+  }
+
+  /**
+   * Step of [[fullConnect]]: decide which build server to use.
+   *
+   * - MBT preferred/selected → run MBT importers directly.
+   * - Already auto-connectable (.bloop/.bsp) → connect straight away.
+   * - MBT importers exist AND no server chosen yet → ask the user once
+   *   ("Use Bloop" / "Use MBT" / "Not now").
+   * - Otherwise → normal slow-connect path (BloopInstall / BSP prompts).
+   */
+  private def fullConnectStep(progress: TaskProgress): Future[Unit] = {
+    val mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
+    if (isMbtPreferred) {
+      runMbtReimport(mbtImporters)
+    } else if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
+      connect(CreateSession(), progress).ignoreValue
+    } else if (
+      mbtImporters.nonEmpty &&
+      tables.buildServers.selectedServer().isEmpty &&
+      !buildServerPromptShown.get()
+    ) {
+      promptBuildServerChoice(mbtImporters, progress)
+    } else {
+      slowConnectToBuildServer(forceImport = false, progress).ignoreValue
+    }
+  }
+
+  private def promptBuildServerChoice(
+      mbtImporters: List[MbtImportProvider],
+      progress: TaskProgress,
+  ): Future[Unit] = {
+    val buildToolName =
+      if (buildTools.isMaven) "Maven"
+      else if (buildTools.isGradle) "Gradle"
+      else "build tool"
+
+    buildServerPromptShown.set(true)
+    languageClient
+      .showMessageRequest(Messages.ChooseBuildServer.params(buildToolName))
+      .asScala
+      .flatMap { item =>
+        if (item == Messages.ChooseBuildServer.mbt) {
+          tables.buildServers.chooseServer(MbtBuildServer.name)
+          mbtImport
+            .runUnconditionally(mbtImporters, isMbtImportInProcess)
+            .ignoreValue
+        } else if (item == Messages.ChooseBuildServer.bloop) {
+          slowConnectToBuildServer(forceImport = true, progress).ignoreValue
+        } else {
+          Future.unit
+        }
+      }
+  }
+
+  private def isMbtPreferred: Boolean =
+    userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
+      tables.buildServers.selectedServer().contains(MbtBuildServer.name)
+
+  def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] = {
+    if (importers.isEmpty) Future.unit
+    else
+      mbtImport
+        .runIfApproved(importers, isMbtImportInProcess)
+        .ignoreValue
   }
 
   def reloadCurrentSession(): Future[Unit] =

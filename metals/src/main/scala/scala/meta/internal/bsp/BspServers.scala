@@ -194,13 +194,19 @@ final class BspServers(
   /**
    * Returns a list of BspConnectionDetails from reading the .bsp/
    *  entries. Notes that this will not return Bloop even though it
-   *  may be a server in the current workspace
+   *  may be a server in the current workspace.
    *
-   *  Additionally, also returns the MBT server details if the mbt.json build file is not empty.
+   * MBT is included when it already has targets OR when the user has
+   * configured it as preferred/selected.
    */
-  def findAvailableServers(): List[BspConnectionDetails] =
+  def findAvailableServers(): List[BspConnectionDetails] = {
+    val includeMbt =
+      !mbtBuild().isEmpty ||
+        userConfig().preferredBuildServer.contains(MbtBuildServer.name) ||
+        tables.buildServers.selectedServer().contains(MbtBuildServer.name)
     (findJsonFiles().flatMap(readInBspConfig(_, charset)) :::
-      Option.when(!mbtBuild().isEmpty)(MbtBuildServer.details).toList)
+      Option.when(includeMbt)(MbtBuildServer.details).toList)
+  }
 
   private def findJsonFiles(): List[AbsolutePath] = {
     val buf = List.newBuilder[AbsolutePath]

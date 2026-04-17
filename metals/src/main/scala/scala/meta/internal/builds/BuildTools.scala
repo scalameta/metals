@@ -6,6 +6,9 @@ import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.concurrent.ExecutionContext
+import scala.util.Try
+
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
@@ -13,6 +16,10 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
+import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
+import scala.meta.internal.metals.mbt.importer.MbtImportProvider
+import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
@@ -271,6 +278,30 @@ final class BuildTools(
       if (knownBsps(name) && !ScalaCli.names(name)) None
       else Some(name)
     } else None
+  }
+
+  def mbtImporters(
+      shellRunner: ShellRunner,
+      userConfig: () => UserConfiguration,
+  )(implicit ec: ExecutionContext): List[MbtImportProvider] = {
+    val buf = List.newBuilder[MbtImportProvider]
+
+    mavenProject.foreach(root =>
+      buf += new MavenMbtImporter(root, shellRunner, userConfig)
+    )
+    gradleProject.foreach(root =>
+      buf += new GradleMbtImporter(root, shellRunner, userConfig)
+    )
+
+    workspace.list
+      .filter(f =>
+        ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
+      )
+      .foreach(script =>
+        buf += new ScriptMbtImporter(script, shellRunner, userConfig)
+      )
+
+    buf.result()
   }
 
   def initialize(): Set[BuildTool] = {
