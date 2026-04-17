@@ -838,7 +838,6 @@ class WorkspaceLspService(
             Option(MetalsSyncParams(uri.getAsString, null))
           case _ => None
         }
-      case _ => None
     }
     paramsOpt match {
       case Some(params) =>

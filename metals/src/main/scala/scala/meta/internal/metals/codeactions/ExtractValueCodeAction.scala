@@ -355,7 +355,7 @@ class ExtractValueCodeAction(
 
 object ExtractValueCodeAction {
   def title(expr: String): String = {
-    val trimmed = removeFewerBracesBlock.andThen(stripBraces)(expr.trim)
+    val trimmed = stripBraces(removeFewerBracesBlock(expr.trim))
     if (trimmed.length <= 10) s"Extract `$trimmed` as value"
     else s"Extract `${trimmed.take(10)}` ... as value"
   }

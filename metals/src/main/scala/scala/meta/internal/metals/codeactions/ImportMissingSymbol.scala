@@ -6,7 +6,6 @@ import scala.concurrent.Future
 import scala.meta.internal.jpc.JavacDiagnostic
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
@@ -259,7 +258,6 @@ object ImportMissingSymbolQuickFix {
 class SourceAddMissingImports(
     compilers: Compilers,
     buildTargets: BuildTargets,
-    diagnostics: Diagnostics,
 ) extends ImportMissingSymbol(compilers, buildTargets) {
 
   override protected def getDiagnostics(

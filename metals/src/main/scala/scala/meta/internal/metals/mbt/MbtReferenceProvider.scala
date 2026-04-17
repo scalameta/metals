@@ -514,7 +514,6 @@ class MbtReferenceProvider(
   // abstraction, it will also be powered by a persistent cache, and it's able
   // to deal with adjusting positions in stale payloads, etc.
   private class TextDocumentCache() {
-    private case class CacheKey(path: AbsolutePath, fileSize: Long)
     private val cache = TrieMap.empty[AbsolutePath, s.TextDocument]
     def indexSingle(path: AbsolutePath): s.TextDocument = {
       index(Seq(path)).documents.headOption.getOrElse {
