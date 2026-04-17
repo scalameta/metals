@@ -304,6 +304,10 @@ lazy val turbine = project
       "com.google.auto.value" % "auto-value-annotations" % "1.11.1",
       "com.google.protobuf" % "protobuf-java" % V.protobuf,
     ),
+    Compile / javacOptions ++= Seq(
+      "-processor",
+      "com.google.auto.value.processor.AutoValueProcessor",
+    ),
     (Compile / PB.targets) :=
       Seq(PB.gens.java(V.protobuf) -> (Compile / sourceManaged).value),
   )

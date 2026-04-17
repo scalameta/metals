@@ -22,6 +22,7 @@ import scala.meta.internal.metals.Indexer.BackgroundJob
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
@@ -114,6 +115,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       resetService()
     }
     val allBuildTargetsData = buildData()
+    // If the user didn't select MBT, we still want the fallbacks to work properly
+    val shouldFallbackToFileMbt =
+      (indexProviders.userConfig.fallbackClasspath.isMbt || bspSession.isEmpty) &&
+        !bspSession.exists(session =>
+          MbtBuildServer.isMbtServer(session.main.name)
+        )
     for (buildTool <- allBuildTargetsData)
       timerProvider.timedThunk(
         s"updated ${buildTool.name} build targets",
@@ -144,11 +151,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         data.addDependencyModules(
           importedBuild.dependencyModules
         )
-        if (
-          indexProviders.userConfig.fallbackClasspath.isMbt || bspSession.isEmpty
-        ) {
+        if (shouldFallbackToFileMbt) {
           val build = MbtBuild.fromWorkspace(indexProviders.folder)
-          data.addDependencyModules(build.asBsp)
+          data.addDependencyModules(build.asBspModules)
         }
 
         // Fallback compilers can possibly use the jars from the build target data, so we trigger a restart
@@ -245,11 +250,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
             progress,
           )
         }
-        if (
-          indexProviders.userConfig.fallbackClasspath.isMbt || bspSession.isEmpty
-        ) {
+        if (shouldFallbackToFileMbt) {
           val build = MbtBuild.fromWorkspace(indexProviders.folder)
-          indexDependencyModules(build.asBsp, progress)
+          indexDependencyModules(build.asBspModules, progress)
         }
         usedJars ++= indexDependencySources(
           buildTool.data,

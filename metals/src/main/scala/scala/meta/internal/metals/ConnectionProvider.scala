@@ -89,7 +89,9 @@ class ConnectionProvider(
     bspGlobalDirectories,
     clientConfig.initialConfig,
     () => userConfig,
+    mbtBuild,
     workDoneProgress,
+    scalaVersionSelector,
   )
 
   val bspConnector: BspConnector = new BspConnector(
@@ -137,16 +139,29 @@ class ConnectionProvider(
               connect(CreateSession(), progress)
             else slowConnectToBuildServer(forceImport = false, progress)
           _ <-
-            if (
-              bspSession.isEmpty && !mbtBuild().dependencyModules
-                .isEmpty()
-            )
+            if (bspSession.isEmpty && !mbtBuild().isEmpty)
               connect(Index(check), progress)
             else Future.unit
         } yield buildServerPromise.trySuccess(()),
       metricName = Some("initialize_build_server"),
     )
   }
+
+  def reloadCurrentSession(): Future[Unit] =
+    bspSession match {
+      case Some(session) if session.canReloadWorkspace =>
+        workDoneProgress.trackProgressFuture(
+          "Sync",
+          progress =>
+            for {
+              _ <- session.workspaceReload()
+              _ <- connect(new ImportBuildAndIndex(session), progress)
+            } yield (),
+          metricName = Some("reload_build_server"),
+        )
+      case _ =>
+        fullConnect()
+    }
 
   private def isBspAvailable(buildTool: BuildTool) =
     buildTool.isBspGenerated(folder) || bspGlobalDirectories.exists(

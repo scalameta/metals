@@ -143,6 +143,11 @@ class MbtWorkspaceSymbolProvider(
     // work that is not necessary for tests or benchmarks.
     documents.size
   }
+
+  def allFiles(): List[AbsolutePath] = {
+    documents.keys.toList
+  }
+
   // `documentsKeys` is effectively `documents.keys.par` but without the
   // overhead to copy the keys into a parallel collection at query time.  Make
   // sure to call updateDocumentsKeys() when you add or remove a document.

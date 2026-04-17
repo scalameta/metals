@@ -163,4 +163,25 @@ object Library {
       .asScala
       .toSeq
       .map(f => AbsolutePath(f.toPath))
+
+  /**
+   * Resolves the scala-library jar for the given Scala version.
+   * Returns the AbsolutePath to the jar file.
+   */
+  def getScalaLibraryJarPath(scalaVersion: String): AbsolutePath = {
+    val scalaLibraryDep =
+      Dependency.of("org.scala-lang", "scala-library", scalaVersion)
+    Fetch
+      .create()
+      .withDependencies(scalaLibraryDep.withTransitive(false))
+      .fetch()
+      .asScala
+      .headOption
+      .map(f => AbsolutePath(f.toPath))
+      .getOrElse(
+        throw new RuntimeException(
+          s"Could not fetch scala-library jar for version $scalaVersion"
+        )
+      )
+  }
 }

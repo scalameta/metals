@@ -1,7 +1,6 @@
 package tests.j
 
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.UserConfiguration
 
@@ -17,10 +16,6 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
   // By default (when None), tests run with both turbine-classpath and javac-sourcepath.
   // Override to Some(...) to only run one of the settings.
   def javaSymbolLoaderMode: Option[JavaSymbolLoaderConfig] = None
-
-  /** Override to customize the turbine recompile delay */
-  def turbineRecompileDelayConfig: TurbineRecompileDelayConfig =
-    TurbineRecompileDelayConfig.testing
 
   private var currentTest: munit.Test = null
   override def beforeEach(context: BeforeEach): Unit = {
@@ -78,7 +73,6 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
       buildOnFocus = false,
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
       javaSymbolLoader = resolvedJavaSymbolLoader,
-      javaTurbineRecompileDelay = turbineRecompileDelayConfig,
     )
 
   override def initializeGitRepo: Boolean = true

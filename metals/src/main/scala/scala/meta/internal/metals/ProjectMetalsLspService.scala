@@ -25,6 +25,7 @@ import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
@@ -193,6 +194,11 @@ class ProjectMetalsLspService(
     syncStatusReporter,
     () => mbtBuild,
   )
+
+  override protected def reconnectAfterMbtJsonChange(): Future[Unit] =
+    if (bspSession.exists(s => MbtBuildServer.isMbtServer(s.main.name)))
+      connectionProvider.reloadCurrentSession()
+    else Future.successful(())
 
   protected val onBuildChanged: BatchedFunction[AbsolutePath, Unit] =
     BatchedFunction.fromFuture[AbsolutePath, Unit](

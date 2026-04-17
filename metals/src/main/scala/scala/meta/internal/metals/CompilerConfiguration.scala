@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
@@ -19,7 +20,9 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
 import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.GitVCS
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
@@ -75,6 +78,47 @@ class CompilerConfiguration(
   def shouldUseFullSourcepathForFallback: Boolean =
     userConfig().fallbackSourcepath.enabled
 
+  /**
+   * When `fallbackSourcepath` is enabled (see `shouldUseFullSourcepathForFallback`), supplies
+   * tracked workspace `.scala` / `.java` paths (via `git ls-files`, or a disk walk if git is
+   * unavailable) for the fallback presentation compiler's `-sourcepath`.
+   */
+  def fallbackPresentationCompilerSourcepathSupplier(
+      scalaVersion: String
+  ): Supplier[ju.List[Path]] = {
+    def isScala2 = !ScalaVersions.isScala3Version(
+      scalaVersion
+    )
+    if (
+      !shouldUseFullSourcepathForFallback ||
+      // uses symbols from MBT for Scala 2
+      isScala2 && userConfig().workspaceSymbolProvider.isMBT
+    ) () => ju.Collections.emptyList()
+    else
+      () => {
+        def defaultSourcepath(): ju.List[Path] = {
+          val blobs = GitVCS.lsFilesStage(
+            workspace,
+            blob =>
+              MbtWorkspaceSymbolProvider.isRelevantPath(blob.path) &&
+                (blob.path.endsWith(".scala") || blob.path.endsWith(".java")),
+          )
+          blobs.iterator
+            .map(b => workspace.resolve(b.path).toNIO)
+            .filter(Files.exists(_))
+            .toSeq
+            .asJava
+        }
+        semanticdbFileManager match {
+          case mbt: MbtWorkspaceSymbolProvider =>
+            val all = mbt.allFiles()
+            if (all.nonEmpty) all.map(_.toNIO).asJava else defaultSourcepath()
+          case _ =>
+            defaultSourcepath()
+        }
+
+      }
+  }
   def shouldRunRefchecks: Boolean =
     userConfig().additionalPcChecks.isRefchecks
 
@@ -103,6 +147,8 @@ class CompilerConfiguration(
       symbolSearch: SymbolSearch,
       classpath: Seq[Path],
       referenceCounter: CompletionItemPriority,
+      srcFiles: Supplier[ju.List[Path]],
+      sourcePathMode: SourcePathMode,
   ) extends MtagsPresentationCompiler {
     private val mtagsBinaries =
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
@@ -115,9 +161,21 @@ class CompilerConfiguration(
         "default",
         symbolSearch,
         referenceCounter,
-        overrideSourcePathMode =
-          if (shouldUseFullSourcepathForFallback) Some(SourcePathMode.MBT)
-          else None,
+        srcFiles,
+        overrideSourcePathMode = {
+          if (shouldUseFullSourcepathForFallback) {
+            // Default to PRUNED for Scala 3, where MBT is not yet supported
+            if (
+              ScalaVersions.isScala3Version(
+                scalaVersion
+              ) || !userConfig().workspaceSymbolProvider.isMBT
+            ) {
+              Some(SourcePathMode.PRUNED)
+            } else {
+              Some(SourcePathMode.MBT)
+            }
+          } else None
+        },
       )
     }
 
@@ -133,6 +191,7 @@ class CompilerConfiguration(
         sources: Seq[Path],
         workspaceFallback: Option[SymbolSearch],
         referenceCounter: CompletionItemPriority,
+        sourcePathMode: SourcePathMode,
     ): StandaloneCompiler = {
       val search =
         createStandaloneSearch(classpath, sources, workspaceFallback)
@@ -141,6 +200,8 @@ class CompilerConfiguration(
         search,
         classpath,
         referenceCounter,
+        () => sources.asJava,
+        sourcePathMode,
       )
     }
   }
@@ -247,6 +308,7 @@ class CompilerConfiguration(
       mtags: MtagsBinaries,
       search: SymbolSearch,
       referenceCounter: CompletionItemPriority,
+      overrideSourcePathMode: SourcePathMode,
       additionalClasspath: Seq[Path] = Nil,
   ) extends LazyCompiler {
 
@@ -312,6 +374,7 @@ class CompilerConfiguration(
         Nil,
         Some(search),
         referenceCounter,
+        overrideSourcePathMode,
       ).standalone
   }
 
@@ -324,6 +387,7 @@ class CompilerConfiguration(
         sources: Seq[Path],
         workspaceFallback: SymbolSearch,
         referenceCounter: CompletionItemPriority,
+        overrideSourcePathMode: SourcePathMode,
     ): ScalaLazyCompiler = {
 
       val worksheetSearch =
@@ -334,6 +398,7 @@ class CompilerConfiguration(
         mtags,
         worksheetSearch,
         referenceCounter,
+        overrideSourcePathMode,
         classpath,
       )
     }
@@ -438,7 +503,7 @@ class CompilerConfiguration(
       name: String,
       symbolSearch: SymbolSearch,
       referenceCounter: CompletionItemPriority,
-      sourcePath: Supplier[ju.List[Path]] = () => Nil.asJava,
+      sourcePath: Supplier[ju.List[Path]],
       overrideSourcePathMode: Option[SourcePathMode] = None,
   ): PresentationCompiler = {
     val pc = mtags match {
