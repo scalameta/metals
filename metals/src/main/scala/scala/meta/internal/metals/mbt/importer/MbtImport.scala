@@ -7,6 +7,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Success
+import scala.util.Try
 
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.WorkspaceLoadedStatus
@@ -41,13 +42,26 @@ final class MbtImport(
   ): Future[WorkspaceLoadedStatus] = {
     if (isImportInProcess.compareAndSet(false, true)) {
       Future
-        .sequence(providers.map(_.extract(workspace)))
-        .map { _ =>
-          val builds =
-            providers.map(p => MbtBuild.fromFile(p.outputPath(workspace).toNIO))
+        .sequence(
+          providers.map(p =>
+            p.extract(workspace)
+              .map { _ =>
+                Try(MbtBuild.fromFile(p.outputPath(workspace).toNIO)).toOption
+              }
+              .recover { case ex =>
+                scribe.error(s"mbt-import: provider '${p.name}' failed", ex)
+                None
+              }
+          )
+        )
+        .map { results =>
+          val builds = results.flatten
           val merged = builds.foldLeft(MbtBuild.empty)(MbtBuild.merge)
           writeOutput(merged)
-          WorkspaceLoadedStatus.Installed
+          if (builds.isEmpty && providers.nonEmpty)
+            WorkspaceLoadedStatus.Failed(-1)
+          else
+            WorkspaceLoadedStatus.Installed
         }
         .recover { case ex =>
           scribe.error("mbt-import: unexpected error during extraction", ex)
@@ -89,8 +103,8 @@ final class MbtImport(
         runUnconditionally(providers, isImportInProcess)
       case Some(digest) =>
         oldImportResult(digest) match {
-          case Some(result)
-              if result != WorkspaceLoadedStatus.Duplicate(Status.Requested) =>
+          case Some(result @ WorkspaceLoadedStatus.Duplicate(s))
+              if s == Status.Installed || s == Status.Rejected =>
             scribe.info(
               s"mbt-import: skipping import with status '${result.name}'"
             )
@@ -124,8 +138,9 @@ final class MbtImport(
   private def computeDigest(
       providers: List[MbtImportProvider]
   ): Option[String] = {
-    val parts = providers.flatMap(_.digest(workspace))
-    Option.when(parts.nonEmpty)(parts.mkString("|"))
+    val parts = providers.map(_.digest(workspace))
+    if (parts.isEmpty || parts.exists(_.isEmpty)) None
+    else Some(parts.flatten.mkString("|"))
   }
 
   private def oldImportResult(

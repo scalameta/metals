@@ -27,11 +27,8 @@ final class GradleMbtImporter(
     Files.writeString(out.toNIO, MbtBuild.toJson(MbtBuild.empty))
   }
 
-  override def isBuildRelated(
-      workspace: AbsolutePath,
-      path: AbsolutePath,
-  ): Boolean =
-    GradleBuildTool.isGradleRelatedPath(workspace, path)
+  override def isBuildRelated(path: AbsolutePath): Boolean =
+    GradleBuildTool.isGradleRelatedPath(projectRoot, path)
 
   override def digest(workspace: AbsolutePath): Option[String] =
     GradleDigest.current(projectRoot)

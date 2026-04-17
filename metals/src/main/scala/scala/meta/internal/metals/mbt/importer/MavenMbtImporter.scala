@@ -27,11 +27,8 @@ final class MavenMbtImporter(
     Files.writeString(out.toNIO, MbtBuild.toJson(MbtBuild.empty))
   }
 
-  override def isBuildRelated(
-      workspace: AbsolutePath,
-      path: AbsolutePath,
-  ): Boolean =
-    MavenBuildTool.isMavenRelatedPath(workspace, path)
+  override def isBuildRelated(path: AbsolutePath): Boolean =
+    MavenBuildTool.isMavenRelatedPath(projectRoot, path)
 
   override def digest(workspace: AbsolutePath): Option[String] =
     MavenDigest.current(projectRoot)

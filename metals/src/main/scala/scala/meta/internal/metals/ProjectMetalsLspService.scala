@@ -295,17 +295,19 @@ class ProjectMetalsLspService(
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
   ): Future[Unit] = {
-    val mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
-    val mbtBuildFilesChanged =
-      mbtImporters.nonEmpty &&
-        paths.exists(path =>
-          mbtImporters.exists(_.isBuildRelated(folder, path))
-        )
     val isMbtSessionActive =
       bspSession.exists(s => MbtBuildServer.isMbtServer(s.main.name))
+    val mbtImporters =
+      if (isMbtSessionActive && !connectionProvider.willGenerateBspConfig)
+        buildTools.mbtImporters(shellRunner, () => userConfig)
+      else Nil
+    val mbtBuildFilesChanged =
+      mbtImporters.nonEmpty &&
+        paths.exists(path => mbtImporters.exists(_.isBuildRelated(path)))
 
     if (
       !connectionProvider.willGenerateBspConfig &&
+      !userConfig.buildChangedAction.isNone &&
       mbtBuildFilesChanged &&
       isMbtSessionActive
     ) {

@@ -55,17 +55,15 @@ final class ScriptMbtImporter(
       .map(_ => ())
   }
 
-  override def isBuildRelated(
-      workspace: AbsolutePath,
-      path: AbsolutePath,
-  ): Boolean = path == scriptPath
+  override def isBuildRelated(path: AbsolutePath): Boolean = path == scriptPath
 
   override def digest(workspace: AbsolutePath): Option[String] =
-    Some(MD5.compute(scriptPath.toNIO))
+    scala.util.Try(MD5.compute(scriptPath.toNIO)).toOption
 
-  override val projectRoot: AbsolutePath = AbsolutePath(
-    scriptPath.toNIO.getParent
-  )
+  override val projectRoot: AbsolutePath =
+    Option(scriptPath.toNIO.getParent)
+      .map(AbsolutePath(_))
+      .getOrElse(scriptPath)
 
   private[importer] def buildCommand: List[String] = {
     if (scriptPath.toFile.getName().endsWith(".mbt.sh"))

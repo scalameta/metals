@@ -27,6 +27,7 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.WorkspaceLoadedStatus
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.doctor.Doctor
@@ -176,7 +177,7 @@ class ConnectionProvider(
     } else if (
       mbtImporters.nonEmpty &&
       tables.buildServers.selectedServer().isEmpty &&
-      !buildServerPromptShown.get()
+      buildServerPromptShown.compareAndSet(false, true)
     ) {
       promptBuildServerChoice(mbtImporters, progress)
     } else {
@@ -193,17 +194,18 @@ class ConnectionProvider(
       else if (buildTools.isGradle) "Gradle"
       else "build tool"
 
-    buildServerPromptShown.set(true)
     languageClient
       .showMessageRequest(Messages.ChooseBuildServer.params(buildToolName))
       .asScala
       .flatMap { item =>
-        if (item == Messages.ChooseBuildServer.mbt) {
+        if (item == null) Future.unit
+        else if (item == Messages.ChooseBuildServer.mbt) {
           tables.buildServers.chooseServer(MbtBuildServer.name)
           mbtImport
             .runUnconditionally(mbtImporters, isMbtImportInProcess)
             .ignoreValue
         } else if (item == Messages.ChooseBuildServer.bloop) {
+          tables.buildServers.chooseServer(BloopServers.name)
           slowConnectToBuildServer(forceImport = true, progress).ignoreValue
         } else {
           Future.unit
@@ -216,8 +218,12 @@ class ConnectionProvider(
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
 
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] = {
-    if (importers.isEmpty) Future.unit
-    else
+    if (importers.isEmpty) {
+      scribe.warn(
+        "mbt-import: MBT is the preferred build server but no MBT importers were discovered"
+      )
+      Future.unit
+    } else
       mbtImport
         .runIfApproved(importers, isMbtImportInProcess)
         .ignoreValue
@@ -840,16 +846,21 @@ class ConnectionProvider(
                 slowConnectToBuildServer(forceImport = true, progress)
               case Some(request: ConnectRequest) =>
                 for {
-                  _ <-
+                  importStatus <-
                     if (isMbtPreferred) {
                       val importers =
                         buildTools.mbtImporters(shellRunner, () => userConfig)
-                      mbtImport.runUnconditionally(
-                        importers,
-                        isMbtImportInProcess,
+                      mbtImport
+                        .runUnconditionally(importers, isMbtImportInProcess)
+                    } else Future.successful(WorkspaceLoadedStatus.Installed)
+                  _ <-
+                    if (importStatus.isInstalled) connect(request, progress)
+                    else {
+                      scribe.warn(
+                        s"mbt-import: skipping server switch after failed import (status: ${importStatus.name})"
                       )
-                    } else Future.unit
-                  _ <- connect(request, progress)
+                      Future.unit
+                    }
                 } yield ()
             }
         } yield ()

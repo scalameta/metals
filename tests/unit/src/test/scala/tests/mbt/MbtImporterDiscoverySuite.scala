@@ -129,7 +129,7 @@ class MbtImporterDiscoverySuite extends BaseSuite {
       .mbtImporters(null, () => UserConfiguration())
       .collectFirst { case m: MavenMbtImporter => m }
       .get
-    assert(importer.isBuildRelated(workspace, workspace.resolve("pom.xml")))
+    assert(importer.isBuildRelated(workspace.resolve("pom.xml")))
   }
 
   test("gradle-isBuildRelated-true-for-build-gradle") {
@@ -139,9 +139,7 @@ class MbtImporterDiscoverySuite extends BaseSuite {
       .mbtImporters(null, () => UserConfiguration())
       .collectFirst { case g: GradleMbtImporter => g }
       .get
-    assert(
-      importer.isBuildRelated(workspace, workspace.resolve("build.gradle"))
-    )
+    assert(importer.isBuildRelated(workspace.resolve("build.gradle")))
   }
 
   test("hasMbtImporters-true-for-pom-xml") {
