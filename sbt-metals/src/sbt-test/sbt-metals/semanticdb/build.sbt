@@ -7,7 +7,7 @@ val checkSemanticdb =
 lazy val a = project
   .in(file("a"))
   .settings(
-    scalaVersion := "2.13.12",
+    scalaVersion := "2.13.16",
     inConfig(Compile) {
       checkSemanticdb := {
         assertSemanticdbForScala2.value

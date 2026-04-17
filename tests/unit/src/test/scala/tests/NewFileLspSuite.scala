@@ -65,7 +65,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedContent = "",
   )
 
-  checkScala("new-ammonite-script-fully-provided")(
+  checkScala("new-script-fully-provided")(
     directory = Some("a/src/main/scala/"),
     fileType = Left(ScalaScript),
     fileName = Left("Foo"),

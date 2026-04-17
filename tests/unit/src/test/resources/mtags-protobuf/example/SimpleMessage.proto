@@ -1,0 +1,36 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   message Person {
+//         ^^^^^^ definition example/Person# CLASS
+     string name = 1;
+//          ^^^^ definition example/Person#name(). METHOD(val)
+//          ^^^^ definition example/Person#getName(). METHOD(val)
+//          ^^^^ definition example/Person#withName(). METHOD(val)
+     int32 age = 2;
+//         ^^^ definition example/Person#age(). METHOD(val)
+//         ^^^ definition example/Person#getAge(). METHOD(val)
+//         ^^^ definition example/Person#withAge(). METHOD(val)
+     bool active = 3;
+//        ^^^^^^ definition example/Person#active(). METHOD(val)
+//        ^^^^^^ definition example/Person#getActive(). METHOD(val)
+//        ^^^^^^ definition example/Person#withActive(). METHOD(val)
+   }
+
+   message Address {
+//         ^^^^^^^ definition example/Address# CLASS
+     string street = 1;
+//          ^^^^^^ definition example/Address#street(). METHOD(val)
+//          ^^^^^^ definition example/Address#getStreet(). METHOD(val)
+//          ^^^^^^ definition example/Address#withStreet(). METHOD(val)
+     string city = 2;
+//          ^^^^ definition example/Address#city(). METHOD(val)
+//          ^^^^ definition example/Address#getCity(). METHOD(val)
+//          ^^^^ definition example/Address#withCity(). METHOD(val)
+     Person occupant = 3;
+//   ^^^^^^ reference Person:
+//          ^^^^^^^^ definition example/Address#occupant(). METHOD(val)
+//          ^^^^^^^^ definition example/Address#getOccupant(). METHOD(val)
+//          ^^^^^^^^ definition example/Address#withOccupant(). METHOD(val)
+   }

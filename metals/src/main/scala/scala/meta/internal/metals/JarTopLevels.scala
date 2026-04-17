@@ -1,8 +1,6 @@
 package scala.meta.internal.metals
 
 import java.nio.file.FileSystem
-import java.nio.file.Files
-import java.nio.file.attribute.BasicFileAttributeView
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.Statement
@@ -278,14 +276,7 @@ class JarTypeHierarchy(conn: () => Connection) {
     } else 0
 
   def getMD5Digest(path: AbsolutePath): String = {
-    val attributes = Files
-      .getFileAttributeView(path.toNIO, classOf[BasicFileAttributeView])
-      .readAttributes()
-    MD5.compute(
-      path.toString + ":" + attributes
-        .lastModifiedTime()
-        .toMillis + ":" + attributes.size()
-    )
+    MD5.compute(path.toNIO)
   }
 }
 

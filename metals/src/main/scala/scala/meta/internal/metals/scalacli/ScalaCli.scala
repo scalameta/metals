@@ -4,8 +4,6 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.InputStream
 import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -30,6 +28,7 @@ import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -292,16 +291,13 @@ object ScalaCli {
   }
 
   def scalaCliClassPath(): Seq[String] =
-    coursierapi.Fetch
-      .create()
-      .addDependencies(
+    Embedded
+      .downloadDependency(
         coursierapi.Dependency
           .of("org.virtuslab.scala-cli", "cli_3", BuildInfo.scalaCliVersion)
       )
-      .fetch()
-      .asScala
       .toSeq
-      .map(_.getAbsolutePath)
+      .map(_.toString())
 
   def scalaCliMainClass: String =
     "scala.cli.ScalaCli"
@@ -320,39 +316,6 @@ object ScalaCli {
   }
 
   def localScalaCli(userConfig: UserConfiguration): Option[ScalaCliCommand] = {
-
-    def endsWithCaseInsensitive(s: String, suffix: String): Boolean =
-      s.length >= suffix.length &&
-        s.regionMatches(
-          true,
-          s.length - suffix.length,
-          suffix,
-          0,
-          suffix.length,
-        )
-
-    def findInPath(app: String): Option[Path] = {
-      val asIs = Paths.get(app)
-      if (Paths.get(app).getNameCount >= 2) Some(asIs)
-      else {
-        def pathEntries =
-          Option(System.getenv("PATH")).iterator
-            .flatMap(_.split(File.pathSeparator).iterator)
-        def pathExts =
-          if (Properties.isWin)
-            Option(System.getenv("PATHEXT")).iterator
-              .flatMap(_.split(File.pathSeparator).iterator)
-          else Iterator("")
-        def matches = for {
-          dir <- pathEntries
-          ext <- pathExts
-          app0 = if (endsWithCaseInsensitive(app, ext)) app else app + ext
-          path = Paths.get(dir).resolve(app0)
-          if Files.isExecutable(path)
-        } yield path
-        matches.toStream.headOption
-      }
-    }
 
     def readFully(is: InputStream): Array[Byte] = {
       val b = new ByteArrayOutputStream
@@ -386,8 +349,9 @@ object ScalaCli {
       .filter(_.trim.nonEmpty)
       .flatMap(withVersion(_))
       .orElse {
-        findInPath("scala-cli")
-          .orElse(findInPath("scala"))
+        Embedded
+          .findInPath("scala-cli")
+          .orElse(Embedded.findInPath("scala"))
           .collect { scalaCli =>
             withVersion(scalaCli.toAbsolutePath.toString) match {
               case Some(cmd: ScalaCliCommand)

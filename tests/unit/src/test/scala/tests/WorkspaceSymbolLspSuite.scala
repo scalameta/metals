@@ -308,6 +308,38 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
     } yield ()
   }
 
+  val expectedExcluded: String =
+    if (isJava21)
+      """|scala.concurrent.Future
+         |scala.concurrent.Future
+         |java.util.concurrent.Future
+         |scala.sys.process.ProcessImpl#Future
+         |scala.jdk.FutureConverters.FutureOps
+         |java.util.concurrent.FutureTask
+         |scala.concurrent.Await.FutureValue
+         |java.util.concurrent.RunnableFuture
+         |java.util.concurrent.ExecutorCompletionService#QueueingFuture
+         |java.util.concurrent.ScheduledFuture
+         |scala.jdk.FutureConverters
+         |scala.jdk.javaapi.FutureConverters
+         |java.util.concurrent.CompletableFuture
+         |java.util.concurrent.ThreadPerTaskExecutor#ThreadBoundFuture
+         |""".stripMargin
+    else """|scala.concurrent.Future
+           |scala.concurrent.Future
+           |java.util.concurrent.Future
+           |scala.sys.process.ProcessImpl#Future
+           |scala.jdk.FutureConverters.FutureOps
+           |java.util.concurrent.FutureTask
+           |scala.concurrent.Await.FutureValue
+           |java.util.concurrent.RunnableFuture
+           |java.util.concurrent.ExecutorCompletionService#QueueingFuture
+           |java.util.concurrent.ScheduledFuture
+           |scala.jdk.FutureConverters
+           |scala.jdk.javaapi.FutureConverters
+           |java.util.concurrent.CompletableFuture
+           |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
+           |""".stripMargin
   test("excluded") {
     cleanWorkspace()
     for {
@@ -323,21 +355,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
       _ <- server.didOpen("a/src/main/scala/a/Before.scala")
       _ = assertNoDiff(
         server.workspaceSymbol("Future"),
-        """|scala.concurrent.Future
-           |scala.concurrent.Future
-           |java.util.concurrent.Future
-           |scala.sys.process.ProcessImpl#Future
-           |scala.jdk.FutureConverters.FutureOps
-           |java.util.concurrent.FutureTask
-           |java.util.concurrent.RunnableFuture
-           |java.util.concurrent.ExecutorCompletionService#QueueingFuture
-           |java.util.concurrent.ScheduledFuture
-           |scala.jdk.FutureConverters
-           |scala.jdk.javaapi.FutureConverters
-           |java.util.concurrent.CompletableFuture
-           |java.util.concurrent.ScheduledThreadPoolExecutor#ScheduledFutureTask
-           |scala.concurrent.impl.FutureConvertersImpl
-           |""".stripMargin,
+        expectedExcluded,
       )
       _ <- server.didChangeConfiguration(
         """|{
@@ -353,6 +371,7 @@ class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
            |scala.concurrent.Future
            |scala.sys.process.ProcessImpl#Future
            |scala.jdk.FutureConverters.FutureOps
+           |scala.concurrent.Await.FutureValue
            |scala.jdk.FutureConverters
            |scala.jdk.javaapi.FutureConverters
            |scala.concurrent.impl.FutureConvertersImpl

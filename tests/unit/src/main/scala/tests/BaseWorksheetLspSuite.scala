@@ -382,7 +382,7 @@ abstract class BaseWorksheetLspSuite(
               |max(that: Long): Long
               |""".stripMargin,
           Map(
-            "3.6" ->
+            "3" ->
               s"""|max(that: Int): Int
                   |""".stripMargin
           ),

@@ -3,6 +3,7 @@ package scala.meta.pc;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +26,14 @@ public interface PresentationCompilerConfig {
   Optional<String> completionCommand();
 
   Map<String, String> symbolPrefixes();
+
+  default List<String> shimGlobs() {
+    return defaultShimGlobs();
+  }
+
+  static List<String> defaultShimGlobs() {
+    return Collections.emptyList();
+  }
 
   static Map<String, String> defaultSymbolPrefixes() {
     HashMap<String, String> map = new HashMap<>();
@@ -137,5 +146,19 @@ public interface PresentationCompilerConfig {
   /** Returns the Scala import placement strategy. */
   default ScalaImportsPlacement scalaImportsPlacement() {
     return ScalaImportsPlacement.APPEND_LAST;
+  }
+
+  /**
+   * Number of compiler instances for batch semanticdb processing. Value 1 means sequential
+   * processing (default), values greater than 1 enable parallel processing with that many compiler
+   * instances.
+   */
+  default int batchSemanticdbCompilerInstances() {
+    return 1;
+  }
+
+  /** Returns the Protobuf LSP configuration. */
+  default ProtobufLspConfig protobufLspConfig() {
+    return ProtobufLspConfig.DISABLED;
   }
 }

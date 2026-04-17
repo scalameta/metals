@@ -50,6 +50,7 @@ class CompilerConfiguration(
     embedded: Embedded,
     progressBars: ProgressBars,
     sh: ScheduledExecutorService,
+    time: Time,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     trees: Trees,
@@ -123,8 +124,13 @@ class CompilerConfiguration(
     userConfig().additionalPcChecks.isRefchecks
 
   sealed trait MtagsPresentationCompiler {
-    def await: PresentationCompiler
+    protected def awaitCompiler: PresentationCompiler
     def shutdown(): Unit
+    @volatile var lastAccessedMs: Long = time.currentMillis()
+    final def await: PresentationCompiler = {
+      lastAccessedMs = time.currentMillis()
+      awaitCompiler
+    }
   }
 
   case class StandaloneJavaCompiler(
@@ -139,7 +145,7 @@ class CompilerConfiguration(
           classpath.asJava,
           List.empty[String].asJava,
         )
-    def await: PresentationCompiler = pc
+    protected def awaitCompiler: PresentationCompiler = pc
     def shutdown(): Unit = pc.shutdown()
   }
   case class StandaloneCompiler(
@@ -154,9 +160,12 @@ class CompilerConfiguration(
       mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
 
     val standalone: PresentationCompiler = {
+      val fallbackOptions =
+        if (ScalaVersions.isScala3Version(scalaVersion)) Nil
+        else List("-Yresolve-term-conflict:package")
       fromMtags(
         mtagsBinaries,
-        options = Nil,
+        options = fallbackOptions,
         classpath ++ Embedded.scalaLibrary(scalaVersion),
         "default",
         symbolSearch,
@@ -180,7 +189,7 @@ class CompilerConfiguration(
     }
 
     def shutdown(): Unit = standalone.shutdown()
-    def await: PresentationCompiler = standalone
+    protected def awaitCompiler: PresentationCompiler = standalone
   }
 
   object StandaloneCompiler {
@@ -263,7 +272,7 @@ class CompilerConfiguration(
       newCompiler(embedded.scalaLibraries(scalaVersion), sourceItems _)
     }
 
-    def await: PresentationCompiler = {
+    protected def awaitCompiler: PresentationCompiler = {
       val compilerConfig = config.initialConfig.compilers
       try {
         val pc = presentationCompilerRef.get()
@@ -405,7 +414,7 @@ class CompilerConfiguration(
   }
 
   case class JavaLazyCompiler(
-      javaTarget: JavaTarget,
+      javaTarget: JvmTarget,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
@@ -420,7 +429,10 @@ class CompilerConfiguration(
       val shouldUseOpts = featureFlags
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
-      val options = if (shouldUseOpts) javaTarget.options else Nil
+      val options = javaTarget match {
+        case j: JavaTarget if shouldUseOpts => j.options
+        case _ => Nil
+      }
       configure(pc, search, completionItemPriority)
         .newInstance(
           buildTargetId.getUri(),
@@ -467,6 +479,7 @@ class CompilerConfiguration(
           .update(options)
           .copy(
             _symbolPrefixes = userConfig().symbolPrefixes,
+            _shimGlobs = userConfig().shimGlobs.values.flatten.toSeq,
             isCompletionSnippetsEnabled =
               initializeParams.supportsCompletionSnippets,
             _isStripMarginOnTypeFormattingEnabled =
@@ -480,6 +493,9 @@ class CompilerConfiguration(
             shouldRunRefchecks = shouldRunRefchecks,
             javacServicesOverrides = userConfig().javacServicesOverrides,
             scalaImportsPlacement = userConfig().scalaImportsPlacement,
+            batchSemanticdbCompilerInstances =
+              userConfig().batchSemanticdbCompilerInstances.instances,
+            protobufLspConfig = userConfig().protobufLspConfig,
           )
       }
 

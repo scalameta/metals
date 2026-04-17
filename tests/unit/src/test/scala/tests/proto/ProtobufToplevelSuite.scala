@@ -1,14 +1,15 @@
 package tests.proto
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
+import scala.meta.internal.mtags.MtagsIndexer
+import scala.meta.internal.mtags.proto.ProtoMtagsV1
 
 import munit.TestOptions
 
 abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
-  def createMtagsIndexer(input: Input.VirtualFile): ProtobufToplevelMtags = {
-    new ProtobufToplevelMtags(input)
-  }
+
+  /** Override to customize indexer */
+  def createMtagsIndexer(input: Input.VirtualFile): MtagsIndexer
   def check(
       name: TestOptions,
       protoFileContent: String,
@@ -26,7 +27,19 @@ abstract class BaseProtobufToplevelSuite extends munit.FunSuite {
       )
     }
 }
+
+/**
+ * Tests V1 indexer (scanner-based, handles malformed files).
+ * V1 is the default because it handles syntax errors gracefully.
+ */
 class ProtobufToplevelSuite extends BaseProtobufToplevelSuite {
+  override def createMtagsIndexer(input: Input.VirtualFile): MtagsIndexer = {
+    new ProtoMtagsV1(
+      input,
+      includeGeneratedSymbols = false,
+      includeFuzzyReferences = false,
+    )
+  }
 
   check(
     "basic",
@@ -261,6 +274,19 @@ class ProtobufToplevelSuite extends BaseProtobufToplevelSuite {
     """|ComplexMessage#
        |ComplexMessage#name().
        |ComplexMessage#value().
+       |""".stripMargin,
+  )
+
+  check(
+    "qualified-type-with-field-option",
+    """
+     syntax = "proto2";
+     message ExampleRequest {
+       optional org.example.shared.SyncConfig sync_config = 6 [(custom.data_label) = DATA_LABEL_PUBLIC];
+     }
+   """,
+    """|ExampleRequest#
+       |ExampleRequest#sync_config().
        |""".stripMargin,
   )
 

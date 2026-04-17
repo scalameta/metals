@@ -1,0 +1,87 @@
+   syntax = "proto3";
+// ^ reference example/
+   package example;
+
+   message MapExample {
+//         ^^^^^^^^^^ definition example/MapExample# CLASS
+     map<string, int32> string_to_int = 1;
+//                      ^^^^^^^^^^^^^ definition example/MapExample#string_to_int(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#stringToInt(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#withStringToInt(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToInt(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToIntMap(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToIntCount(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#containsStringToInt(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToIntOrDefault(). METHOD
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToIntOrThrow(). METHOD
+     map<int32, Person> id_to_person = 2;
+//                      ^^^^^^^^^^^^ definition example/MapExample#id_to_person(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#idToPerson(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#withIdToPerson(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPerson(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPersonMap(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPersonCount(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#containsIdToPerson(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPersonOrDefault(). METHOD
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPersonOrThrow(). METHOD
+   }
+
+   message Person {
+//         ^^^^^^ definition example/Person# CLASS
+     string name = 1;
+//          ^^^^ definition example/Person#name(). METHOD
+//          ^^^^ definition example/Person#withName(). METHOD
+//          ^^^^ definition example/Person#getName(). METHOD
+//          ^^^^ definition example/Person#hasName(). METHOD
+//          ^^^^ definition example/Person#getNameBytes(). METHOD
+   }
+
+   message OneofExample {
+//         ^^^^^^^^^^^^ definition example/OneofExample# CLASS
+     string always_present = 1;
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#always_present(). METHOD
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#alwaysPresent(). METHOD
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#withAlwaysPresent(). METHOD
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#getAlwaysPresent(). METHOD
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#hasAlwaysPresent(). METHOD
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#getAlwaysPresentBytes(). METHOD
+  
+     oneof contact_method {
+//         ^^^^^^^^^^^^^^ definition example/OneofExample#contact_method. PACKAGE_OBJECT(val)
+//         ^^^^^^^^^^^^^^ definition example/OneofExample#ContactMethodCase# CLASS
+       string email = 2;
+//            ^^^^^ definition example/OneofExample#contact_method.email(). METHOD
+//            ^^^^^ definition example/OneofExample#contact_method.EMAIL# CLASS
+//            ^^^^^ definition example/OneofExample#withEmail(). METHOD
+//            ^^^^^ definition example/OneofExample#getEmail(). METHOD
+//            ^^^^^ definition example/OneofExample#hasEmail(). METHOD
+       string phone = 3;
+//            ^^^^^ definition example/OneofExample#contact_method.phone(). METHOD
+//            ^^^^^ definition example/OneofExample#contact_method.PHONE# CLASS
+//            ^^^^^ definition example/OneofExample#withPhone(). METHOD
+//            ^^^^^ definition example/OneofExample#getPhone(). METHOD
+//            ^^^^^ definition example/OneofExample#hasPhone(). METHOD
+       Address mail_address = 4;
+//             ^^^^^^^^^^^^ definition example/OneofExample#contact_method.mail_address(). METHOD
+//             ^^^^^^^^^^^^ definition example/OneofExample#contact_method.MAIL_ADDRESS# CLASS
+//             ^^^^^^^^^^^^ definition example/OneofExample#withMailAddress(). METHOD
+//             ^^^^^^^^^^^^ definition example/OneofExample#getMailAddress(). METHOD
+//             ^^^^^^^^^^^^ definition example/OneofExample#hasMailAddress(). METHOD
+     }
+   }
+
+   message Address {
+//         ^^^^^^^ definition example/Address# CLASS
+     string street = 1;
+//          ^^^^^^ definition example/Address#street(). METHOD
+//          ^^^^^^ definition example/Address#withStreet(). METHOD
+//          ^^^^^^ definition example/Address#getStreet(). METHOD
+//          ^^^^^^ definition example/Address#hasStreet(). METHOD
+//          ^^^^^^ definition example/Address#getStreetBytes(). METHOD
+     string city = 2;
+//          ^^^^ definition example/Address#city(). METHOD
+//          ^^^^ definition example/Address#withCity(). METHOD
+//          ^^^^ definition example/Address#getCity(). METHOD
+//          ^^^^ definition example/Address#hasCity(). METHOD
+//          ^^^^ definition example/Address#getCityBytes(). METHOD
+   }

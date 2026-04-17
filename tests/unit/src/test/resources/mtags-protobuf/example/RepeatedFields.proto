@@ -1,0 +1,45 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   message RepeatedScalars {
+//         ^^^^^^^^^^^^^^^ definition example/RepeatedScalars# CLASS
+     repeated string names = 1;
+//                   ^^^^^ definition example/RepeatedScalars#names(). METHOD(val)
+//                   ^^^^^ definition example/RepeatedScalars#getNames(). METHOD(val)
+//                   ^^^^^ definition example/RepeatedScalars#withNames(). METHOD(val)
+     repeated int32 numbers = 2;
+//                  ^^^^^^^ definition example/RepeatedScalars#numbers(). METHOD(val)
+//                  ^^^^^^^ definition example/RepeatedScalars#getNumbers(). METHOD(val)
+//                  ^^^^^^^ definition example/RepeatedScalars#withNumbers(). METHOD(val)
+     repeated bool flags = 3;
+//                 ^^^^^ definition example/RepeatedScalars#flags(). METHOD(val)
+//                 ^^^^^ definition example/RepeatedScalars#getFlags(). METHOD(val)
+//                 ^^^^^ definition example/RepeatedScalars#withFlags(). METHOD(val)
+   }
+
+   message Tag {
+//         ^^^ definition example/Tag# CLASS
+     string key = 1;
+//          ^^^ definition example/Tag#key(). METHOD(val)
+//          ^^^ definition example/Tag#getKey(). METHOD(val)
+//          ^^^ definition example/Tag#withKey(). METHOD(val)
+     string value = 2;
+//          ^^^^^ definition example/Tag#value(). METHOD(val)
+//          ^^^^^ definition example/Tag#getValue(). METHOD(val)
+//          ^^^^^ definition example/Tag#withValue(). METHOD(val)
+   }
+
+   message RepeatedMessages {
+//         ^^^^^^^^^^^^^^^^ definition example/RepeatedMessages# CLASS
+     repeated Tag tags = 1;
+//            ^^^ reference Tag:
+//                ^^^^ definition example/RepeatedMessages#tags(). METHOD(val)
+//                ^^^^ definition example/RepeatedMessages#getTags(). METHOD(val)
+//                ^^^^ definition example/RepeatedMessages#withTags(). METHOD(val)
+     repeated RepeatedScalars nested = 2;
+//            ^^^^^^^^^^^^^^^ reference RepeatedScalars:
+//                            ^^^^^^ definition example/RepeatedMessages#nested(). METHOD(val)
+//                            ^^^^^^ definition example/RepeatedMessages#getNested(). METHOD(val)
+//                            ^^^^^^ definition example/RepeatedMessages#withNested(). METHOD(val)
+   }

@@ -331,7 +331,10 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def filename: String = file.toNIO.filename
     def isScalaFilename: Boolean = filename.isScalaFilename
     def isJavaFilename: Boolean = filename.isJavaFilename
+    def isProtoFilename: Boolean = filename.isProtoFilename
     def isScalaOrJavaFilename: Boolean = isScalaFilename || isJavaFilename
+    def isScalaOrJavaOrProtoFilename: Boolean =
+      isScalaFilename || isJavaFilename || isProtoFilename
   }
 
   implicit class XtensionStream[A](stream: java.util.stream.Stream[A]) {
@@ -474,16 +477,16 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       filename.endsWith(".tasty")
     }
     def isScalaScript: Boolean = {
-      filename.endsWith(".sc")
+      filename.endsWith(".sc") && !isWorksheet && !isMill
     }
+    def isAmmoniteScript: Boolean =
+      isScalaScript && !isWorksheet && !isMill
     def isSourcesJar: Boolean = {
       filename.endsWith("-sources.jar") || filename == "src.zip"
     }
     def isMill: Boolean =
       filename.endsWith(".mill") ||
         filename.endsWith(".mill.scala") || filename == "build.sc"
-    def isAmmoniteScript: Boolean =
-      isScalaScript && !isWorksheet && !isMill
     def isWorksheet: Boolean = {
       filename.endsWith(".worksheet.sc")
     }
@@ -493,11 +496,20 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
     def isScalaFilename: Boolean = {
       filename.isScalaFilename
     }
+    def isProtoFilename: Boolean = {
+      filename.isProtoFilename
+    }
     def isScala: Boolean = {
       toLanguage == Language.SCALA && isFile
     }
     def isJava: Boolean = {
       toLanguage == Language.JAVA && isFile
+    }
+    def isProto: Boolean = {
+      isProtoFilename && isFile
+    }
+    def isScalaOrJavaOrProto: Boolean = {
+      isScala || isJava || isProto
     }
     def isSemanticdb: Boolean = {
       path.toNIO.getFileName.toString.endsWith(".semanticdb")

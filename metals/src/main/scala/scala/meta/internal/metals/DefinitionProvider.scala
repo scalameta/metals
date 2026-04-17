@@ -4,12 +4,11 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Try
-import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -27,6 +26,7 @@ import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -65,9 +65,17 @@ final class DefinitionProvider(
     sourceMapper: SourceMapper,
     definitionProviders: () => DefinitionProviderConfig,
     mbt: MbtWorkspaceSymbolProvider,
+    protobufLspConfig: () => ProtobufLspConfig,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
+  private val protobufDefinitions = new DefinitionProviderProtobufSupport(
+    workspace,
+    buffers,
+    mbt,
+    definitionProviders,
+    protobufLspConfig,
+  )
   val destinationProvider = new DestinationProvider(
     index,
     buffers,
@@ -83,24 +91,18 @@ final class DefinitionProvider(
   val scaladocDefinitionProvider =
     new ScaladocDefinitionProvider(buffers, trees, destinationProvider)
 
-  private def isAmmonnite(path: AbsolutePath): Boolean =
-    path.isAmmoniteScript && buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.targetData)
-      .exists(_.isAmmonite)
-
   def definition(
       path: AbsolutePath,
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[DefinitionResult] = {
-    val reportBuilder = new DefinitionProviderReportBuilder(path, params)
-    lazy val isScala3 = ScalaVersions.isScala3Version(
-      scalaVersionSelector.scalaVersionForPath(path)
-    )
+    val reportBuilder =
+      new DefinitionProviderReportBuilder(path, params, buffers)
+    val scalaVersion = scalaVersionSelector.scalaVersionForPath(path)
+    val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
 
     def fromCompiler() =
-      if (path.isScalaFilename || path.isJavaFilename) {
+      if (path.isScalaFilename || path.isJavaFilename || path.isProtoFilename) {
         compilers()
           .definition(params, token)
           .map {
@@ -108,12 +110,18 @@ final class DefinitionProvider(
               reportBuilder.setCompilerResult(res)
               Some(res)
             case res =>
-              val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
-              Some(
-                res.copy(semanticdb =
-                  semanticdbs().textDocument(pathToDef).documentIncludingStale
+              val hasProtoJavaLocation =
+                protobufDefinitions.hasProtoJavaLocation(res)
+              if (hasProtoJavaLocation) {
+                protobufDefinitions.handleProtoJavaDefinition(res)
+              } else {
+                val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
+                Some(
+                  res.copy(semanticdb =
+                    semanticdbs().textDocument(pathToDef).documentIncludingStale
+                  )
                 )
-              )
+              }
           }
       } else {
         scribe.warn(
@@ -143,8 +151,18 @@ final class DefinitionProvider(
           .map(reportBuilder.setFallbackResult)
       )
 
+    // Scala 3 prior to 3.7.0 has a bug where the definition is much slower
+    def scala3DefinitionBugFixed: Boolean =
+      SemVer.isCompatibleVersion("3.7.0", scalaVersion) ||
+        scalaVersion.startsWith(
+          "3.3."
+        ) && // LTS 3.3.7 will include fixes from 3.7.x
+        SemVer.isCompatibleVersion("3.3.7", scalaVersion)
+
+    val shouldUseOldOrder = isScala3 && !scala3DefinitionBugFixed
+
     val strategies: List[() => Future[Option[DefinitionResult]]] =
-      if (isAmmonnite(path))
+      if (shouldUseOldOrder)
         List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
       else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
 
@@ -159,59 +177,8 @@ final class DefinitionProvider(
       }
     } yield {
       reportBuilder.build().foreach(rc.unsanitized.create(_))
-      enhanceWithProtobufDefinition(result)
+      protobufDefinitions.enhanceWithProtobufDefinition(result)
     }
-  }
-
-  private def enhanceWithProtobufDefinition(
-      result: DefinitionResult
-  ): DefinitionResult = try {
-    if (!definitionProviders().isProtobuf) {
-      return result
-    }
-    val protoLocation: Option[Location] = (for {
-      path <- result.definition.iterator
-      source <- path
-        .toInputFromBuffers(buffers)
-        .text
-        .linesIterator
-        .takeWhile(line => line.startsWith("//") || line.startsWith(" //"))
-        .collectFirst {
-          case s"// source: $source" => source
-          case s" // testing-only-source: $source" => source // For testing
-        }
-        .iterator
-      protoDoc <- mbt.document(workspace.resolve(source)).iterator
-      sym = Symbol(result.symbol.stripSuffix("apply()."))
-      symSuffix = sym.value.stripPrefix(sym.enclosingPackage.value)
-      symSuffixes =
-        if (symSuffix.endsWith("."))
-          Set(
-            symSuffix,
-            symSuffix.stripSuffix(".") + "#", // Treat objects as classes
-            symSuffix.stripSuffix(".") + "().", // Treat fields as methods
-          )
-        else Set(symSuffix)
-      protoPackage = protoDoc.semanticdbPackages.headOption.getOrElse("")
-      protoSym <- protoDoc.symbols.iterator
-      if symSuffixes.contains(
-        protoSym.getSymbol().stripPrefix(protoPackage)
-      )
-    } yield new Location(
-      protoDoc.file.toURI.toString(),
-      protoSym.getDefinitionRange().toLspRange,
-    )).headOption
-
-    protoLocation.fold(result)(loc =>
-      result.copy(locations = (loc +: result.locations.asScala).asJava)
-    )
-  } catch {
-    case NonFatal(e) =>
-      scribe.warn(
-        s"failed to enhance with protobuf definition for '${result.symbol}'",
-        e,
-      )
-      result
   }
 
   def definition(
@@ -478,7 +445,7 @@ class DestinationProvider(
     }
 
     val path = symbolDefinition.path
-    if (path.isAmmoniteScript || parsed.occurrences.isEmpty) {
+    if (path.isScalaScript || parsed.occurrences.isEmpty) {
       // Fall back to SemanticDB on disk, if any
 
       def fromSemanticdbs(p: AbsolutePath): Option[TextDocument] =
@@ -604,6 +571,7 @@ class DestinationProvider(
 class DefinitionProviderReportBuilder(
     path: AbsolutePath,
     params: TextDocumentPositionParams,
+    buffers: Buffers,
 ) {
   private var compilerDefn: Option[DefinitionResult] = None
   private var semanticDBDefn: Option[DefinitionResult] = None
@@ -669,18 +637,13 @@ class DefinitionProviderReportBuilder(
                }}
                 |${fallbackDefn.filterNot(_.isEmpty) match {
                  case None =>
-                   s"""|empty definition using fallback
+                   s"""empty definition using fallback
                 |non-local guesses:
-                |${nonLocalGuesses.mkString("\t -", "\n\t -", "")}
-                |"""
+                |${if (nonLocalGuesses.isEmpty) "" else nonLocalGuesses.mkString("\t -", "\n\t -", "")}"""
                  case Some(defn) =>
-                   s"found definition using fallback; symbol ${defn.symbol}"
+                   s"\nfound definition using fallback; symbol ${defn.symbol}"
                }}
-                |Document text:
-                |
-                |```scala
-                |${Try(path.readText).toOption.getOrElse("Failed to read text")}
-                |```
+                |${params.printed(buffers)}
                 |""".stripMargin,
             s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
             path = Some(path.toURI),

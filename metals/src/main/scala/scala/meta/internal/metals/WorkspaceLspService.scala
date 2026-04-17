@@ -13,17 +13,21 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsTerminalInputParams
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.DiscoveryFailures
@@ -45,10 +49,13 @@ import scala.meta.internal.tvp.TreeViewParentResult
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.lsp.MetalsSyncParams
 import scala.meta.metals.lsp.ScalaLspService
 
 import ch.epfl.scala.bsp4j.DebugSessionParams
+import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
+import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j
@@ -115,7 +122,12 @@ class WorkspaceLspService(
   private val cancelables = new MutableCancelable()
   val fallbackIsInitialized: ju.concurrent.atomic.AtomicBoolean =
     new ju.concurrent.atomic.AtomicBoolean(false)
-  var httpServer: Option[MetalsHttpServer] = None
+  @volatile var httpServer: HttpServerStatus = HttpServerOff
+
+  sealed trait HttpServerStatus
+  case object HttpServerOff extends HttpServerStatus
+  case object HttpServerIgnored extends HttpServerStatus
+  case class HttpServerOn(server: MetalsHttpServer) extends HttpServerStatus
 
   private val clientConfig =
     ClientConfiguration(
@@ -161,10 +173,35 @@ class WorkspaceLspService(
 
   private val timerProvider: TimerProvider = new TimerProvider(time, metrics)
 
+  def getHttpServer(): Future[Option[MetalsHttpServer]] = {
+    httpServer match {
+      // execute client command provider is used to provide the normal doctor
+      case HttpServerOff
+          if !clientConfig.isExecuteClientCommandProvider && !clientConfig
+            .isHttpEnabled() =>
+        languageClient
+          .showMessageRequest(Messages.StartHttpServer.params())
+          .asScala
+          .flatMap { item =>
+            if (item == Messages.StartHttpServer.yes) {
+              startHttpServer(force = true)
+              getHttpServer()
+            } else if (item == Messages.dontShowAgain) {
+              httpServer = HttpServerIgnored
+              Future.successful(None)
+            } else {
+              Future.successful(None)
+            }
+          }
+      case HttpServerOn(server) => Future.successful(Some(server))
+      case _ => Future.successful(None)
+    }
+  }
+
   val doctor: HeadDoctor =
     new HeadDoctor(
       () => folderServices.map(_.doctor) ++ optFallback.map(_.doctor),
-      () => httpServer,
+      getHttpServer,
       clientConfig,
       languageClient,
       clientConfig.isHttpEnabled(),
@@ -357,17 +394,40 @@ class WorkspaceLspService(
   def onCurrentFolder[A](
       f: ProjectMetalsLspService => Future[A],
       actionName: String,
+      forceMetalsProject: Boolean,
       default: () => A,
   ): Future[A] = {
+    def forcedFocusedToBeMetalsProject(): Option[ProjectMetalsLspService] =
+      nonScalaProjects match {
+        case Nil => None
+        case head :: Nil if folderServices.isEmpty =>
+          workspaceFolders.convertToScalaProject(head)
+        case _ =>
+          focusedDocument
+            .get()
+            .flatMap(getFolderForOpt(_, nonScalaProjects))
+            .flatMap(workspaceFolders.convertToScalaProject)
+      }
     def currentService(): Future[Option[ProjectMetalsLspService]] =
       folderServices match {
+        case Nil if forceMetalsProject =>
+          Future { forcedFocusedToBeMetalsProject() }
         case Nil => Future { None }
-        case head :: Nil => Future { Some(head) }
-        case _ =>
+        case head :: rest =>
           focusedDocument.get().flatMap(getServiceForOpt) match {
             case Some(service) => Future { Some(service) }
             case None =>
-              workspaceChoicePopup.interactiveChooseFolder(actionName)
+              if (rest.isEmpty) {
+                Future { Some(head) }
+              } else if (forceMetalsProject) {
+                forcedFocusedToBeMetalsProject()
+                  .map(folder => Future.successful(Some(folder)))
+                  .getOrElse(
+                    workspaceChoicePopup.interactiveChooseFolder(actionName)
+                  )
+              } else {
+                workspaceChoicePopup.interactiveChooseFolder(actionName)
+              }
           }
       }
     currentService().flatMap {
@@ -385,8 +445,9 @@ class WorkspaceLspService(
   def onCurrentFolder(
       f: ProjectMetalsLspService => Future[Unit],
       actionName: String,
+      forceMetalsProject: Boolean = false,
   ): Future[Unit] =
-    onCurrentFolder(f, actionName, () => ())
+    onCurrentFolder(f, actionName, forceMetalsProject, () => ())
 
   def foreachSeq[A](
       f: ProjectMetalsLspService => Future[A],
@@ -418,7 +479,8 @@ class WorkspaceLspService(
     focusedDocument.get().foreach(recentlyFocusedFiles.add)
     val uri = params.getTextDocument.getUri
     val path = uri.toAbsolutePath
-    setFocusedDocument(Some(path))
+    if (!clientConfig.isDidFocusProvider() || focusedDocument.get().isEmpty)
+      setFocusedDocument(Some(path))
     val service = getServiceForOpt(path)
       .orElse {
         if (path.filename.isScalaOrJavaFilename) {
@@ -446,7 +508,9 @@ class WorkspaceLspService(
 
   override def didClose(params: DidCloseTextDocumentParams): Unit = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (focusedDocument.get().contains(path)) {
+    if (
+      !clientConfig.isDidFocusProvider() && focusedDocument.get().contains(path)
+    ) {
       setFocusedDocument(recentlyFocusedFiles.pollRecent())
     }
     getServiceFor(params.getTextDocument().getUri()).didClose(params)
@@ -758,30 +822,62 @@ class WorkspaceLspService(
   override def sync(
       params: AnyRef
   ): CompletableFuture[Unit] = {
-    val uriOpt: Option[String] = params match {
+    val paramsOpt: Option[MetalsSyncParams] = params match {
       case string: String =>
-        Option(string)
-      case (h: String) :: Nil =>
-        Option(h)
-      case _ =>
-        scribe.warn(
-          s"Unexpected notification params received for didFocusTextDocument: $params"
-        )
-        None
+        // TODO(apatti): This is the legacy case with simple string, remove once fully migrated
+        Option(string).map(MetalsSyncParams(_, null))
+      case other =>
+        // New case with MetalsSyncParams
+        val gson = new Gson()
+        val obj = gson.toJsonTree(other).getAsJsonObject
+        (obj.get("uri"), obj.get("mode")) match {
+          case (uri: JsonPrimitive, mode: JsonPrimitive)
+              if uri.isString && mode.isString =>
+            Option(MetalsSyncParams(uri.getAsString, mode.getAsString))
+          case (uri: JsonPrimitive, _) if uri.isString =>
+            Option(MetalsSyncParams(uri.getAsString, null))
+          case _ => None
+        }
     }
-    uriOpt match {
-      case Some(uri) =>
-        if (uri.startsWith("file://")) {
-          getServiceFor(uri).sync(uri).asJava
+    paramsOpt match {
+      case Some(params) =>
+        if (params.uri.startsWith("file://")) {
+          getServiceFor(params.uri).sync(params.uri, params.mode).asJava
         } else {
           scribe.warn(
-            s"Can only sync file:// URIs, got $uri"
+            s"Can only sync file:// URIs, got ${params.uri}"
           )
           CompletableFuture.completedFuture(())
         }
       case None =>
+        scribe.warn(
+          s"Unexpected notification params received for sync: $params"
+        )
         CompletableFuture.completedFuture(())
     }
+  }
+
+  override def terminalInput(
+      params: MetalsTerminalInputParams
+  ): CompletableFuture[Unit] = {
+    val terminalId = params.terminalId
+    val message = params.message
+    val sent = folderServices.exists { service =>
+      service.bspTaskForTerminal(terminalId) match {
+        case Some((originId, taskId)) =>
+          service.bspSession.foreach { session =>
+            val readParams = new b.ReadParams(originId, message)
+            readParams.setTask(new b.TaskId(taskId))
+            session.mainConnection.sendStdin(readParams)
+          }
+          true
+        case None => false
+      }
+    }
+    if (!sent) {
+      scribe.warn(s"No active terminal found for terminalId: $terminalId")
+    }
+    CompletableFuture.completedFuture(())
   }
 
   private def failedRequest(
@@ -821,6 +917,80 @@ class WorkspaceLspService(
       }
       .flatMap(_.map(exec.tupled).getOrElse(onNotFound()))
 
+  private def recordRunDebugEvent(
+      language: Semanticdb.Language,
+      testName: Option[String],
+  ): Unit = {
+    val event = new Event()
+      .withLabel("name", "run_debug_session")
+      .withLanguage(language)
+    testName.foreach(event.withLabel("testName", _))
+    metrics.recordEvent(event)
+  }
+
+  private def languageFromTargets(
+      targets: Iterable[b.BuildTarget]
+  ): Semanticdb.Language = {
+    val languageIds = targets.iterator.flatMap(_.getLanguageIds.asScala).toList
+    if (languageIds.contains("scala")) Semanticdb.Language.SCALA
+    else if (languageIds.contains("java")) Semanticdb.Language.JAVA
+    else if (languageIds.contains("protobuf")) Semanticdb.Language.PROTOBUF
+    else Semanticdb.Language.UNKNOWN_LANGUAGE
+  }
+
+  private def testNameFromSuites(
+      suites: ju.List[ScalaTestSuiteSelection]
+  ): Option[String] = {
+    if (suites == null || suites.isEmpty) None
+    else {
+      val value = suites.asScala.map { suite =>
+        val tests = Option(suite.tests).map(_.asScala).getOrElse(Nil)
+        if (tests.isEmpty) suite.className
+        else s"${suite.className}(${tests.mkString(", ")})"
+      }
+      Some(value.mkString(";"))
+    }
+  }
+
+  private def testNameFromDebugSession(
+      params: DebugSessionParams
+  ): Option[String] =
+    params.getData match {
+      case json: JsonElement =>
+        params.getDataKind match {
+          case b.TestParamsDataKind.SCALA_TEST_SUITES =>
+            json.as[ju.List[String]].toOption.map(_.asScala.mkString(";"))
+          case b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
+            json
+              .as[ScalaTestSuites]
+              .toOption
+              .flatMap(suites => testNameFromSuites(suites.suites))
+          case _ => None
+        }
+      case _ => None
+    }
+
+  private def languageFromMainClass(
+      params: DebugUnresolvedMainClassParams
+  ): Semanticdb.Language = {
+    val byPath = Option(params.mainClass)
+      .filter(value => value.endsWith(".scala") || value.endsWith(".java"))
+      .flatMap(_.toAbsolutePathSafe)
+      .map(_.toJLanguage)
+    val byTarget = Option(params.buildTarget)
+      .flatMap(findBuildTargetByDisplayName)
+      .map(target => languageFromTargets(List(target)))
+    byPath.orElse(byTarget).getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
+  }
+
+  private def findBuildTargetByDisplayName(
+      target: String
+  ): Option[b.BuildTarget] =
+    folderServices.iterator
+      .flatMap(_.findBuildTargetByDisplayName(target))
+      .toSeq
+      .headOption
+
   override def executeCommand(
       params: ExecuteCommandParams
   ): CompletableFuture[Object] =
@@ -838,7 +1008,7 @@ class WorkspaceLspService(
         uri match {
           case Some(u) =>
             val connectFuture = (for {
-              _ <- getServiceFor(u).sync(u)
+              _ <- getServiceFor(u).sync(u, null)
               // NOTE(olafurpg): Trigger a "Connect to build server" here so
               // that this command returns only once we have successfully
               // connected to the synced build server. I'm not 100% sure how,
@@ -871,6 +1041,7 @@ class WorkspaceLspService(
         onCurrentFolder(
           _.generateBspConfig(),
           ServerCommands.GenerateBspConfig.title,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.ImportBuild() =>
         onCurrentFolder(
@@ -883,12 +1054,14 @@ class WorkspaceLspService(
             ),
           ServerCommands.ImportBuild.title,
           default = () => BuildChange.None,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.ConnectBuildServer() =>
         onCurrentFolder(
           _.connectionProvider.quickConnectToBuildServer(),
           ServerCommands.ConnectBuildServer.title,
           default = () => BuildChange.None,
+          forceMetalsProject = true,
         ).asJavaObject
       case ServerCommands.DisconnectBuildServer() =>
         onCurrentFolder(
@@ -896,7 +1069,11 @@ class WorkspaceLspService(
           ServerCommands.DisconnectBuildServer.title,
         ).asJavaObject
       case ServerCommands.DecodeFile(uri) =>
-        getServiceFor(uri).decodeFile(uri).asJavaObject
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .decodeFile(uri)
+          .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {
           case None =>
@@ -921,10 +1098,20 @@ class WorkspaceLspService(
                   }
               }(_ => true)
               .flatMap { mains =>
-                mains.headOption.fold(
+                mains.fold(
                   Future.failed[DebugSessionParams](
-                    DiscoveryFailures
-                      .NoMainClassFoundException(unresolvedParams.mainClass)
+                    Option(unresolvedParams.buildTarget)
+                      .map(buildTarget =>
+                        DiscoveryFailures
+                          .ClassNotFoundInBuildTargetException(
+                            unresolvedParams.mainClass,
+                            buildTarget,
+                          )
+                      )
+                      .getOrElse(
+                        DiscoveryFailures
+                          .NoMainClassFoundException(unresolvedParams.mainClass)
+                      )
                   )
                 )(Future.successful(_))
               }
@@ -1007,6 +1194,7 @@ class WorkspaceLspService(
         onCurrentFolder(
           _.compileTarget(target),
           ServerCommands.CompileTarget.title,
+          false,
           () =>
             null, // shouldn't happen, but json null is fine as a default here
         ).liftToLspError.asJavaObject
@@ -1078,6 +1266,10 @@ class WorkspaceLspService(
             )(fallbackService)
           } match {
           case Some(service) =>
+            val supportedTargets = targets.flatMap(service.supportsBuildTarget)
+            val language = languageFromTargets(supportedTargets)
+            val testName = testNameFromDebugSession(params)
+            recordRunDebugEvent(language, testName)
             service.startDebugProvider(params).liftToLspError.asJavaObject
           case None =>
             failedRequest(
@@ -1085,6 +1277,7 @@ class WorkspaceLspService(
             ).asJavaObject
         }
       case ServerCommands.StartMainClass(params) if params.mainClass != null =>
+        recordRunDebugEvent(languageFromMainClass(params), testName = None)
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.mainClassSearch(params))
@@ -1098,12 +1291,22 @@ class WorkspaceLspService(
           Future.successful(service.supportsBuildTarget(params.target))
         )(
           _.isDefined,
-          (service, someTarget) =>
-            service.startTestSuite(someTarget.get, params),
+          (service, someTarget) => {
+            val language = languageFromTargets(List(someTarget.get))
+            val testName = testNameFromSuites(params.requestData.suites)
+            recordRunDebugEvent(language, testName)
+            service.startTestSuite(someTarget.get, params)
+          },
           () => failedRequest(s"Could not find '${params.target}' build target"),
         ).asJavaObject
       case ServerCommands.ResolveAndStartTestSuite(params)
           if params.testClass != null =>
+        val language =
+          Option(params.buildTarget)
+            .flatMap(findBuildTargetByDisplayName)
+            .map(target => languageFromTargets(List(target)))
+            .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
+        recordRunDebugEvent(language, Option(params.testClass))
         DebugProvider
           .getResultFromSearches(
             folderServices.map(_.testClassSearch(params))
@@ -1111,6 +1314,12 @@ class WorkspaceLspService(
           .liftToLspError
           .asJavaObject
       case ServerCommands.StartAttach(params) if params.hostName != null =>
+        val language =
+          Option(params.buildTarget)
+            .flatMap(findBuildTargetByDisplayName)
+            .map(target => languageFromTargets(List(target)))
+            .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
+        recordRunDebugEvent(language, testName = None)
         onFirstSatifying(service =>
           Future.successful(
             service.findBuildTargetByDisplayName(params.buildTarget)
@@ -1125,6 +1334,11 @@ class WorkspaceLspService(
             ),
         ).asJavaObject
       case ServerCommands.DiscoverAndRun(params) =>
+        val language = Option(params.path)
+          .flatMap(_.toAbsolutePathSafe)
+          .map(_.toJLanguage)
+          .getOrElse(Semanticdb.Language.UNKNOWN_LANGUAGE)
+        recordRunDebugEvent(language, testName = None)
         getServiceFor(params.path)
           .debugDiscovery(params)
           .liftToLspError
@@ -1138,6 +1352,10 @@ class WorkspaceLspService(
           command.foreach(languageClient.metalsExecuteClientCommand)
           scribe.debug(s"Executing AnalyzeStacktrace ${command}")
         }.asJavaObject
+
+      case ServerCommands.GotoTest(textDocumentPositionParams) =>
+        getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
+          .gotoTest(textDocumentPositionParams)
 
       case ServerCommands.GotoSuperMethod(textDocumentPositionParams) =>
         getServiceFor(textDocumentPositionParams.getTextDocument().getUri())
@@ -1195,14 +1413,6 @@ class WorkspaceLspService(
           .map(getServiceFor)
           .getOrElse(fallbackService)
           .createFile(directoryURI, name, fileType, isScala = false)
-      case ServerCommands.StartAmmoniteBuildServer() =>
-        val res = for {
-          path <- focusedDocument.get()
-          service <- getServiceForOpt(path)
-        } yield service.ammoniteStart()
-        res.getOrElse(Future.unit).asJavaObject
-      case ServerCommands.StopAmmoniteBuildServer() =>
-        foreachSeq(_.ammoniteStop(), ignoreValue = false)
       case ServerCommands.StartScalaCliServer() =>
         val res = focusedDocument.get() match {
           case None => Future.unit
@@ -1294,7 +1504,7 @@ class WorkspaceLspService(
         capabilities.setCompletionProvider(
           new lsp4j.CompletionOptions(
             clientConfig.isCompletionItemResolve(),
-            List(".", "*", "$").asJava,
+            List(".", "*", "$", "`").asJava,
           )
         )
         capabilities.setCallHierarchyProvider(true)
@@ -1378,8 +1588,8 @@ class WorkspaceLspService(
     } yield ()
   }
 
-  private def startHttpServer(): Unit = {
-    if (clientConfig.isHttpEnabled()) {
+  private def startHttpServer(force: Boolean = false): Unit = {
+    if (force || clientConfig.isHttpEnabled()) {
       val host = "localhost"
       val port = 5031
       var url = s"http://$host:$port"
@@ -1398,7 +1608,7 @@ class WorkspaceLspService(
           this,
         )
       )
-      httpServer = Some(server)
+      httpServer = HttpServerOn(server)
       val newClient = new MetalsHttpClient(
         folders.map(_.path),
         () => url,
@@ -1493,8 +1703,7 @@ class Folder(
 ) {
 
   lazy val isMetalsProject: Boolean =
-    isKnownMetalsProject || path.resolve(".metals").exists || path
-      .isMetalsProject()
+    isKnownMetalsProject || path.isMetalsProject()
 
   /**
    * A workspace folder might be a project reference for an other project.

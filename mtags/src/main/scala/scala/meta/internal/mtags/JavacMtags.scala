@@ -424,6 +424,22 @@ class JavacMtags(
       if (isErrorName(name)) {
         return null
       }
+      // Anonymous classes have empty names - we still want to scan their contents
+      // for references, but we shouldn't create symbols for them
+      val isAnonymousClass = name.isEmpty()
+      if (isAnonymousClass) {
+        // Just scan the contents without creating any symbols
+        withScope {
+          var r = scan(node.getModifiers(), p);
+          r = scanAndReduceIterable(node.getTypeParameters(), p, r);
+          insideExtendsClause = true;
+          r = scanAndReduce(node.getExtendsClause(), p, r);
+          r = scanAndReduceIterable(node.getImplementsClause(), p, r);
+          insideExtendsClause = false;
+          r = scanAndReduceIterable(node.getMembers(), p, r);
+          return r
+        }
+      }
       if (node.getKind() == Tree.Kind.RECORD) {
         node.getMembers().asScala.foreach {
           case v: VariableTree =>

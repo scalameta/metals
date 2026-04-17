@@ -14,6 +14,6 @@ object Debug {
   ): Unit = {
     val enclosingTrimmed =
       enclosing.value.split(' ').filter(_ != "$anonfun").mkString(" ")
-    scribe.info(enclosingTrimmed + " " + additionalInfo)
+    scribe.debug(enclosingTrimmed + " " + additionalInfo)
   }
 }

@@ -30,6 +30,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceLoadedStatus
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -66,6 +67,12 @@ class ConnectionProvider(
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
     with Cancelable {
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   import Connect.connect
   import indexProviders._
 
@@ -321,7 +328,7 @@ class ConnectionProvider(
       buildTool.isInstanceOf[ScalaCliBuildTool]
     ) {
       connect(GenerateBspConfigAndConnect(buildTool), progress)
-    } else if (notification.isDismissed) {
+    } else if (notification.isDismissed || !userConfig.promptBuildImport) {
       Future.successful(BuildChange.None)
     } else {
       scribe.debug("Awaiting user response...")
@@ -506,6 +513,12 @@ class ConnectionProvider(
           case Some(session) =>
             bspSession = None
             mainBuildTargetsData.resetConnections(List.empty)
+            languageClient.metalsSyncModes(
+              new MetalsSyncModesParams(
+                false,
+                java.util.Collections.emptyList(),
+              )
+            )
             session.shutdown().map(_ => Some(session.main.name))
         }
         _ <-
@@ -517,11 +530,13 @@ class ConnectionProvider(
     private def index(
         check: () => Unit,
         progress: TaskProgress,
-    ): Future[BuildChange] =
+    ): Future[BuildChange] = {
+      syncStatusReporter.indexingStarted(focusedDocument.map(_.toURI.toString))
       profiledIndexWorkspace(check, progress).map { _ =>
         progress.message = "wrapping up"
         BuildChange.None
       }
+    }
 
     private def importBuildAndIndex(
         session: BspSession,
@@ -540,6 +555,15 @@ class ConnectionProvider(
           }
           mainBuildTargetsData.resetConnections(idToConnection)
           saveProjectReferencesInfo(bspBuilds)
+        }
+        _ = {
+          val hasSyncSupport = bspBuilds.exists(_.connection.supportsSyncMethod)
+          languageClient.metalsSyncModes(
+            new MetalsSyncModesParams(
+              hasSyncSupport,
+              buildTargets.syncModes.toList.asJava,
+            )
+          )
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
@@ -571,7 +595,7 @@ class ConnectionProvider(
         session: BspSession,
         progress: TaskProgress,
     ): Future[BuildChange] = {
-      scribe.info(
+      logInfoInProdDebugInTests(
         s"Connected to Build server: ${session.main.name} v${session.version}"
       )
       cancelables.add(session)
@@ -637,7 +661,9 @@ class ConnectionProvider(
                 if (userConfig.buildOnFocus) {
                   progress.message = "compiling open files"
                   compilations
-                    .compileFiles(buffers.open.toSeq, None)
+                    .compileFiles(
+                      buffers.open.toSeq.map((_, Fingerprint.empty))
+                    )
                     .ignoreValue
                 } else {
                   Future.successful(())

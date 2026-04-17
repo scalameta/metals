@@ -101,7 +101,7 @@ class WorksheetProvider(
 
   private def fallabackMdoc: Mdoc = {
     val scalaVersion =
-      scalaVersionSelector.fallbackScalaVersion(isAmmonite = false)
+      scalaVersionSelector.fallbackScalaVersion()
     mdocs
       .get(MdocKey.Default)
       .flatMap(ref =>

@@ -242,9 +242,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
            |""".stripMargin
       )
       (compileReport, _) <- server.server.compilations
-        .compileFile(
-          workspace.resolve("src/com/App.scala")
-        )
+        .compileFile(workspace.resolve("src/com/App.scala"))
         .zip {
           // wait until the compilation start
           while (!trace.contains(s"buildTarget/compile")) {
@@ -252,7 +250,7 @@ class BillLspSuite extends BaseLspSuite("bill") {
           }
           server.executeCommand(ServerCommands.CancelCompile)
         }
-      _ = assertEquals(compileReport.getStatusCode(), StatusCode.CANCELLED)
+      _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.CANCELLED)
       // wait for all the side effect (`onComplete`) actions of cancellation to happen
       _ = Thread.sleep(1000)
       currentTrace = trace
@@ -261,10 +259,8 @@ class BillLspSuite extends BaseLspSuite("bill") {
       cancelId = cancelMatch.get.group(1)
       _ = assert(currentTrace.contains(s"buildTarget/compile - ($cancelId)"))
       compileReport <- server.server.compilations
-        .compileFile(
-          workspace.resolve("src/com/App.scala")
-        )
-      _ = assertEquals(compileReport.getStatusCode(), StatusCode.OK)
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = assertEquals(compileReport.get.getStatusCode(), StatusCode.OK)
     } yield ()
   }
 }

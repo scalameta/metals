@@ -1,0 +1,49 @@
+   syntax = "proto3";
+// ^ reference example/
+   package example;
+
+   message Outer {
+//         ^^^^^ definition example/Outer# CLASS
+     string outer_field = 1;
+//          ^^^^^^^^^^^ definition example/Outer#outer_field(). METHOD
+//          ^^^^^^^^^^^ definition example/Outer#outerField(). METHOD
+//          ^^^^^^^^^^^ definition example/Outer#withOuterField(). METHOD
+//          ^^^^^^^^^^^ definition example/Outer#getOuterField(). METHOD
+//          ^^^^^^^^^^^ definition example/Outer#hasOuterField(). METHOD
+//          ^^^^^^^^^^^ definition example/Outer#getOuterFieldBytes(). METHOD
+  
+     message Inner {
+//           ^^^^^ definition example/Outer#Inner# CLASS
+       string inner_field = 1;
+//            ^^^^^^^^^^^ definition example/Outer#Inner#inner_field(). METHOD
+//            ^^^^^^^^^^^ definition example/Outer#Inner#innerField(). METHOD
+//            ^^^^^^^^^^^ definition example/Outer#Inner#withInnerField(). METHOD
+//            ^^^^^^^^^^^ definition example/Outer#Inner#getInnerField(). METHOD
+//            ^^^^^^^^^^^ definition example/Outer#Inner#hasInnerField(). METHOD
+//            ^^^^^^^^^^^ definition example/Outer#Inner#getInnerFieldBytes(). METHOD
+    
+       message DeepNested {
+//             ^^^^^^^^^^ definition example/Outer#Inner#DeepNested# CLASS
+         string deep_field = 1;
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#deep_field(). METHOD
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#deepField(). METHOD
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#withDeepField(). METHOD
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#getDeepField(). METHOD
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#hasDeepField(). METHOD
+//              ^^^^^^^^^^ definition example/Outer#Inner#DeepNested#getDeepFieldBytes(). METHOD
+       }
+     }
+  
+     Inner nested = 2;
+//         ^^^^^^ definition example/Outer#nested(). METHOD
+//         ^^^^^^ definition example/Outer#withNested(). METHOD
+//         ^^^^^^ definition example/Outer#getNested(). METHOD
+//         ^^^^^^ definition example/Outer#hasNested(). METHOD
+//         ^^^^^^ definition example/Outer#getNestedBytes(). METHOD
+     Inner.DeepNested deep = 3;
+//                    ^^^^ definition example/Outer#deep(). METHOD
+//                    ^^^^ definition example/Outer#withDeep(). METHOD
+//                    ^^^^ definition example/Outer#getDeep(). METHOD
+//                    ^^^^ definition example/Outer#hasDeep(). METHOD
+//                    ^^^^ definition example/Outer#getDeepBytes(). METHOD
+   }

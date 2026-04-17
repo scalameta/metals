@@ -20,7 +20,9 @@ object SimpleTimer {
       onlyIf && (thresholdMillis == 0 ||
         timer.elapsed(TimeUnit.MILLISECONDS) > thresholdMillis)
     ) {
-      logger.debug(s"time: $didWhat in $timer")
+      val message = s"time: $didWhat in $timer"
+      if (Testing.isEnabled) logger.debug(message)
+      else logger.info(message)
     }
 
     result

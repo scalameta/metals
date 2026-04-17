@@ -295,6 +295,9 @@ object QuickBuild {
     "com.disneystreaming::weaver-cats" -> Config.TestFramework(
       List("weaver.framework.CatsEffect")
     ),
+    "com.lihaoyi:mill-contrib-testng" -> Config.TestFramework(
+      List("mill.testng.TestNGFramework")
+    ),
   )
 
   /**
@@ -430,7 +433,7 @@ object QuickBuild {
           }
           Files.createDirectories(digestFile.toNIO.getParent)
           Files.write(digestFile.toNIO, digest.getBytes(StandardCharsets.UTF_8))
-          scribe.info(s"time: generated quick build in $timer")
+          scribe.debug(s"time: generated quick build in $timer")
       }
     }
   }

@@ -1,9 +1,15 @@
 package scala.meta.internal.pc.classpath
 
+import java.nio.file.FileSystems
+import java.nio.file.InvalidPathException
+import java.nio.file.PathMatcher
+import java.nio.file.Paths
+
 import scala.reflect.io.AbstractFile
 import scala.tools.nsc.Reporting.WarningCategory
 import scala.tools.nsc.symtab.BrowsingLoaders
 
+import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.pc.MetalsGlobal
 
 /**
@@ -13,6 +19,44 @@ import scala.meta.internal.pc.MetalsGlobal
 abstract class MetalsBrowsingLoaders extends BrowsingLoaders {
   override val global: MetalsGlobal
   import global._
+
+  private lazy val normalizedShimPatterns: List[String] =
+    global.metalsConfig
+      .shimGlobs()
+      .asScala
+      .toList
+      .map(_.trim)
+      .filter(!_.isEmpty())
+      .map(toGlobPattern)
+
+  private lazy val shimMatchers: List[PathMatcher] = {
+    logger.debug(
+      s"[shim] configured shim globs: ${normalizedShimPatterns.mkString("[", ", ", "]")}"
+    )
+    normalizedShimPatterns
+      .map(pattern => FileSystems.getDefault.getPathMatcher(pattern))
+  }
+
+  private def toGlobPattern(pattern: String): String = {
+    if (pattern.startsWith("glob:") || pattern.startsWith("regex:")) pattern
+    else s"glob:$pattern"
+  }
+
+  private def matchesAnyShimPattern(path: String): Boolean = {
+    shimMatchers.exists { matcher =>
+      try matcher.matches(Paths.get(path))
+      catch {
+        case _: InvalidPathException => false
+      }
+    }
+  }
+
+  private def isShim(f: AbstractFile): Boolean = {
+    (f ne null) && {
+      val path = Option(f.path).getOrElse(f.name)
+      matchesAnyShimPattern(path) || matchesAnyShimPattern(f.name)
+    }
+  }
 
   override protected def compileLate(srcfile: AbstractFile): Unit = {
     // Metals specific: track which sources were loaded from the source path to be able to prune them later
@@ -31,6 +75,69 @@ abstract class MetalsBrowsingLoaders extends BrowsingLoaders {
     } catch {
       case e: AssertionError =>
         logger.debug(s"Error entering class and module: ${e.getMessage}")
+    }
+  }
+
+  /**
+   * DATABRICKS: Copied form BrowsingLoaders.enterIfNew
+   *
+   * In browse mode, it can happen that an encountered symbol is already
+   *  present. For instance, if the source file has a name different from
+   *  the classes and objects it contains, the symbol loader will always
+   *  reparse the source file. The symbols it encounters might already be loaded
+   *  as class files. In this case we return the one which has a sourcefile
+   *  (and the other has not), and issue an error if both have sourcefiles.
+   */
+  override protected def enterIfNew(
+      owner: Symbol,
+      member: Symbol,
+      completer: SymbolLoader
+  ): Symbol = {
+    completer.sourcefile match {
+      case Some(src) =>
+        (if (member.isModule) member.moduleClass else member).associatedFile =
+          src
+      case _ =>
+    }
+
+    val decls = owner.info.decls
+    val existing = decls.lookup(member.name)
+    if (isShim(member.associatedFile))
+      logger.debug(
+        s"[shim] Attempting to load $member from shim ${member.associatedFile}"
+      )
+
+    if (existing == NoSymbol) {
+      decls enter member
+      return member
+    }
+
+    // there's an existing symbol, special-case shims when deciding whether to keep or replace
+    if (isShim(member.sourceFile)) {
+      logger.debug(
+        s"[shim] Refusing to load $member from ${member.sourceFile}, preferring existing ${existing.associatedFile}"
+      )
+      return existing
+    }
+
+    val existingSourceFile = existing.sourceFile
+
+    if (isShim(existing.associatedFile))
+      logger.debug(
+        s"[shim] Replacing $member from existing shim, preferring new ${existing.associatedFile}"
+      )
+
+    if (existingSourceFile == null || isShim(existing.associatedFile)) {
+      decls unlink existing
+      decls enter member
+      member
+    } else {
+      val memberSourceFile = member.sourceFile
+      if (memberSourceFile != null && existingSourceFile != memberSourceFile)
+        globalError(
+          s"${member}is defined twice,\n in $existingSourceFile\n and also in $memberSourceFile"
+        )
+      existing
     }
   }
 

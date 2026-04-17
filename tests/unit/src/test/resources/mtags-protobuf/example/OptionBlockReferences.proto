@@ -1,0 +1,42 @@
+   syntax = "proto2";
+   package example;
+//                ^ reference example/
+
+   message SharedSettings {
+//         ^^^^^^^^^^^^^^ definition example/SharedSettings# CLASS
+     optional string shared_key = 1;
+//                   ^^^^^^^^^^ definition example/SharedSettings#shared_key(). METHOD(val)
+//                   ^^^^^^^^^^ definition example/SharedSettings#sharedKey(). METHOD(val)
+//                   ^^^^^^^^^^ definition example/SharedSettings#getSharedKey(). METHOD(val)
+//                   ^^^^^^^^^^ definition example/SharedSettings#withSharedKey(). METHOD(val)
+   }
+
+   message SettingsHolder {
+//         ^^^^^^^^^^^^^^ definition example/SettingsHolder# CLASS
+     option (custom.message_options) = {
+       note: "message-option"
+     };
+
+     optional SharedSettings primary_settings = 1 [
+//            ^^^^^^^^^^^^^^ reference SharedSettings:
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#primary_settings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#primarySettings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getPrimarySettings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#withPrimarySettings(). METHOD(val)
+       (custom.field_options) = { label: "primary" }
+     ];
+
+     optional SharedSettings backup_settings = 2;
+//            ^^^^^^^^^^^^^^ reference SharedSettings:
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#backup_settings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#backupSettings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#getBackupSettings(). METHOD(val)
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#withBackupSettings(). METHOD(val)
+     optional example.SharedSettings qualified_settings = 3;
+//            ^^^^^^^ reference example:
+//                    ^^^^^^^^^^^^^^ reference SharedSettings:
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#qualified_settings(). METHOD(val)
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#qualifiedSettings(). METHOD(val)
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getQualifiedSettings(). METHOD(val)
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#withQualifiedSettings(). METHOD(val)
+   }

@@ -20,6 +20,7 @@ object Positions {
       toLspPosition(cu.getLineMap(), end, text)
     )
   }
+
   def toLspRange(
       lineMap: LineMap,
       start: Long,
@@ -32,6 +33,7 @@ object Positions {
       toLspPosition(lineMap, math.max(start, end), text)
     )
   }
+
   def toLspPosition(
       lineMap: LineMap,
       offset: Long,

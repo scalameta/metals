@@ -32,7 +32,7 @@ import ch.epfl.scala.bsp4j.SourceItemKind.FILE
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import org.eclipse.{lsp4j => l}
 
-final class TargetData(val isAmmonite: Boolean = false) {
+final class TargetData() {
 
   val sourceItemsToBuildTarget
       : MMap[AbsolutePath, ConcurrentLinkedQueue[BuildTargetIdentifier]] =
@@ -141,11 +141,28 @@ final class TargetData(val isAmmonite: Boolean = false) {
     buildTargetInfo.get(id)
 
   /**
+   * Get the target classpath if it's already available, without forcing a BSP request.
+   *
+   * @param id id of the queried target
+   * @return classpath if available from cache or eagerly loaded data
+   */
+  def cachedTargetClasspath(
+      id: BuildTargetIdentifier
+  ): Option[List[String]] = {
+    jvmTarget(id)
+      .flatMap(_.classpath)
+      .orElse(buildTargetClasspath.get(id))
+  }
+
+  /**
    * Get jars for a specific build target.
    *
    * We first try to use buildTargetDependencyModules
    * request since it should be low cost for build tools
    * like Bazel.
+   *
+   * We also include jars from the target classpath if available,
+   * to cover jars that might not be reported as dependency modules.
    *
    * We fall back to reading from classpath only if the
    * classpath is read eagerly.
@@ -170,7 +187,20 @@ final class TargetData(val isAmmonite: Boolean = false) {
 
     if (fromDepModules.isEmpty)
       jvmTargets(id).flatMap(_.jarClasspath).headOption
-    else Some(fromDepModules)
+    else {
+      // Add jars from cached classpath that are not already in fromDepModules
+      // this is a kludge to add protobuf source jars, which are reported by bazelbsp
+      // as dependecy sources instead of regular sources.
+      // we don't trigger a BSP request to get the classpath here if the classpath wasn't
+      // yet loaded, since that's expensive, but if the target was synced already, the
+      // classpath must be available -- since it's needed by the presentation compiler.
+      val fromDepModulesSet = fromDepModules.toSet
+      val additionalJars = cachedTargetClasspath(id)
+        .getOrElse(Nil)
+        .map(_.toAbsolutePath)
+        .filterNot(fromDepModulesSet.contains)
+      Some(fromDepModules ++ additionalJars)
+    }
   }
 
   def targetClasspath(

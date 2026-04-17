@@ -117,6 +117,9 @@ final class Doctor(
     scribe.debug(s"running doctor check")
     val scalaTargets = buildTargets.allScala.toList
     val javaTargets = buildTargets.allJava.toList
+    scribe.debug(
+      s"java targets: ${javaTargets.map(_.info.getDisplayName()).mkString(", ")}"
+    )
     val summary = problemResolver.problemMessage(scalaTargets, javaTargets)
     executeReloadDoctor(summary, headDoctor)
     summary match {
@@ -670,7 +673,6 @@ final class Doctor(
           DoctorStatus.alert,
           problemResolver.recommendation(target),
         )
-      case None if scalaTarget.isAmmonite => (DoctorStatus.info, None)
       case None => (DoctorStatus.alert, None)
     }
 
@@ -682,8 +684,6 @@ final class Doctor(
     val sbtRecommendation =
       if (scalaTarget.isSbt)
         Some("Diagnostics and debugging for sbt are not supported currently.")
-      else if (scalaTarget.isAmmonite)
-        Some("Debugging for Ammonite are not supported currently.")
       else None
     DoctorTargetInfo(
       scalaTarget.displayName,

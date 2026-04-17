@@ -244,6 +244,7 @@ object BspServers {
     dirs match {
       case Some(dirs) =>
         List(dirs.dataLocalDir, dirs.dataDir).distinct
+          .filter(MetalsProjectDirectories.isNotBroken)
           .map(path => Try(AbsolutePath(path)).toOption)
           .flatten
       case None =>
@@ -263,6 +264,10 @@ object BspServers {
         None
       },
       details => {
+        if (details.getVersion() == null) {
+          val json = ujson.read(text)
+          json("millVersion").strOpt.map(details.setVersion)
+        }
         Some(details)
       },
     )

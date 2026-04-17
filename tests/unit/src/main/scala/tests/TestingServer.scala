@@ -372,20 +372,27 @@ final case class TestingServer(
     })
   }
 
-  def assertImplementationsSubquery(
+  def implementationsSubquery(
       filename: String,
       subquery: String,
-      expected: String,
-  )(implicit loc: munit.Location): Future[Unit] = {
+  ): Future[List[l.Location]] = {
     val path = toPath(filename)
     val params = new l.TextDocumentPositionParams(
       path.toTextDocumentIdentifier,
       subqueryPosition(path, subquery).toLspStartPosition,
     )
+    server.implementation(params).asScala.map(_.asScala.toList)
+  }
+
+  def assertImplementationsSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      locations <- server.implementation(params).asScala
+      locations <- implementationsSubquery(filename, subquery)
     } yield {
-      assertLocations(locations.asScala.toList, "implementation", expected)
+      assertLocations(locations, "implementation", expected)
     }
   }
 
@@ -715,7 +722,7 @@ final case class TestingServer(
       param: T,
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param)).asScala
   }
 
@@ -724,13 +731,13 @@ final case class TestingServer(
       param: T*
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
   }
 
   def executeCommand[T](command: Command): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams()).asScala
   }
 
@@ -755,7 +762,7 @@ final case class TestingServer(
       params: Seq[Object],
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [$command]")
+    scribe.debug(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
     fullServer.executeCommand(new ExecuteCommandParams(command, args)).asScala
@@ -1151,7 +1158,10 @@ final case class TestingServer(
 
     val compilations =
       paths.map(path =>
-        fullServer.getServiceFor(path).compilations.compileFile(path)
+        fullServer
+          .getServiceFor(path)
+          .compilations
+          .compileFile(path)
       )
 
     for {
@@ -1683,6 +1693,18 @@ final case class TestingServer(
     input.toOffsetPosition(offset)
   }
 
+  def textDocumentPositionParams(
+      filename: String,
+      substringQuery: String,
+  ): TextDocumentPositionParams = {
+    val abspath = toPath(filename)
+    val pos = subqueryPosition(abspath, substringQuery)
+    new TextDocumentPositionParams(
+      abspath.toTextDocumentIdentifier,
+      pos.toLspStartPosition,
+    )
+  }
+
   // Does a goto-definition from a substring AND it does not trigger a didChange
   // notification.
   def definitionSubstringQuery(
@@ -1994,44 +2016,49 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach { token =>
-      val params = token.toPositionParams(identifier)
-      // Scala 3 doesn't count ` as part of the word which is the same as most editors
-      if (token.text.startsWith("`")) {
-        val position = params.getPosition()
-        position.setCharacter(position.getCharacter() + 1)
-      }
-      val definition = server.definitionResult(params).asJava.get()
-      definition.definition.foreach { path =>
-        if (path.isJarFileSystem) {
-          virtualDocSources(path.toString.stripPrefix("/")) = path
+    trees.tokenized(input).get.foreach {
+      case token: m.tokens.Token.Ident =>
+        val params = token.toPositionParams(identifier)
+        // Scala 3 doesn't count ` as part of the word which is the same as most editors
+        if (token.text.startsWith("`")) {
+          val position = params.getPosition()
+          position.setCharacter(position.getCharacter() + 1)
         }
-      }
-      val locations = definition.locations.asScala.toList
-      val symbols = locations.map { location =>
-        val isSameFile = identifier.getUri == location.getUri
-        if (isSameFile) {
-          s"L${location.getRange.getStart.getLine}"
+        val definition = server
+          .definitionOrReferences(params, definitionOnly = true)
+          .asJava
+          .get()
+        definition.definition.foreach { path =>
+          if (path.isJarFileSystem) {
+            virtualDocSources(path.toString.stripPrefix("/")) = path
+          }
+        }
+        val locations = definition.locations.asScala.toList
+        val symbols = locations.map { location =>
+          val isSameFile = identifier.getUri == location.getUri
+          if (isSameFile) {
+            s"L${location.getRange.getStart.getLine}"
+          } else {
+            val path = location.getUri.toAbsolutePath
+            val filename = path.toNIO.getFileName
+            if (path.isDependencySource(workspace)) filename.toString
+            else s"$filename:${location.getRange.getStart.getLine}"
+          }
+        }
+        last = symbols
+        val occurrence = if (token.isIdentifier) {
+          if (definition.symbol.isPackage) None // ignore packages
+          else if (symbols.isEmpty) Some("<no symbol>")
+          else Some(Symbols.Multi(symbols.sorted))
         } else {
-          val path = location.getUri.toAbsolutePath
-          val filename = path.toNIO.getFileName
-          if (path.isDependencySource(workspace)) filename.toString
-          else s"$filename:${location.getRange.getStart.getLine}"
+          if (symbols.isEmpty) None // OK, expected
+          else if (last == symbols) None // OK, expected
+          else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
         }
-      }
-      last = symbols
-      val occurrence = if (token.isIdentifier) {
-        if (definition.symbol.isPackage) None // ignore packages
-        else if (symbols.isEmpty) Some("<no symbol>")
-        else Some(Symbols.Multi(symbols.sorted))
-      } else {
-        if (symbols.isEmpty) None // OK, expected
-        else if (last == symbols) None // OK, expected
-        else Some(s"unexpected: ${Symbols.Multi(symbols.sorted)}")
-      }
-      occurrences ++= occurrence.map { symbol =>
-        s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)
-      }
+        occurrences ++= occurrence.map { symbol =>
+          s.SymbolOccurrence(Some(token.pos.toSemanticdb), symbol)
+        }
+      case _ =>
     }
     s.TextDocument(
       schema = s.Schema.SEMANTICDB4,

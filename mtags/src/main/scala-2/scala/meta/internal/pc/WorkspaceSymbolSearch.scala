@@ -69,13 +69,25 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
           collect(compilerSymbol)
           visited.toList.map(semanticdbSymbol)
         }
+
+        val selfTypeParents =
+          if (compilerSymbol.hasSelfType) {
+            compilerSymbol.selfType match {
+              case RefinedType(parents, _) =>
+                parents.map(_.typeSymbol).filter(_ != compilerSymbol)
+              case parent => List(parent.typeSymbol)
+            }
+          } else Nil
+
         val defnAnn =
           compilerSymbol.info.members.filter(_.isMethod).flatMap(_.annotations)
         Some(
           PcSymbolInformation(
             symbol = symbol,
             kind = getSymbolKind(compilerSymbol),
-            parents = compilerSymbol.parentSymbols.map(semanticdbSymbol),
+            parents = selfTypeParents.map(
+              semanticdbSymbol
+            ) ++ compilerSymbol.parentSymbols.map(semanticdbSymbol),
             dealiasedSymbol = semanticdbSymbol(compilerSymbol.dealiased),
             classOwner = compilerSymbol.ownerChain
               .find(c => c.isClass || c.isModule)
@@ -174,8 +186,13 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       visit(SymbolSearchCandidate.Workspace(symbol, path))
     }
 
-    def shouldVisitPackage(pkg: String): Boolean =
-      packageSymbolFromString(pkg).isDefined
+    def shouldVisitPackage(pkg: String): Boolean = {
+      // this is supposed to be an optimization but checking if `pkg` exists in the symbol table of the compiler
+      // for all packages in a large workspace is more expensive than just letting it go through (it needs to force
+      // everything on its classpath as it keeps trying every possible package). Observed in a profiler that this can
+      // add several seconds on scope completions
+      true
+    }
 
     override def isCancelled: Boolean = {
       false

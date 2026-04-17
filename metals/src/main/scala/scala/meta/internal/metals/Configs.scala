@@ -402,6 +402,178 @@ object Configs {
     }
   }
 
+  final case class ProtoOutlineProviderConfig(val value: String) {
+    require(List("v1", "v2").contains(value), value)
+    def isV1: Boolean =
+      value == "v1"
+    def isV2: Boolean =
+      value == "v2"
+  }
+
+  object ProtoOutlineProviderConfig {
+    def v1: ProtoOutlineProviderConfig =
+      ProtoOutlineProviderConfig("v1")
+    def v2: ProtoOutlineProviderConfig =
+      ProtoOutlineProviderConfig("v2")
+    // Default to v1 which uses a scanner-based approach that handles
+    // malformed proto files gracefully. V2 uses the Java proto parser
+    // which fails on syntax errors. See plans/protopc.md for details.
+    def default: ProtoOutlineProviderConfig = v1
+    def fromConfigOrFeatureFlag(
+        value: Option[String],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, ProtoOutlineProviderConfig] = {
+      value match {
+        case Some(ok @ ("v1" | "v2")) =>
+          Right(ProtoOutlineProviderConfig(ok))
+        case Some(invalid) =>
+          Left(
+            s"invalid config value '$invalid' for protoOutlineProvider. Valid values are \"v1\" and \"v2\""
+          )
+        case None =>
+          Right(ProtoOutlineProviderConfig.default)
+      }
+    }
+  }
+
+  case class ProtobufLspConfig(
+      diagnostics: Boolean,
+      hover: Boolean,
+      definition: Boolean,
+      completions: Boolean,
+      semanticTokens: Boolean,
+      semanticdb: Boolean,
+      override val javaPackagePrefix: String = "",
+  ) extends scala.meta.pc.ProtobufLspConfig
+
+  object ProtobufLspConfig {
+    def default: ProtobufLspConfig =
+      ProtobufLspConfig(
+        diagnostics = false,
+        hover = false,
+        definition = false,
+        completions = false,
+        semanticTokens = false,
+        semanticdb = false,
+        javaPackagePrefix = "",
+      )
+
+    def enabled: ProtobufLspConfig =
+      ProtobufLspConfig(
+        diagnostics = true,
+        hover = true,
+        definition = true,
+        completions = true,
+        semanticTokens = true,
+        semanticdb = true,
+        javaPackagePrefix = "",
+      )
+
+    def defaultFromFeatureFlags(
+        featureFlags: FeatureFlagProvider
+    ): ProtobufLspConfig = {
+      val isEnabled = featureFlags
+        .readBoolean(FeatureFlag.PROTOBUF_LSP)
+        .orElse(false)
+      if (isEnabled) enabled else default
+    }
+
+    def fromJson(
+        element: JsonElement
+    ): Either[String, ProtobufLspConfig] = {
+      // Support simple boolean: "protobuf-lsp": true/false
+      if (
+        element.isJsonPrimitive() && element.getAsJsonPrimitive().isBoolean()
+      ) {
+        val isEnabled = element.getAsJsonPrimitive().getAsBoolean()
+        Right(if (isEnabled) enabled else default)
+      } else if (!element.isJsonObject()) {
+        Left(
+          s"invalid config value '$element' for protobufLsp. Expected a boolean or an object"
+        )
+      } else {
+        val obj = element.getAsJsonObject()
+        val errors = Buffer.empty[String]
+        def requireBoolean(
+            value: JsonElement,
+            name: String,
+            defaultValue: Boolean,
+        ): Boolean = {
+          if (value == null || value.isJsonNull()) {
+            defaultValue
+          } else if (
+            value.isJsonPrimitive() &&
+            value.getAsJsonPrimitive().isBoolean()
+          ) {
+            value.getAsJsonPrimitive().getAsBoolean()
+          } else {
+            errors.append(
+              s"invalid config value for key '$name': $value. Valid values are \"true\" and \"false\""
+            )
+            false
+          }
+        }
+        def requireString(
+            value: JsonElement,
+            name: String,
+            defaultValue: String,
+        ): String = {
+          if (value == null || value.isJsonNull()) {
+            defaultValue
+          } else if (
+            value.isJsonPrimitive() &&
+            value.getAsJsonPrimitive().isString()
+          ) {
+            value.getAsJsonPrimitive().getAsString()
+          } else {
+            errors.append(
+              s"invalid config value for key '$name': $value. Expected a string"
+            )
+            defaultValue
+          }
+        }
+        val result = ProtobufLspConfig(
+          diagnostics = requireBoolean(
+            obj.get("diagnostics"),
+            "diagnostics",
+            default.diagnostics,
+          ),
+          hover = requireBoolean(obj.get("hover"), "hover", default.hover),
+          definition = requireBoolean(
+            obj.get("definition"),
+            "definition",
+            default.definition,
+          ),
+          completions = requireBoolean(
+            obj.get("completions"),
+            "completions",
+            default.completions,
+          ),
+          semanticTokens = requireBoolean(
+            obj.get("semanticTokens"),
+            "semanticTokens",
+            default.semanticTokens,
+          ),
+          semanticdb = requireBoolean(
+            obj.get("semanticdb"),
+            "semanticdb",
+            default.semanticdb,
+          ),
+          javaPackagePrefix = requireString(
+            obj.get("javaPackagePrefix"),
+            "javaPackagePrefix",
+            default.javaPackagePrefix,
+          ),
+        )
+        if (errors.nonEmpty) {
+          Left(errors.mkString("\n"))
+        } else {
+          Right(result)
+        }
+      }
+    }
+  }
+
   case class JavacServicesOverrides(
       names: Boolean,
       attr: Boolean,
@@ -846,6 +1018,50 @@ object Configs {
                 s"Invalid turbine recompile delay '$str': ${e.getMessage}"
               )
               defaultConfig
+          }
+      }
+    }
+  }
+
+  /**
+   * Configuration for batch semanticdb processing.
+   *
+   * @param instances Number of compiler instances to use. Value 1 means sequential
+   *                  processing (default), values > 1 enable parallel processing.
+   */
+  final case class BatchSemanticdbConfig(instances: Int) {
+    require(
+      instances >= 1,
+      s"batchSemanticdbCompilerInstances must be >= 1, got $instances",
+    )
+    def isParallel: Boolean = instances > 1
+  }
+
+  object BatchSemanticdbConfig {
+    def default: BatchSemanticdbConfig = BatchSemanticdbConfig(1)
+
+    def fromConfigOrFeatureFlag(
+        value: Option[Int],
+        featureFlags: FeatureFlagProvider,
+    ): Either[String, BatchSemanticdbConfig] = {
+      value match {
+        case Some(n) if n >= 1 => Right(BatchSemanticdbConfig(n))
+        case Some(invalid) =>
+          Left(
+            s"invalid value '$invalid' for batchSemanticdbCompilerInstances: must be >= 1"
+          )
+        case None =>
+          val flagValue = featureFlags
+            .readInt(FeatureFlag.BATCH_SEMANTICDB_COMPILER_INSTANCES, 1)
+          if (flagValue.isPresent()) {
+            val n = flagValue.get()
+            if (n >= 1) Right(BatchSemanticdbConfig(n))
+            else
+              Left(
+                s"invalid feature flag value '$n' for BATCH_SEMANTICDB_COMPILER_INSTANCES: must be >= 1"
+              )
+          } else {
+            Right(default)
           }
       }
     }

@@ -22,6 +22,7 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def metalsStatus(params: MetalsStatusParams): Unit = ()
 
   override def metalsSyncStatus(params: MetalsSyncStatusParams): Unit = ()
+  override def metalsSyncModes(params: MetalsSyncModesParams): Unit = ()
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(diagnostics: PublishDiagnosticsParams): Unit =
     ()
@@ -68,6 +69,16 @@ abstract class NoopLanguageClient extends MetalsLanguageClient {
   override def refreshInlayHints(): CompletableFuture[Void] = {
     CompletableFuture.completedFuture(null)
   }
+
+  override def metalsCreateTerminal(
+      params: MetalsCreateTerminalParams
+  ): Unit = ()
+
+  override def metalsEndTerminal(params: MetalsEndTerminalParams): Unit = ()
+
+  override def metalsTerminalOutput(
+      params: MetalsTerminalOutputParams
+  ): Unit = ()
 }
 
 object NoopLanguageClient extends NoopLanguageClient

@@ -103,4 +103,52 @@ class PCDiagnosticsSuite
     } yield ()
   }
 
+  test("prefer-non-shim-definition-for-diagnostics") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/shims.scala
+           |package a
+           |
+           |class Duplicate {
+           |  def shimOnly: String = "shim"
+           |}
+           |/a/src/main/scala/a/Duplicate.scala
+           |package a
+           |
+           |class Duplicate {
+           |  def realOnly: String = "real"
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  val value = new Duplicate().shimOnly
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "build-on-focus": false,
+          |  "build-on-change": false,
+          |  "shimGlobs": {
+          |    "default": ["shims.scala"]
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Main.scala")
+      _ = assertContains(
+        client.workspaceDiagnostics,
+        "value shimOnly is not a member of a.Duplicate",
+      )
+    } yield ()
+  }
+
 }

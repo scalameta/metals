@@ -18,6 +18,15 @@ import scala.meta.io.AbsolutePath
  * Manages JSON-RPC tracing of incoming/outgoing messages via BSP and LSP.
  */
 object Trace {
+  private def verboseInfoLevel: scribe.Level =
+    if (MetalsServerConfig.isTesting) scribe.Level.Debug
+    else scribe.Level.Info
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   // jvm-directories can fail for less common OS versions: https://github.com/soc/directories-jvm/issues/17
   def globalDirectory(implicit ec: ExecutionContext): Option[AbsolutePath] =
     Try {
@@ -33,14 +42,15 @@ object Trace {
       // the path making it difficult to tail/cat from the terminal and cmd+click from VS Code.
       // Instead, we use the `cacheDir` which has no spaces. The logs are safe to remove so
       // putting them in the "cache directory" makes more sense compared to the "config directory".
-      projectDirectories.flatMap { dirs =>
-        val cacheDir = Paths.get(dirs.cacheDir)
-        // https://github.com/scalameta/metals/issues/5590
-        // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
-        if (cacheDir.isAbsolute())
-          Some(AbsolutePath(cacheDir))
-        else None
-      }
+      projectDirectories.collectFirst {
+        case dirs if !dirs.cacheDir.contains("null") =>
+          val cacheDir = Paths.get(dirs.cacheDir)
+          // https://github.com/scalameta/metals/issues/5590
+          // deal with issue on windows and PowerShell, which would cause us to create a null directory in the workspace
+          if (cacheDir.isAbsolute())
+            Some(AbsolutePath(cacheDir))
+          else None
+      }.flatten
     }.toOption.flatten
 
   private val localDirectory: AbsolutePath =
@@ -81,7 +91,7 @@ object Trace {
     def setupPrintWriter(paths: List[AbsolutePath]): Option[PrintWriter] =
       paths match {
         case head :: _ if head.isFile =>
-          LogOnce.info(TracingIsEnabled(head.toString))
+          LogOnce.log(verboseInfoLevel, TracingIsEnabled(head.toString))
           val fos = Files.newOutputStream(
             head.toNIO,
             StandardOpenOption.CREATE,
@@ -91,7 +101,7 @@ object Trace {
         case _ :: tail =>
           setupPrintWriter(tail)
         case Nil =>
-          scribe.info(
+          logInfoInProdDebugInTests(
             s"tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
               s"and outgoing JSON messages create an empty file at ${tracePaths.mkString(" or ")}"
           )

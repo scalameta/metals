@@ -3,6 +3,8 @@ package scala.meta.internal.pc
 import java.io.File
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
+import java.time.Duration
 import java.util
 import java.util.Optional
 import java.util.concurrent.CompletableFuture
@@ -12,8 +14,11 @@ import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
 import scala.collection.Seq
+import scala.collection.mutable
+import scala.compat.java8.FutureConverters
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.Future
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
@@ -51,6 +56,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.VirtualFileParams
 import scala.meta.pc.{PcSymbolInformation => IPcSymbolInformation}
 
+import com.google.common.base.Stopwatch
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
@@ -161,8 +167,75 @@ case class ScalaPresentationCompiler(
       buildTargetIdentifier
     )(ec)
 
+  // Constants for parallel batch processing
+  private val BatchParallelThreshold = 50
+  private val BatchCompilerIdleTimeoutMillis = 5 * 60 * 1000L // 5 minutes
+
+  // Additional compiler instances for parallel batch processing (lazy, with idle shutdown)
+  @volatile private var batchCompilerPool: Array[ScalaCompilerAccess] = _
+  @volatile private var lastBatchUseTime: Long = 0L
+  private val batchPoolLock = new Object
+
+  private def getOrCreateBatchPool(): Array[ScalaCompilerAccess] =
+    batchPoolLock.synchronized {
+      val instanceCount = config.batchSemanticdbCompilerInstances()
+      if (
+        batchCompilerPool == null || batchCompilerPool.length != instanceCount - 1
+      ) {
+        // Shutdown old pool if size changed
+        shutdownBatchPool()
+        // Create N-1 additional instances (the main compilerAccess is also used)
+        logger.debug(
+          s"[$buildTargetIdentifier] Creating batch compiler pool with ${instanceCount - 1} additional instances"
+        )
+        batchCompilerPool = (0 until (instanceCount - 1)).map { i =>
+          new ScalaCompilerAccess(
+            logger,
+            config,
+            sh,
+            () => new ScalaCompilerWrapper(newCompiler()),
+            s"$buildTargetIdentifier-batch-$i"
+          )(ec)
+        }.toArray
+      }
+      lastBatchUseTime = System.currentTimeMillis()
+      scheduleIdleShutdown()
+      batchCompilerPool
+    }
+
+  private def scheduleIdleShutdown(): Unit = {
+    sh.foreach(
+      _.schedule(
+        new Runnable {
+          def run(): Unit = {
+            val idleTime = System.currentTimeMillis() - lastBatchUseTime
+            if (idleTime >= BatchCompilerIdleTimeoutMillis) {
+              logger.info(
+                s"[$buildTargetIdentifier] Shutting down idle batch compiler pool"
+              )
+              shutdownBatchPool()
+            }
+          }
+        },
+        BatchCompilerIdleTimeoutMillis,
+        TimeUnit.MILLISECONDS
+      )
+    )
+  }
+
+  private def shutdownBatchPool(): Unit = batchPoolLock.synchronized {
+    if (batchCompilerPool != null) {
+      logger.debug(
+        s"[$buildTargetIdentifier] Shutting down batch compiler pool with ${batchCompilerPool.length} instances"
+      )
+      batchCompilerPool.foreach(_.shutdown())
+      batchCompilerPool = null
+    }
+  }
+
   override def shutdown(): Unit = {
     compilerAccess.shutdown()
+    shutdownBatchPool()
   }
 
   def restart(): Unit = {
@@ -586,38 +659,154 @@ case class ScalaPresentationCompiler(
     }(params.file.toQueryContext)
   }
 
+  /**
+   * Batch the semanticdb text documents for the given parameters. This method
+   * may return partial results if the timeout is reached.
+   *
+   * The default timeout is chosen to be smaller than the default PC timeout of 20s,
+   * which is set as wall-clock time at the level of the compiler job queue.
+   *
+   * @param params the list of virtual file parameters
+   * @param timeout the timeout after which partial results may be returned
+   * @return the serialized TextDocuments protobuf
+   */
   override def batchSemanticdbTextDocuments(
-      params: ju.List[VirtualFileParams]
+      params: ju.List[VirtualFileParams],
+      timeout: Duration
   ): CompletableFuture[Array[Byte]] = {
+    val instanceCount = config.batchSemanticdbCompilerInstances()
+
     if (params.isEmpty()) {
       CompletableFuture.completedFuture(Array.emptyByteArray)
+    } else if (instanceCount <= 1 || params.size() <= BatchParallelThreshold) {
+      // Sequential: use existing compilerAccess (current behavior)
+      processBatchSequential(params, timeout)
     } else {
-      // use the first parameter for query context and cancel token
-      val param = params.get(0)
-      compilerAccess.withInterruptableCompiler(
-        Array.emptyByteArray,
-        param.token()
-      ) { pc =>
-        val provider = new SemanticdbTextDocumentProvider(
-          pc.compiler(),
-          config.semanticdbCompilerOptions().asScala.toList
-        )
-
-        val docs = for (param <- params.asScala) yield {
-          // we overwrite the URI because the provider relativizes the URI to the workspace path
-          try {
-            provider
-              .textDocument(param.uri(), param.text())
-              .withUri(param.uri().toString())
-          } catch {
-            case NonFatal(e) =>
-              logger.error(s"error getting text document for ${param.uri()}", e)
-              s.TextDocument.defaultInstance.withUri(param.uri().toString())
-          }
-        }
-        s.TextDocuments(docs.toSeq).toByteArray
-      }(param.toQueryContext)
+      // Parallel: distribute across main + pool instances
+      processBatchParallel(params, timeout)
     }
+  }
+
+  /**
+   * Process a sequence of files with the given provider, respecting the timeout.
+   * Returns the processed documents.
+   */
+  private def processFiles(
+      files: Seq[VirtualFileParams],
+      provider: SemanticdbTextDocumentProvider,
+      timer: Stopwatch,
+      timeout: Duration,
+      logContext: String
+  ): Seq[s.TextDocument] = {
+    val docsBuffer = mutable.ListBuffer.empty[s.TextDocument]
+    val filesIterator = files.iterator
+    var timedOut = false
+
+    while (filesIterator.hasNext && !timedOut) {
+      if (timer.elapsed().compareTo(timeout) >= 0) {
+        timedOut = true
+        logger.info(
+          s"batchSemanticdbTextDocuments: timeout reached after $timer$logContext, " +
+            s"returning partial results (${docsBuffer.size}/${files.size} documents)"
+        )
+      } else {
+        val fileParam = filesIterator.next()
+        // we overwrite the URI because the provider relativizes the URI to the workspace path
+        try {
+          docsBuffer += provider
+            .textDocument(fileParam.uri(), fileParam.text())
+            .withUri(fileParam.uri().toString())
+        } catch {
+          case NonFatal(e) =>
+            logger.error(
+              s"error getting text document for ${fileParam.uri()}",
+              e
+            )
+            docsBuffer += s.TextDocument.defaultInstance.withUri(
+              fileParam.uri().toString()
+            )
+        }
+      }
+    }
+    docsBuffer.toSeq
+  }
+
+  /**
+   * Process batch sequentially using the main compilerAccess.
+   */
+  private def processBatchSequential(
+      params: ju.List[VirtualFileParams],
+      timeout: Duration
+  ): CompletableFuture[Array[Byte]] = {
+    val param = params.get(0)
+
+    compilerAccess.withInterruptableCompiler(
+      Array.emptyByteArray,
+      param.token()
+    ) { pc =>
+      val provider = new SemanticdbTextDocumentProvider(
+        pc.compiler(),
+        config.semanticdbCompilerOptions().asScala.toList
+      )
+      val timer = Stopwatch.createStarted()
+      val docs =
+        processFiles(params.asScala.toSeq, provider, timer, timeout, "")
+      s.TextDocuments(docs.toList).toByteArray
+    }(param.toQueryContext)
+  }
+
+  /**
+   * Process batch in parallel using multiple compiler instances.
+   * Partitions work across the main compilerAccess and the batch pool.
+   */
+  private def processBatchParallel(
+      params: ju.List[VirtualFileParams],
+      timeout: Duration
+  ): CompletableFuture[Array[Byte]] = {
+    val pool = getOrCreateBatchPool()
+    val allCompilers: Array[ScalaCompilerAccess] =
+      Array(compilerAccess) ++ pool // Main + pool
+    val paramsSeq = params.asScala.toSeq
+    val chunkSize =
+      Math.ceil(paramsSeq.size.toDouble / allCompilers.length).toInt
+    val chunks = paramsSeq.grouped(chunkSize).toSeq
+
+    // Use first param for query context
+    val param = params.get(0)
+    implicit val queryContext: PcQueryContext = param.toQueryContext
+
+    // Shared timer across all chunks
+    val timer = Stopwatch.createStarted()
+
+    // Process each chunk on a different compiler
+    val futures =
+      chunks.zipWithIndex.map { case (chunk, i) =>
+        val compiler = allCompilers(i)
+        FutureConverters.toScala(
+          compiler.withInterruptableCompiler(
+            Seq.empty[s.TextDocument],
+            param.token()
+          ) { pc =>
+            val provider = new SemanticdbTextDocumentProvider(
+              pc.compiler(),
+              config.semanticdbCompilerOptions().asScala.toList
+            )
+            processFiles(chunk, provider, timer, timeout, s" in chunk $i")
+          }
+        )
+      }
+
+    FutureConverters
+      .toJava(
+        Future.sequence(futures).map { docs =>
+          val allDocs = docs.flatten
+          logger.debug(
+            s"batchSemanticdbTextDocuments: parallel processed ${allDocs.size} documents"
+          )
+          s.TextDocuments(allDocs).toByteArray
+        }
+      )
+      .toCompletableFuture
   }
 
   override def semanticdbTextDocument(
@@ -691,8 +880,39 @@ case class ScalaPresentationCompiler(
         ParsedLogicalPackage.fromMbtIndex(
           semanticdbFileManager.listAllPackages()
         )
-      } else
-        ParsedLogicalPackage.collectLogicalPackages(settings)
+      } else {
+        val packages = semanticdbFileManager.listAllPackages().asScala
+        val paths: Set[Path] = settings.sourcepath.value
+          .split(File.pathSeparator)
+          .filter(_.nonEmpty)
+          .map(Paths.get(_))
+          .toSet
+        val indexFiles: Set[Path] =
+          packages.values.flatMap(_.asScala).toSet
+
+        val filteredPackages =
+          packages.mapValues(ps => ps.asScala.filter(paths.contains).asJava)
+        val rootPkg =
+          ParsedLogicalPackage.fromMbtIndex(filteredPackages.toMap.asJava)
+
+        val missingFromIndex = paths -- indexFiles
+        if (missingFromIndex.nonEmpty) {
+          logger.info(
+            s"[$buildTargetIdentifier] Parsing ${missingFromIndex.size} additional source path files not in MBT index"
+          )
+          val augmentSettings = new Settings
+          augmentSettings.usejavacp.value = settings.usejavacp.value
+          augmentSettings.classpath.value = settings.classpath.value
+          augmentSettings.sourcepath.value =
+            missingFromIndex.mkString(File.pathSeparator)
+          augmentSettings.bootclasspath.value = settings.bootclasspath.value
+          val augmentedPackages =
+            ParsedLogicalPackage.collectLogicalPackages(augmentSettings)
+          rootPkg.mergeWith(augmentedPackages)
+        }
+
+        rootPkg
+      }
     }
     if (rootSrcPackage.packages.isEmpty && rootSrcPackage.sources.isEmpty) {
       logger.warn(

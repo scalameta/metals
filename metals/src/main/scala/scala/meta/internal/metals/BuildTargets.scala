@@ -12,6 +12,9 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
+import scala.meta.internal.bsp.sync.SyncMode
+import scala.meta.internal.bsp.sync.WorkspaceSyncParams
+import scala.meta.internal.bsp.sync.WorkspaceSyncResult
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
@@ -64,6 +67,11 @@ final class BuildTargets private (
 
       score
   }
+
+  def syncModes: Iterator[SyncMode] =
+    data
+      .fromIterators(_.targetToConnectionId.values.toIterator)
+      .flatMap(_.syncModes.toSeq.flatten)
 
   def sourceItems: Iterable[AbsolutePath] =
     data.iterable.flatMap(_.sourceItemsToBuildTarget.keys)
@@ -345,6 +353,28 @@ final class BuildTargets private (
       } data.addSourceItem(source, tgt)
       targets
     }
+  }
+
+  def bspSync(
+      source: AbsolutePath,
+      mode: String,
+  )(implicit ec: ExecutionContext): Option[Future[WorkspaceSyncResult]] = {
+    val connections =
+      data.fromIterators(_.targetToConnectionId.values.toIterator).distinct
+    val syncConnections = connections.filter(_.supportsSyncMethod)
+    if (syncConnections.nonEmpty) {
+      val params =
+        new WorkspaceSyncParams(
+          ju.UUID.randomUUID().toString,
+          source.toTextDocumentIdentifier.getUri(),
+          Option(mode).orElse(syncModes.headOption.map(_.id)).getOrElse(null),
+        )
+      val queries = syncConnections.map(_.workspaceSync(params))
+      Some(Future.sequence(queries).map { results =>
+        val allChanges = results.flatMap(_.getChanges.asScala)
+        new WorkspaceSyncResult(allChanges.toList.asJava)
+      })
+    } else None
   }
 
   def scalaVersion(source: AbsolutePath): Option[String] = {

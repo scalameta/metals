@@ -4,6 +4,7 @@ import java.util
 import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.DidFocusResult
+import scala.meta.internal.metals.clients.language.MetalsTerminalInputParams
 import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
@@ -17,6 +18,11 @@ import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
+
+case class MetalsSyncParams(
+    uri: String,
+    mode: String,
+)
 
 /**
  * Interface which describes metals specific LSP requests and notifications which are
@@ -68,4 +74,8 @@ trait MetalsService {
       params: AnyRef
   ): CompletableFuture[Unit]
 
+  @JsonNotification("metals/terminalInput")
+  def terminalInput(
+      params: MetalsTerminalInputParams
+  ): CompletableFuture[Unit]
 }

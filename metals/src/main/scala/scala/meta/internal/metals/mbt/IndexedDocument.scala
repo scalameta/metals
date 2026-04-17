@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt
 
+import java.util.concurrent.atomic.AtomicReference
 import javax.tools.JavaFileObject
 
 import scala.collection.View
@@ -17,6 +18,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.proto.ProtoMtagsV2
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SemanticdbCompilationUnit
 
@@ -36,6 +38,29 @@ case class IndexedDocument(
     symbols: collection.Seq[Mbt.SymbolInformation],
     bloomFilter: StringBloomFilter,
 ) {
+  // Cached generated Java outlines from proto files.
+  // This is lazily populated and automatically invalidated when
+  // the proto file changes (new IndexedDocument replaces old one).
+  private val cachedProtobufJavaOutlines
+      : AtomicReference[Seq[VirtualTextDocument]] =
+    new AtomicReference(null)
+
+  def getOrComputeJavaOutlines(
+      compute: () => Seq[VirtualTextDocument]
+  ): Seq[VirtualTextDocument] = {
+    var result = cachedProtobufJavaOutlines.get()
+    if (result == null) {
+      val computed = compute()
+      cachedProtobufJavaOutlines.compareAndSet(null, computed)
+      result = cachedProtobufJavaOutlines.get()
+    }
+    result
+  }
+
+  def clearProtobufJavaOutlinesCache(): Unit = {
+    cachedProtobufJavaOutlines.set(null)
+  }
+
   def toSemanticdbCompilationUnit(
       input: Input.VirtualFile
   ): SemanticdbCompilationUnit with JavaFileObject = {
@@ -59,6 +84,11 @@ case class IndexedDocument(
       .build()
   }
   def toProto(): Mbt.IndexedDocument.Builder = {
+    val bloomFilterVersion = language match {
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V9
+      case _ => Mbt.IndexedDocument.BloomFilterVersion.V6
+    }
     Mbt.IndexedDocument
       .newBuilder()
       .setUri(file.toURI.toString)
@@ -68,7 +98,7 @@ case class IndexedDocument(
       .setLanguage(language)
       .addAllSymbols(symbols.asJava)
       .setBloomFilter(ByteString.copyFrom(bloomFilter.toBytes))
-      .setBloomFilterVersion(Mbt.IndexedDocument.BloomFilterVersion.V6)
+      .setBloomFilterVersion(bloomFilterVersion)
   }
 }
 
@@ -83,6 +113,7 @@ object IndexedDocument {
       mtags: Mtags,
       buffers: Buffers,
       dialect: Dialect,
+      enableProtoJavaPackage: Boolean = false,
   ): IndexedDocument = {
     val input = file.toInputFromBuffers(buffers)
     val sdoc = mtags.indexMBT(
@@ -107,23 +138,48 @@ object IndexedDocument {
       sdoc.occurrences.view.filter(_.role.isDefinition).map(_.symbol)
     val references =
       sdoc.occurrences.view.filter(_.role.isReference).map(_.symbol)
+
+    // For proto files, use ProtoMtagsV2 to get both proto package and java_package.
+    // This is needed because the default mtags indexer (V1) only indexes by proto package.
+    // ProtoMtagsV2 parses the proto file and extracts java_package from options.
+    val semanticdbPackages =
+      if (enableProtoJavaPackage && file.isProto) {
+        try {
+          val protoMtags = new ProtoMtagsV2(input, includeMembers = false)
+          // Trigger parsing by accessing semanticdbPackages
+          protoMtags.semanticdbPackages
+        } catch {
+          case _: Exception =>
+            // Fall back to packages from sdoc if parsing fails
+            sdoc.semanticdbPackages
+        }
+      } else sdoc.semanticdbPackages
+
     IndexedDocument(
       file = file,
       oid = OID.fromText(input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_FILE,
-      sdoc.semanticdbPackages,
+      semanticdbPackages,
       bloomFilter = bloomFilterMBT(definitions, references),
       language = file.toJLanguage,
       symbols = symbols.toSeq,
     )
   }
 
+  // Minimum bloom filter size to avoid sensitivity issues with very small filters.
+  // Small bloom filters (e.g., size=6) are extremely sensitive - adding 1 extra
+  // entry can push the FPP from 1% to 1.5%. Using a minimum threshold makes small
+  // files more robust to estimation inaccuracies.
+  private val MinBloomFilterSize = 256
+
   private def bloomFilterMBT(
       definitions: View[String],
       references: View[String],
   ): StringBloomFilter = {
     val symbolsSize = Fuzzy.estimateSizeOfSymbolStrings(definitions)
-    val bf = StringBloomFilter.forEstimatedSize(symbolsSize + references.size)
+    val estimatedSize =
+      math.max(MinBloomFilterSize, symbolsSize + references.size)
+    val bf = StringBloomFilter.forEstimatedSize(estimatedSize)
     Fuzzy.bloomFilterSymbolStrings(definitions, bf)
     references.foreach { sym =>
       bf.putCharSequence(FingerprintedCharSequence.fuzzyReference(sym))
@@ -151,7 +207,7 @@ object IndexedDocument {
       file = params.path,
       oid = OID.fromText(params.input.text),
       source = Mbt.IndexedDocument.Source.ON_DID_CHANGE_SYMBOLS,
-      semanticdbPackages,
+      semanticdbPackages.distinct,
       bloomFilter = bloomFilterMBT(
         params.symbols.view.map(_.symbol),
         params.references.view,
@@ -203,9 +259,10 @@ object IndexedDocument {
   // that language.
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
-      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V3
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V6
-      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V6
+      // V9: Proto bloom filters include scanner fixes for option blocks.
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V9
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }

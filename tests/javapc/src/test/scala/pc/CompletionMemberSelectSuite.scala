@@ -186,7 +186,7 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |import java.util.concurrent.CompletableFuture;
       |
       |class Perfect {
-      |  
+      |
       |  void println() {
       |    CompletableFuture<?> cf = new CompletableFuture<>();
       |    cf.completeExc@@
@@ -195,6 +195,41 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
       |""".stripMargin,
     """|completeExceptionally(java.lang.Throwable ex)
        |""".stripMargin,
+  )
+
+  check(
+    "super-select",
+    """|class Parent {
+       |  public void parentMethod() {}
+       |}
+       |
+       |class Child extends Parent {
+       |  @Override
+       |  public void parentMethod() {
+       |    super.parentM@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|parentMethod()
+       |""".stripMargin,
+  )
+
+  check(
+    "super-select-empty",
+    """|class Parent {
+       |  public void parentMethod() {}
+       |}
+       |
+       |class Child extends Parent {
+       |  @Override
+       |  public void parentMethod() {
+       |    super.@@
+       |  }
+       |}
+       |""".stripMargin,
+    """|parentMethod()
+       |""".stripMargin,
+    filterItem = _.getLabel().startsWith("parent"),
   )
 
 }

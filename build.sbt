@@ -53,7 +53,9 @@ inThisBuild(
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    javaHome := Some(
+      file(sys.env.getOrElse("JAVA_HOME", sys.props("java.home")))
+    ),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
     scalaVersion := V.scala213,
@@ -136,6 +138,15 @@ def crossTestDyn(state: State, scalaV: String): State = {
   out
 }
 
+def crossTestDynOnly(state: State, scalaV: String, testName: String): State = {
+  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
+  val (out, _) =
+    Project
+      .extract(configured)
+      .runInputTask(cross / Test / testOnly, testName, configured)
+  out
+}
+
 commands ++= Seq(
   Command.command("save-expect") { s =>
     // Manually clean input because we rely on `unmanagedJars +=` to enable
@@ -153,12 +164,17 @@ commands ++= Seq(
       "jsemanticdb/publishLocal" ::
       "turbine/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
+      "semanticdb-protoc/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
+      "mtags-protobuf/publishLocal" ::
       publishMtags
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
+  },
+  Command.single("cross-test-only-2-11") { (s, testName) =>
+    crossTestDynOnly(s, V.scala211, " " + testName)
   },
 )
 
@@ -237,6 +253,15 @@ val sharedScalacOptions = List(
 
 val sharedSettings = sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
+  Compile / resourceGenerators += Def.task {
+    val org = organization.value
+    val name = moduleName.value
+    val ver = version.value
+    val f =
+      (Compile / resourceManaged).value / "META-INF" / "maven" / org / name / "pom.properties"
+    IO.write(f, s"artifactId=$name\ngroupId=$org\nversion=$ver\n")
+    Seq(f)
+  }.taskValue,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -264,7 +289,7 @@ lazy val interfaces = project
     ),
     crossPaths := false,
     libraryDependencies ++= List(
-      "org.slf4j" % "slf4j-api" % "1.7.36",
+      "org.slf4j" % "slf4j-api" % "2.0.16",
       V.lsp4j,
     ),
     javacOptions := Seq("--release", "8"),
@@ -338,14 +363,9 @@ lazy val mtagsShared = project
     crossVersion := CrossVersion.full,
     libraryDependencies ++= pprintDebuggingDependency,
     Compile / packageSrc / publishArtifact := true,
-    Compile / scalacOptions ++= {
-      if (scalaVersion.value == V.lastPublishedScala3)
-        List("-Yexplicit-nulls", "-language:unsafeNulls")
-      else Nil
-    },
     libraryDependencies ++= List(
       "com.google.protobuf" % "protobuf-java-util" % V.protobuf,
-      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+      "com.google.protobuf" % "protobuf-java" % "4.30.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       "org.lz4" % "lz4-java" % "1.8.0",
@@ -466,7 +486,7 @@ lazy val mtags = project
     moduleName := "mtags",
     projectDependencies := projectDependencies.value,
   )
-  .dependsOn(mtagsShared)
+  .dependsOn(mtagsShared, `semanticdb-protoc`)
   .enablePlugins(BuildInfoPlugin)
 
 val toolchainJavaOptions = List(
@@ -536,6 +556,31 @@ lazy val `mtags-java` = project
   .configure(JavaPcSettings.settings(sharedSettings))
   .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
 
+lazy val `semanticdb-protoc` = project
+  .settings(
+    moduleName := "semanticdb-protoc",
+    autoScalaLibrary := false,
+    crossPaths := false,
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    Compile / doc / sources := Seq.empty,
+    libraryDependencies ++= List(
+      V.guava,
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+    ),
+  )
+  .dependsOn(jsemanticdb)
+  .disablePlugins(ScalafixPlugin)
+
+lazy val `mtags-protobuf` = project
+  .settings(
+    sharedSettings,
+    libraryDependencies ++= pprintDebuggingDependency,
+    libraryDependencies +=
+      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
+  )
+  .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
+
 lazy val metals = project
   .settings(
     sharedSettings,
@@ -553,7 +598,7 @@ lazy val metals = project
       "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
       "org.slf4j" % "slf4j-api" % "1.7.36",
-      "org.scalameta" %% "metaconfig-core" % "0.14.0",
+      "org.scalameta" %% "metaconfig-core" % "0.15.0",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -562,7 +607,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.2.0",
+      "org.flywaydb" % "flyway-core" % "11.4.1",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -619,6 +664,8 @@ lazy val metals = project
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
+      // For test frameworks
+      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
     Compile / resourceGenerators += Def.task {
@@ -658,7 +705,6 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "supportedScala2Versions" -> V.scala2Versions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
-      "supportedScala3Versions" -> V.scala3Versions,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
       "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
@@ -670,10 +716,11 @@ lazy val metals = project
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
+      "latestScala3Next" -> V.latestScala3Next,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, `mtags-protobuf`)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -759,6 +806,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
+  Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "--log=failure"),
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
@@ -862,14 +910,14 @@ lazy val mtest = project
       List(
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else if (scalaVersion.value == "2.13.15") "1.0.4"
           else if (scalaVersion.value == "2.13.14") "1.0.2"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
-          else if (scalaVersion.value == "2.13.11") "1.0.0-M10"
           else V.munit
         },
-        "com.outr" %% "scribe" % V.scribe,
-        "com.outr" %% "scribe-slf4j2" % V.scribe,
+        "com.outr" %% "scribe" % V.scribe(scalaVersion.value),
+        "com.outr" %% "scribe-slf4j2" % V.scribe(scalaVersion.value),
         "io.get-coursier" % "interface" % V.coursierInterfaces,
       ),
     dependencyOverrides += "org.scala-lang" % "scala-library" % scalaVersion.value,
@@ -881,7 +929,6 @@ lazy val mtest = project
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
       "scala2Versions" -> V.scala2Versions,
-      "scala3Versions" -> V.scala3Versions,
       "scala2Versions" -> V.scala2Versions,
       "scalaVersion" -> scalaVersion.value,
       "kindProjector" -> V.kindProjector,
@@ -930,6 +977,18 @@ lazy val javapc = project
   )
   .dependsOn(mtest, `mtags-java`)
 
+lazy val protopc = project
+  .in(file("tests/protopc"))
+  .settings(
+    testSettings,
+    sharedSettings,
+    libraryDependencies ++= List(
+      "com.outr" %% "scribe" % V.scribe,
+      "com.outr" %% "scribe-slf4j2" % V.scribe,
+    ),
+  )
+  .dependsOn(mtest, `mtags-protobuf`)
+
 def isInTestShard(name: String): Boolean = {
   (
     Option(System.getenv("TEST_SHARD_COUNT")),
@@ -958,7 +1017,6 @@ lazy val metalsDependencies = project
     libraryDependencies ++= List(
       // The dependencies listed below are only listed so Scala Steward
       // will pick them up and update them. They aren't actually used.
-      "com.lihaoyi" %% "ammonite-util" % V.ammonite,
       // not available for Scala 2.13.13
       // "org.typelevel" % "kind-projector" % V.kindProjector cross CrossVersion.full,
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
@@ -982,7 +1040,6 @@ lazy val unit = project
     sharedSettings,
     libraryDependencies ++= List(
       "io.get-coursier" %% "coursier" % V.coursier, // for jars
-      "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       "org.scalameta" %% "munit" % V.munit,
     ),
     buildInfoPackage := "tests",
@@ -1048,7 +1105,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.14.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.15.0",
   )
   .dependsOn(metals)
   .enablePlugins(DocusaurusPlugin)

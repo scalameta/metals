@@ -8,9 +8,11 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
+import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
+import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
 import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
@@ -19,6 +21,8 @@ import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
+import scala.meta.internal.metals.Configs.ProtoOutlineProviderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.ScalaImportsPlacementConfig
@@ -54,6 +58,7 @@ case class UserConfiguration(
     scalafixConfigPath: Option[AbsolutePath] = None,
     symbolPrefixes: Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala.toMap,
+    shimGlobs: Map[String, List[String]] = UserConfiguration.defaultShimGlobs,
     worksheetScreenWidth: Int = 120,
     worksheetCancelTimeout: Int = 4,
     bloopSbtAlreadyInstalled: Boolean = false,
@@ -62,6 +67,7 @@ case class UserConfiguration(
     ammoniteJvmProperties: Option[List[String]] = None,
     ammoniteEnabled: Boolean = false,
     superMethodLensesEnabled: Boolean = false,
+    gotoTestLensesEnabled: Boolean = true,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
@@ -98,6 +104,8 @@ case class UserConfiguration(
       DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
+    protoOutlineProvider: ProtoOutlineProviderConfig =
+      ProtoOutlineProviderConfig.default,
     javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
     javaTurbineRecompileDelay: TurbineRecompileDelayConfig =
       TurbineRecompileDelayConfig.default,
@@ -110,6 +118,10 @@ case class UserConfiguration(
       AdditionalPcChecksConfig.default,
     scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacementConfig.default,
+    batchSemanticdbCompilerInstances: BatchSemanticdbConfig =
+      BatchSemanticdbConfig.default,
+    promptBuildImport: Boolean = true,
+    protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -122,6 +134,15 @@ case class UserConfiguration(
     ): Option[(String, java.util.Map[String, String])] = {
       val serializable = opts.map { case (k, v) =>
         (k.toString(), v.toString())
+      }
+      Some((key, serializable.asJava))
+    }
+    def mapListField[K, T](
+        key: String,
+        opts: Map[K, List[T]],
+    ): Option[(String, java.util.Map[String, java.util.List[String]])] = {
+      val serializable = opts.map { case (k, values) =>
+        (k.toString(), values.map(_.toString()).asJava)
       }
       Some((key, serializable.asJava))
     }
@@ -153,6 +174,7 @@ case class UserConfiguration(
         optStringField("scalafixConfigPath", scalafixConfigPath),
         optStringField("scalafixConfigPath", scalafixConfigPath),
         mapField("symbolPrefixes", symbolPrefixes),
+        mapListField("shimGlobs", shimGlobs),
         Some(("worksheetScreenWidth", worksheetScreenWidth)),
         Some(("worksheetCancelTimeout", worksheetCancelTimeout)),
         Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
@@ -161,6 +183,7 @@ case class UserConfiguration(
         listField("ammoniteJvmProperties", ammoniteJvmProperties),
         Some(("ammoniteEnabled", ammoniteEnabled)),
         Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
+        Some(("gotoTestLensesEnabled", gotoTestLensesEnabled)),
         mapField("inlayHintsOptions", inlayHintsOptions.options),
         Some(
           (
@@ -266,6 +289,12 @@ case class UserConfiguration(
         ),
         Some(
           (
+            "protoOutlineProvider",
+            protoOutlineProvider.value,
+          )
+        ),
+        Some(
+          (
             "javaSymbolLoader",
             javaSymbolLoader.value,
           )
@@ -304,6 +333,32 @@ case class UserConfiguration(
             scalaImportsPlacement.name().toLowerCase().replace("_", "-"),
           )
         ),
+        Some(
+          (
+            "batchSemanticdbCompilerInstances",
+            batchSemanticdbCompilerInstances.instances,
+          )
+        ),
+        Some(
+          (
+            "promptBuildImport",
+            promptBuildImport,
+          )
+        ),
+        Some(
+          (
+            "protobufLsp",
+            Map(
+              "diagnostics" -> protobufLspConfig.diagnostics,
+              "hover" -> protobufLspConfig.hover,
+              "definition" -> protobufLspConfig.definition,
+              "completions" -> protobufLspConfig.completions,
+              "semanticTokens" -> protobufLspConfig.semanticTokens,
+              "semanticdb" -> protobufLspConfig.semanticdb,
+              "javaPackagePrefix" -> protobufLspConfig.javaPackagePrefix,
+            ).asJava,
+          )
+        ),
       ).flatten
     )
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -336,6 +391,8 @@ case class UserConfiguration(
 object UserConfiguration {
 
   def default: UserConfiguration = UserConfiguration()
+  val defaultShimGlobs: Map[String, List[String]] =
+    Map.empty
 
   private val defaultExclusion =
     ExcludedPackagesHandler.defaultExclusions
@@ -413,12 +470,14 @@ object UserConfiguration {
           |""".stripMargin,
       ),
       UserConfigurationOption(
-        "ammonite-jvm-properties",
-        """`[]`.""",
-        """["-Xmx1G"]""",
-        "Ammonite JVM Properties",
-        """|Optional list of JVM properties to pass along to the Ammonite server.
-           |Each property needs to be a separate item.\n\nExample: `-Xmx1G` or `-Xms100M`"
+        "shim-globs",
+        """`{}`.""",
+        """{ "default": [] }""",
+        "Shim file globs",
+        """|Named groups of file glob patterns used to detect shim files in the presentation compiler.
+           |Entries follow the 'glob' syntax of FileSystem.getPathMatcher, e.g. use `**/shims.scala` to
+           |match all shims.scala files in the workspace.
+           |Values from all groups are combined into a single list.
            |""".stripMargin,
       ),
       UserConfigurationOption(
@@ -551,7 +610,7 @@ object UserConfiguration {
         "Default fallback Scala version",
         """|The Scala compiler version that is used as the default or fallback in case a file
            |doesn't belong to any build target or the specified Scala version isn't supported by Metals.
-           |This applies to standalone Scala files, worksheets, and Ammonite scripts.
+           |This applies to standalone Scala files, worksheets and Scala CLI scripts.
         """.stripMargin,
       ),
       UserConfigurationOption(
@@ -700,6 +759,16 @@ object UserConfiguration {
            |Valid values are "refchecks". When "refchecks" is included, the
            |presentation compiler will run the RefChecks phase for additional
            |type checking diagnostics.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "prompt-build-import",
+        "false",
+        "true",
+        "Prompt Build Import",
+        """|If enabled, Metals will prompt you to import or connect to a build server
+           |when a new workspace is detected. When disabled, you can still manually
+           |trigger import via the "Import build" command.
            |""".stripMargin,
       ),
     )
@@ -859,6 +928,45 @@ object UserConfiguration {
         },
       )
 
+    def getStringListMap(key: String): Option[Map[String, List[String]]] =
+      getKey(
+        key,
+        json,
+        { value =>
+          Try {
+            value.getAsJsonObject
+              .entrySet()
+              .asScala
+              .map { entry =>
+                val values = entry.getValue
+                if (!values.isJsonArray) {
+                  throw new IllegalArgumentException(
+                    s"Expected array value for '${entry.getKey}'"
+                  )
+                }
+                val strings = values.getAsJsonArray.asScala.map { elem =>
+                  if (
+                    !elem.isJsonPrimitive || !elem.getAsJsonPrimitive.isString
+                  ) {
+                    throw new IllegalArgumentException(
+                      s"Expected string value in array for '${entry.getKey}'"
+                    )
+                  }
+                  elem.getAsString
+                }.toList
+                entry.getKey -> strings
+              }
+              .toMap
+          }.fold(
+            _ => {
+              errors += s"json error: key '$key' should have be object with array string values but obtained $value"
+              None
+            },
+            entries => Some(entries),
+          ).filter(_.nonEmpty)
+        },
+      )
+
     def getInlayHints =
       getKey(
         "inlay-hints",
@@ -903,6 +1011,14 @@ object UserConfiguration {
     val symbolPrefixes =
       getStringMap("symbol-prefixes")
         .getOrElse(default.symbolPrefixes)
+    val shimGlobs = {
+      val userGlobs =
+        getStringListMap("shim-globs").getOrElse(default.shimGlobs)
+      val fflagGlobs =
+        featureFlags.readStringList(FeatureFlag.SHIM_GLOBS).asScala.toList
+      if (fflagGlobs.isEmpty) userGlobs
+      else userGlobs + ("_default" -> fflagGlobs)
+    }
     errors ++= symbolPrefixes.keys.flatMap { sym =>
       Symbol.validated(sym).left.toOption
     }
@@ -921,6 +1037,8 @@ object UserConfiguration {
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
+    val gotoTestLensesEnabled =
+      getBooleanKey("goto-test-lenses-enabled").getOrElse(true)
 
     // For old inlay hints settings
     def inlayHintsOptionsFallback: Map[InlayHintsOption, Boolean] = {
@@ -1074,6 +1192,14 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(JavaOutlineProviderConfig.default)
+    val protoOutlineProvider = getParsedKey(
+      "proto-outline-provider",
+      value =>
+        ProtoOutlineProviderConfig.fromConfigOrFeatureFlag(
+          value,
+          featureFlags,
+        ),
+    ).getOrElse(ProtoOutlineProviderConfig.default)
     val javaSymbolLoader = getParsedKey(
       "java-symbol-loader",
       value =>
@@ -1130,6 +1256,31 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(ScalaImportsPlacementConfig.default)
+    val batchSemanticdbCompilerInstances =
+      BatchSemanticdbConfig.fromConfigOrFeatureFlag(
+        getIntKey("batch-semanticdb-compiler-instances"),
+        featureFlags,
+      ) match {
+        case Right(ok) => ok
+        case Left(error) =>
+          errors += error
+          BatchSemanticdbConfig.default
+      }
+    val promptBuildImport =
+      getBooleanKey("prompt-build-import").getOrElse(false)
+    val protobufLspConfig =
+      getKey(
+        "protobuf-lsp",
+        json,
+        { element =>
+          ProtobufLspConfig.fromJson(element) match {
+            case Right(ok) => Some(ok)
+            case Left(error) =>
+              errors += s"json error: $error"
+              None
+          }
+        },
+      ).getOrElse(ProtobufLspConfig.defaultFromFeatureFlags(featureFlags))
 
     if (errors.isEmpty) {
       Right(
@@ -1142,6 +1293,7 @@ object UserConfiguration {
           scalafmtConfigPath,
           scalafixConfigPath,
           symbolPrefixes,
+          shimGlobs,
           worksheetScreenWidth,
           worksheetCancelTimeout,
           bloopSbtAlreadyInstalled,
@@ -1150,6 +1302,7 @@ object UserConfiguration {
           ammoniteProperties,
           ammoniteEnabled,
           superMethodLensesEnabled,
+          gotoTestLensesEnabled,
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
@@ -1179,6 +1332,7 @@ object UserConfiguration {
           definitionProviders,
           definitionIndexStrategy,
           javaOutlineProvider,
+          protoOutlineProvider,
           javaSymbolLoader,
           javaTurbineRecompileDelay,
           javacServicesOverrides,
@@ -1186,6 +1340,9 @@ object UserConfiguration {
           referenceProvider,
           additionalPcChecks,
           scalaImportsPlacement,
+          batchSemanticdbCompilerInstances,
+          promptBuildImport,
+          protobufLspConfig,
         )
       )
     } else {

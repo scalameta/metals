@@ -1,0 +1,18 @@
+syntax = "proto3";
+package example;
+
+message RepeatedScalars {
+  repeated string names = 1;
+  repeated int32 numbers = 2;
+  repeated bool flags = 3;
+}
+
+message Tag {
+  string key = 1;
+  string value = 2;
+}
+
+message RepeatedMessages {
+  repeated Tag tags = 1;
+  repeated RepeatedScalars nested = 2;
+}

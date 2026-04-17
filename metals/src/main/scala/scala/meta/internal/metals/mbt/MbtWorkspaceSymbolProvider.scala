@@ -3,6 +3,7 @@ package scala.meta.internal.metals.mbt
 import java.io.BufferedOutputStream
 import java.net.URI
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
@@ -34,6 +35,7 @@ import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
@@ -51,6 +53,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 import scala.meta.pc
 import scala.meta.pc.JavaFileManagerFactory
 import scala.meta.pc.SemanticdbFileManager
@@ -100,27 +103,53 @@ class MbtWorkspaceSymbolProvider(
     sleeper: Sleeper = Sleeper.TestingSleeper,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
       TurbineRecompileDelayConfig.fromConfig(None),
+    indexFilters: List[MbtIndexFilter] = List(
+      ProtobufVersionHistoryIndexFilter,
+      ProtobufTemplateAndTestIndexFilter,
+    ),
+    protobufLspConfig: () => ProtobufLspConfig = () => ProtobufLspConfig.default,
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
 ) extends SemanticdbFileManager
     with JavaFileManagerFactory {
 
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (scala.meta.internal.metals.MetalsServerConfig.isTesting)
+      scribe.debug(message)
+    else
+      scribe.info(message)
+  }
+
   private val indexFile: AbsolutePath = workspace.resolve(".metals/index.mbt")
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
-  private val turbineCompiler = new TurbineCompiler[AbsolutePath](
-    () => documentsKeys,
-    file =>
-      if (!file.toLanguage.isJava) None
-      else toInput(file).map(input => new SourceFile(input.path, input.text)),
-    () => fallbackClasspaths().javaCompilerClasspath(),
-    progress,
-    // We don't need to re-compile the workspace super regularly because we can
-    // load recently changed files from the sourcepath.
-    turbineRecompileDelay().duration,
-    sleeper = sleeper,
-    onIndexingDone = onIndexingDone,
+  private lazy val protobufWorkspace = new MbtProtobufWorkspaceSymbolProvider(
+    buffers,
+    protobufLspConfig,
+    clearAllProtobufCaches,
   )
+  private val turbineCompiler: TurbineCompiler[AbsolutePath] =
+    new TurbineCompiler[AbsolutePath](
+      () => documentsKeys,
+      file =>
+        if (!file.toLanguage.isJava) None
+        else toInput(file).map(input => new SourceFile(input.path, input.text)),
+      () => fallbackClasspaths().javaCompilerClasspath(),
+      progress,
+      // We don't need to re-compile the workspace super regularly because we can
+      // load recently changed files from the sourcepath.
+      turbineRecompileDelay().duration,
+      listProtoJavaOutlinesForPackage = pkg =>
+        protobufWorkspace.listProtoJavaOutlinesForPackage(
+          pkg,
+          documentsByPackage,
+          documents,
+        ),
+      sleeper = sleeper,
+      onIndexingDone = onIndexingDone,
+      onNewProjectClasspath = classpath =>
+        protobufWorkspace.onNewProjectClasspath(classpath),
+    )
 
   // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
   // in MetalsLspService.onUserConfigUpdate
@@ -129,6 +158,23 @@ class MbtWorkspaceSymbolProvider(
   }
 
   def close(): Unit = {}
+
+  /**
+   * Clears cached Java outlines for a specific proto file.
+   * Called when a proto file is saved and we need to regenerate outlines from buffers.
+   */
+  def didSave(path: AbsolutePath): Unit = {
+    if (path.isProtoFilename) {
+      documents.get(path).foreach(_.clearProtobufJavaOutlinesCache())
+    }
+  }
+  private def clearAllProtobufCaches(): Unit = {
+    documentsKeys.foreach { path =>
+      if (path.isProtoFilename) {
+        documents.get(path).foreach(_.clearProtobufJavaOutlinesCache())
+      }
+    }
+  }
 
   // The source of truth for what files belong to the workspace, and their attached indexed data.
   // DO NOT update this map directly since have a couple derivative collections.
@@ -195,11 +241,13 @@ class MbtWorkspaceSymbolProvider(
     val toIndex = ParArray.fromSpecific(for {
       file <- files
       path = workspace.resolve(file.path)
+      candidate = MbtFileCandidate(path, file.path)
+      if indexFilters.forall(_.decide(candidate) == MbtIndexDecision.Continue)
       isCached = documents.get(path).exists(_.oid == file.oid)
       if !isCached
     } yield path)
     if (toIndex.nonEmpty) {
-      scribe.info(s"mbt-v2: indexing ${toIndex.length} files")
+      logInfoInProdDebugInTests(s"mbt-v2: indexing ${toIndex.length} files")
     }
 
     val (task, token) = progress.startProgress(
@@ -237,6 +285,10 @@ class MbtWorkspaceSymbolProvider(
       onIndexingDone()
     }
 
+    metrics.recordEvent(
+      Event.duration("mbt2_index_workspace_symbol_pre_write", timer.elapsed)
+    )
+
     // Step 4: Write the index to disk. It's technically fine to move writing
     // the index to a background job.  Might be worth doing someday.
     writeIndex()
@@ -250,7 +302,7 @@ class MbtWorkspaceSymbolProvider(
     metrics.recordEvent(
       Event.duration("mbt2_index_workspace_symbol", timer.elapsed)
     )
-    scribe.info(
+    logInfoInProdDebugInTests(
       f"time: mbt-v2 loaded index for ${documents.size} files in ${timer}"
     )
 
@@ -287,8 +339,22 @@ class MbtWorkspaceSymbolProvider(
       params: OnDidChangeSymbolsParams
   ): Future[Unit] = {
     val indexedDoc = IndexedDocument.fromOnDidChangeParams(params)
-    putDocument(params.path, indexedDoc, updateDocumentKeys = true)
+    putDocument(
+      params.path,
+      indexedDoc,
+      updateDocumentKeys = params.updateDocumentKeys,
+    )
   }
+
+  /**
+   * Update the document keys after batch indexing. Call this after indexing
+   *  multiple files with `updateDocumentKeys = false` to prepare the parallel
+   *  array for workspace symbol search.
+   */
+  def updateDocumentKeys(): Unit = {
+    updateDocumentsKeys(documents)
+  }
+
   def onDidDelete(file: AbsolutePath): Future[Unit] = {
     documents.remove(file) match {
       case None => Future.unit
@@ -342,10 +408,21 @@ class MbtWorkspaceSymbolProvider(
       file: AbsolutePath,
       updateDocumentKeys: Boolean,
   ): Future[Unit] = try {
+    val enableProtoJavaPackage =
+      file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
     val mdoc =
-      IndexedDocument.fromFile(file, mtags(), buffers, dialects.Scala213)
+      IndexedDocument.fromFile(
+        file,
+        mtags(),
+        buffers,
+        dialects.Scala213,
+        enableProtoJavaPackage = enableProtoJavaPackage,
+      )
     putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
   } catch {
+    case _: NoSuchFileException =>
+      onDidDelete(file)
+      Future.unit
     case _: UnexpectedInputEndException =>
       scribe.debug(s"${file}: syntax error")
       Future.unit
@@ -365,7 +442,8 @@ class MbtWorkspaceSymbolProvider(
   }
 
   override def createFileManager(
-      standardFileManager: StandardJavaFileManager
+      standardFileManager: StandardJavaFileManager,
+      classpath: ju.List[Path],
   ): JavaFileManager = {
     if (javaSymbolLoader().isJavacSourcepath) {
       new JavacSourcepathFileManager(
@@ -373,20 +451,33 @@ class MbtWorkspaceSymbolProvider(
         (pkg) => {
           documentsByPackage.get(pkg) match {
             case None =>
+              scribe.debug(s"mbt-v2: package not found in index: $pkg")
               ju.Collections.emptyList()
             case Some(paths) =>
+              scribe.debug(
+                s"mbt-v2: found ${paths.size()} files for package: $pkg"
+              )
               val result = for {
                 path <- paths.asScala.iterator
                 doc <- documents.get(AbsolutePath(path)).toList.iterator
-                if doc.language.isJava
-                input <- toInput(doc.file)
-              } yield doc.toSemanticdbCompilationUnit(input)
+                compilationUnit <- {
+                  if (doc.language.isJava) {
+                    toInput(doc.file)
+                      .map(doc.toSemanticdbCompilationUnit)
+                      .iterator
+                  } else if (doc.language.isProtobuf) {
+                    protobufWorkspace.generateProtoJavaOutlines(doc, pkg)
+                  } else {
+                    Iterator.empty
+                  }
+                }
+              } yield compilationUnit
               ArrayBuffer.from(result).asJava
           }
         },
       )
     } else if (javaSymbolLoader().isTurbineClasspath) {
-      turbineCompiler.createFileManager(standardFileManager)
+      turbineCompiler.createFileManager(standardFileManager, classpath)
     } else {
       throw new IllegalArgumentException(
         s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"
@@ -435,9 +526,23 @@ class MbtWorkspaceSymbolProvider(
     result
   }
 
+  /**
+   * Finds the proto RPC definition for a gRPC stub method symbol.
+   *
+   * Maps from Java gRPC method symbol to proto RPC definition.
+   * e.g., "com/example/api/jproto/GreeterGrpc$GreeterImplBase#sayHello()."
+   *   -> rpc SayHello in greeter.proto
+   *
+   * This is used for goto-super functionality when a Java class overrides
+   * a gRPC ImplBase method.
+   */
+  def findProtoRpcDefinition(methodSymbol: String): List[l.Location] = {
+    protobufWorkspace.findProtoRpcDefinition(methodSymbol, documents)
+  }
+
   def possibleReferences(
       params: MbtPossibleReferencesParams
-  ): Iterable[AbsolutePath] = {
+  ): Set[AbsolutePath] = {
     val queries = HashSet.empty[String]
     params.implementations.foreach { symbol =>
       val sym = Symbol(symbol)
@@ -474,20 +579,23 @@ class MbtWorkspaceSymbolProvider(
     }
     val fingerprints =
       queries.iterator.map(FingerprintedCharSequence.fuzzyReference).toBuffer
-    val result = new ju.concurrent.ConcurrentLinkedDeque[AbsolutePath]()
+    val result = TrieMap.empty[AbsolutePath, Unit]
     for {
       path <- documentsKeys.toList
       doc <- documents.get(path).toList.iterator
       if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
     } {
+      if (doc.bloomFilter.isFull) {
+        scribe.warn(s"mbt-v2: bloom filter is full for ${path}")
+      }
       if (path.exists) {
-        result.add(path)
+        result(path) = ()
       } else {
         // Clean up removed files
         documents.remove(path)
       }
     }
-    result.asScala
+    result.keysIterator.toSet
   }
 
   // Convenience method to avoid dealing with the visitor-based query API
@@ -588,6 +696,7 @@ class MbtWorkspaceSymbolProvider(
       updateDocumentsKeys(documents)
     }
     addDocumentToPackages(doc.semanticdbPackages, file)
+
     if (
       updateDocumentKeys &&
       doc.language.isJava &&
@@ -692,14 +801,15 @@ class MbtWorkspaceSymbolProvider(
     newValue
   }
 
+  private val isIndexRead = new AtomicBoolean(false)
   // Reads .metals/index.mbt, which is a serialized Mbt.Index protobuf payload,
   // into memory and converts it into TrieMap[AbsolutePath, IndexedDocument].
   // For a very large repo (>100k Scala/Java files), this file still only takes
   // ~500mb of ram.
   private def readIndex(): TrieMap[AbsolutePath, IndexedDocument] = try {
     val result = TrieMap.empty[AbsolutePath, IndexedDocument]
+    val timer = new Timer(time)
     if (indexFile.exists) {
-      val timer = new Timer(time)
       val index = Mbt.Index.parseFrom(indexFile.readAllBytes)
       for {
         doc <- index.getDocumentsList().asScala.iterator
@@ -718,15 +828,47 @@ class MbtWorkspaceSymbolProvider(
             scribe.error(s"Error reading index file ${doc.getUri()}", e)
         }
       }
-      scribe.info(
+      logInfoInProdDebugInTests(
         s"mbt-v2: read index for ${result.size} files in ${timer}"
       )
     }
     updateDocumentsKeys(result)
+    val indexDocumentsCount = documentsKeys.length.toString()
+    metrics.recordEvent(
+      Event
+        .duration("mbt2_index_workspace_symbol_read_index", timer.elapsed)
+        .withLabel("index_documents_count", indexDocumentsCount)
+    )
+    if (isIndexRead.compareAndSet(false, true)) {
+      // This metric can be used as a "time to first intelligence" metric to
+      // measure how long it takes for Metals to start up and provide meaningful
+      // diagnostics/definitions.
+      metrics.recordEvent(
+        Event
+          .duration(
+            "mbt2_index_workspace_symbol_read_index_since_start",
+            MetalsLanguageServer.durationSinceStart(),
+          )
+          .withLabel("index_documents_count", indexDocumentsCount)
+      )
+      MetalsLanguageServer
+        .durationSinceExtensionStart()
+        .foreach { extensionStartDuration =>
+          metrics.recordEvent(
+            Event
+              .duration(
+                "mbt2_index_workspace_symbol_read_index_since_extension_start",
+                extensionStartDuration,
+              )
+              .withLabel("index_documents_count", indexDocumentsCount)
+          )
+        }
+    }
     result
   } catch {
     case NonFatal(e) =>
       scribe.error(s"Error reading repo-wide symbol index at '${indexFile}'", e)
+
       TrieMap.empty[AbsolutePath, IndexedDocument]
   }
 

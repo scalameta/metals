@@ -1,0 +1,17 @@
+syntax = "proto3";
+package example;
+
+message Outer {
+  string outer_field = 1;
+  
+  message Inner {
+    string inner_field = 1;
+    
+    message DeepNested {
+      string deep_field = 1;
+    }
+  }
+  
+  Inner nested = 2;
+  Inner.DeepNested deep = 3;
+}

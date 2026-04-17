@@ -436,7 +436,7 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
   )
 
   checkEdit(
-    "jlang".tag(IgnoreScalaVersion("3.3.3")),
+    "jlang",
     """|abstract class Mutable {
        |  def foo: java.lang.StringBuilder
        |}
@@ -1020,10 +1020,20 @@ class CompletionOverrideSuite extends BaseCompletionSuite {
     includeDetail = false,
     topLines = Some(3),
     compat = Map(
+      "2.13.18" ->
+        """|def hello1: Int
+           |def
+           |defaultArg - scala.annotation.meta
+           |""".stripMargin,
       "3" ->
         """|def hello1: Int
            |override val hello2: Int
            |override def equals(that: Any): Boolean
+           |""".stripMargin,
+      ">=2.13.17&&2" ->
+        """|def hello1: Int
+           |def
+           |defaultArg - scala.annotation.meta
            |""".stripMargin
     )
   )

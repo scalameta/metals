@@ -12,6 +12,7 @@ import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
+import scala.meta.pc.ProtobufLspConfig
 import scala.meta.pc.SourcePathMode
 
 case class PresentationCompilerConfigImpl(
@@ -20,6 +21,8 @@ case class PresentationCompilerConfigImpl(
     _completionCommand: Option[String] = None,
     _symbolPrefixes: collection.Map[String, String] =
       PresentationCompilerConfig.defaultSymbolPrefixes().asScala,
+    _shimGlobs: collection.Seq[String] =
+      PresentationCompilerConfig.defaultShimGlobs().asScala.toSeq,
     overrideDefFormat: OverrideDefFormat = OverrideDefFormat.Ascii,
     isCompletionItemDetailEnabled: Boolean = true,
     isCompletionItemDocumentationEnabled: Boolean = true,
@@ -45,13 +48,18 @@ case class PresentationCompilerConfigImpl(
     override val javacServicesOverrides: JavacServicesOverridesConfig =
       JavacServicesOverridesConfig.EMPTY,
     override val scalaImportsPlacement: ScalaImportsPlacement =
-      ScalaImportsPlacement.APPEND_LAST
+      ScalaImportsPlacement.APPEND_LAST,
+    override val batchSemanticdbCompilerInstances: Int = 1,
+    override val protobufLspConfig: ProtobufLspConfig =
+      ProtobufLspConfig.DISABLED
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =
     _isStripMarginOnTypeFormattingEnabled()
   override def symbolPrefixes(): util.Map[String, String] =
     _symbolPrefixes.asJava
+  override def shimGlobs(): util.List[String] =
+    _shimGlobs.asJava
   override def parameterHintsCommand: Optional[String] =
     Optional.ofNullable(_parameterHintsCommand.orNull)
   override def completionCommand: Optional[String] =
