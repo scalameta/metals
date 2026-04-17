@@ -8,7 +8,6 @@ import scala.meta._
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
@@ -32,12 +31,17 @@ final class DocumentSymbolProvider(
     supportsHierarchicalDocumentSymbols: Boolean,
 ) {
 
+  private val protoDocumentSymbolsProvider =
+    new ProtoDocumentSymbolProvider(buffers)
+
   def documentSymbols(
       path: AbsolutePath
   ): Either[util.List[DocumentSymbol], util.List[l.SymbolInformation]] = {
     val symbols: Seq[DocumentSymbol] =
       if (path.isScalaFilename) scalaDocumentSymbols(path)
       else if (path.isJavaFilename) javaDocumentSymbols(path)
+      else if (path.isProtoFilename)
+        protoDocumentSymbolsProvider.documentSymbols(path)
       else {
         scribe.warn(s"documentsymbol: unsupported file type $path")
         Nil
@@ -55,6 +59,12 @@ final class DocumentSymbolProvider(
     val doc = mtags().index(input, dialects.Scala213)
     val occurrences =
       doc.occurrences.iterator.map(occ => occ.symbol -> occ).toMap
+    def lineContent(pos: Position): String = {
+      val lines = pos.input.text.split('\n')
+      if (pos.startLine >= 0 && pos.startLine < lines.length)
+        lines(pos.startLine)
+      else ""
+    }
     val symbols = (for {
       info <- doc.symbols.iterator
       occ <- occurrences.get(info.symbol).iterator
@@ -66,7 +76,7 @@ final class DocumentSymbolProvider(
         None
       }
     } yield {
-      val detail = pos.lineContent
+      val detail = lineContent(pos)
       val name =
         if (info.kind.isConstructor) Symbol(info.symbol).owner.displayName
         else info.displayName
@@ -150,6 +160,15 @@ final class DocumentSymbolProvider(
       owner.getChildren
     }
 
+    private def toLsp(pos: Position): l.Range =
+      if (pos == Position.None)
+        new l.Range(new l.Position(0, 0), new l.Position(0, 0))
+      else
+        new l.Range(
+          new l.Position(pos.startLine, pos.startColumn),
+          new l.Position(pos.endLine, pos.endColumn),
+        )
+
     def addChild(
         name: String,
         kind: SymbolKind,
@@ -161,8 +180,8 @@ final class DocumentSymbolProvider(
         new DocumentSymbol(
           if (name.isEmpty) " " else name,
           kind,
-          range.toLsp,
-          selection.toLsp,
+          toLsp(range),
+          toLsp(selection),
           detail,
           new util.ArrayList[DocumentSymbol](),
         )

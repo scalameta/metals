@@ -1,0 +1,33 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   enum Status {
+//      ^^^^^^ definition example/Status# CLASS
+     UNKNOWN = 0;
+//   ^^^^^^^ definition example/Status#UNKNOWN(). METHOD(val)
+//   ^^^^^^^ definition example/Status#getUNKNOWN(). METHOD(val)
+//   ^^^^^^^ definition example/Status#withUNKNOWN(). METHOD(val)
+     ACTIVE = 1;
+//   ^^^^^^ definition example/Status#ACTIVE(). METHOD(val)
+//   ^^^^^^ definition example/Status#getACTIVE(). METHOD(val)
+//   ^^^^^^ definition example/Status#withACTIVE(). METHOD(val)
+     INACTIVE = 2;
+//   ^^^^^^^^ definition example/Status#INACTIVE(). METHOD(val)
+//   ^^^^^^^^ definition example/Status#getINACTIVE(). METHOD(val)
+//   ^^^^^^^^ definition example/Status#withINACTIVE(). METHOD(val)
+     DELETED = 3;
+//   ^^^^^^^ definition example/Status#DELETED(). METHOD(val)
+//   ^^^^^^^ definition example/Status#getDELETED(). METHOD(val)
+//   ^^^^^^^ definition example/Status#withDELETED(). METHOD(val)
+   }
+
+   message StatusHolder {
+//         ^^^^^^^^^^^^ definition example/StatusHolder# CLASS
+     Status current_status = 1;
+//   ^^^^^^ reference Status:
+//          ^^^^^^^^^^^^^^ definition example/StatusHolder#current_status(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/StatusHolder#currentStatus(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/StatusHolder#getCurrentStatus(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/StatusHolder#withCurrentStatus(). METHOD(val)
+   }

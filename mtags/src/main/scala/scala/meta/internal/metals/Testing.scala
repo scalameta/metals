@@ -7,4 +7,10 @@ object Testing {
   def isEnabled: Boolean = {
     "true" == System.getProperty("metals.testing")
   }
+  def isFileWatchingDisabled: Boolean = {
+    "true" == System.getProperty("metals.testing.file-watching-disabled")
+  }
+  def disableFileWatching(): Unit = {
+    System.setProperty("metals.testing.file-watching-disabled", "true")
+  }
 }

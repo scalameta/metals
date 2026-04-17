@@ -15,6 +15,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.dialects._
+import scala.meta.infra.Event
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
@@ -29,6 +30,7 @@ import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.MavenCoordinates
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
+import scala.meta.metals.MetalsLanguageServer
 
 import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Position
@@ -100,6 +102,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     tracked
   }
 
+  private val hasInitialIndexCompleted: ju.concurrent.atomic.AtomicBoolean =
+    new ju.concurrent.atomic.AtomicBoolean(false)
   private def indexWorkspace(
       check: () => Unit,
       progress: TaskProgress,
@@ -291,6 +295,35 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         languageClient.refreshModel()
       }
     progress.message = ""
+    if (hasInitialIndexCompleted.compareAndSet(false, true)) {
+      val kind = indexProviders match {
+        case _: FallbackMetalsLspService => "fallback"
+        case _: ProjectMetalsLspService => "project"
+        case _ => indexProviders.getClass().getSimpleName()
+      }
+      val folder = indexProviders.folder.toString()
+      metrics.recordEvent(
+        Event
+          .duration(
+            "first_index_workspace_since_start",
+            MetalsLanguageServer.durationSinceStart(),
+          )
+          .withLabel("kind", kind)
+          .withLabel("folder", folder)
+      )
+      MetalsLanguageServer.durationSinceExtensionStart().foreach { duration =>
+        metrics.recordEvent(
+          Event
+            .duration(
+              "first_index_workspace_since_extension_start",
+              duration,
+            )
+            .withLabel("kind", kind)
+            .withLabel("folder", folder)
+        )
+      }
+    }
+
   }
 
   /*
@@ -436,9 +469,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           Some(f.sourceItem),
           f.targets.headOption,
           Seq(data),
+          updateDocumentKeys = false,
         )
       )
     } finally threadPool.shutdown()
+    // Update document keys once after all sources have been indexed
+    mbtSymbolSearch.updateDocumentKeys()
   }
 
   private def indexDependencyModules(
@@ -490,6 +526,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     // that are not used
     val usedJars = mutable.HashSet.empty[AbsolutePath]
     val isVisited = new ju.HashSet[String]()
+    var cacheHits = 0
+    var cacheMisses = 0
     for {
       item <- dependencySources.getItems.asScala
       sourceUri <- Option(item.getSources).toList.flatMap(_.asScala)
@@ -503,7 +541,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         if (path.isJar && path.exists) {
           if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
             usedJars += path
-            addSourceJarSymbols(path)
+            if (addSourceJarSymbols(path)) cacheHits += 1
+            else cacheMisses += 1
           }
         } else if (path.isDirectory) {
           val dialect = buildTargets
@@ -525,6 +564,16 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           scribe.error(s"error processing $sourceUri", e)
       }
     }
+    metrics.recordEvent(
+      new Event()
+        .withLabel("name", "index_library_sources_count")
+        .withLabel("cacheHits", cacheHits.toString)
+        .withLabel("cacheMisses", cacheMisses.toString)
+    )
+    if (clientConfig.initialConfig.statistics.isIndex)
+      scribe.info(
+        s"index library sources: cacheHits: $cacheHits, cacheMisses: $cacheMisses"
+      )
     usedJars.toSet
   }
 
@@ -577,6 +626,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       sourceItem: Option[AbsolutePath],
       targetOpt: Option[b.BuildTargetIdentifier],
       data: Seq[TargetData],
+      updateDocumentKeys: Boolean = true,
   ): BackgroundJob = {
     val job =
       try {
@@ -678,6 +728,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
               allSymbols,
               references,
               methodSymbols.toSeq,
+              updateDocumentKeys,
             )
           )
 
@@ -702,8 +753,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
    * Uses H2 cache for symbols
    *
    * @param path JAR path
+   * @return true if symbols were found in cache, false if jar was indexed
    */
-  private def addSourceJarSymbols(path: AbsolutePath): Unit = {
+  private def addSourceJarSymbols(path: AbsolutePath): Boolean = {
     val dialect = ScalaVersions.dialectForDependencyJar(path, buildTargets)
     tables.jarSymbols.getTopLevels(path) match {
       case Some(toplevels) =>
@@ -716,10 +768,12 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
             val (_, overrides) = indexJar(path, dialect)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
         }
+        true
       case None =>
         scribe.debug(s"Indexing source jar $path")
         val (toplevels, overrides) = indexJar(path, dialect)
         tables.jarSymbols.putJarIndexingInfo(path, toplevels, overrides)
+        false
     }
   }
 

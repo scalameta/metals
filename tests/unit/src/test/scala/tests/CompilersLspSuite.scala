@@ -1,13 +1,23 @@
 package tests
 
+import java.util.concurrent.TimeUnit
+
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.Time
 
 class CompilersLspSuite
     extends BaseCompletionLspSuite("compilers")
     with BaseSourcePathSuite {
+
+  var fakeTime: FakeTime = _
+  override def time: Time = fakeTime
+  override def beforeEach(context: BeforeEach): Unit = {
+    fakeTime = new FakeTime()
+    super.beforeEach(context)
+  }
 
   override def serverConfig: MetalsServerConfig =
     MetalsServerConfig.default.copy(loglevel = "debug")
@@ -109,6 +119,40 @@ class CompilersLspSuite
     } yield ()
   }
 
+  test("restart-on-shim-globs-update") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |object A {
+          |  val abc = 1
+          |  // @@
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.didFocus("a/src/main/scala/a/A.scala")
+      count = server.server.loadedPresentationCompilerCount()
+      _ = assert(clue(count) > 0)
+      _ <- server.didChangeConfiguration(
+        """{
+          |  "shimGlobs": {
+          |    "custom": ["**/my-shims/*.scala"]
+          |  }
+          |}
+          |""".stripMargin
+      )
+      countAfter = server.server.loadedPresentationCompilerCount()
+      _ = assertEquals(0, countAfter)
+    } yield ()
+  }
+
   test("fallback-compiler-exclusion") {
     cleanWorkspace()
     for {
@@ -194,6 +238,52 @@ class CompilersLspSuite
         .restartFallbackCompilers()
       count = countCompilerThreads("Metals/default")
       _ = assert(count < 2, s"Leaking presentation compiler threads: $count")
+    } yield ()
+  }
+
+  test("evict-idle-pc") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/scala/a/A.scala
+          |package a
+          |class A {
+          |  // @@
+          |  def hello() = 42
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/A.scala")
+      _ = assertNoDiagnostics()
+      _ <- assertCompletion(
+        "hell@@",
+        "hello(): Int",
+      )
+      _ = assert(
+        server.server.loadedPresentationCompilerCount() > 0,
+        "expected at least one loaded presentation compiler",
+      )
+      // Advance time past the 30s idle timeout and trigger eviction
+      _ = fakeTime.elapse(31, TimeUnit.SECONDS)
+      _ = server.server.evictIdleCompilers()
+      _ = assertEquals(
+        server.server.loadedPresentationCompilerCount(),
+        0,
+        "idle compilers should have been evicted",
+      )
+      // Compiler should be recreated transparently on next use
+      _ <- assertCompletion(
+        "hell@@",
+        "hello(): Int",
+      )
+      _ = assert(
+        server.server.loadedPresentationCompilerCount() > 0,
+        "compiler should be recreated after eviction",
+      )
     } yield ()
   }
 

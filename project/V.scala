@@ -4,8 +4,9 @@ object V {
   val scala210 = "2.10.7"
   val scala211 = "2.11.12"
   val scala212 = "2.12.21"
-  val scala213 = "2.13.16"
-  val scala3 = "3.3.5"
+  val scala213 = "2.13.18"
+  val lastPublishedScala3 = "3.3.3"
+  val scala3 = "3.7.4"
   val scala3ForSBT2 = "3.6.2"
   val latestScala3Next = "3.6.4"
 
@@ -37,7 +38,7 @@ object V {
   val mavenBloop = "2.0.1"
   val mill = "0.12.9"
   val mdoc = "2.6.5"
-  val munit = "1.1.0"
+  val munit = "1.2.3"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.2.0"

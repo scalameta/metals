@@ -23,6 +23,11 @@ import scala.reflect.ClassTag
 import scala.util.Success
 
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.bsp.ProtocolExtension
+import scala.meta.internal.bsp.sync.SyncExtension
+import scala.meta.internal.bsp.sync.SyncMode
+import scala.meta.internal.bsp.sync.WorkspaceSyncParams
+import scala.meta.internal.bsp.sync.WorkspaceSyncResult
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
@@ -39,6 +44,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
@@ -61,6 +67,11 @@ class BuildServerConnection private (
     progress: WorkDoneProgress,
 )(implicit ec: ExecutionContextExecutorService)
     extends Cancelable {
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
 
   private def timeout(minutes: Int) = Some(
     Timeout.default(FiniteDuration(minutes, TimeUnit.MINUTES))
@@ -142,6 +153,12 @@ class BuildServerConnection private (
   def isDependencyModulesSupported: Boolean =
     capabilities.getDependencyModulesProvider() && !isScalaCLI
 
+  def supportsSyncMethod: Boolean =
+    initialConnection.syncModes.isDefined
+
+  def syncModes: Option[List[SyncMode]] =
+    initialConnection.syncModes
+
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
    */
@@ -176,7 +193,7 @@ class BuildServerConnection private (
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
           conn.optLivenessMonitor.foreach(_.shutdown())
-          scribe.info("Shut down connection with build server.")
+          logInfoInProdDebugInTests("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
         }
@@ -208,6 +225,10 @@ class BuildServerConnection private (
       ),
       timeout = timeout,
     )
+  }
+
+  def sendStdin(params: ReadParams): Unit = {
+    connection.foreach(_.server.onRunReadStdin(params))
   }
 
   def clean(params: CleanCacheParams): CompletableFuture[CleanCacheResult] = {
@@ -448,6 +469,15 @@ class BuildServerConnection private (
       )
   }
 
+  def workspaceSync(
+      params: WorkspaceSyncParams
+  ): Future[WorkspaceSyncResult] = {
+    if (supportsSyncMethod)
+      register(server => server.workspaceSync(params)).asScala
+    else
+      Future.successful(new WorkspaceSyncResult(Collections.emptyList()))
+  }
+
   private val cancelled = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
@@ -661,6 +691,7 @@ object BuildServerConnection {
           result.getVersion(),
           result.getCapabilities(),
           optServerLivenessMonitor,
+          extractSyncModes(result),
         )
       }
     }
@@ -709,6 +740,36 @@ object BuildServerConnection {
       supportedScalaVersions: java.util.List[String],
       enableBestEffortMode: Boolean,
   )
+
+  private def extractSyncModes(
+      result: InitializeBuildResult
+  ): Option[List[SyncMode]] = {
+    val gson = new Gson
+    try {
+      (Option(result.getDataKind), Option(result.getData)) match {
+        case (Some("extensions"), Some(data)) =>
+          val listType =
+            new TypeToken[java.util.List[ProtocolExtension]]() {}.getType
+          val tree = gson.toJsonTree(data)
+          val extensions: Option[java.util.List[ProtocolExtension]] = Option(
+            gson.fromJson(tree, listType)
+          )
+          extensions
+            .flatMap(_.asScala.find(_.getKind.toLowerCase == "sync"))
+            .map(ext => gson.toJsonTree(ext.getData))
+            .flatMap(ext => Option(gson.fromJson(ext, classOf[SyncExtension])))
+            .map(_.getModes.asScala.toList)
+        case _ =>
+          None
+      }
+    } catch {
+      case _: Exception =>
+        scribe.warn(
+          "Failed to parse protocol extensions from build/initialize result"
+        )
+        None
+    }
+  }
 
   /**
    * Run build/initialize handshake
@@ -765,6 +826,7 @@ object BuildServerConnection {
       version: String,
       capabilities: BuildServerCapabilities,
       optLivenessMonitor: Option[ServerLivenessMonitor],
+      syncModes: Option[List[SyncMode]],
   ) {
 
     def cancelables: List[Cancelable] =

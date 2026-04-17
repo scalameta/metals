@@ -53,7 +53,9 @@ inThisBuild(
       if (isCI && !isTest) dynVer
       else localSnapshotVersion // only for local publishing
     },
-    javaHome := Some(file(sys.env("JAVA_HOME"))),
+    javaHome := Some(
+      file(sys.env.getOrElse("JAVA_HOME", sys.props("java.home")))
+    ),
     // semver does not like "+" in version numbers, especially if there are more than one
     dynverSeparator := "-",
     scalaVersion := V.scala213,
@@ -162,8 +164,10 @@ commands ++= Seq(
       "jsemanticdb/publishLocal" ::
       "turbine/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
+      "semanticdb-protoc/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
+      "mtags-protobuf/publishLocal" ::
       publishMtags
   },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
@@ -249,6 +253,15 @@ val sharedScalacOptions = List(
 
 val sharedSettings = sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
+  Compile / resourceGenerators += Def.task {
+    val org = organization.value
+    val name = moduleName.value
+    val ver = version.value
+    val f =
+      (Compile / resourceManaged).value / "META-INF" / "maven" / org / name / "pom.properties"
+    IO.write(f, s"artifactId=$name\ngroupId=$org\nversion=$ver\n")
+    Seq(f)
+  }.taskValue,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
     if2 = List(
@@ -276,7 +289,7 @@ lazy val interfaces = project
     ),
     crossPaths := false,
     libraryDependencies ++= List(
-      "org.slf4j" % "slf4j-api" % "1.7.36",
+      "org.slf4j" % "slf4j-api" % "2.0.16",
       V.lsp4j,
     ),
     javacOptions := Seq("--release", "8"),
@@ -473,7 +486,7 @@ lazy val mtags = project
     moduleName := "mtags",
     projectDependencies := projectDependencies.value,
   )
-  .dependsOn(mtagsShared)
+  .dependsOn(mtagsShared, `semanticdb-protoc`)
   .enablePlugins(BuildInfoPlugin)
 
 val toolchainJavaOptions = List(
@@ -542,6 +555,31 @@ lazy val `mtags-java` = project
   )
   .configure(JavaPcSettings.settings(sharedSettings))
   .dependsOn(interfaces, mtagsShared, `semanticdb-javac`, turbine)
+
+lazy val `semanticdb-protoc` = project
+  .settings(
+    moduleName := "semanticdb-protoc",
+    autoScalaLibrary := false,
+    crossPaths := false,
+    crossVersion := CrossVersion.disabled,
+    Compile / fullClasspath := Nil,
+    Compile / doc / sources := Seq.empty,
+    libraryDependencies ++= List(
+      V.guava,
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
+    ),
+  )
+  .dependsOn(jsemanticdb)
+  .disablePlugins(ScalafixPlugin)
+
+lazy val `mtags-protobuf` = project
+  .settings(
+    sharedSettings,
+    libraryDependencies ++= pprintDebuggingDependency,
+    libraryDependencies +=
+      "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
+  )
+  .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
 lazy val metals = project
   .settings(
@@ -682,7 +720,7 @@ lazy val metals = project
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
   )
-  .dependsOn(mtags, `mtags-java`)
+  .dependsOn(mtags, `mtags-java`, `mtags-protobuf`)
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `sbt-metals` = project
@@ -768,6 +806,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   publish / skip := true,
   fork := true,
   testFrameworks := List(TestFrameworks.MUnit),
+  Test / testOptions += Tests.Argument(TestFrameworks.MUnit, "--log=failure"),
   Test / testOptions ++= {
     if (isCI) {
       // Enable verbose logging using sbt loggers in CI.
@@ -937,6 +976,18 @@ lazy val javapc = project
     Compile / resourceGenerators += packageJavaHeaderCompiler,
   )
   .dependsOn(mtest, `mtags-java`)
+
+lazy val protopc = project
+  .in(file("tests/protopc"))
+  .settings(
+    testSettings,
+    sharedSettings,
+    libraryDependencies ++= List(
+      "com.outr" %% "scribe" % V.scribe,
+      "com.outr" %% "scribe-slf4j2" % V.scribe,
+    ),
+  )
+  .dependsOn(mtest, `mtags-protobuf`)
 
 def isInTestShard(name: String): Boolean = {
   (

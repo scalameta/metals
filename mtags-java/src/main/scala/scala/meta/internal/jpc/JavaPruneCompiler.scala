@@ -43,7 +43,8 @@ class JavaPruneCompiler(
     val javaFileManagerFactory: pc.JavaFileManagerFactory,
     embedded: pc.EmbeddedClient,
     progressBars: pc.ProgressBars,
-    servicesOverrides: pc.JavacServicesOverridesConfig
+    servicesOverrides: pc.JavacServicesOverridesConfig,
+    classpath: Seq[Path] = Nil
 ) extends Closeable {
 
   private val isDebugEnabled = reportsLevel == ReportLevel.Debug
@@ -58,7 +59,10 @@ class JavaPruneCompiler(
   private val standardFileManager =
     compiler.getStandardFileManager(null, null, StandardCharsets.UTF_8)
   val fileManager: JavaFileManager =
-    javaFileManagerFactory.createFileManager(standardFileManager)
+    javaFileManagerFactory.createFileManager(
+      standardFileManager,
+      classpath.asJava
+    )
   // HACK: For a variety of reasons, the JavaFileObject.toUri() method can't
   // always mirror the LSP URIs we use in Metals. For example, JDK source
   // seemingly to be normal file:/// URIs to work with the --patch-module option.
@@ -82,6 +86,7 @@ class JavaPruneCompiler(
     val finalClasspath = classpath :+ headerCompiler
     val options = List.newBuilder[String]
     options ++= List(
+      "-Xprefer:source",
       "-d",
       embedded.targetDir().toString(),
       "-parameters",

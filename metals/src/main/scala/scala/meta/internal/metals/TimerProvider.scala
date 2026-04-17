@@ -20,6 +20,11 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
     ec: ExecutionContext
 ) {
 
+  private def logDuration(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   // Records a metric for how long a future takes to complete.
   def recorded[T](
       metricName: String,
@@ -38,10 +43,13 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
       reportStatus: Boolean = false,
       onlyIf: Boolean = false,
       metricName: Option[String] = None,
+      transformEvent: infra.Event => infra.Event = identity,
   )(thunk: => Future[T]): Future[T] = {
     withTimer(didWhat, reportStatus, onlyIf)(thunk).map { case (timer, value) =>
       metricName.foreach { name =>
-        metrics.recordEvent(infra.Event.duration(name, timer.elapsed))
+        val baseEvent = infra.Event.duration(name, timer.elapsed)
+        val event = transformEvent(baseEvent)
+        metrics.recordEvent(event)
       }
       value
     }
@@ -58,7 +66,7 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
     if (
       onlyIf && (thresholdMillis == 0 || timer.elapsedMillis > thresholdMillis)
     ) {
-      scribe.info(s"time: $didWhat in $timer")
+      logDuration(s"time: $didWhat in $timer")
     }
 
     metricName.foreach { name =>
@@ -79,7 +87,7 @@ final class TimerProvider(time: Time, metrics: infra.MonitoringClient)(implicit
     val result = thunk
     result.map { value =>
       if (onlyIf && (reportStatus || elapsed.isLogWorthy)) {
-        scribe.info(s"time: $didWhat in $elapsed")
+        logDuration(s"time: $didWhat in $elapsed")
       }
       (elapsed, value)
     }

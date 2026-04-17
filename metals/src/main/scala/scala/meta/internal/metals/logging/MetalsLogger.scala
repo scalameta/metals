@@ -39,6 +39,11 @@ object MetalsLogger {
   private val workspaceLogPath: RelativePath =
     RelativePath(".metals").resolve("metals.log")
 
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
   def updateDefaultFormat(): Unit = {
     Logger.root
       .clearHandlers()
@@ -101,7 +106,7 @@ object MetalsLogger {
       config: MetalsServerConfig,
   ): Unit = {
     val newLogFiles = folders.map(backUpOldLogFileIfTooBig(_, config))
-    scribe.info(s"logging to files ${newLogFiles.mkString(",")}")
+    logInfoInProdDebugInTests(s"logging to files ${newLogFiles.mkString(",")}")
     if (redirectSystemStreams) {
       redirectSystemOut(newLogFiles)
     }

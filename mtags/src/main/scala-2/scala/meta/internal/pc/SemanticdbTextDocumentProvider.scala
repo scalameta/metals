@@ -6,6 +6,7 @@ import java.nio.file.Paths
 import scala.util.Properties
 
 import scala.meta.dialects
+import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.semanticdb.scalac.SemanticdbConfig
@@ -32,7 +33,12 @@ class SemanticdbTextDocumentProvider(
       filename = uri.toString(),
       cursor = None
     )
-    typeCheck(unit)
+    SimpleTimer.timedThunk(
+      "semanticdb:textDocument:typeCheck",
+      thresholdMillis = 250
+    ) {
+      typeCheck(unit)
+    }
 
     import semanticdbOps._
     // This cache is never updated in semanticdb and will contain the old source
@@ -52,7 +58,10 @@ class SemanticdbTextDocumentProvider(
       None
     }
     // we recalculate md5, since there seems to be issue with newlines sometimes
-    val document =
+    val document = SimpleTimer.timedThunk(
+      "semanticdb:testDocument:toTextDocument",
+      thresholdMillis = 250
+    ) {
       try {
         unit
           .toTextDocument(explicitDialect)
@@ -62,6 +71,7 @@ class SemanticdbTextDocumentProvider(
         case _: TokenizeException | _: ParseException =>
           s.TextDocument.defaultInstance
       }
+    }
 
     compiler.workspace
       .flatMap { workspacePath =>

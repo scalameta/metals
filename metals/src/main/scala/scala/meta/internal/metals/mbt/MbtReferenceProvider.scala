@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import java.time.Duration
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -10,6 +12,8 @@ import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
 
+import scala.meta.infra.Event
+import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
@@ -41,6 +45,7 @@ class MbtReferenceProvider(
     time: Time,
     languageClient: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
+    metrics: MonitoringClient,
 )(implicit ec: ExecutionContext) {
   private val cache = new TextDocumentCache()
 
@@ -69,6 +74,21 @@ class MbtReferenceProvider(
     }
     i
   }
+
+  /**
+   * Query MBT for possible references, filtering out proto files and sorting
+   *  results by proximity to the given path.
+   */
+  private def sortedCandidates(
+      params: MbtPossibleReferencesParams,
+      path: AbsolutePath,
+  ): Seq[AbsolutePath] =
+    mbt
+      .possibleReferences(params)
+      .filterNot(_.filename.endsWith(".proto"))
+      .toSeq
+      .sortBy(c => -commonPrefixLength(path, c))
+
   // We timebox the search because the user could do "Find References" on
   // java.lang.String and get matches in ALL files, which is always going to
   // take a long time to compute. We still stream results for clients that
@@ -76,21 +96,40 @@ class MbtReferenceProvider(
   // this timeout.
   private val timeout: FiniteDuration =
     if (sys.props.contains("metals.debug")) 20.minutes else 20.seconds
+  private val protobufReferences = new MbtProtobufReferenceProvider(
+    mbt,
+    buffers,
+    languageClient,
+    time,
+    groupSize,
+    timeout,
+  )
   def implementations(
       params: l.TextDocumentPositionParams
   ): Future[List[l.Location]] =
     workDoneProgress.trackProgressFuture(
       "Finding implementations",
-      taskProgress =>
-        Future {
-          doImplementations(params, taskProgress)
-        },
+      taskProgress => {
+        val timer = new Timer(time)
+        val path = params.getTextDocument.getUri.toAbsolutePath
+        Future(doImplementations(params, taskProgress)).map {
+          case (results, symbol) =>
+            metrics.recordEvent(
+              Event
+                .duration("find_implementations", timer.elapsed)
+                .withLanguage(path.toJLanguage)
+                .withLabel("resultCount", results.size.toString)
+                .withOptional("symbol", symbol)
+            )
+            results
+        }
+      },
     )
 
   private def doImplementations(
       params: l.TextDocumentPositionParams,
       taskProgress: TaskProgress,
-  ): List[l.Location] = {
+  ): (List[l.Location], Option[String]) = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
     val pos = params.getPosition()
@@ -99,17 +138,41 @@ class MbtReferenceProvider(
     scribe.info(
       s"implementations: found ${enclosingOccurrences.length} occurrences"
     )
+
+    if (path.isProtoFilename) {
+      return protobufReferences.implementations(
+        path,
+        requestDoc,
+        enclosingOccurrences,
+        taskProgress,
+        timer,
+        cache.index,
+        commonPrefixLength,
+      )
+    }
+    doScalaJavaImplementations(
+      path,
+      enclosingOccurrences,
+      taskProgress,
+      timer,
+    )
+  }
+
+  private def doScalaJavaImplementations(
+      path: AbsolutePath,
+      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      taskProgress: TaskProgress,
+      timer: Timer,
+  ): (List[l.Location], Option[String]) = {
     val enclosingSymbols = enclosingOccurrences.map(_.symbol)
+    val primarySymbol = enclosingSymbols.headOption
     val isOverridenSymbol = mutable.Set.from(enclosingSymbols)
     val isVisitedMethodName = mutable.Set.empty[String]
     var lastQueryRound = Set.empty[String]
     val result = mutable.ListBuffer.empty[l.Location]
     val isVisitedURI = mutable.Set.empty[String]
-    var visited = 0
 
     def visitDoc(doc: s.TextDocument): Boolean = {
-      visited += 1
-
       def overridesOrImplements(info: s.SymbolInformation): Boolean = {
         if (
           info.language.isScala
@@ -132,11 +195,13 @@ class MbtReferenceProvider(
         return false
       }
       isVisitedURI += doc.uri
+      // prebuild occurrences map to avoid iterating over the occurrences more than once
+      lazy val occurrencesForSymbol = doc.occurrences.groupBy(_.symbol)
       for {
         info <- doc.symbols.iterator
         if overridesOrImplements(info)
-        occ <- doc.occurrences.iterator
-        if occ.symbol == info.symbol && occ.role.isDefinition
+        occ <- occurrencesForSymbol(info.symbol).iterator
+        if occ.role.isDefinition
         range <- occ.range.toList
       } {
         if (info.kind.isMethod) {
@@ -159,13 +224,12 @@ class MbtReferenceProvider(
         if (sym.isMethod) isVisitedMethodName.contains(sym.displayName)
         else lastQueryRound.contains(s)
       }
-      val candidates = mbt
-        .possibleReferences(
-          MbtPossibleReferencesParams(implementations = toQuery)
-        )
-        .toSeq
-        .sortBy(c => -commonPrefixLength(path, c))
-      scribe.info(s"Found ${candidates.size} candidate files.")
+      val candidates = sortedCandidates(
+        MbtPossibleReferencesParams(implementations = toQuery),
+        path,
+      )
+
+      scribe.info(s"Found ${candidates.size} candidate files for depth $depth.")
       lastQueryRound = Set.from(isOverridenSymbol)
       var didMakeProgress = false
       var processedInRound = 0
@@ -186,12 +250,7 @@ class MbtReferenceProvider(
       }
       if (timer.hasElapsed(timeout)) {
         scribe.warn(
-          s"Time out analyzing candidate files at $visited/${candidates.size}."
-        )
-        taskProgress.update(
-          processedInRound,
-          totalInRound,
-          Some("Time out analyzing candidate files"),
+          s"Time out analyzing candidate files at $processedInRound/${totalInRound}."
         )
       }
       if (didMakeProgress) {
@@ -201,7 +260,12 @@ class MbtReferenceProvider(
 
     // visitDoc(requestDoc)
     loop(depth = 0)
-    result.toList
+
+    scribe.info(
+      s"implementations: found ${result.size} implementation results in $timer"
+    )
+
+    (result.toList, primarySymbol)
   }
 
   def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
@@ -209,8 +273,7 @@ class MbtReferenceProvider(
     val path = params.getTextDocument.getUri.toAbsolutePath
     val queryRange = params.getPosition()
     val requestDoc = cache.indexSingle(path)
-    val enclosingOccurrences =
-      this.enclosingOccurrences(requestDoc, queryRange)
+    val enclosingOccurrences = this.enclosingOccurrences(requestDoc, queryRange)
     scribe.info(
       s"references: found ${enclosingOccurrences.length} occurrences"
     )
@@ -218,24 +281,38 @@ class MbtReferenceProvider(
     // If all symbols are local, use compilers.references directly
     val allLocal = enclosingOccurrences.forall(_.symbol.isLocal)
 
-    if (allLocal && requestDoc.language.isScala) {
-      scribe.info("references: all local, using compilers.references")
-      compilers
-        .references(params, EmptyCancelToken, noAdjustRange)
-    } else {
-      workDoneProgress.trackProgressFuture(
-        "Finding references",
-        taskProgress =>
-          Future {
-            doReferences(
-              timer,
-              params,
-              requestDoc,
-              enclosingOccurrences,
-              taskProgress,
-            )
-          },
+    val results =
+      if (allLocal && requestDoc.language.isScala) {
+        scribe.debug("references: all local, using compilers.references")
+        compilers
+          .references(params, EmptyCancelToken, noAdjustRange)
+      } else {
+        workDoneProgress.trackProgressFuture(
+          "Finding references",
+          taskProgress =>
+            Future {
+              doReferences(
+                timer,
+                params,
+                requestDoc,
+                enclosingOccurrences,
+                taskProgress,
+              )
+            },
+        )
+      }
+
+    results.map { refs =>
+      val resultCount = refs.iterator.map(_.locations.size).sum
+      val sym = refs.map(_.symbol).headOption
+      metrics.recordEvent(
+        Event
+          .duration("find_references", timer.elapsed)
+          .withLanguage(path.toJLanguage)
+          .withOptional("symbol", sym)
+          .withLabel("resultCount", resultCount.toString)
       )
+      refs
     }
   }
 
@@ -246,7 +323,9 @@ class MbtReferenceProvider(
       enclosingOccurrences: Seq[s.SymbolOccurrence],
       taskProgress: TaskProgress,
   ): List[ReferencesResult] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
     val token = params.getPartialResultToken()
+
     val superMethods = for {
       enclosing <- enclosingOccurrences
       info <- requestDoc.symbols.find(_.symbol == enclosing.symbol).iterator
@@ -267,10 +346,25 @@ class MbtReferenceProvider(
         timeout.div(2),
         cache,
         superMethods,
+        path,
       ) ++ superMethods).distinct
     val toQuerySymbols =
       if (implementationMethods.nonEmpty) implementationMethods
       else enclosingOccurrences.map(_.symbol)
+
+    if (path.isProtoFilename) {
+      return protobufReferences.references(
+        path,
+        timer,
+        params,
+        requestDoc,
+        enclosingOccurrences,
+        toQuerySymbols,
+        taskProgress,
+        cache.index,
+      )
+    }
+
     // Expand symbols to include alternatives like companion objects/classes,
     // apply/copy params, constructor params, etc.
     val scalaMatchingOccurrence = (for {
@@ -290,15 +384,16 @@ class MbtReferenceProvider(
 
     val enclosingGlobalOccurrences =
       toQuerySymbols.filter(sym => sym.isGlobal)
-    val externalDocumentCandidates: Iterable[AbsolutePath] =
+    val candidatesList =
       if (enclosingGlobalOccurrences.nonEmpty) {
-        mbt.possibleReferences(
-          MbtPossibleReferencesParams(references = toQuerySymbols)
+        sortedCandidates(
+          MbtPossibleReferencesParams(references = toQuerySymbols),
+          path,
         )
       } else {
         Nil
       }
-    val candidatesList = externalDocumentCandidates.iterator.distinct.toSeq
+
     val totalCandidates = candidatesList.size
     scribe.info(
       s"references: found $totalCandidates external document candidates in $timer"
@@ -391,9 +486,11 @@ class MbtReferenceProvider(
       timeout: FiniteDuration,
       cache: TextDocumentCache,
       overriddenSymbols: Seq[String],
+      path: AbsolutePath,
   ): Seq[String] = {
-    val candidates = mbt.possibleReferences(
-      MbtPossibleReferencesParams(implementations = overriddenSymbols)
+    val candidates = sortedCandidates(
+      MbtPossibleReferencesParams(implementations = overriddenSymbols),
+      path,
     )
     if (candidates.isEmpty) {
       return Nil
@@ -417,7 +514,6 @@ class MbtReferenceProvider(
   // abstraction, it will also be powered by a persistent cache, and it's able
   // to deal with adjusting positions in stale payloads, etc.
   private class TextDocumentCache() {
-    private case class CacheKey(path: AbsolutePath, fileSize: Long)
     private val cache = TrieMap.empty[AbsolutePath, s.TextDocument]
     def indexSingle(path: AbsolutePath): s.TextDocument = {
       index(Seq(path)).documents.headOption.getOrElse {
@@ -443,7 +539,12 @@ class MbtReferenceProvider(
       } else {
         val result = Await
           .result(
-            compilers.batchSemanticdbTextDocuments(toIndex, EmptyCancelToken),
+            compilers.batchSemanticdbTextDocuments(
+              toIndex,
+              EmptyCancelToken,
+              // intentionally smaller than the default PC timeout of 20s
+              Duration.ofSeconds(15),
+            ),
             timeout,
           )
           .documents

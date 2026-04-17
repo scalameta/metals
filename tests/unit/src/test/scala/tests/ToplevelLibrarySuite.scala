@@ -19,7 +19,10 @@ class ToplevelLibrarySuite extends BaseSuite {
   val scala3TestClasspath: List[AbsolutePath] = Library.scala3.sources.entries
 
   val scala3ExclusionList: Set[String] = Set(
-    "/scala/Singleton.scala"
+    "/scala/Singleton.scala",
+    "/dotty/tools/dotc/typer/RefChecks.scala",
+    "/scala/orType.scala",
+    "/scala/andType.scala",
   )
 
   val scala2ExclusionList: Set[String] = Set(

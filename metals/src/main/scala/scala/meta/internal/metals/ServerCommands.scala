@@ -508,6 +508,21 @@ object ServerCommands {
     "[location], where the location is a lsp location object.",
   )
 
+  val GotoTest = new ParametrizedCommand[TextDocumentPositionParams](
+    "goto-test",
+    "Go to corresponding test class",
+    """|Jump to the corresponding test class for the current source file, or
+       |to the source class if the current file is a test.
+       |
+       |Navigation is based on naming conventions. For a class `MyClass`,
+       |it searches for `MyClassTest`, `MyClassSuite`, `MyClassSpec`, etc.
+       |For a test class `MyClassTest`, it navigates back to `MyClass`.
+       |
+       |""".stripMargin,
+    """|This command should be sent in with the LSP [`TextDocumentPositionParams`](https://microsoft.github.io/language-server-protocol/specifications/specification-current/#textDocumentPositionParams)
+       |""".stripMargin,
+  )
+
   val GotoSuperMethod = new ParametrizedCommand[TextDocumentPositionParams](
     "goto-super-method",
     "Go to super method/field definition",
@@ -767,6 +782,7 @@ object ServerCommands {
       GotoPosition,
       GotoSuperMethod,
       GotoSymbol,
+      GotoTest,
       ImportBuild,
       InsertInferredType,
       InsertInferredMethod,
@@ -822,6 +838,7 @@ final case class ScalaTestSuitesDebugRequest(
 final case class ScalaTestSuites(
     suites: java.util.List[ScalaTestSuiteSelection],
     jvmOptions: java.util.List[String],
+    flags: java.util.List[String],
     environmentVariables: java.util.List[String],
 )
 

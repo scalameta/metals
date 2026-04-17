@@ -9,6 +9,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
+import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
@@ -106,6 +107,7 @@ class UserConfigurationSuite extends BaseSuite {
       obtained.scalafixConfigPath ==
         UserConfiguration.default.scalafixConfigPath
     )
+    assertEquals(obtained.shimGlobs, Map.empty[String, List[String]])
   }
 
   checkOK(
@@ -200,6 +202,38 @@ class UserConfigurationSuite extends BaseSuite {
       "(to learn the syntax see https://scalameta.org/docs/semanticdb/specification.html#symbol-1)",
   )
 
+  checkOK(
+    "shim-globs",
+    """
+      |{
+      | "shim-globs": {
+      |   "default": ["shims.scala", "**/shims/*.scala"],
+      |   "db": ["**/db-shims/*.scala"]
+      | }
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assertEquals(
+      obtained.shimGlobs,
+      Map(
+        "default" -> List("shims.scala", "**/shims/*.scala"),
+        "db" -> List("**/db-shims/*.scala"),
+      ),
+    )
+  }
+
+  checkError(
+    "invalid shim-globs",
+    """
+      |{
+      | "shim-globs": {
+      |   "default": "shims.scala"
+      | }
+      |}
+    """.stripMargin,
+    """json error: key 'shim-globs' should have be object with array string values but obtained {"default":"shims.scala"}""",
+  )
+
   checkError(
     "invalid workspace symbol provider",
     """
@@ -269,6 +303,9 @@ class UserConfigurationSuite extends BaseSuite {
       ): Optional[java.lang.Boolean] = {
         Optional.of(flag == FeatureFlag.MBT_WORKSPACE_SYMBOL_PROVIDER)
       }
+
+      def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
+        Optional.empty()
     }
 
     // Assert that feature flag overrides when there is no custom setting
@@ -296,6 +333,24 @@ class UserConfigurationSuite extends BaseSuite {
     )
   }
 
+  checkOK(
+    "protobuf package prefix",
+    """
+      |{
+      |  "protobufLsp": {
+      |    "definition": true,
+      |    "javaPackagePrefix": "grpc_shaded."
+      |  }
+      |}
+      |""".stripMargin,
+  ) { obtained =>
+    assertEquals(obtained.protobufLspConfig.definition, true)
+    assertEquals(
+      obtained.protobufLspConfig.javaPackagePrefix,
+      "grpc_shaded.",
+    )
+  }
+
   test("check-print") {
     val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
     val fakePathString = fakePath.toString().replace("\\", "\\\\")
@@ -310,6 +365,10 @@ class UserConfigurationSuite extends BaseSuite {
       scalafixConfigPath = Some(fakePath),
       javaFormatter = Some(JavaFormatterConfig("eclipse")),
       symbolPrefixes = Map("java/util/" -> "hello."),
+      shimGlobs = Map(
+        "default" -> List("shims.scala", "**/shims/*.scala"),
+        "db" -> List("**/db-shims/*.scala"),
+      ),
       worksheetScreenWidth = 140,
       worksheetCancelTimeout = 10,
       bloopSbtAlreadyInstalled = true,
@@ -349,6 +408,8 @@ class UserConfigurationSuite extends BaseSuite {
       defaultBspToBuildTool = true,
       additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
       scalaImportsPlacement = ScalaImportsPlacement.SMART,
+      batchSemanticdbCompilerInstances = BatchSemanticdbConfig(4),
+      promptBuildImport = true,
     )
 
     val json = nonDefault.toString()
@@ -364,6 +425,15 @@ class UserConfigurationSuite extends BaseSuite {
   "scalafixConfigPath": "$fakePathString",
   "symbolPrefixes": {
     "java/util/": "hello."
+  },
+  "shimGlobs": {
+    "default": [
+      "shims.scala",
+      "**/shims/*.scala"
+    ],
+    "db": [
+      "**/db-shims/*.scala"
+    ]
   },
   "worksheetScreenWidth": 140,
   "worksheetCancelTimeout": 10,
@@ -381,6 +451,7 @@ class UserConfigurationSuite extends BaseSuite {
   ],
   "ammoniteEnabled": true,
   "superMethodLensesEnabled": true,
+  "gotoTestLensesEnabled": true,
   "inlayHintsOptions": {
     "HintsInPatternMatch": "true",
     "ImplicitArguments": "true",
@@ -430,6 +501,7 @@ class UserConfigurationSuite extends BaseSuite {
   ],
   "definitionIndexStrategy": "classpath",
   "javaOutlineProvider": "javac",
+  "protoOutlineProvider": "v1",
   "javaSymbolLoader": "turbine-classpath",
   "javaTurbineRecompileDelay": "100 milliseconds",
   "javacServicesOverrides": {
@@ -443,7 +515,18 @@ class UserConfigurationSuite extends BaseSuite {
   "additionalPcChecks": [
     "refchecks"
   ],
-  "scalaImportsPlacement": "smart"
+  "scalaImportsPlacement": "smart",
+  "batchSemanticdbCompilerInstances": 4,
+  "promptBuildImport": true,
+  "protobufLsp": {
+    "hover": false,
+    "semanticdb": false,
+    "diagnostics": false,
+    "definition": false,
+    "javaPackagePrefix": "",
+    "completions": false,
+    "semanticTokens": false
+  }
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)

@@ -1090,6 +1090,11 @@ object Messages {
     }
   }
 
+  def noTestClassFound(fileName: String): MessageParams =
+    new MessageParams(
+      MessageType.Info,
+      s"No corresponding test or source class found for '$fileName'",
+    )
 }
 
 object FileOutOfScalaCliBspScope {
@@ -1111,4 +1116,5 @@ object FileOutOfScalaCliBspScope {
     params.setActions(List(regenerateAndRestart, ignore).asJava)
     params
   }
+
 }

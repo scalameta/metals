@@ -5,14 +5,21 @@ import scala.concurrent.Future
 
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.search.SymbolHierarchyOps
+import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -24,10 +31,15 @@ class Supermethods(
     client: MetalsLanguageClient,
     definitionProvider: DefinitionProvider,
     symbolHierarchyOps: SymbolHierarchyOps,
+    mbt: MbtWorkspaceSymbolProvider,
+    protobufLspConfig: () => ProtobufLspConfig,
 )(implicit
     ec: ExecutionContext,
     reports: ReportContext,
 ) {
+  private def superMethodFallbacks: List[SuperMethodFallback] =
+    if (protobufLspConfig().definition) List(new ProtoSuperMethodFallback(mbt))
+    else Nil
 
   def getGoToSuperMethodCommand(
       commandParams: TextDocumentPositionParams
@@ -84,7 +96,17 @@ class Supermethods(
       symbolInformation <- findSymbol(symbolOcc.symbol)
       gotoSymbol <- {
         if (symbolOcc.role.isDefinition) {
-          findSuperMethodSymbol(symbolInformation)
+          findSuperMethodSymbol(symbolInformation).orElse {
+            superMethodFallbacks.iterator
+              .flatMap(
+                _.findSuperMethodSymbol(
+                  symbolInformation,
+                  textDocument,
+                  findSymbol,
+                )
+              )
+              .nextOption()
+          }
         } else {
           Some(symbolInformation.symbol)
         }
@@ -154,7 +176,15 @@ class Supermethods(
       symbol: String,
       source: AbsolutePath,
   ): Option[Location] = {
-    definitionProvider.fromSymbol(symbol, Some(source)).asScala.headOption
+    definitionProvider
+      .fromSymbol(symbol, Some(source))
+      .asScala
+      .headOption
+      .orElse {
+        superMethodFallbacks.iterator
+          .flatMap(_.findDefinitionLocation(symbol, source))
+          .nextOption()
+      }
   }
 
 }
@@ -175,4 +205,56 @@ object Supermethods {
     replaced.substring(0, replaced.length - 1)
   }
 
+}
+
+trait SuperMethodFallback {
+  def findSuperMethodSymbol(
+      methodInfo: SymbolInformation,
+      textDocument: TextDocument,
+      findSymbol: String => Option[SymbolInformation],
+  ): Option[String] = None
+
+  def findDefinitionLocation(
+      symbol: String,
+      source: AbsolutePath,
+  ): Option[Location] = None
+}
+
+final class ProtoSuperMethodFallback(
+    mbt: MbtWorkspaceSymbolProvider
+) extends SuperMethodFallback {
+  override def findSuperMethodSymbol(
+      methodInfo: SymbolInformation,
+      textDocument: TextDocument,
+      findSymbol: String => Option[SymbolInformation],
+  ): Option[String] = {
+    if (!methodInfo.kind.isMethod) return None
+
+    val methodSymbol = Symbol(methodInfo.symbol)
+    val enclosingClassSymbol = methodSymbol.owner.value
+
+    findSymbol(enclosingClassSymbol).flatMap { classInfo =>
+      classInfo.signature match {
+        case ClassSignature(_, parents, _, _) =>
+          parents.collectFirst {
+            case TypeRef(_, parentSymbol, _)
+                if ProtoJavaSymbolMapper.isGrpcStubClassSymbol(parentSymbol) =>
+              val methodName = methodSymbol.displayName
+              s"$parentSymbol$methodName()."
+          }
+        case _ => None
+      }
+    }
+  }
+
+  override def findDefinitionLocation(
+      symbol: String,
+      source: AbsolutePath,
+  ): Option[Location] = {
+    if (ProtoJavaSymbolMapper.isGrpcStubMethodSymbol(symbol)) {
+      mbt.findProtoRpcDefinition(symbol).headOption
+    } else {
+      None
+    }
+  }
 }

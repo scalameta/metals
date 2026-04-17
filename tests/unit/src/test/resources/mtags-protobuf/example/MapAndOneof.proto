@@ -1,0 +1,62 @@
+   syntax = "proto3";
+   package example;
+//                ^ reference example/
+
+   message MapExample {
+//         ^^^^^^^^^^ definition example/MapExample# CLASS
+     map<string, int32> string_to_int = 1;
+//                      ^^^^^^^^^^^^^ definition example/MapExample#string_to_int(). METHOD(val)
+//                      ^^^^^^^^^^^^^ definition example/MapExample#stringToInt(). METHOD(val)
+//                      ^^^^^^^^^^^^^ definition example/MapExample#getStringToInt(). METHOD(val)
+//                      ^^^^^^^^^^^^^ definition example/MapExample#withStringToInt(). METHOD(val)
+     map<int32, Person> id_to_person = 2;
+//              ^^^^^^ reference Person:
+//                      ^^^^^^^^^^^^ definition example/MapExample#id_to_person(). METHOD(val)
+//                      ^^^^^^^^^^^^ definition example/MapExample#idToPerson(). METHOD(val)
+//                      ^^^^^^^^^^^^ definition example/MapExample#getIdToPerson(). METHOD(val)
+//                      ^^^^^^^^^^^^ definition example/MapExample#withIdToPerson(). METHOD(val)
+   }
+
+   message Person {
+//         ^^^^^^ definition example/Person# CLASS
+     string name = 1;
+//          ^^^^ definition example/Person#name(). METHOD(val)
+//          ^^^^ definition example/Person#getName(). METHOD(val)
+//          ^^^^ definition example/Person#withName(). METHOD(val)
+   }
+
+   message OneofExample {
+//         ^^^^^^^^^^^^ definition example/OneofExample# CLASS
+     string always_present = 1;
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#always_present(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#alwaysPresent(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#getAlwaysPresent(). METHOD(val)
+//          ^^^^^^^^^^^^^^ definition example/OneofExample#withAlwaysPresent(). METHOD(val)
+  
+     oneof contact_method {
+//         ^^^^^^^^^^^^^^ definition example/OneofExample#contact_method. PACKAGE_OBJECT(val)
+//         ^^^^^^^^^^^^^^ definition example/OneofExample#ContactMethodCase# CLASS(val)
+       string email = 2;
+//            ^^^^^ definition example/OneofExample#contact_method.email(). METHOD(val)
+//            ^^^^^ definition example/OneofExample#contact_method.EMAIL# CLASS(val)
+       string phone = 3;
+//            ^^^^^ definition example/OneofExample#contact_method.phone(). METHOD(val)
+//            ^^^^^ definition example/OneofExample#contact_method.PHONE# CLASS(val)
+       Address mail_address = 4;
+//     ^^^^^^^ reference Address:
+//             ^^^^^^^^^^^^ definition example/OneofExample#contact_method.mail_address(). METHOD(val)
+//             ^^^^^^^^^^^^ definition example/OneofExample#contact_method.MAIL_ADDRESS# CLASS(val)
+     }
+   }
+
+   message Address {
+//         ^^^^^^^ definition example/Address# CLASS
+     string street = 1;
+//          ^^^^^^ definition example/Address#street(). METHOD(val)
+//          ^^^^^^ definition example/Address#getStreet(). METHOD(val)
+//          ^^^^^^ definition example/Address#withStreet(). METHOD(val)
+     string city = 2;
+//          ^^^^ definition example/Address#city(). METHOD(val)
+//          ^^^^ definition example/Address#getCity(). METHOD(val)
+//          ^^^^ definition example/Address#withCity(). METHOD(val)
+   }

@@ -4,11 +4,11 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
+import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -65,9 +65,17 @@ final class DefinitionProvider(
     sourceMapper: SourceMapper,
     definitionProviders: () => DefinitionProviderConfig,
     mbt: MbtWorkspaceSymbolProvider,
+    protobufLspConfig: () => ProtobufLspConfig,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
+  private val protobufDefinitions = new DefinitionProviderProtobufSupport(
+    workspace,
+    buffers,
+    mbt,
+    definitionProviders,
+    protobufLspConfig,
+  )
   val destinationProvider = new DestinationProvider(
     index,
     buffers,
@@ -94,7 +102,7 @@ final class DefinitionProvider(
     val isScala3 = ScalaVersions.isScala3Version(scalaVersion)
 
     def fromCompiler() =
-      if (path.isScalaFilename || path.isJavaFilename) {
+      if (path.isScalaFilename || path.isJavaFilename || path.isProtoFilename) {
         compilers()
           .definition(params, token)
           .map {
@@ -102,12 +110,18 @@ final class DefinitionProvider(
               reportBuilder.setCompilerResult(res)
               Some(res)
             case res =>
-              val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
-              Some(
-                res.copy(semanticdb =
-                  semanticdbs().textDocument(pathToDef).documentIncludingStale
+              val hasProtoJavaLocation =
+                protobufDefinitions.hasProtoJavaLocation(res)
+              if (hasProtoJavaLocation) {
+                protobufDefinitions.handleProtoJavaDefinition(res)
+              } else {
+                val pathToDef = res.locations.asScala.head.getUri.toAbsolutePath
+                Some(
+                  res.copy(semanticdb =
+                    semanticdbs().textDocument(pathToDef).documentIncludingStale
+                  )
                 )
-              )
+              }
           }
       } else {
         scribe.warn(
@@ -163,59 +177,8 @@ final class DefinitionProvider(
       }
     } yield {
       reportBuilder.build().foreach(rc.unsanitized.create(_))
-      enhanceWithProtobufDefinition(result)
+      protobufDefinitions.enhanceWithProtobufDefinition(result)
     }
-  }
-
-  private def enhanceWithProtobufDefinition(
-      result: DefinitionResult
-  ): DefinitionResult = try {
-    if (!definitionProviders().isProtobuf) {
-      return result
-    }
-    val protoLocation: Option[Location] = (for {
-      path <- result.definition.iterator
-      source <- path
-        .toInputFromBuffers(buffers)
-        .text
-        .linesIterator
-        .takeWhile(line => line.startsWith("//") || line.startsWith(" //"))
-        .collectFirst {
-          case s"// source: $source" => source
-          case s" // testing-only-source: $source" => source // For testing
-        }
-        .iterator
-      protoDoc <- mbt.document(workspace.resolve(source)).iterator
-      sym = Symbol(result.symbol.stripSuffix("apply()."))
-      symSuffix = sym.value.stripPrefix(sym.enclosingPackage.value)
-      symSuffixes =
-        if (symSuffix.endsWith("."))
-          Set(
-            symSuffix,
-            symSuffix.stripSuffix(".") + "#", // Treat objects as classes
-            symSuffix.stripSuffix(".") + "().", // Treat fields as methods
-          )
-        else Set(symSuffix)
-      protoPackage = protoDoc.semanticdbPackages.headOption.getOrElse("")
-      protoSym <- protoDoc.symbols.iterator
-      if symSuffixes.contains(
-        protoSym.getSymbol().stripPrefix(protoPackage)
-      )
-    } yield new Location(
-      protoDoc.file.toURI.toString(),
-      protoSym.getDefinitionRange().toLspRange,
-    )).headOption
-
-    protoLocation.fold(result)(loc =>
-      result.copy(locations = (loc +: result.locations.asScala).asJava)
-    )
-  } catch {
-    case NonFatal(e) =>
-      scribe.warn(
-        s"failed to enhance with protobuf definition for '${result.symbol}'",
-        e,
-      )
-      result
   }
 
   def definition(

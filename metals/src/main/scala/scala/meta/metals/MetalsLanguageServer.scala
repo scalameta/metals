@@ -1,5 +1,7 @@
 package scala.meta.metals
 
+import java.time.Duration
+import java.time.Instant
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicBoolean
@@ -9,6 +11,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.infra.AggregateFeatureFlagProvider
@@ -21,6 +24,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.FallbackMetalsLspService
 import scala.meta.internal.metals.Folder
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.StdReportContext
@@ -54,6 +58,21 @@ class MetalsLanguageServer(
     serverInputs: MetalsServerInputs =
       MetalsServerInputs.productionConfiguration,
 ) extends LanguageServer {
+
+  private def logInfoInProdDebugInTests(message: => String): Unit = {
+    if (MetalsServerConfig.isTesting) scribe.debug(message)
+    else scribe.info(message)
+  }
+
+  private val startInstant =
+    MetalsLanguageServer.startInstant // 100% evaluate it even when debug is disabled
+  // Record the start time of the MetalsLanguageServer constructor so we can
+  // measure metrics like "Time to first intelligence", how long it takes for
+  // Metals to restart compilers with a repo-wide understanding.
+  scribe.debug(
+    s"MetalsLanguageServer constructor called at ${startInstant}"
+  )
+
   import serverInputs._
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -206,10 +225,50 @@ class MetalsLanguageServer(
         val clientInfo = Option(params.getClientInfo()).fold("") { info =>
           s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
         }
-        scribe.info(
+        logInfoInProdDebugInTests(
           s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )
+        val clientNameLabel =
+          Option(params.getClientInfo()).fold("<unknown>")(_.getName())
+        val clientVersionLabel =
+          Option(params.getClientInfo()).fold("<unknown>")(_.getVersion)
+
+        val baseInitializeEvent =
+          Event
+            .duration(
+              "initialize",
+              MetalsLanguageServer.durationSinceStart(),
+            )
+            .withLabel("clientName", clientNameLabel)
+            .withLabel("clientVersion", clientVersionLabel)
+        val initializeEvent =
+          folders.zipWithIndex.foldLeft(baseInitializeEvent) {
+            case (event, (folder, 0)) =>
+              event.withLabel(
+                "workspaceFolder",
+                folder.path.toString,
+              )
+            case (event, (folder, index)) =>
+              event.withLabel(
+                s"workspaceFolder-${index}",
+                folder.path.toString,
+              )
+          }
+
+        metrics.recordEvent(initializeEvent)
+        MetalsLanguageServer.durationSinceExtensionStart().foreach { duration =>
+          // Interesting to track if the extension startup time varies between clients
+          metrics.recordEvent(
+            Event
+              .duration(
+                "initialize_since_extension_start",
+                duration,
+              )
+              .withLabel("clientName", clientNameLabel)
+              .withLabel("clientVersion", clientVersionLabel)
+          )
+        }
 
         serverState.set(ServerState.Initialized(service))
         metalsService.underlying = service
@@ -296,4 +355,28 @@ class MetalsLanguageServer(
     case _ => throw new IllegalStateException("Server is not initialized")
   }
 
+}
+
+object MetalsLanguageServer {
+  val extensionStartInstant: Option[Instant] =
+    for {
+      timestamp <- Option(System.getProperty("metals.activation-timestamp"))
+      instant <-
+        try {
+          Some(Instant.parse(timestamp))
+        } catch {
+          case NonFatal(e) =>
+            scribe.warn(
+              s"-Dmetals.activation-timestamp: '$timestamp' is not a valid instant",
+              e,
+            )
+            None
+        }
+    } yield instant
+  def durationSinceExtensionStart(): Option[Duration] =
+    extensionStartInstant.map(start => Duration.between(start, Instant.now()))
+
+  @volatile var startInstant: Instant = Instant.now()
+  def durationSinceStart(): Duration =
+    Duration.between(startInstant, Instant.now())
 }

@@ -1,0 +1,14 @@
+syntax = "proto3";
+package example;
+
+message Person {
+  string name = 1;
+  int32 age = 2;
+  bool active = 3;
+}
+
+message Address {
+  string street = 1;
+  string city = 2;
+  Person occupant = 3;
+}

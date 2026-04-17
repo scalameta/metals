@@ -372,20 +372,27 @@ final case class TestingServer(
     })
   }
 
-  def assertImplementationsSubquery(
+  def implementationsSubquery(
       filename: String,
       subquery: String,
-      expected: String,
-  )(implicit loc: munit.Location): Future[Unit] = {
+  ): Future[List[l.Location]] = {
     val path = toPath(filename)
     val params = new l.TextDocumentPositionParams(
       path.toTextDocumentIdentifier,
       subqueryPosition(path, subquery).toLspStartPosition,
     )
+    server.implementation(params).asScala.map(_.asScala.toList)
+  }
+
+  def assertImplementationsSubquery(
+      filename: String,
+      subquery: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[Unit] = {
     for {
-      locations <- server.implementation(params).asScala
+      locations <- implementationsSubquery(filename, subquery)
     } yield {
-      assertLocations(locations.asScala.toList, "implementation", expected)
+      assertLocations(locations, "implementation", expected)
     }
   }
 
@@ -715,7 +722,7 @@ final case class TestingServer(
       param: T,
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param)).asScala
   }
 
@@ -724,13 +731,13 @@ final case class TestingServer(
       param: T*
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
   }
 
   def executeCommand[T](command: Command): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [${command.id}]")
+    scribe.debug(s"Executing command [${command.id}]")
     fullServer.executeCommand(command.toExecuteCommandParams()).asScala
   }
 
@@ -755,7 +762,7 @@ final case class TestingServer(
       params: Seq[Object],
   ): Future[Any] = {
     Debug.printEnclosing()
-    scribe.info(s"Executing command [$command]")
+    scribe.debug(s"Executing command [$command]")
     val args: java.util.List[Object] =
       params.map(_.toJson.asInstanceOf[Object]).asJava
     fullServer.executeCommand(new ExecuteCommandParams(command, args)).asScala
@@ -1684,6 +1691,18 @@ final case class TestingServer(
     }
     val offset = textOffset + queryOffset
     input.toOffsetPosition(offset)
+  }
+
+  def textDocumentPositionParams(
+      filename: String,
+      substringQuery: String,
+  ): TextDocumentPositionParams = {
+    val abspath = toPath(filename)
+    val pos = subqueryPosition(abspath, substringQuery)
+    new TextDocumentPositionParams(
+      abspath.toTextDocumentIdentifier,
+      pos.toLspStartPosition,
+    )
   }
 
   // Does a goto-definition from a substring AND it does not trigger a didChange

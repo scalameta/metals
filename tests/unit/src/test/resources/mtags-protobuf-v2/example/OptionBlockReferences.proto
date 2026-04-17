@@ -1,0 +1,46 @@
+   syntax = "proto2";
+// ^ reference example/
+   package example;
+
+   message SharedSettings {
+//         ^^^^^^^^^^^^^^ definition example/SharedSettings# CLASS
+     optional string shared_key = 1;
+//                   ^^^^^^^^^^ definition example/SharedSettings#shared_key(). METHOD
+//                   ^^^^^^^^^^ definition example/SharedSettings#sharedKey(). METHOD
+//                   ^^^^^^^^^^ definition example/SharedSettings#withSharedKey(). METHOD
+//                   ^^^^^^^^^^ definition example/SharedSettings#getSharedKey(). METHOD
+//                   ^^^^^^^^^^ definition example/SharedSettings#hasSharedKey(). METHOD
+//                   ^^^^^^^^^^ definition example/SharedSettings#getSharedKeyBytes(). METHOD
+   }
+
+   message SettingsHolder {
+//         ^^^^^^^^^^^^^^ definition example/SettingsHolder# CLASS
+     option (custom.message_options) = {
+       note: "message-option"
+     };
+
+     optional SharedSettings primary_settings = 1 [
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#primary_settings(). METHOD
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#primarySettings(). METHOD
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#withPrimarySettings(). METHOD
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getPrimarySettings(). METHOD
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#hasPrimarySettings(). METHOD
+//                           ^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getPrimarySettingsBytes(). METHOD
+       (custom.field_options) = { label: "primary" }
+     ];
+
+     optional SharedSettings backup_settings = 2;
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#backup_settings(). METHOD
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#backupSettings(). METHOD
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#withBackupSettings(). METHOD
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#getBackupSettings(). METHOD
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#hasBackupSettings(). METHOD
+//                           ^^^^^^^^^^^^^^^ definition example/SettingsHolder#getBackupSettingsBytes(). METHOD
+     optional example.SharedSettings qualified_settings = 3;
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#qualified_settings(). METHOD
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#qualifiedSettings(). METHOD
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#withQualifiedSettings(). METHOD
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getQualifiedSettings(). METHOD
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#hasQualifiedSettings(). METHOD
+//                                   ^^^^^^^^^^^^^^^^^^ definition example/SettingsHolder#getQualifiedSettingsBytes(). METHOD
+   }

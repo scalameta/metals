@@ -20,6 +20,7 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.bsp.BspSession
@@ -35,6 +36,7 @@ import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.codeactions.CodeActionProvider
+import scala.meta.internal.metals.codelenses.GotoTestCodeLens
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
@@ -64,6 +66,7 @@ import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
+import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.TextDocumentService
@@ -73,6 +76,7 @@ import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
 import ch.epfl.scala.{bsp4j => b}
+import com.google.common.collect.HashBiMap
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j._
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
@@ -141,6 +145,8 @@ abstract class MetalsLspService(
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   val wasInitialized = new AtomicBoolean(false)
+  // Tracks whether proto files have been saved since the last Java PC restart.
+  private val protoFilesHaveChanged = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -330,6 +336,11 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
+    indexFilters = List(
+      mbt.ProtobufVersionHistoryIndexFilter,
+      mbt.ProtobufTemplateAndTestIndexFilter,
+    ),
+    protobufLspConfig = () => userConfig.protobufLspConfig,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2
@@ -362,6 +373,7 @@ abstract class MetalsLspService(
     sourceMapper,
     () => userConfig.definitionProviders,
     mbt2,
+    () => userConfig.protobufLspConfig,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -386,7 +398,7 @@ abstract class MetalsLspService(
     folder,
   )
 
-  protected val codeLensProvider: CodeLensProvider = {
+  protected lazy val codeLensProvider: CodeLensProvider = {
     val runTestLensProvider =
       new RunTestCodeLens(
         buildTargetClasses,
@@ -405,6 +417,12 @@ abstract class MetalsLspService(
       trees,
     )
     val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
+    val gotoTestLensProvider = new GotoTestCodeLens(
+      buffers,
+      () => userConfig,
+      gotoTestProvider,
+      trees,
+    )
 
     new CodeLensProvider(
       codeLensProviders = List(
@@ -412,6 +430,7 @@ abstract class MetalsLspService(
         goSuperLensProvider,
         worksheetCodeLens,
         testProvider,
+        gotoTestLensProvider,
       ),
       semanticdbs,
       stacktraceAnalyzer,
@@ -476,6 +495,13 @@ abstract class MetalsLspService(
     () => mtags,
   )
 
+  val gotoTestProvider: GotoTestProvider = new GotoTestProvider(
+    () => semanticdbs(),
+    symbolSearch,
+    workspaceSymbols,
+    languageClient,
+  )
+
   val worksheetProvider: WorksheetProvider = register(
     new WorksheetProvider(
       folder,
@@ -506,6 +532,7 @@ abstract class MetalsLspService(
       embedded,
       workDoneProgress,
       sh,
+      time,
       initializeParams,
       () => excludedPackageHandler,
       scalaVersionSelector,
@@ -519,10 +546,22 @@ abstract class MetalsLspService(
       mbt2,
       workDoneProgress,
       timerProvider,
+      metrics,
       featureFlags,
       () => mbtBuild,
     )
   )
+
+  if (initialServerConfig.telemetry.isMetricsEnabled)
+    register(
+      new MemoryMonitoring(
+        initialServerConfig,
+        metrics,
+        () => compilers.loadedPresentationCompilerCount(),
+        folder.filename.toString,
+        sh,
+      )
+    )
 
   val mbtReferenceProvider = new MbtReferenceProvider(
     mbtSymbolSearch,
@@ -531,6 +570,7 @@ abstract class MetalsLspService(
     time,
     languageClient,
     workDoneProgress,
+    metrics,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
@@ -604,6 +644,8 @@ abstract class MetalsLspService(
     languageClient,
     definitionProvider,
     symbolHierarchyOps,
+    mbtSymbolSearch,
+    () => userConfig.protobufLspConfig,
   )
 
   val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
@@ -692,6 +734,9 @@ abstract class MetalsLspService(
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
+
+  def evictIdleCompilers(): Unit =
+    compilers.evictIdleCompilers()
 
   protected val findTextInJars: FindTextInDependencyJars =
     new FindTextInDependencyJars(
@@ -838,20 +883,13 @@ abstract class MetalsLspService(
       workspaceSymbols.indexClasspath()
     }
 
-    userConfig.fallbackScalaVersion.foreach { version =>
-      if (!ScalaVersions.isSupportedAtReleaseMomentScalaVersion(version)) {
-        val params =
-          Messages.UnsupportedScalaVersion.fallbackScalaVersionParams(version)
-        languageClient.showMessage(params)
-      }
-    }
-
     if (userConfig.fallbackScalaVersion != old.fallbackScalaVersion) {
       compilers.restartFallbackCompilers()
     }
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
+      userConfig.shimGlobs != old.shimGlobs ||
       userConfig.javaHome != old.javaHome
     ) {
       compilers.restartAll()
@@ -930,6 +968,11 @@ abstract class MetalsLspService(
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
 
+    // Restart Java PCs if proto files have been saved since last Java file focus
+    if (path.isJavaFilename && protoFilesHaveChanged.getAndSet(false)) {
+      compilers.restartJavaCompilers()
+    }
+
     // when focusing on a new file, display updated diagnostics
     val future = for {
       // when focusing on a new file, display updated diagnostics
@@ -951,19 +994,27 @@ abstract class MetalsLspService(
   }
 
   def sync(
-      uri: String
+      uri: String,
+      mode: String,
   ): Future[Unit] = {
-    syncStatusReporter.onSync(uri)
-    buildTargets
-      .bspInverseSources(uri.toAbsolutePath)
-      .andThen {
-        case Success(targets) =>
-          syncStatusReporter.expanded(uri, Some(targets.toList))
-        case Failure(_) =>
-          syncStatusReporter.expanded(uri, None)
-          syncStatusReporter.importFinished(Some(uri))
-      }
-      .ignoreValue
+    syncStatusReporter.onSync(uri, mode)
+    val path = uri.toAbsolutePath
+    buildTargets.bspSync(path, mode) match {
+      case Some(syncFuture) =>
+        syncFuture
+          .map(result =>
+            onBuildTargetChanges(
+              new b.DidChangeBuildTarget(result.getChanges)
+            )
+          )
+          .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
+      case None =>
+        // TODO(apatti): fallback to using inverse sources, clean up once fully migrated
+        buildTargets
+          .bspInverseSources(path)
+          .andThen { case _ => syncStatusReporter.importFinished(Some(uri)) }
+          .ignoreValue
+    }
   }
 
   protected def maybeCompileOnDidFocus(
@@ -1027,6 +1078,11 @@ abstract class MetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
+    mbt2.didSave(path)
+    // Invalidate proto cache and track change so we restart Java PCs on next focus
+    if (path.isProtoFilename) {
+      protoFilesHaveChanged.set(true)
+    }
     Future
       .sequence(
         List(
@@ -1193,8 +1249,87 @@ abstract class MetalsLspService(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { token =>
-      compilers.typeDefinition(position, token).map(_.locations)
+      compilers.typeDefinition(position, token).map { result =>
+        // Check if any location points to a proto-java virtual file
+        val hasProtoJavaLocation = result.locations.asScala.exists { loc =>
+          mbt.ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())
+        }
+        if (hasProtoJavaLocation) {
+          // Redirect to proto service/message definition
+          val protoLocations = result.locations.asScala.flatMap { loc =>
+            if (mbt.ProtoJavaVirtualFile.isProtoJavaUri(loc.getUri())) {
+              // Extract proto path and find the service/message definition
+              mbt.ProtoJavaVirtualFile.extractProtoPath(loc.getUri()).flatMap {
+                protoPath =>
+                  findProtoTypeDefinition(protoPath, result.symbol)
+              }
+            } else {
+              Some(loc)
+            }
+          }
+          protoLocations.asJava
+        } else {
+          result.locations
+        }
+      }
     }
+
+  /**
+   * Finds the proto type definition for a proto-generated Java class.
+   *
+   * Maps the Java class symbol to the corresponding proto message/service definition.
+   */
+  private def findProtoTypeDefinition(
+      protoPath: AbsolutePath,
+      javaSymbol: String,
+  ): Option[Location] = {
+    import scala.meta.internal.mtags.proto.ProtoMtagsV2
+    import scala.util.control.NonFatal
+
+    try {
+      val sym = Symbol(javaSymbol)
+      // For gRPC stub classes, extract the service name
+      // e.g., "com/example/GreeterGrpc$GreeterBlockingStub#" -> "Greeter"
+      val className = sym.displayName
+      val serviceName = className
+        .stripSuffix("ImplBase")
+        .stripSuffix("BlockingStub")
+        .stripSuffix("FutureStub")
+        .stripSuffix("Stub")
+        .stripSuffix("Grpc")
+
+      val input = protoPath.toInputFromBuffers(buffers)
+      val protoMtags = new ProtoMtagsV2(input, includeMembers = false)
+      val doc = protoMtags.index()
+
+      // First try to find a service with this name
+      val serviceOcc = doc.occurrences.find { occ =>
+        occ.symbol.endsWith(s"$serviceName#") &&
+        occ.role == scala.meta.internal.semanticdb.SymbolOccurrence.Role.DEFINITION &&
+        doc.symbols.exists { info =>
+          info.symbol == occ.symbol && info.kind.isInterface
+        }
+      }
+
+      // If not a service, try to find a message with this name
+      val messageOcc = serviceOcc.orElse {
+        doc.occurrences.find { occ =>
+          occ.symbol.endsWith(s"$className#") &&
+          occ.role == scala.meta.internal.semanticdb.SymbolOccurrence.Role.DEFINITION
+        }
+      }
+
+      messageOcc.flatMap { occ =>
+        occ.range.map { range =>
+          new Location(protoPath.toURI.toString(), range.toLsp)
+        }
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.debug(s"Failed to find proto type definition for $javaSymbol", e)
+        None
+    }
+  }
 
   override def implementation(
       position: TextDocumentPositionParams
@@ -1398,7 +1533,16 @@ abstract class MetalsLspService(
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
-    CancelTokens.future { token => compilers.completions(params, token) }
+    CancelTokens.future { token =>
+      timerProvider.timed(
+        "completion",
+        metricName = Some("completion"),
+        transformEvent =
+          _.withLanguage(params.getTextDocument.getUri.toJLanguage),
+      ) {
+        compilers.completions(params, token)
+      }
+    }
 
   override def completionItemResolve(
       item: CompletionItem
@@ -1582,6 +1726,11 @@ abstract class MetalsLspService(
       .asScala
       .headOption
 
+  def gotoTest(
+      textDocumentPositionParams: TextDocumentPositionParams
+  ): CompletableFuture[Object] =
+    gotoTestProvider.goto(textDocumentPositionParams).asJavaObject
+
   def gotoSupermethod(
       textDocumentPositionParams: TextDocumentPositionParams
   ): CompletableFuture[Object] =
@@ -1671,6 +1820,13 @@ abstract class MetalsLspService(
         }
     }
 
+  private val terminals: HashBiMap[(String, String), String] =
+    HashBiMap.create()
+
+  def bspTaskForTerminal(terminalId: String): Option[(String, String)] = {
+    Option(terminals.inverse().get(terminalId))
+  }
+
   val buildClient: ForwardingMetalsBuildClient =
     new ForwardingMetalsBuildClient(
       languageClient,
@@ -1688,6 +1844,7 @@ abstract class MetalsLspService(
       },
       bspErrorHandler,
       workDoneProgress,
+      terminals,
     )
 
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(
@@ -1911,7 +2068,10 @@ abstract class MetalsLspService(
       token: CancelToken = EmptyCancelToken,
   ): Future[DefinitionResult] = {
     val source = position.getTextDocument.getUri.toAbsolutePath
-    if (source.isScalaFilename || source.isJavaFilename) {
+    val timer = new Timer(time)
+    if (
+      source.isScalaFilename || source.isJavaFilename || source.isProtoFilename
+    ) {
       val result =
         timerProvider.timedThunk(
           "definition",
@@ -1925,6 +2085,26 @@ abstract class MetalsLspService(
           // needed to know what classpath to compile the dependency source with.
           interactiveSemanticdbs.didDefinition(source, value)
         case _ =>
+      }
+      result.onComplete {
+        case Success(value) =>
+
+          metrics.recordEvent(
+            Event
+              .duration("definition", timer.elapsed)
+              .withLanguage(source.toJLanguage)
+              .withLanguageTarget(value.locations.asScala)
+              .withLabel("symbol", value.symbol)
+              .withLabel("success", (!value.isEmpty).toString)
+          )
+        case Failure(_) =>
+          metrics.recordEvent(
+            Event
+              .duration("definition", timer.elapsed)
+              .withLanguage(source.toJLanguage)
+              .withLabel("symbol", Symbols.None)
+              .withLabel("success", "false")
+          )
       }
       result
     } else {

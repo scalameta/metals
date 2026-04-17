@@ -12,6 +12,7 @@ import scala.meta.internal.inputs._
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala
 import scala.meta.internal.semanticdb.Scala._
@@ -74,13 +75,12 @@ class ScalaToplevelMtags(
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Any = {
-      import scala.meta.internal.semanticdb.Implicits._
       curr = scanner.nextToken()
       if (collectIdentifiers)
         curr.token match {
           case IDENTIFIER =>
             // we don't know whether the identifier is a term or a type, so we add both as fuzzy references
-            for (suffix <- List("().", "():", ".", "#", ":")) {
+            for (suffix <- List("().", ".", "#")) {
               visitFuzzyReferenceOccurrence(
                 s.SymbolOccurrence(
                   symbol = s"${curr.strVal}$suffix",
@@ -549,6 +549,17 @@ class ScalaToplevelMtags(
                   .distinct
                   .map(UnresolvedOverriddenSymbol(_))
               )
+              if (collectIdentifiers) {
+                overridden.foreach { identifier =>
+                  visitFuzzyReferenceOccurrence(
+                    s.SymbolOccurrence(
+                      symbol = s"${identifier.name}:",
+                      role = s.SymbolOccurrence.Role.REFERENCE,
+                      range = Some(identifier.pos.toRange)
+                    )
+                  )
+                }
+              }
             }
           )
           loop(
@@ -947,9 +958,21 @@ class ScalaToplevelMtags(
             SymbolInformation.Property.VAL.value
           )
         }
-        def emitOverridden() = addOverridden(
-          List(ResolvedOverriddenSymbol(region.owner))
-        )
+        def emitOverridden() = {
+          addOverridden(
+            List(ResolvedOverriddenSymbol(region.owner))
+          )
+          if (collectIdentifiers) {
+            import scala.meta.internal.semanticdb.Implicits._
+            visitFuzzyReferenceOccurrence(
+              s.SymbolOccurrence(
+                symbol = s"${name}:",
+                role = s.SymbolOccurrence.Role.REFERENCE,
+                range = Some(pos.toRange)
+              )
+            )
+          }
+        }
         val nextIsNewLine0 = nextIsNL()
         curr.token match {
           case COMMA =>

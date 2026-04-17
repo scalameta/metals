@@ -94,22 +94,28 @@ object ClasspathSearch {
   }
 
   object Indexer {
+    val default: Indexer = new DefaultClasspathIndexer
+  }
 
-    val default: Indexer =
-      (classpath, excludePackages, bucketSize) => {
-        val packages = PackageIndex.fromClasspath(
-          classpath,
-          excludePackages.isExcludedPackage
-        )
-        val map = CompressedPackageIndex.fromPackages(
-          () =>
-            packages.packages.asScala.iterator.map { pkg =>
-              (pkg._1, pkg._2.asScala)
-            },
-          excludePackages.isExcludedPackage,
-          bucketSize
-        )
-        new ClasspathSearch(map)
-      }
+  class DefaultClasspathIndexer extends Indexer {
+    override def index(
+        classpath: collection.Seq[Path],
+        excludePackages: ExcludedPackagesHandler,
+        bucketSize: Int = CompressedPackageIndex.DefaultBucketSize
+    ): ClasspathSearch = {
+      val packages = PackageIndex.fromClasspath(
+        classpath,
+        excludePackages.isExcludedPackage
+      )
+      val map = CompressedPackageIndex.fromPackages(
+        () =>
+          packages.packages.asScala.iterator.map { pkg =>
+            (pkg._1, pkg._2.asScala)
+          },
+        excludePackages.isExcludedPackage,
+        bucketSize
+      )
+      new ClasspathSearch(map)
+    }
   }
 }

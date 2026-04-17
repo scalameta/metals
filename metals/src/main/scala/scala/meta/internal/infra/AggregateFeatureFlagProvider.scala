@@ -28,6 +28,47 @@ class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
       }
     })
   }
+
+  override def readInt(
+      flag: FeatureFlag,
+      defaultValue: Integer,
+  ): Optional[Integer] = {
+    underlying.foldLeft(Optional.empty[Integer])((acc, provider) => {
+      if (acc.isPresent) acc // Return first non-empty result
+      else {
+        try provider.readInt(flag, defaultValue)
+        catch {
+          case NonFatal(e) =>
+            scribe.error(
+              s"error reading feature flag $flag from provider ${provider.getClass.getName}",
+              e,
+            )
+            Optional.empty()
+        }
+      }
+    })
+  }
+
+  override def readStringList(
+      flag: FeatureFlag
+  ): java.util.List[String] = {
+    underlying.foldLeft(java.util.Collections.emptyList[String]())(
+      (acc, provider) => {
+        if (!acc.isEmpty) acc
+        else {
+          try provider.readStringList(flag)
+          catch {
+            case NonFatal(e) =>
+              scribe.error(
+                s"error reading feature flag $flag from provider ${provider.getClass.getName}",
+                e,
+              )
+              java.util.Collections.emptyList()
+          }
+        }
+      }
+    )
+  }
 }
 
 object AggregateFeatureFlagProvider {

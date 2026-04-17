@@ -559,7 +559,9 @@ class CompletionDocSuite extends BaseCompletionSuite {
       "2.13.13" -> baseScala21313Docs,
       "2.13.14" -> baseScala21313Docs,
       "2.13.15" -> baseScala21313Docs,
-      "2.13.16" -> baseScala21313Docs
+      "2.13.16" -> baseScala21313Docs,
+      "2.13.17" -> baseScala21313Docs,
+      "2.13.18" -> baseScala21313Docs
     )
   )
 

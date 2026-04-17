@@ -147,7 +147,12 @@ final class TestSuitesProvider(
             b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
           )
           params.setData(
-            ScalaTestSuites(List(c).asJava, Nil.asJava, Nil.asJava).toJson
+            ScalaTestSuites(
+              List(c).asJava,
+              Nil.asJava,
+              Nil.asJava,
+              Nil.asJava,
+            ).toJson
           )
           def lens(name: String, cmd: BaseCommand) = new l.CodeLens(
             entry.location.getRange(),

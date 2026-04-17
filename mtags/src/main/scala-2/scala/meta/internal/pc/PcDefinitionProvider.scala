@@ -80,10 +80,21 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
         if (findTypeDef) typeSymbol(tree, pos)
         else namedParamSymbol(tree, pos).getOrElse(tree.symbol)
 
+      def logMissingDef(extra: String = ""): Unit = {
+        logger.warn(
+          s"""|Could not find PC definition at ${pos.toString()}}. Additional context:
+              |  tree: $tree [${tree.getClass()}]
+              |  symbol: $symbol
+              |  $extra
+              |  """.stripMargin
+        )
+      }
+
       if (
         symbol == null ||
         symbol == NoSymbol
       ) {
+        logMissingDef()
         DefinitionResultImpl.empty
       } else if (symbol.hasPackageFlag) {
         DefinitionResultImpl(
@@ -99,6 +110,10 @@ class PcDefinitionProvider(val compiler: MetalsGlobal, params: OffsetParams) {
             .distinct
             .asJava
         )
+
+        // if we didn't find any results, log additional information
+        if (sourceBasedDefs.locations.isEmpty())
+          logMissingDef(s"allSyms: $allSyms")
 
         if (sourceBasedDefs.locations.isEmpty && symbol.associatedFile.exists) {
           symbol.associatedFile.underlyingSource match {

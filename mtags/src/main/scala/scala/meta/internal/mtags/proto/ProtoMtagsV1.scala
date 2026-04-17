@@ -9,14 +9,20 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.{semanticdb => s}
 
 /**
- * A symbol outline indexer for Protobuf v2 and v3.
+ * V1 symbol outline indexer for Protobuf v2 and v3.
+ *
+ * This indexer uses the proto package for symbol generation. It's the original
+ * implementation that only indexes by proto package paths.
  *
  * Warning: this file is ~90% AI generated. The best way to work with this file
  * is to write test cases in ProtobufToplevelSuite and let the AI fix the bugs.
+ *
+ * @see [[ProtoMtagsV2]] for the newer indexer that also supports Java package indexing
  */
-class ProtobufToplevelMtags(
+class ProtoMtagsV1(
     val input: Input.VirtualFile,
-    includeGeneratedSymbols: Boolean = false
+    includeGeneratedSymbols: Boolean = false,
+    includeFuzzyReferences: Boolean = false
 ) extends MtagsIndexer {
 
   override def language: Language = Language.UNKNOWN_LANGUAGE
@@ -86,7 +92,7 @@ class ProtobufToplevelMtags(
         )
       case s.SymbolInformation.Kind.METHOD =>
         for {
-          desc <- ProtobufToplevelMtags.toCamelCaseVariations(info.displayName)
+          desc <- ProtoMtagsV1.toCamelCaseVariations(info.displayName)
           if desc != info.displayName
         } {
           val symbol = Symbols.Global(owner, Descriptor.Method(desc, "()"))
@@ -99,7 +105,7 @@ class ProtobufToplevelMtags(
       case s.SymbolInformation.Kind.PACKAGE_OBJECT =>
         isOneof.add(info.symbol)
         val camelCase =
-          ProtobufToplevelMtags.toCamelCase(info.displayName.capitalize)
+          ProtoMtagsV1.toCamelCase(info.displayName.capitalize)
         val desc = s"${camelCase}Case"
         val symbol = Symbols.Global(owner, Descriptor.Type(desc))
         super.visitOccurrence(
@@ -129,6 +135,8 @@ class ProtobufToplevelMtags(
         processEnumDeclaration()
       case SERVICE =>
         processServiceDeclaration()
+      case EXTEND =>
+        processExtendDeclaration()
       case _ =>
         // Skip other tokens and move to next
         scanner.nextToken()
@@ -136,7 +144,7 @@ class ProtobufToplevelMtags(
 
     // Restore package level owner after processing top-level declarations
     token.tpe match {
-      case MESSAGE | ENUM | SERVICE =>
+      case MESSAGE | ENUM | SERVICE | EXTEND =>
         currentOwner = packageLevelOwner
       case _ =>
     }
@@ -213,6 +221,8 @@ class ProtobufToplevelMtags(
             token = processEnumDeclaration() // Nested enum
           case ProtobufToken.ONEOF =>
             token = processOneofDeclaration()
+          case ProtobufToken.OPTION =>
+            token = skipOptionBlock(token)
           case _ =>
             token = processFieldDeclaration(token)
         }
@@ -385,6 +395,38 @@ class ProtobufToplevelMtags(
     skipRpcDeclaration(token)
   }
 
+  private def processExtendDeclaration(): ProtobufToken = {
+    var token = scanner.nextToken() // Skip 'extend'
+
+    // The type name after 'extend' is a type reference (e.g., google.protobuf.MessageOptions)
+    while (
+      token.tpe == ProtobufToken.IDENTIFIER || token.tpe == ProtobufToken.DOT
+    ) {
+      if (token.tpe == ProtobufToken.IDENTIFIER && includeFuzzyReferences) {
+        emitTypeReference(token)
+      }
+      token = scanner.nextToken()
+    }
+
+    // Process the body of the extend block - contains field declarations
+    if (token.tpe == ProtobufToken.LEFT_BRACE) {
+      token = scanner.nextToken() // Skip opening brace
+      while (
+        token.tpe != ProtobufToken.RIGHT_BRACE && token.tpe != ProtobufToken.EOF
+      ) {
+        // Process fields inside extend block (same as message fields)
+        token = processFieldDeclaration(token)
+      }
+      if (token.tpe == ProtobufToken.RIGHT_BRACE) {
+        scanner.nextToken() // Skip closing brace
+      } else {
+        token
+      }
+    } else {
+      token
+    }
+  }
+
   private def processOneofDeclaration(): ProtobufToken = {
     var token = scanner.nextToken() // Skip 'oneof'
 
@@ -431,8 +473,30 @@ class ProtobufToplevelMtags(
   private def skipFieldType(token: ProtobufToken): ProtobufToken = {
     var current = token
 
-    if (isFieldType(current)) {
+    // Support fully-qualified types like ".foo.bar.Baz".
+    if (current.tpe == ProtobufToken.DOT) {
       current = scanner.nextToken()
+    }
+
+    if (isFieldType(current)) {
+      // Emit fuzzy reference for user-defined types (IDENTIFIER).
+      if (current.tpe == ProtobufToken.IDENTIFIER && includeFuzzyReferences) {
+        emitTypeReference(current)
+      }
+      current = scanner.nextToken()
+
+      // Consume dotted type segments in qualified user-defined types.
+      // Keep indexing intermediate segments so nested type qualifiers like
+      // `Outer.Inner` remain discoverable as references.
+      while (current.tpe == ProtobufToken.DOT) {
+        current = scanner.nextToken()
+        if (current.tpe == ProtobufToken.IDENTIFIER) {
+          if (includeFuzzyReferences) {
+            emitTypeReference(current)
+          }
+          current = scanner.nextToken()
+        }
+      }
 
       // Handle map<K, V> syntax
       if (current.tpe == ProtobufToken.LEFT_ANGLE) {
@@ -442,6 +506,9 @@ class ProtobufToplevelMtags(
           current.tpe match {
             case ProtobufToken.LEFT_ANGLE => angleCount += 1
             case ProtobufToken.RIGHT_ANGLE => angleCount -= 1
+            case ProtobufToken.IDENTIFIER if includeFuzzyReferences =>
+              // Emit reference for type parameters in map<K, V>
+              emitTypeReference(current)
             case _ =>
           }
           if (angleCount > 0) {
@@ -455,6 +522,26 @@ class ProtobufToplevelMtags(
     }
 
     current
+  }
+
+  private def emitTypeReference(token: ProtobufToken): Unit = {
+    val typeName = token.lexeme
+    val pos = createPosition(token)
+    // Emit as a fuzzy reference with ":" suffix for type references
+    visitFuzzyReferenceOccurrence(
+      s.SymbolOccurrence(
+        symbol = s"$typeName:",
+        role = s.SymbolOccurrence.Role.REFERENCE,
+        range = Some(
+          s.Range(
+            startLine = pos.startLine,
+            startCharacter = pos.startColumn,
+            endLine = pos.endLine,
+            endCharacter = pos.endColumn
+          )
+        )
+      )
+    )
   }
 
   private def isFieldType(token: ProtobufToken): Boolean = {
@@ -475,6 +562,10 @@ class ProtobufToplevelMtags(
       current.tpe != ProtobufToken.EOF &&
       current.tpe != ProtobufToken.LEFT_BRACE
     ) {
+      // Emit references for RPC input/output types (identifiers inside parentheses)
+      if (current.tpe == ProtobufToken.IDENTIFIER && includeFuzzyReferences) {
+        emitTypeReference(current)
+      }
       current = scanner.nextToken()
     }
 
@@ -506,20 +597,38 @@ class ProtobufToplevelMtags(
   }
 
   private def skipToSemicolon(token: ProtobufToken): ProtobufToken = {
+    import ProtobufToken._
     var current = token
-    while (
-      current.tpe != ProtobufToken.SEMICOLON &&
-      current.tpe != ProtobufToken.EOF &&
-      current.tpe != ProtobufToken.RIGHT_BRACE
-    ) {
+    var braceDepth = 0
+    var bracketDepth = 0
+    var parenDepth = 0
+
+    while (current.tpe != EOF) {
+      current.tpe match {
+        case LEFT_BRACE =>
+          braceDepth += 1
+        case RIGHT_BRACE =>
+          if (braceDepth > 0) {
+            braceDepth -= 1
+          } else if (bracketDepth == 0 && parenDepth == 0) {
+            return current
+          }
+        case LEFT_BRACKET =>
+          bracketDepth += 1
+        case RIGHT_BRACKET =>
+          if (bracketDepth > 0) bracketDepth -= 1
+        case LEFT_PAREN =>
+          parenDepth += 1
+        case RIGHT_PAREN =>
+          if (parenDepth > 0) parenDepth -= 1
+        case SEMICOLON
+            if braceDepth == 0 && bracketDepth == 0 && parenDepth == 0 =>
+          return scanner.nextToken()
+        case _ =>
+      }
       current = scanner.nextToken()
     }
-
-    if (current.tpe == ProtobufToken.SEMICOLON) {
-      scanner.nextToken() // Skip semicolon
-    } else {
-      current
-    }
+    current
   }
 
   private def skipOptionBlock(token: ProtobufToken): ProtobufToken = {
@@ -576,7 +685,7 @@ class ProtobufToplevelMtags(
   }
 }
 
-object ProtobufToplevelMtags {
+object ProtoMtagsV1 {
   def toCamelCase(snakeCase: String): String = {
     val matches = "_([a-z])".r.findAllIn(snakeCase)
     matches.map(m => m.toUpperCase()).mkString("")

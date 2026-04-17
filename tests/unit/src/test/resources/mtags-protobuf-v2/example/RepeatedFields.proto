@@ -1,0 +1,57 @@
+   syntax = "proto3";
+// ^ reference example/
+   package example;
+
+   message RepeatedScalars {
+//         ^^^^^^^^^^^^^^^ definition example/RepeatedScalars# CLASS
+     repeated string names = 1;
+//                   ^^^^^ definition example/RepeatedScalars#names(). METHOD
+//                   ^^^^^ definition example/RepeatedScalars#withNames(). METHOD
+//                   ^^^^^ definition example/RepeatedScalars#getNames(). METHOD
+//                   ^^^^^ definition example/RepeatedScalars#getNamesList(). METHOD
+//                   ^^^^^ definition example/RepeatedScalars#getNamesCount(). METHOD
+     repeated int32 numbers = 2;
+//                  ^^^^^^^ definition example/RepeatedScalars#numbers(). METHOD
+//                  ^^^^^^^ definition example/RepeatedScalars#withNumbers(). METHOD
+//                  ^^^^^^^ definition example/RepeatedScalars#getNumbers(). METHOD
+//                  ^^^^^^^ definition example/RepeatedScalars#getNumbersList(). METHOD
+//                  ^^^^^^^ definition example/RepeatedScalars#getNumbersCount(). METHOD
+     repeated bool flags = 3;
+//                 ^^^^^ definition example/RepeatedScalars#flags(). METHOD
+//                 ^^^^^ definition example/RepeatedScalars#withFlags(). METHOD
+//                 ^^^^^ definition example/RepeatedScalars#getFlags(). METHOD
+//                 ^^^^^ definition example/RepeatedScalars#getFlagsList(). METHOD
+//                 ^^^^^ definition example/RepeatedScalars#getFlagsCount(). METHOD
+   }
+
+   message Tag {
+//         ^^^ definition example/Tag# CLASS
+     string key = 1;
+//          ^^^ definition example/Tag#key(). METHOD
+//          ^^^ definition example/Tag#withKey(). METHOD
+//          ^^^ definition example/Tag#getKey(). METHOD
+//          ^^^ definition example/Tag#hasKey(). METHOD
+//          ^^^ definition example/Tag#getKeyBytes(). METHOD
+     string value = 2;
+//          ^^^^^ definition example/Tag#value(). METHOD
+//          ^^^^^ definition example/Tag#withValue(). METHOD
+//          ^^^^^ definition example/Tag#getValue(). METHOD
+//          ^^^^^ definition example/Tag#hasValue(). METHOD
+//          ^^^^^ definition example/Tag#getValueBytes(). METHOD
+   }
+
+   message RepeatedMessages {
+//         ^^^^^^^^^^^^^^^^ definition example/RepeatedMessages# CLASS
+     repeated Tag tags = 1;
+//                ^^^^ definition example/RepeatedMessages#tags(). METHOD
+//                ^^^^ definition example/RepeatedMessages#withTags(). METHOD
+//                ^^^^ definition example/RepeatedMessages#getTags(). METHOD
+//                ^^^^ definition example/RepeatedMessages#getTagsList(). METHOD
+//                ^^^^ definition example/RepeatedMessages#getTagsCount(). METHOD
+     repeated RepeatedScalars nested = 2;
+//                            ^^^^^^ definition example/RepeatedMessages#nested(). METHOD
+//                            ^^^^^^ definition example/RepeatedMessages#withNested(). METHOD
+//                            ^^^^^^ definition example/RepeatedMessages#getNested(). METHOD
+//                            ^^^^^^ definition example/RepeatedMessages#getNestedList(). METHOD
+//                            ^^^^^^ definition example/RepeatedMessages#getNestedCount(). METHOD
+   }

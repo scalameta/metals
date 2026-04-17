@@ -162,6 +162,16 @@ final class MbtBuildServer(
   }
   override def onRunReadStdin(params: ReadParams): Unit = ()
 
+  override def workspaceSync(
+      params: scala.meta.internal.bsp.sync.WorkspaceSyncParams
+  ): java.util.concurrent.CompletableFuture[
+    scala.meta.internal.bsp.sync.WorkspaceSyncResult
+  ] = CompletableFuture.failedFuture(
+    new UnsupportedOperationException(
+      "MBT build server does not support 'workspaceSync'."
+    )
+  )
+
   override def buildInitialize(
       params: InitializeBuildParams
   ): CompletableFuture[InitializeBuildResult] =

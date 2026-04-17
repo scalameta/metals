@@ -3,10 +3,14 @@ package scala.meta.internal.metals
 import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.time.Duration
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.{util => ju}
 
+import scala.annotation.nowarn
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -15,7 +19,9 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
+import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.infra.MonitoringClient
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
@@ -32,6 +38,7 @@ import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
+import scala.meta.internal.protopc.ProtoPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.{semanticdb => s}
@@ -96,6 +103,7 @@ class Compilers(
     embedded: Embedded,
     workDoneProgress: WorkDoneProgress,
     sh: ScheduledExecutorService,
+    time: Time,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
     scalaVersionSelector: ScalaVersionSelector,
@@ -109,6 +117,7 @@ class Compilers(
     javaFileManagerFactory: JavaFileManagerFactory,
     progressBars: ProgressBars,
     timerProvider: TimerProvider,
+    metrics: MonitoringClient,
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
@@ -124,6 +133,7 @@ class Compilers(
     embedded,
     progressBars,
     sh,
+    time,
     initializeParams,
     excludedPackages,
     trees,
@@ -158,6 +168,40 @@ class Compilers(
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
   private val cache = jcache.asScala
+
+  private val idleCompilerTimeoutMs = 30000L
+
+  private[metals] def evictIdleCompilers(): Unit = {
+    try {
+      val now = time.currentMillis()
+      val toEvict = cache.collect {
+        case (key, lazyPc)
+            if now - lazyPc.lastAccessedMs > idleCompilerTimeoutMs =>
+          (key, now - lazyPc.lastAccessedMs)
+      }
+      for ((key, idleMs) <- toEvict) {
+        Option(jcache.remove(key)).foreach { removed =>
+          scribe.debug(
+            s"Shutting down idle presentation compiler for $key (idle for ${idleMs}ms)"
+          )
+          removed.shutdown()
+        }
+      }
+    } catch {
+      case e: Throwable =>
+        scribe.error("Failed to evict idle compilers", e)
+    }
+  }
+
+  @nowarn("cat=unused")
+  private val idleCompilerEvictionTask: ScheduledFuture[_] =
+    sh.scheduleAtFixedRate(
+      (() => evictIdleCompilers()): Runnable,
+      10,
+      10,
+      TimeUnit.SECONDS,
+    )
+
   private def buildTargetPCFromCache(
       id: BuildTargetIdentifier
   ): Option[PresentationCompiler] =
@@ -231,6 +275,9 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
+    // this may be tempting, but cancel is called after every sync/import,
+    // but the Compilers instance is reused, causing eviction to stop working
+    // idleCompilerEvictionTask.cancel(false)
     Cancelable.cancelEach(cache.values)(_.shutdown())
     Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
     // important not to leak presentation compilers, they come with
@@ -283,22 +330,32 @@ class Compilers(
     val maybeDiagnostics =
       for (pc <- loadCompiler(path); contents <- buffers.get(path))
         yield {
-          timerProvider.timed(
-            s"[${pc.buildTargetId()}] computed diagnostics",
-            onlyIf = serverConfig.statistics.isDiagnostics,
-          ) {
-            pc.didChange(
-              CompilerVirtualFileParams(
-                path.toNIO.toUri,
-                contents,
-                EmptyCancelToken,
-                outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+          timerProvider
+            .withTimer(
+              s"[${pc.buildTargetId()}] computed diagnostics",
+              reportStatus = false,
+              onlyIf = serverConfig.statistics.isDiagnostics,
+            ) {
+              pc.didChange(
+                CompilerVirtualFileParams(
+                  path.toNIO.toUri,
+                  contents,
+                  EmptyCancelToken,
+                  outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+                )
+              ).asScala
+                .map { result =>
+                  result.asScala.toList
+                }
+            }
+            .map { case (timer, result) =>
+              metrics.recordEvent(
+                Event
+                  .duration("diagnostics", timer.elapsed)
+                  .withLanguage(path.toJLanguage)
               )
-            ).asScala
-              .map { result =>
-                result.asScala.toList
-              }
-          }
+              result
+            }
         }
 
     maybeDiagnostics.getOrElse(Future.successful(List.empty))
@@ -328,15 +385,25 @@ class Compilers(
               contents,
               token = token,
             )
-            for {
-              reportedDiagnostics <- pc
-                .didChange(params)
-                .asScala
-              _ = diagnostics.publishDiagnosticsNotAdjusted(
-                file,
-                reportedDiagnostics.asScala.toList,
-              )
-            } yield ()
+            timerProvider
+              .withTimer(
+                "computed diagnostics",
+                reportStatus = false,
+                onlyIf = false,
+              ) {
+                pc.didChange(params).asScala
+              }
+              .map { case (timer, reportedDiagnostics) =>
+                diagnostics.publishDiagnosticsNotAdjusted(
+                  file,
+                  reportedDiagnostics.asScala.toList,
+                )
+                metrics.recordEvent(
+                  Event
+                    .duration("diagnostics", timer.elapsed)
+                    .withLanguage(file.toJLanguage)
+                )
+              }
           }
           _ <- Future.sequence(futures)
         } yield ()
@@ -395,7 +462,7 @@ class Compilers(
 
   def didChange(path: AbsolutePath): Future[Unit] = {
     if (userConfig().presentationCompilerDiagnostics)
-      // Batch/debounce these requests since they can arrivein bursts
+      // Batch/debounce these requests since they can arrive in bursts
       fileDidChange(Seq(path))
     else
       didChangeBSPDiagnostics(path, shouldReturnDiagnostics = false).ignoreValue
@@ -465,6 +532,23 @@ class Compilers(
       )
     } {
       compiler.await.restart()
+    }
+  }
+
+  /**
+   * Restart all Java presentation compilers (both build-target-specific and fallback).
+   * This is needed when proto files change because the Java compiler caches resolved symbols
+   * and won't re-request them from the file manager until restarted.
+   */
+  def restartJavaCompilers(): Unit = {
+    for {
+      (key, lazyPc) <- cache
+      if key.isInstanceOf[PresentationCompilerKey.JavaBuildTarget] ||
+        (key.isInstanceOf[PresentationCompilerKey.Default] &&
+          key.asInstanceOf[PresentationCompilerKey.Default].language.isJava)
+    } {
+      scribe.debug(s"Restarting Java compiler for $key")
+      lazyPc.await.restart()
     }
   }
 
@@ -1362,7 +1446,8 @@ class Compilers(
       }
     }
 
-    if (!path.isScalaFilename && !path.isJavaFilename) None
+    if (path.isProtoFilename) loadProtoCompiler(path)
+    else if (!path.isScalaFilename && !path.isJavaFilename) None
     else if (path.isWorksheet)
       loadWorksheetCompiler(path).orElse(fromBuildTarget)
     else fromBuildTarget
@@ -1448,7 +1533,7 @@ class Compilers(
   private def loadJavaCompiler(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
-    buildTargets.javaTarget(targetId).map { javaTarget =>
+    buildTargets.jvmTarget(targetId).map { javaTarget =>
       jcache
         .computeIfAbsent(
           PresentationCompilerKey.JavaBuildTarget(targetId),
@@ -1462,6 +1547,29 @@ class Compilers(
         )
         .await
     }
+  }
+
+  private def protoCompiler: PresentationCompiler = {
+    ProtoPresentationCompiler(
+      buildTargetId = "",
+      importPaths = Nil,
+      search = search,
+      ec = ec,
+      sh = Some(sh),
+      workspace = Some(workspace.toNIO),
+    ).withConfiguration(
+      config.initialConfig.compilers.copy(
+        emitDiagnostics = true,
+        protobufLspConfig = userConfig().protobufLspConfig,
+      )
+    )
+  }
+
+  private def loadProtoCompiler(
+      @nowarn("cat=unused-params")
+      path: AbsolutePath
+  ): Option[PresentationCompiler] = {
+    Some(protoCompiler)
   }
 
   private def loadCompiler(
@@ -1786,6 +1894,7 @@ class Compilers(
   def batchSemanticdbTextDocuments(
       sources: Seq[AbsolutePath],
       cancelToken: CancelToken,
+      timeout: Duration,
   ): Future[s.TextDocuments] = {
     val futures = for {
       (pc, paths) <- sources
@@ -1799,8 +1908,9 @@ class Compilers(
           token = cancelToken,
         ): VirtualFileParams
       }
-      pc.batchSemanticdbTextDocuments(params.asJava).asScala.map { bytes =>
-        s.TextDocuments.parseFrom(bytes).documents
+      pc.batchSemanticdbTextDocuments(params.asJava, timeout).asScala.map {
+        bytes =>
+          s.TextDocuments.parseFrom(bytes).documents
       }
     }
     Future

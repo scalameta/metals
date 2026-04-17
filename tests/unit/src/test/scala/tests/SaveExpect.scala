@@ -3,6 +3,52 @@ package tests
 import scala.collection.mutable
 import scala.util.control.NonFatal
 
+/**
+ * Entry point to save/update expect files for snapshot tests.
+ *
+ * == Usage ==
+ *
+ * Run all expect suites:
+ * {{{
+ * coursier launch sbt -- --client "unit/Test/runMain tests.SaveExpect"
+ * }}}
+ *
+ * Run a specific suite (filter by suite name, case-insensitive):
+ * {{{
+ * coursier launch sbt -- --client "unit/Test/runMain tests.SaveExpect JavacMtagsExpectSuite"
+ * }}}
+ *
+ * You can also filter by the directory name (suiteName for DirectoryExpectSuite):
+ * {{{
+ * coursier launch sbt -- --client "unit/Test/runMain tests.SaveExpect mtags-protobuf-v2"
+ * }}}
+ *
+ * == How to Add a New Expect Test Suite ==
+ *
+ * 1. Create a new test class extending `DirectoryExpectSuite`:
+ *    {{{
+ *    class MyNewExpectSuite extends DirectoryExpectSuite("my-expect-dir") {
+ *      override lazy val input: InputProperties = InputProperties.fromDirectory(
+ *        AbsolutePath(BuildInfo.testResourceDirectory).resolve("my-input-dir")
+ *      )
+ *      def testCases(): List[ExpectTestCase] = for {
+ *        file <- input.allFiles
+ *        if file.file.toNIO.toString.endsWith(".myext")
+ *      } yield ExpectTestCase(file, () => computeOutput(file))
+ *    }
+ *    }}}
+ *
+ * 2. Create input files in `tests/unit/src/test/resources/my-input-dir/`
+ *
+ * 3. Add the suite loader to the list below:
+ *    {{{
+ *    () => new MyNewExpectSuite,
+ *    }}}
+ *
+ * 4. Run `SaveExpect` to generate expect files in `tests/unit/src/test/resources/my-expect-dir/`
+ *
+ * 5. Commit both input and expect files
+ */
 object SaveExpect {
   def main(args: Array[String]): Unit = {
     val filter = args.headOption.map(_.toLowerCase).getOrElse("")
@@ -10,6 +56,8 @@ object SaveExpect {
     for {
       loader <- List[() => BaseExpectSuite](
         () => new JavacMtagsExpectSuite(assertCompat = false),
+        () => new ProtobufMtagsExpectSuite,
+        () => new ProtobufMtagsV2ExpectSuite,
         () => new DefinitionScala2Suite,
         () => new SemanticdbScala2Suite,
         () => new MtagsScala2Suite,

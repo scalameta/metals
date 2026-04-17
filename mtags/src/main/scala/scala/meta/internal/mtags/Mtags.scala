@@ -10,7 +10,6 @@ import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
-import scala.meta.internal.mtags.proto.ProtobufToplevelMtags
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Schema
@@ -57,7 +56,7 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
         indexer.index()
       )
     } else if (language.isProtobuf) {
-      new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
+      config.protoInstance(input, includeGeneratedSymbols = true).index()
     } else {
       TextDocument()
     }
@@ -96,7 +95,7 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       val overrides = indexer.overrides()
       (doc, overrides)
     } else if (language.isProtobuf) {
-      new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
+      config.protoInstance(input, includeGeneratedSymbols = true).index()
       (TextDocument(), Nil)
     } else {
       (TextDocument(), Nil)
@@ -160,7 +159,7 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       } else if (language == Semanticdb.Language.SCALA) {
         ScalaMtags.index(input, dialect).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {
-        new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
+        config.protoInstance(input, includeGeneratedSymbols = true).index()
       } else {
         TextDocument()
       }
@@ -192,7 +191,13 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
           collectIdentifiers = includeReferences
         ).index()
       } else if (language == Semanticdb.Language.PROTOBUF) {
-        new ProtobufToplevelMtags(input, includeGeneratedSymbols = true).index()
+        config
+          .protoInstance(
+            input,
+            includeGeneratedSymbols = true,
+            includeFuzzyReferences = includeReferences
+          )
+          .index()
       } else {
         TextDocument()
       }
