@@ -244,7 +244,7 @@ object Embedded {
       ),
     ) ++ Repository.defaults().asScala.toList)
       .distinctBy {
-        case m: MavenRepository => m.getBase()
+        case m: MavenRepository => m.getBase().stripSuffix("/")
         case i: IvyRepository => i.getPattern()
       }
       .map(setCredentials)
