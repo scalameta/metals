@@ -175,7 +175,7 @@ class MbtBuildServerLspSuite
             |       ^^^^^
             |""".stripMargin,
       )
-      _ <- server.didFocus(coreService)
+      _ <- server.didFocus(extraApp)
       _ <- assertCompletion(
         """|package extra
            |import core.Model

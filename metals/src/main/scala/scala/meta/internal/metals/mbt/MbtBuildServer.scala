@@ -39,6 +39,8 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import ch.epfl.scala.bsp4j.BuildClient
 import ch.epfl.scala.bsp4j.BuildServerCapabilities
+import ch.epfl.scala.bsp4j.BuildTargetEvent
+import ch.epfl.scala.bsp4j.BuildTargetEventKind
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CleanCacheParams
 import ch.epfl.scala.bsp4j.CleanCacheResult
@@ -51,6 +53,7 @@ import ch.epfl.scala.bsp4j.DependencyModulesParams
 import ch.epfl.scala.bsp4j.DependencyModulesResult
 import ch.epfl.scala.bsp4j.DependencySourcesParams
 import ch.epfl.scala.bsp4j.DependencySourcesResult
+import ch.epfl.scala.bsp4j.DidChangeBuildTarget
 import ch.epfl.scala.bsp4j.InitializeBuildParams
 import ch.epfl.scala.bsp4j.InitializeBuildResult
 import ch.epfl.scala.bsp4j.InverseSourcesParams
@@ -189,7 +192,18 @@ final class MbtBuildServer(
   override def onBuildExit(): Unit = ()
 
   override def workspaceReload(): CompletableFuture[Object] = {
-    importedBuild.set(build().mbtTargets)
+    val newTargets = build().mbtTargets
+    importedBuild.set(newTargets)
+    Option(buildClient.get()).foreach { client =>
+      val events = newTargets.map { target =>
+        val event = new BuildTargetEvent(target.id)
+        event.setKind(BuildTargetEventKind.CHANGED)
+        event
+      }
+      client.onBuildTargetDidChange(
+        new DidChangeBuildTarget(events.asJava)
+      )
+    }
     CompletableFuture.completedFuture(null)
   }
 
