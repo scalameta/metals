@@ -7,7 +7,6 @@ import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
-import scala.util.Try
 
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
@@ -279,6 +278,17 @@ final class BuildTools(
       else Some(name)
     } else None
   }
+
+  /**
+   * Returns `true` when at least one MBT importer would be produced for this
+   * workspace.  Intentionally avoids instantiating importers.
+   */
+  def hasMbtImporters: Boolean =
+    mavenProject.isDefined ||
+      gradleProject.isDefined ||
+      workspace.list.exists(f =>
+        ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
+      )
 
   def mbtImporters(
       shellRunner: ShellRunner,

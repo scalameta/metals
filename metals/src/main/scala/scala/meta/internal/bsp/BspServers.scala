@@ -57,6 +57,7 @@ final class BspServers(
     mbtBuild: () => MbtBuild,
     workDoneProgress: WorkDoneProgress,
     scalaVersionSelector: ScalaVersionSelector,
+    hasMbtImporters: () => Boolean = () => false,
 )(implicit ec: ExecutionContextExecutorService) {
   private def customProjectRoot =
     userConfig().getCustomProjectRoot(mainWorkspace)
@@ -202,6 +203,7 @@ final class BspServers(
   def findAvailableServers(): List[BspConnectionDetails] = {
     val includeMbt =
       !mbtBuild().isEmpty ||
+        hasMbtImporters() ||
         userConfig().preferredBuildServer.contains(MbtBuildServer.name) ||
         tables.buildServers.selectedServer().contains(MbtBuildServer.name)
     (findJsonFiles().flatMap(readInBspConfig(_, charset)) :::

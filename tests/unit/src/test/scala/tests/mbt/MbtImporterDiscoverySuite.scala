@@ -121,4 +121,49 @@ class MbtImporterDiscoverySuite extends BaseSuite {
     )
     assertEquals(importers.length, 0)
   }
+
+  test("maven-isBuildRelated-true-for-pom-xml") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-related"))
+    write(workspace.resolve("pom.xml"), "<project/>")
+    val importer = buildTools(workspace)
+      .mbtImporters(null, () => UserConfiguration())
+      .collectFirst { case m: MavenMbtImporter => m }
+      .get
+    assert(importer.isBuildRelated(workspace, workspace.resolve("pom.xml")))
+  }
+
+  test("gradle-isBuildRelated-true-for-build-gradle") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-related"))
+    write(workspace.resolve("build.gradle"), "plugins {}")
+    val importer = buildTools(workspace)
+      .mbtImporters(null, () => UserConfiguration())
+      .collectFirst { case g: GradleMbtImporter => g }
+      .get
+    assert(
+      importer.isBuildRelated(workspace, workspace.resolve("build.gradle"))
+    )
+  }
+
+  test("hasMbtImporters-true-for-pom-xml") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-has"))
+    write(workspace.resolve("pom.xml"), "<project/>")
+    assert(buildTools(workspace).hasMbtImporters)
+  }
+
+  test("hasMbtImporters-true-for-build-gradle") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-has"))
+    write(workspace.resolve("build.gradle"), "plugins {}")
+    assert(buildTools(workspace).hasMbtImporters)
+  }
+
+  test("hasMbtImporters-true-for-script") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-has"))
+    write(workspace.resolve("export.mbt.scala"), "// script")
+    assert(buildTools(workspace).hasMbtImporters)
+  }
+
+  test("hasMbtImporters-false-for-empty-workspace") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-has"))
+    assert(!buildTools(workspace).hasMbtImporters)
+  }
 }

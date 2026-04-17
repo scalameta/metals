@@ -95,6 +95,7 @@ class ConnectionProvider(
     mbtBuild,
     workDoneProgress,
     scalaVersionSelector,
+    hasMbtImporters = () => buildTools.hasMbtImporters,
   )
 
   val bspConnector: BspConnector = new BspConnector(
@@ -837,7 +838,19 @@ class ConnectionProvider(
               case None => Future.unit
               case Some(SlowConnect) =>
                 slowConnectToBuildServer(forceImport = true, progress)
-              case Some(request: ConnectRequest) => connect(request, progress)
+              case Some(request: ConnectRequest) =>
+                for {
+                  _ <-
+                    if (isMbtPreferred) {
+                      val importers =
+                        buildTools.mbtImporters(shellRunner, () => userConfig)
+                      mbtImport.runUnconditionally(
+                        importers,
+                        isMbtImportInProcess,
+                      )
+                    } else Future.unit
+                  _ <- connect(request, progress)
+                } yield ()
             }
         } yield ()
       },
