@@ -95,7 +95,7 @@ case class MbtTarget(
     target.setDisplayName(name)
     target.setBaseDirectory(baseDirectory(workspace).toURI.toString)
     target.setDataKind("scala")
-    target.setData(toGson(scalaTarget))
+    target.setData(MbtTarget.toGson(scalaTarget))
     target
   }
 
@@ -143,6 +143,10 @@ case class MbtTarget(
       dependencyModules.map(_.asBsp).asJava,
     )
 
+}
+
+object MbtTarget {
+  private val gson = new com.google.gson.Gson()
   private def toGson(value: bsp4j.ScalaBuildTarget) =
-    new com.google.gson.Gson().toJsonTree(value)
+    gson.toJsonTree(value)
 }
