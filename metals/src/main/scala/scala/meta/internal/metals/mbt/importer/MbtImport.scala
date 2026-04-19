@@ -43,8 +43,7 @@ final class MbtImport(
     if (providers.isEmpty) {
       scribe.warn("mbt-import: no importers available, skipping")
       return Future.successful(WorkspaceLoadedStatus.Installed)
-    }
-    if (isImportInProcess.compareAndSet(false, true)) {
+    } else if (isImportInProcess.compareAndSet(false, true)) {
       Future
         .sequence(
           providers.map(p =>
@@ -72,8 +71,8 @@ final class MbtImport(
         }
         .andThen { _ => isImportInProcess.set(false) }
     } else {
+      languageClient.showMessage(Messages.ImportAlreadyRunning)
       Future.successful {
-        languageClient.showMessage(Messages.ImportAlreadyRunning)
         WorkspaceLoadedStatus.Dismissed
       }
     }
@@ -146,9 +145,8 @@ final class MbtImport(
   private def computeDigest(
       providers: List[MbtImportProvider]
   ): Option[String] = {
-    val parts = providers.map(_.digest(workspace))
-    if (parts.isEmpty || parts.exists(_.isEmpty)) None
-    else Some(parts.flatten.mkString("|"))
+    val parts = providers.flatMap(_.digest(workspace))
+    Option.when(parts.size == providers.size)(parts.mkString("|"))
   }
 
   private def oldImportResult(
