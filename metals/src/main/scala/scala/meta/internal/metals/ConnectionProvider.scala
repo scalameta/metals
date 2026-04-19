@@ -155,30 +155,31 @@ class ConnectionProvider(
     workDoneProgress.trackProgressFuture(
       "Sync",
       progress =>
-        for {
-          _ <- fullConnectStep(progress)
-          _ <-
-            if (bspSession.isEmpty && buildTools.isMbt)
-              connect(CreateSession(), progress)
-            else Future.unit
-        } yield buildServerPromise.trySuccess(()),
+        connectBuildServer(progress).map(_ =>
+          buildServerPromise.trySuccess(())
+        ),
       metricName = Some("initialize_build_server"),
     )
   }
 
   /**
-   * Step of [[fullConnect]]: decide which build server to use.
+   * Decides which build server to use and starts the connection:
    *
-   * - MBT preferred/selected → run MBT importers directly.
+   * - MBT preferred/selected → run MBT importers, then create session.
    * - Already auto-connectable (.bloop/.bsp) → connect straight away.
    * - MBT importers exist AND no server chosen yet → ask the user once
    *   ("Use Bloop" / "Use MBT" / "Not now").
    * - Otherwise → normal slow-connect path (BloopInstall / BSP prompts).
    */
-  private def fullConnectStep(progress: TaskProgress): Future[Unit] = {
+  private def connectBuildServer(progress: TaskProgress): Future[Unit] = {
     val mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
     if (isMbtPreferred) {
-      runMbtReimport(mbtImporters)
+      for {
+        _ <- runMbtReimport(mbtImporters)
+        _ <-
+          if (bspSession.isEmpty) connect(CreateSession(), progress).ignoreValue
+          else Future.unit
+      } yield ()
     } else if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
       connect(CreateSession(), progress).ignoreValue
     } else if (
