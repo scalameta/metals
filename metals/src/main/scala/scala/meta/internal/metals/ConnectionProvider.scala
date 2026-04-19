@@ -210,9 +210,10 @@ class ConnectionProvider(
           mbtImport
             .runUnconditionally(mbtImporters, isMbtImportInProcess)
             .flatMap { importStatus =>
-              if (importStatus.isInstalled)
+              if (importStatus.isInstalled) {
                 tables.buildServers.chooseServer(MbtBuildServer.name)
-              Future.unit
+                connect(CreateSession(), progress).ignoreValue
+              } else Future.unit
             }
         } else if (item == Messages.ChooseBuildServer.bloop) {
           tables.buildServers.chooseServer(BloopServers.name)
@@ -227,17 +228,8 @@ class ConnectionProvider(
     userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
 
-  def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] = {
-    if (importers.isEmpty) {
-      scribe.warn(
-        "mbt-import: MBT is the preferred build server but no MBT importers were discovered"
-      )
-      Future.unit
-    } else
-      mbtImport
-        .runIfApproved(importers, isMbtImportInProcess)
-        .ignoreValue
-  }
+  def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
+    mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
 
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
@@ -877,16 +869,12 @@ class ConnectionProvider(
                 for {
                   importStatus <-
                     if (isMbtPreferred) {
-                      val importers =
-                        buildTools.mbtImporters(shellRunner, () => userConfig)
-                      if (importers.isEmpty) {
-                        scribe.warn(
-                          "mbt-import: no MBT importers discovered during server switch"
+                      mbtImport
+                        .runUnconditionally(
+                          buildTools
+                            .mbtImporters(shellRunner, () => userConfig),
+                          isMbtImportInProcess,
                         )
-                        Future.successful(WorkspaceLoadedStatus.Failed(-1))
-                      } else
-                        mbtImport
-                          .runUnconditionally(importers, isMbtImportInProcess)
                     } else Future.successful(WorkspaceLoadedStatus.Installed)
                   _ <-
                     if (importStatus.isInstalled) connect(request, progress)

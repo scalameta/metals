@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.mbt.importer
 
 import java.nio.file.Files
+import java.util.concurrent.CancellationException
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -8,6 +9,7 @@ import scala.concurrent.Future
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 /**
@@ -52,7 +54,21 @@ final class ScriptMbtImporter(
           "MBT_WORKSPACE" -> workspace.toString,
         ),
       )
-      .map(_ => ())
+      .flatMap {
+        case ExitCodes.Success => Future.successful(())
+        case ExitCodes.Cancel =>
+          Future.failed(
+            new CancellationException(
+              s"mbt-script: ${scriptPath.toFile.getName()} was cancelled"
+            )
+          )
+        case code =>
+          Future.failed(
+            new Exception(
+              s"mbt-script: ${scriptPath.toFile.getName()} failed with exit code $code"
+            )
+          )
+      }
   }
 
   override def isBuildRelated(path: AbsolutePath): Boolean = path == scriptPath

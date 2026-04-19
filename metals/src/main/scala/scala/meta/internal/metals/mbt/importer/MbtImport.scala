@@ -40,6 +40,10 @@ final class MbtImport(
       providers: List[MbtImportProvider],
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
+    if (providers.isEmpty) {
+      scribe.warn("mbt-import: no importers available, skipping")
+      return Future.successful(WorkspaceLoadedStatus.Installed)
+    }
     if (isImportInProcess.compareAndSet(false, true)) {
       Future
         .sequence(
@@ -56,12 +60,11 @@ final class MbtImport(
         )
         .map { results =>
           val builds = results.flatten
-          val merged = builds.foldLeft(MbtBuild.empty)(MbtBuild.merge)
-          writeOutput(merged)
-          if (builds.isEmpty && providers.nonEmpty)
-            WorkspaceLoadedStatus.Failed(-1)
-          else
+          if (builds.nonEmpty) {
+            val merged = builds.foldLeft(MbtBuild.empty)(MbtBuild.merge)
+            writeOutput(merged)
             WorkspaceLoadedStatus.Installed
+          } else WorkspaceLoadedStatus.Failed(-1)
         }
         .recover { case ex =>
           scribe.error("mbt-import: unexpected error during extraction", ex)
@@ -109,6 +112,11 @@ final class MbtImport(
               s"mbt-import: skipping import with status '${result.name}'"
             )
             Future.successful(result)
+          case Some(WorkspaceLoadedStatus.Dismissed) =>
+            scribe.info(
+              "mbt-import: skipping import, notifications are dismissed"
+            )
+            Future.successful(WorkspaceLoadedStatus.Dismissed)
           case _ =>
             val run =
               if (userConfig().shouldAutoImportNewProject) {
