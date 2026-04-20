@@ -20,14 +20,7 @@ case class BazelBuildTool(
   }
 
   def createBspFileArgs(workspace: AbsolutePath): Option[List[String]] =
-    Option.when(workspaceSupportsBsp)(composeArgs())
-
-  def workspaceSupportsBsp: Boolean = {
-    projectRoot.list.exists {
-      case file if file.filename == "WORKSPACE" => true
-      case _ => false
-    }
-  }
+    Option.when(BazelBuildTool.workspaceSupportsBsp(projectRoot))(composeArgs())
 
   private def composeArgs(): List[String] = {
     val classpathSeparator = java.io.File.pathSeparator
@@ -42,11 +35,11 @@ case class BazelBuildTool(
     ) ++ BazelBuildTool.projectViewArgs(projectRoot)
   }
 
-  override def minimumVersion: String = "3.0.0"
+  override def minimumVersion: String = "5.0.0"
 
   override def recommendedVersion: String = version
 
-  override def version: String = BazelBuildTool.version
+  override def version: String = BazelBuildTool.resolveBazelVersion(projectRoot)
 
   override def toString: String = "bazel"
 
@@ -60,7 +53,7 @@ case class BazelBuildTool(
       currentVersion: String,
       workspace: AbsolutePath,
   ): Boolean = {
-    currentVersion != BazelBuildTool.version
+    currentVersion != BazelBuildTool.bspVersion
   }
 
   override def ensurePrerequisites(workspace: AbsolutePath): Unit = {
@@ -77,33 +70,50 @@ case class BazelBuildTool(
 object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
-  val version: String = "3.2.0-20240629-e3d8bdf-NIGHTLY"
+  val bspVersion: String = "4.0.3"
+  val defaultBazelVersion = "8.2.1"
+
+  def resolveBazelVersion(projectRoot: AbsolutePath): String = {
+    val bazelVersionFile = projectRoot.resolve(".bazelversion")
+    if (bazelVersionFile.exists && bazelVersionFile.isFile) {
+      val version = bazelVersionFile.readText.trim()
+      if (version.nonEmpty) version else defaultBazelVersion
+    } else {
+      defaultBazelVersion
+    }
+  }
+
+  def getScalaRulesName(projectRoot: AbsolutePath): Option[String] = {
+    ScalaRulesetFinderHeuristic(projectRoot).guessRulesetName()
+  }
 
   val mainClass = "org.jetbrains.bsp.bazel.install.Install"
 
   val dependency: Dependency = Dependency.of(
-    "org.jetbrains.bsp",
+    "org.virtuslab",
     "bazel-bsp",
-    version,
+    bspVersion,
   )
 
   private def hasProjectView(dir: AbsolutePath): Option[AbsolutePath] =
-    dir.list.find(_.filename.endsWith(".bazelproject"))
+    Some(dir.resolve(".bazelproject"))
+      .filter(_.isFile)
+      .orElse(dir.list.find(_.filename.endsWith(".bazelproject")))
 
-  val fallbackProjectView: String = {
-    """|targets:
-       |    //...
-       |
-       |build_manual_targets: false
-       |
-       |derive_targets_from_directories: false
-       |
-       |enabled_rules:
-       |    io_bazel_rules_scala
-       |    rules_java
-       |    rules_jvm
-       |
-       |""".stripMargin
+  def enabledRules(projectRoot: AbsolutePath): List[String] = {
+    val scalaRules = getScalaRulesName(projectRoot)
+    List(scalaRules.getOrElse("rules_scala"), "rules_java", "rules_jvm")
+  }
+
+  def fallbackProjectView: String = {
+    s"""|targets:
+        |    //...
+        |
+        |build_manual_targets: false
+        |
+        |derive_targets_from_directories: false
+        |
+        |""".stripMargin
   }
 
   def existingProjectView(
@@ -124,9 +134,16 @@ object BazelBuildTool {
         List("-p", projectView.toRelative(projectRoot).toString())
       case None =>
         List(
-          "-t", "//...", "-enabled-rules", "io_bazel_rules_scala", "rules_java",
-          "rules_jvm",
+          "-t",
+          "//...",
         )
+    }
+  }
+
+  def workspaceSupportsBsp(projectRoot: AbsolutePath): Boolean = {
+    val bzlProjectRootFiles = Set("WORKSPACE", "MODULE.bazel")
+    projectRoot.list.exists { file =>
+      bzlProjectRootFiles.contains(file.filename)
     }
   }
 
