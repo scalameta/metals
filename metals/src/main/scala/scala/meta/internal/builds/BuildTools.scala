@@ -281,7 +281,7 @@ final class BuildTools(
 
   /**
    * Returns `true` when at least one MBT importer would be produced for this
-   * workspace.  Intentionally avoids instantiating importers.
+   * workspace. Intentionally avoids instantiating importers.
    */
   def hasMbtImporters: Boolean =
     mavenProject.isDefined ||

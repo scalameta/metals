@@ -197,13 +197,10 @@ class ConnectionProvider(
       mbtImporters: List[MbtImportProvider],
       progress: TaskProgress,
   ): Future[Unit] = {
-    val buildToolName =
-      if (buildTools.isMaven) "Maven"
-      else if (buildTools.isGradle) "Gradle"
-      else "build tool"
+    val buildToolNames = mbtImporters.map(_.name).mkString(",")
 
     languageClient
-      .showMessageRequest(Messages.ChooseBuildServer.params(buildToolName))
+      .showMessageRequest(Messages.ChooseBuildServer.params(buildToolNames))
       .asScala
       .flatMap { item =>
         if (item == null) Future.unit

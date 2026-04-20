@@ -42,7 +42,7 @@ final class MbtImport(
   ): Future[WorkspaceLoadedStatus] = {
     if (providers.isEmpty) {
       scribe.warn("mbt-import: no importers available, skipping")
-      return Future.successful(WorkspaceLoadedStatus.Installed)
+      Future.successful(WorkspaceLoadedStatus.Installed)
     } else if (isImportInProcess.compareAndSet(false, true)) {
       Future
         .sequence(
