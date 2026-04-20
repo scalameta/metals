@@ -81,7 +81,8 @@ trait CommonMtagsEnrichments {
 
     def trimWhitespaceInRange: Option[OffsetParams] = {
       def isWhitespace(i: Int): Boolean =
-        params.text.charAt(i).isWhitespace
+        i < params.text.length &&
+          params.text.charAt(i).isWhitespace
 
       @tailrec
       def trim(start: Int, end: Int): Option[(Int, Int)] =
