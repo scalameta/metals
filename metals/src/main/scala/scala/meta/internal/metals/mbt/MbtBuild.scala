@@ -133,7 +133,11 @@ case class MbtBuild(
 
 object MbtBuild {
   private val gson = new com.google.gson.Gson()
+  private val gsonPretty =
+    new com.google.gson.GsonBuilder().setPrettyPrinting().create()
   val LegacyTargetName = "default"
+
+  def toJson(build: MbtBuild): String = gsonPretty.toJson(build)
 
   def empty: MbtBuild =
     MbtBuild(
@@ -166,6 +170,32 @@ object MbtBuild {
 
   def namespaceTargetId(name: String): String = {
     s"mbt://namespace/$name"
+  }
+
+  /**
+   * Merge two [[MbtBuild]] values produced by different importers.
+   *
+   * - `dependencyModules` are unioned and deduplicated by `id`.
+   * - `namespaces` maps are merged; when the same key exists in both builds,
+   *   the value from `other` wins and a warning is logged.
+   */
+  def merge(a: MbtBuild, b: MbtBuild): MbtBuild = {
+    val mergedModules =
+      (a.getDependencyModules.asScala ++ b.getDependencyModules.asScala)
+        .distinctBy(_.id)
+        .asJava
+
+    val mergedNamespaces =
+      new ju.LinkedHashMap[String, MbtNamespace](a.getNamespaces)
+    b.getNamespaces.asScala.foreach { case (key, ns) =>
+      if (mergedNamespaces.containsKey(key))
+        scribe.warn(
+          s"mbt-merge: namespace '$key' is defined by multiple importers; last one wins."
+        )
+      mergedNamespaces.put(key, ns)
+    }
+
+    MbtBuild(mergedModules, mergedNamespaces)
   }
 
 }
