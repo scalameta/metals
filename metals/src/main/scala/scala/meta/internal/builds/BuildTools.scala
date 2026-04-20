@@ -15,8 +15,6 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
-import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -284,8 +282,7 @@ final class BuildTools(
    * workspace. Intentionally avoids instantiating importers.
    */
   def hasMbtImporters: Boolean =
-    mavenProject.isDefined ||
-      gradleProject.isDefined ||
+    loadSupported().exists(_.isInstanceOf[MbtImportProvider]) ||
       workspace.list.exists(f =>
         ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
       )
@@ -295,14 +292,7 @@ final class BuildTools(
       userConfig: () => UserConfiguration,
   )(implicit ec: ExecutionContext): List[MbtImportProvider] = {
     val buf = List.newBuilder[MbtImportProvider]
-
-    mavenProject.foreach(root =>
-      buf += new MavenMbtImporter(root, shellRunner, userConfig)
-    )
-    gradleProject.foreach(root =>
-      buf += new GradleMbtImporter(root, shellRunner, userConfig)
-    )
-
+    buf ++= loadSupported().collect { case p: MbtImportProvider => p }
     workspace.list
       .filter(f =>
         ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
@@ -310,7 +300,6 @@ final class BuildTools(
       .foreach(script =>
         buf += new ScriptMbtImporter(script, shellRunner, userConfig)
       )
-
     buf.result()
   }
 
