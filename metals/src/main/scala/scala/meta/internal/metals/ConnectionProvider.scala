@@ -27,11 +27,15 @@ import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.builds.WorkspaceLoadedStatus
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.importer.MbtImport
+import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
 
@@ -99,6 +103,7 @@ class ConnectionProvider(
     mbtBuild,
     workDoneProgress,
     scalaVersionSelector,
+    hasMbtImporters = () => buildTools.hasMbtImporters,
   )
 
   val bspConnector: BspConnector = new BspConnector(
@@ -125,6 +130,16 @@ class ConnectionProvider(
     () => userConfig,
   )
 
+  private val mbtImport: MbtImport = new MbtImport(
+    folder,
+    languageClient,
+    tables,
+    () => userConfig,
+  )
+
+  private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
+  private val buildServerPromptShown: AtomicBoolean = new AtomicBoolean(false)
+
   val cancelables = new MutableCancelable
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
@@ -140,19 +155,79 @@ class ConnectionProvider(
     workDoneProgress.trackProgressFuture(
       "Sync",
       progress =>
-        for {
-          _ <-
-            if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot))
-              connect(CreateSession(), progress)
-            else slowConnectToBuildServer(forceImport = false, progress)
-          _ <-
-            if (bspSession.isEmpty && !mbtBuild().isEmpty)
-              connect(Index(check), progress)
-            else Future.unit
-        } yield buildServerPromise.trySuccess(()),
+        connectBuildServer(progress).map(_ =>
+          buildServerPromise.trySuccess(())
+        ),
       metricName = Some("initialize_build_server"),
     )
   }
+
+  /**
+   * Decides which build server to use and starts the connection:
+   *
+   * - MBT preferred/selected → run MBT importers, then create session.
+   * - Already auto-connectable (.bloop/.bsp) → connect straight away.
+   * - MBT importers exist AND no server chosen yet → ask the user once
+   *   ("Use Bloop" / "Use MBT" / "Not now").
+   * - Otherwise → normal slow-connect path (BloopInstall / BSP prompts).
+   */
+  private def connectBuildServer(progress: TaskProgress): Future[Unit] = {
+    val mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
+    if (isMbtPreferred) {
+      for {
+        _ <- runMbtReimport(mbtImporters)
+        _ <-
+          if (bspSession.isEmpty) connect(CreateSession(), progress).ignoreValue
+          else Future.unit
+      } yield ()
+    } else if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
+      connect(CreateSession(), progress).ignoreValue
+    } else if (
+      mbtImporters.nonEmpty &&
+      tables.buildServers.selectedServer().isEmpty &&
+      buildServerPromptShown.compareAndSet(false, true)
+    ) {
+      promptBuildServerChoice(mbtImporters, progress)
+    } else {
+      slowConnectToBuildServer(forceImport = false, progress).ignoreValue
+    }
+  }
+
+  private def promptBuildServerChoice(
+      mbtImporters: List[MbtImportProvider],
+      progress: TaskProgress,
+  ): Future[Unit] = {
+    val buildToolNames = mbtImporters.map(_.name).mkString(",")
+
+    languageClient
+      .showMessageRequest(Messages.ChooseBuildServer.params(buildToolNames))
+      .asScala
+      .flatMap { item =>
+        if (item == null) Future.unit
+        else if (item == Messages.ChooseBuildServer.mbt) {
+          mbtImport
+            .runUnconditionally(mbtImporters, isMbtImportInProcess)
+            .flatMap { importStatus =>
+              if (importStatus.isInstalled) {
+                tables.buildServers.chooseServer(MbtBuildServer.name)
+                connect(CreateSession(), progress).ignoreValue
+              } else Future.unit
+            }
+        } else if (item == Messages.ChooseBuildServer.bloop) {
+          tables.buildServers.chooseServer(BloopServers.name)
+          slowConnectToBuildServer(forceImport = true, progress).ignoreValue
+        } else {
+          Future.unit
+        }
+      }
+  }
+
+  private def isMbtPreferred: Boolean =
+    userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
+      tables.buildServers.selectedServer().contains(MbtBuildServer.name)
+
+  def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
+    mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
 
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
@@ -788,7 +863,26 @@ class ConnectionProvider(
               case None => Future.unit
               case Some(SlowConnect) =>
                 slowConnectToBuildServer(forceImport = true, progress)
-              case Some(request: ConnectRequest) => connect(request, progress)
+              case Some(request: ConnectRequest) =>
+                for {
+                  importStatus <-
+                    if (isMbtPreferred) {
+                      mbtImport
+                        .runUnconditionally(
+                          buildTools
+                            .mbtImporters(shellRunner, () => userConfig),
+                          isMbtImportInProcess,
+                        )
+                    } else Future.successful(WorkspaceLoadedStatus.Installed)
+                  _ <-
+                    if (importStatus.isInstalled) connect(request, progress)
+                    else {
+                      scribe.warn(
+                        s"mbt-import: skipping server switch after failed import (status: ${importStatus.name})"
+                      )
+                      Future.unit
+                    }
+                } yield ()
             }
         } yield ()
       },

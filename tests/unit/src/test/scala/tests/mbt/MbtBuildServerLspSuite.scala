@@ -2,11 +2,17 @@ package tests.mbt
 
 import java.nio.file.Files
 
+import scala.jdk.CollectionConverters._
+
+import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuildServer
 
+import coursierapi.Dependency
+import coursierapi.Fetch
 import tests.BaseCompletionLspSuite
 import tests.BuildInfo
 import tests.Library
@@ -30,12 +36,83 @@ class MbtBuildServerLspSuite
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
       referenceProvider = ReferenceProviderConfig.mbt,
       fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
     )
 
   override def initializeGitRepo: Boolean = true
 
   private def targetIds: Set[String] =
     server.server.buildTargets.allBuildTargetIds.map(_.getUri).toSet
+
+  test("script-import-then-mbt-server") {
+    cleanWorkspace()
+    val scalaBinary = BuildInfo.scalaVersion.split("\\.").take(2).mkString(".")
+    val xmlJar = Fetch
+      .create()
+      .withMainArtifacts()
+      .withDependencies(
+        Dependency
+          .of("org.scala-lang.modules", s"scala-xml_$scalaBinary", "2.3.0")
+          .withTransitive(false)
+      )
+      .fetch()
+      .asScala
+      .map(_.toPath)
+      .head
+    val mbtJson =
+      s"""|{
+          |  "namespaces": {
+          |    "core": {
+          |      "sources": ["src/**"],
+          |      "scalaVersion": "${BuildInfo.scalaVersion}",
+          |      "dependencyModules": [
+          |        {
+          |          "id": "org.scala-lang.modules:scala-xml_$scalaBinary:2.3.0",
+          |          "jar": "$xmlJar"
+          |        }
+          |      ]
+          |    }
+          |  }
+          |}""".stripMargin
+    val script =
+      s"""|#!/bin/sh
+          |printf '$mbtJson' > "$$MBT_OUTPUT_FILE"
+          |""".stripMargin
+
+    for {
+      _ <- initialize(
+        s"""|/build.mbt.sh
+            |$script
+            |/src/Main.scala
+            |package example
+            |
+            |import scala.xml.XML
+            |
+            |object Main {
+            |  val doc = XML.loadString("<root/>")
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didChangeWatchedFiles(".metals/mbt.json")
+      _ <- server.didOpen("src/Main.scala")
+      _ <- server.assertHover(
+        "src/Main.scala",
+        """|package example
+           |
+           |import scala.xml.XML
+           |
+           |object Main {
+           |  val doc = XML.load@@String("<root/>")
+           |}""".stripMargin,
+        """|```scala
+           |def loadString(string: String): Elem
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
 
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()

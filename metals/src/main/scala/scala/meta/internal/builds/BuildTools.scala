@@ -6,6 +6,8 @@ import java.nio.file.Files
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
@@ -13,6 +15,8 @@ import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.importer.MbtImportProvider
+import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 
@@ -271,6 +275,32 @@ final class BuildTools(
       if (knownBsps(name) && !ScalaCli.names(name)) None
       else Some(name)
     } else None
+  }
+
+  /**
+   * Returns `true` when at least one MBT importer would be produced for this
+   * workspace. Intentionally avoids instantiating importers.
+   */
+  def hasMbtImporters: Boolean =
+    loadSupported().exists(_.isInstanceOf[MbtImportProvider]) ||
+      workspace.list.exists(f =>
+        ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
+      )
+
+  def mbtImporters(
+      shellRunner: ShellRunner,
+      userConfig: () => UserConfiguration,
+  )(implicit ec: ExecutionContext): List[MbtImportProvider] = {
+    val buf = List.newBuilder[MbtImportProvider]
+    buf ++= loadSupported().collect { case p: MbtImportProvider => p }
+    workspace.list
+      .filter(f =>
+        ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
+      )
+      .foreach(script =>
+        buf += new ScriptMbtImporter(script, shellRunner, userConfig)
+      )
+    buf.result()
   }
 
   def initialize(): Set[BuildTool] = {

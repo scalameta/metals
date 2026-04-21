@@ -24,6 +24,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
   val BspErrors = new Notification(15)
   val RequestTimeout = new Notification(16)
   val ScalafixConfAmend = new Notification(17)
+  val MbtImportChanges = new Notification(18)
 
   val all: List[Notification] = List(
     Only212Navigation,
@@ -41,6 +42,7 @@ final class DismissedNotifications(conn: () => Connection, time: Time) {
     BspErrors,
     RequestTimeout,
     ScalafixConfAmend,
+    MbtImportChanges,
   )
 
   def resetAll(): Unit = {

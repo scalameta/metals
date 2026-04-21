@@ -294,17 +294,24 @@ class ProjectMetalsLspService(
 
   def onBuildChangedUnbatched(
       paths: Seq[AbsolutePath]
-  ): Future[Unit] =
-    if (
-      connectionProvider.willGenerateBspConfig ||
-      userConfig.buildChangedAction.isNone
-    ) Future.unit
-    else {
+  ): Future[Unit] = {
+    if (connectionProvider.willGenerateBspConfig) {
+      Future.unit
+    } else if (
+      bspSession.exists(s => MbtBuildServer.isMbtServer(s.main.name))
+    ) {
+      val mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
+      if (paths.exists(path => mbtImporters.exists(_.isBuildRelated(path))))
+        connectionProvider.runMbtReimport(mbtImporters)
+      else
+        Future.unit
+    } else if (userConfig.buildChangedAction.isNone) {
+      Future.unit
+    } else {
       val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
       tables.buildTool.selectedBuildTool() match {
-        // no build tool and new added
         case None if changedBuilds.nonEmpty =>
-          scribe.info(s"Detected new build tool in $path")
+          scribe.info(s"Detected new build tool in ${paths.mkString(", ")}")
           connectionProvider.fullConnect()
         // used build tool changed
         case Some(chosenBuildTool) if changedBuilds.contains(chosenBuildTool) =>
@@ -321,6 +328,7 @@ class ProjectMetalsLspService(
         case _ => Future.unit
       }
     }
+  }
 
   private def onBuildToolsAdded(
       currentBuildToolName: String,

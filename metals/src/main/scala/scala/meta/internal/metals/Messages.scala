@@ -199,6 +199,22 @@ object Messages {
     }
   }
 
+  object ChooseBuildServer {
+    def bloop: MessageActionItem = new MessageActionItem("Use Bloop")
+    def mbt: MessageActionItem = new MessageActionItem("Use MBT")
+    def notNow: MessageActionItem = Messages.notNow
+
+    def params(buildToolName: String): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams()
+      params.setMessage(
+        s"New $buildToolName workspace detected. Which build server would you like to use?"
+      )
+      params.setType(MessageType.Info)
+      params.setActions(List(bloop, mbt, notNow).asJava)
+      params
+    }
+  }
+
   object StartHttpServer {
     def yes = new MessageActionItem("Start")
 
