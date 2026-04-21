@@ -5,9 +5,10 @@ title: Model Context Protocol (MCP)
 
 ## Overview
 
-Metals implements a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
-server that allows AI-powered tools to interact with your Scala project. MCP
-provides a standardized way for AI assistants like Cursor, Claude Code, or other
+Metals implements a
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that
+allows AI-powered tools to interact with your Scala project. MCP provides a
+standardized way for AI assistants like Cursor, Claude Code, or other
 MCP-compatible clients to access project information, compile code, run tests,
 and perform intelligent code analysis.
 
@@ -27,21 +28,31 @@ them access to:
 When using Metals inside an editor like VS Code or Cursor, the MCP server runs
 alongside the language server and can be enabled through settings.
 
-1. **Enable MCP in Metals**: Set `metals.startMcpServer` to `true` in your editor
-   settings.
+1. **Enable MCP in Metals**: Set `metals.startMcpServer` to `true` in your
+   editor settings.
 
 2. **Automatic Configuration**: For common editors like Cursor or VS Code (with
    GitHub Copilot), Metals will automatically add the MCP configuration to your
-   workspace when the above option is enabled. You can verify the connection in 
+   workspace when the above option is enabled. You can verify the connection in
    your AI agent settings.
 
 3. **Manual Configuration**: For other AI tools, Metals will display a message
    with the port number when the MCP server starts. You can also find this
    information in the Metals log (`.metals/metals.log`) with the message:
-   `Metals MCP server started on port: ${port}`. It is also available in the
+   `Metals MCP server started on port: <port>`. It is also available in the
    `.metals/mcp.json` file.
 
 The MCP server endpoint is available at `http://localhost:<port>/mcp`.
+
+As an example of manual configuration, if you want to add Metals MCP to Claude
+Code you can use the command:
+
+```bash
+claude mcp add --transport http metals "http://localhost:$(grep -oE 'localhost:[0-9]+' .metals/mcp.json | head -n1 | sed 's/.*://')/mcp"
+```
+
+Run this from the workspace root so `.metals/mcp.json` is found; the port is
+read from that file.
 
 ### Using MCP Standalone
 
@@ -50,7 +61,7 @@ editor. This is useful for:
 
 - Using AI tools that don't have built-in editor integration
 - Running MCP in headless environments
-- Command-line based AI workflows
+- Command-line-based AI workflows
 
 #### Installation
 
@@ -105,45 +116,45 @@ Metals provides a comprehensive set of tools through MCP:
 
 ### Compilation Tools
 
-| Tool | Description |
-|------|-------------|
-| `compile-file` | Compile a specific Scala file. Returns errors in the file, or if none, errors in the containing module. |
-| `compile-module` | Compile a chosen build target/module by name. |
-| `compile-full` | Compile the entire Scala project. |
+| Tool             | Description                                                                                             |
+| ---------------- | ------------------------------------------------------------------------------------------------------- |
+| `compile-file`   | Compile a specific Scala file. Returns errors in the file, or if none, errors in the containing module. |
+| `compile-module` | Compile a chosen build target/module by name.                                                           |
+| `compile-full`   | Compile the entire Scala project.                                                                       |
 
 ### Testing
 
-| Tool | Description |
-|------|-------------|
+| Tool   | Description                                                                                                                                            |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `test` | Run Scala test suites. Supports running specific test classes or individual test methods. Works with ScalaTest, MUnit, ZIO Test, and other frameworks. |
 
 ### Symbol Search and Inspection
 
-| Tool | Description |
-|------|-------------|
-| `glob-search` | Search for symbols by partial name matching. Find packages, classes, objects, methods, traits, and other symbols across the workspace. |
-| `typed-glob-search` | Search for symbols filtered by type (package, class, object, function, method, trait). |
-| `inspect` | Inspect a Scala symbol. Returns members for packages/objects/traits, members and constructors for classes, and signatures for methods. |
-| `get-docs` | Get documentation (ScalaDoc) for a symbol. |
-| `get-usages` | Find all references and usages of a symbol across the project. |
-| `get-source` | Get the source file contents for a symbol. Useful for understanding library code. |
+| Tool                | Description                                                                                                                            |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `glob-search`       | Search for symbols by partial name matching. Find packages, classes, objects, methods, traits, and other symbols across the workspace. |
+| `typed-glob-search` | Search for symbols filtered by type (package, class, object, function, method, trait).                                                 |
+| `inspect`           | Inspect a Scala symbol. Returns members for packages/objects/traits, members and constructors for classes, and signatures for methods. |
+| `get-docs`          | Get documentation (ScalaDoc) for a symbol.                                                                                             |
+| `get-usages`        | Find all references and usages of a symbol across the project.                                                                         |
+| `get-source`        | Get the source file contents for a symbol. Useful for understanding library code.                                                      |
 
 ### Build and Dependencies
 
-| Tool | Description |
-|------|-------------|
-| `import-build` | Re-import the build after changes (e.g., adding dependencies to build.sbt). |
-| `find-dep` | Search for dependencies using Coursier. Complete organization, artifact name, and version. |
-| `list-modules` | List all available modules (build targets) in the project. |
+| Tool           | Description                                                                                |
+| -------------- | ------------------------------------------------------------------------------------------ |
+| `import-build` | Re-import the build after changes (e.g., adding dependencies to build.sbt).                |
+| `find-dep`     | Search for dependencies using Coursier. Complete organization, artifact name, and version. |
+| `list-modules` | List all available modules (build targets) in the project.                                 |
 
 ### Code Quality
 
-| Tool | Description |
-|------|-------------|
-| `format-file` | Format a Scala file using the project's Scalafmt configuration. |
-| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings. |
-| `run-scalafix-rule` | Run a previously created Scalafix rule. |
-| `list-scalafix-rules` | List available Scalafix rules including the generated ones from `.metals/rules` directory. |
+| Tool                     | Description                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `format-file`            | Format a Scala file using the project's Scalafmt configuration.                            |
+| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings.        |
+| `run-scalafix-rule`      | Run a previously created Scalafix rule.                                                    |
+| `list-scalafix-rules`    | List available Scalafix rules including the generated ones from `.metals/rules` directory. |
 
 ## Tool Usage Examples
 
@@ -189,19 +200,9 @@ Using MCP, generate a scalafix rule that converts filter.map chains to collect
 
 When using MCP with Metals in an editor:
 
-| Setting | Description | Default |
-|---------|-------------|---------|
+| Setting                 | Description           | Default |
+| ----------------------- | --------------------- | ------- |
 | `metals.startMcpServer` | Enable the MCP server | `false` |
-
-## Supported Clients
-
-Metals MCP works with various AI clients:
-
-- **Cursor** - Configuration is auto-generated
-- **VS Code with GitHub Copilot** - Configuration is auto-generated
-- **Claude Code** - Configuration is auto-generated
-- **Claude Desktop** - Manual configuration required
-- **Other MCP Clients** - Use the port from Metals log or standalone server
 
 ## Tips for AI Agents
 
@@ -221,6 +222,12 @@ When working with Metals MCP, AI agents should:
 
 5. **After code changes**: Call `format-file` to ensure code follows project
    style guidelines.
+
+You can add these tips to your AI agent's prompt to help it use Metals MCP
+effectively. Examples of such approaches are in the
+[VirtusLab Skills Repository](https://github.com/VirtusLab/scala-skill/blob/master/direct-style-scala/SKILL.md)
+and within Metals itself in the
+[AGENTS.md](https://github.com/scalameta/metals/blob/main/AGENTS.md) file.
 
 ## Troubleshooting
 
