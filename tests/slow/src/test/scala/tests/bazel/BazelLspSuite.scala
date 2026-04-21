@@ -348,7 +348,7 @@ class BazelLspSuite
            |                   ^
            |""".stripMargin,
       )
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
     } yield ()
   }
 

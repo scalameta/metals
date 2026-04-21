@@ -1,0 +1,65 @@
+"""Bazel module ./test/shell/test_examples.sh tests"""
+
+module(name = "overridden_artifacts")
+
+bazel_dep(name = "dummy-scala_rules.2")
+local_path_override(
+    module_name = "rules_scala",
+    path = "fake/path",
+)
+
+bazel_dep(name = "latest_dependencies", dev_dependency = True)
+local_path_override(
+    module_name = "latest_dependencies",
+    path = "fake/path/deps/latest",
+)
+
+scala_config = use_extension(
+    "@dummy-scala_rules.2//scala/extensions:config.bzl",
+    "scala_config",
+)
+scala_config.settings(
+    scala_version = "3.3.7",
+)
+
+scala_deps = use_extension(
+    "@dummy-scala_rules.2//scala/extensions:deps.bzl",
+    "scala_deps",
+    dev_dependency = True,
+)
+scala_deps.settings(
+    fetch_sources = False,
+)
+scala_deps.scala()
+
+# Deliberately set for Scala 3.3 and 2.13 versions less than the most
+# recently supported. See the `scala_version` setting at the top of
+# `third_party/repositories/scala_{2_13,3_3}.bzl`.
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_library",
+    artifact = "org.scala-lang:scala3-library_3:3.3.4",
+    sha256 = "d95184acfcd814da2e051378e4962c653f4b468f4086452ab427af030482bd3c",
+)
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_compiler",
+    artifact = "org.scala-lang:scala3-compiler_3:3.3.4",
+    sha256 = "2cca65fdb92e2cc393786cae61b4f7bcb9032ad4be61f9cebae1dca72997e52f",
+    # These are _not_ strictly required in this case, but we want to test that
+    # nothing breaks when they're specified.
+    deps = [
+        "@io_bazel_rules_scala_scala_asm",
+        "@io_bazel_rules_scala_scala_interfaces",
+        "@io_bazel_rules_scala_scala_library",
+        "@io_bazel_rules_scala_scala_tasty_core",
+        "@org_jline_jline_reader",
+        "@org_jline_jline_terminal",
+        "@org_jline_jline_terminal_jni",
+        "@org_scala_sbt_compiler_interface",
+    ],
+)
+scala_deps.overridden_artifact(
+    name = "io_bazel_rules_scala_scala_library_2",
+    artifact = "org.scala-lang:scala-library:2.13.14",
+    sha256 = "43e0ca1583df1966eaf02f0fbddcfb3784b995dd06bfc907209347758ce4b7e3",
+)
+scala_deps.scalatest()
