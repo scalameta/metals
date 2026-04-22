@@ -511,15 +511,20 @@ object SbtBuildTool {
           args <- json("argv").arrOpt
           firstArg <- args.headOption
           javaArg <- firstArg.strOpt
-          if (javaArg.endsWith("java"))
+          // possible bug with Windows when path to java ends with /
+          javaArgEscaped =
+            if (scala.util.Properties.isWin)
+              javaArg.replace("/", "\\")
+            else javaArg
+          if (javaArg.endsWith("java") || javaArg.endsWith("java.exe"))
         } yield {
           val possibleJavaBinaries =
             JavaBinary.allPossibleJavaBinaries(userJavaHome)
           val sbtJavaHomeIsCorrect =
-            possibleJavaBinaries.exists(_.toString == javaArg)
+            possibleJavaBinaries.exists(_.toString == javaArgEscaped)
           if (!sbtJavaHomeIsCorrect) {
             scribe.debug(
-              s"Java binary used by sbt server $javaArg doesn't match the expected java home. Possible paths considered: $possibleJavaBinaries"
+              s"Java binary used by sbt server $javaArgEscaped doesn't match the expected java home. Possible paths considered: $possibleJavaBinaries"
             )
           }
           sbtJavaHomeIsCorrect
