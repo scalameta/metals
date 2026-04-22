@@ -45,7 +45,7 @@ final class ScriptMbtImporter(
     shellRunner
       .run(
         s"mbt-script: ${scriptPath.toFile.getName()}",
-        buildCommand,
+        buildCommand(workspace),
         workspace,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,
@@ -81,13 +81,21 @@ final class ScriptMbtImporter(
       .map(AbsolutePath(_))
       .getOrElse(scriptPath)
 
-  private[importer] def buildCommand: List[String] = {
+  private[importer] def buildCommand(workspace: AbsolutePath): List[String] = {
     if (scriptPath.toFile.getName().endsWith(".mbt.sh"))
       List("sh", scriptPath.toString)
     else {
       // .mbt.scala or .mbt.java — use Scala CLI
       val launcher = userConfig().scalaCliLauncher.getOrElse("scala-cli")
-      List(launcher, "run", scriptPath.toString)
+      val scalaCliWorkspace = workspace.resolve(s".metals/scala-cli-$name")
+      List(
+        launcher,
+        "run",
+        "--server=false",
+        "--workspace",
+        scalaCliWorkspace.toString,
+        scriptPath.toString,
+      )
     }
   }
 }
