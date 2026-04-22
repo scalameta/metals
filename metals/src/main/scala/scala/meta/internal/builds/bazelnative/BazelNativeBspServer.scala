@@ -44,8 +44,10 @@ class BazelNativeBspServer(
   @volatile private var buildClient: Option[ch.epfl.scala.bsp4j.BuildClient] =
     None
 
-  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit =
+  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit = {
+    scribe.info(s"Setting buildClient to ${client}")
     buildClient = Some(client)
+  }
 
   // -- BazelNativeBspClient implementation --
 
@@ -53,14 +55,20 @@ class BazelNativeBspServer(
     buildClient.foreach(_.onBuildTaskStart(params))
   override def onBuildTaskFinish(params: TaskFinishParams): Unit =
     buildClient.foreach(_.onBuildTaskFinish(params))
-  override def onBuildTaskProgress(params: TaskProgressParams): Unit =
+  override def onBuildTaskProgress(params: TaskProgressParams): Unit = {
+    scribe.info(s"Sending onBuildTaskProgress to ${buildClient}")
     buildClient.foreach(_.onBuildTaskProgress(params))
+  }
+
   override def onBuildPublishDiagnostics(
       params: PublishDiagnosticsParams
   ): Unit =
     buildClient.foreach(_.onBuildPublishDiagnostics(params))
-  override def onBuildShowMessage(params: ShowMessageParams): Unit =
+  override def onBuildShowMessage(params: ShowMessageParams): Unit = {
+    scribe.info(s"Sending onBuildShowMessage to ${buildClient}")
     buildClient.foreach(_.onBuildShowMessage(params))
+  }
+
   override def onBuildLogMessage(params: LogMessageParams): Unit =
     buildClient.foreach(_.onBuildLogMessage(params))
 
@@ -237,7 +245,7 @@ class BazelNativeBspServer(
           if (exitCode == 0) StatusCode.OK else StatusCode.ERROR
         val result = new CompileResult(statusCode)
         result.setOriginId(originId)
-        result.setDataKind()
+        // result.setDataKind()
         result
       },
       executor,

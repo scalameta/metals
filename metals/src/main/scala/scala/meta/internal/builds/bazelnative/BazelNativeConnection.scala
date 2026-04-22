@@ -52,10 +52,10 @@ object BazelNativeConnection {
     val targetData = new BazelNativeTargetData()
 
     def createConnection(): Future[SocketConnection] = Future {
-      val wiredTranslator = new BazelNativeBepTranslator(null)
+      val wiredTranslator = new BazelNativeBepTranslator
       val wiredBesServer = new BazelNativeBesServer(wiredTranslator)
 
-      val wiredBspServer =
+      val bspServer =
         new BazelNativeBspServer(
           workspace,
           process,
@@ -65,21 +65,10 @@ object BazelNativeConnection {
           targetData,
         )
 
-      val translatorWithClient = new BazelNativeBepTranslator(wiredBspServer)
-      val besServerWithClient = new BazelNativeBesServer(translatorWithClient)
+      wiredTranslator.setClient(bspServer)
 
-      val bspServer =
-        new BazelNativeBspServer(
-          workspace,
-          process,
-          besServerWithClient,
-          translatorWithClient,
-          aspectsManager,
-          targetData,
-        )
-
-      val besPort = besServerWithClient.start()
-      scribe.debug(
+      val besPort = wiredBesServer.start()
+      scribe.info(
         s"[BazelNative Connection] BES server started on port $besPort"
       )
 
@@ -98,6 +87,9 @@ object BazelNativeConnection {
           .create()
 
       val remoteProxy = serverLauncher.getRemoteProxy
+      scribe.info(
+        s"[BazelNative Connection] Setting BSP client to $remoteProxy"
+      )
       bspServer.setClient(remoteProxy)
 
       val listening = serverLauncher.startListening()
@@ -114,7 +106,7 @@ object BazelNativeConnection {
 
       val cancelable = Cancelable { () =>
         listening.cancel(true)
-        besServerWithClient.shutdown()
+        wiredBesServer.shutdown()
         process.cancel()
       }
 

@@ -24,12 +24,14 @@ import com.google.protobuf.UnknownFieldSet
  * Progress is derived from Bazel's stderr output: lines matching `[N / M]` are
  * translated into `build/taskProgress` BSP notifications.
  */
-class BazelNativeBepTranslator(client: BazelNativeBspClient) {
+class BazelNativeBepTranslator {
 
   private val gson = new Gson()
   private val activeTaskIds = new ConcurrentHashMap[String, TaskId]()
   @volatile private var currentOriginId: Option[String] = None
   @volatile private var currentTargets: List[BuildTargetIdentifier] = Nil
+  @volatile private var maybeClient: Option[BazelNativeBspClient] = None
+  private lazy val client: BazelNativeBspClient = maybeClient.get
 
   private val ProgressPattern = """\[(\d+)\s*/\s*(\d+)\]""".r.unanchored
 
@@ -45,6 +47,12 @@ class BazelNativeBepTranslator(client: BazelNativeBspClient) {
   def clearState(): Unit = {
     currentOriginId = None
     currentTargets = Nil
+  }
+
+  def setClient(client: BazelNativeBspClient): Unit = {
+    scribe.info(s"Setting buildClient to ${client}")
+    maybeClient = Some(client)
+    this.client
   }
 
   /**
