@@ -17,7 +17,7 @@
 
 import scala.util.control.NonFatal
 
-@main def cherryPickBetweenTags(args: String*): Unit =
+@main def cherryPickBetweenTags(args: String*): Unit = 
   val (fromTag, toTag, repoPath) = args.toList match
     case from :: to :: Nil          => (from, to, ".")
     case from :: to :: path :: Nil  => (from, to, path)

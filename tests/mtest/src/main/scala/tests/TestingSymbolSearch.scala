@@ -19,8 +19,6 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
-import scala.meta.pc.reports.EmptyReportContext
-import scala.meta.pc.reports.ReportContext
 
 import org.eclipse.{lsp4j => l}
 
@@ -37,7 +35,7 @@ class TestingSymbolSearch(
     index: GlobalSymbolIndex = OnDemandSymbolIndex.empty(
       mtags = () => Mtags.testingSingleton
     )
-)(implicit rc: ReportContext = new EmptyReportContext()) extends SymbolSearch {
+) extends SymbolSearch {
 
   override def documentation(
       symbol: String,

@@ -54,6 +54,7 @@ final class ScriptMbtImporter(
           "MBT_WORKSPACE" -> workspace.toString,
         ),
       )
+      .future
       .flatMap {
         case ExitCodes.Success => Future.successful(())
         case ExitCodes.Cancel =>

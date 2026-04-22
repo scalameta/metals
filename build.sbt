@@ -659,8 +659,6 @@ lazy val metals = project
         scalaVersion.value
       ) cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      // For starting Ammonite
-      "io.github.alexarchambault.ammonite" %% "ammonite-runner" % "0.4.0",
       "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
@@ -702,7 +700,6 @@ lazy val metals = project
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
       "javaSemanticdbVersion" -> V.javaSemanticdb,
       "scalafmtVersion" -> V.scalafmt,
-      "ammoniteVersion" -> V.ammonite,
       "scalaCliVersion" -> V.scalaCli,
       "millVersion" -> V.mill,
       "debugAdapterVersion" -> V.debugAdapter,
@@ -715,9 +712,6 @@ lazy val metals = project
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala211" -> V.scala211,
       "scala212" -> V.scala212,
-      "ammonite212" -> V.ammonite212Version,
-      "ammonite213" -> V.ammonite213Version,
-      "ammonite3" -> V.ammonite3Version,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,

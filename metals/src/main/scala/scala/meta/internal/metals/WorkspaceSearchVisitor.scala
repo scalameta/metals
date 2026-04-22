@@ -5,11 +5,11 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
 
-import scala.meta.Dialect
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.DescriptorParser
 import scala.meta.internal.semanticdb.Scala.Symbols
@@ -90,15 +90,15 @@ class WorkspaceSearchVisitor(
       pkg: String,
       filename: String,
       index: GlobalSymbolIndex,
-  ): Option[(AbsolutePath, Dialect)] = {
+  ): Option[SymbolDefinition] = {
     val nme = Classfile.name(filename)
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-    val forTpe = index.findFileForToplevel(tpe)
+    val forTpe = index.definitions(tpe)
     val defs = if (forTpe.isEmpty) {
       val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
-      index.findFileForToplevel(term)
+      index.definitions(term)
     } else forTpe
-    defs.sortBy(_._1)(resultOrdering).headOption
+    defs.sortBy(_.path)(resultOrdering).headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
   override def visitWorkspaceSymbol(
@@ -130,21 +130,21 @@ class WorkspaceSearchVisitor(
   private def expandClassfile(pkg: String, filename: String): Int = {
     var isHit = false
     for {
-      (path, dialect) <- definition(pkg, filename, index)
-      if !isVisited(path)
+      defn <- definition(pkg, filename, index)
+      if !isVisited(defn.path)
     } {
-      isVisited += path
-      val input = path.toInput
+      isVisited += defn.path
+      val input = defn.path.toInput
       SemanticdbDefinition.foreach(
         mtags,
         input,
-        dialect,
+        defn.dialect,
         includeMembers = false,
       ) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
           val adjustedPath =
-            if (saveClassFileToDisk) path.toFileOnDisk(workspace)
-            else path
+            if (saveClassFileToDisk) defn.path.toFileOnDisk(workspace)
+            else defn.path
           val uri = adjustedPath.toURI.toString
           fromClasspath.add(semanticDefn.toLsp(uri))
           isHit = true

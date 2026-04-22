@@ -6,14 +6,13 @@ import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.reports.EmptyReportContext
 
 /**
  * Symbol index that delegates all methods to an underlying implementation
  */
 class DelegatingGlobalSymbolIndex(
     var underlying: OnDemandSymbolIndex =
-      OnDemandSymbolIndex.empty(mtags = () => mtags.Mtags.testingSingleton)(new EmptyReportContext())
+      OnDemandSymbolIndex.empty(mtags = () => mtags.Mtags.testingSingleton)
 ) extends GlobalSymbolIndex {
 
   def definitions(symbol: mtags.Symbol): List[SymbolDefinition] =
@@ -43,8 +42,4 @@ class DelegatingGlobalSymbolIndex(
     underlying.addSourceDirectory(dir, dialect)
   }
 
-  def findFileForToplevel(
-      topLevelSymbol: mtags.Symbol
-  ): List[(AbsolutePath, Dialect)] =
-    underlying.findFileForToplevel(topLevelSymbol)
 }

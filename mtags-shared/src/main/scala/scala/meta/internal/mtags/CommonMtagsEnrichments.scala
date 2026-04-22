@@ -266,10 +266,8 @@ trait CommonMtagsEnrichments {
       else if (isJavaFilename) Semanticdb.Language.JAVA
       else if (isProtoFilename) Semanticdb.Language.PROTOBUF
       else Semanticdb.Language.UNKNOWN_LANGUAGE
-    def isAmmoniteGeneratedFile: Boolean =
-      doc.endsWith(".amm.sc.scala")
     def isScalaCLIGeneratedFile: Boolean =
-      doc.endsWith(".sc.scala") && !isAmmoniteGeneratedFile
+      doc.endsWith(".sc.scala")
     def isMill: Boolean =
       doc.endsWith(".mill") ||
         doc.endsWith(".mill.scala") ||
@@ -465,7 +463,7 @@ trait CommonMtagsEnrichments {
     def withOptional(key: String, value: Option[String]): Event =
       value.fold(event)(event.withLabel(key, _))
   }
-  
+
   implicit class XtensionSymbol(symbol: String) {
     def fqcn: String =
       symbol

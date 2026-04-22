@@ -28,6 +28,7 @@ final class CodeActionProvider(
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
     new ImportMissingSymbolQuickFix(compilers, buildTargets),
+    new SourceAddMissingImports(compilers, buildTargets, diagnostics),
     new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
     new StringActions(buffers),
@@ -62,7 +63,6 @@ final class CodeActionProvider(
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
     val requestedKinds = Option(params.getContext.getOnly).map(_.asScala.toList)
-
     def isRequestedKind(action: CodeAction): Boolean =
       requestedKinds match {
         case Some(only) =>

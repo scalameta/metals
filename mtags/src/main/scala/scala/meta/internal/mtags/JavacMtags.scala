@@ -849,16 +849,16 @@ class JavacMtags(
                      |```
                      |""".stripMargin)
 
-    rc.unsanitized.create(
+    rc.unsanitized.create(() =>
       new Report(
         name = "mtags-javac-error",
         text = s"""|error in javac parser$content
                    |$diagnosticsContent
                    |""".stripMargin,
         error = Some(e),
-        path = Some(new URI(input.path)),
+        path = Some(new URI(input.path)).asJava,
         shortSummary = s"JavacMtags error processing ${input.path}",
-        id = Some(input.path)
+        id = Some(input.path).asJava
       )
     )
   }

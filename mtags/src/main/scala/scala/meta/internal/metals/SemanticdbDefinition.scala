@@ -5,6 +5,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.internal.jsemanticdb.Semanticdb
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
@@ -13,7 +14,6 @@ import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.internal.{semanticdb => s}
-import scala.meta.pc.reports.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 import org.eclipse.{lsp4j => l}

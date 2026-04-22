@@ -1461,7 +1461,7 @@ class Compilers(
           Some(fallbackCompiler(path))
         case Some(value) =>
           if (path.isScalaFilename)
-            Some(loadCompiler(value).getOrElse(fallbackCompiler))
+            Some(loadCompiler(value).getOrElse(fallbackCompiler(path)))
           else if (path.isJavaFilename && forceScala)
             loadCompiler(value)
               .orElse(loadJavaCompiler(value))

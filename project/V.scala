@@ -11,10 +11,6 @@ object V {
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.21"
-  val ammonite212Version = "2.12.19"
-  val ammonite213Version = "2.13.14"
-  val ammonite3Version = "3.3.4"
-  val ammonite = "3.0.0-2-6342755f"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
@@ -25,7 +21,7 @@ object V {
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
   val coursierInterfaces = "1.0.28"
-  val debugAdapter = "4.2.5"
+  val debugAdapter = "4.2.8"
   val genyVersion = "1.0.0"
   val gitter8Version = "0.17.0"
   val gradleBloop = "1.6.3"
@@ -185,9 +181,7 @@ object V {
 //    scala211,
     // sbtScala,
     scala212,
-//    ammonite212Version,
     scala213,
-//    ammonite213Version,
 //    lastPublishedScala3,
   ).toList
 }

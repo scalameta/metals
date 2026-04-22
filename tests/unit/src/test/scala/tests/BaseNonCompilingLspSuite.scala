@@ -5,7 +5,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
-import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 
 abstract class BaseNonCompilingLspSuite(name: String)
     extends BaseCompletionLspSuite(name) {
@@ -117,7 +116,6 @@ abstract class BaseNonCompilingLspSuite(name: String)
             "a/src/main/scala/a/A.scala",
             newText,
             s"""|${ImportMissingSymbol.title("UniqueObjectOther", "b")}
-                |${SourceAddMissingImports.title}
                 |${CreateNewSymbol.title("UniqueObjectOther")}
                 |""".stripMargin,
             kind = List(ImportMissingSymbolQuickFix.kind),
@@ -378,7 +376,6 @@ abstract class BaseNonCompilingLspSuite(name: String)
             "a/src/main/scala/a/A.scala",
             newText,
             s"""|${ImportMissingSymbol.title("UniqueObject", "b.W")}
-                |${SourceAddMissingImports.title}
                 |${CreateNewSymbol.title("UniqueObject")}
                 |""".stripMargin,
             kind = List(ImportMissingSymbolQuickFix.kind),

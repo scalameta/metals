@@ -5,7 +5,6 @@ import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
-import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.CodeActionKind

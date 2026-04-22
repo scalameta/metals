@@ -4,7 +4,6 @@ import java.nio.file.Path
 
 import scala.collection.mutable
 
-import scala.meta.Dialect
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.EmptyReportContext
@@ -14,7 +13,9 @@ import scala.meta.internal.metals.WorkspaceSymbolProvider
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.mcp.McpQueryEngine.kindToTypeString
 import scala.meta.internal.mtags.GlobalSymbolIndex
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
@@ -27,6 +28,7 @@ class McpSymbolSearch(
     index: GlobalSymbolIndex,
     buildTargets: BuildTargets,
     workspaceSearchProvider: WorkspaceSymbolProvider,
+    mtags: () => Mtags,
 ) {
 
   def nameSearch(
@@ -41,7 +43,7 @@ class McpSymbolSearch(
       lastPart.toLowerCase.contains(lowerCaseQuery)
     }
     search(
-      WorkspaceSymbolQuery.fromTextQuery(query),
+      WorkspaceSymbolQuery.fuzzy(query),
       matches,
       symbolTypes,
       path,
@@ -69,6 +71,7 @@ class McpSymbolSearch(
       index,
       symbolTypes,
       matches,
+      mtags,
     )
 
     val buildTarget =
@@ -93,6 +96,7 @@ private[mcp] class McpSearchVisitor(
     index: GlobalSymbolIndex,
     symbolTypes: Set[SymbolType],
     matches: String => Boolean,
+    mtags: () => Mtags,
 ) extends SymbolSearchVisitor {
   private val results = mutable.ListBuffer.empty[SearchResult]
   def getResults: Seq[SearchResult] = results.toSeq
@@ -191,11 +195,12 @@ private[mcp] class McpSearchVisitor(
       includeMembers: Boolean = false,
   )(f: SearchResult => Unit): Unit = {
     definition(pkg, name).foreach {
-      case (path, dialect) if shouldVisitFile(path) =>
-        val input = path.toInput
+      case defn if shouldVisitFile(defn.path) =>
+        val input = defn.path.toInput
         SemanticdbDefinition.foreach(
+          mtags(),
           input,
-          dialect,
+          defn.dialect,
           includeMembers,
         ) { semanticdbDefn =>
           lazy val kind =
@@ -205,7 +210,7 @@ private[mcp] class McpSearchVisitor(
           val searchResult = SearchResult(
             symbol = semanticdbDefn.info.symbol,
             symbolType = kind,
-            definitionPath = Some(path),
+            definitionPath = Some(defn.path),
           )
           f(searchResult)
         }(EmptyReportContext)
@@ -216,12 +221,12 @@ private[mcp] class McpSearchVisitor(
   private def definition(
       pkg: String,
       nme: String,
-  ): List[(AbsolutePath, Dialect)] = {
+  ): List[SymbolDefinition] = {
     val tpe = Symbol(Symbols.Global(pkg, Descriptor.Type(nme)))
-    val forTpe = index.findFileForToplevel(tpe)
+    val forTpe = index.definitions(tpe)
     val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
-    val forTerm = index.findFileForToplevel(term)
-    (forTpe ++ forTerm).distinctBy(_._1)
+    val forTerm = index.definitions(term)
+    (forTpe ++ forTerm).distinctBy(_.path)
   }
 }
 

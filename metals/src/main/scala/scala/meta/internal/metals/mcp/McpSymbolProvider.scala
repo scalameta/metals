@@ -7,11 +7,13 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mcp.McpQueryEngine.kindToTypeString
+import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
 
 class McpSymbolProvider(
     scalaVersionSelector: ScalaVersionSelector,
     mcpSearch: McpSymbolSearch,
+    mtags: () => Mtags,
 ) {
 
   /**
@@ -34,6 +36,7 @@ class McpSymbolProvider(
           symbol.definitionPath match {
             case Some(path) =>
               SemanticdbDefinition.foreach(
+                mtags(),
                 path.toInput,
                 scalaVersionSelector.getDialect(path),
                 includeMembers = true,

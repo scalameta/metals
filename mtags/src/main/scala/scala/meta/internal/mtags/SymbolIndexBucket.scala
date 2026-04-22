@@ -168,7 +168,7 @@ class SymbolIndexBucket(
   private def isTrivialToplevelSymbol(
       path: String,
       symbol: String,
-      extension: String = "scala"
+      extension: String
   ): Boolean = {
     val pathBuffer =
       CharBuffer.wrap(path).subSequence(1, path.length - extension.length - 1)
@@ -184,7 +184,7 @@ class SymbolIndexBucket(
   ): Unit = {
     val extension = if (source.isJava) "java" else "scala"
     if (
-      source.isAmmoniteScript || !isTrivialToplevelSymbol(
+      source.isScalaScript || !isTrivialToplevelSymbol(
         path,
         toplevel,
         extension
@@ -195,18 +195,6 @@ class SymbolIndexBucket(
         case None => Some(Set(source))
       }
     }
-  }
-
-  def findFileForToplevel(
-      topLevelSymbol: Symbol
-  ): List[(AbsolutePath, Dialect)] = {
-    toplevels
-      .get(topLevelSymbol.toString())
-      .map(_.toList)
-      .orElse(loadFromSourceJars(trivialPaths(topLevelSymbol)))
-      .orElse(loadFromSourceJars(modulePaths(topLevelSymbol)))
-      .getOrElse(Nil)
-      .map(x => (x, dialect))
   }
 
   def query(symbol: Symbol): List[SymbolDefinition] =

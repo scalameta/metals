@@ -45,7 +45,7 @@ trait Reporter extends jreports.Reporter {
 class StdReportContext(
     workspace: Path,
     resolveBuildTarget: Option[URI] => Option[String],
-    level: ReportLevel = ReportLevel.Info,
+    level: ReportLevel = ReportLevel.Info
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
@@ -55,7 +55,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "metals-full",
+      "metals-full"
     )
   val incognito: StdReporter =
     new StdReporter(
@@ -63,7 +63,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "metals",
+      "metals"
     )
   val bloop: StdReporter =
     new StdReporter(
@@ -71,7 +71,7 @@ class StdReportContext(
       StdReportContext.reportsDir,
       resolveBuildTarget,
       level,
-      "bloop",
+      "bloop"
     )
 
   override def cleanUpOldReports(
@@ -92,7 +92,7 @@ class StdReporter(
     pathToReports: Path,
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
-    override val name: String,
+    override val name: String
 ) extends Reporter {
 
   private val logger = Logger.getLogger(classOf[ReportContext].getName)
@@ -105,7 +105,7 @@ class StdReporter(
       maybeReportsDir,
       StdReportContext.MAX_NUMBER_OF_REPORTS,
       ReportFileName.pattern,
-      ".md",
+      ".md"
     )
 
   private lazy val userHome = Option(System.getProperty("user.home"))
@@ -133,7 +133,7 @@ class StdReporter(
 
   override def create(
       lazyReport: Supplier[jreports.Report],
-      ifVerbose: lang.Boolean,
+      ifVerbose: lang.Boolean
   ): Optional[Path] =
     if (ifVerbose && !level.isVerbose) Optional.empty()
     else
@@ -141,7 +141,6 @@ class StdReporter(
         if (initialized.compareAndSet(false, true)) {
           readInIds()
         }
-
         val report = lazyReport.get()
         val sanitizedId = report.id().asScala.map(sanitize)
         val path = reportPath(report)
@@ -199,7 +198,11 @@ class StdReporter(
   override def deleteAll(): Unit = {
     getReports().foreach(r => Files.delete(r.toPath))
     limitedFilesManager.directoriesWithDate.foreach { d =>
-      Files.delete(d.toPath)
+      try Files.delete(d.toPath)
+      catch {
+        case NonFatal(_) =>
+          logger.warning(s"Unable to delete directory $d")
+      }
     }
   }
 
@@ -221,7 +224,7 @@ object EmptyReporter extends Reporter {
 
   override def create(
       report: Supplier[jreports.Report],
-      ifVerbose: lang.Boolean,
+      ifVerbose: lang.Boolean
   ): Optional[Path] =
     Optional.empty()
 
@@ -242,7 +245,7 @@ object EmptyReportContext extends ReportContext {
 }
 
 object ReportFileName {
-  val pattern: Regex = "r_(?<name>[^()~]*)(~(?<buildTarget>.*)~)?_".r
+  val pattern: Regex = "r_(?<name>[^()]*)(_\\((?<buildTarget>.*)\\))?_".r
 
   def getReportNameAndBuildTarget(
       file: TimestampedFile

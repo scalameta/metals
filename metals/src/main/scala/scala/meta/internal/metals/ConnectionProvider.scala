@@ -71,11 +71,6 @@ class ConnectionProvider(
     extends Indexer(indexProviders, mbtBuild)
     with Cancelable {
 
-  private def logInfoInProdDebugInTests(message: => String): Unit = {
-    if (MetalsServerConfig.isTesting) scribe.debug(message)
-    else scribe.info(message)
-  }
-
   import Connect.connect
   import indexProviders._
 

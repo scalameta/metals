@@ -85,8 +85,6 @@ case class ScalaTarget(
       )
   }
 
-  def isAmmonite: Boolean = displayName.endsWith(".sc")
-
   def semanticdbFilesPresent(): Boolean =
     if (targetroot.isJar)
       targetroot.isFile && AbsolutePath(

@@ -22,16 +22,15 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ammonite.Ammonite
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mbt.MbtBuildServer
-import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
 import scala.meta.internal.metals.mcp.MetalsMcpServer
+import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.NoopFileWatcher
@@ -255,6 +254,7 @@ class ProjectMetalsLspService(
     definitionIndex,
     buildTargets,
     workspaceSymbols,
+    () => mtags,
   )
 
   lazy val queryEngine =
@@ -265,6 +265,7 @@ class ProjectMetalsLspService(
       referencesProvider,
       scalaVersionSelector,
       mcpSearch,
+      () => mtags,
     )
 
   lazy val mcpTestRunner =
@@ -554,28 +555,6 @@ class ProjectMetalsLspService(
     }
   }
 
-  private val ammonite: Ammonite = register {
-    val amm = new Ammonite(
-      buffers,
-      compilers,
-      compilations,
-      workDoneProgress,
-      diagnostics,
-      tables,
-      languageClient,
-      buildClient,
-      () => userConfig,
-      () => indexer.index(() => (), TaskProgress.empty),
-      () => folder,
-      focusedDocument,
-      clientConfig.initialConfig,
-      scalaVersionSelector,
-      parseTreesAndPublishDiags,
-    )
-    buildTargets.addData(amm.buildTargetsData)
-    amm
-  }
-
   private val popupChoiceReset: PopupChoiceReset = new PopupChoiceReset(
     tables,
     languageClient,
@@ -667,14 +646,6 @@ class ProjectMetalsLspService(
         bspSession.map(_.lastImportedBuild).getOrElse(Nil)
       ),
     )
-
-    if (userConfig.ammoniteEnabled) {
-      result += Indexer.BuildTool(
-        "ammonite",
-        ammonite.buildTargetsData,
-        ammonite.lastImportedBuild,
-      )
-    }
 
     if (userConfig.scalaCliEnabled) {
       result ++= scalaCli.lastImportedBuilds.map {

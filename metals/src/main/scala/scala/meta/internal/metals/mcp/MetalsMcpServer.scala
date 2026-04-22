@@ -22,6 +22,7 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
@@ -218,7 +219,7 @@ class MetalsMcpServer(
       ),
       withErrorHandling { (exchange, _) =>
         connectionProvider
-          .slowConnectToBuildServer(forceImport = true)
+          .slowConnectToBuildServer(forceImport = true, TaskProgress.empty)
           .map {
             case BuildChange.None =>
               new CallToolResult(createContent("No changes detected"), false)

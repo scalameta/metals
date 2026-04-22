@@ -504,13 +504,16 @@ final class ReferenceProvider(
     val definitionPaths =
       if (sourceContainsDefinition) Set(source)
       else {
-        val foundDefinitionLocations =
-          isSymbol.flatMap(definition.destinationProvider.findDefinitionFile)
+        val foundDefinitionLocations = isSymbol
+          .flatMap { sym =>
+            definition.destinationProvider
+              .definition(sym, Some(source))
+              .map(_.path)
+          }
 
         if (foundDefinitionLocations.isEmpty) Set(source)
         else foundDefinitionLocations
       }
-
     val definitionBuildTargets =
       definitionPaths.flatMap { path =>
         buildTargets.inverseSourcesAll(path).toSet

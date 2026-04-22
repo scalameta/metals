@@ -6,6 +6,7 @@ import scala.concurrent.Future
 import scala.meta.internal.jpc.JavacDiagnostic
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalacDiagnostic
@@ -258,12 +259,16 @@ object ImportMissingSymbolQuickFix {
 class SourceAddMissingImports(
     compilers: Compilers,
     buildTargets: BuildTargets,
+    diagnostics: Diagnostics,
 ) extends ImportMissingSymbol(compilers, buildTargets) {
 
   override protected def getDiagnostics(
       params: l.CodeActionParams
-  ): Seq[l.Diagnostic] =
-    params.getContext().getDiagnostics().asScala.toSeq
+  ): Seq[l.Diagnostic] = {
+    val uri = params.getTextDocument().getUri()
+    val file = uri.toAbsolutePath
+    this.diagnostics.getFileDiagnostics(file).toSeq
+  }
 
   override val kind: String = SourceAddMissingImports.kind
   override protected val allSymbolsTitle: String = SourceAddMissingImports.title

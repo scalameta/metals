@@ -78,7 +78,7 @@ object Report {
     Report(name, text, error, path = None)
 
   val idPrefix = "error id: "
-  val summaryTitle = "#### Short summary: "
+  val summaryTitle = "#### Short summary:"
 }
 
 sealed trait ReportLevel {

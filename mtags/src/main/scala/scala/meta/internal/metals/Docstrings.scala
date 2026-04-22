@@ -24,7 +24,6 @@ import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.reports.ReportContext
 
 import org.slf4j.LoggerFactory
 

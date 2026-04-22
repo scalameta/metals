@@ -64,8 +64,6 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     bloopJvmProperties: Option[List[String]] = None,
-    ammoniteJvmProperties: Option[List[String]] = None,
-    ammoniteEnabled: Boolean = false,
     superMethodLensesEnabled: Boolean = false,
     gotoTestLensesEnabled: Boolean = true,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
@@ -183,8 +181,6 @@ case class UserConfiguration(
         Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
         optStringField("bloopVersion", bloopVersion),
         listField("bloopJvmProperties", bloopJvmProperties),
-        listField("ammoniteJvmProperties", ammoniteJvmProperties),
-        Some(("ammoniteEnabled", ammoniteEnabled)),
         Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
         Some(("gotoTestLensesEnabled", gotoTestLensesEnabled)),
         mapField("inlayHintsOptions", inlayHintsOptions.options),
@@ -362,18 +358,18 @@ case class UserConfiguration(
             ).asJava,
           )
         ),
-      Some(
-        (
-          "enableBestEffort",
-          enableBestEffort,
-        )
-      ),
-      Some(
-        (
-          "startMcpServer",
-          startMcpServer,
-        )
-      ),
+        Some(
+          (
+            "enableBestEffort",
+            enableBestEffort,
+          )
+        ),
+        Some(
+          (
+            "startMcpServer",
+            startMcpServer,
+          )
+        ),
       ).flatten
     )
     val gson = new GsonBuilder().setPrettyPrinting().create()
@@ -804,7 +800,7 @@ object UserConfiguration {
         """|If enabled, Metals will prompt you to import or connect to a build server
            |when a new workspace is detected. When disabled, you can still manually
            |trigger import via the "Import build" command.
-          |""".stripMargin,
+           |""".stripMargin,
       ),
       UserConfigurationOption(
         "enable-best-effort",
@@ -1091,8 +1087,6 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
-    val ammoniteProperties = getStringListKey("ammonite-jvm-properties")
-    val ammoniteEnabled = getBooleanKey("ammonite-enabled").getOrElse(false)
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
@@ -1367,8 +1361,6 @@ object UserConfiguration {
           bloopSbtAlreadyInstalled,
           bloopVersion,
           bloopJvmProperties,
-          ammoniteProperties,
-          ammoniteEnabled,
           superMethodLensesEnabled,
           gotoTestLensesEnabled,
           inlayHintsOptions,

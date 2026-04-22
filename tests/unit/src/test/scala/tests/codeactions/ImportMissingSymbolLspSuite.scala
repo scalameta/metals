@@ -12,6 +12,11 @@ import org.eclipse.lsp4j.CodeActionKind
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
 
+  // ---------------------------------------------------------------------------
+  // Tests for ImportMissingSymbolQuickFix (CodeActionKind.QuickFix)
+  // These tests verify the existing behavior for manual import resolution
+  // ---------------------------------------------------------------------------
+
   check(
     "basic",
     """|package a
@@ -31,6 +36,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -59,6 +65,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -89,6 +96,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -110,6 +118,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -133,6 +142,7 @@ class ImportMissingSymbolLspSuite
        |  val g = Try{}
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -165,7 +175,6 @@ class ImportMissingSymbolLspSuite
     kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
-  // Note: When importing multiple symbols, each is added relative to existing imports
   check(
     "multi-across-lines-non-ambiguous",
     """|package a
@@ -196,6 +205,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   check(
@@ -231,6 +242,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -266,6 +278,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -295,9 +308,10 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
-  // Import added after existing import
   check(
     "i5567",
     """package p {
@@ -324,6 +338,7 @@ class ImportMissingSymbolLspSuite
        |  }
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -349,6 +364,7 @@ class ImportMissingSymbolLspSuite
        |  ) extends Foo
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -380,6 +396,7 @@ class ImportMissingSymbolLspSuite
         |  }
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -408,6 +425,7 @@ class ImportMissingSymbolLspSuite
         |}
         |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
   )
 
@@ -478,7 +496,10 @@ class ImportMissingSymbolLspSuite
        |  val test = <<Macros.createCodecIgnoreNone[Test]()>> // trigger code action on this line
        |}
        |""".stripMargin,
-    s"""|${SourceAddMissingImports.title}
+    s"""|${ImportMissingSymbol.title("DocumentCodecProvider", "org.bson.codecs")}
+        |${ImportMissingSymbol.title("DocumentCodecProvider", "org.mongodb.scala.bson.codecs")}
+        |${CreateNewSymbol.title("DocumentCodecProvider")}
+        |${ExtractMethodCodeAction.title("object `A`")}
         |""".stripMargin,
     """|package a
        |import org.mongodb.scala.bson.codecs.Macros

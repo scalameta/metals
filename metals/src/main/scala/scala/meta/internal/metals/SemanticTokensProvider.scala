@@ -1,8 +1,8 @@
 package scala.meta.internal.metals
 
-import scala.annotation.nowarn
 import java.util.Optional
 
+import scala.annotation.nowarn
 import scala.annotation.switch
 import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer

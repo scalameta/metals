@@ -15,8 +15,6 @@ import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.Schema
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.reports.EmptyReportContext
-import scala.meta.pc.reports.ReportContext
 
 final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
     val rc: ReportContext
@@ -118,7 +116,7 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       input: Input.VirtualFile,
       dialect: Dialect,
       includeMembers: Boolean = true
-  )(implicit rc: ReportContext = new EmptyReportContext()): TextDocument =
+  )(implicit rc: ReportContext = EmptyReportContext): TextDocument =
     input.toLanguage match {
       case Language.JAVA =>
         config.javaInstance(input, includeMembers = true).index()

@@ -21,8 +21,11 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.PcQueryContext
+import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl

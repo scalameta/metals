@@ -357,10 +357,8 @@ class CompilerConfiguration(
       val selfBestEffortDir =
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
-
-      // scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
       val fallbackScalaLib =
-        if (!buildTargets.hasScalaLibrary(scalaTarget.id)) {
+        if (!classpath.exists(_.toString.contains("scala-library"))) {
           scribe.warn(
             s"scala-library.jar not found on classpath for ${scalaTarget.displayName}, adding default library for ${scalaTarget.scalaVersion}"
           )

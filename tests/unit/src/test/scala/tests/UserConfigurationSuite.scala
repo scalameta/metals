@@ -374,8 +374,6 @@ class UserConfigurationSuite extends BaseSuite {
       bloopSbtAlreadyInstalled = true,
       bloopVersion = Some("1.2.3"),
       bloopJvmProperties = Some(List("a", "b", "c")),
-      ammoniteJvmProperties = Some(List("aa", "bb", "cc")),
-      ammoniteEnabled = true,
       superMethodLensesEnabled = true,
       inlayHintsOptions = InlayHintsOptions(
         Map(
@@ -444,12 +442,6 @@ class UserConfigurationSuite extends BaseSuite {
     "b",
     "c"
   ],
-  "ammoniteJvmProperties": [
-    "aa",
-    "bb",
-    "cc"
-  ],
-  "ammoniteEnabled": true,
   "superMethodLensesEnabled": true,
   "gotoTestLensesEnabled": true,
   "inlayHintsOptions": {
@@ -526,7 +518,9 @@ class UserConfigurationSuite extends BaseSuite {
     "javaPackagePrefix": "",
     "completions": false,
     "semanticTokens": false
-  }
+  },
+  "enableBestEffort": false,
+  "startMcpServer": false
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)

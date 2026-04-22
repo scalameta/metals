@@ -30,7 +30,6 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.SimpleTimer
-import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.mtags.BuildInfo
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
@@ -86,17 +85,13 @@ case class ScalaPresentationCompiler(
     semanticdbFileManager: SemanticdbFileManager = SemanticdbFileManager.EMPTY,
     optReportContext: Option[ReportContext] = None
 ) extends PresentationCompiler {
-  implicit val reportContext: ReportContext =
-    optReportContext.getOrElse(new EmptyReportContext())
 
   implicit val executionContext: ExecutionContextExecutor = ec
 
   val scalaVersion = BuildInfo.scalaCompilerVersion
 
-  implicit val reportContex: ReportContext =
-    folderPath
-      .map(new StdReportContext(_, _ => buildTargetName, reportsLevel))
-      .getOrElse(EmptyReportContext)
+  implicit val reportContext: ReportContext =
+    optReportContext.getOrElse(new EmptyReportContext())
 
   override def withBuildTargetName(
       buildTargetName: String
@@ -139,7 +134,7 @@ case class ScalaPresentationCompiler(
       semanticdbFileManager: SemanticdbFileManager
   ): PresentationCompiler =
     copy(semanticdbFileManager = semanticdbFileManager)
-    
+
   override def withReportContext(
       reportContext: ReportContext
   ): PresentationCompiler =

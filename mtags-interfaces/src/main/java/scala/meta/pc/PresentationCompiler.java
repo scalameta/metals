@@ -1,19 +1,5 @@
 package scala.meta.pc;
 
-import scala.meta.pc.reports.ReportContext;
-
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.DocumentHighlight;
-import org.eclipse.lsp4j.SignatureHelp;
-import org.eclipse.lsp4j.TextEdit;
-import org.eclipse.lsp4j.WorkspaceEdit;
-import org.eclipse.lsp4j.Range;
-
-import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.InlayHint;
-import org.eclipse.lsp4j.SelectionRange;
-
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Duration;
@@ -35,6 +21,7 @@ import org.eclipse.lsp4j.SelectionRange;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 import org.slf4j.Logger;
+import scala.meta.pc.reports.ReportContext;
 
 /**
  * The public API of the presentation compiler.
@@ -174,10 +161,8 @@ public abstract class PresentationCompiler {
   public abstract CompletableFuture<List<TextEdit>> convertToNamedArguments(
       OffsetParams params, List<Integer> argIndices);
 
-	/**
-	 * The text contents of the given file changed.
-	 */
-	public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
+  /** The text contents of the given file changed. */
+  public abstract CompletableFuture<List<Diagnostic>> didChange(VirtualFileParams params);
 
   /**
    * Returns decorations for missing type adnotations, inferred type parameters, implicit parameters
@@ -289,28 +274,24 @@ public abstract class PresentationCompiler {
 
   /** Provide custom configuration for features like signature help and completions. */
   public abstract PresentationCompiler withConfiguration(PresentationCompilerConfig config);
-	/**
-	 * Provide a reporting context for reporting errors.
-	 */
-	public PresentationCompiler withReportContext(ReportContext reportContext) {
-		return this;
-	}
 
-	/**
-	 * Construct a new presentation compiler with the given parameters.
-	 *
-	 * @param buildTargetIdentifier the build target containing this source file.
-	 *                              This is needed for
-	 *                              {@link #completionItemResolve(CompletionItem, String)}.
-	 * @param classpath             the classpath of this build target.
-	 * @param options               the compiler flags for the new compiler.
-	 *                              Important, it is recommended to disable all
-	 *                              compiler plugins excluding
-	 *                              org.scalamacros:paradise, kind-projector and
-	 *                              better-monadic-for.
-	 */
-	public abstract PresentationCompiler newInstance(String buildTargetIdentifier, List<Path> classpath,
-			List<String> options);
+  /** Provide a reporting context for reporting errors. */
+  public PresentationCompiler withReportContext(ReportContext reportContext) {
+    return this;
+  }
+
+  /**
+   * Construct a new presentation compiler with the given parameters.
+   *
+   * @param buildTargetIdentifier the build target containing this source file. This is needed for
+   *     {@link #completionItemResolve(CompletionItem, String)}.
+   * @param classpath the classpath of this build target.
+   * @param options the compiler flags for the new compiler. Important, it is recommended to disable
+   *     all compiler plugins excluding org.scalamacros:paradise, kind-projector and
+   *     better-monadic-for.
+   */
+  public abstract PresentationCompiler newInstance(
+      String buildTargetIdentifier, List<Path> classpath, List<String> options);
 
   /** Provide workspace root for features like ammonite script $file completions. */
   public abstract PresentationCompiler withWorkspace(Path workspace);

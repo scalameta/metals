@@ -432,10 +432,6 @@ class DestinationProvider(
     sourceMapper: SourceMapper,
 ) {
 
-  def findDefinitionFile(symbol: String): List[AbsolutePath] = {
-    index.findFileForToplevel(Symbol(symbol).toplevel).map(_._1)
-  }
-
   private def bestTextDocument(
       symbolDefinition: SymbolDefinition
   ): TextDocument = {

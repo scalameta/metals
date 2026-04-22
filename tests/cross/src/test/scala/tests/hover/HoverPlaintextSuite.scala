@@ -94,38 +94,7 @@ class HoverPlaintextSuite extends BaseHoverSuite {
        |
        |@param ifEmpty: the expression to evaluate if empty.
        |@param f: the function to apply if nonempty.
-       |""".stripMargin,
-    compat = Map(
-      "2.13.18" ->
-        """|Expression type:
-           |String
-           |
-           |Symbol signature:
-           |final def fold[B](ifEmpty: => B)(f: Int => B): B
-           |
-           |Returns the result of applying f to this [[scala.Option]]'s
-           | value if the [[scala.Option]] is nonempty.  Otherwise, evaluates
-           | expression ifEmpty.
-           |
-           |This is equivalent to:
-           |
-           |{{{
-           |option match {
-           |  case Some(x) => f(x)
-           |  case None    => ifEmpty
-           |}
-           |}}}
-           |
-           |This is also equivalent to:
-           |
-           |{{{
-           |option.map(f).getOrElse(ifEmpty)
-           |}}}
-           |
-           |@param ifEmpty: the expression to evaluate if empty.
-           |@param f: the function to apply if nonempty.
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(

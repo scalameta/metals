@@ -174,6 +174,7 @@ final class BspServers(
         mbtBuild,
         workDoneProgress,
         scalaVersionSelector,
+        userConfig,
       )
     } else {
       BuildServerConnection.fromSockets(
