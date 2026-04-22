@@ -77,34 +77,39 @@ class ScriptMbtImporterSuite extends FunSuite {
   test("buildCommand-sh-uses-sh") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
     val script = makeScript(dir, "run.mbt.sh")
-    val cmd = importer(script).buildCommand
+    val cmd = importer(script).buildCommand(dir)
     assertEquals(cmd.head, "sh")
     assertEquals(cmd(1), script.toString)
   }
 
   test("buildCommand-scala-uses-scala-cli") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-cmd-ws"))
     val script = makeScript(dir, "run.mbt.scala")
-    val cmd = importer(script).buildCommand
+    val cmd = importer(script).buildCommand(workspace)
     assertEquals(cmd.head, "scala-cli")
     assertEquals(cmd(1), "run")
-    assertEquals(cmd(2), script.toString)
+    assertEquals(cmd.last, script.toString)
   }
 
   test("buildCommand-java-uses-scala-cli") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-cmd-ws"))
     val script = makeScript(dir, "run.mbt.java")
-    val cmd = importer(script).buildCommand
+    val cmd = importer(script).buildCommand(workspace)
     assertEquals(cmd.head, "scala-cli")
   }
 
   test("buildCommand-custom-scala-cli-launcher") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-cmd-ws"))
     val script = makeScript(dir, "run.mbt.scala")
     val customConfig: () => UserConfiguration =
       () => UserConfiguration(scalaCliLauncher = Some("/opt/scala-cli"))
     val cmd =
-      new ScriptMbtImporter(script, noShellRunner, customConfig).buildCommand
+      new ScriptMbtImporter(script, noShellRunner, customConfig).buildCommand(
+        workspace
+      )
     assertEquals(cmd.head, "/opt/scala-cli")
   }
 
