@@ -250,20 +250,20 @@ class BazelNativeBepTranslator(client: BazelNativeBspClient) {
         }
       case e: String if e.startsWith("ERROR:") => {
         scribe.info(s"Sending error to ${client} output: ${e}")
-        if(client != null) {
+        if (client != null) {
           val logParams = new ShowMessageParams(
             MessageType.ERROR,
             e,
           )
           logParams.setOriginId(currentOriginId.getOrElse("unknown"))
-           currentTargets.headOption.foreach { target =>
+          currentTargets.headOption.foreach { target =>
             val invocationId = currentOriginId.getOrElse("unknown")
             val key = taskKey(invocationId, target)
             val taskId = Option(activeTaskIds.get(key))
-            .getOrElse(new TaskId(key))
+              .getOrElse(new TaskId(key))
             logParams.setTask(taskId)
-           }
-          
+          }
+
           client.onBuildShowMessage(logParams)
         }
       }
