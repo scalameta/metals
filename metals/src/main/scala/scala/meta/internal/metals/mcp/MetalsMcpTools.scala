@@ -206,67 +206,64 @@ trait MetalsMcpTools extends Cancelable {
         if (path.exists) {
           compilations
             .compileFile(path)
-            .map {
-              case c if c.getStatusCode == StatusCode.CANCELLED =>
-                CallToolResult
-                  .builder()
-                  .content(
-                    createContent(
-                      "Compilation cancelled or incorrect file path"
-                    )
-                  )
-                  .isError(true)
-                  .build()
-              case _ =>
-                lazy val buildTarget = buildTargets.inverseSources(path)
+            .map { compileResult =>
+              lazy val buildTarget = buildTargets.inverseSources(path)
 
-                def inFileErrors = {
-                  val fileDiagnostics = diagnostics.forFile(path)
-                  val diagnosticsOutput = fileDiagnostics.show()
-                  if (diagnosticsOutput.isEmpty) None
-                  else {
-                    val prefix = if (fileDiagnostics.hasErrors) {
-                      "Found errors in"
-                    } else {
-                      "Found warnings in"
-                    }
-                    Some(s"$prefix $path:\n$diagnosticsOutput")
+              def inFileErrors = {
+                val fileDiagnostics = diagnostics.forFile(path)
+                val diagnosticsOutput = fileDiagnostics.show()
+                if (diagnosticsOutput.isEmpty) None
+                else {
+                  val prefix = if (fileDiagnostics.hasErrors) {
+                    "Found errors in"
+                  } else {
+                    "Found warnings in"
                   }
+                  Some(s"$prefix $path:\n$diagnosticsOutput")
+                }
+              }
+
+              def inModuleErrors =
+                for {
+                  bt <- buildTarget
+                  diagnosticsOutput <- this.inModuleErrors(bt)
+                } yield {
+                  val moduleDiagnostics =
+                    diagnostics.allDiagnostics.filter { case (path, _) =>
+                      buildTargets.inverseSources(path).contains(bt)
+                    }
+                  val issuesType = if (moduleDiagnostics.hasErrors) {
+                    "errors"
+                  } else {
+                    "warnings"
+                  }
+                  s"No issues in the file, but found compile $issuesType in the module:\n$diagnosticsOutput"
                 }
 
-                def inModuleErrors =
-                  for {
-                    bt <- buildTarget
-                    diagnosticsOutput <- this.inModuleErrors(bt)
-                  } yield {
-                    val moduleDiagnostics =
-                      diagnostics.allDiagnostics.filter { case (path, _) =>
-                        buildTargets.inverseSources(path).contains(bt)
-                      }
-                    val issuesType = if (moduleDiagnostics.hasErrors) {
-                      "errors"
-                    } else {
-                      "warnings"
-                    }
-                    s"No issues in the file, but found compile $issuesType in the module:\n$diagnosticsOutput"
-                  }
+              def inUpstreamModulesErrors =
+                for {
+                  bt <- buildTarget
+                  errors <- upstreamModulesErros(bt, "file")
+                } yield errors
 
-                def inUpstreamModulesErrors =
-                  for {
-                    bt <- buildTarget
-                    errors <- upstreamModulesErros(bt, "file")
-                  } yield errors
+              val diagnosticsContent = inFileErrors
+                .orElse(inModuleErrors)
+                .orElse(inUpstreamModulesErrors)
 
-                val content = inFileErrors
-                  .orElse(inModuleErrors)
-                  .orElse(inUpstreamModulesErrors)
-                  .getOrElse("Compilation successful.")
+              val content =
+                if (compileResult.getStatusCode == StatusCode.CANCELLED) {
+                  diagnosticsContent.getOrElse(
+                    "Compilation cancelled."
+                  )
+                } else {
+                  diagnosticsContent.getOrElse("Compilation successful.")
+                }
 
-                CallToolResult
-                  .builder()
-                  .content(createContent(content))
-                  .isError(false)
-                  .build()
+              CallToolResult
+                .builder()
+                .content(createContent(content))
+                .isError(false)
+                .build()
             }
             .toMono
         } else {
@@ -313,34 +310,33 @@ trait MetalsMcpTools extends Cancelable {
             compilations
               .compileTarget(target.id)
               .map { compileResult =>
-                if (compileResult.getStatusCode == StatusCode.CANCELLED) {
-                  CallToolResult
-                    .builder()
-                    .content(createContent("Compilation cancelled"))
-                    .isError(true)
-                    .build()
-                } else {
-                  val result = inModuleErrors(target.id)
-                    .map { diagnosticsOutput =>
-                      val moduleDiagnostics =
-                        diagnostics.allDiagnostics.filter { case (path, _) =>
-                          buildTargets.inverseSources(path).contains(target.id)
-                        }
-                      val prefix = if (moduleDiagnostics.hasErrors) {
-                        "Found errors in the module"
-                      } else {
-                        "Found warnings in the module"
+                val diagnosticsContent = inModuleErrors(target.id)
+                  .map { diagnosticsOutput =>
+                    val moduleDiagnostics =
+                      diagnostics.allDiagnostics.filter { case (path, _) =>
+                        buildTargets.inverseSources(path).contains(target.id)
                       }
-                      s"$prefix:\n$diagnosticsOutput"
+                    val prefix = if (moduleDiagnostics.hasErrors) {
+                      "Found errors in the module"
+                    } else {
+                      "Found warnings in the module"
                     }
-                    .orElse(upstreamModulesErros(target.id, "module"))
-                    .getOrElse("Compilation successful.")
-                  CallToolResult
-                    .builder()
-                    .content(createContent(result))
-                    .isError(false)
-                    .build()
-                }
+                    s"$prefix:\n$diagnosticsOutput"
+                  }
+                  .orElse(upstreamModulesErros(target.id, "module"))
+
+                val content =
+                  if (compileResult.getStatusCode == StatusCode.CANCELLED) {
+                    diagnosticsContent.getOrElse("Compilation cancelled")
+                  } else {
+                    diagnosticsContent.getOrElse("Compilation successful.")
+                  }
+
+                CallToolResult
+                  .builder()
+                  .content(createContent(content))
+                  .isError(false)
+                  .build()
               }
               .toMono
           case None =>
