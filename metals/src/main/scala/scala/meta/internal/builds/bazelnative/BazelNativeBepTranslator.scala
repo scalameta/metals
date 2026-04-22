@@ -248,7 +248,26 @@ class BazelNativeBepTranslator(client: BazelNativeBspClient) {
             client.onBuildTaskProgress(params)
           }
         }
-      case _ =>
+      case e: String if e.startsWith("ERROR:") => {
+        scribe.info(s"Sending error to ${client} output: ${e}")
+        if(client != null) {
+          val logParams = new ShowMessageParams(
+            MessageType.ERROR,
+            e,
+          )
+          logParams.setOriginId(currentOriginId.getOrElse("unknown"))
+           currentTargets.headOption.foreach { target =>
+            val invocationId = currentOriginId.getOrElse("unknown")
+            val key = taskKey(invocationId, target)
+            val taskId = Option(activeTaskIds.get(key))
+            .getOrElse(new TaskId(key))
+            logParams.setTask(taskId)
+           }
+          
+          client.onBuildShowMessage(logParams)
+        }
+      }
+      case x => scribe.info(s"Stderr output: ${x}")
     }
   }
 
@@ -320,5 +339,6 @@ trait BazelNativeBspClient {
   def onBuildTaskFinish(params: TaskFinishParams): Unit
   def onBuildTaskProgress(params: TaskProgressParams): Unit
   def onBuildPublishDiagnostics(params: PublishDiagnosticsParams): Unit
+  def onBuildShowMessage(params: ShowMessageParams): Unit
   def onBuildLogMessage(params: LogMessageParams): Unit
 }
