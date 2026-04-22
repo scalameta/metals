@@ -59,6 +59,8 @@ class BazelNativeBspServer(
       params: PublishDiagnosticsParams
   ): Unit =
     buildClient.foreach(_.onBuildPublishDiagnostics(params))
+  override def onBuildShowMessage(params: ShowMessageParams): Unit =
+    buildClient.foreach(_.onBuildShowMessage(params))
   override def onBuildLogMessage(params: LogMessageParams): Unit =
     buildClient.foreach(_.onBuildLogMessage(params))
 
