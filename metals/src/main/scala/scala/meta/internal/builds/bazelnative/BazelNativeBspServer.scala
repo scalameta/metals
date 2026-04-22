@@ -179,14 +179,20 @@ class BazelNativeBspServer(
       params: CompileParams
   ): CompletableFuture[CompileResult] = {
     val targets = params.getTargets.asScala.toList
-    scribe.info(
-      s"[BazelNative BSP] Request: buildTargetCompile, targets=${targets.size}"
-    )
+    
 
-    if (targets.isEmpty)
+    if (targets.isEmpty) {
+      scribe.warn(
+      s"[BazelNative BSP] Request buildTargetCompile with no targets specified, short-circuiting with an empty success"
+      )
       return CompletableFuture.completedFuture(
         new CompileResult(StatusCode.OK)
       )
+    }
+
+    scribe.info(
+      s"[BazelNative BSP] Request: buildTargetCompile, targets=${targets.size}"
+    )
 
     CompletableFuture.supplyAsync(
       () => {
@@ -199,8 +205,9 @@ class BazelNativeBspServer(
         val labels = targets.map(extractLabel)
         val besPort = besServer.port
 
-        var exitCode = 1
+        var exitCode = 99
         try {
+          scribe.info(s"[BazelNative BSP] Launching Bazel build, targets=${targets}")
           exitCode = scala.concurrent.Await.result(
             process.build(
               labels,
@@ -214,6 +221,7 @@ class BazelNativeBspServer(
           case e: Exception =>
             scribe.error(s"[BazelNative BSP] Build failed: ${e.getMessage}")
         } finally {
+          scribe.info(s"[BazelNative BSP] Build exited with code ${exitCode} for targets=${targets}")
           translator.notifyBuildFinished(originId, exitCode)
           translator.clearState()
         }
@@ -224,6 +232,7 @@ class BazelNativeBspServer(
           if (exitCode == 0) StatusCode.OK else StatusCode.ERROR
         val result = new CompileResult(statusCode)
         result.setOriginId(originId)
+        result.setDataKind()
         result
       },
       executor,
@@ -508,7 +517,7 @@ class BazelNativeBspServer(
   override def buildTargetJvmCompileClasspath(
       params: JvmCompileClasspathParams
   ): CompletableFuture[JvmCompileClasspathResult] = {
-    scribe.debug("[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
+    scribe.info("[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
     CompletableFuture.supplyAsync(
       () => {
         val items = params.getTargets.asScala.map { id =>
@@ -517,8 +526,10 @@ class BazelNativeBspServer(
             .flatMap(_.jvmTargetInfo)
             .map(_.transitiveCompileTimeJars.map(resolveOutputUri))
             .getOrElse(Nil)
+          scribe.info(s"[BazelNative BSP] Target ${id} Adding ${cp.size} items to classpath")
           new JvmCompileClasspathItem(id, cp.asJava)
         }
+        
         new JvmCompileClasspathResult(items.asJava)
       },
       executor,

@@ -389,7 +389,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       usedJars: mutable.HashSet[AbsolutePath],
   ): Unit = {
     try {
-      if (path.isJar && path.exists) {
+      if (!path.exists) {
+        scribe.warn(s"dependency missing at absolute path: $path")
+      } else if (path.isJar) {
         usedJars += path
         addSourceJarSymbols(path)
       } else if (path.isDirectory) {

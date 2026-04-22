@@ -145,9 +145,9 @@ class BazelNativeAspectsManager(workspace: AbsolutePath) {
           Files.readAllBytes(file.toNIO),
           StandardCharsets.UTF_8,
         )
-        if (content.contains("io_bazel_rules_scala"))
+        if (content.contains("\"io_bazel_rules_scala\""))
           Some("io_bazel_rules_scala")
-        else if (content.contains("rules_scala")) Some("rules_scala")
+        else if (content.contains("\"rules_scala\"")) Some("rules_scala")
         else None
       }
       .nextOption()
