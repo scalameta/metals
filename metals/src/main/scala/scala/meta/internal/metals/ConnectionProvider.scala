@@ -229,6 +229,9 @@ class ConnectionProvider(
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
     mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
 
+  def forceMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
+    mbtImport.runUnconditionally(importers, isMbtImportInProcess).ignoreValue
+
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
       case Some(session) if session.canReloadWorkspace =>
@@ -251,6 +254,27 @@ class ConnectionProvider(
     )
 
   def slowConnectToBuildServer(
+      forceImport: Boolean,
+      progress: TaskProgress,
+  ): Future[BuildChange] = {
+    def mbtImporters = buildTools.mbtImporters(shellRunner, () => userConfig)
+    if (isMbtPreferred && mbtImporters.nonEmpty) {
+      val runImport =
+        if (forceImport) forceMbtReimport(mbtImporters)
+        else runMbtReimport(mbtImporters)
+      runImport.flatMap { _ =>
+        bspSession match {
+          case Some(session) =>
+            connect(new ImportBuildAndIndex(session), progress)
+          case None =>
+            connect(CreateSession(), progress)
+        }
+      }
+    } else
+      slowConnectToStandardBuildServer(forceImport, progress)
+  }
+
+  private def slowConnectToStandardBuildServer(
       forceImport: Boolean,
       progress: TaskProgress,
   ): Future[BuildChange] = {

@@ -277,6 +277,7 @@ class ProjectMetalsLspService(
   def maybeSetupScalaCli(): Future[Unit] = {
     if (
       !buildTools.isAutoConnectable()
+      && !buildTools.hasMbtImporters
       && buildTools.loadSupported().isEmpty
       && (folder.isScalaProject() || focusedDocument().exists(_.isScala))
     ) {
