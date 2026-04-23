@@ -133,7 +133,9 @@ class MbtWorkspaceSymbolProvider(
       () => documentsKeys,
       file =>
         if (!file.toLanguage.isJava) None
-        else toInput(file).map(input => new SourceFile(input.path, input.text)),
+        else
+          toInput(file)
+            .map(input => new SourceFile(file.toString(), input.text)),
       () => fallbackClasspaths().javaCompilerClasspath(),
       progress,
       // We don't need to re-compile the workspace super regularly because we can
