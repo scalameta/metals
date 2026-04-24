@@ -68,7 +68,7 @@ object BazelNativeConnection {
       wiredTranslator.setClient(bspServer)
 
       val besPort = wiredBesServer.start()
-      scribe.info(
+      scribe.debug(
         s"[BazelNative Connection] BES server started on port $besPort"
       )
 
@@ -87,9 +87,6 @@ object BazelNativeConnection {
           .create()
 
       val remoteProxy = serverLauncher.getRemoteProxy
-      scribe.info(
-        s"[BazelNative Connection] Setting BSP client to $remoteProxy"
-      )
       bspServer.setClient(remoteProxy)
 
       val listening = serverLauncher.startListening()
