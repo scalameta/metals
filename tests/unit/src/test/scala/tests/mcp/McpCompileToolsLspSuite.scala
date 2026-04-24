@@ -11,6 +11,9 @@ import tests.mcp.TestMcpClient
 
 class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
 
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(buildOnChange = true, buildOnFocus = true)
+
   test("compile-file") {
     cleanWorkspace()
     for {
@@ -87,7 +90,11 @@ class McpCompileToolsLspSuite extends BaseLspSuite("mcp-compile-tools") {
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       _ <- server.didChangeConfiguration(
-        UserConfiguration(startMcpServer = true).toString
+        UserConfiguration(
+          startMcpServer = true,
+          buildOnChange = true,
+          buildOnFocus = true,
+        ).toString
       )
       port <- Future.successful(
         McpConfig.readPort(server.workspace, "root", VSCodeEditor)

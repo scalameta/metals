@@ -1,5 +1,8 @@
-package example
+   package example
+//         ^^^^^^^ definition example/
 
-trait TypeMembers/*example.TypeMembers#*/ { type TypeMember/*example.TypeMembers#TypeMember#*/ }
+   trait TypeMembers { type TypeMember }
+//       ^^^^^^^^^^^ definition example/TypeMembers#
+//                          ^^^^^^^^^^ definition example/TypeMembers#TypeMember#
 
-object AfterTrait/*example.AfterTrait.*/
+   object AfterTrait//        ^^^^^^^^^^ definition example/AfterTrait.

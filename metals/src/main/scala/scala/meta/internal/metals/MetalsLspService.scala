@@ -134,7 +134,6 @@ abstract class MetalsLspService(
   def refreshTestSuites(): Unit = testProvider.refreshTestSuites.apply(())
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
-
   @volatile protected var mbtBuild: MbtBuild = MbtBuild.fromWorkspace(folder)
   protected val userConfigPromise: Promise[Unit] = Promise()
 
