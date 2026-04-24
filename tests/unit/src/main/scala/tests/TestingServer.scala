@@ -12,7 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import java.{util => ju}
+import java.util.{List => juList}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -54,18 +54,17 @@ import scala.meta.internal.metals.ParametrizedCommand
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.tvp.TreeViewChildrenParams
@@ -150,6 +149,7 @@ final case class TestingServer(
     time: Time,
     initializationOptions: InitializationOptions,
     mtagsResolver: MtagsResolver,
+    clientName: String,
     onStartCompilation: () => Unit = () => (),
 )(implicit ex: ExecutionContextExecutorService) {
   import scala.meta.internal.metals.JsonParser._
@@ -180,20 +180,12 @@ final case class TestingServer(
   implicit val reports: ReportContext =
     new StdReportContext(workspace.toNIO, _ => None)
 
-  private lazy val trees = new Trees(
-    buffers,
-    new ScalaVersionSelector(
-      () => initialUserConfig,
-      server.buildTargets,
-    ),
-  )
-
   private val virtualDocSources = TrieMap.empty[String, AbsolutePath]
   def statusBarHistory: String = {
     // collect both published items in the client and pending items from the server.
     val all = List(
       fullServer.statusBar.pendingItems,
-      client.statusParams.asScala.map(_.text),
+      client.getStatusParams(StatusType.metals).asScala.map(_.text),
     ).flatten
     all.distinct.mkString("\n")
   }
@@ -504,9 +496,9 @@ final case class TestingServer(
     }
     for {
       source <- workspaceSources()
-      input = source.toInputFromBuffers(buffers)
+      content <- buffers.get(source).orElse(source.readTextOpt)
       identifier = source.toTextDocumentIdentifier
-      token <- trees.tokenized(input).get
+      token <- content.safeTokenize.get
       if token.isIdentifier
       params = token.toPositionParams(identifier)
       definition = server
@@ -659,6 +651,12 @@ final case class TestingServer(
         .toMap
         .asJava
 
+    params.setClientInfo(
+      new l.ClientInfo(
+        clientName,
+        m.internal.metals.BuildInfo.metalsVersion,
+      )
+    )
     params.setInitializationOptions(existingInitOptions.toJson)
     params.setCapabilities(
       new ClientCapabilities(
@@ -1020,7 +1018,7 @@ final case class TestingServer(
   def retrieveRanges(
       filename: String,
       expected: String,
-  ): Future[ju.List[l.SelectionRange]] = {
+  ): Future[juList[l.SelectionRange]] = {
     val path = toPath(filename)
     val input = path.toInputFromBuffers(buffers)
     val offset = expected.indexOf("@@")
@@ -1139,7 +1137,7 @@ final case class TestingServer(
     ): Future[List[BuildTargetUpdate]] = {
       val arg = ServerCommands.DiscoverTestParams(uri.orNull)
       executeCommand(ServerCommands.DiscoverTestSuites, arg)
-        .asInstanceOf[Future[ju.List[BuildTargetUpdate]]]
+        .asInstanceOf[Future[juList[BuildTargetUpdate]]]
         .map(_.asScala.toList)
         .flatMap { r =>
           if (r.exists(_.events.asScala.nonEmpty)) {
@@ -1733,9 +1731,10 @@ final case class TestingServer(
   def definition(
       filename: String,
       query: String,
+      root: AbsolutePath,
   ): Future[List[Location]] = {
     for {
-      (_, params) <- offsetParams(filename, query)
+      (_, params) <- offsetParams(filename, query, root)
       definition <- fullServer.definition(params).asScala
     } yield {
       definition.asScala.toList
@@ -2022,7 +2021,7 @@ final case class TestingServer(
     val identifier = path.toTextDocumentIdentifier
     val occurrences = ListBuffer.empty[s.SymbolOccurrence]
     var last = List[String]()
-    trees.tokenized(input).get.foreach {
+    input.value.safeTokenize.get.foreach {
       case token: m.tokens.Token.Ident =>
         val params = token.toPositionParams(identifier)
         // Scala 3 doesn't count ` as part of the word which is the same as most editors

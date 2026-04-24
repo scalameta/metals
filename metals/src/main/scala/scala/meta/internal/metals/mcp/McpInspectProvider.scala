@@ -1,16 +1,16 @@
 package scala.meta.internal.metals.mcp
 
-import java.net.URI
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Random
+import scala.util.chaining._
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.CompletionItem
@@ -58,6 +58,7 @@ import org.eclipse.lsp4j.CompletionItemTag
  */
 private class McpInspectProvider(
     compilers: Compilers,
+    workspace: AbsolutePath,
     symbol: SymbolSearchResult,
     buildTarget: BuildTargetIdentifier,
 )(implicit ec: ExecutionContext) {
@@ -124,10 +125,14 @@ private class McpInspectProvider(
     }
 
     if (desc.isType || desc.isTerm || desc.isPackage) {
+      val compilerParams = makeCompilerOffsetParams(forSignature = false)
+      scribe.debug(
+        s"querying for completions for ${symbol.symbol}:\n${compilerParams.text}"
+      )
       compilers
         .completions(
           buildTarget,
-          makeCompilerOffsetParams(forSignature = false),
+          compilerParams,
         )
         .map { completionList =>
           completionList
@@ -139,21 +144,40 @@ private class McpInspectProvider(
                 completion.getLabel()
             }
             .toList
+            .tap { result =>
+              scribe.debug(
+                s"completions for ${symbol.symbol}:\n$result}"
+              )
+            }
         }
-    } else Future.successful(Nil)
+    } else {
+      scribe.debug(s"skipping completions for ${symbol.symbol}")
+      Future.successful(Nil)
+    }
   }
 
   private def getSignatures(): Future[List[String]] = {
     if (desc.isMethod || desc.isType) {
+      val compilerParams = makeCompilerOffsetParams(forSignature = true)
+      scribe.debug(
+        s"querying for signatures for ${symbol.symbol}:\n${compilerParams.text}"
+      )
       compilers
         .signatureHelp(
           buildTarget,
-          makeCompilerOffsetParams(forSignature = true),
+          compilerParams,
         )
         .map {
-          _.getSignatures().asScala.map(_.getLabel()).toList
+          _.getSignatures().asScala.map(_.getLabel()).toList.tap { result =>
+            scribe.debug(
+              s"signatures for ${symbol.symbol}:\n$result}"
+            )
+          }
         }
-    } else Future.successful(Nil)
+    } else {
+      scribe.debug(s"skipping signatures for ${symbol.symbol}")
+      Future.successful(Nil)
+    }
   }
 
   private def makeCompilerOffsetParams(forSignature: Boolean) = {
@@ -176,7 +200,7 @@ private class McpInspectProvider(
     val withWrapper = s"object mcp$id {$code}"
 
     CompilerOffsetParams(
-      URI.create(s"mcp$id.scala"),
+      workspace.resolve(s".metals/tmp/mcp.scala").toURI,
       withWrapper,
       // calculating offet
       // for signature help we skip last 3 characters `)\n}`
@@ -197,9 +221,10 @@ private class McpInspectProvider(
 object McpInspectProvider {
   def inspect(
       compilers: Compilers,
+      workspace: AbsolutePath,
       symbol: SymbolSearchResult,
       buildTarget: BuildTargetIdentifier,
   )(implicit ec: ExecutionContext): Future[Option[SymbolInspectResult]] = {
-    new McpInspectProvider(compilers, symbol, buildTarget).inspect()
+    new McpInspectProvider(compilers, workspace, symbol, buildTarget).inspect()
   }
 }

@@ -9,6 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StatusBarConfig
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -45,6 +46,49 @@ class MillServerSuite
     super.beforeEach(context)
     cleanWorkspace()
     bspTrace.touch()
+  }
+
+  test("basic-1.0.0") {
+    cleanWorkspace()
+    writeLayout(
+      MillBuildLayout(
+        """|/a/src/main.scala
+           |object Failure {
+           |  def scalaVersion: String = 3
+           |}
+           |""".stripMargin,
+        V.latestScala3Next,
+        testDep = None,
+        "1.0.0-RC1",
+      )
+    )
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    client.generateBspAndConnect = Messages.GenerateBspAndConnect.yes
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        Messages.GenerateBspAndConnect
+          .params(
+            MillBuildTool.name,
+            MillBuildTool.bspName,
+          )
+          .getMessage,
+      )
+      _ <- server.headServer.buildServerPromise.future
+      _ = assert(millBspConfig.exists)
+      _ <- server.didSave("a/src/main.scala")
+    } yield {
+      assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main.scala:2:30: error: Found:    (3 : Int)
+           |Required: String
+           |  def scalaVersion: String = 3
+           |                             ^
+           |""".stripMargin,
+      )
+    }
   }
 
   test("too-old") {
@@ -229,7 +273,7 @@ class MillServerSuite
 
   test("call pc before initial compilation") {
     cleanWorkspace()
-    client.statusParams.clear()
+    client.getStatusParams(StatusType.metals).clear()
     val compileTaskFinished = Promise[Unit]()
     client.onMetalsStatus = { params =>
       if (params.text.contains("Compiled")) compileTaskFinished.success(())

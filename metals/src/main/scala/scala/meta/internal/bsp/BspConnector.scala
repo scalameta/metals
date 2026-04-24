@@ -14,8 +14,10 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.ConnectKind
+import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.CreateSession
 import scala.meta.internal.metals.GenerateBspConfigAndConnect
+import scala.meta.internal.metals.Interruptable.MetalsCancelException
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.BspSwitch
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -25,19 +27,19 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.common.collect.ImmutableList
-import org.eclipse.lsp4j.services.LanguageClient
 
 class BspConnector(
     bloopServers: BloopServers,
     bspServers: BspServers,
     buildTools: BuildTools,
-    client: LanguageClient,
+    client: ConfiguredLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
     statusBar: StatusBar,
@@ -235,8 +237,11 @@ class BspConnector(
           progress.message = s"choosing build server"
           for {
             Some(item) <- client
-              .showMessageRequest(query.params)
-              .asScala
+              .showMessageRequest(
+                query.params,
+                ConnectionProvider.ConnectRequestCancelationGroup,
+                throw MetalsCancelException,
+              )
               .map(item =>
                 Option(item)
                   .map(item => distinctServers(query.mapping(item.getTitle)))

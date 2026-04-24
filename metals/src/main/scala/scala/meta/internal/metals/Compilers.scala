@@ -136,14 +136,13 @@ class Compilers(
     time,
     initializeParams,
     excludedPackages,
-    trees,
-    mtags,
     mtagsResolver,
     sourceMapper,
     semanticdbFileManager,
     javaFileManagerFactory,
     featureFlags,
     mbtBuild,
+    mtags,
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 

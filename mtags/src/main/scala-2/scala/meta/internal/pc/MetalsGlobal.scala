@@ -641,7 +641,7 @@ class MetalsGlobal(
                 case Descriptor.Method(value, _) =>
                   owner.info
                     .decl(TermName(value).encode)
-                    .alternatives
+                    .safeAlternatives
                     .iterator
                     .filter(sym => semanticdbSymbol(sym) == s)
                     .toList
@@ -867,7 +867,10 @@ class MetalsGlobal(
           qualifier.pos
         case _ =>
           val start = sel.pos.point
-          val end = start + sel.name.getterName.decoded.trim.length()
+          val decoded = sel.name.getterName.decoded.trim
+          val hasBackticks = sel.pos.source.content.lift(start).contains('`')
+          val backtickLen = if (hasBackticks) 2 else 0
+          val end = start + decoded.length() + backtickLen
           Position.range(sel.pos.source, start, start, end)
       }
     }
@@ -897,6 +900,18 @@ class MetalsGlobal(
   }
 
   implicit class XtensionSymbolMetals(sym: Symbol) {
+
+    def safeAlternatives: List[Symbol] = {
+      if (sym == NoSymbol) Nil
+      else {
+        sym.info match {
+          case overloadedType: OverloadedType => overloadedType.alternatives
+          case _ if sym.isOverloaded => Nil
+          case _ => sym.alternatives
+        }
+      }
+    }
+
     def isLocallyDefined: Boolean =
       sym.ownersIterator
         .drop(1)

@@ -101,7 +101,7 @@ class CompletionProvider(
       }
     }
 
-    val items = sorted.iterator.zipWithIndex.map { case (member, idx) =>
+    val items = sorted.zipWithIndex.map { case (member, idx) =>
       params.checkCanceled()
       val definitionSiteHasBackticks = {
         val defnNameStart = member.sym.pos.focus

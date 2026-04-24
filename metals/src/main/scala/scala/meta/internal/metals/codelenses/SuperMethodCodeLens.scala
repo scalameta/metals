@@ -8,9 +8,9 @@ import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -22,8 +22,8 @@ import org.eclipse.{lsp4j => l}
 final class SuperMethodCodeLens(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
+    scalaVersionSelector: ScalaVersionSelector,
     clientConfig: ClientConfiguration,
-    trees: Trees,
 )(implicit val ec: ExecutionContext)
     extends CodeLens {
 
@@ -37,7 +37,8 @@ final class SuperMethodCodeLens(
 
     def search(query: String) = textDocument.symbols.find(_.symbol == query)
 
-    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val distance =
+      buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
 
     for {
       occurrence <- textDocument.occurrences

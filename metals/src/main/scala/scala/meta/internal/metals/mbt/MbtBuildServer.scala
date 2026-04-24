@@ -34,7 +34,7 @@ import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -450,7 +450,7 @@ object MbtBuildServer {
   def newServer(
       workspace: AbsolutePath,
       buildClient: MetalsBuildClient,
-      languageClient: MetalsLanguageClient,
+      languageClient: ConfiguredLanguageClient,
       config: MetalsServerConfig,
       requestTimeOutNotification: DismissedNotifications#Notification,
       reconnectNotification: DismissedNotifications#Notification,

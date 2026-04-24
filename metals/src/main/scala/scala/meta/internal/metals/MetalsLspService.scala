@@ -120,10 +120,12 @@ abstract class MetalsLspService(
     maxScalaCliServers: Int,
     featureFlags: FeatureFlagProvider,
     val metrics: MonitoringClient,
+    moduleStatus: ModuleStatus,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
-    with IndexProviders {
+    with IndexProviders
+    with ModulesService {
   import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
@@ -132,7 +134,6 @@ abstract class MetalsLspService(
   def refreshTestSuites(): Unit = testProvider.refreshTestSuites.apply(())
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
-
   @volatile protected var mbtBuild: MbtBuild = MbtBuild.fromWorkspace(folder)
   protected val userConfigPromise: Promise[Unit] = Promise()
 
@@ -173,6 +174,26 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
+
+  protected val mainBuildTargetsData = new TargetData
+
+  val buildTargets: BuildTargets =
+    BuildTargets.from(folder, mainBuildTargetsData, tables)
+
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
     _.flatMap { uri =>
@@ -183,27 +204,11 @@ abstract class MetalsLspService(
       } yield name
     },
     ReportLevel.fromString(MetalsServerConfig.default.loglevel),
+    reportTrackers = List(moduleStatus),
   )
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
   @volatile var mtags: Mtags = new Mtags()
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
   val symbolDocs = new Docstrings(definitionIndex, () => mtags)
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
-  protected val mainBuildTargetsData = new TargetData
-  val buildTargets: BuildTargets =
-    BuildTargets.from(folder, mainBuildTargetsData, tables)
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
@@ -216,16 +221,16 @@ abstract class MetalsLspService(
   val buildTargetClasses =
     new BuildTargetClasses(buildTargets)
 
-  val sourceMapper: SourceMapper = SourceMapper(
+  val scalaVersionSelector = new ScalaVersionSelector(
+    () => userConfig,
     buildTargets,
-    buffers,
   )
 
   protected val downstreamTargets = new PreviouslyCompiledDownsteamTargets
 
-  val scalaVersionSelector = new ScalaVersionSelector(
-    () => userConfig,
+  val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
+    buffers,
   )
 
   val compilations: Compilations = new Compilations(
@@ -281,14 +286,15 @@ abstract class MetalsLspService(
     buffers,
     foldOnlyLines = initializeParams.foldOnlyLines,
     clientConfig.initialConfig.foldingRageMinimumSpan,
+    scalaVersionSelector,
   )
 
-  protected val diagnostics: Diagnostics = new Diagnostics(
+  val diagnostics: Diagnostics = new Diagnostics(
     buffers,
     languageClient,
     clientConfig.initialConfig.statistics,
     Option(folder),
-    trees,
+    scalaVersionSelector,
     buildTargets,
     downstreamTargets,
     initialServerConfig,
@@ -402,25 +408,25 @@ abstract class MetalsLspService(
       new RunTestCodeLens(
         buildTargetClasses,
         buffers,
+        scalaVersionSelector,
         buildTargets,
         clientConfig,
         () => userConfig,
-        trees,
         folder,
         diagnostics,
       )
     val goSuperLensProvider = new SuperMethodCodeLens(
       buffers,
       () => userConfig,
+      scalaVersionSelector,
       clientConfig,
-      trees,
     )
     val worksheetCodeLens = new WorksheetCodeLens(clientConfig)
     val gotoTestLensProvider = new GotoTestCodeLens(
       buffers,
       () => userConfig,
       gotoTestProvider,
-      trees,
+      scalaVersionSelector,
     )
 
     new CodeLensProvider(
@@ -456,6 +462,7 @@ abstract class MetalsLspService(
       trees,
       () => userConfig,
       formattingProvider,
+      scalaVersionSelector,
     )
 
   protected val javaHighlightProvider: JavaDocumentHighlightProvider =
@@ -505,7 +512,6 @@ abstract class MetalsLspService(
     new WorksheetProvider(
       folder,
       buffers,
-      trees,
       buildTargets,
       languageClient,
       () => userConfig,
@@ -620,7 +626,6 @@ abstract class MetalsLspService(
       folder,
       buffers,
       definitionProvider,
-      trees,
       scalaVersionSelector,
       compilers,
       buildTargets,
@@ -635,7 +640,6 @@ abstract class MetalsLspService(
       definitionIndex,
       scalaVersionSelector,
       buffers,
-      trees,
       () => mtags,
     )
 
@@ -1403,25 +1407,33 @@ abstract class MetalsLspService(
   override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens { _ =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
-        javaFormattingProvider.format()
-      else
-        onTypeFormattingProvider.format(params).asJava
+    CancelTokens.future { _ =>
+      parseTrees
+        .currentFuture()
+        .map { _ =>
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          if (path.isJava)
+            javaFormattingProvider.format()
+          else
+            onTypeFormattingProvider.format(params).asJava
+        }
     }
 
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CancelTokens { token =>
-      val path = params.getTextDocument.getUri.toAbsolutePath
-      if (path.isJava)
-        javaFormattingProvider.formatRange(params)
-      else {
-        val projectRoot = optProjectRoot.getOrElse(folder)
-        rangeFormattingProvider.format(params, projectRoot, token).asJava
-      }
+    CancelTokens.future { token =>
+      parseTrees
+        .currentFuture()
+        .map { _ =>
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          if (path.isJava)
+            javaFormattingProvider.formatRange(params)
+          else {
+            val projectRoot = optProjectRoot.getOrElse(folder)
+            rangeFormattingProvider.format(params, projectRoot, token).asJava
+          }
+        }
     }
 
   override def prepareRename(
@@ -1833,6 +1845,7 @@ abstract class MetalsLspService(
       bspErrorHandler,
       workDoneProgress,
       terminals,
+      moduleStatus,
     )
 
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(

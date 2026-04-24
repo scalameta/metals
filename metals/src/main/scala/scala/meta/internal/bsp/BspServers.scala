@@ -29,7 +29,7 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.mtags.MD5
@@ -48,7 +48,7 @@ import com.google.gson.Gson
 final class BspServers(
     mainWorkspace: AbsolutePath,
     charset: Charset,
-    client: MetalsLanguageClient,
+    client: ConfiguredLanguageClient,
     buildClient: MetalsBuildClient,
     tables: Tables,
     bspGlobalInstallDirectories: List[AbsolutePath],

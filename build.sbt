@@ -12,7 +12,7 @@ Global / resolvers += "scala-integration" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.5.3"
+val forkBaseVersion = "1.6.0"
 
 def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
@@ -286,6 +286,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.2.2",
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
+      "org.scalameta" % "mtags-interfaces" % "1.5.2",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -365,7 +366,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "com.google.protobuf" % "protobuf-java-util" % V.protobuf,
-      "com.google.protobuf" % "protobuf-java" % "4.30.2",
+      "com.google.protobuf" % "protobuf-java" % V.protobuf,
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       "org.lz4" % "lz4-java" % "1.8.0",
@@ -607,7 +608,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.8.0",
+      "org.flywaydb" % "flyway-core" % "11.8.2",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -650,7 +651,7 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.1.0",
+      "com.lihaoyi" %% "ujson" % "4.2.1",
       // For fetching projects' templates
       "com.lihaoyi" %% "requests" % "0.9.0",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
@@ -659,15 +660,15 @@ lazy val metals = project
         scalaVersion.value
       ) cross CrossVersion.full,
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      "org.scala-lang.modules" %% "scala-xml" % "2.3.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.8.1",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.15.4",
+      "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,

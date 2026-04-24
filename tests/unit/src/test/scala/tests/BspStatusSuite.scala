@@ -10,6 +10,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
+import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath
 
 import bill.Bill
@@ -86,18 +87,24 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
         expectError = false,
       )
       _ <- server.didOpen("bloopWorkspace/a/src/main/scala/Main.scala")
-      _ = assertNoDiff(client.pollStatusBar(), s"Bloop ${Icons.default.link}")
-      _ = client.statusParams.clear()
+      _ = assertNoDiff(
+        client.pollStatusBar(StatusType.bsp),
+        s"Bloop ${Icons.default.link}",
+      )
+      _ = client.getStatusParams(StatusType.bsp).clear()
       _ <- server.didOpen("billWorkspace/src/com/App.scala")
-      _ = assertNoDiff(client.pollStatusBar(), s"Bill ${Icons.default.link}")
-      _ = client.statusParams.clear()
+      _ = assertNoDiff(
+        client.pollStatusBar(StatusType.bsp),
+        s"Bill ${Icons.default.link}",
+      )
+      _ = client.getStatusParams(StatusType.bsp).clear()
       _ = server.server.buildClient.onBuildLogMessage(
         new MessageParams(MessageType.Error, "This is an error.")
       )
-      _ = assert(client.statusParams.isEmpty())
+      _ = assert(client.getStatusParams(StatusType.bsp).isEmpty())
       _ <- server.didFocus("bloopWorkspace/a/src/main/scala/Main.scala")
       _ = assertNoDiff(
-        client.pollStatusBar(),
+        client.pollStatusBar(StatusType.bsp),
         s"Bloop 1 ${Icons.default.alert}",
       )
       reports = bloopReports
@@ -112,7 +119,10 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
           )
         )
         .asScala
-      _ = assertNoDiff(client.pollStatusBar(), s"Bloop ${Icons.default.link}")
+      _ = assertNoDiff(
+        client.pollStatusBar(StatusType.bsp),
+        s"Bloop ${Icons.default.link}",
+      )
       _ = assert(bloopReports.nonEmpty)
     } yield ()
   }

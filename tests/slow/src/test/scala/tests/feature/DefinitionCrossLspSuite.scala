@@ -273,6 +273,7 @@ class DefinitionCrossLspSuite
       definition <- server.definition(
         "a/src/main/scala/a/Main.scala",
         mainFile,
+        workspace,
       )
       uri = workspace
         .resolve("a/src/main/scala/a/TypeDecl.scala")
@@ -317,6 +318,7 @@ class DefinitionCrossLspSuite
       locations <- server.definition(
         "a/src/main/scala/a/Main.scala",
         testCase,
+        workspace,
       )
       _ = assert(locations.nonEmpty)
       _ = assert(locations.head.getUri().endsWith("a/Main.scala"))

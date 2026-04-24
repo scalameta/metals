@@ -22,12 +22,17 @@ import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
+import scala.meta.internal.mtags.CoursierComplete
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.StatusCode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServer
@@ -62,6 +67,7 @@ class MetalsMcpServer(
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
@@ -131,6 +137,7 @@ class MetalsMcpServer(
 
     // Register tools
     asyncServer.addTool(createFileCompileTool()).subscribe()
+    asyncServer.addTool(createCompileModuleTool()).subscribe()
     asyncServer.addTool(createCompileTool()).subscribe()
     asyncServer.addTool(createTestTool()).subscribe()
     asyncServer.addTool(createGlobSearchTool()).subscribe()
@@ -139,6 +146,7 @@ class MetalsMcpServer(
     asyncServer.addTool(createGetDocsTool()).subscribe()
     asyncServer.addTool(createGetUsagesTool()).subscribe()
     asyncServer.addTool(importBuildTool()).subscribe()
+    asyncServer.addTool(createFindDepTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -177,9 +185,9 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor = Editor.allEditors.find(_.name == editorName)
-    val configPort =
-      editor.flatMap(e => McpConfig.readPort(projectPath, projectName, e))
+    val editor =
+      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
+    val configPort = McpConfig.readPort(projectPath, projectName, editor)
     val undertowServer = Undertow
       .builder()
       .addHttpListener(configPort.getOrElse(0), "localhost")
@@ -191,8 +199,8 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (editor.isDefined && !configPort.isDefined) {
-      McpConfig.writeConfig(port, projectName, projectPath, editor.get)
+    if (!configPort.isDefined) {
+      McpConfig.writeConfig(port, projectName, projectPath, editor)
     }
 
     languageClient.showMessage(
@@ -214,7 +222,7 @@ class MetalsMcpServer(
     new AsyncToolSpecification(
       new Tool(
         "import-build",
-        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependepcies or any changes in build.sbt.",
+        "Import the build to IDE. Should be performed after any build changes, e.g. adding dependencies or any changes in build.sbt.",
         schema,
       ),
       withErrorHandling { (exchange, _) =>
@@ -235,6 +243,11 @@ class MetalsMcpServer(
                 createContent("Failed to reimport build."),
                 false,
               )
+            case BuildChange.Cancelled =>
+              new CallToolResult(
+                createContent("Reimport cancelled by the user."),
+                false,
+              )
           }
           .toMono
       },
@@ -245,18 +258,15 @@ class MetalsMcpServer(
   private def createCompileTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
     new AsyncToolSpecification(
-      new Tool("compile-full", "Compile the whole Scalaproject", schema),
+      new Tool("compile-full", "Compile the whole Scala project", schema),
       withErrorHandling { (exchange, _) =>
         compilations
           .cascadeCompile(buildTargets.allBuildTargetIds)
           .map { _ =>
-            val content = diagnostics.allDiagnostics
-              .map { case (path, diag) =>
-                val startLine = diag.getRange().getStart().getLine()
-                val endLine = diag.getRange().getEnd().getLine()
-                s"${path.toRelative(projectPath)} ($startLine-$endLine): ${diag.getMessage()}"
-              }
-              .mkString("\n")
+            val errors = diagnostics.allDiagnostics.show(projectPath)
+            val content =
+              if (errors.isEmpty) "Compilation successful."
+              else s"Compilation failed with errors:\n$errors"
             new CallToolResult(createContent(content), false)
           }
           .toMono
@@ -271,38 +281,129 @@ class MetalsMcpServer(
          |  "properties": {
          |    "fileInFocus": {
          |      "type": "string",
-         |      "description": "The file to compile, if empty we will try to detect file in focus"
+         |      "description": "The file to compile, if empty we will try to detect file in focus. Will return errors in the file focused file, if any. If no errors in the file, it will return errors in the module the file belongs to, if any."
          |    }
          |  }
          |}""".stripMargin
     new AsyncToolSpecification(
-      new Tool("compile-file", "Compile a chosenScala file", schema),
+      new Tool("compile-file", "Compile a chosen Scala file", schema),
       withErrorHandling { (exchange, arguments) =>
         val path = arguments.getFileInFocus
-        compilations
-          .compileFile(path)
-          .map {
-            case Some(_) =>
-              val result = diagnostics
-                .forFile(path)
-                .map { d =>
-                  val startLine = d.getRange().getStart().getLine()
-                  val endLine = d.getRange().getEnd().getLine()
-                  s"($startLine-$endLine):\n${d.getMessage()}"
+        if (path.exists) {
+          compilations
+            .compileFile(path)
+            .map {
+              case c if c.getStatusCode == StatusCode.CANCELLED =>
+                new CallToolResult(
+                  createContent("Compilation cancelled or incorrect file path"),
+                  false,
+                )
+              case _ =>
+                lazy val buildTarget = buildTargets.inverseSources(path)
+
+                def inFileErrors = {
+                  val errors = diagnostics.forFile(path).show()
+                  if (errors.isEmpty) None
+                  else Some(s"Found errors in $path:\n$errors")
                 }
-                .mkString("\n")
+
+                def inModuleErrors =
+                  for {
+                    bt <- buildTarget
+                    errors <- this.inModuleErrors(bt)
+                  } yield {
+                    s"No errors in the file, but found compile errors in the module:\n$errors"
+                  }
+
+                def inUpstreamModulesErrors =
+                  for {
+                    bt <- buildTarget
+                    errors <- upstreamModulesErros(bt, "file")
+                  } yield errors
+
+                val content = inFileErrors
+                  .orElse(inModuleErrors)
+                  .orElse(inUpstreamModulesErrors)
+                  .getOrElse("Compilation successful.")
+
+                new CallToolResult(createContent(content), false)
+            }
+            .toMono
+        } else {
+          Future
+            .successful(
+              new CallToolResult(
+                createContent(s"Error: File not found: $path"),
+                true,
+              )
+            )
+            .toMono
+        }
+      },
+    )
+  }
+
+  private def createCompileModuleTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "module": {
+         |      "type": "string",
+         |      "description": "The module's (build target's) name to compile"
+         |    }
+         |  }
+         |}""".stripMargin
+    new AsyncToolSpecification(
+      new Tool("compile-module", "Compile a chosen Scala module", schema),
+      withErrorHandling { (exchange, arguments) =>
+        val module = arguments.getAs[String]("module")
+        Future {
+          (buildTargets.allScala ++ buildTargets.allJava).find(
+            _.displayName == module
+          ) match {
+            case Some(target) =>
+              val result = inModuleErrors(target.id)
+                .map(errors => s"Found errors in the module:\n$errors")
+                .orElse(upstreamModulesErros(target.id, "module"))
+                .getOrElse("Compilation successful.")
               new CallToolResult(createContent(result), false)
             case None =>
               new CallToolResult(
-                createContent(
-                  s"Error: Incorrect file path: ${path.toString()}"
-                ),
+                createContent(s"Error: Module not found: $module"),
                 true,
               )
           }
-          .toMono
+        }.toMono
       },
     )
+  }
+
+  private def inModuleErrors(buildTarget: BuildTargetIdentifier) = {
+    if (diagnostics.hasCompilationErrors(buildTarget)) {
+      val errors =
+        diagnostics.allDiagnostics.filter { case (path, _) =>
+          buildTargets.inverseSources(path).contains(buildTarget)
+        }
+      Some(errors.show(projectPath))
+    } else None
+  }
+
+  private def upstreamModulesErros(
+      buildTarget: BuildTargetIdentifier,
+      fileOrModule: String,
+  ) = {
+    val upstreamModules = diagnostics
+      .upstreamTargetsWithCompilationErrors(buildTarget)
+    if (upstreamModules.nonEmpty) {
+      val modules = upstreamModules
+        .flatMap(buildTargets.jvmTarget)
+        .map(_.displayName)
+        .mkString("\n", "\n", "")
+      Some(
+        s"Failed to compile the $fileOrModule, since there compile errors in upstream modules: $modules"
+      )
+    } else None
   }
 
   private def createTestTool(): AsyncToolSpecification = {
@@ -334,7 +435,9 @@ class MetalsMcpServer(
         val optPath = arguments
           .getOptAs[String]("testFile")
           .map(path => AbsolutePath(Path.of(path))(projectPath))
-        val printOnlyErrorsAndSummary = arguments.getAs[Boolean]("verbose")
+        val printOnlyErrorsAndSummary = arguments
+          .getOptAs[Boolean]("verbose")
+          .getOrElse(false)
         val result = mcpTestRunner.runTests(
           testClass,
           optPath,
@@ -554,6 +657,110 @@ class MetalsMcpServer(
     )
   }
 
+  object FindDepKey {
+    val version = "version"
+    val name = "name"
+    val organization = "organization"
+  }
+
+  private def createFindDepTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": {
+        |    "organization": {
+        |      "type": "string",
+        |      "description": "Organization to search for or its prefix when name and version are not specified. for example 'org.scalamet'"
+        |    },
+        |    "name": {
+        |      "type": "string",
+        |      "description": "Dependency name to search for or its prefix when version is not specified, for example 'scalameta_2.13' or 'scalam'. Needs organization to be specified."
+        |    },
+        |    "version": {
+        |      "type": "string",
+        |      "description": "Version to search for or its prefix, for example '0.1.0' or '0.1'. Needs name and organization to be specified."
+        |    },
+        |    "fileInFocus": {
+        |      "type": "string",
+        |      "description": "The current file in focus for context, if empty we will try to detect it"
+        |    }
+        |  },
+        |  "required": ["organization"]
+        |}
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "find-dep",
+        """|Find a dependency using coursier, optionally specify organization, name, and version.
+           |It will try to return completions for the dependency string.
+           |At a minimum you should specify the dependency organization. When only organization is 
+           |specified, it will return all organizations with the specified prefix. If name is additionally
+           |specified, it will return all names with the specified prefix in the organization. If version is additionally
+           |specified, it will return all versions with the specified prefix in the organization and name.
+           |""".stripMargin,
+        schema,
+      ),
+      withErrorHandling { (exchange, arguments) =>
+        val org = arguments.getOptNoEmptyString(FindDepKey.organization)
+        val name = arguments.getOptNoEmptyString(FindDepKey.name)
+        val version = arguments.getOptNoEmptyString(FindDepKey.version)
+        val scalaVersion = arguments.getFileInFocusOpt match {
+          case Some(path) => scalaVersionSelector.scalaVersionForPath(path)
+          case None => scalaVersionSelector.fallbackScalaVersion()
+        }
+        val coursierComplete = new CoursierComplete(scalaVersion)
+        val scalaBinaryVersion =
+          ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
+
+        /* Some logic to handle different possible agent queries
+         */
+        val potentialDepStrings = (org, name, version) match {
+          case (Some(org), Some(name), Some(version)) =>
+            val versionQuery = if (version.contains("latest")) "" else version
+            List(
+              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:$versionQuery",
+              FindDepKey.version -> s"$org:$name:$versionQuery",
+            )
+          case (Some(org), Some(name), None) =>
+            List(
+              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:",
+              FindDepKey.version -> s"$org:$name:",
+              FindDepKey.name -> s"$org:$name",
+            )
+          case (Some(org), None, _) =>
+            List(
+              FindDepKey.name -> s"$org:",
+              FindDepKey.organization -> s"$org",
+            )
+          case _ => List()
+        }
+        val completions = {
+          for {
+            (key, depString) <- potentialDepStrings.iterator
+            completed = coursierComplete.complete(depString)
+            if completed.nonEmpty
+          } yield {
+            val completedOrLast =
+              if (key == FindDepKey.version && version.contains("latest"))
+                completed.headOption.toSeq
+              else completed
+            McpMessages.FindDep.dependencyReturnMessage(
+              key,
+              completedOrLast.distinct,
+            )
+          }
+        }.headOption
+          .getOrElse(McpMessages.FindDep.noCompletionsFound)
+
+        Future
+          .successful(
+            new CallToolResult(createContent(completions), false)
+          )
+          .toMono
+      },
+    )
+  }
+
   private def withErrorHandling(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
   ): BiFunction[
@@ -614,15 +821,39 @@ class MetalsMcpServer(
           )
       }
 
-    def getFileInFocus: AbsolutePath =
+    /**
+     * Like getOptAs, but returns None if the value is an empty string (after trimming).
+     */
+    def getOptNoEmptyString(key: String): Option[String] =
+      getOptAs[String](key).map(_.trim).filter(_.nonEmpty)
+
+    def getFileInFocusOpt: Option[AbsolutePath] =
       getOptAs[String]("fileInFocus")
         .filter(_.nonEmpty)
         .map(path => AbsolutePath(Path.of(path))(projectPath))
         .orElse { focusedDocument() }
+
+    def getFileInFocus: AbsolutePath =
+      getFileInFocusOpt
         .getOrElse(throw MissingFileInFocusException)
   }
 }
 
+object McpMessages {
+
+  object FindDep {
+    def dependencyReturnMessage(
+        key: String,
+        completed: Seq[String],
+    ): String = {
+      s"""|Tool managed to complete `$key` field and got potential values to use for it: ${completed.mkString(", ")}
+          |""".stripMargin
+    }
+
+    def noCompletionsFound: String =
+      "No completions found"
+  }
+}
 sealed trait IncorrectArgumentException extends Exception
 class MissingArgumentException(key: String)
     extends Exception(s"Missing argument: $key")

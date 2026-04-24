@@ -3,9 +3,9 @@ package scala.meta.internal.parsing
 import java.util
 import java.util.Collections
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.parsing.FoldingRangeProvider._
 import scala.meta.io.AbsolutePath
 
@@ -16,21 +16,20 @@ final class FoldingRangeProvider(
     buffers: Buffers,
     foldOnlyLines: Boolean,
     foldingRageMinimumSpan: Int,
+    scalaVersionSelector: ScalaVersionSelector,
 ) {
 
   def getRangedForScala(
       filePath: AbsolutePath
   ): util.List[FoldingRange] = {
     val result = for {
-      code <- buffers.get(filePath)
-      if filePath.isScala
       tree <- trees.get(filePath)
+      if filePath.isScala
     } yield {
-      val revised = Input.VirtualFile(filePath.toURI.toString(), code)
-      val fromTree =
-        Input.VirtualFile(filePath.toURI.toString(), tree.pos.input.text)
-      val distance = TokenEditDistance(fromTree, revised, trees).getOrElse(
-        TokenEditDistance.NoMatch
+      val distance = buffers.tokenEditDistance(
+        filePath,
+        tree.pos.input.text,
+        scalaVersionSelector,
       )
       val extractor = new FoldingRangeExtractor(
         distance,

@@ -139,6 +139,7 @@ class ConnectionProvider(
   private val buildServerPromptShown: AtomicBoolean = new AtomicBoolean(false)
 
   val cancelables = new MutableCancelable
+  // Can be set only in tests
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 
@@ -293,16 +294,17 @@ class ConnectionProvider(
     buildToolProvider.supportedBuildTool().flatMap {
       case Some(BuildTool.Found(buildTool: BloopInstallProvider, digest))
           if chosenBuildServer.contains(BloopServers.name) ||
-            chosenBuildServer.isEmpty && !useBuildToolBsp(buildTool) =>
-        connect(
-          new BloopInstallAndConnect(
-            buildTool,
-            digest,
-            forceImport,
-            shutdownServer = false,
-          ),
+            chosenBuildServer.isEmpty && !useBuildToolBsp(
+              buildTool
+            ) && buildTool.isBloopInstallProvider =>
+        def runInstall() = connect(
+          new BloopInstallAndConnect(buildTool),
           progress,
         )
+        if (forceImport) runInstall()
+        else {
+          bloopInstall.runIfApproved(buildTool, digest, runInstall)
+        }
       case Some(found)
           if isSelected(found.buildTool) &&
             isBspAvailable(found.buildTool) =>
@@ -480,9 +482,15 @@ class ConnectionProvider(
         request: ConnectRequest,
         progress: TaskProgress,
     ): Future[BuildChange] = {
+      scribe.debug(s"new connect request: ${request.toString}")
       val info = addToQueue(request)
       pollAndConnect(progress)
-      info.promise.future
+      info.promise.future.map { buildChange =>
+        scribe.debug(
+          s"connect request: ${request.show} finished with $buildChange"
+        )
+        buildChange
+      }
     }
 
     private def addToQueue(request: ConnectRequest): RequestInfo =
@@ -500,8 +508,12 @@ class ConnectionProvider(
         queue.add(info)
         // maybe cancel ongoing
         currentRequest.foreach(ongoing =>
-          if (request.cancelCompare(ongoing.request) == TakeOver)
+          if (request.cancelCompare(ongoing.request) == TakeOver) {
             ongoing.cancel()
+            languageClient.cancelRequest(
+              ConnectionProvider.ConnectRequestCancelationGroup
+            )
+          }
         )
         info
       }
@@ -536,19 +548,8 @@ class ConnectionProvider(
                   shutdownServer,
                   progress,
                 )
-              case BloopInstallAndConnect(
-                    buildTool,
-                    checksum,
-                    forceImport,
-                    shutdownServer,
-                  ) =>
-                bloopInstallAndConnect(
-                  buildTool,
-                  checksum,
-                  forceImport,
-                  shutdownServer,
-                  progress,
-                )
+              case BloopInstallAndConnect(buildTool) =>
+                bloopInstallAndConnect(buildTool, progress)
             }
         result.future.onComplete { res =>
           res match {
@@ -878,26 +879,13 @@ class ConnectionProvider(
 
     private def bloopInstallAndConnect(
         buildTool: BloopInstallProvider,
-        checksum: String,
-        forceImport: Boolean,
-        shutdownServer: Boolean,
         progress: TaskProgress,
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       for {
-        result <- {
-          if (forceImport)
-            bloopInstall.runUnconditionally(
-              buildTool
-            )
-          else
-            bloopInstall.runIfApproved(
-              buildTool,
-              checksum,
-            )
-        }.withInterrupt
+        result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
           if (result.isInstalled)
-            createSession(shutdownServer, progress)
+            createSession(shutdownServer = false, progress)
           else if (result.isFailed) {
             for {
               change <-
@@ -913,7 +901,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer, progress)
+                  createSession(shutdownServer = false, progress)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
@@ -922,12 +910,12 @@ class ConnectionProvider(
                           Messages.ImportProjectFailedSuggestBspSwitch.params()
                         )
                         .asScala
-                        .withInterrupt
-                        .flatMap {
+                        .foreach {
                           case Messages.ImportProjectFailedSuggestBspSwitch.switchBsp =>
-                            switchBspServer().withInterrupt
+                            switchBspServer()
                           case _ => Interruptable.successful(BuildChange.Failed)
                         }
+                      Interruptable.successful(BuildChange.Failed)
                     case _ =>
                       languageClient.showMessage(Messages.ImportProjectFailed)
                       Interruptable.successful(BuildChange.Failed)
@@ -1001,6 +989,8 @@ sealed abstract class ConnectRequest(
    * Queue    -- queue
    */
   def cancelCompare(other: ConnectRequest): ConflictBehaviour
+
+  def show: String
 }
 
 case class Disconnect(shutdownBuildServer: Boolean)
@@ -1010,10 +1000,14 @@ case class Disconnect(shutdownBuildServer: Boolean)
       case _: Index => Queue
       case _ => Yield
     }
+
+  def show: String = s"disconnect with shutdown=$shutdownBuildServer"
 }
 case class Index(check: () => Unit)
     extends ConnectRequest("Indexing workspace") {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = Yield
+
+  def show: String = s"index"
 }
 case class ImportBuildAndIndex(bspSession: BspSession)
     extends ConnectRequest("Importing build") {
@@ -1022,6 +1016,8 @@ case class ImportBuildAndIndex(bspSession: BspSession)
       case (_: Index) | (_: ImportBuildAndIndex) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"import build and index for ${bspSession.main.name}"
 }
 case class ConnectToSession(bspSession: BspSession)
     extends ConnectRequest("Connecting to build server") {
@@ -1030,6 +1026,8 @@ case class ConnectToSession(bspSession: BspSession)
       case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => TakeOver
       case _ => Yield
     }
+
+  def show: String = s"connect to session for ${bspSession.main.name}"
 }
 case class CreateSession(shutdownBuildServer: Boolean = false)
     extends ConnectRequest("Establishing build server session") {
@@ -1041,26 +1039,33 @@ case class CreateSession(shutdownBuildServer: Boolean = false)
         TakeOver
       case _ => Yield
     }
+
+  def show: String = s"create session with shutdown=$shutdownBuildServer"
 }
 case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest("Generating bsp config") {
-  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
-    other match {
-      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => Queue
-      case _ => TakeOver
-    }
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
+
+  def show: String =
+    s"generate bsp config and connect for ${buildTool.buildServerName} with shutdown=$shutdownServer"
 }
 case class BloopInstallAndConnect(
-    buildTool: BloopInstallProvider,
-    checksum: String,
-    forceImport: Boolean,
-    shutdownServer: Boolean,
+    buildTool: BloopInstallProvider
 ) extends ConnectRequest("Bloop installing") {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case GenerateBspConfigAndConnect(_, true) if !shutdownServer => Queue
+      case GenerateBspConfigAndConnect(_, true) => Queue
       case _ => TakeOver
     }
+
+  def show: String =
+    s"bloop install and connect for ${buildTool.buildServerName}"
+}
+
+object ConnectionProvider {
+  // message requests called inside of `connect`,
+  // since it's queued, they block `connect`
+  val ConnectRequestCancelationGroup = "connect-request"
 }

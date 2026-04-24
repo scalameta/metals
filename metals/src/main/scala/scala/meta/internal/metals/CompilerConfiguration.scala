@@ -24,7 +24,6 @@ import scala.meta.internal.metals.mbt.GitVCS
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -53,14 +52,13 @@ class CompilerConfiguration(
     time: Time,
     initializeParams: InitializeParams,
     excludedPackages: () => ExcludedPackagesHandler,
-    trees: Trees,
-    mtags: () => Mtags,
     mtagsResolver: MtagsResolver,
     sourceMapper: SourceMapper,
     semanticdbFileManager: SemanticdbFileManager,
     javaFileManagerFactory: JavaFileManagerFactory,
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
+    mtags: () => Mtags,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -552,8 +550,8 @@ class CompilerConfiguration(
       classpath.map(AbsolutePath(_)),
       sources.map(AbsolutePath(_)),
       buffers,
+      scalaVersionSelector,
       excludedPackages,
-      trees,
       buildTargets,
       saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
       sourceMapper,

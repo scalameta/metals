@@ -12,9 +12,9 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.parsing.TokenEditDistance
-import scala.meta.internal.parsing.Trees
 
 import org.eclipse.{lsp4j => l}
 
@@ -29,7 +29,7 @@ class ScalafmtRangeFormatter(
     userConfig: () => UserConfiguration,
     scalafmtProvider: FormattingProvider,
     buffers: Buffers,
-    trees: Trees,
+    scalaVersionSelector: ScalaVersionSelector,
 ) extends RangeFormatter {
 
   override def contribute(
@@ -82,10 +82,11 @@ class ScalafmtRangeFormatter(
     val formattedFullFile = fullFormat.get(0).getNewText()
     val original = params.path.toInputFromBuffers(buffers)
     val revised = Input.VirtualFile(original.path, formattedFullFile)
-    val d = TokenEditDistance.apply(original, revised, trees) match {
-      case Right(d) => d
-      case _ => return None
-    }
+    val d =
+      TokenEditDistance.apply(original, revised, scalaVersionSelector) match {
+        case Right(d) => d
+        case _ => return None
+      }
 
     // Expand the selection to the start and end of the lines so that it fixes
     // indentation even if you're only selecting a word inside the line.

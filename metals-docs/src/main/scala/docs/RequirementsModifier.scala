@@ -37,6 +37,10 @@ class RequirementsModifier extends SupportedScalaVersions with StringModifier {
            |points to a valid Java 11 or 17 installation.
            |
            |""".stripMargin
+    val scalaVersions: String = supportedVersionsString(
+      Snapshot.latest(useSnapshot = false, "2.13").version,
+      5.minutes,
+    ).getOrElse("No versions found")
     s"""
        |## Requirements$javaRequirement
        |
@@ -45,7 +49,7 @@ class RequirementsModifier extends SupportedScalaVersions with StringModifier {
        |
        |**Scala 2.13, 2.12, 2.11 and Scala 3**. Metals supports these Scala versions:
        |
-       |${supportedVersionsString(Snapshot.latest("releases", "2.13").version, 5.minutes)}
+       |$scalaVersions
        |
        |Note that 2.11.x support is deprecated and it will be removed in future releases.
        |It's recommended to upgrade to Scala 2.12 or Scala 2.13

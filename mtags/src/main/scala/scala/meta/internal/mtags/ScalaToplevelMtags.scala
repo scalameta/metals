@@ -259,7 +259,7 @@ class ScalaToplevelMtags(
             val name = s"$srcName$$package"
             val pos = newPosition
             val owner = withOwner(currRegion.owner) {
-              term(name, pos, Kind.OBJECT, 0)
+              term(name, pos, Kind.PACKAGE_OBJECT, 0)
             }
             owner
           } else if (expectTemplate.exists(_.isImplicit)) {
@@ -804,7 +804,7 @@ class ScalaToplevelMtags(
         case OBJECT =>
           if (isPackageObject) {
             currentOwner = symbol(Scala.Descriptor.Package(name.name))
-            term("package", name.pos, Kind.OBJECT, 0)
+            term("package", name.pos, Kind.PACKAGE_OBJECT, 0)
           } else {
             term(name.name, name.pos, Kind.OBJECT, 0)
           }
@@ -827,7 +827,7 @@ class ScalaToplevelMtags(
             isAfterEq: Boolean = false
         ): Option[String] = {
           curr.token match {
-            case SEMI => name
+            case SEMI | RBRACE => name
             case _ if isNewline | isDone => name
             case EQUALS =>
               scanner.mtagsNextToken()
