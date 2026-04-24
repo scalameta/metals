@@ -168,7 +168,7 @@ class SymbolIndexBucket(
   private def isTrivialToplevelSymbol(
       path: String,
       symbol: String,
-      extension: String = "scala"
+      extension: String
   ): Boolean = {
     val pathBuffer =
       CharBuffer.wrap(path).subSequence(1, path.length - extension.length - 1)
@@ -184,7 +184,7 @@ class SymbolIndexBucket(
   ): Unit = {
     val extension = if (source.isJava) "java" else "scala"
     if (
-      source.isAmmoniteScript || !isTrivialToplevelSymbol(
+      source.isScalaScript || !isTrivialToplevelSymbol(
         path,
         toplevel,
         extension

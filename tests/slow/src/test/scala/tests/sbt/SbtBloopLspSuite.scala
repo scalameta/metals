@@ -18,6 +18,7 @@ import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
+import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
 import tests.JavaHomeChangeTest
 import tests.ScriptsAssertions
@@ -35,6 +36,44 @@ class SbtBloopLspSuite
   override def currentDigest(
       workspace: AbsolutePath
   ): Option[String] = SbtDigest.current(workspace)
+
+  test("environment-variables") {
+    cleanWorkspace()
+
+    val fakeShell = workspace.resolve("fake-shell.sh")
+    fakeShell.writeText("""
+                          |export MY_ENV_VAR="test-value"
+                          |exec bash "$@"
+                          |""".stripMargin)
+    fakeShell.toFile.setExecutable(true)
+
+    for {
+      // should fail with NoSuchElementException
+      _ <- initialize(
+        s"""|/project/build.properties
+            |sbt.version=$sbtVersion
+            |/build.sbt
+            |name := sys.env("MY_ENV_VAR")
+            |""".stripMargin,
+        expectError = true,
+      ).recover {
+        case t: java.util.NoSuchElementException =>
+          assert(t.getMessage.contains("key not found: MY_ENV_VAR"))
+        case t => fail(s"Expected NoSuchElementException but got $t")
+      }
+
+      _ <- server.didChangeConfiguration(
+        s"""{
+           |  "defaultShell": "$fakeShell"
+           |}""".stripMargin
+      )
+
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+
+      _ = assertStatus(_.isInstalled)
+
+    } yield ()
+  }
 
   test("basic") {
     cleanWorkspace()
@@ -205,17 +244,11 @@ class SbtBloopLspSuite
         client.beginProgressMessages,
         List(
           progressMessage,
+          progressMessage,
           Messages.importingBuild,
           Messages.indexing,
         ).mkString("\n"),
       )
-      _ = assertNoDiff(
-        client.workspaceShowMessages,
-        List(
-          ImportAlreadyRunning.getMessage()
-        ).mkString("\n"),
-      )
-
     } yield ()
   }
 
@@ -878,5 +911,39 @@ class SbtBloopLspSuite
          |            ^^^^^^^^^^^^^^^
          |""".stripMargin,
   )
+
+  test("switch-build-server-while-connect") {
+    cleanWorkspace()
+    val layout =
+      s"""|/project/build.properties
+          |sbt.version=${V.sbtVersion}
+          |/build.sbt
+          |scalaVersion := "${V.scala213}"
+          |/src/main/scala/A.scala
+          |
+          |object A {
+          |  val i: Int = "aaa"
+          |}
+          |""".stripMargin
+    writeLayout(layout)
+    client.importBuild = ImportBuild.yes
+    client.selectBspServer = { _ => new MessageActionItem("sbt") }
+    for {
+      _ <- server.initialize()
+      _ = server.initialized()
+      connectionProvider = server.headServer.connectionProvider.Connect
+      _ = while (connectionProvider.getOngoingRequest().isEmpty) {
+        // wait for connect to start
+        Thread.sleep(100)
+      }
+      bloopConnectF = connectionProvider.getOngoingRequest().get.promise.future
+      bspSwitchF = server.executeCommand(ServerCommands.BspSwitch)
+      _ <- bloopConnectF
+      _ = assert(!server.server.indexingPromise.isCompleted)
+      _ <- bspSwitchF
+      _ = assert(server.server.indexingPromise.isCompleted)
+      _ = assert(server.server.bspSession.exists(_.main.isSbt))
+    } yield ()
+  }
 
 }

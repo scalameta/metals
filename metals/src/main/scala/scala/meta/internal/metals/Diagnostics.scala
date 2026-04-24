@@ -67,6 +67,18 @@ final class Diagnostics(
   private val compilationStatus =
     TrieMap.empty[BuildTargetIdentifier, CompilationStatus]
 
+  def forFile(path: AbsolutePath): Seq[Diagnostic] = {
+    diagnostics
+      .getOrElse(path, new ConcurrentLinkedQueue[Diagnostic]())
+      .asScala
+      .toList
+  }
+
+  def allDiagnostics: Seq[(AbsolutePath, Diagnostic)] =
+    diagnostics.toList.flatMap { case (path, queue) =>
+      queue.asScala.map(diag => (path, diag))
+    }
+
   def reset(): Unit = {
     val keys = diagnostics.keys
     diagnostics.clear()
@@ -77,12 +89,6 @@ final class Diagnostics(
     for (path <- paths if diagnostics.contains(path)) {
       diagnostics.remove(path)
       publishDiagnostics(path)
-    }
-
-  def resetAmmoniteScripts(): Unit =
-    for (key <- diagnostics.keys if key.isAmmoniteScript) {
-      diagnostics.remove(key)
-      publishDiagnostics(key)
     }
 
   def onStartCompileBuildTarget(target: BuildTargetIdentifier): Unit = {
@@ -270,6 +276,9 @@ final class Diagnostics(
       case None => false
     }
   }
+
+  def getFileDiagnostics(path: AbsolutePath): List[Diagnostic] =
+    diagnostics.get(path).map(_.asScala.toList).getOrElse(Nil)
 
   private def publishDiagnostics(
       path: AbsolutePath,

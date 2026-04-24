@@ -1,16 +1,15 @@
 package scala.meta.internal.mtags
 
 import java.nio.file.Paths
+import java.util.Optional
 
 import scala.annotation.tailrec
-import scala.util.Try
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs._
 import scala.meta.internal.metals.Report
-import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Implicits._
 import scala.meta.internal.semanticdb.Language
@@ -23,6 +22,7 @@ import scala.meta.internal.tokenizers.LegacyToken
 import scala.meta.internal.tokenizers.LegacyToken._
 import scala.meta.internal.tokenizers.LegacyTokenData
 import scala.meta.internal.{semanticdb => s}
+import scala.meta.pc.reports.ReportContext
 import scala.meta.tokenizers.TokenizeException
 
 final class Identifier(val name: String, val pos: Position) {
@@ -75,7 +75,7 @@ class ScalaToplevelMtags(
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
     def mtagsNextToken(): Any = {
-      curr = scanner.nextToken()
+      curr = scanner.nextTokenOrEof()
       if (collectIdentifiers)
         curr.token match {
           case IDENTIFIER =>
@@ -100,7 +100,7 @@ class ScalaToplevelMtags(
   override def indexRoot(): Unit =
     loop(Indent.init, new Region.RootRegion, None)
 
-  def isDone: Boolean = curr.token == EOF
+  def isDone: Boolean = curr.token == EOF || curr.token == PASTEOF
 
   private def resetRegion(region: Region): Region = {
     currentOwner = region.owner
@@ -1217,15 +1217,16 @@ class ScalaToplevelMtags(
     curr.token >= WHITESPACE_LF && curr.token < WHITESPACE_END
 
   def reportError(expected: String): Unit = {
-    rc.incognito.create(
-      Report(
-        "scala-toplevel-mtags",
-        failMessage(expected),
-        s"expected $expected; obtained $currentToken",
-        id = Some(s"""${input.path}:${newPosition}"""),
-        path = Try(Paths.get(input.path).toUri()).toOption
+    rc.incognito()
+      .create(() =>
+        Report(
+          "scala-toplevel-mtags",
+          failMessage(expected),
+          s"expected $expected; obtained $currentToken",
+          id = Optional.of(s"""${input.path}:${newPosition}"""),
+          path = Optional.of(Paths.get(input.path).toUri())
+        )
       )
-    )
   }
 
   def failMessage(expected: String): String = {

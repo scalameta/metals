@@ -41,6 +41,13 @@ class MillVersionSuite extends BaseSuite {
   )
 
   check(
+    """|build.mill
+       |//| mill-version: 0.13.0-M1-jvm
+       |""".stripMargin,
+    "0.13.0-M1",
+  )
+
+  check(
     """|mill
        |#!/usr/bin/env sh
        |

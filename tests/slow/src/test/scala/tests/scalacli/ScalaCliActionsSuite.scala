@@ -5,6 +5,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 import scala.meta.internal.mtags.BuildInfo.scalaCompilerVersion
 import scala.meta.internal.mtags.CoursierComplete
@@ -138,6 +139,7 @@ class ScalaCliActionsSuite
         |  Future.successful(2)
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.sc",
@@ -167,6 +169,7 @@ class ScalaCliActionsSuite
         |  Future.successful(2)
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.sc",
@@ -188,6 +191,7 @@ class ScalaCliActionsSuite
         |   FiniteDuration
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     scalaCliOptions = List("--actions", "-S", scalaVersion),
     expectNoDiagnostics = false,
     fileName = "A.scala",

@@ -32,6 +32,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.SocketConnection
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
@@ -457,6 +458,7 @@ object MbtBuildServer {
       mbtBuild: () => MbtBuild,
       workDoneProgress: WorkDoneProgress,
       scalaVersionSelector: ScalaVersionSelector,
+      userConfig: () => UserConfiguration,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -506,6 +508,7 @@ object MbtBuildServer {
       requestTimeOutNotification,
       reconnectNotification,
       config,
+      userConfig(),
       name,
       bspStatusOpt,
       workDoneProgress = workDoneProgress,

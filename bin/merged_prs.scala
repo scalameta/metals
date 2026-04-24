@@ -45,9 +45,9 @@ def main(
     "git",
     "log",
     s"$firstTag..$lastTag",
+    "--format=format:%H",
     "--first-parent",
     "main",
-    "--pretty=format:%H",
   )
 
   val output = os.proc(command).call().out.trim()

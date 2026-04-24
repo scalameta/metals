@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
+import java.util.Optional
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.collection.concurrent.TrieMap
@@ -145,28 +146,15 @@ final class ReferenceProvider(
       source: AbsolutePath,
       directlyImportedSymbols: Set[String],
   ): List[String] = {
-    def matchesOwner(symbol: String) = {
-      symbol.startsWith(owner) && {
-        val rest = symbol.stripPrefix(owner)
-        rest match {
-          case "" => true
-          case "/package." => true
-          case SyntheticPackageObject(_) => true
-          case _ => false
-        }
-      }
-    }
+
     semanticdbs().textDocument(source).documentIncludingStale match {
       case Some(doc) =>
         doc.occurrences
           .map(_.symbol)
           .distinct
           .filter { s =>
-            val reversedOwners = s.ownerChain.reverse
-
-            (reversedOwners.length > 1
-            && matchesOwner(reversedOwners(1))
-            && !directlyImportedSymbols.contains(s))
+            s.startsWith(owner) && s.isType && !directlyImportedSymbols
+              .contains(s)
           }
           .toList
       case None => List()
@@ -235,21 +223,24 @@ final class ReferenceProvider(
                 scribe.debug(
                   s"No references found, index size ${index.size}\n" + fileInIndex
                 )
-                report.unsanitized.create(
-                  Report(
-                    "empty-references",
-                    index
-                      .map { case (path, entry) =>
-                        s"$path -> ${entry.bloom.approximateElementCount()}"
-                      }
-                      .mkString("\n"),
-                    s"Could not find any locations for ${result.occurrence}, printing index state",
-                    Some(source.toURI),
-                    Some(
-                      source.toString() + ":" + result.occurrence.getOrElse("")
-                    ),
+                report
+                  .unsanitized()
+                  .create(() =>
+                    Report(
+                      "empty-references",
+                      index
+                        .map { case (path, entry) =>
+                          s"$path -> ${entry.bloom.approximateElementCount()}"
+                        }
+                        .mkString("\n"),
+                      s"Could not find any locations for ${result.occurrence}, printing index state",
+                      path = Optional.of(source.toURI),
+                      id = Optional.of(
+                        source.toString() + ":" + result.occurrence
+                          .getOrElse("")
+                      ),
+                    )
                   )
-                )
               }
               ReferencesResult(occurrence.symbol, locations)
             }
@@ -513,18 +504,16 @@ final class ReferenceProvider(
     val definitionPaths =
       if (sourceContainsDefinition) Set(source)
       else {
-        val foundDefinitionLocations =
-          isSymbol
-            .flatMap { sym =>
-              definition.destinationProvider
-                .definition(sym, Some(source))
-                .map(_.path)
-            }
+        val foundDefinitionLocations = isSymbol
+          .flatMap { sym =>
+            definition.destinationProvider
+              .definition(sym, Some(source))
+              .map(_.path)
+          }
 
         if (foundDefinitionLocations.isEmpty) Set(source)
         else foundDefinitionLocations
       }
-
     val definitionBuildTargets =
       definitionPaths.flatMap { path =>
         buildTargets.inverseSourcesAll(path).toSet

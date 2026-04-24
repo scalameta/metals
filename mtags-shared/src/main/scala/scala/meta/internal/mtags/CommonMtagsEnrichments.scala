@@ -137,6 +137,9 @@ trait CommonMtagsEnrichments {
       pos.getLine() < 0 &&
         pos.getCharacter() < 0
 
+    def <=(other: l.Position): Boolean =
+      pos.getLine < other.getLine ||
+        (pos.getLine == other.getLine && pos.getCharacter <= other.getCharacter)
   }
 
   implicit class XtensionLspRange(range: l.Range) {
@@ -147,17 +150,8 @@ trait CommonMtagsEnrichments {
       range.getStart().isNone &&
         range.getEnd().isNone
 
-    def encloses(position: l.Position): Boolean = {
-      val startsBeforeOrAt =
-        range.getStart.getLine < position.getLine ||
-          (range.getStart.getLine == position.getLine &&
-            range.getStart.getCharacter <= position.getCharacter)
-      val endsAtOrAfter =
-        range.getEnd.getLine > position.getLine ||
-          (range.getEnd.getLine == position.getLine &&
-            range.getEnd.getCharacter >= position.getCharacter)
-      startsBeforeOrAt && endsAtOrAfter
-    }
+    def encloses(position: l.Position): Boolean =
+      range.getStart <= position && position <= range.getEnd
 
     def encloses(other: l.Range): Boolean =
       encloses(other.getStart) && encloses(other.getEnd)
@@ -272,10 +266,8 @@ trait CommonMtagsEnrichments {
       else if (isJavaFilename) Semanticdb.Language.JAVA
       else if (isProtoFilename) Semanticdb.Language.PROTOBUF
       else Semanticdb.Language.UNKNOWN_LANGUAGE
-    def isAmmoniteGeneratedFile: Boolean =
-      doc.endsWith(".amm.sc.scala")
     def isScalaCLIGeneratedFile: Boolean =
-      doc.endsWith(".sc.scala") && !isAmmoniteGeneratedFile
+      doc.endsWith(".sc.scala")
     def isMill: Boolean =
       doc.endsWith(".mill") ||
         doc.endsWith(".mill.scala") ||
@@ -470,6 +462,14 @@ trait CommonMtagsEnrichments {
 
     def withOptional(key: String, value: Option[String]): Event =
       value.fold(event)(event.withLabel(key, _))
+  }
+
+  implicit class XtensionSymbol(symbol: String) {
+    def fqcn: String =
+      symbol
+        .stripPrefix("_empty_/")
+        .replaceAll("[#/$]|(`<init>`)?\\((\\+[0-9]+)?\\)\\.", ".")
+        .stripSuffix(".")
   }
 
 }

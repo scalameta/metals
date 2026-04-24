@@ -2,19 +2,20 @@ package scala.meta.internal.builds
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.DurationInt
 import scala.language.postfixOps
 import scala.util.Properties
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.SystemProcess
@@ -22,7 +23,11 @@ import scala.meta.io.AbsolutePath
 
 import coursierapi._
 
-class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
+class ShellRunner(
+    time: Time,
+    workDoneProvider: WorkDoneProgress,
+    userConfiguration: () => UserConfiguration,
+)(implicit
     executionContext: scala.concurrent.ExecutionContext
 ) extends Cancelable {
 
@@ -43,7 +48,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       javaOptsMap: Map[String, String] = Map.empty,
-  ): Future[Int] = {
+  ): CancelableFuture[Int] = {
 
     val classpathSeparator = if (Properties.isWin) ";" else ":"
     val classpath =
@@ -84,11 +89,18 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       logInfo: Boolean = true,
-  ): Future[Int] = {
+  ): CancelableFuture[Int] = {
     val elapsed = new Timer(time)
     val env = additionalEnv ++ JdkSources.envVariables(javaHome)
+
+    val shellArguments = userConfiguration().defaultShell match {
+      case Some(shell) if shell.contains("fish") => shell :: args
+      case Some(shell) => List(shell, "-i", "-l", "-c", args.mkString(" "))
+      case None => args
+    }
+
     val ps = SystemProcess.run(
-      args,
+      shellArguments,
       directory,
       redirectErrorOutput,
       env,
@@ -96,6 +108,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       Some(processErr),
       propagateError,
     )
+
     val result = Promise[Int]()
     val newCancelable: Cancelable = () => ps.cancel
     cancelables.add(newCancelable)
@@ -117,7 +130,7 @@ class ShellRunner(time: Time, workDoneProvider: WorkDoneProgress)(implicit
       result.trySuccess(code)
     }
     result.future.onComplete(_ => cancelables.remove(newCancelable))
-    result.future
+    CancelableFuture(result.future, newCancelable)
   }
 
 }

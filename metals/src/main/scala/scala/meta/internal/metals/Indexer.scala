@@ -695,7 +695,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
             if (
               sourceItem.isDefined &&
               !info.symbol.isPackage &&
-              (owner.isPackage || source.isAmmoniteScript)
+              (owner.isPackage || source.isScalaScript)
             ) {
               definitionIndex.addToplevelSymbol(
                 reluri,

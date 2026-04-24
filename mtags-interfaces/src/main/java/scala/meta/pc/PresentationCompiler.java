@@ -21,6 +21,7 @@ import org.eclipse.lsp4j.SelectionRange;
 import org.eclipse.lsp4j.SignatureHelp;
 import org.eclipse.lsp4j.TextEdit;
 import org.slf4j.Logger;
+import scala.meta.pc.reports.ReportContext;
 
 /**
  * The public API of the presentation compiler.
@@ -274,6 +275,24 @@ public abstract class PresentationCompiler {
   /** Provide custom configuration for features like signature help and completions. */
   public abstract PresentationCompiler withConfiguration(PresentationCompilerConfig config);
 
+  /** Provide a reporting context for reporting errors. */
+  public PresentationCompiler withReportContext(ReportContext reportContext) {
+    return this;
+  }
+
+  /**
+   * Construct a new presentation compiler with the given parameters.
+   *
+   * @param buildTargetIdentifier the build target containing this source file. This is needed for
+   *     {@link #completionItemResolve(CompletionItem, String)}.
+   * @param classpath the classpath of this build target.
+   * @param options the compiler flags for the new compiler. Important, it is recommended to disable
+   *     all compiler plugins excluding org.scalamacros:paradise, kind-projector and
+   *     better-monadic-for.
+   */
+  public abstract PresentationCompiler newInstance(
+      String buildTargetIdentifier, List<Path> classpath, List<String> options);
+
   /** Provide workspace root for features like ammonite script $file completions. */
   public abstract PresentationCompiler withWorkspace(Path workspace);
 
@@ -301,19 +320,6 @@ public abstract class PresentationCompiler {
   public PresentationCompiler withCompletionItemPriority(CompletionItemPriority priority) {
     return this;
   }
-
-  /**
-   * Construct a new presentation compiler with the given parameters.
-   *
-   * @param buildTargetIdentifier the build target containing this source file. This is needed for
-   *     {@link #completionItemResolve(CompletionItem, String)}.
-   * @param classpath the classpath of this build target.
-   * @param options the compiler flags for the new compiler. Important, it is recommended to disable
-   *     all compiler plugins excluding org.scalamacros:paradise, kind-projector and
-   *     better-monadic-for.
-   */
-  public abstract PresentationCompiler newInstance(
-      String buildTargetIdentifier, List<Path> classpath, List<String> options);
 
   /**
    * Construct a new presentation compiler with the given parameters.

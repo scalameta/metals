@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import java.util.Optional
+
 import scala.annotation.nowarn
 import scala.annotation.switch
 import scala.annotation.tailrec
@@ -139,15 +141,16 @@ object SemanticTokensProvider {
     } else {
       val tokens = Try(getTokens(isScala3, params.text())) match {
         case Failure(t) =>
-          rc.unsanitized.create(
-            Report(
-              "semantic-tokens-provider",
-              params.text(),
-              s"Could not find semantic tokens for: ${params.uri()}",
-              Some(params.uri()),
-              error = Some(t),
+          rc.unsanitized()
+            .create(() =>
+              Report(
+                "semantic-tokens-provider",
+                params.text(),
+                s"Could not find semantic tokens for: ${params.uri()}",
+                path = Optional.of(params.uri()),
+                error = Some(t),
+              )
             )
-          )
           /* Try to get tokens from trees as a fallback to avoid
            * things being unhighlighted too often.
            */

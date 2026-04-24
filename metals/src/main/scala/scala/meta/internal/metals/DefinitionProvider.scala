@@ -176,7 +176,7 @@ final class DefinitionProvider(
           }
       }
     } yield {
-      reportBuilder.build().foreach(rc.unsanitized.create(_))
+      reportBuilder.build().foreach(r => rc.unsanitized().create(() => r))
       protobufDefinitions.enhanceWithProtobufDefinition(result)
     }
   }
@@ -646,10 +646,8 @@ class DefinitionProviderReportBuilder(
                 |${params.printed(buffers)}
                 |""".stripMargin,
             s"empty definition using pc, found symbol in pc: ${compilerDefn.querySymbol}",
-            path = Some(path.toURI),
-            id = querySymbol.orElse(
-              Some(s"${path.toURI}:${params.getPosition().getLine()}")
-            ),
+            path = ju.Optional.of(path.toURI),
+            id = querySymbol.map(s => s"${path.toURI}:$s").asJava,
             error = error,
           )
         )

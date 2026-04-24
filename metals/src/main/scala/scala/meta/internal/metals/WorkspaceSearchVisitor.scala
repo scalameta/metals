@@ -34,7 +34,7 @@ class WorkspaceSearchVisitor(
     index: GlobalSymbolIndex,
     saveClassFileToDisk: Boolean,
     mtags: Mtags,
-    resultOrdering: Ordering[SymbolDefinition] = DefaultSymbolDefinitionOrdering,
+    resultOrdering: Ordering[AbsolutePath] = DefaultSymbolDefinitionOrdering,
 )(implicit rc: ReportContext)
     extends SymbolSearchVisitor {
   private val fromWorkspace = new ConcurrentLinkedQueue[l.SymbolInformation]()
@@ -85,6 +85,7 @@ class WorkspaceSearchVisitor(
   )
   private val isVisited: mutable.Set[AbsolutePath] =
     mutable.Set.empty[AbsolutePath]
+
   private def definition(
       pkg: String,
       filename: String,
@@ -97,7 +98,7 @@ class WorkspaceSearchVisitor(
       val term = Symbol(Symbols.Global(pkg, Descriptor.Term(nme)))
       index.definitions(term)
     } else forTpe
-    defs.sorted(resultOrdering).headOption
+    defs.sortBy(_.path)(resultOrdering).headOption
   }
   override def shouldVisitPackage(pkg: String): Boolean = true
   override def visitWorkspaceSymbol(
@@ -141,10 +142,10 @@ class WorkspaceSearchVisitor(
         includeMembers = false,
       ) { semanticDefn =>
         if (query.matches(semanticDefn.info)) {
-          val path =
+          val adjustedPath =
             if (saveClassFileToDisk) defn.path.toFileOnDisk(workspace)
             else defn.path
-          val uri = path.toURI.toString
+          val uri = adjustedPath.toURI.toString
           fromClasspath.add(semanticDefn.toLsp(uri))
           isHit = true
         }
@@ -154,9 +155,9 @@ class WorkspaceSearchVisitor(
   }
 }
 
-object DefaultSymbolDefinitionOrdering extends Ordering[SymbolDefinition] {
+object DefaultSymbolDefinitionOrdering extends Ordering[AbsolutePath] {
 
-  override def compare(x: SymbolDefinition, y: SymbolDefinition): Int =
-    x.path.toURI.toString().length() - y.path.toURI.toString().length()
+  override def compare(x: AbsolutePath, y: AbsolutePath): Int =
+    x.toURI.toString().length() - y.toURI.toString().length()
 
 }

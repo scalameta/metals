@@ -172,7 +172,7 @@ class InsertInferredTypeLspSuite
     s"""|${InsertInferredType.insertTypeToPattern}
         |""".stripMargin,
     """|object A{
-       |  val (first, second) = (List(1), List(""))
+       |  val (first: List[Int], second) = (List(1), List(""))
        |}
        |""".stripMargin,
   )

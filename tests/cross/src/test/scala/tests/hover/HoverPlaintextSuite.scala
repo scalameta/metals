@@ -38,7 +38,33 @@ class HoverPlaintextSuite extends BaseHoverSuite {
   check(
     "fold-plaintext",
     """|object a {
-       |  <<Option(1).fo@@ld("")(_ => @@)>>
+       |  /**
+       |   *  @define option [[scala.Option]]
+       |   *  @define f `f`
+       |   */
+       |  case class OptionWrapper[A](val x: Option[A]) {
+       |    /** Returns the result of applying $f to this $option's
+       |    *  value if the $option is nonempty.  Otherwise, evaluates
+       |    *  expression `ifEmpty`.
+       |    *
+       |    * This is equivalent to:
+       |    * {{{
+       |    * option match {
+       |    *   case Some(x) => f(x)
+       |    *   case None    => ifEmpty
+       |    * }
+       |    * }}}
+       |    * This is also equivalent to:
+       |    * {{{
+       |    * option map f getOrElse ifEmpty
+       |    * }}}
+       |    *  @param  ifEmpty the expression to evaluate if empty.
+       |    *  @param  f       the function to apply if nonempty.
+       |    */
+       |    final def fold[B](ifEmpty: => B)(f: A => B): B = ???
+       |   }
+       |
+       |  <<OptionWrapper(Some(1)).fo@@ld("")(_ => ???)>>
        |}
        |""".stripMargin,
     """|Expression type:
@@ -68,46 +94,27 @@ class HoverPlaintextSuite extends BaseHoverSuite {
        |
        |@param ifEmpty: the expression to evaluate if empty.
        |@param f: the function to apply if nonempty.
-       |""".stripMargin,
-    compat = Map(
-      "2.13.18" ->
-        """|Expression type:
-           |String
-           |
-           |Symbol signature:
-           |final def fold[B](ifEmpty: => B)(f: Int => B): B
-           |
-           |Returns the result of applying f to this [[scala.Option]]'s
-           | value if the [[scala.Option]] is nonempty.  Otherwise, evaluates
-           | expression ifEmpty.
-           |
-           |This is equivalent to:
-           |
-           |{{{
-           |option match {
-           |  case Some(x) => f(x)
-           |  case None    => ifEmpty
-           |}
-           |}}}
-           |
-           |This is also equivalent to:
-           |
-           |{{{
-           |option.map(f).getOrElse(ifEmpty)
-           |}}}
-           |
-           |@param ifEmpty: the expression to evaluate if empty.
-           |@param f: the function to apply if nonempty.
-           |""".stripMargin
-    )
+       |""".stripMargin
   )
 
   check(
-    "head-plaintext".tag(
-      IgnoreScala211.and(IgnoreScala212)
-    ),
+    "head-plaintext",
     """|object a {
-       |  <<List(1).he@@ad>>
+       |  /**
+       |  * @define coll iterable collection
+       |  * @define orderDependent
+       |  *
+       |  *    Note: might return different results for different runs, unless the underlying collection type is ordered.
+       |  */
+       |  case class MyList[A](l: List[A]) {
+       |   /** Selects the first element of this $coll.
+       |    *  $orderDependent
+       |    *  @return  the first element of this $coll.
+       |    *  @throws NoSuchElementException if the $coll is empty.
+       |    */
+       |    def head: A = l.head
+       |  }
+       |  <<MyList(List(1)).he@@ad>>
        |}
        |""".stripMargin,
     """|def head: Int

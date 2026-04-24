@@ -4,6 +4,6 @@ import example.JavaEnum
 
 object UseJavaEnum {
   def main(): Unit = {
-    println(JavaEnum.A)
+    println(/*x = */JavaEnum.A)
   }
 }

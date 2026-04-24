@@ -1,18 +1,27 @@
 package scala.meta.internal.metals
 
+import java.lang
 import java.nio.file.Path
+import java.util.Optional
+import java.util.function.Supplier
 
 import scala.meta.internal.metals.utils.TimestampedFile
+import scala.meta.pc.reports.Report
 
 object LoggerReporter extends Reporter {
 
-  override def name: String = "logger-report"
-  override def create(report: => Report, ifVerbose: Boolean): Option[Path] = {
+  override def create(
+      lazyReport: Supplier[Report],
+      ifVerbose: lang.Boolean,
+  ): Optional[Path] = {
+    val report = lazyReport.get()
     scribe.info(
-      s"Report ${report.name}: ${report.fullText(withIdAndSummary = false)}"
+      s"Report ${report.name}: ${report.fullText( /* withIdAndSummary = */ false)}"
     )
-    None
+    Optional.empty()
   }
+
+  override def name: String = "logger-report"
 
   override def cleanUpOldReports(maxReportsNumber: Int): List[TimestampedFile] =
     List()

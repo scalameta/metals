@@ -23,13 +23,16 @@ object Run {
       jvmOptions: List[String],
       evnVariables: List[String],
       logger: Logger,
+      debug: Boolean = true,
   )(implicit ec: ExecutionContext): CancelableFuture[Unit] = {
     val fullClasspathStr =
       classPath.map(_.toString()).mkString(File.pathSeparator)
     val java = JavaBinary(userJavaHome).toString()
     val classpathOption = "-cp" :: fullClasspathStr :: Nil
     val cmd =
-      java :: (jvmOptions :+ enableDebugInterface) ::: classpathOption ::: (className :: args)
+      java :: jvmOptions ::: (if (debug) enableDebugInterface :: Nil
+                              else
+                                Nil) ::: classpathOption ::: (className :: args)
     val cmdLength = cmd.foldLeft(0)(_ + _.length)
     val envOptions =
       evnVariables.flatMap { line =>

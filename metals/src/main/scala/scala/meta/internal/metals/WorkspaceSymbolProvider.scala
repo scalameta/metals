@@ -13,7 +13,6 @@ import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearchParams
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.SymbolDefinition
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -43,6 +42,9 @@ final class WorkspaceSymbolProvider(
   val MaxWorkspaceMatchesForShortQuery = 100
   val inWorkspace: TrieMap[Path, WorkspaceSymbolsIndex] =
     TrieMap.empty[Path, WorkspaceSymbolsIndex]
+
+  val packages: TrieMap[BuildTargetIdentifier, TrieMap[String, PackageNode]] =
+    TrieMap.empty
 
   // symbols for extension methods
   val inWorkspaceMethods: TrieMap[Path, Seq[WorkspaceSymbolInformation]] =
@@ -127,6 +129,27 @@ final class WorkspaceSymbolProvider(
     SymbolSearch.Result.COMPLETE
   }
 
+  def searchWorkspacePackages(
+      visitor: SymbolSearchVisitor,
+      target: Option[BuildTargetIdentifier],
+  ): SymbolSearch.Result = {
+    def loop(packages: TrieMap[String, PackageNode], owner: String): Unit = {
+      packages.foreach { case (name, node) =>
+        val pkg = s"$owner$name/"
+        visitor.visitWorkspacePackage(pkg)
+        loop(node.children, pkg)
+      }
+    }
+    target.foreach { id =>
+      buildTargets
+        .buildTargetTransitiveDependencies(id)
+        .foreach { dep =>
+          packages.get(dep).foreach(loop(_, ""))
+        }
+    }
+    SymbolSearch.Result.COMPLETE
+  }
+
   def indexClasspath(progress: TaskProgress = TaskProgress.empty): Unit = {
     try {
       indexClasspathUnsafe(progress)
@@ -137,7 +160,70 @@ final class WorkspaceSymbolProvider(
   }
 
   def didRemove(path: AbsolutePath): Unit = {
-    inWorkspace.remove(path.toNIO)
+    val prev = inWorkspace.remove(path.toNIO)
+    buildTargets
+      .inverseSources(path)
+      .foreach(bti =>
+        prev.foreach(wsi => removeWorkspacePackages(wsi.symbols, bti))
+      )
+  }
+
+  def addWorkspacePackages(
+      symbols: Seq[WorkspaceSymbolInformation],
+      buildTargetIdentifier: BuildTargetIdentifier,
+  ): Unit = {
+    val toAdd = symbols.map(_.symbol.split("/").dropRight(1)).distinct
+    @tailrec
+    def loop(
+        current: Seq[String],
+        packages: TrieMap[String, PackageNode],
+    ): Unit = {
+      current match {
+        case Nil =>
+        case head :: next =>
+          val pkg = packages.getOrElseUpdate(head, PackageNode())
+          pkg.count += 1
+          loop(next, pkg.children)
+      }
+    }
+    toAdd.foreach(pkg =>
+      loop(
+        pkg.toList,
+        packages.getOrElseUpdate(buildTargetIdentifier, TrieMap.empty),
+      )
+    )
+  }
+
+  def removeWorkspacePackages(
+      symbols: Seq[WorkspaceSymbolInformation],
+      buildTargetIdentifier: BuildTargetIdentifier,
+  ): Unit = {
+    packages.get(buildTargetIdentifier) match {
+      case Some(packages) =>
+        val toRemove = symbols.map(_.symbol.split("/").dropRight(1)).distinct
+        @tailrec
+        def loop(
+            current: Seq[String],
+            packages: TrieMap[String, PackageNode],
+        ): Unit = {
+          current match {
+            case Nil =>
+            case head :: next =>
+              packages.get(head).foreach(_.count -= 1)
+              packages.synchronized {
+                if (packages.get(head).exists(_.count <= 0)) {
+                  packages.remove(head)
+                }
+              }
+              packages.get(head) match {
+                case Some(pkg) => loop(next, pkg.children)
+                case None =>
+              }
+          }
+        }
+        toRemove.foreach(pkg => loop(pkg.toList, packages))
+      case None =>
+    }
   }
 
   def didChange(
@@ -146,6 +232,7 @@ final class WorkspaceSymbolProvider(
       methodSymbols: Seq[WorkspaceSymbolInformation],
   ): Unit = {
     val bloom = Fuzzy.bloomFilterSymbolStrings(symbols.map(_.symbol))
+    val prev = inWorkspace.get(source.toNIO)
     inWorkspace(source.toNIO) = WorkspaceSymbolsIndex(bloom, symbols)
 
     // methodSymbols will be searched when we type `qual.x@@`
@@ -158,6 +245,13 @@ final class WorkspaceSymbolProvider(
     //   Therefore, we can expect symbol lookup for extension methods could be fast enough without bloom-filter.
     if (methodSymbols.nonEmpty)
       inWorkspaceMethods(source.toNIO) = methodSymbols
+
+    buildTargets.inverseSources(source).foreach { buildTargetIdentifier =>
+      prev.foreach(prev =>
+        removeWorkspacePackages(prev.symbols, buildTargetIdentifier)
+      )
+      addWorkspacePackages(symbols, buildTargetIdentifier)
+    }
   }
 
   def buildTargetSymbols(
@@ -297,18 +391,18 @@ final class WorkspaceSymbolProvider(
   }
 
   class PreferredScalaVersionOrdering(preferredScalaVersions: Set[String])
-      extends Ordering[SymbolDefinition] {
+      extends Ordering[AbsolutePath] {
     private def pathMatchesPreferred(path: AbsolutePath) =
       buildTargets
         .possibleScalaVersions(path)
         .exists(preferredScalaVersions(_))
 
-    private def pathLength(symbolDef: SymbolDefinition) =
-      symbolDef.path.toURI.toString().length()
+    private def pathLength(path: AbsolutePath) =
+      path.toURI.toString().length()
 
-    override def compare(x: SymbolDefinition, y: SymbolDefinition): Int = {
-      val xVersionMatches = pathMatchesPreferred(x.path)
-      val yVersionMatches = pathMatchesPreferred(y.path)
+    override def compare(x: AbsolutePath, y: AbsolutePath): Int = {
+      val xVersionMatches = pathMatchesPreferred(x)
+      val yVersionMatches = pathMatchesPreferred(y)
 
       if (xVersionMatches && !yVersionMatches) -1
       else if (yVersionMatches && !xVersionMatches) 1
@@ -317,7 +411,7 @@ final class WorkspaceSymbolProvider(
   }
 
   object SymbolDefinitionOrdering {
-    def fromOptPath(path: Option[AbsolutePath]): Ordering[SymbolDefinition] = {
+    def fromOptPath(path: Option[AbsolutePath]): Ordering[AbsolutePath] = {
       path.toList.flatMap(buildTargets.possibleScalaVersions(_)) match {
         case Nil => DefaultSymbolDefinitionOrdering
         case preferredScalaVersions =>
@@ -325,4 +419,9 @@ final class WorkspaceSymbolProvider(
       }
     }
   }
+}
+case class PackageNode(
+    children: TrieMap[String, PackageNode] = TrieMap.empty
+) {
+  @volatile var count: Int = 0
 }

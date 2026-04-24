@@ -41,4 +41,5 @@ class DelegatingGlobalSymbolIndex(
   ): List[mtags.IndexingResult] = {
     underlying.addSourceDirectory(dir, dialect)
   }
+
 }

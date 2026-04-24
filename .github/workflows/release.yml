@@ -26,3 +26,9 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      # - name: Publish Documentation
+      #   if: ${{ !contains(github.ref_name, '@') }}
+      #   run: sbt docs/docusaurusPublishGhpages
+      #   env:
+      #     GIT_USER: scalameta@scalameta.org
+      #     GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}

@@ -6,7 +6,9 @@ import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -28,6 +30,8 @@ class MillServerSuite
   val supportedBspVersion = V.millVersion
   val scalaVersion = V.scala213
   def buildTool: MillBuildTool = MillBuildTool(() => userConfig, workspace)
+  override def serverConfig: MetalsServerConfig =
+    super.serverConfig.copy(statusBar = StatusBarConfig.on)
 
   override def currentDigest(
       workspace: AbsolutePath
@@ -164,5 +168,108 @@ class MillServerSuite
                        |$fileContent
                        |""".stripMargin,
   )
+
+  test(s"no-ide-modules-are-not-loaded") {
+    def millBspConfig = workspace.resolve(".bsp/mill-bsp.json")
+    writeLayout(
+      s"""
+         |/.mill-version
+         |$supportedBspVersion
+         |/build.sc
+         |package build
+         |import mill.scalalib.bsp.BspBuildTarget
+         |import mill.scalalib.bsp.BspModule
+         |  
+         |import mill._
+         |import scalalib._
+         |  
+         |object foo extends ScalaModule {
+         |  def scalaVersion = "2.13.13"
+         |}
+         |  
+         |object bar extends ScalaModule with BspModule  {
+         |  def scalaVersion = "2.13.13"
+         |  
+         |  override def bspBuildTarget: BspBuildTarget = {
+         |    val original = super.bspBuildTarget
+         |    original.copy(tags = original.tags :+ BspModule.Tag.NoIDE)
+         |  }
+         |}
+         |/foo/src/Main.scala
+         |package foo
+         |
+         |object Main extends App {
+         |  println("Hello, world!")
+         |}
+         |
+         |/bar/src/Main.scala
+         |package foo
+         |
+         |object Main extends App {
+         |  println("Hello, world!")
+         |}
+         |""".stripMargin
+    )
+    for {
+      _ <- server.initialize()
+      _ <- server.initialized()
+      _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
+      _ <- server.server.buildServerPromise.future
+      _ = assertNoDiff(
+        client.workspaceMessageRequests,
+        importBuildMessage,
+      )
+      targets <- server.listBuildTargets
+    } yield {
+      assert(millBspConfig.exists)
+      server.assertBuildServerConnection()
+      assertEquals(targets, List("foo", "mill-build/"))
+    }
+  }
+
+  test("call pc before initial compilation") {
+    cleanWorkspace()
+    client.statusParams.clear()
+    val compileTaskFinished = Promise[Unit]()
+    client.onMetalsStatus = { params =>
+      if (params.text.contains("Compiled")) compileTaskFinished.success(())
+    }
+    for {
+      _ <- initialize(
+        s"""|/build.sc
+            |import mill._, scalalib._
+            |object foo extends ScalaModule {
+            |  def scalaVersion = "${V.scala213}"
+            |}
+            |/foo/src/bar/Main.scala
+            |package bar
+            |object Main {
+            |  val i: Int = "aaaa"
+            |}
+            |/foo/src/bar/Foo.scala
+            |package bar
+            |object Foo {
+            |  def foo = "foo"
+            |}
+            |""".stripMargin
+      )
+      res1 <- server.headServer.compilers
+        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      _ = assert(res1.isEmpty)
+      _ <- server.didOpen("foo/src/bar/Main.scala")
+      _ <- server.didChange("foo/src/bar/Main.scala") { _ =>
+        """|package bar
+           |object Main {
+           |  val i: Int = 1
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("foo/src/bar/Main.scala")
+      _ <- compileTaskFinished.future
+      res2 <- server.headServer.compilers
+        .info(server.toPath("foo/src/bar/Main.scala"), "bar/Foo.")
+      _ = assert(res2.isDefined)
+    } yield ()
+  }
 
 }

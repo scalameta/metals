@@ -41,6 +41,7 @@ import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.EmptyResult
@@ -264,14 +265,21 @@ object MetalsEnrichments
     def liftToLspError(implicit ec: ExecutionContext): Future[A] =
       future.recoverWith { case NonFatal(e) =>
         scribe.error(e)
-        val newException = new ResponseErrorException(
-          new messages.ResponseError(
-            messages.ResponseErrorCode.InvalidRequest,
-            e.getMessage(),
-            null,
-          )
-        )
-        Future.failed(newException)
+        val responseError = e match {
+          case DiscoveryFailures.WorkspaceErrorsException =>
+            new messages.ResponseError(
+              543, // some number we picked to represent compile errors
+              e.getMessage(),
+              null,
+            )
+          case _ =>
+            new messages.ResponseError(
+              messages.ResponseErrorCode.InvalidRequest,
+              e.getMessage(),
+              null,
+            )
+        }
+        Future.failed(new ResponseErrorException(responseError))
       }
     def asJavaUnit(implicit ec: ExecutionContext): CompletableFuture[Unit] =
       future.ignoreValue.asJava
@@ -787,14 +795,16 @@ object MetalsEnrichments
         Some(toAbsolutePath)
       } catch {
         case NonFatal(error) =>
-          reports.incognito.create(
-            Report(
-              "absolute-path",
-              s"""|Uri: $value
-                  |""".stripMargin,
-              error,
+          reports
+            .incognito()
+            .create(() =>
+              Report(
+                "absolute-path",
+                s"""|Uri: $value
+                    |""".stripMargin,
+                error,
+              )
             )
-          )
           None
       }
 
@@ -1038,11 +1048,42 @@ object MetalsEnrichments
         else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
+
       Option(diag.getCode()).foreach { code =>
         ld.setCode(diag.getCode())
-        if (DiagnosticCodes.isEqual(code, DiagnosticCodes.Unused)) {
-          ld.setTags(java.util.List.of(l.DiagnosticTag.Unnecessary))
+      }
+
+      Option(diag.getTags()).foreach { tags =>
+        val converted = tags.asScala.flatMap {
+          case num if (l.DiagnosticTag.Unnecessary.getValue() == num) =>
+            Some(l.DiagnosticTag.Unnecessary)
+          case num if (l.DiagnosticTag.Deprecated.getValue() == num) =>
+            Some(l.DiagnosticTag.Deprecated)
+          case _ => None
         }
+        val all =
+          if (DiagnosticCodes.isEqual(diag.getCode(), DiagnosticCodes.Unused))
+            converted :+ l.DiagnosticTag.Unnecessary
+          else converted
+        ld.setTags(all.distinct.asJava)
+      }
+
+      Option(diag.getCodeDescription()).foreach { codeDesc =>
+        ld.setCodeDescription(
+          new l.DiagnosticCodeDescription(codeDesc.getHref())
+        )
+      }
+
+      Option(diag.getRelatedInformation()).foreach { related =>
+        ld.setRelatedInformation(related.asScala.map { r =>
+          new l.DiagnosticRelatedInformation(
+            new l.Location(
+              r.getLocation().getUri(),
+              r.getLocation().getRange().toLsp,
+            ),
+            r.getMessage(),
+          )
+        }.asJava)
       }
 
       ld.setData(diag.getData)
@@ -1084,7 +1125,6 @@ object MetalsEnrichments
     def toAbsoluteClasspath: Iterator[AbsolutePath] = {
       classpath.iterator
         .map(_.toAbsolutePath)
-        .filter(p => Files.exists(p.toNIO))
     }
   }
 

@@ -5,9 +5,17 @@ import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExtractMethodCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
+
+import org.eclipse.lsp4j.CodeActionKind
 
 class ImportMissingSymbolLspSuite
     extends BaseCodeActionLspSuite("importMissingSymbol") {
+
+  // ---------------------------------------------------------------------------
+  // Tests for ImportMissingSymbolQuickFix (CodeActionKind.QuickFix)
+  // These tests verify the existing behavior for manual import resolution
+  // ---------------------------------------------------------------------------
 
   check(
     "basic",
@@ -28,6 +36,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -56,6 +65,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -86,6 +96,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -107,6 +118,7 @@ class ImportMissingSymbolLspSuite
        |  val f = Future.successful(2)
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -130,6 +142,7 @@ class ImportMissingSymbolLspSuite
        |  val g = Try{}
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -162,7 +175,6 @@ class ImportMissingSymbolLspSuite
     kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
-  // Note: When importing multiple symbols, each is added relative to existing imports
   check(
     "multi-across-lines-non-ambiguous",
     """|package a
@@ -193,6 +205,8 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
   check(
@@ -228,6 +242,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -263,6 +278,7 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -292,9 +308,10 @@ class ImportMissingSymbolLspSuite
        |}
        |""".stripMargin,
     expectNoDiagnostics = false,
+    kind =
+      List(ImportMissingSymbolQuickFix.kind, CodeActionKind.RefactorRewrite),
   )
 
-  // Import added after existing import
   check(
     "i5567",
     """package p {
@@ -321,6 +338,7 @@ class ImportMissingSymbolLspSuite
        |  }
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -346,6 +364,7 @@ class ImportMissingSymbolLspSuite
        |  ) extends Foo
        |}
        |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -377,6 +396,7 @@ class ImportMissingSymbolLspSuite
         |  }
         |}
         |""".stripMargin,
+    kind = List(ImportMissingSymbolQuickFix.kind),
   )
 
   check(
@@ -405,6 +425,7 @@ class ImportMissingSymbolLspSuite
         |}
         |""".stripMargin,
     expectNoDiagnostics = false,
+    kind = List(ImportMissingSymbolQuickFix.kind),
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
   )
 
@@ -435,6 +456,33 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImportMissingSymbol.title("A", "example.a"),
+    kind = List(ImportMissingSymbolQuickFix.kind),
+  )
+
+  // ---------------------------------------------------------------------------
+  // Tests for SourceAddMissingImports (source.addMissingImports)
+  // These tests verify the auto-import behavior that only imports unambiguous symbols
+  // ---------------------------------------------------------------------------
+
+  check(
+    "source-add-missing-imports-single-unambiguous",
+    """|package a
+       |
+       |object <<A>> {
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    s"""|${SourceAddMissingImports.title}
+        |""".stripMargin,
+    """|package a
+       |
+       |import java.time.Instant
+       |
+       |object A {
+       |  val i = Instant.now
+       |}
+       |""".stripMargin,
+    kind = List(SourceAddMissingImports.kind),
   )
 
   check(

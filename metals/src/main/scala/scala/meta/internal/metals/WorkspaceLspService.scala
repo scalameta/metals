@@ -164,7 +164,7 @@ class WorkspaceLspService(
   }
 
   private val shellRunner = register {
-    new ShellRunner(time, workDoneProgress)
+    new ShellRunner(time, workDoneProgress, () => UserConfiguration())
   }
 
   private val focusedDocument: AtomicReference[Option[AbsolutePath]] =
@@ -255,7 +255,6 @@ class WorkspaceLspService(
           clientConfig,
           statusBar,
           () => focusedDocument.get(),
-          shellRunner,
           timerProvider,
           initTreeView,
           uri,
@@ -1171,7 +1170,7 @@ class WorkspaceLspService(
         }.asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
-          _.switchBspServer(),
+          _.switchBspServer().ignoreValue,
           ServerCommands.BspSwitch.title,
         ).asJavaObject
       case ServerCommands.OpenIssue() =>
@@ -1493,7 +1492,10 @@ class WorkspaceLspService(
         capabilities.setRenameProvider(renameOptions)
         capabilities.setDocumentHighlightProvider(true)
         capabilities.setDocumentOnTypeFormattingProvider(
-          new lsp4j.DocumentOnTypeFormattingOptions("\n", List("\"").asJava)
+          new lsp4j.DocumentOnTypeFormattingOptions(
+            "\n",
+            List("\"", "{").asJava,
+          )
         )
         capabilities.setDocumentRangeFormattingProvider(
           initialServerConfig.allowMultilineStringFormatting

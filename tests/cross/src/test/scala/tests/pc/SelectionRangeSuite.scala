@@ -201,6 +201,7 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
     "def - braced",
     """object Main extends App { def foo(hi: Int, b@@: Int, c:Int) = ??? } """.stripMargin,
     List(
+      """object Main extends App { def foo(hi: Int, >>region>>b<<region<<: Int, c:Int) = ??? }""".stripMargin,
       """object Main extends App { def foo(hi: Int, >>region>>b: Int<<region<<, c:Int) = ??? }""".stripMargin,
       """object Main extends App { def foo(>>region>>hi: Int, b: Int, c:Int<<region<<) = ??? }""".stripMargin,
       """object Main extends App { >>region>>def foo(hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
@@ -213,9 +214,83 @@ class SelectionRangeSuite extends BaseSelectionRangeSuite {
     object Main extends App { def foo[Type@@ <: T1, B](hi: Int, b: Int, c:Int) = ??? }
     """.stripMargin,
     List(
+      """object Main extends App { def foo[>>region>>Type<<region<< <: T1, B](hi: Int, b: Int, c:Int) = ??? }""".stripMargin,
       """object Main extends App { def foo[>>region>>Type <: T1<<region<<, B](hi: Int, b: Int, c:Int) = ??? }""".stripMargin,
       """object Main extends App { def foo[>>region>>Type <: T1, B<<region<<](hi: Int, b: Int, c:Int) = ??? }""".stripMargin,
       """object Main extends App { >>region>>def foo[Type <: T1, B](hi: Int, b: Int, c:Int) = ???<<region<< }""".stripMargin
+    )
+  )
+
+  check(
+    "def - lhs",
+    """
+    object Main extends App { def `foo ba@@r` = ??? }
+    """.stripMargin,
+    List(
+      """object Main extends App { def >>region>>`foo bar`<<region<< = ??? }""".stripMargin,
+      """object Main extends App { >>region>>def `foo bar` = ???<<region<< }""".stripMargin
+    )
+  )
+
+  check(
+    "expr - apply",
+    """
+    object Main extends App { def foo = bar.baz(1, math.floor(p@@i), 2) }
+    """.stripMargin,
+    List(
+      """object Main extends App { def foo = bar.baz(1, math.floor(>>region>>pi<<region<<), 2) }""",
+      """object Main extends App { def foo = bar.baz(1, >>region>>math.floor(pi)<<region<<, 2) }""",
+      """object Main extends App { def foo = bar.baz(>>region>>1, math.floor(pi), 2<<region<<) }""",
+      """object Main extends App { def foo = >>region>>bar.baz(1, math.floor(pi), 2)<<region<< }""",
+      """object Main extends App { >>region>>def foo = bar.baz(1, math.floor(pi), 2)<<region<< }"""
+    )
+  )
+
+  check(
+    "expr - backticked",
+    """
+    object Main extends App { def foo = `foo ba@@r` + 1 }
+    """.stripMargin,
+    List(
+      """object Main extends App { def foo = >>region>>`foo bar`<<region<< + 1 }""",
+      """object Main extends App { def foo = >>region>>`foo bar` +<<region<< 1 }""",
+      """object Main extends App { def foo = >>region>>`foo bar` + 1<<region<< }""",
+      """object Main extends App { >>region>>def foo = `foo bar` + 1<<region<< }"""
+    )
+  )
+
+  check(
+    "type - apply",
+    """
+    object Main extends App { def foo: Tuple3[Int, List[In@@t], Double] = ??? }
+    """.stripMargin,
+    List(
+      """object Main extends App { def foo: Tuple3[Int, List[>>region>>Int<<region<<], Double] = ??? }""",
+      """object Main extends App { def foo: Tuple3[Int, >>region>>List[Int]<<region<<, Double] = ??? }""",
+      """object Main extends App { def foo: Tuple3[>>region>>Int, List[Int], Double<<region<<] = ??? }""",
+      """object Main extends App { def foo: >>region>>Tuple3[Int, List[Int], Double]<<region<< = ??? }""",
+      """object Main extends App { >>region>>def foo: Tuple3[Int, List[Int], Double] = ???<<region<< }"""
+    )
+  )
+
+  check(
+    "constructor-argument",
+    """
+    class Foo(val ar@@g: Int)
+    """.stripMargin,
+    List(
+      """class Foo(val >>region>>arg<<region<<: Int)""",
+      """class Foo(>>region>>val arg: Int<<region<<)"""
+    )
+  )
+
+  check(
+    "object - backticked",
+    """
+    object `Foo B@@ar Baz` extends SomeTrait
+    """.stripMargin,
+    List(
+      """object >>region>>`Foo Bar Baz`<<region<< extends SomeTrait"""
     )
   )
 }

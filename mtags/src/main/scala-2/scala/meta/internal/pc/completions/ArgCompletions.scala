@@ -170,12 +170,19 @@ trait ArgCompletions { this: MetalsGlobal =>
           }
           .mkString(", ")
         val edit = new l.TextEdit(editRange, editText)
+        val labelText = allParams
+          .collect {
+            case param if !param.hasDefault =>
+              s"${Identifier.backtickWrap(param.name).replace("$", "$$")} = ???"
+          }
+          .mkString(", ")
         List(
           new TextEditMember(
             filterText = s"$prefix-$suffix",
             edit = edit,
             methodSym,
-            label = Some("Autofill with default values")
+            label = Option(labelText),
+            detail = Option("")
           )
         )
       } else {

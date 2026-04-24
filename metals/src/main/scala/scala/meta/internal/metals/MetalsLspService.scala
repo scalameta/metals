@@ -59,7 +59,6 @@ import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
-import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
@@ -112,7 +111,6 @@ abstract class MetalsLspService(
     val clientConfig: ClientConfiguration,
     val statusBar: StatusBar,
     getFocusedDocument: () => Option[AbsolutePath],
-    shellRunner: ShellRunner,
     val timerProvider: TimerProvider,
     val folder: AbsolutePath,
     folderVisibleName: Option[String],
@@ -129,6 +127,7 @@ abstract class MetalsLspService(
   import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
+  def shellRunner: ShellRunner
 
   def refreshTestSuites(): Unit = testProvider.refreshTestSuites.apply(())
   @volatile
@@ -519,7 +518,7 @@ abstract class MetalsLspService(
     )
   )
 
-  protected val compilers: Compilers = register(
+  val compilers: Compilers = register(
     new Compilers(
       folder,
       clientConfig,
@@ -719,18 +718,7 @@ abstract class MetalsLspService(
 
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
-  protected val fileDecoderProvider: FileDecoderProvider =
-    new FileDecoderProvider(
-      folder,
-      compilers,
-      buildTargets,
-      () => userConfig,
-      shellRunner,
-      optFileSystemSemanticdbs,
-      interactiveSemanticdbs,
-      languageClient,
-      new ClassFinder(trees),
-    )
+  protected def fileDecoderProvider: FileDecoderProvider
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()
@@ -2123,7 +2111,7 @@ abstract class MetalsLspService(
         case e: IndexingExceptions.PathIndexingException =>
           scribe.error(s"issues while parsing: ${e.path}", e.getCause)
         case e: IndexingExceptions.InvalidSymbolException =>
-          reports.incognito.create(
+          reports.incognito.create(() =>
             Report(
               "invalid-symbol",
               s"""Symbol: ${e.symbol}""".stripMargin,

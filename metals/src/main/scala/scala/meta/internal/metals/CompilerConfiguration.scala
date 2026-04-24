@@ -156,9 +156,14 @@ class CompilerConfiguration(
       srcFiles: Supplier[ju.List[Path]],
       sourcePathMode: SourcePathMode,
   ) extends MtagsPresentationCompiler {
-    private val mtagsBinaries =
-      mtagsResolver.resolve(scalaVersion).getOrElse(MtagsBinaries.BuildIn)
+    private val resolvedMtags = mtagsResolver.resolve(scalaVersion)
 
+    private val mtagsBinaries =
+      resolvedMtags.getOrElse(MtagsBinaries.BuildIn)
+
+    private val classPathExtension =
+      if (resolvedMtags.nonEmpty) Embedded.scalaLibrary(scalaVersion)
+      else Embedded.scalaLibrary(MtagsBinaries.BuildIn.scalaVersion)
     val standalone: PresentationCompiler = {
       val fallbackOptions =
         if (ScalaVersions.isScala3Version(scalaVersion)) Nil
@@ -166,7 +171,7 @@ class CompilerConfiguration(
       fromMtags(
         mtagsBinaries,
         options = fallbackOptions,
-        classpath ++ Embedded.scalaLibrary(scalaVersion),
+        classpath ++ classPathExtension,
         "default",
         symbolSearch,
         referenceCounter,
@@ -352,10 +357,8 @@ class CompilerConfiguration(
       val selfBestEffortDir =
         if (scalaTarget.isBestEffort) Seq(scalaTarget.bestEffortPath)
         else Seq.empty
-
-      // scribe.debug(s"Source path: ${srcFiles.get().asScala.mkString(":")}")
       val fallbackScalaLib =
-        if (!buildTargets.hasScalaLibrary(scalaTarget.id)) {
+        if (!classpath.exists(_.toString.contains("scala-library"))) {
           scribe.warn(
             s"scala-library.jar not found on classpath for ${scalaTarget.displayName}, adding default library for ${scalaTarget.scalaVersion}"
           )
@@ -472,6 +475,7 @@ class CompilerConfiguration(
         else progressBars
       )
       .withReportsLoggerLevel(MetalsServerConfig.default.loglevel)
+      .withReportContext(rc)
       .withConfiguration {
         val options =
           InitializationOptions.from(initializeParams).compilerOptions
@@ -575,7 +579,7 @@ class CompilerConfiguration(
               |""".stripMargin,
           error,
         )
-      rc.unsanitized.create(report)
+      rc.unsanitized().create(() => report)
       EmptySymbolSearch
     }
   }

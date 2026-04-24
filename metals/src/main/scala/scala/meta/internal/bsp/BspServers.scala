@@ -174,6 +174,7 @@ final class BspServers(
         mbtBuild,
         workDoneProgress,
         scalaVersionSelector,
+        userConfig,
       )
     } else {
       BuildServerConnection.fromSockets(
@@ -185,6 +186,7 @@ final class BspServers(
         tables.dismissedNotifications.RequestTimeout,
         tables.dismissedNotifications.ReconnectBsp,
         config,
+        userConfig(),
         details.getName(),
         bspStatusOpt,
         workDoneProgress = workDoneProgress,

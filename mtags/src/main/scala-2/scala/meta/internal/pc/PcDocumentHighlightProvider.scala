@@ -27,5 +27,5 @@ final class PcDocumentHighlightProvider(
   }
 
   def highlights(): List[DocumentHighlight] =
-    result()
+    result().distinctBy(_.getRange())
 }

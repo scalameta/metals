@@ -36,6 +36,70 @@ class ScalaCliDependencyRangeFormatterPastingSuite
   )
 
   check(
+    "change-no-dep-format-test-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "1.0.4" % "test""""".stripMargin,
+    s"""
+       |//> using test.dep org.scalameta::munit:1.0.4
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
+    "change-no-dep-format-test-configuration-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "1.0.4" % Test""".stripMargin,
+    s"""
+       |//> using test.dep org.scalameta::munit:1.0.4
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
+    "change-no-dep-format-provided-configuration",
+    s"""
+       |//> using @@
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"com.github.dwickern" %% "scala-nameof" % "4.0.0" % "provided"""".stripMargin,
+    s"""
+       |//> using compileOnly.dep com.github.dwickern::scala-nameof:4.0.0
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
+    "change-no-dep-format-within-existing-deps",
+    s"""
+       |//> using dep com.lihaoyi::utest::0.7.10
+       |//> using @@
+       |//> using dep com.lihaoyi::pprint::0.6.6
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+    s"""|"org.scalameta" %% "munit" % "0.7.26"""".stripMargin,
+    s"""
+       |//> using dep com.lihaoyi::utest::0.7.10
+       |//> using dep org.scalameta::munit:0.7.26
+       |//> using dep com.lihaoyi::pprint::0.6.6
+       |object Main {
+       |  println("hello")
+       |}""".stripMargin,
+  )
+
+  check(
     "change-dep-format-within-existing-deps",
     s"""
        |//> using dep com.lihaoyi::utest::0.7.10

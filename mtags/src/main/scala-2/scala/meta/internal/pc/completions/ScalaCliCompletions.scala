@@ -13,11 +13,15 @@ trait ScalaCliCompletions {
           .stripPrefix("/*<script>*/")
       )
 
+      def default = CoursierComplete.isScalaCliDep(
+        pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
+      )
+
       path match {
-        case Nil =>
-          CoursierComplete.isScalaCliDep(
-            pos.lineContent.replace(CURSOR, "").take(pos.column - 1)
-          )
+        case Nil => default
+        // worksheets with using directives
+        case (pkg: PackageDef) :: Nil if nme.EMPTY_PACKAGE_NAME == pkg.name =>
+          default
         // generated script file will end with .sc.scala
         case (_: Template) :: (_: ModuleDef) :: (_: PackageDef) :: Nil
             if pos.source.file.path.endsWith(".sc.scala") =>

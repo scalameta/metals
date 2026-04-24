@@ -3,11 +3,12 @@ package scala.meta.internal.metals
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.internal.pc.CompilerThrowable
 import scala.meta.pc.VirtualFileParams
+import scala.meta.pc.reports
 
 case class PcQueryContext(
     params: Option[VirtualFileParams],
     additionalReportingData: () => String
-)(implicit rc: ReportContext) {
+)(implicit rc: reports.ReportContext) {
   def report(name: String, e: Throwable, additionalInfo: String): Unit = {
     val error = CompilerThrowable.trimStackTrace(e)
     val report =
@@ -27,6 +28,6 @@ case class PcQueryContext(
         error,
         path = params.map(_.uri())
       )
-    rc.unsanitized.create(report)
+    rc.unsanitized().create(() => report)
   }
 }

@@ -21,7 +21,9 @@ object TestingWorkspaceSearch {
   ): TestingWorkspaceSearch = new TestingWorkspaceSearch
 }
 
-class TestingWorkspaceSearch(implicit rc: ReportContext = EmptyReportContext) {
+class TestingWorkspaceSearch(implicit
+    rc: ReportContext = EmptyReportContext
+) {
   val inputs: mutable.Map[String, (String, Dialect)] =
     mutable.Map.empty[String, (String, Dialect)]
   def search(

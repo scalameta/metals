@@ -20,6 +20,7 @@ import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.Semanticdbs
+import scala.meta.internal.parsing.ClassFinder
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget
@@ -35,7 +36,7 @@ class FallbackMetalsLspService(
     override val clientConfig: ClientConfiguration,
     override val statusBar: StatusBar,
     focusedDocument: () => Option[AbsolutePath],
-    shellRunner: ShellRunner,
+    override val shellRunner: ShellRunner,
     override val timerProvider: TimerProvider,
     override val folder: AbsolutePath,
     folderVisibleName: Option[String],
@@ -53,7 +54,6 @@ class FallbackMetalsLspService(
       clientConfig,
       statusBar,
       focusedDocument,
-      shellRunner,
       timerProvider,
       folder,
       folderVisibleName,
@@ -67,6 +67,19 @@ class FallbackMetalsLspService(
 
   val buildServerPromise: Promise[Unit] = Promise.successful(())
   indexingPromise.success(())
+
+  override protected def fileDecoderProvider: FileDecoderProvider =
+    new FileDecoderProvider(
+      folder,
+      compilers,
+      buildTargets,
+      () => userConfig,
+      shellRunner,
+      optFileSystemSemanticdbs,
+      interactiveSemanticdbs,
+      languageClient,
+      new ClassFinder(trees),
+    )
 
   private val files: AtomicReference[Set[AbsolutePath]] = new AtomicReference(
     Set.empty

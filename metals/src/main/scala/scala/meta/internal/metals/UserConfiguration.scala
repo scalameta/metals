@@ -64,8 +64,6 @@ case class UserConfiguration(
     bloopSbtAlreadyInstalled: Boolean = false,
     bloopVersion: Option[String] = None,
     bloopJvmProperties: Option[List[String]] = None,
-    ammoniteJvmProperties: Option[List[String]] = None,
-    ammoniteEnabled: Boolean = false,
     superMethodLensesEnabled: Boolean = false,
     gotoTestLensesEnabled: Boolean = true,
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
@@ -122,6 +120,9 @@ case class UserConfiguration(
       BatchSemanticdbConfig.default,
     promptBuildImport: Boolean = true,
     protobufLspConfig: ProtobufLspConfig = ProtobufLspConfig.default,
+    enableBestEffort: Boolean = false,
+    defaultShell: Option[String] = None,
+    startMcpServer: Boolean = false,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -180,8 +181,6 @@ case class UserConfiguration(
         Some(("bloopSbtAlreadyInstalled", bloopSbtAlreadyInstalled)),
         optStringField("bloopVersion", bloopVersion),
         listField("bloopJvmProperties", bloopJvmProperties),
-        listField("ammoniteJvmProperties", ammoniteJvmProperties),
-        Some(("ammoniteEnabled", ammoniteEnabled)),
         Some(("superMethodLensesEnabled", superMethodLensesEnabled)),
         Some(("gotoTestLensesEnabled", gotoTestLensesEnabled)),
         mapField("inlayHintsOptions", inlayHintsOptions.options),
@@ -357,6 +356,18 @@ case class UserConfiguration(
               "semanticdb" -> protobufLspConfig.semanticdb,
               "javaPackagePrefix" -> protobufLspConfig.javaPackagePrefix,
             ).asJava,
+          )
+        ),
+        Some(
+          (
+            "enableBestEffort",
+            enableBestEffort,
+          )
+        ),
+        Some(
+          (
+            "startMcpServer",
+            startMcpServer,
           )
         ),
       ).flatten
@@ -542,6 +553,26 @@ object UserConfiguration {
         "Should display type annotations for inferred types",
         """|When this option is enabled, each method that can have inferred types has them
            |displayed either as additional decorations if they are supported by the editor or
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "inlay-hints.named-parameters.enable",
+        "false",
+        "false",
+        "Should display parameter names next to arguments",
+        """|When this option is enabled, each method has an added parameter name next to its arguments
+           |displayed either as additional decorations if they are supported by the editor or 
+           |shown in the hover.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "inlay-hints.by-name-parameters.enable",
+        "false",
+        "false",
+        "Should display if a parameter is by-name at usage sites",
+        """|When this option is enabled, each method that has by-name parameters has them 
+           |displayed either as additional '=>' decorations if they are supported by the editor or 
            |shown in the hover.
            |""".stripMargin,
       ),
@@ -769,6 +800,34 @@ object UserConfiguration {
         """|If enabled, Metals will prompt you to import or connect to a build server
            |when a new workspace is detected. When disabled, you can still manually
            |trigger import via the "Import build" command.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "enable-best-effort",
+        "false",
+        "true",
+        "Use best effort compilation for Scala 3.",
+        """|When using Scala 3, use best effort compilation to improve Metals 
+           |correctness when the workspace doesn't compile.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "default-shell",
+        """empty string `""`.""",
+        "/usr/bin/fish",
+        "Full path to the shell executable to be used as the default",
+        """|Optionally provide a default shell executable to use for build operations.
+           |This allows customizing the shell environment before build execution.
+           |When specified, must use absolute path to the shell.
+           |The configured shell will be used for all build-related subprocesses.
+           |""".stripMargin,
+      ),
+      UserConfigurationOption(
+        "start-mcp-server",
+        "false",
+        "true",
+        "Start MCP server",
+        """|If Metals should start the MCP (SSE) server, that an AI agent can connect to.
            |""".stripMargin,
       ),
     )
@@ -1028,12 +1087,12 @@ object UserConfiguration {
     val worksheetCancelTimeout =
       getIntKey("worksheet-cancel-timeout")
         .getOrElse(default.worksheetCancelTimeout)
-    val ammoniteProperties = getStringListKey("ammonite-jvm-properties")
-    val ammoniteEnabled = getBooleanKey("ammonite-enabled").getOrElse(false)
     val bloopSbtAlreadyInstalled =
       getBooleanKey("bloop-sbt-already-installed").getOrElse(false)
     val bloopVersion =
       getStringKey("bloop-version")
+    val defaultShell =
+      getStringKey("default-shell")
     val bloopJvmProperties = getStringListKey("bloop-jvm-properties")
     val superMethodLensesEnabled =
       getBooleanKey("super-method-lenses-enabled").getOrElse(false)
@@ -1281,7 +1340,10 @@ object UserConfiguration {
           }
         },
       ).getOrElse(ProtobufLspConfig.defaultFromFeatureFlags(featureFlags))
+    val enableBestEffort =
+      getBooleanKey("enable-best-effort").getOrElse(false)
 
+    val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -1299,8 +1361,6 @@ object UserConfiguration {
           bloopSbtAlreadyInstalled,
           bloopVersion,
           bloopJvmProperties,
-          ammoniteProperties,
-          ammoniteEnabled,
           superMethodLensesEnabled,
           gotoTestLensesEnabled,
           inlayHintsOptions,
@@ -1343,6 +1403,9 @@ object UserConfiguration {
           batchSemanticdbCompilerInstances,
           promptBuildImport,
           protobufLspConfig,
+          enableBestEffort,
+          defaultShell,
+          startMcpServer,
         )
       )
     } else {
