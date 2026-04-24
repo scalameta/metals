@@ -130,7 +130,6 @@ class Compilers(
     scalaVersionSelector,
     buildTargets,
     buffers,
-    scalaVersionSelector,
     embedded,
     progressBars,
     sh,
@@ -143,6 +142,7 @@ class Compilers(
     javaFileManagerFactory,
     featureFlags,
     mbtBuild,
+    mtags,
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 

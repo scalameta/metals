@@ -208,25 +208,8 @@ abstract class MetalsLspService(
     reportTrackers = List(moduleStatus),
   )
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
   @volatile var mtags: Mtags = new Mtags()
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
   val symbolDocs = new Docstrings(definitionIndex, () => mtags)
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
-  protected val mainBuildTargetsData = new TargetData
-  val buildTargets: BuildTargets =
-    BuildTargets.from(folder, mainBuildTargetsData, tables)
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
@@ -444,7 +427,7 @@ abstract class MetalsLspService(
       buffers,
       () => userConfig,
       gotoTestProvider,
-      trees,
+      scalaVersionSelector,
     )
 
     new CodeLensProvider(
@@ -480,6 +463,7 @@ abstract class MetalsLspService(
       trees,
       () => userConfig,
       formattingProvider,
+      scalaVersionSelector,
     )
 
   protected val javaHighlightProvider: JavaDocumentHighlightProvider =
@@ -657,6 +641,7 @@ abstract class MetalsLspService(
       definitionIndex,
       scalaVersionSelector,
       buffers,
+      () => mtags,
     )
 
   protected val supermethods: Supermethods = new Supermethods(

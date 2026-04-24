@@ -38,6 +38,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
       Paths.get(System.getProperty("user.home"), ".local", "share", "bsp")
     )
   )
+  def clientName: String = "Visual Studio Code"
 
   def defaultUserConfig: UserConfiguration = UserConfiguration.default.copy(
     preferredBuildServer = preferredBuildServer,
@@ -84,6 +85,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
           initializationOptions = TestingServer.TestDefault
             .copy(isVirtualDocumentSupported = Some(true)),
           mtagsResolver = new TestMtagsResolver(checkCoursier = true),
+          clientName = clientName,
           onStartCompilation = () => (),
         )(ex)
         for {

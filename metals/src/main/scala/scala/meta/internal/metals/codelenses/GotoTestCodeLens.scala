@@ -7,10 +7,10 @@ import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.GotoTestProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.Scala._
 
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -20,7 +20,7 @@ final class GotoTestCodeLens(
     buffers: Buffers,
     userConfig: () => UserConfiguration,
     gotoTestProvider: GotoTestProvider,
-    trees: Trees,
+    scalaVersionSelector: ScalaVersionSelector,
 )(implicit val ec: ExecutionContext)
     extends CodeLens {
 
@@ -32,7 +32,8 @@ final class GotoTestCodeLens(
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
 
-    val distance = buffers.tokenEditDistance(path, textDocument.text, trees)
+    val distance =
+      buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
 
     for {
       occurrence <- textDocument.occurrences

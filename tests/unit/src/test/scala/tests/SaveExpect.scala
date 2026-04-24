@@ -72,7 +72,6 @@ object SaveExpect {
         () => new DocumentSymbolScala3Suite,
         () => new FoldingRangeScala2Suite,
         () => new FoldingRangeScala3Suite,
-        () => new WorkspaceSymbolExpectSuite,
         () => new SemanticTokensExpectSuite,
         () => new inlayHints.InlayHintsExpectSuite,
       )

@@ -3,9 +3,8 @@ package tests.mcp
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
 
-import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
+import scala.meta.internal.metals.MetalsEnrichments._
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.client.McpClient

@@ -24,7 +24,6 @@ import scala.meta.internal.metals.mbt.GitVCS
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.io.AbsolutePath
@@ -47,7 +46,6 @@ class CompilerConfiguration(
     scalaVersionSelector: ScalaVersionSelector,
     buildTargets: BuildTargets,
     buffers: Buffers,
-    scalaVersionSelector: ScalaVersionSelector,
     embedded: Embedded,
     progressBars: ProgressBars,
     sh: ScheduledExecutorService,
@@ -60,6 +58,7 @@ class CompilerConfiguration(
     javaFileManagerFactory: JavaFileManagerFactory,
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
+    mtags: () => Mtags,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()

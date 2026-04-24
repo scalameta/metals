@@ -1731,9 +1731,10 @@ final case class TestingServer(
   def definition(
       filename: String,
       query: String,
+      root: AbsolutePath,
   ): Future[List[Location]] = {
     for {
-      (_, params) <- offsetParams(filename, query)
+      (_, params) <- offsetParams(filename, query, root)
       definition <- fullServer.definition(params).asScala
     } yield {
       definition.asScala.toList

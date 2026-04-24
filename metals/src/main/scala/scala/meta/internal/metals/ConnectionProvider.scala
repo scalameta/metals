@@ -298,12 +298,7 @@ class ConnectionProvider(
               buildTool
             ) && buildTool.isBloopInstallProvider =>
         def runInstall() = connect(
-          new BloopInstallAndConnect(
-            buildTool,
-            digest,
-            forceImport,
-            shutdownServer = false,
-          ),
+          new BloopInstallAndConnect(buildTool),
           progress,
         )
         if (forceImport) runInstall()
@@ -483,7 +478,10 @@ class ConnectionProvider(
 
     def getOngoingRequest(): Option[RequestInfo] = currentRequest
 
-    def connect[T](request: ConnectRequest, progress: TaskProgress): Future[BuildChange] = {
+    def connect[T](
+        request: ConnectRequest,
+        progress: TaskProgress,
+    ): Future[BuildChange] = {
       scribe.debug(s"new connect request: ${request.toString}")
       val info = addToQueue(request)
       pollAndConnect(progress)
@@ -886,7 +884,8 @@ class ConnectionProvider(
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
-          if (result.isInstalled) createSession(shutdownServer = false, progress)
+          if (result.isInstalled)
+            createSession(shutdownServer = false, progress)
           else if (result.isFailed) {
             for {
               change <-
@@ -1047,18 +1046,6 @@ case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest("Generating bsp config") {
-  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
-    other match {
-      case BloopInstallAndConnect(_, _, _, true) if !shutdownServer => Queue
-      case _ => TakeOver
-    }
-}
-case class BloopInstallAndConnect(
-    buildTool: BloopInstallProvider,
-    checksum: String,
-    forceImport: Boolean,
-    shutdownServer: Boolean,
-) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
 
   def show: String =
@@ -1066,7 +1053,7 @@ case class BloopInstallAndConnect(
 }
 case class BloopInstallAndConnect(
     buildTool: BloopInstallProvider
-) extends ConnectRequest {
+) extends ConnectRequest("Bloop installing") {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
       case GenerateBspConfigAndConnect(_, true) => Queue

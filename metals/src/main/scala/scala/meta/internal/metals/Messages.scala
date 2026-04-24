@@ -1119,7 +1119,7 @@ object Messages {
       MessageType.Info,
       s"No corresponding test or source class found for '$fileName'",
     )
-    
+
   val missedByUser = new MessageActionItem("Missed by user")
 
 }

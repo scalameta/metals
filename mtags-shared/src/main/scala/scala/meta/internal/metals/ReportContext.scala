@@ -9,6 +9,7 @@ import java.util.Optional
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import java.util.function.Supplier
+import java.util.logging.Logger
 
 import scala.util.Try
 import scala.util.control.NonFatal
@@ -45,8 +46,8 @@ trait Reporter extends jreports.Reporter {
 class StdReportContext(
     workspace: Path,
     resolveBuildTarget: Option[URI] => Option[String],
-    level: ReportLevel = ReportLevel.Info
-    reportTrackers: List[ReportTracker] = Nil,
+    level: ReportLevel = ReportLevel.Info,
+    reportTrackers: List[ReportTracker] = Nil
 ) extends ReportContext {
   val reportsDir: Path = workspace.resolve(StdReportContext.reportsDir)
 
@@ -57,7 +58,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals-full",
-      reportTrackers,
+      reportTrackers
     )
   val incognito: StdReporter =
     new StdReporter(
@@ -66,7 +67,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "metals",
-      reportTrackers,
+      reportTrackers
     )
   val bloop: StdReporter =
     new StdReporter(
@@ -75,7 +76,7 @@ class StdReportContext(
       resolveBuildTarget,
       level,
       "bloop",
-      reportTrackers,
+      reportTrackers
     )
 
   override def cleanUpOldReports(
@@ -97,9 +98,10 @@ class StdReporter(
     resolveBuildTarget: Option[URI] => Option[String],
     level: ReportLevel,
     override val name: String,
-    reportTrackers: List[ReportTracker],
+    reportTrackers: List[ReportTracker]
 ) extends Reporter {
 
+  private val logger = Logger.getLogger(classOf[ReportContext].getName)
   val maybeReportsDir: Path =
     workspace.resolve(pathToReports).resolve(name)
   private lazy val reportsDir = maybeReportsDir.createDirectories()
@@ -162,13 +164,13 @@ class StdReporter(
           path.writeText(
             sanitize(report.fullText( /* withIdAndSummary = */ true))
           )
-          scribe.info(s"Created report: ${report.path()}")
+          logger.info(s"Created report: ${report.path()}")
           reportTrackers.foreach(_.reportCreated(report))
           path
         }
         if (!ifVerbose)
-          scribe.info(
-            s"${report.shortSummary()} (full report at: \"$pathToReport\")"
+          logger.info(
+            s"${report.shortSummary()} (full report at: ${pathToReport})"
           )
         pathToReport
       }.toOption.asJava
@@ -265,7 +267,7 @@ object ReportFileName {
         (
           foundMatch.group("name"),
           Option(foundMatch.group("buildTarget"))
-            .map(FileNameEncoderDecoder.decode),
+            .map(FileNameEncoderDecoder.decode)
         )
     }
 
@@ -274,5 +276,5 @@ object ReportFileName {
 object FileNameEncoderDecoder
     extends EncoderDecoder(
       '_',
-      Set('/', '\\', ':', '*', '?', '"', '<', '>', '|', '_', '@'),
+      Set('/', '\\', ':', '*', '?', '"', '<', '>', '|', '_', '@')
     )

@@ -61,7 +61,7 @@ class ThirdPartyDefinitionLspSuite
       base: Map[String, String],
   ): Future[Unit] = {
     for {
-      locations <- server.definition(filename, edit)
+      locations <- server.definition(filename, edit, workspace)
     } yield {
       assert(locations.nonEmpty, s"Expected definition location but got none")
       val loc = locations(0)

@@ -8,8 +8,7 @@ case class PcQueryContext(
     params: Option[VirtualFileParams],
     additionalReportingData: () => String
 )(implicit rc: reports.ReportContext) {
-  def report(name: String, e: Throwable, additionalInfo: String): Unit = {
-    val error = CompilerThrowable.trimStackTrace(e)
+  def report(name: String, error: Throwable, additionalInfo: String): Unit = {
     val report =
       Report(
         name,

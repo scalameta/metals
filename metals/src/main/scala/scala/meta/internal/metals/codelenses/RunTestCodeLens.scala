@@ -83,7 +83,7 @@ final class RunTestCodeLens(
     }
     val textDocument = textDocumentWithPath.textDocument
     val path = textDocumentWithPath.filePath
-    val distance = 
+    val distance =
       buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
     val targetIds = buildTargets
       .inverseSourcesAll(path)

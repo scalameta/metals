@@ -33,6 +33,7 @@ class SymbolHierarchyOps(
     index: GlobalSymbolIndex,
     scalaVersionSelector: ScalaVersionSelector,
     buffer: Buffers,
+    mtags: () => Mtags,
 ) {
   private val globalTable = new GlobalClassTable(buildTargets)
   def defaultSymbolSearch(
