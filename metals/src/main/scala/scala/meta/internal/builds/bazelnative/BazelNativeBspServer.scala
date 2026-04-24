@@ -44,10 +44,8 @@ class BazelNativeBspServer(
   @volatile private var buildClient: Option[ch.epfl.scala.bsp4j.BuildClient] =
     None
 
-  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit = {
-    scribe.info(s"Setting buildClient to ${client}")
+  def setClient(client: ch.epfl.scala.bsp4j.BuildClient): Unit =
     buildClient = Some(client)
-  }
 
   // -- BazelNativeBspClient implementation --
 
@@ -55,20 +53,15 @@ class BazelNativeBspServer(
     buildClient.foreach(_.onBuildTaskStart(params))
   override def onBuildTaskFinish(params: TaskFinishParams): Unit =
     buildClient.foreach(_.onBuildTaskFinish(params))
-  override def onBuildTaskProgress(params: TaskProgressParams): Unit = {
-    scribe.info(s"Sending onBuildTaskProgress to ${buildClient}")
+  override def onBuildTaskProgress(params: TaskProgressParams): Unit =
     buildClient.foreach(_.onBuildTaskProgress(params))
-  }
 
   override def onBuildPublishDiagnostics(
       params: PublishDiagnosticsParams
   ): Unit =
     buildClient.foreach(_.onBuildPublishDiagnostics(params))
-  override def onBuildShowMessage(params: ShowMessageParams): Unit = {
-    scribe.info(s"Sending onBuildShowMessage to ${buildClient}")
+  override def onBuildShowMessage(params: ShowMessageParams): Unit =
     buildClient.foreach(_.onBuildShowMessage(params))
-  }
-
   override def onBuildLogMessage(params: LogMessageParams): Unit =
     buildClient.foreach(_.onBuildLogMessage(params))
 
@@ -190,18 +183,10 @@ class BazelNativeBspServer(
   ): CompletableFuture[CompileResult] = {
     val targets = params.getTargets.asScala.toList
 
-    if (targets.isEmpty) {
-      scribe.warn(
-        s"[BazelNative BSP] Request buildTargetCompile with no targets specified, short-circuiting with an empty success"
-      )
+    if (targets.isEmpty)
       return CompletableFuture.completedFuture(
         new CompileResult(StatusCode.OK)
       )
-    }
-
-    scribe.info(
-      s"[BazelNative BSP] Request: buildTargetCompile, targets=${targets.size}"
-    )
 
     CompletableFuture.supplyAsync(
       () => {
@@ -216,7 +201,7 @@ class BazelNativeBspServer(
 
         var exitCode = 99
         try {
-          scribe.info(
+          scribe.debug(
             s"[BazelNative BSP] Launching Bazel build, targets=${targets}"
           )
           exitCode = scala.concurrent.Await.result(
@@ -232,7 +217,7 @@ class BazelNativeBspServer(
           case e: Exception =>
             scribe.error(s"[BazelNative BSP] Build failed: ${e.getMessage}")
         } finally {
-          scribe.info(
+          scribe.debug(
             s"[BazelNative BSP] Build exited with code ${exitCode} for targets=${targets}"
           )
           translator.notifyBuildFinished(originId, exitCode)
@@ -245,7 +230,6 @@ class BazelNativeBspServer(
           if (exitCode == 0) StatusCode.OK else StatusCode.ERROR
         val result = new CompileResult(statusCode)
         result.setOriginId(originId)
-        // result.setDataKind()
         result
       },
       executor,
@@ -530,7 +514,7 @@ class BazelNativeBspServer(
   override def buildTargetJvmCompileClasspath(
       params: JvmCompileClasspathParams
   ): CompletableFuture[JvmCompileClasspathResult] = {
-    scribe.info("[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
+    scribe.debug("[BazelNative BSP] Request: buildTargetJvmCompileClasspath")
     CompletableFuture.supplyAsync(
       () => {
         val items = params.getTargets.asScala.map { id =>
@@ -539,9 +523,6 @@ class BazelNativeBspServer(
             .flatMap(_.jvmTargetInfo)
             .map(_.transitiveCompileTimeJars.map(resolveOutputUri))
             .getOrElse(Nil)
-          scribe.info(
-            s"[BazelNative BSP] Target ${id} Adding ${cp.size} items to classpath"
-          )
           new JvmCompileClasspathItem(id, cp.asJava)
         }
 

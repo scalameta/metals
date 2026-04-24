@@ -50,7 +50,6 @@ class BazelNativeBepTranslator {
   }
 
   def setClient(client: BazelNativeBspClient): Unit = {
-    scribe.info(s"Setting buildClient to ${client}")
     maybeClient = Some(client)
     this.client
   }
