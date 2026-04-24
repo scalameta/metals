@@ -165,6 +165,7 @@ class StdReporter(
           logger.warning(
             s"${report.shortSummary()} (full report at: $pathToReport)"
           )
+          logger.severe(report.fullText(true))
         }
         pathToReport
       }.toOption.asJava

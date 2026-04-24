@@ -174,7 +174,7 @@ final class Embedded(
       case None => resolutionParams
       case Some(version) =>
         resolutionParams.forceVersions(
-          Embedded.scala3CompilerDependencies(version)
+          Embedded.scala3CompilerDependencies(version).asJava
         )
     }
     val jars =
@@ -254,7 +254,7 @@ object Embedded {
     Dependency.of("org.scala-lang", "scala3-library_3", version),
     Dependency.of("org.scala-lang", "scala3-compiler_3", version),
     Dependency.of("org.scala-lang", "tasty-core_3", version),
-  ).map(d => (d.getModule, d.getVersion)).toMap.asJava
+  ).map(d => (d.getModule, d.getVersion)).toMap
 
   private def validateURL(url0: String) = {
     try Some(CacheUrl.url(url0))
@@ -338,6 +338,13 @@ object Embedded {
       customRepositories: List[String] = Nil,
   ): Fetch = {
 
+    val mtagsInterfaceOverride = Map(
+      "3.5.0" -> "1.3.1",
+      "3.4.3" -> "1.3.0",
+      "3.4.2" -> "1.3.0",
+      "3.4.1" -> "1.2.1",
+      "3.4.0" -> "1.2.0",
+    )
     val resolutionParams = resolution.getOrElse(ResolutionParams.create())
 
     scalaVersion.foreach { scalaVersion =>
@@ -349,10 +356,22 @@ object Embedded {
             Dependency.of("org.scala-lang", "scala-reflect", scalaVersion),
           ).map(d => (d.getModule, d.getVersion)).toMap.asJava
         )
-      else
+      else {
+        val mtagsOverride =
+          mtagsInterfaceOverride
+            .get(scalaVersion)
+            .map { overrideVersion =>
+              List(
+                Dependency
+                  .of("org.scalameta", "mtags-interfaces", overrideVersion)
+              ).map(d => (d.getModule, d.getVersion)).toMap
+            }
+            .getOrElse(Map.empty)
+
         resolutionParams.forceVersions(
-          scala3CompilerDependencies(scalaVersion)
+          (scala3CompilerDependencies(scalaVersion) ++ mtagsOverride).asJava
         )
+      }
     }
     val repositories =
       CoursierHelpers.parseCustomRepositories(customRepositories)
