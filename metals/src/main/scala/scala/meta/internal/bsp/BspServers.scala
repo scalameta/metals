@@ -12,6 +12,7 @@ import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.bsp.BspServers.readInBspConfig
+import scala.meta.internal.builds.bazelnative.BazelNativeConnection
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
@@ -176,6 +177,23 @@ final class BspServers(
       userConfig(),
       details.getName(),
       bspStatusOpt,
+      workDoneProgress = workDoneProgress,
+    )
+  }
+
+  def newBazelNativeServer(
+      projectDirectory: AbsolutePath,
+      bspStatusOpt: Option[ConnectionBspStatus],
+  ): Future[BuildServerConnection] = {
+    BazelNativeConnection.establish(
+      workspace = projectDirectory,
+      localClient = buildClient,
+      languageClient = client,
+      requestTimeOutNotification = tables.dismissedNotifications.RequestTimeout,
+      reconnectNotification = tables.dismissedNotifications.ReconnectBsp,
+      config = config,
+      userConfiguration = userConfig,
+      bspStatusOpt = bspStatusOpt,
       workDoneProgress = workDoneProgress,
     )
   }

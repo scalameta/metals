@@ -187,6 +187,36 @@ object BazelBuildLayout extends BuildToolLayout {
         |""".stripMargin
 }
 
+object BazelNativeBuildLayout extends BuildToolLayout {
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    BazelBuildLayout(sourceLayout, scalaVersion)
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+  ): String =
+    BazelBuildLayout(sourceLayout, scalaVersion, bazelVersion)
+}
+
+object BazelNativeModuleLayout extends BuildToolLayout {
+  override def apply(sourceLayout: String, scalaVersion: String): String =
+    BazelModuleLayout(sourceLayout, scalaVersion)
+
+  def apply(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+      enableToolChainRegistration: Boolean = false,
+  ): String =
+    BazelModuleLayout(
+      sourceLayout,
+      scalaVersion,
+      bazelVersion,
+      enableToolChainRegistration,
+    )
+}
+
 object BazelModuleLayout extends BuildToolLayout {
   private def baseLayout(
       sourceLayout: String,

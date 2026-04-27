@@ -7,6 +7,7 @@ import scala.util.matching.Regex
 import scala.meta.Dialect
 import scala.meta.dialects._
 import scala.meta.internal.builds.BazelBuildTool
+import scala.meta.internal.builds.BazelNativeBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTarget.ExperimentalSyntaxRegex
@@ -88,6 +89,7 @@ case class ScalaTarget(
   private def semanticDbEnabledAlternatively = bspConnection.exists {
     buildServer =>
       buildServer.name == BazelBuildTool.bspName ||
+      buildServer.name == BazelNativeBuildTool.bspName ||
       buildServer.name == MillBuildTool.bspName &&
       SemVer.isCompatibleVersion(
         MillBuildTool.scalaSemanticDbSupport,
