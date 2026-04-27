@@ -341,6 +341,7 @@ class Compilers(
                   contents,
                   EmptyCancelToken,
                   outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+                  shouldReturnDiagnostics = true,
                 )
               ).asScala
                 .map { result =>
@@ -383,6 +384,7 @@ class Compilers(
               file.toNIO.toUri,
               contents,
               token = token,
+              shouldReturnDiagnostics = true,
             )
             timerProvider
               .withTimer(
@@ -727,6 +729,7 @@ class Compilers(
               input.text,
               token,
               outlineFilesProvider.getOutlineFiles(compiler.buildTargetId()),
+              shouldReturnDiagnostics = true,
             )
           val isScala3 = ScalaVersions.isScala3Version(compiler.scalaVersion())
 
@@ -1031,7 +1034,7 @@ class Compilers(
             val (input, _, adjust) =
               sourceAdjustments(uri.toString(), compiler.scalaVersion())
             val requestParams = new internal.pc.PcReferencesRequest(
-              CompilerVirtualFileParams(uri, input.text),
+              CompilerVirtualFileParams(uri, input.text, shouldReturnDiagnostics = true),
               includeDefinition,
               JEither.forRight(symbols.head),
               symbols.tail.asJava,
@@ -1606,7 +1609,7 @@ class Compilers(
 
         modifiedFiles.foreach(path =>
           pc.didChange(
-            CompilerVirtualFileParams(path.toNIO.toUri, buffers.get(path).get)
+            CompilerVirtualFileParams(path.toNIO.toUri, buffers.get(path).get, shouldReturnDiagnostics = true)
           )
         )
         pc
@@ -1929,6 +1932,7 @@ class Compilers(
           s.toURI,
           s.toInputFromBuffers(buffers).text,
           token = cancelToken,
+          shouldReturnDiagnostics = true,
         ): VirtualFileParams
       }
       pc.batchSemanticdbTextDocuments(params.asJava, timeout).asScala.map {

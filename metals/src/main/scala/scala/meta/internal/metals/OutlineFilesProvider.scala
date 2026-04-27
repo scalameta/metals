@@ -179,6 +179,7 @@ class BuildTargetOutlineFilesProvider(
       CompilerVirtualFileParams(
         path.toURI,
         text,
+        shouldReturnDiagnostics = true,
       )
     }
 
