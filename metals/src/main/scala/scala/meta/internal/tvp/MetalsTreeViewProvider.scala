@@ -232,6 +232,7 @@ class MetalsTreeViewProvider(
 class FolderTreeViewProvider(
     folder: Folder,
     buildTargets: BuildTargets,
+    uriMapper: URIMapper,
     definitionIndex: GlobalSymbolIndex,
     userConfig: () => UserConfiguration,
     scalaVersionSelector: ScalaVersionSelector,
@@ -265,8 +266,16 @@ class FolderTreeViewProvider(
     title = s"Libraries",
     folder = folder,
     id = identity,
-    encode = _.toURI.toString(),
-    decode = _.toAbsolutePath(followSymlink = false),
+    encode = path => {
+      val uri = path.toURI.toString()
+      if (clientConfig.isLibraryFileSystemSupported())
+        uriMapper.convertToMetalsFS(uri)
+      else uri
+    },
+    decode = uri =>
+      uriMapper
+        .convertToLocal(uri)
+        .toAbsolutePath(followSymlink = false),
     valueTitle = path => {
       if (path.filename == JdkSources.zipFileName) {
         maybeUsedJdkVersion

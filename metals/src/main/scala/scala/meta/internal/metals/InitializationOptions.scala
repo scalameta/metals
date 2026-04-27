@@ -69,6 +69,7 @@ final case class InitializationOptions(
     isHttpEnabled: Option[Boolean],
     commandInHtmlFormat: Option[CommandHTMLFormat],
     isVirtualDocumentSupported: Option[Boolean],
+    isLibraryFileSystemSupported: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
     readClipboardProvider: Option[Boolean],
@@ -171,6 +172,8 @@ object InitializationOptions {
         .flatMap(CommandHTMLFormat.fromString),
       isVirtualDocumentSupported =
         jsonObj.getBooleanOption("isVirtualDocumentSupported"),
+      isLibraryFileSystemSupported =
+        jsonObj.getBooleanOption("isLibraryFileSystemSupported"),
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),

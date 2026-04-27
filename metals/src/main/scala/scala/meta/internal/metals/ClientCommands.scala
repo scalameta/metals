@@ -38,6 +38,12 @@ object ClientCommands {
        |""".stripMargin,
   )
 
+  val LibraryFileSystemReady = new Command(
+    "metals-library-filesystem-ready",
+    "Library File System Ready",
+    "Notifies client that library file system is ready",
+  )
+
   val RunDoctor = new ParametrizedCommand[String](
     "metals-doctor-run",
     "Run doctor",

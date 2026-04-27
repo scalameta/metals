@@ -203,6 +203,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
           buildTool.importedBuild.dependencySources,
         )
       }
+    if (clientConfig.isLibraryFileSystemSupported()) {
+      lspFileSystemProvider.sendLibraryFileSystemReady()
+    }
     // Schedule removal of unused toplevel symbols from cache
     if (usedJars.nonEmpty)
       sh.schedule(
