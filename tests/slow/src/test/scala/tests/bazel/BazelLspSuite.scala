@@ -197,7 +197,7 @@ class BazelLspSuite
            |  scala
            |
            |Capabilities
-           |  Debug
+           |  Debug <- NOT SUPPORTED
            |  Run
            |  Test <- NOT SUPPORTED
            |  Compile""".stripMargin
@@ -323,7 +323,7 @@ class BazelLspSuite
         .runJava(
           Dependency.of(
             BazelBuildTool.dependency.getModule(),
-            "3.2.0-20240508-f3a81e7-NIGHTLY",
+            BazelBuildTool.bspVersion,
           ),
           BazelBuildTool.mainClass,
           workspace,
@@ -331,7 +331,7 @@ class BazelLspSuite
           None,
         )
         .future
-      _ = assertContains(jsonFile, "3.2.0-20240508-f3a81e7-NIGHTLY")
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )

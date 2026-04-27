@@ -55,25 +55,29 @@ class BspConnector(
    * workspace can support Bloop, it will also resolve Bloop.
    */
   def resolve(buildTool: Option[BuildTool]): BspResolvedResult = {
-    resolveExplicit().getOrElse {
-      if (buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop)
+    tables.buildServers.selectedServer() match {
+      case None
+          if buildTool.exists(_.isBloopInstallProvider) || buildTools.isBloop =>
         ResolvedBloop
-      else bspServers.resolve()
+      case None => bspServers.resolve()
+      case Some(selected) if selected == BloopServers.name =>
+        ResolvedBloop
+      case Some(selected) =>
+        resolveExplicit(selected).getOrElse(RegenerateBspConfig)
     }
   }
 
-  private def resolveExplicit(): Option[BspResolvedResult] = {
-    tables.buildServers.selectedServer().flatMap { sel =>
-      if (sel == BloopServers.name) Some(ResolvedBloop)
-      else
-        bspServers
-          .findAvailableServers()
-          .find(buildServer =>
-            (ScalaCli.names(buildServer.getName()) && ScalaCli.names(sel)) ||
-              buildServer.getName == sel
-          )
-          .map(ResolvedBspOne.apply)
-    }
+  private def resolveExplicit(
+      selectedServer: String
+  ): Option[BspResolvedResult] = {
+    bspServers
+      .findAvailableServers()
+      .find(buildServer =>
+        (ScalaCli.names(buildServer.getName()) &&
+          ScalaCli.names(selectedServer)) ||
+          buildServer.getName == selectedServer
+      )
+      .map(ResolvedBspOne.apply)
   }
 
   /**
@@ -105,6 +109,26 @@ class BspConnector(
         regeneratedConfig: Boolean = false,
     ): Future[Option[BuildServerConnection]] = {
       def bspStatusOpt = Option.when(addLivenessMonitor)(bspStatus)
+
+      def regenerateConfig(bsp: BuildServerProvider) = {
+        progress.message = s"generating ${bsp.buildServerName} json config"
+        bsp
+          .generateBspConfig(
+            workspace,
+            args => bspConfigGenerator.runUnconditionally(bsp, args),
+            statusBar,
+          )
+          .future
+          .flatMap { _ =>
+            connect(
+              projectRoot,
+              bspTraceRoot,
+              addLivenessMonitor,
+              regeneratedConfig = true,
+            )
+          }
+      }
+
       scribe.debug("Attempting to connect to the build server...")
       resolve(buildTool) match {
         case ResolvedNone =>
@@ -167,22 +191,7 @@ class BspConnector(
               scribe.info(
                 s"Regenerating ${details.getName()} json config to latest."
               )
-              progress.message = s"generating ${details.getName()} json config"
-              bsp
-                .generateBspConfig(
-                  workspace,
-                  args => bspConfigGenerator.runUnconditionally(bsp, args),
-                  statusBar,
-                )
-                .future
-                .flatMap { _ =>
-                  connect(
-                    projectRoot,
-                    bspTraceRoot,
-                    addLivenessMonitor,
-                    regeneratedConfig = true,
-                  )
-                }
+              regenerateConfig(bsp)
             case _ =>
               progress.message = s"connecting to ${details.getName()}"
               bspServers
@@ -256,6 +265,24 @@ class BspConnector(
               progress,
             )
           } yield Some(conn)
+        case RegenerateBspConfig =>
+          buildTool match {
+            case Some(bsp: BuildServerProvider) if !regeneratedConfig =>
+              scribe.info(
+                s"Regenerating ${bsp.buildServerName} json config since it was missing."
+              )
+              regenerateConfig(bsp)
+            case Some(_: BuildServerProvider) if regeneratedConfig =>
+              scribe.error(
+                s"Tried regenerating json config for build tool but failed."
+              )
+              Future.successful(None)
+            case _ =>
+              scribe.error(
+                s"Cannot regenerate json config for build tool since no build server capable tool is available."
+              )
+              Future.successful(None)
+          }
       }
     }
 

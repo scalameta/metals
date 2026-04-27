@@ -12,7 +12,7 @@ Global / resolvers += "scala-integration" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.0"
+val forkBaseVersion = "1.6.1"
 
 def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
@@ -608,7 +608,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.16.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.8.2",
+      "org.flywaydb" % "flyway-core" % "11.10.4",
       "com.h2database" % "h2" % "2.3.232",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -620,8 +620,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "io.get-coursier.util" % "directories" % "0.1.3",
-      "io.get-coursier.util" % "directories-jni" % "0.1.3",
+      "io.get-coursier.util" % "directories" % "0.1.4",
+      "io.get-coursier.util" % "directories-jni" % "0.1.4",
       // for decompiling Java code
       "org.benf" % "cfr" % "0.152",
 
@@ -668,7 +668,7 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % "0.10.0",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.0",
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.19.2",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,

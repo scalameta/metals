@@ -150,17 +150,21 @@ final class BloopServers(
     val versionRevertedToDefault = changedToNoVersion && !correctVersionRunning
 
     if (versionRevertedToDefault || versionChanged) {
-      languageClient
-        .showMessageRequest(
-          Messages.BloopVersionChange.params()
-        )
-        .asScala
-        .flatMap {
-          case item if item == Messages.BloopVersionChange.reconnect =>
-            restartAndConnect().ignoreValue
-          case _ =>
-            Future.unit
-        }
+      if (serverConfig.askToRestartBloop) {
+        languageClient
+          .showMessageRequest(
+            Messages.BloopVersionChange.params()
+          )
+          .asScala
+          .flatMap {
+            case item if item == Messages.BloopVersionChange.reconnect =>
+              restartAndConnect().ignoreValue
+            case _ =>
+              Future.unit
+          }
+      } else {
+        restartAndConnect().ignoreValue
+      }
     } else {
       Future.unit
     }
@@ -172,17 +176,29 @@ final class BloopServers(
       restartAndConnect: () => Future[BuildChange],
   ): Future[Unit] = {
     if (old.bloopJvmProperties != newConfig.bloopJvmProperties) {
-      languageClient
-        .showMessageRequest(
-          Messages.BloopJvmPropertiesChange.params()
-        )
-        .asScala
-        .flatMap {
-          case item if item == Messages.BloopJvmPropertiesChange.reconnect =>
-            restartAndConnect().ignoreValue
-          case _ =>
-            Future.unit
-        }
+      old.bloopJvmProperties match {
+        case BloopJvmProperties.Uninitialized =>
+          scribe.debug(
+            s"Bloop JVM properties initialized from uninitialized to ${newConfig.bloopJvmProperties}, no restart needed"
+          )
+          Future.unit
+        case _ =>
+          scribe.debug(
+            s"Bloop JVM properties changed from ${old.bloopJvmProperties} to ${newConfig.bloopJvmProperties}"
+          )
+          languageClient
+            .showMessageRequest(
+              Messages.BloopJvmPropertiesChange.params()
+            )
+            .asScala
+            .flatMap {
+              case item
+                  if item == Messages.BloopJvmPropertiesChange.reconnect =>
+                restartAndConnect().ignoreValue
+              case _ =>
+                Future.unit
+            }
+      }
     } else {
       Future.unit
     }
@@ -343,7 +359,7 @@ final class BloopServers(
         bspStderr = bloopLogger.bloopBspStderr,
       )
 
-    userConfig.flatMap(_.bloopJvmProperties) match {
+    userConfig.map(_.bloopJvmProperties.properties).flatten match {
       case Some(opts) if opts.nonEmpty => config.copy(javaOpts = opts)
       case _ => config
     }

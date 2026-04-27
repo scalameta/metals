@@ -20,9 +20,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   private def cancelToken: CancelToken = EmptyCancelToken
 
   private def resolvedCompletions(
-      params: CompilerOffsetParams
+      params: CompilerOffsetParams,
+      restart: Boolean
   ): CompletionList = {
-    presentationCompiler.restart()
+    if (restart) presentationCompiler.restart()
     val result = presentationCompiler.complete(params).get()
     val newItems = result.getItems.asScala.map { item =>
       item.data
@@ -36,9 +37,10 @@ abstract class BaseCompletionSuite extends BasePCSuite {
   }
 
   // NOTE: this filters out things from `java.lang.classfile` which was added in JDK 22
-  private def getItems(
+  protected def getItems(
       original: String,
-      filename: String = "A.scala"
+      filename: String = "A.scala",
+      restart: Boolean = true
   ): Seq[CompletionItem] = {
     val (code, offset) = params(original, filename)
     val result = resolvedCompletions(
@@ -47,7 +49,8 @@ abstract class BaseCompletionSuite extends BasePCSuite {
         code,
         offset,
         cancelToken
-      )
+      ),
+      restart
     )
     result.getItems.asScala
       .filterNot(item => item.getLabel().contains("- java.lang.classfile"))

@@ -56,6 +56,38 @@ class FuzzySuite extends BaseSuite {
   checkOK("fluent", "a/B.`fluent name`().")
   checkOK("fluent na", "a/B.`fluent name`().")
 
+  // Test forgivingFirstChar functionality
+  def checkForgiving(query: String, symbol: String, shouldMatch: Boolean)(
+      implicit loc: Location
+  ): Unit = {
+    test(
+      s"forgiving query: $query on symbol: $symbol ${if (shouldMatch) "should match" else "should not match"}"
+    ) {
+      val obtained = Fuzzy.matches(query, symbol, forgivingFirstChar = true)
+      assertEquals(obtained, shouldMatch)
+    }
+  }
+
+  // Basic first character case-insensitive matching
+  checkForgiving("name", "name", true)
+  checkForgiving("name", "Name", false)
+  checkForgiving("Name", "name", false)
+  checkForgiving("Name", "Name", true)
+  checkForgiving("xame", "Name", false)
+
+  // CamelCase matching query not matching from start
+  checkForgiving("namYo", "longNameYouCouldForget", true)
+  checkForgiving("NamYo", "longNameYouCouldForget", true)
+  checkForgiving("namyo", "longNameYouCouldForget", false)
+  checkForgiving("namYo", "LongNameYouCouldForget", false)
+  checkForgiving("NAMYO", "longNameYouCouldForget", false)
+  checkForgiving("ameYo", "longNameYouCouldForget", false)
+
+  checkForgiving("_name", "_Name", false)
+  checkForgiving("na1", "name1", true)
+  checkForgiving("fi2B", "fizBaz2Boo", true)
+  checkForgiving("b2B", "fizBaz2Boo", true)
+
   def checkWords(in: String, expected: String): Unit = {
     val name = in.replaceAll("[^a-zA-Z0-9]", " ").trim
     val start = name.lastIndexOf(' ') + 1

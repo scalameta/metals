@@ -20,17 +20,6 @@ or via the VS Code editor:
 
 ![install stable version](https://imgur.com/Qew0fNH.png)
 
-> Make sure to disable the extensions
-> [Scala Language Server](https://marketplace.visualstudio.com/items?itemName=dragos.scala-lsp)
-> and
-> [Scala (sbt)](https://marketplace.visualstudio.com/items?itemName=lightbend.vscode-sbt-scala)
-> if they are installed. The
-> [Dotty Language Server](https://marketplace.visualstudio.com/items?itemName=lampepfl.dotty)
-> does **not** need to be disabled because the Metals and Dotty extensions don't
-> conflict with each other. However, if you want to work on Scala 3 code in a
-> workspace that was previously opened with `Dotty Language Server` you need to
-> first remove `.dotty-ide-artifact` before opening the workspace with Metals.
-
 Next, open a directory containing your Scala code. The extension activates when
 the main directory contains `build.sbt` or `build.sc` file, a Scala file is
 opened, which includes `*.sbt`, `*.scala` and `*.sc` file, or a standard Scala

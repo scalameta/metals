@@ -287,6 +287,7 @@ case class ScalaPresentationCompiler(
       compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
         pc =>
           val mGlobal = pc.compiler()
+          pc.compiler().didChange(params.uri())
           import mGlobal._
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))

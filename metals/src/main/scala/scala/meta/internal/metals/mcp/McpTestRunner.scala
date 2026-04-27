@@ -29,12 +29,17 @@ class McpTestRunner(
   def runTests(
       testClass: String,
       optPath: Option[AbsolutePath],
+      testName: Option[String],
       verbose: Boolean,
   ): Either[String, Future[String]] = {
-    val testSuites = new b.ScalaTestSuites(
-      List(
+    val testSelection = testName match {
+      case Some(name) =>
+        new b.ScalaTestSuiteSelection(testClass, List(name).asJava)
+      case None =>
         new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
-      ).asJava,
+    }
+    val testSuites = new b.ScalaTestSuites(
+      List(testSelection).asJava,
       Nil.asJava,
       Nil.asJava,
     )
@@ -46,7 +51,11 @@ class McpTestRunner(
       id <- buildTargets
         .inverseSources(path)
         .toRight(s"Could not find build target for $path")
-      projectInfo <- debugProvider.debugConfigCreator.create(id, cancelPromise)
+      projectInfo <- debugProvider.debugConfigCreator.create(
+        id,
+        cancelPromise,
+        isTests = true,
+      )
     } yield {
       for {
         discovered <- debugProvider.discoverTests(id, testSuites)
@@ -59,9 +68,9 @@ class McpTestRunner(
           discovered,
           isDebug = false,
         )
-        listner = new McpDebuggeeListener(verbose)
-        _ <- adapter.run(listner).future
-      } yield listner.result
+        listener = new McpDebuggeeListener(verbose)
+        _ <- adapter.run(listener).future
+      } yield listener.result
     }
   }
 

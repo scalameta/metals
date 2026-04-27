@@ -101,10 +101,50 @@ object ScalatestTestFinder {
 
           case AnyFunSpec =>
             findAnyFunSpecTests(path, template)
+
+          case AnyFeatureSpec =>
+            findAnyFeatureSpecTests(path, template)
         }
       case None =>
         Vector.empty
     }
+
+  private def findAnyFeatureSpecTests(
+      path: AbsolutePath,
+      template: Template,
+  ): Vector[TestCaseEntry] = {
+
+    def findScenarios(
+        stats: List[Stat],
+        namePrefix: String,
+    ): List[TestCaseEntry] =
+      stats.flatMap {
+        case Term.Apply(
+              appl @ Term.Apply(
+                Term.Name(opName),
+                Lit.String(scenarioName) :: _,
+              ),
+              _,
+            ) if AnyFeatureSpec.leafMethods.contains(opName) =>
+          val testname = s"Feature: $namePrefix Scenario: $scenarioName"
+          TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI)) :: Nil
+
+        case _ =>
+          List.empty
+      }
+
+    template.body.stats
+      .collect {
+        case Term.Apply(
+              Term.Apply(Term.Name(opName), Lit.String(featureName) :: _),
+              Term.Block(stats) :: Nil,
+            ) if AnyFeatureSpec.intermediateMethods.contains(opName) =>
+          findScenarios(stats, featureName)
+      }
+      .flatten
+      .toVector
+
+  }
 
   private def findAnyFunSuiteTests(
       path: AbsolutePath,
@@ -112,7 +152,7 @@ object ScalatestTestFinder {
       style: ScalatestStyle,
   ): Vector[TestCaseEntry] = {
     // collect all entries like test("testname") { ... }
-    template.stats.collect {
+    template.body.stats.collect {
           // format: off
           case Term.Apply(appl @ Term.Apply(Term.Name(funName), Lit.String(testname) :: _), _)
               if style.leafMethods.contains(funName) =>
@@ -258,6 +298,7 @@ object ScalatestStyle {
       AnyFunSpec,
       AnyWordSpec,
       AnyFreeSpec,
+      AnyFeatureSpec,
     )
 
   val baseSymbols: Set[String] = styles.flatMap(_.symbols).toSet
@@ -320,4 +361,18 @@ object ScalatestStyle {
     override val leafMethods: Set[String] = Set("in", "ignore")
   }
 
+  case object AnyFeatureSpec extends ScalatestStyle {
+    val symbols: Set[String] = Set(
+      "org/scalatest/featurespec/AnyFeatureSpec#",
+      "org/scalatest/featurespec/AnyFeatureSpecLike#",
+      "org/scalatest/featurespec/AsyncFeatureSpec#",
+      "org/scalatest/featurespec/AsyncFeatureSpecLike#",
+      "org/scalatest/featurespec/FixtureAnyFeatureSpec#",
+      "org/scalatest/featurespec/FixtureAnyFeatureSpecLike#",
+      "org/scalatest/featurespec/FixtureAsyncFeatureSpec#",
+      "org/scalatest/featurespec/FixtureAsyncFeatureSpecLike#",
+    )
+    override val intermediateMethods: Set[String] = Set("Feature")
+    override val leafMethods: Set[String] = Set("Scenario")
+  }
 }

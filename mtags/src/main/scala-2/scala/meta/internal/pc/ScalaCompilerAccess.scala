@@ -30,6 +30,7 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
 
   override def askShutdown(): Unit = {
     global.askShutdown()
+    global.close()
   }
 
   override def isAlive(): Boolean = {

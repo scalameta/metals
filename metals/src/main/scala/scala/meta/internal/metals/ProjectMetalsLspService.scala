@@ -296,11 +296,14 @@ class ProjectMetalsLspService(
             diagnostics,
             buildTargets,
             mcpTestRunner,
-            initializeParams.getClientInfo().getName(),
+            userConfig.mcpClient.getOrElse(
+              initializeParams.getClientInfo().getName()
+            ),
             getVisibleName,
             languageClient,
             connectionProvider,
             scalaVersionSelector,
+            formattingProvider,
           )
         ).run()
     }.recover { case e: Exception =>

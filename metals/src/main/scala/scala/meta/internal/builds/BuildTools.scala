@@ -146,7 +146,7 @@ final class BuildTools(
   )
   def isMaven: Boolean = mavenProject.isDefined
   def bazelProject: Option[AbsolutePath] = searchForBuildTool(
-    _.resolve("WORKSPACE").isFile
+    BazelBuildTool.workspaceSupportsBsp(_)
   )
   def isBazel: Boolean = bazelProject.isDefined
 

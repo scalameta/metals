@@ -65,20 +65,23 @@ class ZioTestFinder(
             ),
             _,
           ) =>
-        val fullName = if (prefix.isEmpty) testName else s"$prefix $testName"
         val location = appl.pos.toLsp.toLocation(uri)
-        testCases.addOne(TestCaseEntry(fullName, location))
+        testCases.addOne(TestCaseEntry(testName, location))
 
-      // Handle suite calls: suite("suiteName")( ... )
-      case Term.Apply(
+      // Handle suite calls: suite("suiteName")( ... ) or suiteAll("suiteName") { ... }
+      case appl @ Term.Apply(
             Term.Apply(
-              Term.Name("suite"),
+              Term.Name(name),
               List(Lit.String(suiteName)),
             ),
-            List(suiteContent),
-          ) =>
+            suiteContents,
+          ) if name == "suite" || name == "suiteAll" =>
         val newPrefix = if (prefix.isEmpty) suiteName else s"$prefix $suiteName"
-        processSpecTree(suiteContent, newPrefix, testCases, uri)
+        val location = appl.pos.toLsp.toLocation(uri)
+        testCases.addOne(TestCaseEntry(suiteName, location))
+        suiteContents.foreach(content =>
+          processSpecTree(content, newPrefix, testCases, uri)
+        )
 
       // Handle multiple tests or suites separated by commas (wrapped in a block)
       case Term.Block(stats) =>

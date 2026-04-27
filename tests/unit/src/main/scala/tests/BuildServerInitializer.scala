@@ -50,6 +50,7 @@ object QuickBuildInitializer extends BuildServerInitializer {
         case Some(workspaceFolders) => workspaceFolders.map(workspace.resolve)
         case None => List(workspace)
       }
+    scribe.info(s"Initializing folders with Bloop: $foldersToInit")
     foldersToInit.foreach(QuickBuild.bloopInstall)
     for {
       initializeResult <- server.initialize(workspaceFolders)

@@ -4,11 +4,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-import scala.jdk.CollectionConverters.MapHasAsJava
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
@@ -77,7 +77,8 @@ class DebugDiscoverySuite
            |package a
            |object Main {
            |  def main(args: Array[String]) = {
-           |    print("oranges are nice")
+           |    val argsString = args.mkString
+           |    print("oranges are nice " + argsString)
            |    System.exit(0)
            |  }
            |}
@@ -92,6 +93,7 @@ class DebugDiscoverySuite
             null,
             "run",
             "a.Main",
+            args = List("Hello", " Wo$rld").asJava,
           ),
         )
         .map(_.asInstanceOf[DebugSessionParams])
@@ -101,10 +103,18 @@ class DebugDiscoverySuite
         mainClass.isSuccess,
         "Server should return ExtendedScalaMainClass object",
       )
-    } yield assert(
-      mainClass.get.shellCommand.nonEmpty,
-      "Shell command should be available in response for discovery",
-    )
+      _ = assert(
+        mainClass.get.shellCommand.nonEmpty,
+        "Shell command should be available in response for discovery",
+      )
+    } yield {
+      import scala.sys.process._
+      val output = mainClass.get.shellCommand.!!
+      val expected =
+        if (isWindows) "oranges are nice Hello Wo$rld"
+        else "oranges are nice Hello Wo\\$rld"
+      assertEquals(output.trim(), expected)
+    }
   }
 
   test("run-file-main") {
@@ -531,5 +541,40 @@ class DebugDiscoverySuite
       result.toString,
       SemanticDbNotFoundException.getMessage(),
     )
+  }
+
+  test("main-method-in-dependencies") {
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies":["org.scalatest::scalatest:3.2.16"]
+           |  },
+           |  "b": {}
+           |}
+           |""".stripMargin
+      )
+      discovery <- server.executeDiscoverMainClassesCommand(
+        new DebugDiscoveryParams(
+          path = null,
+          runType = "run",
+          mainClass = "org.scalatest.tools.Runner",
+        )
+      )
+    } yield {
+      assertEquals(
+        discovery.getTargets().asScala.map(_.getUri()).toList,
+        List(server.buildTarget("a")),
+      )
+      discovery.asScalaMainClass match {
+        case Left(err) => sys.error(s"Expected Main class ($err)")
+        case Right(scalaMainClass) =>
+          assertNoDiff(
+            scalaMainClass.getClassName(),
+            "org.scalatest.tools.Runner",
+          )
+      }
+    }
   }
 }

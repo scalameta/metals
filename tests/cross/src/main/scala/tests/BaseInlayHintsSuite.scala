@@ -38,6 +38,7 @@ class BaseInlayHintsSuite extends BasePCSuite {
         true,
         true,
         true,
+        true,
         namedParameters,
         hintsInPatternMatch
       )

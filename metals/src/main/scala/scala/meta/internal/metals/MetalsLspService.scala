@@ -41,6 +41,7 @@ import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.doctor.Doctor
@@ -174,21 +175,6 @@ abstract class MetalsLspService(
 
   val tables: Tables = register(new Tables(folder, time))
 
-  def javaHome = userConfig.javaHome
-
-  protected val fingerprints = new MutableMd5Fingerprints
-  val focusedDocumentBuildTarget =
-    new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
-
-  def bspSession: Option[BspSession] = indexer.bspSession
-  protected val savedFiles = new ActiveFiles(time)
-  protected val recentlyOpenedFiles = new ActiveFiles(time)
-
-  @volatile
-  var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
-
   protected val mainBuildTargetsData = new TargetData
 
   val buildTargets: BuildTargets =
@@ -208,7 +194,21 @@ abstract class MetalsLspService(
   )
 
   @volatile var mtags: Mtags = new Mtags()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
   val symbolDocs = new Docstrings(definitionIndex, () => mtags)
+  def javaHome = userConfig.javaHome
+
+  protected val fingerprints = new MutableMd5Fingerprints
+  val focusedDocumentBuildTarget =
+    new AtomicReference[b.BuildTargetIdentifier]()
+
+  def bspSession: Option[BspSession] = indexer.bspSession
+  protected val savedFiles = new ActiveFiles(time)
+  protected val recentlyOpenedFiles = new ActiveFiles(time)
+
+  @volatile
+  var excludedPackageHandler: ExcludedPackagesHandler =
+    ExcludedPackagesHandler.default
 
   def containsJar(path: AbsolutePath): Boolean = {
     buildTargets.inverseSources(path).nonEmpty ||
@@ -948,6 +948,9 @@ abstract class MetalsLspService(
       load: () => Future[Unit],
   ): Future[Unit]
 
+  /**
+   * Corresponds to LSP `didFocus` event.
+   */
   def didFocus(
       uri: String
   ): CompletableFuture[DidFocusResult.Value] = {
@@ -1848,6 +1851,13 @@ abstract class MetalsLspService(
       moduleStatus,
     )
 
+  protected val buildTargetClassesFinder: BuildTargetClassesFinder =
+    new BuildTargetClassesFinder(
+      buildTargets,
+      buildTargetClasses,
+      definitionIndex,
+    )
+
   protected val debugDiscovery: DebugDiscovery = new DebugDiscovery(
     buildTargetClasses,
     buildTargets,
@@ -1856,6 +1866,7 @@ abstract class MetalsLspService(
     semanticdbs,
     () => userConfig,
     folder,
+    buildTargetClassesFinder,
   )
 
   protected val debugProvider: DebugProvider = register(
@@ -1866,7 +1877,7 @@ abstract class MetalsLspService(
       compilations,
       languageClient,
       buildClient,
-      definitionIndex,
+      buildTargetClassesFinder,
       stacktraceAnalyzer,
       clientConfig,
       compilers,

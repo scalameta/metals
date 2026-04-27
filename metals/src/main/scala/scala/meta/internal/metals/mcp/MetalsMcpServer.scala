@@ -1,8 +1,8 @@
 package scala.meta.internal.metals.mcp
 
+import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.nio.file.Path
-import java.util.ArrayList
 import java.util.Arrays
 import java.util.function.BiFunction
 import java.util.{List => JList}
@@ -19,12 +19,14 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
+import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.TaskProgress
+import scala.meta.internal.metals.Trace
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
@@ -48,8 +50,6 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import io.undertow.Undertow
 import io.undertow.servlet.Servlets
 import io.undertow.servlet.api.InstanceHandle
-import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpServletResponse
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.services.LanguageClient
@@ -63,14 +63,21 @@ class MetalsMcpServer(
     diagnostics: Diagnostics,
     buildTargets: BuildTargets,
     mcpTestRunner: McpTestRunner,
-    editorName: String,
+    clientName: String,
     projectName: String,
     languageClient: LanguageClient,
     connectionProvider: ConnectionProvider,
     scalaVersionSelector: ScalaVersionSelector,
+    formattingProvider: FormattingProvider,
 )(implicit
     ec: ExecutionContext
 ) extends Cancelable {
+
+  private val client =
+    Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
+
+  val tracePrinter: Option[PrintWriter] =
+    Trace.setupTracePrinter("mcp", projectPath)
 
   private val objectMapper = new ObjectMapper()
 
@@ -78,47 +85,18 @@ class MetalsMcpServer(
     Arrays.asList(new TextContent(text))
   }
 
-  private def cancelable = new MutableCancelable()
+  private val cancelable = new MutableCancelable()
 
   private val sseEndpoint = "/sse"
 
   def run(): Unit = {
-    val servlet = new HttpServletSseServerTransportProvider(
-      objectMapper,
-      "/",
-      sseEndpoint,
-    ) {
-      override def doGet(
-          request: HttpServletRequest,
-          response: HttpServletResponse,
-      ): Unit = {
-        super.doGet(request, response)
-        val pathInfo = request.getPathInfo();
-        if (sseEndpoint.equals(pathInfo)) {
-          val scheduler =
-            java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
-          // Scheduling a ping task to keep the connection alive,
-          // see: https://github.com/AltimateAI/vscode-dbt-power-user/pull/1631 or
-          // https://github.com/modelcontextprotocol/rust-sdk/pull/74
-          val pingTask = new Runnable {
-            override def run(): Unit = {
-              try {
-                response.getWriter().write(": ping\n\n")
-                response.getWriter().flush()
-              } catch {
-                case _: Exception => scheduler.shutdown()
-              }
-            }
-          }
-          scheduler.scheduleAtFixedRate(
-            pingTask,
-            30,
-            30,
-            java.util.concurrent.TimeUnit.SECONDS,
-          )
-        }
-      }
-    }
+    val servlet =
+      new LoggingServletTransportProvider(
+        objectMapper,
+        "/",
+        sseEndpoint,
+        tracePrinter,
+      )
 
     val capabilities = ServerCapabilities
       .builder()
@@ -147,6 +125,8 @@ class MetalsMcpServer(
     asyncServer.addTool(createGetUsagesTool()).subscribe()
     asyncServer.addTool(importBuildTool()).subscribe()
     asyncServer.addTool(createFindDepTool()).subscribe()
+    asyncServer.addTool(createListModulesTool()).subscribe()
+    asyncServer.addTool(createFormatTool()).subscribe()
 
     // Log server initialization
     asyncServer.loggingNotification(
@@ -185,12 +165,14 @@ class MetalsMcpServer(
     val deployment = manager.addDeployment(servletDeployment)
     deployment.deploy()
 
-    val editor =
-      Editor.allEditors.find(_.names.contains(editorName)).getOrElse(NoEditor)
-    val configPort = McpConfig.readPort(projectPath, projectName, editor)
+    // Read port from the default config file in .metals/ directory
+    def readPort(client: Client) =
+      McpConfig.readPort(projectPath, projectName, client)
+    val savedClientConfigPort = readPort(client)
+    val savedConfigPort = savedClientConfigPort.orElse(readPort(NoClient))
     val undertowServer = Undertow
       .builder()
-      .addHttpListener(configPort.getOrElse(0), "localhost")
+      .addHttpListener(savedConfigPort.getOrElse(0), "localhost")
       .setHandler(deployment.start())
       .build()
     undertowServer.start()
@@ -199,8 +181,12 @@ class MetalsMcpServer(
     val port =
       listenerInfo.get(0).getAddress().asInstanceOf[InetSocketAddress].getPort()
 
-    if (!configPort.isDefined) {
-      McpConfig.writeConfig(port, projectName, projectPath, editor)
+    if (savedConfigPort.isEmpty) {
+      McpConfig.writeConfig(port, projectName, projectPath, NoClient)
+    }
+
+    if (savedClientConfigPort.isEmpty) {
+      McpConfig.writeConfig(port, projectName, projectPath, client)
     }
 
     languageClient.showMessage(
@@ -215,7 +201,13 @@ class MetalsMcpServer(
     cancelable.add(() => undertowServer.stop())
   }
 
-  override def cancel(): Unit = cancelable.cancel()
+  override def cancel(): Unit = {
+    // Remove the config so that next time the editor will only connect after mcp server is started
+    if (client != NoClient && client.shouldCleanUpServerEntry) {
+      McpConfig.deleteConfig(projectPath, projectName, client)
+    }
+    cancelable.cancel()
+  }
 
   private def importBuildTool(): AsyncToolSpecification = {
     val schema = """{"type": "object", "properties": { }}"""
@@ -352,7 +344,8 @@ class MetalsMcpServer(
          |      "type": "string",
          |      "description": "The module's (build target's) name to compile"
          |    }
-         |  }
+         |  },
+         |  "required": ["module"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("compile-module", "Compile a chosen Scala module", schema),
@@ -410,23 +403,26 @@ class MetalsMcpServer(
     val schema =
       """|{
          |  "type": "object",
-         |    "properties": {
-         |      "testFile": {
-         |        "type": "string",
-         |        "description": "The file containing the test suite, if empty we will try to detect it"
-         |      },
-         |      "testClass": {
-         |        "type": "string",
-         |        "description": "Fully qualified name of the test class to run"
-         |      },
-         |      "verbose": {
-         |        "type": "boolean",
-         |        "description": "Print all output from the test suite, otherwise prints only errors and summary",
-         |        "default": false
-         |      }
+         |  "properties": {
+         |    "testFile": {
+         |      "type": "string",
+         |      "description": "The file containing the test suite, if empty we will try to detect it"
          |    },
-         |    "required": ["testClass"]
-         |  }
+         |    "testClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the test class to run"
+         |    },
+         |    "testName": {
+         |      "type": "string",
+         |      "description": "Name of the specific test to run within the test class, if empty runs all tests in the class"
+         |    },
+         |    "verbose": {
+         |      "type": "boolean",
+         |      "description": "Print all output from the test suite, otherwise prints only errors and summary",
+         |      "default": false
+         |    }
+         |  },
+         |  "required": ["testClass"]
          |}""".stripMargin
     new AsyncToolSpecification(
       new Tool("test", "Run Scala test suite", schema),
@@ -435,12 +431,14 @@ class MetalsMcpServer(
         val optPath = arguments
           .getOptAs[String]("testFile")
           .map(path => AbsolutePath(Path.of(path))(projectPath))
+        val testName = arguments.getOptAs[String]("testName")
         val printOnlyErrorsAndSummary = arguments
           .getOptAs[Boolean]("verbose")
           .getOrElse(false)
         val result = mcpTestRunner.runTests(
           testClass,
           optPath,
+          testName,
           printOnlyErrorsAndSummary,
         )
         (result match {
@@ -526,8 +524,11 @@ class MetalsMcpServer(
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
         val path = arguments.getFileInFocus
-        val symbolTypes = arguments
-          .getAs[ArrayList[String]]("symbolType")
+        val symbolTypes = scala.jdk.CollectionConverters
+          .ListHasAsScala(
+            arguments
+              .getAs[JList[String]]("symbolType")
+          )
           .asScala
           .flatMap(s => SymbolType.values.find(_.name == s))
           .toSet
@@ -757,6 +758,95 @@ class MetalsMcpServer(
             new CallToolResult(createContent(completions), false)
           )
           .toMono
+      },
+    )
+  }
+
+  private def createListModulesTool(): AsyncToolSpecification = {
+    val schema =
+      """{
+        |  "type": "object",
+        |  "properties": { }
+        |} 
+        |""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "list-modules",
+        "Return the list of modules (build targets) available in the project.",
+        schema,
+      ),
+      withErrorHandling { (_, _) =>
+        Future {
+          val modules =
+            buildTargets.allBuildTargetIds.flatMap(
+              buildTargets.jvmTarget(_).map(_.displayName)
+            )
+          new CallToolResult(
+            s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}",
+            false,
+          )
+        }.toMono
+      },
+    )
+  }
+
+  private def createFormatTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "fileInFocus": {
+         |      "type": "string",
+         |      "description": "The file to format, if empty we will try to detect file in focus"
+         |    }
+         |  }
+         |}""".stripMargin
+    new AsyncToolSpecification(
+      new Tool(
+        "format-file",
+        "Format a Scala file and return the formatted text",
+        schema,
+      ),
+      withErrorHandling { (_, arguments) =>
+        val path = arguments.getFileInFocus
+        if (path.exists && path.isScalaFilename) {
+          val cancelChecker = new org.eclipse.lsp4j.jsonrpc.CancelChecker {
+            override def isCanceled(): Boolean = false
+            override def checkCanceled(): Unit = ()
+          }
+
+          formattingProvider
+            .formatForMcp(path, projectPath, cancelChecker)
+            .map {
+              case Left(errorMessage) =>
+                new CallToolResult(
+                  createContent(errorMessage),
+                  true,
+                )
+              case Right(None) =>
+                new CallToolResult(
+                  createContent("File is already properly formatted."),
+                  false,
+                )
+              case Right(Some(formattedText)) =>
+                new CallToolResult(
+                  createContent(formattedText),
+                  false,
+                )
+            }
+            .toMono
+        } else {
+          Future
+            .successful(
+              new CallToolResult(
+                createContent(
+                  s"Error: File not found or not a Scala file: $path"
+                ),
+                true,
+              )
+            )
+            .toMono
+        }
       },
     )
   }

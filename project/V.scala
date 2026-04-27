@@ -11,10 +11,11 @@ object V {
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.21"
+  val sbtMill = "2.13.15"
   // Rules need to be manually updated to support
   val bazelScalaVersion = "2.13.12"
   val betterMonadicFor = "0.3.1"
-  val bloop = "2.0.10"
+  val bloop = "2.0.12"
   val bloopConfig = "2.3.2"
   val bsp = "2.2.0-M2"
   val coursier = "2.1.24"
@@ -26,25 +27,26 @@ object V {
   val gitter8Version = "0.17.0"
   val gradleBloop = "1.6.3"
   val java8Compat = "1.0.2"
-  val javaSemanticdb = "0.10.4"
-  val jsoup = "1.20.1"
+  val javaSemanticdb = "0.11.0"
+  val jsoup = "1.21.1"
   val kindProjector = "0.13.4"
   val lsp4jV = "0.24.0"
   val mavenBloop = "2.0.1"
-  val mill = "0.12.14"
-  val mdoc = "2.7.1"
+  val mill = "1.0.1"
+  val mdoc = "2.7.2"
   val munit = "1.2.3"
   val pprint = "0.7.3"
   val sbtBloop = bloop
   val sbtJdiTools = "1.2.0"
-  val scalaCli = "1.8.0"
+  val scalaCli = "1.8.4"
   val scalafix = "0.14.3"
   val scalafmt = "3.7.15"
   val scalameta = "4.14.4"
-  val scribe = "3.16.1"
+  val scribe = "3.17.0"
+
   // scribe dropped Scala 2.12 support after 3.15.2
   def scribe(scalaVersion: String): String =
-    if (scalaVersion.startsWith("2.12")) "3.15.2" else "3.16.0"
+    if (scalaVersion.startsWith("2.12")) "3.15.2" else scribe
   val qdox = "2.2.0"
   val protobuf = "4.31.1"
 
@@ -182,6 +184,6 @@ object V {
     // sbtScala,
     scala212,
     scala213,
-//    lastPublishedScala3,
+    // sbtMill,
   ).toList
 }

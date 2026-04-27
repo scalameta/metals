@@ -1,5 +1,6 @@
 package scala.meta.internal.metals
 
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.Term
@@ -58,7 +59,8 @@ class FallbackDefinitionProvider(
           val symbolPrefix = mtags.Symbol
             .guessSymbolFromParts(parts, isScala3)
             .value
-          if (isInSelectPosition) List(symbolPrefix + ".")
+          if (symbolPrefix.isEmpty()) Nil
+          else if (isInSelectPosition) List(symbolPrefix + ".")
           else if (isInTypePosition) List(symbolPrefix + "#")
           else List(".", "#", "().").map(ending => symbolPrefix + ending)
         }
@@ -126,11 +128,16 @@ class FallbackDefinitionProvider(
         val fullyScopedName =
           guessObjectOrClass(proposedNameParts)
 
+        import scala.meta.internal.semanticdb.Scala._
+
         def findInIndex(proposedSymbol: String) = {
-          index
-            .definition(mtags.Symbol(proposedSymbol))
-            // Make sure we don't return unrelated definitions
-            .filter { _.definitionSymbol.value == proposedSymbol }
+          // Check if the semanticdb symbol is valid
+          Try(proposedSymbol.desc).toOption.flatMap(_ =>
+            index
+              .definition(mtags.Symbol(proposedSymbol))
+              // Make sure we don't return unrelated definitions
+              .filter { _.definitionSymbol.value == proposedSymbol }
+          )
         }
         val nonLocalCandidates =
           (proposedImportedSymbols ++ fullyScopedName ++ standardScalaImports).distinct

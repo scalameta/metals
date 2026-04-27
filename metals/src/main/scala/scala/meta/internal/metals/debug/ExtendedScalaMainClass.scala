@@ -39,35 +39,53 @@ case class ExtendedScalaMainClass(
     jvmOptions: java.util.List[String],
     environmentVariables: java.util.List[String],
     shellCommand: String,
+    classpath: String,
+    javaBinary: String,
 )
 
 object ExtendedScalaMainClass {
 
   private def createCommand(
       javaBinary: AbsolutePath,
-      classpath: List[String],
+      classpathString: String,
       jvmOptions: List[String],
       arguments: List[String],
       mainClass: String,
-      workspace: AbsolutePath,
   ): String = {
-    val jvmOptsString =
-      if (jvmOptions.nonEmpty) jvmOptions.mkString("\"", "\" \"", "\"") else ""
-    val classpathString = Try(tempManifestJar(classpath, workspace)).getOrElse(
-      classpath.mkString(File.pathSeparator)
-    )
-    val argumentsString = arguments.mkString(" ")
+
+    def escape(s: String): String = {
+      if (Properties.isWin) {
+        s
+      } else {
+        s.replace("$", "\\$")
+      }
+    }
+
+    def escapeMkString(list: List[String]): String = {
+      if (list.nonEmpty) {
+        list
+          .map { str =>
+            // Escape $ and other special characters
+            val escaped = escape(str)
+            s"\"$escaped\""
+          }
+          .mkString(" ")
+      } else ""
+    }
+
+    val jvmOptsString = escapeMkString(jvmOptions)
+    val argumentsString = escapeMkString(arguments)
     // We need to add "" to account for whitespace and also escaped \ before "
     val escapedJavaHome = javaBinary.toNIO.getRoot().toString +
       javaBinary.toNIO
         .iterator()
         .asScala
-        .map(p => s""""$p"""")
+        .map(p => s""""${escape(p.toString)}"""")
         .mkString(File.separator)
     val safeJavaBinary =
       if (Properties.isWin) escapedJavaHome.replace("""\"""", """\\"""")
       else escapedJavaHome
-    s"$safeJavaBinary $jvmOptsString -classpath \"$classpathString\" $mainClass $argumentsString"
+    s"$safeJavaBinary $jvmOptsString -classpath \"$classpathString\" \"$mainClass\" $argumentsString"
   }
 
   /**
@@ -119,20 +137,26 @@ object ExtendedScalaMainClass {
     val mainEnvVariables = Option(main.getEnvironmentVariables())
       .map(_.asScala.toList)
       .getOrElse(Nil)
-
+    val classpath =
+      env.getClasspath().asScala.map(_.toAbsolutePath.toString).toList
+    val classpathString = Try(tempManifestJar(classpath, workspace)).getOrElse(
+      classpath.mkString(File.pathSeparator)
+    )
+    val cmd = createCommand(
+      javaBinary,
+      classpathString,
+      jvmOpts,
+      main.getArguments().asScala.toList,
+      main.getClassName(),
+    )
     ExtendedScalaMainClass(
       main.getClassName(),
       main.getArguments(),
       jvmOpts.asJava,
       (jvmEnvVariables ++ mainEnvVariables).asJava,
-      createCommand(
-        javaBinary,
-        env.getClasspath().asScala.map(_.toAbsolutePath.toString).toList,
-        jvmOpts,
-        main.getArguments().asScala.toList,
-        main.getClassName(),
-        workspace,
-      ),
+      cmd,
+      classpathString,
+      javaBinary.toString(),
     )
   }
 }

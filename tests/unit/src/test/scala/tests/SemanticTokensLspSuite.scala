@@ -254,6 +254,42 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         |""".stripMargin,
   )
 
+  check(
+    "doobie-sql-select",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<sql>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<name>>/*variable*/, <<age>>/*variable*/ <<FROM>>/*keyword*/ <<users>>/*variable*/ <<WHERE>>/*keyword*/ <<age>>/*variable*/ <<>>>/*operator*/ <<30>>/*number*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-fragment-composition",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<baseQuery>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<name>>/*variable*/, <<age>>/*variable*/ <<FROM>>/*keyword*/ <<users>>/*variable*/<<\"\"\">>/*string*/
+        |  <<val>>/*keyword*/ <<condition>>/*variable,definition,readonly*/ = <<fr>>/*keyword*/<<\"\"\">>/*string*/<<WHERE>>/*keyword*/ <<age>>/*variable*/ <<>>>/*operator*/ <<30>>/*number*/<<\"\"\">>/*string*/
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<baseQuery>>/*variable,readonly*/ <<++>>/*method*/ <<condition>>/*variable,readonly*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
+  check(
+    "doobie-sql-with-variable-literal",
+    s"""|<<import>>/*keyword*/ <<doobie>>/*namespace*/.<<implicits>>/*class*/.<<_>>/*variable,readonly*/
+        |
+        |<<object>>/*keyword*/ <<SQL>>/*class*/ {
+        |  <<val>>/*keyword*/ <<username>>/*variable,definition,readonly*/ = <<"John">>/*string*/
+        |  <<val>>/*keyword*/ <<query>>/*variable,definition,readonly*/ = <<sql>>/*keyword*/<<\"\"\">>/*string*/<<SELECT>>/*keyword*/ <<*>>/*operator*/ <<FROM>>/*keyword*/ <<users>>/*variable*/ <<WHERE>>/*keyword*/ <<name>>/*variable*/ <<=>>/*operator*/ <<'prefix->>/*string*/<<$$>>/*keyword*/<<username>>/*variable,readonly*/<<-suffix'>>/*string*/<<\"\"\">>/*string*/
+        |}
+        |""".stripMargin,
+    libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
+  )
+
   test("new-changes") {
     val expected =
       """|<<package>>/*keyword*/ <<a>>/*namespace*/
@@ -309,6 +345,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
       name: TestOptions,
       expected: String,
       fileName: String = "Main.scala",
+      libraryDependencies: List[String] = Nil,
   )(implicit loc: munit.Location): Unit = {
     val fileContent =
       TestSemanticTokens.removeSemanticHighlightDecorations(expected)
@@ -321,7 +358,11 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         // potentially we could derive input from
         _ <- initialize(
           s"""/metals.json
-             |{"a":{}}
+             |{
+             |  "a": {
+             |    "libraryDependencies": ${libraryDependencies.map("\"" + _ + "\"").mkString("[", ",", "]")}
+             |  }
+             |}
              |${absFilePath.trim()}
              |${fileContent}
              |""".stripMargin,
