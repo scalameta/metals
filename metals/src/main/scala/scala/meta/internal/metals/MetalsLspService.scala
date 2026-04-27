@@ -194,13 +194,13 @@ abstract class MetalsLspService(
   )
 
   @volatile var mtags: Mtags = new Mtags()
+  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
   val symbolDocs = new Docstrings(definitionIndex, () => mtags)
   def javaHome = userConfig.javaHome
 
   protected val fingerprints = new MutableMd5Fingerprints
   val focusedDocumentBuildTarget =
     new AtomicReference[b.BuildTargetIdentifier]()
-  val definitionIndex: OnDemandSymbolIndex = newSymbolIndex()
 
   def bspSession: Option[BspSession] = indexer.bspSession
   protected val savedFiles = new ActiveFiles(time)

@@ -43,7 +43,7 @@ object V {
   val scalafmt = "3.7.15"
   val scalameta = "4.14.4"
   val scribe = "3.17.0"
-  
+
   // scribe dropped Scala 2.12 support after 3.15.2
   def scribe(scalaVersion: String): String =
     if (scalaVersion.startsWith("2.12")) "3.15.2" else scribe

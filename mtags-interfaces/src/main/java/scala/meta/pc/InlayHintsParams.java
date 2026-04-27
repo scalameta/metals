@@ -25,10 +25,8 @@ public interface InlayHintsParams extends RangeParams {
     return false;
   }
 
-    /**
-   * Response should contain intermediate types on transformation chains
-   */
-  default boolean hintsXRayMode(){
+  /** Response should contain intermediate types on transformation chains */
+  default boolean hintsXRayMode() {
     return false;
   }
 

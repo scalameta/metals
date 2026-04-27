@@ -888,7 +888,7 @@ final case class TestingServer(
       )
       .asScala
   }
-  
+
   def info(
       filename: String,
       symbol: String,

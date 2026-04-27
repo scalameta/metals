@@ -1,5 +1,7 @@
 package tests.mcp
 
+import scala.meta.internal.metals.UserConfiguration
+
 import tests.BaseLspSuite
 
 class McpCompileToolsLspSuite

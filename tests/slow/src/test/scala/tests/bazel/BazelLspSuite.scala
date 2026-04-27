@@ -323,7 +323,7 @@ class BazelLspSuite
         .runJava(
           Dependency.of(
             BazelBuildTool.dependency.getModule(),
-            BazelBuildTool.version,
+            BazelBuildTool.bspVersion,
           ),
           BazelBuildTool.mainClass,
           workspace,
@@ -331,7 +331,7 @@ class BazelLspSuite
           None,
         )
         .future
-      _ = assertContains(jsonFile, BazelBuildTool.version)
+      _ = assertContains(jsonFile, BazelBuildTool.bspVersion)
       _ <- initialize(
         BazelBuildLayout(workspaceLayout, V.bazelScalaVersion, bazelVersion)
       )

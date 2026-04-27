@@ -1,7 +1,5 @@
 package scala.meta.internal.pc
 
-import java.util.logging.Level
-
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -95,7 +93,7 @@ class CompletionItemResolver(
       }
     } catch {
       case NonFatal(e) =>
-        logger.log(Level.WARNING, s"Error getting docstring for $gsym", e)
+        logger.warn(s"Error getting docstring for $gsym", e)
         ""
     }
 }

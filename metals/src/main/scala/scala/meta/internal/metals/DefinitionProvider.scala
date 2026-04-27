@@ -10,8 +10,8 @@ import scala.meta.inputs.Position.Range
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
 import scala.meta.internal.mtags.Mtags
@@ -616,7 +616,7 @@ class DefinitionProviderReportBuilder(
     foundScalaDocDef = true
     result
   }
-  
+
   private def symbolDefinitelyHasNoDefinition(symbol: String): Boolean = {
     symbol == "" ||
     symbol.contains("UNKNOWN_BECAUSE_WE_HAVENT_HANDLED_LOCALS_YET") ||

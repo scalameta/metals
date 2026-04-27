@@ -420,6 +420,7 @@ class MillServerSuite
             ).asJava,
             Nil.asJava,
             Nil.asJava,
+            Nil.asJava,
           ),
         )
       )

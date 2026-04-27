@@ -4,8 +4,6 @@ import java.io.Closeable
 import java.net.URI
 import java.nio.file.Path
 import java.util
-import java.util.logging.Level
-import java.util.logging.Logger
 import java.{util => ju}
 
 import scala.annotation.nowarn
@@ -17,9 +15,9 @@ import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.reflect.io.AbstractFile
+import scala.reflect.io.VirtualFile
 import scala.tools.nsc.LogicalPackage
 import scala.tools.nsc.MetalsJavaPlatform
-import scala.reflect.io.VirtualFile
 import scala.tools.nsc.Mode
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.Global
@@ -40,6 +38,7 @@ import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
 
 import org.eclipse.{lsp4j => l}
+import org.slf4j.Logger
 
 class MetalsGlobal(
     settings: Settings,
@@ -73,18 +72,18 @@ class MetalsGlobal(
     with AutoImports
     with Keywords
     with PcDiagnostics
-    with WorkspaceSymbolSearch 
+    with WorkspaceSymbolSearch
     with Closeable { compiler =>
   hijackPresentationCompilerThread(
     backgroundCompilation = !metalsConfig.emitDiagnostics()
   )
 
   lazy val logger: Logger =
-    Logger.getLogger(classOf[MetalsGlobal].getName)
+    org.slf4j.LoggerFactory.getLogger(classOf[MetalsGlobal])
 
   override def close(): Unit = {
     super.close()
-    logger.log(Level.FINE, "Restarting compiler and clearing caches.")
+    logger.debug("Restarting compiler and clearing caches.")
   }
 
   val richCompilationCache: TrieMap[String, RichCompilationUnit] =
@@ -149,7 +148,7 @@ class MetalsGlobal(
   override protected def computeInternalPhases(): Unit = {
     super.computeInternalPhases()
     if (metalsConfig.sourcePathMode().shouldPrune()) {
-      logger.log(Level.FINE, s"[$buildTargetIdentifier] using pruned search path")
+      logger.debug(s"[$buildTargetIdentifier] using pruned search path")
       phasesSet += PruneLateSourcesComponent
     }
   }
@@ -170,7 +169,7 @@ class MetalsGlobal(
   override def assertCorrectThread(): Unit = {
     val name = Thread.currentThread().getName
     if (!name.startsWith("Compiler Job Thread")) {
-      logger.log(Level.FINE, s"Wrong thread: $name")
+      logger.debug(s"Wrong thread: $name")
     }
   }
 
