@@ -159,6 +159,10 @@ final class BuildTools(
     BazelBuildTool.workspaceSupportsBsp(_)
   )
   def isBazel: Boolean = bazelProject.isDefined
+  def dederProject: Option[AbsolutePath] = searchForBuildTool(
+    _.resolve(DederBuildTool.buildFile).isFile
+  )
+  def isDeder: Boolean = dederProject.isDefined
 
   def isInBsp(path: AbsolutePath): Boolean =
     path.isFile && path.parent.filename == ".bsp" &&
@@ -224,6 +228,7 @@ final class BuildTools(
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
       BazelBuildTool(userConfig, workspace, shellRunner, ec),
+      DederBuildTool(userConfig, workspace),
     )
   }
 
@@ -235,6 +240,7 @@ final class BuildTools(
     if (isGradle) buf += "Gradle"
     if (isMaven) buf += "Maven"
     if (isBazel) buf += "Bazel"
+    if (isDeder) buf += "Deder"
     buf.result()
   }
 
@@ -263,6 +269,7 @@ final class BuildTools(
         tables,
       )
     }
+    dederProject.foreach(buf += DederBuildTool(userConfig, _))
     buf.addAll(customBsps)
 
     buf.result()
@@ -287,6 +294,8 @@ final class BuildTools(
       Some(MillBuildTool.name)
     else if (bazelProject.exists(BazelBuildTool.isBazelRelatedPath(_, path)))
       Some(BazelBuildTool.name)
+    else if (dederProject.exists(DederBuildTool.isDederRelatedPath(_, path)))
+      Some(DederBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
       if (knownBsps(name) && !ScalaCli.names(name)) None
@@ -373,5 +382,6 @@ object BuildTools {
     MillBuildTool.name,
     ScalaCliBuildTool.name,
     BazelBuildTool.name,
+    DederBuildTool.name,
   )
 }
