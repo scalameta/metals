@@ -412,4 +412,55 @@ class MbtBuildServerLspSuite
       )
     } yield ()
   }
+
+  test("mbt-uncheckedSources-compiles-with-gitignore-sources") {
+    cleanWorkspace()
+    val mbtJson =
+      s"""|{
+          |  "uncheckedSources": ["generated"]
+          |}""".stripMargin
+
+    val generatedFile = "generated/core/Generated.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/.gitignore
+            |generated/
+            |/src/core/Main.scala
+            |package core
+            |
+            |object Main {
+            |  def main(): Any = GeneratedObject.value
+            |}
+            |/$generatedFile
+            |package core
+            |
+            |object GeneratedObject {
+            |  val value: String = "generated"
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ = assertNoDiff(
+        server.workspaceSymbol("GeneratedObject"),
+        "core.GeneratedObject",
+      )
+      _ <- server.didOpen(generatedFile)
+      _ <- server.assertHover(
+        generatedFile,
+        """|package core
+           |
+           |object Main {
+           |  def main(): Any = GeneratedObject.val@@ue
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
 }

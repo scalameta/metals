@@ -138,6 +138,7 @@ abstract class MetalsLspService(
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
   @volatile protected var mbtBuild: MbtBuild = MbtBuild.fromWorkspace(folder)
+  def currentMbtBuild: MbtBuild = mbtBuild
   protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -350,6 +351,7 @@ abstract class MetalsLspService(
     ),
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
+    mbtBuild = () => mbtBuild,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2

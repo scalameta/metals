@@ -81,6 +81,46 @@ object GitVCS {
       ParArray.empty[GitBlob]
   }
 
+  /**
+   * Walks the given directories on disk without any gitignore or hardcoded
+   * exclusions. Intended for explicitly listed generated-source directories
+   * (e.g. `genSources` in `mbt.json`) that are gitignored and therefore
+   * invisible to `lsFilesStage`.
+   */
+  def lsFilesFromDirs(
+      dirs: Seq[AbsolutePath],
+      isRelevantPath: GitBlob => Boolean = blob =>
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+  ): ParArray[GitBlob] = {
+    val result = ParArray.newBuilder[GitBlob]
+    dirs.foreach { dir =>
+      if (Files.isDirectory(dir.toNIO)) {
+        Files.walkFileTree(
+          dir.toNIO,
+          new SimpleFileVisitor[Path] {
+            override def visitFile(
+                file: Path,
+                attrs: BasicFileAttributes,
+            ): FileVisitResult = {
+              val blob = new GitBlob(file.toString, Array.emptyByteArray)
+              if (attrs.isRegularFile && isRelevantPath(blob)) {
+                try {
+                  val oid = OID.fromBlob(Files.readAllBytes(file))
+                  blob.oidBytes = oid.getBytes(StandardCharsets.UTF_8)
+                  result += blob
+                } catch {
+                  case NonFatal(_) => // silently ignore unreadable files
+                }
+              }
+              FileVisitResult.CONTINUE
+            }
+          },
+        )
+      }
+    }
+    result.result()
+  }
+
   private def isIgnoredDirectory(dir: Path): Boolean = {
     dir.endsWith("node_modules") ||
     dir.endsWith(".git") ||

@@ -15,6 +15,7 @@ import ch.epfl.scala.bsp4j
 case class MbtBuild(
     @Nullable dependencyModules: ju.List[MbtDependencyModule],
     @Nullable namespaces: ju.Map[String, MbtNamespace],
+    @Nullable genSources: ju.List[String],
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
@@ -23,9 +24,13 @@ case class MbtBuild(
   def getNamespaces: ju.Map[String, MbtNamespace] =
     Option(this.namespaces).getOrElse(ju.Collections.emptyMap())
 
+  def getGenSources: ju.List[String] =
+    Option(this.genSources).getOrElse(ju.Collections.emptyList())
+
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
-      Option(this.namespaces).forall(_.isEmpty)
+      Option(this.namespaces).forall(_.isEmpty) &&
+      Option(this.genSources).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
@@ -148,6 +153,7 @@ object MbtBuild {
     MbtBuild(
       ju.Collections.emptyList(),
       new ju.LinkedHashMap[String, MbtNamespace](),
+      ju.Collections.emptyList(),
     )
 
   def fromWorkspace(workspace: AbsolutePath): MbtBuild =
@@ -200,7 +206,10 @@ object MbtBuild {
       mergedNamespaces.put(key, ns)
     }
 
-    MbtBuild(mergedModules, mergedNamespaces)
+    val mergedGenSources =
+      (a.getGenSources.asScala ++ b.getGenSources.asScala).distinct.asJava
+
+    MbtBuild(mergedModules, mergedNamespaces, mergedGenSources)
   }
 
 }

@@ -375,13 +375,27 @@ class WorkspaceLspService(
             service.containsJar(path)
           } else {
             service.buildTargets.all
-              .exists(bt => bt.baseDirectoryPath.exists(path.startWith))
+              .exists(bt =>
+                bt.baseDirectoryPath.exists(path.startWith)
+              ) || isInMbtGenSources(service, path)
           }
         }
     }
 
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
+
+  private def isInMbtGenSources(
+      service: ProjectMetalsLspService,
+      path: AbsolutePath,
+  ): Boolean =
+    service.currentMbtBuild.getGenSources.asScala.exists { genDir =>
+      val genDirNio = service.folder.resolve(genDir).toNIO
+      // resolve symlinks so that e.g. bazel-bin symlink paths match the real file paths
+      val genDirReal =
+        scala.util.Try(genDirNio.toRealPath()).getOrElse(genDirNio)
+      path.toNIO.startsWith(genDirNio) || path.toNIO.startsWith(genDirReal)
+    }
 
   private def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
     // "metalsDecode" prefix is used for showing special files and is not an actual file system
