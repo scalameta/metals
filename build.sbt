@@ -166,7 +166,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.BasePCSuite.scala&msg=parameter (scalaVersion|classpath) in method (extraDependencies|scalacOptions):silent",
     "-Wconf:src=*.CodeLens.scala&msg=parameter (textDocumentWithPath|path) in method codeLenses is never used:silent",
     "-Wconf:src=*.Completions.scala&msg=parameter (member|m) in method (isCandidate|isPrioritized):silent",
-    "-Wconf:src=*.JavaMtags.scala&msg=parameter (ctor|method) in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.JavaMtags.scala&msg=parameter (info|ctor|method) in method (visitConstructor|visitMethod|visitClass):silent",
     "-Wconf:src=*.MtagsIndexer.scala&msg=parameter owner in method visitOccurrence:silent",
     "-Wconf:src=*.ScaladocParser.scala&msg=parameter (pos|message) in method reportError:silent",
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
@@ -334,7 +334,8 @@ val mtagsSettings = List(
   ),
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
-    "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
+    "io.github.bonede" % "tree-sitter" % V.treeSitter, // for java mtags
+    "io.github.bonede" % "tree-sitter-java" % V.treeSitterJava, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions

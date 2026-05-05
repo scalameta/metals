@@ -81,7 +81,9 @@ object V {
 
   val scribe = "3.18.0"
 
-  val qdox = "2.2.0"
+  val treeSitter = "0.26.6"
+
+  val treeSitterJava = "0.23.5"
 
   val sbt2Version = "2.0.0-RC8"
 

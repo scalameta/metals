@@ -1,17 +1,12 @@
 package scala.meta.internal.mtags
 
-import java.io.StringReader
 import java.net.URI
-import java.util.Comparator
 import java.util.Optional
 
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.CompilerRangeParamsUtils
-import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.Report
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
@@ -19,126 +14,189 @@ import scala.meta.internal.semanticdb.SymbolInformation.Kind
 import scala.meta.internal.semanticdb.SymbolInformation.Property
 import scala.meta.pc.reports.ReportContext
 
-import com.thoughtworks.qdox._
-import com.thoughtworks.qdox.model.JavaClass
-import com.thoughtworks.qdox.model.JavaConstructor
-import com.thoughtworks.qdox.model.JavaField
-import com.thoughtworks.qdox.model.JavaMember
-import com.thoughtworks.qdox.model.JavaMethod
-import com.thoughtworks.qdox.model.JavaModel
-import com.thoughtworks.qdox.parser.ParseException
-import org.eclipse.lsp4j
+import org.treesitter.TSNode
+import org.treesitter.TSParser
+import org.treesitter.TSTree
+import org.treesitter.TreeSitterJava
 
 object JavaMtags {
+  private val threadLocalParser: ThreadLocal[TSParser] =
+    ThreadLocal.withInitial { () =>
+      val parser = new TSParser()
+      parser.setLanguage(new TreeSitterJava())
+      parser
+    }
+
   def index(
       input: Input.VirtualFile,
       includeMembers: Boolean
   )(implicit rc: ReportContext): MtagsIndexer =
     new JavaMtags(input, includeMembers)
 }
+
 class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     implicit rc: ReportContext
 ) extends MtagsIndexer { self =>
-  val builder = new JavaProjectBuilder()
   override def language: Language = Language.JAVA
 
   override def input: Input.VirtualFile = virtualFile
 
   override def indexRoot(): Unit = {
+    val parser = JavaMtags.threadLocalParser.get()
+    var tree: TSTree = null
     try {
-      val source = builder.addSource(new StringReader(input.value))
-      if (source.getPackage != null) {
-        source.getPackageName.split("\\.").foreach { p =>
-          pkg(
-            p,
-            toRangePosition(source.getPackage.lineNumber, p)
-          )
-        }
-      }
-      source.getClasses.asScala.foreach(visitClass)
+      tree = parser.parseString(null, input.value)
+      val root = tree.getRootNode()
+      walkProgram(root)
     } catch {
-      case e: ParseException =>
-        reportError(
-          "parse error",
-          e,
-          Some(new lsp4j.Position(e.getLine() - 1, e.getColumn()))
-        )
-      case e: NullPointerException =>
-        reportError("null pointer exception", e, None)
+      case NonFatal(e: Exception) =>
+        reportError("tree-sitter parse error", e)
+      case NonFatal(_) =>
+    } finally {
+      if (tree != null) tree.close()
     }
   }
 
-  /**
-   * Computes the start/end offsets from a name in a line number.
-   *
-   * Applies a simple heuristic to find the name: the first occurence of
-   * name in that line. If the name does not appear in the line then
-   * 0 is returned. If the name appears for example in the return type
-   * of a method then we get the position of the return type, not the
-   * end of the world.
-   */
-  def toRangePosition(line: Int, name: String): Position = {
-    val offset = input.toOffset(line, 0)
-    val columnAndLength = {
-      val fromIndex = {
-        // HACK(olafur) avoid hitting on substrings of "package".
-        if (input.value.startsWith("package", offset)) "package".length
-        else offset
+  private def walkProgram(root: TSNode): Unit = {
+    val childCount = root.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = root.getNamedChild(i)
+      child.getType() match {
+        case "package_declaration" =>
+          walkPackageDeclaration(child)
+        case "class_declaration" | "interface_declaration" |
+            "enum_declaration" | "record_declaration" |
+            "annotation_type_declaration" =>
+          visitClassNode(child)
+        case _ => // skip imports, comments at top level, etc.
       }
-      val idx = input.value.indexOf(" " + name, fromIndex)
-      if (idx == -1) (0, 0)
-      else (idx - offset + " ".length, name.length)
+      i += 1
     }
-    input.toPosition(
-      line,
-      columnAndLength._1,
-      line,
-      columnAndLength._1 + columnAndLength._2
-    )
   }
 
-  def visitMembers[T <: JavaMember](cls: JavaClass): Unit = {
-    val fields = cls.getFields
-    if (fields == null) ()
-    else fields.asScala.foreach(visitMember(cls, _))
+  private def walkPackageDeclaration(node: TSNode): Unit = {
+    val nameNode = findPackageName(node)
+    if (nameNode != null) {
+      val parts = extractScopedIdentifierParts(nameNode)
+      parts.foreach { case (name, startPoint, endPoint) =>
+        pkg(
+          name,
+          input.toPosition(
+            startPoint.getRow(),
+            startPoint.getColumn(),
+            endPoint.getRow(),
+            endPoint.getColumn()
+          )
+        )
+      }
+    }
   }
 
-  def visitClasses(classes: java.util.List[JavaClass]): Unit =
-    if (classes == null) ()
-    else classes.asScala.foreach(visitClass)
+  private def findPackageName(pkgNode: TSNode): TSNode = {
+    val childCount = pkgNode.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = pkgNode.getNamedChild(i)
+      val tpe = child.getType()
+      if (tpe == "scoped_identifier" || tpe == "identifier") return child
+      i += 1
+    }
+    null
+  }
+
+  private def extractScopedIdentifierParts(
+      node: TSNode
+  ): List[(String, org.treesitter.TSPoint, org.treesitter.TSPoint)] = {
+    node.getType() match {
+      case "identifier" =>
+        val text = nodeText(node)
+        List((text, node.getStartPoint(), node.getEndPoint()))
+      case "scoped_identifier" =>
+        val scope = node.getChildByFieldName("scope")
+        val name = node.getChildByFieldName("name")
+        val scopeParts =
+          if (scope != null && !scope.isNull())
+            extractScopedIdentifierParts(scope)
+          else Nil
+        val nameParts =
+          if (name != null && !name.isNull()) {
+            val text = nodeText(name)
+            List((text, name.getStartPoint(), name.getEndPoint()))
+          } else Nil
+        scopeParts ++ nameParts
+      case _ => Nil
+    }
+  }
 
   def visitClass(
-      cls: JavaClass,
+      info: JavaClassInfo,
       pos: Position,
       kind: Kind
   ): Unit = {
     tpe(
-      cls.getName,
+      info.name,
       pos,
       kind,
-      if (cls.isEnum) Property.ENUM.value else 0
+      if (info.isEnum) Property.ENUM.value else 0
     )
   }
 
-  def visitClass(cls: JavaClass): Unit =
+  private def visitClassNode(node: TSNode): Unit =
     withOwner(owner) {
-      val kind = if (cls.isInterface) Kind.INTERFACE else Kind.CLASS
-      val pos = toRangePosition(cls.lineNumber, cls.getName)
-      visitClass(
-        cls,
-        pos,
-        kind
-      )
-      visitClasses(cls.getNestedClasses)
-      if (includeMembers) {
-        visitMethods(cls)
-        visitConstructors(cls)
-        visitMembers(cls)
+      val nameNode = node.getChildByFieldName("name")
+      if (nameNode != null && !nameNode.isNull()) {
+        val name = nodeText(nameNode)
+        val nodeType = node.getType()
+        val isInterface = nodeType == "interface_declaration" ||
+          nodeType == "annotation_type_declaration"
+        val isEnum = nodeType == "enum_declaration"
+        val kind = if (isInterface) Kind.INTERFACE else Kind.CLASS
+        val pos = nodePosition(nameNode)
+        val javadoc = findJavadocComment(node)
+        val typeParams = extractTypeParameterNames(node)
+
+        val info = JavaClassInfo(
+          name = name,
+          javadocComment = javadoc,
+          typeParameterNames = typeParams,
+          isInterface = isInterface,
+          isEnum = isEnum
+        )
+
+        visitClass(info, pos, kind)
+
+        // Visit nested classes
+        val body = node.getChildByFieldName("body")
+        if (body != null && !body.isNull()) {
+          visitNestedClasses(body)
+          if (includeMembers) {
+            visitMethods(body)
+            visitConstructors(body, name)
+            visitFields(body, isEnum)
+          }
+        }
       }
     }
 
+  private def visitNestedClasses(body: TSNode): Unit = {
+    val childCount = body.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = body.getNamedChild(i)
+      child.getType() match {
+        case "class_declaration" | "interface_declaration" |
+            "enum_declaration" | "record_declaration" |
+            "annotation_type_declaration" =>
+          visitClassNode(child)
+        case _ =>
+      }
+      i += 1
+    }
+  }
+
   def visitConstructor(
-      ctor: JavaConstructor,
+      info: JavaConstructorInfo,
       disambiguator: String,
       pos: Position,
       properties: Int
@@ -146,24 +204,42 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     super.ctor(disambiguator, pos, properties)
   }
 
-  def visitConstructors(cls: JavaClass): Unit = {
+  private def visitConstructors(body: TSNode, className: String): Unit = {
     val overloads = new OverloadDisambiguator()
-    cls.getConstructors
-      .iterator()
-      .asScala
-      .filterNot(_.isPrivate)
-      .foreach { ctor =>
-        val name = cls.getName
-        val disambiguator = overloads.disambiguator(name)
-        val pos = toRangePosition(ctor.lineNumber, name)
-        withOwner() {
-          visitConstructor(ctor, disambiguator, pos, 0)
+    val childCount = body.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = body.getNamedChild(i)
+      if (child.getType() == "constructor_declaration") {
+        if (!isPrivateNode(child)) {
+          val disambiguator = overloads.disambiguator(className)
+          val nameNode = child.getChildByFieldName("name")
+          val pos =
+            if (nameNode != null && !nameNode.isNull()) nodePosition(nameNode)
+            else nodePosition(child)
+          val javadoc = findJavadocComment(child)
+          val paramNames = extractParameterNames(child)
+          val typeParams = extractTypeParameterNames(child)
+
+          val info = JavaConstructorInfo(
+            name = className,
+            javadocComment = javadoc,
+            parameterNames = paramNames,
+            typeParameterNames = typeParams,
+            isPrivate = false
+          )
+
+          withOwner() {
+            visitConstructor(info, disambiguator, pos, 0)
+          }
         }
       }
+      i += 1
+    }
   }
 
   def visitMethod(
-      method: JavaMethod,
+      info: JavaMethodInfo,
       name: String,
       disambiguator: String,
       pos: Position,
@@ -172,75 +248,266 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     super.method(name, disambiguator, pos, properties)
   }
 
-  def visitMethods(cls: JavaClass): Unit = {
+  private def visitMethods(body: TSNode): Unit = {
     val overloads = new OverloadDisambiguator()
-    val methods = cls.getMethods
-    methods.sort(new Comparator[JavaMethod] {
-      override def compare(o1: JavaMethod, o2: JavaMethod): Int = {
-        java.lang.Boolean.compare(o1.isStatic, o2.isStatic)
-      }
-    })
-    methods.asScala.foreach { method =>
-      val name = method.getName
-      val disambiguator = overloads.disambiguator(name)
-      val line =
-        if (method.lineNumber == -1) cls.lineNumber else method.lineNumber
-      val pos = toRangePosition(line, name)
-      withOwner() {
-        visitMethod(method, name, disambiguator, pos, 0)
+    // Collect methods, sort static last for overload disambiguation compatibility
+    val methods = collectMethods(body)
+    val sorted = methods.sortWith { case ((_, isStatic1), (_, isStatic2)) =>
+      java.lang.Boolean.compare(isStatic1, isStatic2) < 0
+    }
+
+    sorted.foreach { case (methodNode, _) =>
+      val nameNode = methodNode.getChildByFieldName("name")
+      if (nameNode != null && !nameNode.isNull()) {
+        val name = nodeText(nameNode)
+        val disambiguator = overloads.disambiguator(name)
+        val pos = nodePosition(nameNode)
+        val javadoc = findJavadocComment(methodNode)
+        val paramNames = extractParameterNames(methodNode)
+        val typeParams = extractTypeParameterNames(methodNode)
+        val isStatic = hasModifier(methodNode, "static")
+
+        val info = JavaMethodInfo(
+          name = name,
+          javadocComment = javadoc,
+          parameterNames = paramNames,
+          typeParameterNames = typeParams,
+          isStatic = isStatic
+        )
+
+        withOwner() {
+          visitMethod(info, name, disambiguator, pos, 0)
+        }
       }
     }
   }
 
-  def visitMember[T <: JavaMember](cls: JavaClass, m: T): Unit =
-    withOwner(owner) {
-      val name = m.getName
-      val line = m match {
-        case c: JavaMethod => c.lineNumber
-        case c: JavaField => c.lineNumber
-        case _ => 0
+  private def collectMethods(
+      body: TSNode
+  ): List[(TSNode, Boolean)] = {
+    val builder = List.newBuilder[(TSNode, Boolean)]
+    val childCount = body.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = body.getNamedChild(i)
+      if (child.getType() == "method_declaration") {
+        val isStatic = hasModifier(child, "static")
+        builder += ((child, isStatic))
       }
-      val actualLine =
-        if (line == -1) cls.lineNumber
-        else line
-      val pos = toRangePosition(actualLine, name)
-      val (kind: Kind, properties: Int) = m match {
-        case _: JavaMethod => (Kind.METHOD, 0)
-        case field: JavaField if field.isEnumConstant() =>
-          (Kind.FIELD, Property.ENUM.value)
-        case _: JavaField =>
-          (Kind.FIELD, 0)
-        case c: JavaClass =>
-          if (c.isInterface) (Kind.INTERFACE, 0)
-          else (Kind.CLASS, 0)
-        case _ => (Kind.UNKNOWN_KIND, 0)
-      }
-      term(name, pos, kind, properties)
+      i += 1
     }
+    builder.result()
+  }
 
-  implicit class XtensionJavaModel(m: JavaModel) {
-    def lineNumber: Int = m.getLineNumber - 1
+  private def visitFields(body: TSNode, isEnum: Boolean): Unit = {
+    val childCount = body.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = body.getNamedChild(i)
+      child.getType() match {
+        case "field_declaration" =>
+          visitFieldDeclaration(child, isEnumConstant = false)
+        case "enum_constant" if isEnum =>
+          visitEnumConstant(child)
+        case _ =>
+      }
+      i += 1
+    }
+  }
+
+  private def visitFieldDeclaration(
+      node: TSNode,
+      isEnumConstant: Boolean
+  ): Unit = {
+    // field_declaration has a "declarator" field which is a variable_declarator
+    val childCount = node.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = node.getNamedChild(i)
+      if (child.getType() == "variable_declarator") {
+        val nameNode = child.getChildByFieldName("name")
+        if (nameNode != null && !nameNode.isNull()) {
+          val name = nodeText(nameNode)
+          val pos = nodePosition(nameNode)
+          val kind =
+            if (isEnumConstant) Kind.FIELD
+            else Kind.FIELD
+          val properties =
+            if (isEnumConstant) Property.ENUM.value
+            else 0
+          withOwner(owner) {
+            term(name, pos, kind, properties)
+          }
+        }
+      }
+      i += 1
+    }
+  }
+
+  private def visitEnumConstant(node: TSNode): Unit = {
+    val nameNode = node.getChildByFieldName("name")
+    if (nameNode != null && !nameNode.isNull()) {
+      val name = nodeText(nameNode)
+      val pos = nodePosition(nameNode)
+      withOwner(owner) {
+        term(name, pos, Kind.FIELD, Property.ENUM.value)
+      }
+    }
+  }
+
+  // --- Helper methods ---
+
+  // Lazily compute UTF-8 bytes for proper byte-offset-based text extraction
+  private lazy val utf8Bytes: Array[Byte] =
+    input.value.getBytes("UTF-8")
+
+  protected def nodeText(node: TSNode): String = {
+    val startByte = node.getStartByte()
+    val endByte = node.getEndByte()
+    new String(utf8Bytes, startByte, endByte - startByte, "UTF-8")
+  }
+
+  protected def nodePosition(node: TSNode): Position = {
+    // TSPoint columns are byte offsets from line start in UTF-8.
+    // For Java identifiers (always ASCII), byte offset = char offset.
+    val start = node.getStartPoint()
+    val end = node.getEndPoint()
+    input.toPosition(
+      start.getRow(),
+      start.getColumn(),
+      end.getRow(),
+      end.getColumn()
+    )
+  }
+
+  protected def findJavadocComment(node: TSNode): Option[String] = {
+    var sibling = node.getPrevSibling()
+    // Skip annotations and line comments to find the Javadoc block_comment
+    while (sibling != null && !sibling.isNull()) {
+      sibling.getType() match {
+        case "block_comment" =>
+          val text = nodeText(sibling)
+          if (text.startsWith("/**")) return Some(text)
+          else return None
+        case "line_comment" | "marker_annotation" | "annotation" =>
+          sibling = sibling.getPrevSibling()
+        case _ =>
+          return None
+      }
+    }
+    None
+  }
+
+  private def isPrivateNode(node: TSNode): Boolean =
+    hasModifier(node, "private")
+
+  private def hasModifier(node: TSNode, modifier: String): Boolean = {
+    val childCount = node.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = node.getNamedChild(i)
+      if (child.getType() == "modifiers") {
+        val modCount = child.getNamedChildCount()
+        var j = 0
+        while (j < modCount) {
+          val mod = child.getNamedChild(j)
+          if (nodeText(mod) == modifier) return true
+          j += 1
+        }
+        // Also check unnamed children for simple modifiers
+        val totalCount = child.getChildCount()
+        var k = 0
+        while (k < totalCount) {
+          val mod = child.getChild(k)
+          if (nodeText(mod) == modifier) return true
+          k += 1
+        }
+        return false
+      }
+      i += 1
+    }
+    false
+  }
+
+  protected def extractParameterNames(node: TSNode): List[String] = {
+    val params = node.getChildByFieldName("parameters")
+    if (params == null || params.isNull()) return Nil
+    val builder = List.newBuilder[String]
+    val childCount = params.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = params.getNamedChild(i)
+      child.getType() match {
+        case "formal_parameter" =>
+          val nameNode = child.getChildByFieldName("name")
+          if (nameNode != null && !nameNode.isNull()) {
+            builder += nodeText(nameNode)
+          }
+        case "spread_parameter" =>
+          // Varargs: name is in a variable_declarator or direct identifier child
+          val nameNode = child.getChildByFieldName("name")
+          if (nameNode != null && !nameNode.isNull()) {
+            builder += nodeText(nameNode)
+          } else {
+            // Fallback: find variable_declarator or identifier child
+            val paramName = findSpreadParamName(child)
+            if (paramName != null) builder += paramName
+          }
+        case _ =>
+      }
+      i += 1
+    }
+    builder.result()
+  }
+
+  private def findSpreadParamName(spreadParam: TSNode): String = {
+    val childCount = spreadParam.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = spreadParam.getNamedChild(i)
+      child.getType() match {
+        case "variable_declarator" =>
+          // variable_declarator contains the name as its text
+          val nameNode = child.getChildByFieldName("name")
+          if (nameNode != null && !nameNode.isNull()) return nodeText(nameNode)
+          else return nodeText(child)
+        case "identifier" =>
+          // Check if this is the parameter name (not the type)
+          // Type is type_identifier, name is identifier
+          return nodeText(child)
+        case _ =>
+      }
+      i += 1
+    }
+    null
+  }
+
+  protected def extractTypeParameterNames(node: TSNode): List[String] = {
+    val tparams = node.getChildByFieldName("type_parameters")
+    if (tparams == null || tparams.isNull()) return Nil
+    val builder = List.newBuilder[String]
+    val childCount = tparams.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = tparams.getNamedChild(i)
+      if (child.getType() == "type_parameter") {
+        // The first named child of type_parameter is the type_identifier
+        val nameCount = child.getNamedChildCount()
+        if (nameCount > 0) {
+          val nameNode = child.getNamedChild(0)
+          builder += nodeText(nameNode)
+        }
+      }
+      i += 1
+    }
+    builder.result()
   }
 
   private def reportError(
       errorName: String,
-      e: Exception,
-      position: Option[lsp4j.Position]
-  ) = {
+      e: Exception
+  ): Unit = {
     try {
-      val content = position
-        .flatMap(_.toMeta(virtualFile))
-        .map(pos =>
-          CompilerRangeParamsUtils.fromPos(pos, EmptyCancelToken).printed()
-        )
-        .map(content => s"""|
-                            |file content:
-                            |```java
-                            |$content
-                            |```
-                            |""".stripMargin)
-        .getOrElse("")
-
       val shortFileName = {
         val index = virtualFile.path.indexOf("jar!")
         if (index > 0) virtualFile.path.substring(index + 4)
@@ -250,12 +517,12 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
       rc.unsanitized()
         .create(() =>
           new Report(
-            name = "qdox-error",
-            text = s"""|error in qdox parser$content
+            name = "java-mtags-error",
+            text = s"""|error in tree-sitter java parser
                        |""".stripMargin,
             error = Some(e),
             path = Optional.of(new URI(virtualFile.path)),
-            shortSummary = s"QDox $errorName in $shortFileName",
+            shortSummary = s"Tree-sitter $errorName in $shortFileName",
             id = Optional.of(virtualFile.path)
           )
         )
@@ -263,5 +530,4 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
       case NonFatal(_) =>
     }
   }
-
 }
