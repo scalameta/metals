@@ -25,12 +25,12 @@ object JavadocParser {
   // Parse a raw block comment string (Javadoc delimiters included).
   // Returns None if the comment is not a Javadoc comment.
   def parse(rawComment: String): Option[JavadocComment] = {
-    if (rawComment == null || !rawComment.startsWith("/**"))
-      return None
-
-    val stripped = stripDelimiters(rawComment)
-    val (body, tags) = splitBodyAndTags(stripped)
-    Some(JavadocComment(body, tags))
+    if (rawComment == null || !rawComment.startsWith("/**")) None
+    else {
+      val stripped = stripDelimiters(rawComment)
+      val (body, tags) = splitBodyAndTags(stripped)
+      Some(JavadocComment(body, tags))
+    }
   }
 
   // Strips Javadoc delimiters and leading asterisks from each line.

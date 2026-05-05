@@ -18,6 +18,7 @@ case class JavaClassInfo(
     isInterface: Boolean,
     isEnum: Boolean
 ) extends JavaDeclarationInfo {
+  // Records have component parameters, but we don't extract them yet.
   val parameterNames: List[String] = Nil
 }
 

@@ -19,7 +19,11 @@ import org.treesitter.TSParser
 import org.treesitter.TSTree
 import org.treesitter.TreeSitterJava
 
+// Tree-sitter node type reference:
+// https://github.com/tree-sitter/tree-sitter-java/blob/master/src/node-types.json
 object JavaMtags {
+  // ThreadLocal ensures thread safety. Re-entrancy on the same thread is not
+  // expected — JavaMtags.indexRoot() is always the top-level entry point.
   private val threadLocalParser: ThreadLocal[TSParser] =
     ThreadLocal.withInitial { () =>
       val parser = new TSParser()
@@ -45,6 +49,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     val parser = JavaMtags.threadLocalParser.get()
     var tree: TSTree = null
     try {
+      // First arg is old tree for incremental re-parsing; null for fresh parse
       tree = parser.parseString(null, input.value)
       val root = tree.getRootNode()
       walkProgram(root)
@@ -176,7 +181,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             visitFields(body, isEnum)
             // For enums, methods/constructors/nested classes may be in
             // enum_body_declarations
-            visitEnumBodyDeclarations(body, name, isEnum)
+            visitEnumBodyDeclarations(body, name)
           }
         }
       }
@@ -202,8 +207,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
 
   private def visitEnumBodyDeclarations(
       body: TSNode,
-      className: String,
-      isEnum: Boolean
+      className: String
   ): Unit = {
     val childCount = body.getNamedChildCount()
     var i = 0
@@ -233,8 +237,14 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     var i = 0
     while (i < childCount) {
       val child = body.getNamedChild(i)
-      if (child.getType() == "constructor_declaration") {
-        if (!isPrivateNode(child)) {
+      val childType = child.getType()
+      // compact_constructor_declaration is used in Java records
+      if (
+        childType == "constructor_declaration" ||
+        childType == "compact_constructor_declaration"
+      ) {
+        val isPrivate = isPrivateNode(child)
+        if (!isPrivate) {
           val disambiguator = overloads.disambiguator(className)
           val nameNode = child.getChildByFieldName("name")
           val pos =
@@ -249,7 +259,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             javadocComment = javadoc,
             parameterNames = paramNames,
             typeParameterNames = typeParams,
-            isPrivate = false
+            isPrivate = isPrivate
           )
 
           withOwner() {
@@ -313,9 +323,15 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     var i = 0
     while (i < childCount) {
       val child = body.getNamedChild(i)
-      if (child.getType() == "method_declaration") {
-        val isStatic = hasModifier(child, "static")
-        builder += ((child, isStatic))
+      child.getType() match {
+        case "method_declaration" =>
+          val isStatic = hasModifier(child, "static")
+          builder += ((child, isStatic))
+        case "annotation_type_element_declaration" =>
+          // Annotation type elements (e.g. `String value() default ""`)
+          // are method-like declarations in @interface types
+          builder += ((child, false))
+        case _ =>
       }
       i += 1
     }
@@ -328,8 +344,9 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     while (i < childCount) {
       val child = body.getNamedChild(i)
       child.getType() match {
-        case "field_declaration" =>
-          visitFieldDeclaration(child, isEnumConstant = false)
+        case "field_declaration" | "constant_declaration" =>
+          // constant_declaration appears in interfaces for constants
+          visitFieldDeclaration(child)
         case "enum_constant" if isEnum =>
           visitEnumConstant(child)
         case _ =>
@@ -338,11 +355,8 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     }
   }
 
-  private def visitFieldDeclaration(
-      node: TSNode,
-      isEnumConstant: Boolean
-  ): Unit = {
-    // field_declaration has a "declarator" field which is a variable_declarator
+  private def visitFieldDeclaration(node: TSNode): Unit = {
+    // field_declaration has "declarator" children which are variable_declarators
     val childCount = node.getNamedChildCount()
     var i = 0
     while (i < childCount) {
@@ -352,14 +366,8 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
         if (nameNode != null && !nameNode.isNull()) {
           val name = nodeText(nameNode)
           val pos = nodePosition(nameNode)
-          val kind =
-            if (isEnumConstant) Kind.FIELD
-            else Kind.FIELD
-          val properties =
-            if (isEnumConstant) Property.ENUM.value
-            else 0
           withOwner(owner) {
-            term(name, pos, kind, properties)
+            term(name, pos, Kind.FIELD, 0)
           }
         }
       }
@@ -391,16 +399,34 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
   }
 
   protected def nodePosition(node: TSNode): Position = {
-    // TSPoint columns are byte offsets from line start in UTF-8.
-    // For Java identifiers (always ASCII), byte offset = char offset.
     val start = node.getStartPoint()
     val end = node.getEndPoint()
-    input.toPosition(
-      start.getRow(),
-      start.getColumn(),
-      end.getRow(),
+    val startCharCol = byteColumnToCharColumn(
+      node.getStartByte(),
+      start.getColumn()
+    )
+    val endCharCol = byteColumnToCharColumn(
+      node.getEndByte(),
       end.getColumn()
     )
+    input.toPosition(
+      start.getRow(),
+      startCharCol,
+      end.getRow(),
+      endCharCol
+    )
+  }
+
+  // TSPoint.getColumn() returns byte offsets from line start in UTF-8.
+  // input.toPosition expects character offsets. Convert by decoding the
+  // leading bytes on the line to count characters.
+  private def byteColumnToCharColumn(
+      nodeByte: Int,
+      byteColumn: Int
+  ): Int = {
+    if (byteColumn == 0) return 0
+    val lineStartByte = nodeByte - byteColumn
+    new String(utf8Bytes, lineStartByte, byteColumn, "UTF-8").length
   }
 
   protected def findJavadocComment(node: TSNode): Option[String] = {
