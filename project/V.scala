@@ -9,7 +9,7 @@ object V {
 
   val scala213 = "2.13.18"
 
-  val scala3 = "3.3.7"
+  val scala3 = "3.3.8-RC2"
 
   val scala3ForSBT2 = "3.7.4"
 
