@@ -54,9 +54,8 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
       val root = tree.getRootNode()
       walkProgram(root)
     } catch {
-      case NonFatal(e: Exception) =>
+      case NonFatal(e) =>
         reportError("tree-sitter parse error", e)
-      case NonFatal(_) =>
     } finally {
       if (tree != null) tree.close()
     }
@@ -243,8 +242,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
         childType == "constructor_declaration" ||
         childType == "compact_constructor_declaration"
       ) {
-        val isPrivate = isPrivateNode(child)
-        if (!isPrivate) {
+        if (!isPrivateNode(child)) {
           val disambiguator = overloads.disambiguator(className)
           val nameNode = child.getChildByFieldName("name")
           val pos =
@@ -258,8 +256,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             name = className,
             javadocComment = javadoc,
             parameterNames = paramNames,
-            typeParameterNames = typeParams,
-            isPrivate = isPrivate
+            typeParameterNames = typeParams
           )
 
           withOwner() {
@@ -456,14 +453,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     while (i < childCount) {
       val child = node.getNamedChild(i)
       if (child.getType() == "modifiers") {
-        val modCount = child.getNamedChildCount()
-        var j = 0
-        while (j < modCount) {
-          val mod = child.getNamedChild(j)
-          if (nodeText(mod) == modifier) return true
-          j += 1
-        }
-        // Also check unnamed children for simple modifiers
+        // Modifiers like "static", "private" are unnamed token children
         val totalCount = child.getChildCount()
         var k = 0
         while (k < totalCount) {
@@ -554,7 +544,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
 
   private def reportError(
       errorName: String,
-      e: Exception
+      e: Throwable
   ): Unit = {
     try {
       val shortFileName = {

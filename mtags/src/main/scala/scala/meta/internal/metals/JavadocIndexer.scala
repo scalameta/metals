@@ -174,7 +174,10 @@ class JavadocIndexer(
       val docstring = javadoc.toList
         .flatMap(_.tagsByName("param"))
         .collectFirst {
-          case tag if tag.value.startsWith(paramName) =>
+          case tag
+              if tag.value.startsWith(paramName) &&
+                (tag.value.length == paramName.length ||
+                  tag.value.charAt(paramName.length).isWhitespace) =>
             tag.value
         }
       this.param(

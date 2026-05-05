@@ -34,8 +34,7 @@ case class JavaConstructorInfo(
     name: String,
     javadocComment: Option[String],
     parameterNames: List[String],
-    typeParameterNames: List[String],
-    isPrivate: Boolean
+    typeParameterNames: List[String]
 ) extends JavaDeclarationInfo
 
 case class JavaFieldInfo(
