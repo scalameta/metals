@@ -166,7 +166,7 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
 
         visitClass(info, pos, kind)
 
-        // Visit nested classes
+        // Visit nested classes and members
         val body = node.getChildByFieldName("body")
         if (body != null && !body.isNull()) {
           visitNestedClasses(body)
@@ -174,6 +174,9 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             visitMethods(body)
             visitConstructors(body, name)
             visitFields(body, isEnum)
+            // For enums, methods/constructors/nested classes may be in
+            // enum_body_declarations
+            visitEnumBodyDeclarations(body, name, isEnum)
           }
         }
       }
@@ -189,7 +192,27 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             "enum_declaration" | "record_declaration" |
             "annotation_type_declaration" =>
           visitClassNode(child)
+        case "enum_body_declarations" =>
+          visitNestedClasses(child)
         case _ =>
+      }
+      i += 1
+    }
+  }
+
+  private def visitEnumBodyDeclarations(
+      body: TSNode,
+      className: String,
+      isEnum: Boolean
+  ): Unit = {
+    val childCount = body.getNamedChildCount()
+    var i = 0
+    while (i < childCount) {
+      val child = body.getNamedChild(i)
+      if (child.getType() == "enum_body_declarations") {
+        visitMethods(child)
+        visitConstructors(child, className)
+        visitFields(child, isEnum = false)
       }
       i += 1
     }

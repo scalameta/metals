@@ -228,4 +228,35 @@ class JavaToplevelSuite extends BaseToplevelSuite {
     mode = ToplevelWithInner,
   )
 
+  check(
+    "annotated-type-params",
+    """|package com.example;
+       |
+       |import java.util.function.Function;
+       |import java.util.stream.Collector;
+       |
+       |public class CollectorUtils {
+       |  public static <T extends @Nullable Object, K, V>
+       |      Collector<T, ?, ImmutableMap<K, V>> toImmutableMap(
+       |          Function<? super T, ? extends K> keyFunction,
+       |          Function<? super T, ? extends V> valueFunction) {
+       |    return null;
+       |  }
+       |
+       |  public <@NonNull T> T requireNonNull(@Nullable T obj, String message) {
+       |    return obj;
+       |  }
+       |
+       |  public void process(java.util.@Nullable List<String> items) {
+       |  }
+       |}
+       |""".stripMargin,
+    List(
+      "com/",
+      "com/example/",
+      "com/example/CollectorUtils#",
+    ),
+    mode = ToplevelWithInner,
+  )
+
 }
