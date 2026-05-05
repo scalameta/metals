@@ -200,6 +200,70 @@ class JavaMtagsSuite extends BaseSuite {
   )
 
   check(
+    "nested-declarations",
+    """|package sample;
+       |
+       |public class Outer {
+       |  public int outerField;
+       |  public void outerMethod() {}
+       |
+       |  public static class StaticInner {
+       |    public String innerField;
+       |    public void innerMethod() {}
+       |
+       |    public enum InnerEnum {
+       |      A, B;
+       |      public int value() { return ordinal(); }
+       |    }
+       |  }
+       |
+       |  public interface InnerInterface {
+       |    void doWork();
+       |    default void doDefault() {}
+       |  }
+       |
+       |  private enum Status {
+       |    ACTIVE,
+       |    INACTIVE;
+       |
+       |    public boolean isActive() { return this == ACTIVE; }
+       |  }
+       |
+       |  public record Point(int x, int y) {
+       |    public double distance() { return Math.sqrt(x*x + y*y); }
+       |  }
+       |
+       |  public @interface Marker {
+       |    String value() default "";
+       |  }
+       |}
+       |""".stripMargin,
+    """|sample/
+       |sample/Outer#
+       |sample/Outer#StaticInner#
+       |sample/Outer#StaticInner#InnerEnum#
+       |sample/Outer#StaticInner#InnerEnum#A.
+       |sample/Outer#StaticInner#InnerEnum#B.
+       |sample/Outer#StaticInner#InnerEnum#value().
+       |sample/Outer#StaticInner#innerMethod().
+       |sample/Outer#StaticInner#innerField.
+       |sample/Outer#InnerInterface#
+       |sample/Outer#InnerInterface#doWork().
+       |sample/Outer#InnerInterface#doDefault().
+       |sample/Outer#Status#
+       |sample/Outer#Status#ACTIVE.
+       |sample/Outer#Status#INACTIVE.
+       |sample/Outer#Status#isActive().
+       |sample/Outer#Point#
+       |sample/Outer#Point#distance().
+       |sample/Outer#Marker#
+       |sample/Outer#Marker#value().
+       |sample/Outer#outerMethod().
+       |sample/Outer#outerField.
+       |""".stripMargin.trim,
+  )
+
+  check(
     "interface-constants",
     """|package sample;
        |
