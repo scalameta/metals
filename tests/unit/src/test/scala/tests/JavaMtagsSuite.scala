@@ -16,7 +16,7 @@ class JavaMtagsSuite extends BaseSuite {
   def check(
       name: String,
       code: String,
-      expected: String
+      expected: String,
   )(implicit loc: munit.Location): Unit = {
     test(name) {
       val input = Input.VirtualFile("Test.java", code)
@@ -56,7 +56,7 @@ class JavaMtagsSuite extends BaseSuite {
        |com/example/CollectorUtils#requireNonNull().
        |com/example/CollectorUtils#process().
        |com/example/CollectorUtils#toImmutableMap().
-       |""".stripMargin.trim
+       |""".stripMargin.trim,
   )
 
   check(
@@ -75,7 +75,7 @@ class JavaMtagsSuite extends BaseSuite {
        |sample/Foo#main().
        |sample/Foo#`<init>`().
        |sample/Foo#bar.
-       |""".stripMargin.trim
+       |""".stripMargin.trim,
   )
 
   check(
@@ -96,7 +96,7 @@ class JavaMtagsSuite extends BaseSuite {
        |sample/Color#GREEN.
        |sample/Color#BLUE.
        |sample/Color#display().
-       |""".stripMargin.trim
+       |""".stripMargin.trim,
   )
 
   check(
@@ -112,6 +112,6 @@ class JavaMtagsSuite extends BaseSuite {
        |sample/Processor#
        |sample/Processor#process().
        |sample/Processor#processAll().
-       |""".stripMargin.trim
+       |""".stripMargin.trim,
   )
 }
