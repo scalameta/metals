@@ -82,17 +82,8 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
   private def walkPackageDeclaration(node: TSNode): Unit = {
     val nameNode = findPackageName(node)
     if (nameNode != null) {
-      val parts = extractScopedIdentifierParts(nameNode)
-      parts.foreach { case (name, startPoint, endPoint) =>
-        pkg(
-          name,
-          input.toPosition(
-            startPoint.getRow(),
-            startPoint.getColumn(),
-            endPoint.getRow(),
-            endPoint.getColumn()
-          )
-        )
+      extractScopedIdentifierParts(nameNode).foreach { part =>
+        pkg(nodeText(part), nodePosition(part))
       }
     }
   }
@@ -109,13 +100,10 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     null
   }
 
-  private def extractScopedIdentifierParts(
-      node: TSNode
-  ): List[(String, org.treesitter.TSPoint, org.treesitter.TSPoint)] = {
+  private def extractScopedIdentifierParts(node: TSNode): List[TSNode] = {
     node.getType() match {
       case "identifier" =>
-        val text = nodeText(node)
-        List((text, node.getStartPoint(), node.getEndPoint()))
+        List(node)
       case "scoped_identifier" =>
         val scope = node.getChildByFieldName("scope")
         val name = node.getChildByFieldName("name")
@@ -124,10 +112,8 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
             extractScopedIdentifierParts(scope)
           else Nil
         val nameParts =
-          if (name != null && !name.isNull()) {
-            val text = nodeText(name)
-            List((text, name.getStartPoint(), name.getEndPoint()))
-          } else Nil
+          if (name != null && !name.isNull()) List(name)
+          else Nil
         scopeParts ++ nameParts
       case _ => Nil
     }
@@ -530,16 +516,25 @@ class JavaMtags(virtualFile: Input.VirtualFile, includeMembers: Boolean)(
     while (i < childCount) {
       val child = tparams.getNamedChild(i)
       if (child.getType() == "type_parameter") {
-        // The first named child of type_parameter is the type_identifier
-        val nameCount = child.getNamedChildCount()
-        if (nameCount > 0) {
-          val nameNode = child.getNamedChild(0)
-          builder += nodeText(nameNode)
-        }
+        // Find the type_identifier/identifier, skipping any leading annotations
+        val nameNode = findTypeParameterName(child)
+        if (nameNode != null) builder += nodeText(nameNode)
       }
       i += 1
     }
     builder.result()
+  }
+
+  private def findTypeParameterName(typeParam: TSNode): TSNode = {
+    val count = typeParam.getNamedChildCount()
+    var i = 0
+    while (i < count) {
+      val child = typeParam.getNamedChild(i)
+      val tpe = child.getType()
+      if (tpe == "type_identifier" || tpe == "identifier") return child
+      i += 1
+    }
+    null
   }
 
   private def reportError(

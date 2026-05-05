@@ -72,18 +72,20 @@ class JavadocIndexer(
   }
 
   private def toContent(javadocComment: Option[String]): String = {
-    val comment = javadocComment
-      .flatMap { raw =>
-        JavadocParser.parse(raw).map(_.body)
-      }
+    val raw = javadocComment.getOrElse("")
+    if (raw.isEmpty) return ""
+    val body = javadocComment
+      .flatMap(JavadocParser.parse)
+      .map(_.body)
       .getOrElse("")
     contentType match {
       case MARKDOWN =>
-        try MarkdownGenerator.fromDocstring(s"/**$comment\n*/", Map.empty)
+        // Pass the full raw Javadoc to preserve @return, @throws, etc.
+        try MarkdownGenerator.fromDocstring(raw, Map.empty)
         catch {
-          case NonFatal(_) => comment
+          case NonFatal(_) => body
         }
-      case PLAINTEXT => comment
+      case PLAINTEXT => body
     }
   }
 
@@ -155,7 +157,7 @@ class JavadocIndexer(
         .flatMap(_.tagsByName("param"))
         .collectFirst {
           case tag if tag.value.startsWith(tparamTag) =>
-            tag.value
+            tag.value.substring(tparamTag.length).trim
         }
       this.param(
         Symbols.Global(owner, Descriptor.TypeParameter(tparamName)),
@@ -178,7 +180,7 @@ class JavadocIndexer(
               if tag.value.startsWith(paramName) &&
                 (tag.value.length == paramName.length ||
                   tag.value.charAt(paramName.length).isWhitespace) =>
-            tag.value
+            tag.value.substring(paramName.length).trim
         }
       this.param(
         Symbols.Global(owner, Descriptor.Parameter(paramName)),
