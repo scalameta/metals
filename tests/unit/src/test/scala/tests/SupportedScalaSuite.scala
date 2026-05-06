@@ -10,7 +10,8 @@ import munit.IgnoreSuite
 @IgnoreSuite
 class SupportedScalaSuite extends BaseSuite {
 
-  test("released-version") {
+  // disabled, due to sonatype being largely unavailable
+  test("released-version".ignore) {
     Main.supportedVersionsString("1.2.0", 5.minutes) match {
       case Left(value) =>
         assert(
@@ -42,7 +43,8 @@ class SupportedScalaSuite extends BaseSuite {
     }
   }
 
-  test("snapshot-version") {
+  // disabled, due to sonatype being largely unavailable
+  test("snapshot-version".ignore) {
 
     Main.supportedVersionsString(
       "1.5.3+42-a4e9168d-SNAPSHOT",
