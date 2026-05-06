@@ -197,6 +197,7 @@ final class BuildTools(
       SbtBuildTool.name,
       MillBuildTool.bspName,
       BazelBuildTool.bspName,
+      DederBuildTool.bspName,
     ) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)

@@ -11,6 +11,6 @@ object DederDigest extends Digestable {
   ): Boolean = {
     val dederFile = workspace.resolve("deder.pkl")
     if (dederFile.isFile) Digest.digestFile(dederFile, digest)
-    else true
+    else false
   }
 }

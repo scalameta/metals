@@ -22,11 +22,14 @@ case class DederBuildTool(
 
   override def executableName: String = DederBuildTool.name
 
+  override def buildServerName: String = DederBuildTool.bspName
+
   override def toString: String = "Deder"
 }
 
 object DederBuildTool {
   val name: String = "deder"
+  val bspName: String = "deder-bsp"
   val buildFile: String = "deder.pkl"
 
   def isDederRelatedPath(
