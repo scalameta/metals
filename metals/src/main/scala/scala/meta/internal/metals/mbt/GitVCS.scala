@@ -89,7 +89,7 @@ object GitVCS {
   /**
    * Walks the given directories on disk without any gitignore or hardcoded
    * exclusions. Intended for explicitly listed generated-source directories
-   * (e.g. `genSources` in `mbt.json`) that are gitignored and therefore
+   * (e.g. `uncheckedSources` in `mbt.json`) that are gitignored and therefore
    * invisible to `lsFilesStage`.
    */
   def lsFilesFromDirs(
@@ -130,7 +130,7 @@ object GitVCS {
    * Opens the given srcjar archives and lists source files inside them,
    * extracting each file to the workspace dependencies cache so the resulting
    * paths are real on-disk paths. Intended for `.srcjar` entries in
-   * `genSources` in `mbt.json`.
+   * `uncheckedSources` in `mbt.json`.
    */
   def lsFilesFromSrcJars(
       srcJars: Seq[AbsolutePath],
@@ -141,8 +141,6 @@ object GitVCS {
     val result = ParArray.newBuilder[GitBlob]
     srcJars.foreach { srcJar =>
       try {
-        // Use the full relative path from workspace as the extraction directory key to avoid
-        // collisions between srcjars with the same filename in different directories.
         val relPath = workspace.toNIO.relativize(srcJar.toNIO)
         val extractDir = workspace
           .resolve(Directories.dependencies)

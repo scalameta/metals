@@ -467,7 +467,7 @@ class MbtBuildServerLspSuite
     } yield ()
   }
 
-  test("mbt-genSources-compilers-with-srcjar") {
+  test("mbt-uncheckedSources-compilers-with-srcjar") {
     cleanWorkspace()
     val srcJarName = "generated-sources.srcjar"
     // Create the srcjar before initialize so it exists when the server first indexes
@@ -490,7 +490,7 @@ class MbtBuildServerLspSuite
       _ <- initialize(
         s"""|/.metals/mbt.json
             |{
-            |  "genSources": ["$srcJarName"]
+            |  "uncheckedSources": ["$srcJarName"]
             |}
             |/src/core/Main.scala
             |package core

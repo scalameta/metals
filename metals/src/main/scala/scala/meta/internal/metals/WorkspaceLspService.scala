@@ -377,7 +377,7 @@ class WorkspaceLspService(
             service.buildTargets.all
               .exists(bt =>
                 bt.baseDirectoryPath.exists(path.startWith)
-              ) || isInMbtGenSources(service, path)
+              ) || isInMbtUncheckedSources(service, path)
           }
         }
     }
@@ -385,11 +385,11 @@ class WorkspaceLspService(
   def getServiceFor(path: AbsolutePath): MetalsLspService =
     getServiceForOpt(path).getOrElse(fallbackService)
 
-  private def isInMbtGenSources(
+  private def isInMbtUncheckedSources(
       service: ProjectMetalsLspService,
       path: AbsolutePath,
   ): Boolean =
-    service.currentMbtBuild.getGenSources.asScala.exists { genSource =>
+    service.currentMbtBuild.getUncheckedSources.asScala.exists { genSource =>
       if (genSource.endsWith(".srcjar")) {
         val srcJar = service.folder.resolve(genSource)
         val relPath = service.folder.toNIO.relativize(srcJar.toNIO)
