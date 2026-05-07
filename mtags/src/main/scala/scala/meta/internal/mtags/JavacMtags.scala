@@ -39,6 +39,8 @@ import com.sun.source.util.Trees
 import com.sun.tools.javac.api.JavacTrees
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
+import com.sun.tools.javac.parser.Tokens.Comment
+import com.sun.tools.javac.tree.{JCTree => javacTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
@@ -115,28 +117,33 @@ class JavacMtags(
 
   override def language: Language = Language.JAVA
 
-  override def indexRoot(): Unit = try {
-    val context = new Context()
-    val task = JavacMtags.createParserFactory(context)
-    this.parseTask = Some(task)
-    val source =
-      JavacMtags.makeSourceFileObject(input.text, URI.create(input.path))
-    Log.instance(context).useSource(source)
-    val parser = task.factory.newParser(
-      input.text,
-      false, // keepDocComments
-      true, // keepEndPos
-      true // keepLineMap
-    )
-    val cu = parser.parseCompilationUnit()
-    cu.sourcefile = source
-    val trees = JavacTrees.instance(context)
-    val visitor = new Visitor(cu, trees)
-    visitor.scan(cu, ())
-    task.fileManager.close()
-  } catch {
-    case NonFatal(e) =>
-      reportError(e)
+  override def indexRoot(): Unit = {
+    var fileManager: Option[JavaFileManager] = None
+    try {
+      val context = new Context()
+      val task = JavacMtags.createParserFactory(context)
+      this.parseTask = Some(task)
+      fileManager = Some(task.fileManager)
+      val source =
+        JavacMtags.makeSourceFileObject(input.text, URI.create(input.path))
+      Log.instance(context).useSource(source)
+      val parser = task.factory.newParser(
+        input.text,
+        keepDocComments, // keepDocComments
+        true, // keepEndPos
+        true // keepLineMap
+      )
+      val cu = parser.parseCompilationUnit()
+      cu.sourcefile = source
+      val trees = JavacTrees.instance(context)
+      val visitor = new Visitor(cu, trees)
+      visitor.scan(cu, ())
+    } catch {
+      case NonFatal(e) =>
+        reportError(e)
+    } finally {
+      fileManager.foreach(_.close())
+    }
   }
 
   // Hook for subclasses (e.g. JavadocIndexer).
@@ -256,35 +263,21 @@ class JavacMtags(
       }
     }
 
+    // Uses javac's internal DocCommentTable to retrieve Javadoc comments.
+    // When keepDocComments=true, the parser populates this table during
+    // parsing. This is more robust than manual backward text scanning,
+    // which can fail with annotations or non-Javadoc block comments
+    // between the doc comment and the declaration.
     private def getDocComment(node: Tree): Option[String] = {
       if (!keepDocComments) return None
-      val startPos = sourcePositions.getStartPosition(cu, node).intValue()
-      if (startPos <= 0) return None
-      // Search backwards from the node start for a /** comment
-      val text = mtags.input.text
-      var i = startPos - 1
-      // Skip whitespace
-      while (i >= 0 && Character.isWhitespace(text.charAt(i))) {
-        i -= 1
-      }
-      if (i >= 1 && text.charAt(i) == '/' && text.charAt(i - 1) == '*') {
-        // Found end of a block comment, search backwards for start
-        val commentEnd = i + 1
-        i -= 2
-        while (
-          i >= 1 && !(text.charAt(i) == '/' && text.charAt(i + 1) == '*')
-        ) {
-          i -= 1
-        }
-        if (
-          i >= 0 && text.charAt(i) == '/' && i + 1 < text.length &&
-          text.charAt(i + 1) == '*' && i + 2 < text.length &&
-          text.charAt(i + 2) == '*'
-        ) {
-          // It's a /** javadoc comment
-          Some(text.substring(i, commentEnd))
-        } else None
-      } else None
+      val jcCu = cu.asInstanceOf[javacTree.JCCompilationUnit]
+      val docComments = jcCu.docComments
+      if (docComments == null) return None
+      // The DocCommentTable only stores Javadoc-style (/**) comments,
+      // so a non-null result is always a Javadoc comment.
+      val comment: Comment =
+        docComments.getComment(node.asInstanceOf[javacTree])
+      if (comment != null) Some(comment.getText) else None
     }
 
     private def extractParamNames(node: MethodTree): List[String] = {
@@ -309,8 +302,14 @@ class JavacMtags(
         return super.visitClass(node, p)
       }
       if (node.getKind() == Tree.Kind.RECORD) {
+        // Records cannot have instance fields (JLS 8.10.3), so any
+        // non-static VariableTree in getMembers() is a record component.
+        // We filter out static fields to avoid misidentifying them as
+        // record components (which get emitted as accessor methods).
         node.getMembers().asScala.foreach {
-          case v: VariableTree => recordMembers.add(v)
+          case v: VariableTree
+              if !v.getModifiers().getFlags().contains(Modifier.STATIC) =>
+            recordMembers.add(v)
           case _ =>
         }
       }

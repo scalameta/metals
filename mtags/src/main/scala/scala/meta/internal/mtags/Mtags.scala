@@ -152,7 +152,7 @@ object Mtags {
   )(implicit rc: ReportContext = new EmptyReportContext()): TextDocument =
     input.toLanguage match {
       case Language.JAVA =>
-        new JavacMtags(input, includeMembers = true).index()
+        new JavacMtags(input, includeMembers = includeMembers).index()
       case Language.SCALA =>
         val mtags =
           new ScalaToplevelMtags(input, true, includeMembers, dialect)

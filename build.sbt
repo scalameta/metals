@@ -857,6 +857,8 @@ lazy val bench = project
     ),
     buildInfoPackage := "bench",
     Jmh / bspEnabled := false,
+    Jmh / fork := true,
+    Jmh / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
