@@ -349,7 +349,8 @@ class ProblemResolver(
     else isWrongJavaRelease(javaTarget)
   }
 
-  def isBazelBsp: Boolean = currentBuildServer().exists(_.main.isBazel)
+  def isBazelBsp: Boolean =
+    currentBuildServer().exists(s => s.main.isBazel || s.main.isBazelNative)
 
   private def isWrongJavaRelease(
       javaTarget: JavaTarget
