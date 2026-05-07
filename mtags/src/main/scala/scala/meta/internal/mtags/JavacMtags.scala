@@ -59,6 +59,8 @@ import com.sun.source.util.Trees
 import com.sun.tools.javac.api.JavacTrees
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
+import com.sun.tools.javac.parser.Tokens.Comment
+import com.sun.tools.javac.tree.{JCTree => javacTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
@@ -104,7 +106,8 @@ class JavacMtags(
     includeMembers: Boolean = false,
     includeFuzzyReferences: Boolean = false,
     includeUniqueFuzzyReferences: Boolean =
-      true // `true` only exists for testing purposes,
+      true, // `true` only exists for testing purposes
+    keepDocComments: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer { mtags =>
   private val _names = new ju.LinkedHashSet[String]()
@@ -136,7 +139,7 @@ class JavacMtags(
     Log.instance(context).useSource(source)
     val parser = task.factory.newParser(
       input.text,
-      false, // keepDocComments
+      keepDocComments, // keepDocComments
       true, // keepEndPos
       true // keepLineMap
     )
@@ -151,6 +154,30 @@ class JavacMtags(
       logger.error(s"Error processing file ${input.path}", e)
       reportError(e, None)
   }
+
+  // Hook for subclasses (e.g. JavadocIndexer).
+  // `sym` is the SemanticDB symbol for the declaration.
+  protected def onClass(
+      sym: String,
+      name: String,
+      typeParams: Seq[String],
+      docComment: Option[String]
+  ): Unit = {}
+
+  protected def onMethod(
+      sym: String,
+      name: String,
+      params: Seq[String],
+      typeParams: Seq[String],
+      docComment: Option[String]
+  ): Unit = {}
+
+  protected def onConstructor(
+      sym: String,
+      params: Seq[String],
+      typeParams: Seq[String],
+      docComment: Option[String]
+  ): Unit = {}
 
   private val emptyScope = new SyntacticScope(null)
   private class SyntacticScope(outer: SyntacticScope) {
@@ -417,6 +444,32 @@ class JavacMtags(
 
     }
 
+    // Uses javac's internal DocCommentTable to retrieve Javadoc comments.
+    // When keepDocComments=true, the parser populates this table during
+    // parsing. This is more robust than manual backward text scanning,
+    // which can fail with annotations or non-Javadoc block comments
+    // between the doc comment and the declaration.
+    private def getDocComment(node: Tree): Option[String] = {
+      if (!keepDocComments) return None
+      val jcCu = cu.asInstanceOf[javacTree.JCCompilationUnit]
+      val docComments = jcCu.docComments
+      if (docComments == null) return None
+      // The DocCommentTable only stores Javadoc-style (/**) comments,
+      // so a non-null result is always a Javadoc comment.
+      val comment: Comment =
+        docComments.getComment(node.asInstanceOf[javacTree])
+      if (comment != null) Some(comment.getText) else None
+    }
+
+    private def extractParamNames(node: MethodTree): Seq[String] =
+      node.getParameters().asScala.map(_.getName().toString()).toSeq
+
+    private def extractTypeParamNames(node: ClassTree): Seq[String] =
+      node.getTypeParameters().asScala.map(_.getName().toString()).toSeq
+
+    private def extractMethodTypeParamNames(node: MethodTree): Seq[String] =
+      node.getTypeParameters().asScala.map(_.getName().toString()).toSeq
+
     private val recordMembers = new ju.LinkedHashSet[VariableTree]()
     private val enumMembers = new ju.LinkedHashMap[VariableTree, NewClassTree]()
     override def visitClass(node: ClassTree, p: Unit): TreePath = {
@@ -512,6 +565,12 @@ class JavacMtags(
             )
           }
         }
+        mtags.onClass(
+          currentOwner,
+          name,
+          extractTypeParamNames(node),
+          getDocComment(node)
+        )
         lazy val constructorCount = node.getMembers().asScala.count {
           case method: MethodTree =>
             val name = method.getName()
@@ -585,7 +644,7 @@ class JavacMtags(
           // needs to be present to shrink the search by a significant amount.
           addName(name, "():", sourcePositions.getStartPosition(cu, node))
         }
-        mtags.method(
+        val sym = mtags.method(
           name = name,
           disambiguator = disambiguators.getOrDefault(node, 0) match {
             case 0 => "()"
@@ -617,6 +676,22 @@ class JavacMtags(
             if (name == "<init>") s.SymbolInformation.Kind.CONSTRUCTOR
             else s.SymbolInformation.Kind.METHOD
         )
+        if (name == "<init>") {
+          mtags.onConstructor(
+            sym,
+            extractParamNames(node),
+            extractMethodTypeParamNames(node),
+            getDocComment(node)
+          )
+        } else {
+          mtags.onMethod(
+            sym,
+            name,
+            extractParamNames(node),
+            extractMethodTypeParamNames(node),
+            getDocComment(node)
+          )
+        }
         withScope {
           node.getTypeParameters().forEach { tparam =>
             localVariableScope.addName(tparam.getName())

@@ -476,7 +476,6 @@ val mtagsSettings = List(
   libraryDependencies ++= Seq(
     "org.ow2.asm" % "asm" % "9.9",
     "com.lihaoyi" %% "geny" % V.genyVersion,
-    "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions

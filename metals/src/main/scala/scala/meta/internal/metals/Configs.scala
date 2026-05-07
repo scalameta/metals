@@ -370,16 +370,12 @@ object Configs {
   }
 
   final case class JavaOutlineProviderConfig(val value: String) {
-    require(List("qdox", "javac").contains(value), value)
-    def isQdox: Boolean =
-      value == "qdox"
+    require(value == "javac", value)
     def isJavac: Boolean =
       value == "javac"
   }
 
   object JavaOutlineProviderConfig {
-    def qdox: JavaOutlineProviderConfig =
-      JavaOutlineProviderConfig("qdox")
     def javac: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig("javac")
     def default: JavaOutlineProviderConfig = javac
@@ -388,21 +384,12 @@ object Configs {
         featureFlags: FeatureFlagProvider,
     ): Either[String, JavaOutlineProviderConfig] = {
       value match {
-        case Some(ok @ ("qdox" | "javac")) =>
-          Right(JavaOutlineProviderConfig(ok))
+        case Some("javac") | None =>
+          Right(JavaOutlineProviderConfig.javac)
         case Some(invalid) =>
           Left(
-            s"invalid config value '$invalid' for javaOutlineProvider. Valid values are \"qdox\" and \"javac\""
+            s"invalid config value '$invalid' for javaOutlineProvider. Valid values are \"javac\""
           )
-        case None =>
-          val isJavacEnabled = featureFlags
-            .readBoolean(FeatureFlag.JAVAC_OUTLINE_PROVIDER)
-            .orElse(false)
-          if (isJavacEnabled) {
-            Right(JavaOutlineProviderConfig.javac)
-          } else {
-            Right(JavaOutlineProviderConfig.default)
-          }
       }
     }
   }

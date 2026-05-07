@@ -15,7 +15,6 @@ import scala.meta.internal.mtags.JavaToplevelMtags
 import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
-import scala.meta.internal.mtags.QdoxJavaMtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.SemanticdbClasspath
@@ -162,16 +161,10 @@ class MetalsBench {
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
-  def mtagsJavaQdoxParse(): Unit = {
-    javaDependencySources.foreach { input =>
-      new QdoxJavaMtags(input, includeMembers = true)(EmptyReportContext)
-        .index()
-    }
-  }
-
   def mtagsJavacParse(): Unit = {
     javaDependencySources.foreach { input =>
-      new JavacMtags(input, includeMembers = true)(EmptyReportContext).index()
+      new JavacMtags(input, includeMembers = true)(EmptyReportContext)
+        .index()
     }
   }
 

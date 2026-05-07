@@ -29,6 +29,13 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |List<String> s = Collections.emptyList();
        |```
+       |**Parameters**
+       |- `type`: of elements, if there were any, in the list
+       |
+       |**Returns:** an empty immutable list
+       |
+       |**See**
+       |- [#EMPTY_LIST](#EMPTY_LIST)
        |""".stripMargin,
     compat = Map(
       "2.13" ->
@@ -47,6 +54,13 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
+           |**Parameters**
+           |- `type`: of elements, if there were any, in the list
+           |
+           |**Returns:** an empty immutable list
+           |
+           |**See**
+           |- [#EMPTY_LIST](#EMPTY_LIST)
            |""".stripMargin,
       "3" ->
         """|**Expression type**:
@@ -64,6 +78,13 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
+           |**Parameters**
+           |- `type`: of elements, if there were any, in the list
+           |
+           |**Returns:** an empty immutable list
+           |
+           |**See**
+           |- [#EMPTY_LIST](#EMPTY_LIST)
            |""".stripMargin
     )
   )
@@ -106,12 +127,29 @@ class HoverDocSuite extends BaseHoverSuite {
        |  <<Paths.g@@et("")>>
        |}
        |""".stripMargin,
-    """|```scala
-       |def get(first: String, more: String*): Path
-       |```
-       |Converts a path string, or a sequence of strings that when joined form
-       |a path string, to a `Path`.
-       |""".stripMargin
+    s"""|```scala
+        |def get(first: String, more: String*): Path
+        |```
+        |Converts a path string, or a sequence of strings that when joined form
+        |a path string, to a `Path`.
+        |
+        |
+        |**Parameters**
+        |- `first`:${" "}
+        |the path string or initial part of the path string
+        |- `more`:${" "}
+        |additional strings to be joined to form the path string
+        |
+        |**Returns:** the resulting `Path`
+        |
+        |**Throws**
+        |- `InvalidPathException`:${" "}
+        |if the path string cannot be converted to a `Path`
+        |
+        |**See**
+        |- [FileSystem#getPath](FileSystem#getPath)
+        |- [Path#of(String,String...)](Path#of(String,String...))
+        |""".stripMargin
   )
 
   check(
@@ -467,6 +505,10 @@ class HoverDocSuite extends BaseHoverSuite {
        |
        |This class consists exclusively of static methods that return a [Path](Path)
        |by converting a path string or [URI](URI).
+       |
+       |
+       |**See**
+       |- [Path](Path)
        |""".stripMargin,
     compat = Map(
       "3" -> """|```scala
@@ -474,6 +516,10 @@ class HoverDocSuite extends BaseHoverSuite {
                 |```
                 |This class consists exclusively of static methods that return a [Path](Path)
                 |by converting a path string or [URI](URI).
+                |
+                |
+                |**See**
+                |- [Path](Path)
                 |""".stripMargin
     )
   )

@@ -889,12 +889,6 @@ abstract class MetalsLspService(
       }
     }
 
-    if (old.javaOutlineProvider != newConfig.javaOutlineProvider) {
-      mtags = new Mtags(
-        mtags.config.copy(useQdox = newConfig.javaOutlineProvider.isQdox)
-      )
-    }
-
     if (userConfig.excludedPackages != old.excludedPackages) {
       workspaceSymbols.indexClasspath()
     }
