@@ -1,6 +1,10 @@
 package tests.mbt
 
+import java.io.FileOutputStream
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
@@ -463,4 +467,57 @@ class MbtBuildServerLspSuite
     } yield ()
   }
 
+  test("mbt-genSources-compilers-with-srcjar") {
+    cleanWorkspace()
+    val srcJarName = "generated-sources.srcjar"
+    // Create the srcjar before initialize so it exists when the server first indexes
+    val zos = new ZipOutputStream(
+      new FileOutputStream(workspace.resolve(srcJarName).toFile)
+    )
+    zos.putNextEntry(new ZipEntry("core/GeneratedObject.scala"))
+    zos.write(
+      """|package core
+         |
+         |object GeneratedObject {
+         |  val value: String = "generated"
+         |}
+         |""".stripMargin.getBytes(StandardCharsets.UTF_8)
+    )
+    zos.closeEntry()
+    zos.close()
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |{
+            |  "genSources": ["$srcJarName"]
+            |}
+            |/src/core/Main.scala
+            |package core
+            |
+            |object Main {
+            |  def main(): Any = GeneratedObject.value
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ = assertNoDiff(
+        server.workspaceSymbol("GeneratedObject"),
+        "core.GeneratedObject",
+      )
+      _ <- server.didOpen("src/core/Main.scala")
+      _ <- server.assertHover(
+        "src/core/Main.scala",
+        """|package core
+           |
+           |object Main {
+           |  def main(): Any = GeneratedObject.val@@ue
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
 }

@@ -90,15 +90,25 @@ class CompilerConfiguration(
       scalaVersion
     )
     def collectGenSources(): Seq[Path] = {
-      val genDirs =
-        mbtBuild().getGenSources.asScala.toSeq.map(workspace.resolve)
-      if (genDirs.isEmpty) return Nil
-      GitVCS
-        .lsFilesFromDirs(genDirs)
-        .seq
-        .map(b => Paths.get(b.path))
-        .filter(Files.exists(_))
-        .toIndexedSeq
+      val genSources = mbtBuild().getGenSources.asScala.toSeq
+      val (genSrcJarStrs, genDirStrs) =
+        genSources.partition(_.endsWith(".srcjar"))
+      val genDirs = genDirStrs.map(workspace.resolve)
+      val srcJars =
+        genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+      val dirFiles =
+        GitVCS
+          .lsFilesFromDirs(genDirs)
+          .seq
+          .map(b => Paths.get(b.path))
+          .filter(Files.exists(_))
+      val srcJarFiles =
+        GitVCS
+          .lsFilesFromSrcJars(srcJars, workspace)
+          .seq
+          .map(b => Paths.get(b.path))
+          .filter(Files.exists(_))
+      (dirFiles ++ srcJarFiles).toIndexedSeq
     }
 
     if (
