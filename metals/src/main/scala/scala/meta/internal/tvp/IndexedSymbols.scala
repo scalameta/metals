@@ -14,7 +14,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ScalaMtags
 import scala.meta.internal.mtags.Symbol
@@ -104,7 +104,7 @@ class IndexedSymbols(
   }
 
   private def javaSymbols(in: AbsolutePath) = {
-    val mtags = new JavaMtags(
+    val mtags = new JavacMtags(
       Input.VirtualFile(in.toString(), buffers.get(in).getOrElse(in.readText)),
       includeMembers = true,
     )

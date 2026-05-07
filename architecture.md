@@ -113,5 +113,5 @@ The endpoints is `scala.meta.internal.mtags.Mtags`, which dispatches to several 
   - To enable fast indexing with a low memory footprint, nested symbols (such as functions and members defined in top-level classes, traits, and objects) are skipped since nested symbols are not of interest when performing symbol search.
   - See [Fast goto definition with low memory footprint | Metals](https://scalameta.org/metals/blog/2018/12/12/fast-goto-definition) for more details.
   - The unit test (`ScalaToplevelSuite.scala`) is a good resource to see which symbols it extracts.
-- `JavaMtags` parses the given Java file using `qdox`.
+- `JavacMtags` parses the given Java file using the javac parser.
 - `JavaToplevelMtags` tokenize and parses Java code in the same way as `ScalaToplevelMtags`. We use our own custom tokenizer and parser instead of `qdox` for fast indexing.

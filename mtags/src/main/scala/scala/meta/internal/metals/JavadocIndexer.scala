@@ -5,26 +5,16 @@ import java.util
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
-import scala.meta.inputs.Position
-import scala.meta.internal.docstrings.printers.MarkdownGenerator
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.pc.ContentType
 import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.reports.ReportContext
-
-import com.thoughtworks.qdox.model.JavaAnnotatedElement
-import com.thoughtworks.qdox.model.JavaClass
-import com.thoughtworks.qdox.model.JavaConstructor
-import com.thoughtworks.qdox.model.JavaGenericDeclaration
-import com.thoughtworks.qdox.model.JavaMethod
-import com.thoughtworks.qdox.model.JavaParameter
-import com.thoughtworks.qdox.model.JavaTypeVariable
+import scala.meta.internal.docstrings.printers.MarkdownGenerator
 
 /**
  * Extracts Javadoc from Java source code.
@@ -34,45 +24,39 @@ class JavadocIndexer(
     fn: SymbolDocumentation => Unit,
     contentType: ContentType
 )(implicit rc: ReportContext)
-    extends JavaMtags(input, includeMembers = true) {
-  override def visitClass(
-      cls: JavaClass,
-      pos: Position,
-      kind: SymbolInformation.Kind
-  ): Unit = {
-    super.visitClass(cls, pos, kind)
-    fn(fromClass(currentOwner, cls))
-  }
-  override def visitConstructor(
-      ctor: JavaConstructor,
-      disambiguator: String,
-      pos: Position,
-      properties: Int
-  ): Unit = {
-    fn(
-      fromConstructor(
-        symbol(Descriptor.Method("<init>", disambiguator)),
-        ctor
-      )
-    )
-  }
-  override def visitMethod(
-      method: JavaMethod,
+    extends JavacMtags(input, includeMembers = true, keepDocComments = true) {
+
+  override protected def onClass(
+      sym: String,
       name: String,
-      disambiguator: String,
-      pos: Position,
-      properties: Int
+      typeParams: List[String],
+      docComment: Option[String]
   ): Unit = {
-    fn(
-      fromMethod(
-        symbol(Descriptor.Method(name, disambiguator)),
-        method
-      )
-    )
+    fn(fromClass(sym, name, typeParams, docComment))
   }
 
-  def toContent(e: JavaAnnotatedElement): String = {
-    val comment = Option(e.getComment).getOrElse("")
+  override protected def onConstructor(
+      sym: String,
+      params: List[String],
+      typeParams: List[String],
+      docComment: Option[String]
+  ): Unit = {
+    fn(fromConstructor(sym, params, typeParams, docComment))
+  }
+
+  override protected def onMethod(
+      sym: String,
+      name: String,
+      params: List[String],
+      typeParams: List[String],
+      docComment: Option[String]
+  ): Unit = {
+    fn(fromMethod(sym, name, params, typeParams, docComment))
+  }
+
+  def toContent(docComment: Option[String]): String = {
+    val comment = JavadocParser.extractBody(docComment)
+    if (comment.isEmpty) return ""
     contentType match {
       case MARKDOWN =>
         try MarkdownGenerator.fromDocstring(s"/**$comment\n*/", Map.empty)
@@ -86,40 +70,50 @@ class JavadocIndexer(
     }
   }
 
-  def fromMethod(symbol: String, method: JavaMethod): SymbolDocumentation = {
+  def fromMethod(
+      symbol: String,
+      name: String,
+      params: List[String],
+      typeParams: List[String],
+      docComment: Option[String]
+  ): SymbolDocumentation = {
     new MetalsSymbolDocumentation(
       symbol,
-      method.getName,
-      toContent(method),
+      name,
+      toContent(docComment),
       "",
-      typeParameters(symbol, method, method.getTypeParameters),
-      parameters(symbol, method, method.getParameters)
+      typeParameters(symbol, typeParams, docComment),
+      parameters(symbol, params, docComment)
     )
   }
   def fromClass(
       symbol: String,
-      method: JavaClass
+      name: String,
+      typeParams: List[String],
+      docComment: Option[String]
   ): SymbolDocumentation = {
     new MetalsSymbolDocumentation(
       symbol,
-      method.getName,
-      toContent(method),
+      name,
+      toContent(docComment),
       "",
-      typeParameters(symbol, method, method.getTypeParameters),
+      typeParameters(symbol, typeParams, docComment),
       Nil.asJava
     )
   }
   def fromConstructor(
       symbol: String,
-      method: JavaConstructor
+      params: List[String],
+      typeParams: List[String],
+      docComment: Option[String]
   ): SymbolDocumentation = {
     new MetalsSymbolDocumentation(
       symbol,
-      method.getName,
-      toContent(method),
+      "<init>",
+      toContent(docComment),
       "",
-      typeParameters(symbol, method, method.getTypeParameters),
-      parameters(symbol, method, method.getParameters)
+      typeParameters(symbol, typeParams, docComment),
+      parameters(symbol, params, docComment)
     )
   }
   def param(
@@ -133,42 +127,39 @@ class JavadocIndexer(
       if (docstring == null) "" else docstring,
       ""
     )
-  def typeParameters[D <: JavaGenericDeclaration](
+  def typeParameters(
       owner: String,
-      method: JavaAnnotatedElement,
-      tparams: util.List[JavaTypeVariable[D]]
+      typeParams: List[String],
+      docComment: Option[String]
   ): util.List[SymbolDocumentation] = {
-    tparams.asScala.map { tparam =>
-      val tparamName = s"<${tparam.getName}>"
-      val docstring = method.getTagsByName("param").asScala.collectFirst {
-        case tag if tag.getValue.startsWith(tparamName) =>
-          tag.getValue
-      }
+    val tags = JavadocParser.extractParamTags(docComment)
+    typeParams.map { tparam =>
+      val docstring = tags.getOrElse(s"<$tparam>", "")
       this.param(
-        Symbols.Global(owner, Descriptor.TypeParameter(tparam.getName)),
-        tparam.getName,
-        docstring.getOrElse("")
+        Symbols.Global(owner, Descriptor.TypeParameter(tparam)),
+        tparam,
+        docstring
       )
     }.asJava
   }
   def parameters(
       owner: String,
-      method: JavaAnnotatedElement,
-      params: util.List[JavaParameter]
+      params: List[String],
+      docComment: Option[String]
   ): util.List[SymbolDocumentation] = {
-    params.asScala.map { param =>
-      val docstring = method.getTagsByName("param").asScala.collectFirst {
-        case tag if tag.getValue.startsWith(param.getName) =>
-          tag.getValue
-      }
+    val tags = JavadocParser.extractParamTags(docComment)
+    params.map { param =>
+      val docstring = tags.getOrElse(param, "")
       this.param(
-        Symbols.Global(owner, Descriptor.Parameter(param.getName)),
-        param.getName,
-        docstring.getOrElse("")
+        Symbols.Global(owner, Descriptor.Parameter(param)),
+        param,
+        docstring
       )
     }.asJava
   }
+
 }
+
 object JavadocIndexer {
   def all(
       input: Input.VirtualFile,
