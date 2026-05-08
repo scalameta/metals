@@ -297,7 +297,8 @@ class BazelMbtLspSuite
             |        "//core"
             |      ]
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("core/Hello.scala")
@@ -442,7 +443,8 @@ class BazelMbtLspSuite
             |      "scalaVersion": "2.13.16",
             |      "dependsOn": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("core/Hello.scala")
@@ -548,7 +550,8 @@ class BazelMbtLspSuite
             |        "//lib"
             |      ]
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("lib/Parser.java")
@@ -634,7 +637,8 @@ class BazelMbtLspSuite
             |      "scalaVersion": "2.13.16",
             |      "dependsOn": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
     } yield ()

@@ -5,6 +5,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import scala.collection.mutable
@@ -12,8 +13,6 @@ import scala.collection.parallel.mutable.ParArray
 import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.util.control.NonFatal
-
-import java.nio.file.StandardCopyOption
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
