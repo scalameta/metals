@@ -449,17 +449,16 @@ class JavacMtags(
     // parsing. This is more robust than manual backward text scanning,
     // which can fail with annotations or non-Javadoc block comments
     // between the doc comment and the declaration.
-    private def getDocComment(node: Tree): Option[String] = {
-      if (!keepDocComments) return None
-      val jcCu = cu.asInstanceOf[javacTree.JCCompilationUnit]
-      val docComments = jcCu.docComments
-      if (docComments == null) return None
-      // The DocCommentTable only stores Javadoc-style (/**) comments,
-      // so a non-null result is always a Javadoc comment.
-      val comment: Comment =
-        docComments.getComment(node.asInstanceOf[javacTree])
-      if (comment != null) Some(comment.getText) else None
-    }
+    private def getDocComment(node: Tree): Option[String] =
+      (cu, node) match {
+        case (unit: javacTree.JCCompilationUnit, jcNode: javacTree)
+            if keepDocComments =>
+          for {
+            docs <- Option(unit.docComments)
+            comment <- Option(docs.getComment(jcNode))
+          } yield comment.getText
+        case _ => None
+      }
 
     private def extractParamNames(node: MethodTree): Seq[String] =
       node.getParameters().asScala.map(_.getName().toString()).toSeq

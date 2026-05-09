@@ -387,6 +387,13 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
     """.stripMargin,
     """| Returns an immutable set containing only the specified object.
        |The returned set is serializable.
+       |
+       |
+       |**Parameters**
+       |- `o`: the sole object to be stored in the returned set.
+       |- `the`: class of the objects in the set
+       |
+       |**Returns:** an immutable set containing only the specified object.
        |singleton[T](o: T): Set[T]
        |             ^^^^
        |  @param T <T> the class of the objects in the set
@@ -396,9 +403,30 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       "2.13" ->
         """| Returns an immutable set containing only the specified object.
            |The returned set is serializable.
+           |
+           |
+           |**Parameters**
+           |- `o`: the sole object to be stored in the returned set.
+           |- `the`: class of the objects in the set
+           |
+           |**Returns:** an immutable set containing only the specified object.
            |singleton[T <: Object](o: T): Set[T]
            |                       ^^^^
            |  @param T <T> the class of the objects in the set
+           |  @param o o the sole object to be stored in the returned set.
+           |""".stripMargin,
+      "3" ->
+        """|Returns an immutable set containing only the specified object.
+           |The returned set is serializable.
+           |
+           |
+           |**Parameters**
+           |- `o`: the sole object to be stored in the returned set.
+           |- `the`: class of the objects in the set
+           |
+           |**Returns:** an immutable set containing only the specified object.
+           |singleton[T](o: T): java.util.Set[T]
+           |             ^^^^
            |  @param o o the sole object to be stored in the returned set.
            |""".stripMargin
     )

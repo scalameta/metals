@@ -517,7 +517,9 @@ class MbtBuildServerLspSuite
            |  }
            |}""".stripMargin,
         s"""|${"def toString(): String".hover}
-            |Returns a string representation of the object.""".stripMargin,
+            |Returns a string representation of the object.
+            |
+            |**Returns:** a string representation of the object.""".stripMargin,
       )
       _ <- server.assertHover(
         "src/Dummy.scala",

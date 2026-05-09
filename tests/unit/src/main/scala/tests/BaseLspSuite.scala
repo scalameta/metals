@@ -52,7 +52,6 @@ abstract class BaseLspSuite(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
-      javaOutlineProvider = Configs.JavaOutlineProviderConfig.javac,
 
       // Legacy settings that are enabled for tests only.  We  should eventually
       // update the tests to use the new defaults.

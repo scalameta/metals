@@ -369,31 +369,6 @@ object Configs {
     }
   }
 
-  final case class JavaOutlineProviderConfig(val value: String) {
-    require(value == "javac", value)
-    def isJavac: Boolean =
-      value == "javac"
-  }
-
-  object JavaOutlineProviderConfig {
-    def javac: JavaOutlineProviderConfig =
-      JavaOutlineProviderConfig("javac")
-    def default: JavaOutlineProviderConfig = javac
-    def fromConfigOrFeatureFlag(
-        value: Option[String],
-        featureFlags: FeatureFlagProvider,
-    ): Either[String, JavaOutlineProviderConfig] = {
-      value match {
-        case Some("javac") | None =>
-          Right(JavaOutlineProviderConfig.javac)
-        case Some(invalid) =>
-          Left(
-            s"invalid config value '$invalid' for javaOutlineProvider. Valid values are \"javac\""
-          )
-      }
-    }
-  }
-
   final case class ProtoOutlineProviderConfig(val value: String) {
     require(List("v1", "v2").contains(value), value)
     def isV1: Boolean =

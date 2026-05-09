@@ -33,6 +33,11 @@ class HoverDependencySuite extends BaseJavaHoverSuite {
        |```
        |Returns a range that contains all values greater than or equal to `lower` and less than
        |or equal to `upper`.
+       |
+       |
+       |**Throws**
+       |- `IllegalArgumentException`: if `lower` is greater than `upper`
+       |- `ClassCastException`: if `lower` and `upper` are not mutually comparable
        |""".stripMargin,
   )
 }

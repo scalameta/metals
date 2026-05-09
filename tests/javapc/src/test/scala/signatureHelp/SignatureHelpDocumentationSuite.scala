@@ -22,6 +22,9 @@ class SignatureHelpDocumentationSuite extends BaseJavaSignatureHelpSuite {
     """|=> log(java.lang.String message)
        |       ^^^^^^^^^^^^^^^^^^^^^^^^
        |   Logs a message to the console.
+       |
+       |**Parameters**
+       |- `message`: the message to log
        |""".stripMargin,
   )
 
