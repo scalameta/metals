@@ -13,7 +13,6 @@ import javax.tools.JavaFileObject
 import javax.tools.SimpleJavaFileObject
 import javax.tools.StandardLocation
 
-import scala.collection.mutable.Buffer
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
@@ -230,6 +229,10 @@ class JavacMtags(
       Position.None
     }
 
+    private def isPrivateConstructor(method: MethodTree): Boolean =
+      method.getName().toString() == "<init>" &&
+        method.getModifiers().getFlags().contains(Modifier.PRIVATE)
+
     private val disambiguators = new ju.HashMap[MethodTree, Int]()
     private def updateDisambiguators(node: ClassTree): Unit = {
       // Per the SemanticDB spec, the disambiguator is the definition order of
@@ -239,27 +242,21 @@ class JavacMtags(
       // symbol" (companion object) even if Java doesn't have companion objects.
       // Private constructors are excluded from both the output and
       // disambiguation counting to preserve compatibility.
-      val methods = node
+      val sorted = node
         .getMembers()
         .asScala
-        .collect { case m: MethodTree => m }
-        .filterNot { m =>
-          m.getName().toString() == "<init>" &&
-          m.getModifiers().getFlags().contains(Modifier.PRIVATE)
+        .collect {
+          case m: MethodTree if !isPrivateConstructor(m) => m
         }
-      val sorted = methods
         .sortBy(m => m.getModifiers().getFlags().contains(Modifier.STATIC))
-      sorted.sliding(2).foreach {
-        case Buffer(method1, method2) =>
-          if (method1.getName().toString() != method2.getName().toString()) {
-            disambiguators.put(method2, 0)
-          } else {
-            disambiguators.put(
-              method2,
-              disambiguators.getOrDefault(method1, 0) + 1
-            )
-          }
-        case _ =>
+      val counters = new ju.HashMap[String, Int]()
+      for (method <- sorted) {
+        val name = method.getName().toString()
+        val next = counters.getOrDefault(name, -1) + 1
+        counters.put(name, next)
+        if (next > 0) {
+          disambiguators.put(method, next)
+        }
       }
     }
 
@@ -397,10 +394,7 @@ class JavacMtags(
         return null
       }
       // Skip private constructors to preserve compatibility
-      if (
-        name == "<init>" &&
-        node.getModifiers().getFlags().contains(Modifier.PRIVATE)
-      ) {
+      if (isPrivateConstructor(node)) {
         return null
       }
       mtags.withOwner() {
