@@ -5,6 +5,7 @@ import java.util
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.docstrings.printers.MarkdownGenerator
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.semanticdb.Scala.Descriptor
@@ -14,7 +15,6 @@ import scala.meta.pc.ContentType.MARKDOWN
 import scala.meta.pc.ContentType.PLAINTEXT
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.reports.ReportContext
-import scala.meta.internal.docstrings.printers.MarkdownGenerator
 
 /**
  * Extracts Javadoc from Java source code.

@@ -13,8 +13,8 @@ import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments.XtensionScanner
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.logging.MetalsLogger
-import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.JavaToplevelMtags
+import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.ScalaMtags
