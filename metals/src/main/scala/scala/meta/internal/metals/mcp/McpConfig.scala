@@ -286,11 +286,14 @@ object KiloCodeEditor
         "Kilo",
         "kilo",
       ),
-      settingsPath = ".kilocode/",
-      serverField = "mcpServers",
+      settingsPath = ".kilo/",
+      fileNames = List("kilo.json"),
+
+      serverField = "mcp",
       additionalProperties = List(
-        "type" -> "streamable-http"
+        "type" -> "remote"
       ),
+      rootProperties = List("$schema" -> "https://app.kilo.ai/config.json"),
     )
 
 object CursorEditor
