@@ -24,8 +24,13 @@ case class MbtBuild(
   def getNamespaces: ju.Map[String, MbtNamespace] =
     Option(this.namespaces).getOrElse(ju.Collections.emptyMap())
 
-  def getUncheckedSources: ju.List[String] =
-    Option(this.uncheckedSources).getOrElse(ju.Collections.emptyList())
+  def getUncheckedSources: ju.List[String] = {
+    val topLevel =
+      Option(this.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala
+    val fromNamespaces =
+      getNamespaces.values.asScala.flatMap(_.getUncheckedSources.asScala)
+    (topLevel ++ fromNamespaces).distinct.asJava
+  }
 
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
@@ -110,6 +115,7 @@ case class MbtBuild(
           scalaVersion = Option(namespace.scalaVersion),
           javaHome = Option(namespace.javaHome),
           dependsOn = dependsOnIds,
+          uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
         )
       }
     }
@@ -207,7 +213,8 @@ object MbtBuild {
     }
 
     val mergedUncheckedSources =
-      (a.getUncheckedSources.asScala ++ b.getUncheckedSources.asScala).distinct.asJava
+      (Option(a.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala ++
+        Option(b.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala).distinct.asJava
 
     MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
   }

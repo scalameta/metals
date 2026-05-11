@@ -6,6 +6,7 @@ import java.{util => ju}
 
 import scala.util.Properties
 
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
@@ -24,6 +25,7 @@ case class MbtTarget(
     scalaVersion: Option[String] = None,
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
+    uncheckedSources: Seq[String] = Nil,
 ) {
 
   // mbt doesn't produce any classfiles
@@ -46,10 +48,26 @@ case class MbtTarget(
   ): Boolean =
     stableSourcePaths(workspace).exists(path.startWith)
 
+  def resolvedUncheckedSourceDirs(workspace: AbsolutePath): Seq[AbsolutePath] =
+    uncheckedSources.map { source =>
+      if (source.endsWith(".srcjar")) {
+        val srcJar = workspace.resolve(source)
+        val relPath = workspace.toNIO.relativize(srcJar.toNIO)
+        workspace.resolve(Directories.dependencies).resolveZipPath(relPath)
+      } else {
+        workspace.resolve(source)
+      }
+    }
+
   def containsSource(workspace: AbsolutePath, path: AbsolutePath): Boolean = {
     containsStableSource(workspace, path) ||
     path.toRelativeInside(workspace).exists { relative =>
       globMatchers.exists(_.matcher.matches(relative.toNIO))
+    } ||
+    resolvedUncheckedSourceDirs(workspace).exists { dir =>
+      val dirNio = dir.toNIO
+      val dirReal = scala.util.Try(dirNio.toRealPath()).getOrElse(dirNio)
+      path.toNIO.startsWith(dirNio) || path.toNIO.startsWith(dirReal)
     }
   }
 
@@ -124,7 +142,9 @@ case class MbtTarget(
   ): bsp4j.SourcesItem =
     new bsp4j.SourcesItem(
       id,
-      (stableSourcePaths(workspace) ++ globbedSources).distinct.map { path =>
+      (stableSourcePaths(workspace) ++ globbedSources ++ resolvedUncheckedSourceDirs(
+        workspace
+      )).distinct.map { path =>
         new bsp4j.SourceItem(
           path.toURI.toString,
           if (path.isFile) bsp4j.SourceItemKind.FILE

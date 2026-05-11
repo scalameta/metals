@@ -11,6 +11,7 @@ case class MbtNamespace(
     @Nullable scalaVersion: String,
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
+    @Nullable uncheckedSources: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =
     Option(this.sources).getOrElse(ju.Collections.emptyList())
@@ -24,4 +25,6 @@ case class MbtNamespace(
     Option(this.dependencyModules).getOrElse(ju.Collections.emptyList())
   def getDependsOn: ju.List[String] =
     Option(this.dependsOn).getOrElse(ju.Collections.emptyList())
+  def getUncheckedSources: ju.List[String] =
+    Option(this.uncheckedSources).getOrElse(ju.Collections.emptyList())
 }
