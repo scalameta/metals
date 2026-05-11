@@ -80,7 +80,8 @@ object BazelMbtBuildSupport {
         val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
         val scalacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
         val javacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
-        val genSrcOutputsByNamespaces = mutable.Map.empty[String, mutable.Buffer[String]]
+        val genSrcOutputsByNamespaces =
+          mutable.Map.empty[String, mutable.Buffer[String]]
         for {
           t <- targetLabels
           p = keys(t)
@@ -120,7 +121,10 @@ object BazelMbtBuildSupport {
           p = keys(t)
           path <- genSrcOutputsByTarget.getOrElse(t, Nil)
         } {
-          genSrcOutputsByNamespaces.getOrElseUpdate(p, mutable.Buffer.empty) += path
+          genSrcOutputsByNamespaces.getOrElseUpdate(
+            p,
+            mutable.Buffer.empty,
+          ) += path
         }
         for ((namespace, files) <- byBuildFile) {
           putNamespace(
@@ -132,7 +136,9 @@ object BazelMbtBuildSupport {
             dependsByNs.getOrElse(namespace, Set.empty),
             externalDepsByNs.getOrElse(namespace, Set.empty),
             scalaVersion,
-            genSrcOutputsByNamespaces.getOrElse(namespace, mutable.Buffer.empty).toSeq,
+            genSrcOutputsByNamespaces
+              .getOrElse(namespace, mutable.Buffer.empty)
+              .toSeq,
           )
         }
       } else {

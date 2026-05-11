@@ -26,7 +26,9 @@ case class MbtBuild(
 
   def getUncheckedSources: ju.List[String] = {
     val topLevel =
-      Option(this.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala
+      Option(this.uncheckedSources)
+        .getOrElse(ju.Collections.emptyList())
+        .asScala
     val fromNamespaces =
       getNamespaces.values.asScala.flatMap(_.getUncheckedSources.asScala)
     (topLevel ++ fromNamespaces).distinct.asJava
@@ -213,8 +215,12 @@ object MbtBuild {
     }
 
     val mergedUncheckedSources =
-      (Option(a.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala ++
-        Option(b.uncheckedSources).getOrElse(ju.Collections.emptyList()).asScala).distinct.asJava
+      (Option(a.uncheckedSources)
+        .getOrElse(ju.Collections.emptyList())
+        .asScala ++
+        Option(b.uncheckedSources)
+          .getOrElse(ju.Collections.emptyList())
+          .asScala).distinct.asJava
 
     MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
   }

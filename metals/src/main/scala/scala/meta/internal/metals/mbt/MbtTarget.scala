@@ -142,7 +142,9 @@ case class MbtTarget(
   ): bsp4j.SourcesItem =
     new bsp4j.SourcesItem(
       id,
-      (stableSourcePaths(workspace) ++ globbedSources ++ resolvedUncheckedSourceDirs(
+      (stableSourcePaths(
+        workspace
+      ) ++ globbedSources ++ resolvedUncheckedSourceDirs(
         workspace
       )).distinct.map { path =>
         new bsp4j.SourceItem(

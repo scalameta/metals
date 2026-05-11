@@ -70,7 +70,8 @@ abstract class BazelMbtImporter(
         .run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
-      (genSrcOutputsByTarget, genSrcLabels) <- BazelQuery.queryGenSrcOutputsByTarget(srcs, queryEnv)
+      (genSrcOutputsByTarget, genSrcLabels) <- BazelQuery
+        .queryGenSrcOutputsByTarget(srcs, queryEnv)
       filteredSrcs = srcs.map { case (t, labels) =>
         t -> labels.filterNot(genSrcLabels)
       }
