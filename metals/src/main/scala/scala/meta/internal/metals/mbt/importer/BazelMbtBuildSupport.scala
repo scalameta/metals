@@ -39,6 +39,7 @@ object BazelMbtBuildSupport {
       externalDepsByTarget: Map[String, List[String]],
       dependencyModules: Seq[MbtDependencyModule],
       scalaVersion: Option[String],
+      genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
@@ -79,6 +80,7 @@ object BazelMbtBuildSupport {
         val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
         val scalacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
         val javacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
+        val genSrcOutputsByNamespaces = mutable.Map.empty[String, mutable.Buffer[String]]
         for {
           t <- targetLabels
           p = keys(t)
@@ -113,6 +115,13 @@ object BazelMbtBuildSupport {
             javacOptionsByBuildFile.getOrElse(p, Nil) ++ javacOptions,
           )
         }
+        for {
+          t <- targetLabels
+          p = keys(t)
+          path <- genSrcOutputsByTarget.getOrElse(t, Nil)
+        } {
+          genSrcOutputsByNamespaces.getOrElseUpdate(p, mutable.Buffer.empty) += path
+        }
         for ((namespace, files) <- byBuildFile) {
           putNamespace(
             namespaces,
@@ -123,11 +132,13 @@ object BazelMbtBuildSupport {
             dependsByNs.getOrElse(namespace, Set.empty),
             externalDepsByNs.getOrElse(namespace, Set.empty),
             scalaVersion,
+            genSrcOutputsByNamespaces.getOrElse(namespace, mutable.Buffer.empty).toSeq,
           )
         }
       } else {
         val allSrcs = srcFilesByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
+        val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
         putNamespace(
           namespaces,
           workspaceNamespaceName,
@@ -138,6 +149,7 @@ object BazelMbtBuildSupport {
           Set.empty,
           allExtDeps,
           scalaVersion,
+          allGenSrcOutputs,
         )
       }
       MbtBuild(
@@ -246,6 +258,7 @@ object BazelMbtBuildSupport {
       dependsOn: Set[String],
       dependencyModuleIds: Set[String],
       scalaVersion: Option[String],
+      uncheckedSources: Seq[String] = Nil,
   ): Unit = {
     namespaces.put(
       name,
@@ -257,6 +270,8 @@ object BazelMbtBuildSupport {
         scalaVersion.orNull,
         null,
         dependsOn.toSeq.sorted.asJava,
+        if (uncheckedSources.isEmpty) null
+        else uncheckedSources.distinct.sorted.asJava,
       ),
     )
   }
