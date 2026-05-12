@@ -162,6 +162,7 @@ case class UserConfiguration(
         )
       ),
       optStringField("mcpClient", mcpClient),
+      Some(("symbolsViewShowAll", symbolsViewShowAll)),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -911,6 +912,8 @@ object UserConfiguration {
     val startMcpServer = getBooleanKey("start-mcp-server").getOrElse(false)
 
     val mcpClient = getStringKey("mcp-client")
+    val symbolsViewShowAll =
+      getBooleanKey("symbols-view-show-all").getOrElse(false)
 
     if (errors.isEmpty) {
       Right(
@@ -949,6 +952,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
+          symbolsViewShowAll,
         )
       )
     } else {
