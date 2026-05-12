@@ -103,7 +103,8 @@ final class DocumentSymbolProvider(
 
     // don't show local variables, parameters, and private members in the outline view, since they are not visible outside of their enclosing class or method. This is especially important for parameters, since they can be very numerous and clutter the outline view.
     def filterSymbols(addPatF: => Unit) = {
-      if (symbolsViewShowAll) {} else addPatF
+      if (symbolsViewShowAll) { addPatF }
+      else {}
     }
 
     override def apply(tree: Tree): Unit = {
@@ -230,13 +231,16 @@ final class DocumentSymbolProvider(
             }
           )
         case t: Term.Param =>
-          addChild(
-            t.name.value,
-            SymbolKind.Variable,
-            t.pos,
-            t.name.pos,
-            t.decltpe.fold("")(_.syntax),
-          )
+          filterSymbols({
+            addChild(
+              t.name.value,
+              SymbolKind.Variable,
+              t.pos,
+              t.name.pos,
+              t.decltpe.fold("")(_.syntax),
+            )
+          })
+
         case t: Decl.Val =>
           filterSymbols(
             {
