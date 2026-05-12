@@ -10,6 +10,7 @@ import scala.meta.trees.Origin
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.UserConfiguration
 
 /**
  *  Retrieves all the symbols defined in a document
@@ -20,7 +21,10 @@ import org.eclipse.{lsp4j => l}
 final class DocumentSymbolProvider(
     trees: Trees,
     supportsHierarchicalDocumentSymbols: Boolean,
+    userConfig: () => UserConfiguration,
 ) {
+
+  val symbolsViewShowAll: Boolean = userConfig().symbolsViewShowAll
 
   def documentSymbols(
       path: AbsolutePath
@@ -98,8 +102,8 @@ final class DocumentSymbolProvider(
     }
 
     // don't show local variables, parameters, and private members in the outline view, since they are not visible outside of their enclosing class or method. This is especially important for parameters, since they can be very numerous and clutter the outline view.
-    def filterSymbols(addPatF: => Unit, showOnlyTopLevel: Boolean = true) = {
-      if (showOnlyTopLevel) {} else addPatF
+    def filterSymbols(addPatF: => Unit) = {
+      if (symbolsViewShowAll) {} else addPatF
     }
 
     override def apply(tree: Tree): Unit = {
