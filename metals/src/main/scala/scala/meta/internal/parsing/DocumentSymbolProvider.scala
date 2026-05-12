@@ -97,6 +97,11 @@ final class DocumentSymbolProvider(
       }
     }
 
+    // don't show local variables, parameters, and private members in the outline view, since they are not visible outside of their enclosing class or method. This is especially important for parameters, since they can be very numerous and clutter the outline view.
+    def filterSymbols(addPatF: => Unit, showOnlyTopLevel: Boolean = true) = {
+      if (showOnlyTopLevel) {} else addPatF
+    }
+
     override def apply(tree: Tree): Unit = {
       def continue(withNewOwner: Boolean = false): Unit = {
         val oldRoot = owner
@@ -209,13 +214,17 @@ final class DocumentSymbolProvider(
           )
           newOwner()
         case t: Defn.Val =>
-          addPats(
-            t.pats,
-            SymbolKind.Constant,
-            t.pos,
-            t.decltpe.fold("")(_.syntax),
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Constant,
+                t.pos,
+                t.decltpe.fold("")(_.syntax),
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Term.Param =>
           addChild(
             t.name.value,
@@ -225,29 +234,41 @@ final class DocumentSymbolProvider(
             t.decltpe.fold("")(_.syntax),
           )
         case t: Decl.Val =>
-          addPats(
-            t.pats,
-            SymbolKind.Constant,
-            t.pos,
-            t.decltpe.syntax,
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Constant,
+                t.pos,
+                t.decltpe.syntax,
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Defn.Var =>
-          addPats(
-            t.pats,
-            SymbolKind.Variable,
-            t.pos,
-            t.decltpe.fold("")(_.syntax),
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Variable,
+                t.pos,
+                t.decltpe.fold("")(_.syntax),
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Decl.Var =>
-          addPats(
-            t.pats,
-            SymbolKind.Variable,
-            t.pos,
-            t.decltpe.syntax,
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Variable,
+                t.pos,
+                t.decltpe.syntax,
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Defn.Type =>
           addChild(
             t.name.value,
