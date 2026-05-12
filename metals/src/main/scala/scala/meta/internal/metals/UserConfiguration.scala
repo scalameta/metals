@@ -611,6 +611,16 @@ object UserConfiguration {
            |and it will still generate the one matching your editor if it's also supported.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "symbols-view-show-all",
+        "false",
+        "true",
+        "Show all symbols in the symbols view",
+        """|When this option is enabled, the symbols view will show all symbols instead of only toplevel classes, traits, objects, and packages.
+           |This can be useful when you want to see all the available symbols in the project, but it can also make the view more cluttered and harder to navigate.
+           |""".stripMargin,
+        isBoolean = true,
+      ),
     )
 
   def listOptions: String =

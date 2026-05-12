@@ -24,8 +24,6 @@ final class DocumentSymbolProvider(
     userConfig: () => UserConfiguration,
 ) {
 
-  val symbolsViewShowAll: Boolean = userConfig().symbolsViewShowAll
-
   def documentSymbols(
       path: AbsolutePath
   ): Either[util.List[DocumentSymbol], util.List[l.SymbolInformation]] = {
@@ -103,7 +101,7 @@ final class DocumentSymbolProvider(
 
     // don't show local variables, parameters, and private members in the outline view, since they are not visible outside of their enclosing class or method. This is especially important for parameters, since they can be very numerous and clutter the outline view.
     def filterSymbols(addPatF: => Unit) = {
-      if (symbolsViewShowAll) { addPatF }
+      if (userConfig().symbolsViewShowAll) { addPatF }
       else {}
     }
 
