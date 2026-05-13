@@ -62,7 +62,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
-    symbolsViewShowAll: Boolean = true,
+    symbolsViewShowAll: Boolean = false,
 ) {
 
   override def toString(): String = {
