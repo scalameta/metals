@@ -62,7 +62,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
-    symbolsViewShowAll: Boolean = false,
+    symbolsViewShowAll: Boolean = true,
 ) {
 
   override def toString(): String = {
@@ -162,7 +162,6 @@ case class UserConfiguration(
         )
       ),
       optStringField("mcpClient", mcpClient),
-      Some(("symbolsViewShowAll", symbolsViewShowAll)),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
