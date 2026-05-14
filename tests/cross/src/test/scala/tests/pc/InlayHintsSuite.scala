@@ -1598,7 +1598,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def downloadDependency(
        |      dep: Dependency,
        |      scalaVersion: Option[String] = None,
-       |      classfiers: Seq[String] = Seq.empty,
+       |      classifiers: Seq[String] = Seq.empty,
        |      resolution: Option[Object] = None,
        |  ): List[Path] = ???
        |
@@ -1642,7 +1642,7 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
        |  def downloadDependency(
        |      dep: Dependency,
        |      scalaVersion: Option[String] = None,
-       |      classfiers: Seq[String] = Seq.empty/*[Nothing<<scala/Nothing#>>]*/,
+       |      classifiers: Seq[String] = Seq.empty/*[Nothing<<scala/Nothing#>>]*/,
        |      resolution: Option[Object] = None,
        |  ): List[Path] = ???
        |
