@@ -87,7 +87,7 @@ class WorksheetProvider(
   // first-come last-out.
   private val jobs = CompilerJobQueue()
   // Executor for stopping threads. We don't reuse the scheduled executor from
-  // MetalsLanguageServer because this exector service may occasionally block
+  // MetalsLanguageServer because this executor service may occasionally block
   // and we don't want to block on other features like the status bar.
   private lazy val threadStopper: ScheduledExecutorService =
     Executors.newSingleThreadScheduledExecutor()
@@ -98,7 +98,7 @@ class WorksheetProvider(
   private val worksheetPcData =
     new TrieMap[AbsolutePath, WorksheetPcData]()
 
-  private def fallabackMdoc: Mdoc = {
+  private def fallbackMdoc: Mdoc = {
     val scalaVersion =
       scalaVersionSelector.fallbackScalaVersion()
     mdocs
@@ -499,7 +499,7 @@ class WorksheetProvider(
       target <- buildTargets.inverseSources(path)
       mdoc <- getMdoc(target)
     } yield mdoc
-    mdoc.getOrElse(fallabackMdoc)
+    mdoc.getOrElse(fallbackMdoc)
   }
 
   private def getMdoc(target: BuildTargetIdentifier): Option[Mdoc] = {
@@ -545,7 +545,7 @@ class WorksheetProvider(
             scribe.warn(
               s"Still waiting for information about classpath, using default worksheet with empty classpath"
             )
-            fallabackMdoc
+            fallbackMdoc
         }
       }
     }

@@ -403,11 +403,11 @@ object Embedded {
   def downloadDependency(
       dep: Dependency,
       scalaVersion: Option[String] = None,
-      classfiers: Seq[String] = Seq.empty,
+      classifiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
   ): List[Path] = try {
     val settings = fetchSettings(dep, scalaVersion, resolution)
-      .addClassifiers(classfiers.map(Classifier(_)): _*)
+      .addClassifiers(classifiers.map(Classifier(_)): _*)
     val withPossibleSnapshotRepo =
       // Scala 3.4.x series depends on mtags snapshot versions
       if (scalaVersion.exists(_.startsWith("3.4"))) {
@@ -447,14 +447,14 @@ object Embedded {
     downloadDependency(
       scalaLibraryDependency(scalaVersion),
       Some(scalaVersion),
-      classfiers = Seq("sources"),
+      classifiers = Seq("sources"),
     )
 
   def downloadScala3Sources(scalaVersion: String): List[Path] =
     downloadDependency(
       scala3Dependency(scalaVersion),
       Some(scalaVersion),
-      classfiers = Seq("sources"),
+      classifiers = Seq("sources"),
     )
 
   def downloadSemanticdbScalac(scalaVersion: String): List[Path] =
