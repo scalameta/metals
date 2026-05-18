@@ -50,6 +50,8 @@ import org.eclipse.{lsp4j => l}
  *                            the output, you can enable this to strip them.
  * @param doctorVisibilityProvider if the clients implements `metals/doctorVisibilityDidChange`
  * @param bspStatusBarProvider if the client supports `metals/status` with "bsp" status type
+ * @param definitionIndexStrategy whether definitions from dependencies should index classfiles
+ *                                or source files.
  */
 final case class InitializationOptions(
     compilerOptions: CompilerInitializationOptions,
@@ -82,6 +84,7 @@ final case class InitializationOptions(
     doctorVisibilityProvider: Option[Boolean],
     bspStatusBarProvider: Option[String],
     moduleStatusBarProvider: Option[String],
+    definitionIndexStrategy: Option[String],
 ) {
   def doctorFormat: Option[DoctorFormat.DoctorFormat] =
     doctorProvider.flatMap(DoctorFormat.fromString)
@@ -188,6 +191,8 @@ object InitializationOptions {
       bspStatusBarProvider = jsonObj.getStringOption("bspStatusBarProvider"),
       moduleStatusBarProvider =
         jsonObj.getStringOption("moduleStatusBarProvider"),
+      definitionIndexStrategy =
+        jsonObj.getStringOption("definitionIndexStrategy"),
     )
   }
 

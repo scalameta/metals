@@ -420,8 +420,7 @@ object Configs {
     // which fails on syntax errors. See plans/protopc.md for details.
     def default: ProtoOutlineProviderConfig = v1
     def fromConfigOrFeatureFlag(
-        value: Option[String],
-        featureFlags: FeatureFlagProvider,
+        value: Option[String]
     ): Either[String, ProtoOutlineProviderConfig] = {
       value match {
         case Some(ok @ ("v1" | "v2")) =>

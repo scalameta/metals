@@ -51,7 +51,6 @@ abstract class BaseLspSuite(
       buildChangedAction = BuildChangedAction.prompt,
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
-      definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
       javaOutlineProvider = Configs.JavaOutlineProviderConfig.javac,
 
       // Legacy settings that are enabled for tests only.  We  should eventually

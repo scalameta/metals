@@ -6,6 +6,7 @@ import java.util.Properties
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.ClientConfiguration
@@ -493,7 +494,6 @@ class UserConfigurationSuite extends BaseSuite {
     "mbt",
     "protobuf"
   ],
-  "definitionIndexStrategy": "classpath",
   "javaOutlineProvider": "javac",
   "protoOutlineProvider": "v1",
   "javaSymbolLoader": "turbine-classpath",
@@ -532,7 +532,11 @@ class UserConfigurationSuite extends BaseSuite {
       Map("testExplorerProvider" -> true).asJava.toJsonObject
     )
 
-    val clientConfig = ClientConfiguration(MetalsServerConfig.default, params)
+    val clientConfig = ClientConfiguration(
+      MetalsServerConfig.default,
+      params,
+      NoopFeatureFlagProvider,
+    )
 
     val roundtrip = UserConfiguration
       .fromJson(

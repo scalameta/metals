@@ -248,7 +248,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         )
         progress.message =
           s"indexing ${buildTool.importedBuild.dependencyModules.getItems().size()} dependencies"
-        if (indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+        if (indexProviders.clientConfig.definitionIndexStrategy().isClasspath) {
           usedJars ++= indexDependencyModules(
             buildTool.importedBuild.dependencyModules,
             progress,
@@ -544,7 +544,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     var cacheMisses = 0
     try {
       if (path.isJar && path.exists) {
-        if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+        if (
+          !indexProviders.clientConfig.definitionIndexStrategy().isClasspath
+        ) {
           usedJars += path
           if (addSourceJarSymbols(path)) cacheHits += 1
           else cacheMisses += 1

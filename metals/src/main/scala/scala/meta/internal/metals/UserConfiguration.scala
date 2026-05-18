@@ -14,7 +14,6 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
-import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
@@ -99,8 +98,6 @@ case class UserConfiguration(
       WorkspaceSymbolProviderConfig.default,
     definitionProviders: DefinitionProviderConfig =
       DefinitionProviderConfig.default,
-    definitionIndexStrategy: DefinitionIndexStrategy =
-      DefinitionIndexStrategy.default,
     javaOutlineProvider: JavaOutlineProviderConfig =
       JavaOutlineProviderConfig.default,
     protoOutlineProvider: ProtoOutlineProviderConfig =
@@ -273,12 +270,6 @@ case class UserConfiguration(
           (
             "definitionProviders",
             definitionProviders.values.asJava,
-          )
-        ),
-        Some(
-          (
-            "definitionIndexStrategy",
-            definitionIndexStrategy.value,
           )
         ),
         Some(
@@ -1334,14 +1325,6 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(WorkspaceSymbolProviderConfig.default)
-    val definitionIndexStrategy = getParsedKey(
-      "definition-index-strategy",
-      value =>
-        DefinitionIndexStrategy.fromConfigOrFeatureFlag(
-          value,
-          featureFlags,
-        ),
-    ).getOrElse(DefinitionIndexStrategy.default)
     val definitionProviders = getParsedArrayKey(
       "definition-providers",
       values =>
@@ -1362,8 +1345,7 @@ object UserConfiguration {
       "proto-outline-provider",
       value =>
         ProtoOutlineProviderConfig.fromConfigOrFeatureFlag(
-          value,
-          featureFlags,
+          value
         ),
     ).getOrElse(ProtoOutlineProviderConfig.default)
     val javaSymbolLoader = getParsedKey(
@@ -1501,7 +1483,6 @@ object UserConfiguration {
           useSourcePath,
           workspaceSymbolProvider,
           definitionProviders,
-          definitionIndexStrategy,
           javaOutlineProvider,
           protoOutlineProvider,
           javaSymbolLoader,

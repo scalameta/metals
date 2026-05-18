@@ -1,5 +1,8 @@
 package scala.meta.internal.metals
 
+import scala.meta.infra.FeatureFlagProvider
+import scala.meta.internal.infra.NoopFeatureFlagProvider
+import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.GlobSyntaxConfig
 import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
@@ -19,6 +22,7 @@ import org.eclipse.lsp4j.InitializeParams
 final class ClientConfiguration(
     val initialConfig: MetalsServerConfig,
     initializeParams: Option[InitializeParams],
+    featureFlags: FeatureFlagProvider,
 ) {
 
   private val clientCapabilities: Option[ClientCapabilities] =
@@ -66,6 +70,14 @@ final class ClientConfiguration(
     initializationOptions.globSyntax
       .flatMap(GlobSyntaxConfig.fromString)
       .getOrElse(initialConfig.globSyntax)
+
+  def definitionIndexStrategy(): DefinitionIndexStrategy =
+    DefinitionIndexStrategy
+      .fromConfigOrFeatureFlag(
+        initializationOptions.definitionIndexStrategy,
+        featureFlags,
+      )
+      .getOrElse(DefinitionIndexStrategy.default)
 
   def renameFileThreshold(): Int =
     initializationOptions.renameFileThreshold.getOrElse(
@@ -238,18 +250,21 @@ final class ClientConfiguration(
 }
 
 object ClientConfiguration {
-  val default: ClientConfiguration = ClientConfiguration(MetalsServerConfig())
+  val default: ClientConfiguration =
+    ClientConfiguration(MetalsServerConfig(), NoopFeatureFlagProvider)
 
   def apply(
       initialConfig: MetalsServerConfig,
       initializeParams: InitializeParams,
+      featureFlags: FeatureFlagProvider,
   ): ClientConfiguration = {
-    new ClientConfiguration(initialConfig, Some(initializeParams))
+    new ClientConfiguration(initialConfig, Some(initializeParams), featureFlags)
   }
 
   def apply(
-      initialConfig: MetalsServerConfig
+      initialConfig: MetalsServerConfig,
+      featureFlags: FeatureFlagProvider,
   ): ClientConfiguration = {
-    new ClientConfiguration(initialConfig, None)
+    new ClientConfiguration(initialConfig, None, featureFlags)
   }
 }
