@@ -59,8 +59,11 @@ class JavadocIndexer(
     lazy val body = JavadocParser.extractBody(docComment)
     contentType match {
       case MARKDOWN =>
-        // Pass the full raw Javadoc to preserve @return, @throws, etc.
-        try MarkdownGenerator.fromDocstring(raw, Map.empty)
+        // Rewrite Javadoc-only constructs (e.g. `@param <T>`) so the Scaladoc
+        // parser doesn't mis-handle them, then pass the full Javadoc to
+        // preserve @return, @throws, @see, etc.
+        val scaladocReady = JavadocParser.toScaladocCompatible(raw)
+        try MarkdownGenerator.fromDocstring(scaladocReady, Map.empty)
         catch {
           case NonFatal(_) =>
             // The Scaladoc parser implementation uses fragile regexp processing

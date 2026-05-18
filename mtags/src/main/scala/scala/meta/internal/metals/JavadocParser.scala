@@ -41,6 +41,19 @@ object JavadocParser {
     }
   }
 
+  // Rewrites Javadoc `@param <T> desc` to Scaladoc `@tparam T desc` so the
+  // ScaladocParser's HTML-cleaning step doesn't strip <T> as an unknown HTML
+  // tag (which would leave the next word as the captured parameter name).
+  private val JavadocTypeParamTag =
+    """@param(\s+)<(\w+)>""".r
+
+  /**
+   * Rewrites Javadoc-only constructs into a Scaladoc-equivalent form so the
+   * Scaladoc-based MarkdownGenerator can render Javadoc comments correctly.
+   */
+  def toScaladocCompatible(raw: String): String =
+    JavadocTypeParamTag.replaceAllIn(raw, "@tparam$1$2")
+
   /**
    * Extracts `@param` tags from a Javadoc comment, returning a map of
    * param name to `"name description"`. Supports multi-line tag descriptions:

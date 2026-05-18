@@ -29,8 +29,8 @@ class HoverDocSuite extends BaseHoverSuite {
        |```
        |List<String> s = Collections.emptyList();
        |```
-       |**Parameters**
-       |- `type`: of elements, if there were any, in the list
+       |**Type Parameters**
+       |- `T`: type of elements, if there were any, in the list
        |
        |**Returns:** an empty immutable list
        |
@@ -54,8 +54,8 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |**Parameters**
-           |- `type`: of elements, if there were any, in the list
+           |**Type Parameters**
+           |- `T`: type of elements, if there were any, in the list
            |
            |**Returns:** an empty immutable list
            |
@@ -78,8 +78,8 @@ class HoverDocSuite extends BaseHoverSuite {
            |```
            |List<String> s = Collections.emptyList();
            |```
-           |**Parameters**
-           |- `type`: of elements, if there were any, in the list
+           |**Type Parameters**
+           |- `T`: type of elements, if there were any, in the list
            |
            |**Returns:** an empty immutable list
            |

@@ -25,8 +25,8 @@ class HoverDocSuite extends BaseJavaHoverSuite {
        |```
        |List<String> s = Collections.emptyList();
        |```
-       |**Parameters**
-       |- `type`: of elements, if there were any, in the list
+       |**Type Parameters**
+       |- `T`: type of elements, if there were any, in the list
        |
        |**Returns:** an empty immutable list
        |
@@ -174,11 +174,13 @@ class HoverDocSuite extends BaseJavaHoverSuite {
        |See [Unmodifiable Lists]() for details.
        |
        |
+       |**Type Parameters**
+       |- `E`: the `List`'s element type
+       |
        |**Parameters**
        |- `e1`: the first element
        |- `e2`: the second element
        |- `e3`: the third element
-       |- `the`: `List`'s element type
        |
        |**Returns:** a `List` containing the specified elements
        |
