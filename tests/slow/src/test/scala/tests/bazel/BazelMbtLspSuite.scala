@@ -379,7 +379,8 @@ class BazelMbtLspSuite
             |      "scalaVersion": "2.13.18",
             |      "dependsOn": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
     } yield ()
