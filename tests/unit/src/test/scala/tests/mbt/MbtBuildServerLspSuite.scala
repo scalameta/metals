@@ -523,6 +523,80 @@ class MbtBuildServerLspSuite
     } yield ()
   }
 
+  test(
+    "mbt-namespace-uncheckedSources-visible-in-dependent-namespace"
+  ) {
+    cleanWorkspace()
+    val mbtJson =
+      s"""|{
+          |  "namespaces": {
+          |    "core": {
+          |      "sources": ["src/**"],
+          |      "uncheckedSources": ["generated"],
+          |      "scalaVersion": "${BuildInfo.scalaVersion}"
+          |    },
+          |    "extra": {
+          |      "sources": ["extra/src/**"],
+          |      "scalaVersion": "${BuildInfo.scalaVersion}",
+          |      "dependsOn": ["core"]
+          |    }
+          |  }
+          |}""".stripMargin
+
+    val generatedFile = "generated/core/Generated.scala"
+    val extraApp = "extra/src/extra/App.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/.gitignore
+            |generated/
+            |/src/core/Base.scala
+            |package core
+            |
+            |object Base {
+            |  val label: String = "base"
+            |}
+            |/$generatedFile
+            |package core
+            |
+            |object GeneratedObject {
+            |  val value: String = "generated"
+            |}
+            |/$extraApp
+            |package extra
+            |
+            |import core.GeneratedObject
+            |
+            |object App {
+            |  def run(): String = GeneratedObject.value
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ = assertNoDiff(
+        server.workspaceSymbol("GeneratedObject"),
+        "core.GeneratedObject",
+      )
+      _ <- server.didOpen(extraApp)
+      _ <- server.assertHover(
+        extraApp,
+        """|package extra
+           |
+           |import core.GeneratedObject
+           |
+           |object App {
+           |  def run(): String = GeneratedObject.val@@ue
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
   test("mbt-uncheckedSources-compilers-with-srcjar") {
     cleanWorkspace()
     val srcJarName = "generated-sources.srcjar"
@@ -568,6 +642,84 @@ class MbtBuildServerLspSuite
            |
            |object Main {
            |  def main(): Any = GeneratedObject.val@@ue
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
+  test(
+    "mbt-namespace-uncheckedSources-srcjar-visible-in-dependent-namespace"
+  ) {
+    cleanWorkspace()
+    val srcJarName = "generated-sources.srcjar"
+    val zos = new ZipOutputStream(
+      new FileOutputStream(workspace.resolve(srcJarName).toFile)
+    )
+    zos.putNextEntry(new ZipEntry("core/GeneratedObject.scala"))
+    zos.write(
+      """|package core
+         |
+         |object GeneratedObject {
+         |  val value: String = "generated"
+         |}
+         |""".stripMargin.getBytes(StandardCharsets.UTF_8)
+    )
+    zos.closeEntry()
+    zos.close()
+
+    val extraApp = "extra/src/extra/App.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |{
+            |  "namespaces": {
+            |    "core": {
+            |      "sources": ["src/**"],
+            |      "uncheckedSources": ["$srcJarName"],
+            |      "scalaVersion": "${BuildInfo.scalaVersion}"
+            |    },
+            |    "extra": {
+            |      "sources": ["extra/src/**"],
+            |      "scalaVersion": "${BuildInfo.scalaVersion}",
+            |      "dependsOn": ["core"]
+            |    }
+            |  }
+            |}
+            |/src/core/Base.scala
+            |package core
+            |
+            |object Base {
+            |  val label: String = "base"
+            |}
+            |/$extraApp
+            |package extra
+            |
+            |import core.GeneratedObject
+            |
+            |object App {
+            |  def run(): String = GeneratedObject.value
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ = assertNoDiff(
+        server.workspaceSymbol("GeneratedObject"),
+        "core.GeneratedObject",
+      )
+      _ <- server.didOpen(extraApp)
+      _ <- server.assertHover(
+        extraApp,
+        """|package extra
+           |
+           |import core.GeneratedObject
+           |
+           |object App {
+           |  def run(): String = GeneratedObject.val@@ue
            |}""".stripMargin,
         """|```scala
            |val value: String
