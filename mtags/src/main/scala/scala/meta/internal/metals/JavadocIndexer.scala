@@ -55,18 +55,22 @@ class JavadocIndexer(
   }
 
   def toContent(docComment: Option[String]): String = {
-    val comment = JavadocParser.extractBody(docComment)
-    if (comment.isEmpty) return ""
-    contentType match {
-      case MARKDOWN =>
-        try MarkdownGenerator.fromDocstring(s"/**$comment\n*/", Map.empty)
-        catch {
-          case NonFatal(_) =>
-            // The Scaladoc parser implementation uses fragile regexp processing which
-            // sometimes causes exceptions.
-            comment
+    docComment match {
+      case None => ""
+      case Some(raw) if raw.trim.isEmpty => ""
+      case Some(raw) =>
+        contentType match {
+          case MARKDOWN =>
+            val scaladocReady = JavadocParser.toScaladocCompatible(raw)
+            try MarkdownGenerator.fromDocstring(scaladocReady, Map.empty)
+            catch {
+              case NonFatal(_) =>
+                // The Scaladoc parser implementation uses fragile regexp processing
+                // which sometimes causes exceptions.
+                JavadocParser.extractBody(docComment)
+            }
+          case PLAINTEXT => JavadocParser.extractBody(docComment)
         }
-      case PLAINTEXT => comment
     }
   }
 

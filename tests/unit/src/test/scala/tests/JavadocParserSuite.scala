@@ -201,4 +201,45 @@ class JavadocParserSuite extends BaseSuite {
     val tags = JavadocParser.extractParamTags(Some(doc))
     assertEquals(tags, Map("x" -> "x"))
   }
+
+  // --- toScaladocCompatible tests ---
+
+  test("toScaladocCompatible: rewrites @param <T> to @tparam T") {
+    val raw = "/** @param <T> the class of the objects */"
+    assertEquals(
+      JavadocParser.toScaladocCompatible(raw),
+      "/** @tparam T the class of the objects */",
+    )
+  }
+
+  test("toScaladocCompatible: preserves spacing between @param and <T>") {
+    val raw = "/** @param  <T> the class of the objects */"
+    assertEquals(
+      JavadocParser.toScaladocCompatible(raw),
+      "/** @tparam  T the class of the objects */",
+    )
+  }
+
+  test("toScaladocCompatible: leaves regular @param tags untouched") {
+    val raw = "/** @param x the value @param y the other value */"
+    assertEquals(
+      JavadocParser.toScaladocCompatible(raw),
+      raw,
+    )
+  }
+
+  test("toScaladocCompatible: handles mixed type-param and regular params") {
+    val raw =
+      """|/**
+         | * @param <T> the type param
+         | * @param o the regular param
+         | */""".stripMargin
+    assertEquals(
+      JavadocParser.toScaladocCompatible(raw),
+      """|/**
+         | * @tparam T the type param
+         | * @param o the regular param
+         | */""".stripMargin,
+    )
+  }
 }

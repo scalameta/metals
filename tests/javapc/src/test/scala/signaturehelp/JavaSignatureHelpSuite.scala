@@ -232,6 +232,15 @@ class JavaSignatureHelpSuite extends BaseJavaSignatureHelpSuite {
        |
        |The representation is exactly the one returned by the
        |`Integer.toString` method of one argument.
+       |
+       |
+       |**Parameters**
+       |- `i`: an `int`.
+       |
+       |**Returns:** a string representation of the `int` argument.
+       |
+       |**See**
+       |- [java.lang.Integer#toString(int, int)](java.lang.Integer#toString(int, int))
        |String valueOf(int i)
        |               ^^^^^
        |""".stripMargin,
@@ -263,6 +272,10 @@ class JavaSignatureHelpSuite extends BaseJavaSignatureHelpSuite {
       |}
     """.stripMargin,
     """|This method does something important.
+       |
+       |**Parameters**
+       |- `x`: the first parameter
+       |- `y`: the second parameter
        |void myMethod(int x, String y)
        |                     ^^^^^^^^
        |""".stripMargin,

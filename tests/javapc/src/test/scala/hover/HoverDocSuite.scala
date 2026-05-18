@@ -25,6 +25,13 @@ class HoverDocSuite extends BaseJavaHoverSuite {
        |```
        |List<String> s = Collections.emptyList();
        |```
+       |**Type Parameters**
+       |- `T`: type of elements, if there were any, in the list
+       |
+       |**Returns:** an empty immutable list
+       |
+       |**See**
+       |- [#EMPTY_LIST](#EMPTY_LIST)
        |""".stripMargin,
   )
 
@@ -41,7 +48,7 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |}
       |""".stripMargin,
     if (isJava22)
-      """|```java
+      s"""|```java
          |public void sort(java.util.Comparator<? super E> arg0)
          |```
          |Sorts this list according to the order induced by the specified
@@ -58,6 +65,22 @@ class HoverDocSuite extends BaseJavaHoverSuite {
          |[natural ordering](Comparable) should be used.
          |
          |This list must be modifiable, but need not be resizable.
+         |
+         |
+         |**Parameters**
+         |- `c`: the `Comparator` used to compare list elements.
+         |A `null` value indicates that the elements'
+         |[natural ordering](Comparable) should be used
+         |
+         |**Throws**
+         |- `ClassCastException`: if the list contains elements that are not
+         |*mutually comparable* using the specified comparator
+         |- `UnsupportedOperationException`: if the `sort` operation
+         |is not supported by this list
+         |- `IllegalArgumentException`:${" "}
+         |([optional]())
+         |if the comparator is found to violate the [Comparator](Comparator)
+         |contract
          |""".stripMargin
     else
       """|```java
@@ -90,11 +113,28 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |    }
       |}
       |""".stripMargin,
-    """|```java
-       |public static java.nio.file.Path get(java.lang.String arg0, java.lang.String[] arg1)
-       |```
-       |Converts a path string, or a sequence of strings that when joined form
-       |a path string, to a `Path`.""".stripMargin,
+    s"""|```java
+        |public static java.nio.file.Path get(java.lang.String arg0, java.lang.String[] arg1)
+        |```
+        |Converts a path string, or a sequence of strings that when joined form
+        |a path string, to a `Path`.
+        |
+        |
+        |**Parameters**
+        |- `first`:${" "}
+        |the path string or initial part of the path string
+        |- `more`:${" "}
+        |additional strings to be joined to form the path string
+        |
+        |**Returns:** the resulting `Path`
+        |
+        |**Throws**
+        |- `InvalidPathException`:${" "}
+        |if the path string cannot be converted to a `Path`
+        |
+        |**See**
+        |- [FileSystem#getPath](FileSystem#getPath)
+        |- [Path#of(String,String...)](Path#of(String,String...))""".stripMargin,
   )
 
   check(
@@ -113,6 +153,20 @@ class HoverDocSuite extends BaseJavaHoverSuite {
        |```
        |Returns an unmodifiable list containing three elements.
        |
-       |See [Unmodifiable Lists]() for details.""".stripMargin,
+       |See [Unmodifiable Lists]() for details.
+       |
+       |
+       |**Type Parameters**
+       |- `E`: the `List`'s element type
+       |
+       |**Parameters**
+       |- `e1`: the first element
+       |- `e2`: the second element
+       |- `e3`: the third element
+       |
+       |**Returns:** a `List` containing the specified elements
+       |
+       |**Throws**
+       |- `NullPointerException`: if an element is `null`""".stripMargin,
   )
 }

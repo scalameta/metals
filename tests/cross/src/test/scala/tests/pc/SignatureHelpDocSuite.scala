@@ -280,8 +280,17 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
       |  java.util.Collections.singleton(@@)
       |}
     """.stripMargin,
-    """| Returns an immutable set containing only the specified object.
+    """|Returns an immutable set containing only the specified object.
        |The returned set is serializable.
+       |
+       |
+       |**Type Parameters**
+       |- `T`: the class of the objects in the set
+       |
+       |**Parameters**
+       |- `o`: the sole object to be stored in the returned set.
+       |
+       |**Returns:** an immutable set containing only the specified object.
        |singleton[T](o: T): Set[T]
        |             ^^^^
        |  @param T <T> the class of the objects in the set
@@ -289,8 +298,17 @@ class SignatureHelpDocSuite extends BaseSignatureHelpSuite {
        |""".stripMargin,
     compat = Map(
       "2.13" ->
-        """| Returns an immutable set containing only the specified object.
+        """|Returns an immutable set containing only the specified object.
            |The returned set is serializable.
+           |
+           |
+           |**Type Parameters**
+           |- `T`: the class of the objects in the set
+           |
+           |**Parameters**
+           |- `o`: the sole object to be stored in the returned set.
+           |
+           |**Returns:** an immutable set containing only the specified object.
            |singleton[T <: Object](o: T): Set[T]
            |                       ^^^^
            |  @param T <T> the class of the objects in the set
