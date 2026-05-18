@@ -52,7 +52,10 @@ object JavadocParser {
    * Scaladoc-based MarkdownGenerator can render Javadoc comments correctly.
    */
   def toScaladocCompatible(raw: String): String = {
-    JavadocTypeParamTag.replaceAllIn(raw, m => s"@tparam${m.group(1)}${m.group(2)}")
+    JavadocTypeParamTag.replaceAllIn(
+      raw,
+      m => s"@tparam${m.group(1)}${m.group(2)}"
+    )
   }
 
   /**

@@ -49,39 +49,39 @@ class HoverDocSuite extends BaseJavaHoverSuite {
       |""".stripMargin,
     if (isJava22)
       s"""|```java
-         |public void sort(java.util.Comparator<? super E> arg0)
-         |```
-         |Sorts this list according to the order induced by the specified
-         |[Comparator](Comparator) (optional operation).  The sort is *stable*:
-         |this method must not reorder equal elements.
-         |
-         |All elements in this list must be *mutually comparable* using the
-         |specified comparator (that is, `c.compare(e1, e2)` must not throw
-         |a `ClassCastException` for any elements `e1` and `e2`
-         |in the list).
-         |
-         |If the specified comparator is `null` then all elements in this
-         |list must implement the [Comparable](Comparable) interface and the elements'
-         |[natural ordering](Comparable) should be used.
-         |
-         |This list must be modifiable, but need not be resizable.
-         |
-         |
-         |**Parameters**
-         |- `c`: the `Comparator` used to compare list elements.
-         |A `null` value indicates that the elements'
-         |[natural ordering](Comparable) should be used
-         |
-         |**Throws**
-         |- `ClassCastException`: if the list contains elements that are not
-         |*mutually comparable* using the specified comparator
-         |- `UnsupportedOperationException`: if the `sort` operation
-         |is not supported by this list
-         |- `IllegalArgumentException`:${" "}
-         |([optional]())
-         |if the comparator is found to violate the [Comparator](Comparator)
-         |contract
-         |""".stripMargin
+          |public void sort(java.util.Comparator<? super E> arg0)
+          |```
+          |Sorts this list according to the order induced by the specified
+          |[Comparator](Comparator) (optional operation).  The sort is *stable*:
+          |this method must not reorder equal elements.
+          |
+          |All elements in this list must be *mutually comparable* using the
+          |specified comparator (that is, `c.compare(e1, e2)` must not throw
+          |a `ClassCastException` for any elements `e1` and `e2`
+          |in the list).
+          |
+          |If the specified comparator is `null` then all elements in this
+          |list must implement the [Comparable](Comparable) interface and the elements'
+          |[natural ordering](Comparable) should be used.
+          |
+          |This list must be modifiable, but need not be resizable.
+          |
+          |
+          |**Parameters**
+          |- `c`: the `Comparator` used to compare list elements.
+          |A `null` value indicates that the elements'
+          |[natural ordering](Comparable) should be used
+          |
+          |**Throws**
+          |- `ClassCastException`: if the list contains elements that are not
+          |*mutually comparable* using the specified comparator
+          |- `UnsupportedOperationException`: if the `sort` operation
+          |is not supported by this list
+          |- `IllegalArgumentException`:${" "}
+          |([optional]())
+          |if the comparator is found to violate the [Comparator](Comparator)
+          |contract
+          |""".stripMargin
     else
       """|```java
          |public void sort(java.util.Comparator<? super E> arg0)
