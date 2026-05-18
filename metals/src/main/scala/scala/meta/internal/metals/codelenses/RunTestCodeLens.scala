@@ -89,10 +89,10 @@ final class RunTestCodeLens(
       buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
     val targetIds = buildTargets
       .inverseSourcesAll(path)
-      .flatMap(buildTargets.allInverseDependencies)
       .distinct
-    val lenses = for {
-      buildTargetId <- targetIds
+
+    val firstLegitimateTargetId = for {
+      buildTargetId <- targetIds.iterator
       buildTarget <- buildTargets.info(buildTargetId)
       capabilities = buildTarget.getCapabilities
       if Option(capabilities.getCanDebug).exists(_.booleanValue) ||
@@ -101,6 +101,10 @@ final class RunTestCodeLens(
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
       )
+    } yield (buildTargetId, isJVM)
+
+    val lenses = for {
+      (buildTargetId, isJVM) <- firstLegitimateTargetId.headOption.toSeq
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
