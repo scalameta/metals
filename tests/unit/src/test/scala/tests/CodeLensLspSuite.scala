@@ -146,6 +146,7 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       )
     } yield ()
   }
+
   test("run-java") {
     cleanWorkspace()
     for {
@@ -171,6 +172,53 @@ class CodeLensLspSuite extends BaseCodeLensLspSuite("codeLenses") {
       _ <- assertCodeLenses(
         "a/src/main/java/Main.java",
         """|package foo.bar;
+           |
+           |public class Main {
+           |<<run>><<debug>>
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("run-java-depends") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{
+           |  "a": { },
+           |  "b": { "dependsOn": ["a"] }
+           |}
+           |
+           |/a/src/main/java/Main.java
+           |package a;
+           |
+           |public class Main {
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |
+           |/b/src/main/java/Main.java
+           |package b;
+           |
+           |public class Main {
+           |  public static void main(String[] args){
+           |    System.out.println("Hello from Java!");
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/java/Main.java"
+      ) // compile `a` to populate its cache
+      _ <- assertCodeLenses(
+        "a/src/main/java/Main.java",
+        """|package a;
            |
            |public class Main {
            |<<run>><<debug>>
