@@ -477,8 +477,8 @@ class UserConfigurationSuite extends BaseSuite {
     "rule1",
     "rule2"
   ],
-  "customProjectRoot": "customs",
   "scalafixLintEnabled": false,
+  "customProjectRoot": "customs",
   "verboseCompilation": true,
   "autoImportBuilds": "all",
   "scalaCliLauncher": "scala-cli",

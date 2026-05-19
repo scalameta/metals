@@ -184,6 +184,7 @@ class JavaToplevelMtags(
         throw new RuntimeException("Broken file, quote doesn't end.")
       reader.ch match {
         case `quote` =>
+          reader.nextChar()
           Token.Literal
         case '\\' =>
           reader.nextChar()
@@ -220,6 +221,7 @@ class JavaToplevelMtags(
         reader.endCharOffset + 1 < reader.buf.length &&
         reader.buf(reader.endCharOffset + 1) == '"'
       ) {
+        reader.nextChar()
         reader.nextChar()
         reader.nextChar()
       } else {
