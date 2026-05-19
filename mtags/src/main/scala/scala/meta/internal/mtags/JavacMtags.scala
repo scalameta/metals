@@ -106,7 +106,12 @@ class JavacMtags(
     includeFuzzyReferences: Boolean = false,
     includeUniqueFuzzyReferences: Boolean =
       true, // `true` only exists for testing purposes
-    keepDocComments: Boolean = false
+    keepDocComments: Boolean = false,
+    // When true, private constructors are excluded from emission and from
+    // disambiguator computation. Used by JavadocIndexer so that the parameter-
+    // name lookup keyed by `<init>(+N)` matches the Scala compiler's view of
+    // Java constructors (which excludes private ones).
+    filterPrivateConstructors: Boolean = false
 )(implicit rc: ReportContext)
     extends MtagsIndexer { mtags =>
   private val _names = new ju.LinkedHashSet[String]()
@@ -431,7 +436,9 @@ class JavacMtags(
         .getMembers()
         .asScala
         .collect {
-          case m: MethodTree if !isPrivateConstructor(m) => m
+          case m: MethodTree
+              if !filterPrivateConstructors || !isPrivateConstructor(m) =>
+            m
         }
         .sortBy(m => m.getModifiers().getFlags().contains(Modifier.STATIC))
       val counters = new ju.HashMap[String, Int]()
@@ -638,7 +645,7 @@ class JavacMtags(
       if (isErrorName(name)) {
         return null
       }
-      if (isPrivateConstructor(node)) {
+      if (filterPrivateConstructors && isPrivateConstructor(node)) {
         return null
       }
       mtags.withOwner() {

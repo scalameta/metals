@@ -23,7 +23,12 @@ class JavadocIndexer(
     fn: SymbolDocumentation => Unit,
     contentType: ContentType
 )(implicit rc: ReportContext)
-    extends JavacMtags(input, includeMembers = true, keepDocComments = true) {
+    extends JavacMtags(
+      input,
+      includeMembers = true,
+      keepDocComments = true,
+      filterPrivateConstructors = true
+    ) {
 
   override protected def onClass(
       sym: String,
