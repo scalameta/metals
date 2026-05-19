@@ -58,7 +58,6 @@ import com.sun.source.util.Trees
 import com.sun.tools.javac.api.JavacTrees
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
-import com.sun.tools.javac.parser.Tokens.Comment
 import com.sun.tools.javac.tree.{JCTree => javacTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
