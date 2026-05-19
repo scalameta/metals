@@ -456,6 +456,7 @@ object Embedded {
       scalaVersion: Option[String] = None,
       classfiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
+      additionalRepositories: List[Repository] = Nil,
   ): List[Path] = try {
     val settings = fetchSettings(dep, scalaVersion, resolution)
       .addClassifiers(classfiers.map(Classifier(_)): _*)
@@ -478,6 +479,7 @@ object Embedded {
       } else settings
 
     withPossibleSnapshotRepo
+      .addRepositories(additionalRepositories: _*)
       .run()
       .map(_.toPath())
       .toList
@@ -578,6 +580,22 @@ object Embedded {
         BuildInfo.javaSemanticdbVersion,
       ),
       None,
+    )
+  }
+
+  def downloadGradleExtractor(): List[Path] = {
+    downloadDependency(
+      dependencyOf(
+        "org.scalameta",
+        "gradle-extractor_2.13",
+        BuildInfo.metalsVersion,
+      ),
+      None,
+      additionalRepositories = List(
+        MavenRepository(
+          "https://repo.gradle.org/gradle/libs-releases"
+        )
+      ),
     )
   }
 

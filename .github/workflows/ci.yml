@@ -100,6 +100,13 @@ jobs:
             name: Bazel integration
             os: ubuntu-latest
             java: "17"
+          - type: gradle
+            command: |
+              bin/test.sh quick-publish-local
+              bin/test.sh 'slow/testOnly -- tests.gradle.*'
+            name: Gradle integration
+            os: ubuntu-latest
+            java: "17"
 #          - type: feature
 #            command: bin/test.sh 'slow/testOnly -- tests.feature.*'
 #            name: LSP integration tests

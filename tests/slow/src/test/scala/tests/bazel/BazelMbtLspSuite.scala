@@ -15,6 +15,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite
+import tests.BaseMbtSuite
 import tests.BazelBuildLayout
 import tests.BazelMbtTestInitializer
 import tests.TestHovers
@@ -25,7 +26,8 @@ import tests.TestHovers
  */
 class BazelMbtLspSuite
     extends BaseLspSuite("bazel-mbt", BazelMbtTestInitializer)
-    with TestHovers {
+    with TestHovers
+    with BaseMbtSuite {
 
   private val bazelVersion = "8.2.1"
 
@@ -48,13 +50,6 @@ class BazelMbtLspSuite
 
   private val catsVersion = "2.13.0"
   private val jsoupVersion = "1.21.1"
-  private def escapeMbtFile(mbtFile: String): String = {
-
-    mbtFile.replaceAll(
-      """"(jar|sources)":\s*"[^"]+"""",
-      """"$1": "<$1-path>"""",
-    )
-  }
 
   /** Same targets as [[BazelLspSuite]], plus a project view so MBT import scopes `bazel query`. */
   private def bazelWorkspaceLayout: String = {
@@ -229,6 +224,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-server-hover") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -385,6 +381,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-single-target") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -496,6 +493,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-java-workspace") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -577,6 +575,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-workspace-namespace-choice") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     client.chooseBazelMbtNamespaceMode =
       Messages.BazelMbtNamespaceChoice.workspace

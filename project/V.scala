@@ -45,6 +45,8 @@ object V {
 
   val gradleBloop = "1.6.4"
 
+  val gradleToolingApi = "8.14"
+
   val java8Compat = "1.0.2"
 
   val javaSemanticdb = "0.11.2"

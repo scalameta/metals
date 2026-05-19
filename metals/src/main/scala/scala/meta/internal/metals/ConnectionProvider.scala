@@ -181,6 +181,7 @@ class ConnectionProvider(
     if (isMbtPreferred) {
       for {
         _ <- runMbtReimport(mbtImporters)
+        _ = tables.buildServers.chooseServer(MbtBuildServer.name)
         _ <-
           if (bspSession.isEmpty)
             connect(
@@ -189,14 +190,14 @@ class ConnectionProvider(
             ).ignoreValue
           else Future.unit
       } yield ()
-    } else if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
-      connect(CreateSession(), progress).ignoreValue
     } else if (
       mbtImporters.nonEmpty &&
       tables.buildServers.selectedServer().isEmpty &&
       buildServerPromptShown.compareAndSet(false, true)
     ) {
       promptBuildServerChoice(mbtImporters, progress)
+    } else if (buildTools.isAutoConnectable(buildToolProvider.optProjectRoot)) {
+      connect(CreateSession(), progress).ignoreValue
     } else {
       slowConnectToBuildServer(forceImport = false, progress).ignoreValue
     }

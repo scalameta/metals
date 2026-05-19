@@ -593,6 +593,23 @@ lazy val `mtags-protobuf` = project
   )
   .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
+lazy val `gradle-extractor` = project
+  .in(file("gradle-extractor"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "gradle-extractor",
+    scalaVersion := V.scala213,
+    crossScalaVersions := Seq(V.scala213),
+    resolvers += "Gradle Releases" at "https://repo.gradle.org/gradle/libs-releases",
+    libraryDependencies ++= Seq(
+      "org.gradle" % "gradle-tooling-api" % V.gradleToolingApi,
+      "com.lihaoyi" %% "upickle" % "4.3.2",
+      "org.scalameta" %% "munit" % V.munit % Test,
+    ),
+  )
+  .settings(sharedScalacOptions)
+  .dependsOn(interfaces)
+
 lazy val metals = project
   .settings(
     sharedSettings,
@@ -1085,10 +1102,18 @@ lazy val slow = project
     testSettings,
     sharedSettings,
     Test / testOnly := (Test / testOnly)
-      .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
+      .dependsOn(
+        `sbt-metals` / publishLocal,
+        `gradle-extractor` / publishLocal,
+        publishBinaryMtags,
+      )
       .evaluated,
     Test / test := (Test / test)
-      .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
+      .dependsOn(
+        `sbt-metals` / publishLocal,
+        `gradle-extractor` / publishLocal,
+        publishBinaryMtags,
+      )
       .value,
   )
   .dependsOn(unit, `metals-mcp`)

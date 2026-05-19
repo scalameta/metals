@@ -427,7 +427,12 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
             switchBuildTool
           } else if (ImportScalaScript.params() == params) {
             importScalaCliScript
-          } else if (ChooseBuildServer.params("bazel") == params) {
+          } else if (
+            params
+              .getActions()
+              .asScala
+              .exists(_.getTitle() == ChooseBuildServer.mbt.getTitle())
+          ) {
             selectedServer
           } else if (ResetWorkspace.params() == params) {
             resetWorkspace

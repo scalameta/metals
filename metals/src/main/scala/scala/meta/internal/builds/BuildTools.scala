@@ -219,7 +219,7 @@ final class BuildTools(
   def allAvailable: List[BuildTool] = {
     List(
       SbtBuildTool(workspaceVersion = None, workspace, userConfig),
-      GradleBuildTool(userConfig, workspace),
+      GradleBuildTool(userConfig, workspace)(ec),
       MavenBuildTool(userConfig, workspace),
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
@@ -249,7 +249,7 @@ final class BuildTools(
     val buf = List.newBuilder[BuildTool]
 
     sbtProject.foreach(buf += SbtBuildTool(_, userConfig))
-    gradleProject.foreach(buf += GradleBuildTool(userConfig, _))
+    gradleProject.foreach(buf += GradleBuildTool(userConfig, _)(ec))
     mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
