@@ -4,14 +4,28 @@ import upickle.default._
 
 /** A single external (third-party) library a module depends on. */
 final case class ExternalDependency(
-    group: String,
-    name: String,
-    version: String,
+    group: Option[String],
+    name: Option[String],
+    version: Option[String],
     scope: String,
     file: Option[String],
     source: Option[String],
 ) {
-  def gav: String = s"$group:$name:$version"
+  def gav: String = {
+    val result = List(group, name, version).flatten.mkString(":")
+    if (result.nonEmpty) result
+    else {
+      file
+        .map(_.split("/|\\\\").lastOption)
+        .flatten
+        .map(_.split("\\.").head)
+        .getOrElse {
+          throw new RuntimeException(
+            "No group, name, or version and no file available for this dependency"
+          )
+        }
+    }
+  }
 }
 
 /** A dependency on another module within the same Gradle build. */

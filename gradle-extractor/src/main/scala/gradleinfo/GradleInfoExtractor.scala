@@ -5,7 +5,6 @@ import java.nio.file.Path
 
 import scala.jdk.CollectionConverters._
 
-import org.gradle.tooling.ConfigurableLauncher
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ModelBuilder
 import org.gradle.tooling.ProjectConnection
@@ -76,15 +75,9 @@ object GradleInfoExtractor {
       config: ExtractorConfig,
   ): T = {
     val builder: ModelBuilder[T] = connection.model(modelType)
-    applyLauncherOptions(builder, config)
+    config.gradleJvm.foreach(builder.setJavaHome)
     builder.get()
   }
-
-  private def applyLauncherOptions(
-      launcher: ConfigurableLauncher[?],
-      config: ExtractorConfig,
-  ): Unit =
-    config.gradleJvm.foreach(launcher.setJavaHome)
 
   private def extractModule(
       m: IdeaModule,
@@ -161,12 +154,11 @@ object GradleInfoExtractor {
       val file = Option(d.getFile)
       val source = Option(d.getSource)
       ExternalDependency(
-        group = gav.map(_.getGroup).getOrElse("<unknown>"),
+        group = gav.map(_.getGroup),
         name = gav
           .map(_.getName)
-          .orElse(file.map(stripJarExtension))
-          .getOrElse("<unknown>"),
-        version = gav.map(_.getVersion).getOrElse("<unknown>"),
+          .orElse(file.map(stripJarExtension)),
+        version = gav.map(_.getVersion),
         scope = scopeOf(d),
         file = file.map(_.toPath().toUri().toString()),
         source = source.map(_.toPath().toUri().toString()),
