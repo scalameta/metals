@@ -85,7 +85,7 @@ class JavaSemanticdbProvider(
     // HACK: we set the URI manually here so it matches exactly the requested URI.
     // It's a complicated story how URIs get interpreted in our LSP setup and the
     // virtual file system we have for Java.
-    visitor.uri = cu.getSourceFile().toUri().toString()
+    visitor.uri = compiler.guessOriginalUri(cu.getSourceFile())
     val textDocument = visitor.buildTextDocumentBuilder(cu);
     compile.listener.diagnostics.foreach { d =>
       val line = (d.getLineNumber() - 1).toInt
