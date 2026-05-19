@@ -12,6 +12,7 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.plugins.annotations.ResolutionScope;
 import org.apache.maven.project.MavenProject;
+import org.apache.maven.project.ProjectBuilder;
 import org.apache.maven.toolchain.ToolchainManager;
 import org.eclipse.aether.RepositorySystem;
 import org.eclipse.aether.RepositorySystemSession;
@@ -51,6 +52,8 @@ public class MbtMojo extends AbstractMojo {
 
   @Component private ToolchainManager toolchainManager;
 
+  @Component private ProjectBuilder projectBuilder;
+
   public void execute() throws MojoExecutionException, MojoFailureException {
     MbtMojoImpl.run(this);
   }
@@ -77,6 +80,10 @@ public class MbtMojo extends AbstractMojo {
 
   public ToolchainManager getToolchainManager() {
     return toolchainManager;
+  }
+
+  public ProjectBuilder getProjectBuilder() {
+    return projectBuilder;
   }
 
   public RepositorySystemSession getRepositorySession() {

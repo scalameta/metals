@@ -119,14 +119,14 @@ lazy val `maven-metals` = project
     crossPaths := false,
     publish / skip := false,
     publishLocal := publishM2.value,
-    testFrameworks := List(new TestFramework("org.scalatest.tools.Framework")),
+    testFrameworks := List(TestFrameworks.MUnit),
     libraryDependencies ++= List(
       "org.apache.maven" % "maven-core" % "3.9.5" % "provided",
       "org.apache.maven" % "maven-plugin-api" % "3.9.5" % "provided",
       "org.apache.maven.plugin-tools" % "maven-plugin-annotations" % "3.15.1" % "provided",
       "org.apache.maven" % "maven-model" % "3.9.5" % "provided",
       "com.google.code.gson" % "gson" % "2.14.0",
-      "org.scalatest" %% "scalatest" % "3.2.15" % Test,
+      "org.scalameta" %% "munit" % V.munit % Test,
     ),
     Compile / resourceGenerators += Def.task {
       val template = IO.read(

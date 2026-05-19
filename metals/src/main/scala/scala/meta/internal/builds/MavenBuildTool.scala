@@ -57,9 +57,11 @@ case class MavenBuildTool(
         )
     }
 
-  override def digest(workspace: AbsolutePath): Option[String] = {
+  override def isBuildRelated(path: AbsolutePath): Boolean =
+    MavenBuildTool.isMavenRelatedPath(projectRoot, path)
+
+  override def digest(workspace: AbsolutePath): Option[String] =
     MavenDigest.current(projectRoot)
-  }
 
   override def minimumVersion: String = "3.5.2"
 
@@ -80,8 +82,8 @@ object MavenBuildTool {
   ): Boolean = {
     val nio = path.toNIO
     val ws = workspace.toNIO
-    if (!nio.startsWith(ws)) return false
-    path.filename == "pom.xml" ||
-    nio.startsWith(ws.resolve(".mvn"))
+    nio.startsWith(ws) &&
+    (path.filename == "pom.xml" ||
+      nio.startsWith(ws.resolve(".mvn")))
   }
 }

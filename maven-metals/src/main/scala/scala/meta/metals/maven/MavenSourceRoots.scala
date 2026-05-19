@@ -66,7 +66,7 @@ private[maven] object MavenSourceRoots {
       if (
         !declared(parent.getAbsolutePath) && containsSourceFile(
           parent,
-          maxDepth = 1,
+          1,
         )
       )
         List(parent.getAbsolutePath)
@@ -75,14 +75,20 @@ private[maven] object MavenSourceRoots {
   }
 
   private def sourceRootCandidate(dir: File, isTest: Boolean): Option[File] = {
+    val generatedSourceSearchDepth = 15
     val sub = if (isTest) "src/test" else "src/main"
     Seq("java", "scala")
       .map(lang => new File(dir, s"$sub/$lang"))
-      .find(d => d.isDirectory && containsSourceFile(d))
-      .orElse(if (containsSourceFile(dir)) Some(dir) else None)
+      .find(d =>
+        d.isDirectory && containsSourceFile(d, generatedSourceSearchDepth)
+      )
+      .orElse(
+        if (containsSourceFile(dir, generatedSourceSearchDepth)) Some(dir)
+        else None
+      )
   }
 
-  private def containsSourceFile(dir: File, maxDepth: Int = 5): Boolean =
+  private def containsSourceFile(dir: File, maxDepth: Int): Boolean =
     maxDepth > 0 &&
       Option(dir.listFiles()).toList.flatten.exists {
         case f if f.isFile =>
@@ -154,6 +160,16 @@ private[maven] object MavenSourceRoots {
         )
       else Nil
 
+    val modelloRoots =
+      if (!isTest)
+        generatorRoots(
+          ModelloMavenPlugin,
+          defaultDir = new File(buildDir, "generated-sources/modello").getPath,
+          configPath = Seq("outputDirectory"),
+          goals = Set("java"),
+        )
+      else Nil
+
     val buildHelperRoots =
       Option(plugins.get(BuildHelperMavenPlugin)).toList.flatMap { plugin =>
         val goal = if (isTest) "add-test-source" else "add-source"
@@ -210,7 +226,7 @@ private[maven] object MavenSourceRoots {
       else Nil
     }
 
-    (antlrRoots ++ buildHelperRoots ++ annotationRoots ++ protobufRoots).distinct
+    (antlrRoots ++ modelloRoots ++ buildHelperRoots ++ annotationRoots ++ protobufRoots).distinct
   }
 
   private def buildHelperSources(

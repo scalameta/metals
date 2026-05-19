@@ -5,8 +5,6 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.builds.MavenBuildTool
-import scala.meta.internal.builds.MavenDigest
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.UserConfiguration
@@ -63,9 +61,4 @@ abstract class MavenMbtImporter(
       }
   }
 
-  override def isBuildRelated(path: AbsolutePath): Boolean =
-    MavenBuildTool.isMavenRelatedPath(projectRoot, path)
-
-  override def digest(workspace: AbsolutePath): Option[String] =
-    MavenDigest.current(projectRoot)
 }

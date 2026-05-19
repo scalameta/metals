@@ -19,6 +19,7 @@ private[maven] object MavenPluginSupport {
   val Antlr4MavenPlugin = "org.antlr:antlr4-maven-plugin"
   val BuildHelperMavenPlugin = "org.codehaus.mojo:build-helper-maven-plugin"
   val MavenToolchainsPlugin = "org.apache.maven.plugins:maven-toolchains-plugin"
+  val ModelloMavenPlugin = "org.codehaus.modello:modello-maven-plugin"
   val ProtobufMavenPlugin = "org.xolstice.maven.plugins:protobuf-maven-plugin"
 
   private val PropertyRef: Regex = """\$\{([^}]+)\}""".r

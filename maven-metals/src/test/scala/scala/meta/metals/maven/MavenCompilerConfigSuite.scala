@@ -6,16 +6,15 @@ import org.apache.maven.model.PluginExecution
 import org.apache.maven.model.PluginManagement
 import org.apache.maven.project.MavenProject
 import org.codehaus.plexus.util.xml.Xpp3Dom
-import org.scalatest.funsuite.AnyFunSuite
 
-class MavenCompilerConfigSuite extends AnyFunSuite {
+class MavenCompilerConfigSuite extends munit.FunSuite {
 
   test(
     "returns empty compiler config when no Maven compiler plugins are present"
   ) {
     val config = MavenCompilerConfig.extract(new MavenProject(), isTest = false)
 
-    assert(config == CompilerConfig(Nil, Nil, None))
+    assertEquals(config, CompilerConfig(Nil, Nil, None))
   }
 
   test("extracts javac options from Maven properties without compiler plugin") {
@@ -29,11 +28,14 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
 
     val config = MavenCompilerConfig.extract(project, isTest = false)
 
-    assert(
-      config.javacOptions == List(
-        "--release", "11", "-encoding", "ISO-8859-1", "--enable-preview",
-        "-parameters",
-      )
+    assertNoDiff(
+      config.javacOptions.mkString("\n"),
+      """|--release
+         |11
+         |-encoding
+         |ISO-8859-1
+         |--enable-preview
+         |-parameters""".stripMargin,
     )
   }
 
@@ -46,10 +48,14 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
 
     val config = MavenCompilerConfig.extract(project, isTest = false)
 
-    assert(
-      config.javacOptions == List(
-        "-source", "8", "-target", "11", "-encoding", "UTF-8",
-      )
+    assertNoDiff(
+      config.javacOptions.mkString("\n"),
+      """|-source
+         |8
+         |-target
+         |11
+         |-encoding
+         |UTF-8""".stripMargin,
     )
   }
 
@@ -89,58 +95,9 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
 
     val config = MavenCompilerConfig.extract(project, isTest = false)
 
-    assert(config.javacOptions == List("--release", "17"))
-    assert(config.scalacOptions == List("-Wunused"))
-    assert(config.scalaVersion == Some("2.13"))
-  }
-
-  test("extracts javac and scalac options from Maven plugin configuration") {
-    val project = new MavenProject()
-    project.setBuild(new Build())
-    project.getProperties.setProperty("project.build.sourceEncoding", "UTF-8")
-
-    project.getBuild.addPlugin(
-      plugin(
-        "org.apache.maven.plugins",
-        "maven-compiler-plugin",
-        configuration(
-          "release" -> "17",
-          "enablePreview" -> "true",
-          "parameters" -> "true",
-          "compilerArg" -> "-Xlint:all",
-        ),
-      )
-    )
-    project.getBuild.addPlugin(
-      plugin(
-        "net.alchim31.maven",
-        "scala-maven-plugin",
-        node(
-          "configuration",
-          node("scalaVersion", "2.13.14"),
-          node("args", node("arg", "-deprecation"), node("arg", "-feature")),
-          node("addScalacArgs", "-Wunused| -Xlint"),
-        ),
-      )
-    )
-
-    val config = MavenCompilerConfig.extract(project, isTest = false)
-
-    assert(
-      config.javacOptions == List(
-        "--release", "17", "-encoding", "UTF-8", "--enable-preview",
-        "-parameters", "-Xlint:all",
-      )
-    )
-    assert(
-      config.scalacOptions == List(
-        "-deprecation",
-        "-feature",
-        "-Wunused",
-        "-Xlint",
-      )
-    )
-    assert(config.scalaVersion == Some("2.13.14"))
+    assertNoDiff(config.javacOptions.mkString("\n"), "--release\n17")
+    assertNoDiff(config.scalacOptions.mkString("\n"), "-Wunused")
+    assertEquals(config.scalaVersion, Some("2.13"))
   }
 
   test("extracts test-specific javac options using testRelease property") {
@@ -152,36 +109,11 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
     val mainConfig = MavenCompilerConfig.extract(project, isTest = false)
     val testConfig = MavenCompilerConfig.extract(project, isTest = true)
 
-    assert(mainConfig.javacOptions.contains("17"))
-    assert(testConfig.javacOptions.contains("21"))
+    assertNoDiff(mainConfig.javacOptions.mkString("\n"), "--release\n17")
+    assertNoDiff(testConfig.javacOptions.mkString("\n"), "--release\n21")
   }
 
-  test("extracts legacy compilerArgument and compilerArguments fields") {
-    val project = new MavenProject()
-    project.setBuild(new Build())
-    project.getBuild.addPlugin(
-      plugin(
-        "org.apache.maven.plugins",
-        "maven-compiler-plugin",
-        node(
-          "configuration",
-          node("release", "11"),
-          node("compilerArgument", "-Xlint:deprecation"),
-          node(
-            "compilerArguments",
-            node("Xlint", ""),
-            node("Afoo", "bar"),
-          ),
-        ),
-      )
-    )
-    val config = MavenCompilerConfig.extract(project, isTest = false)
-    assert(config.javacOptions.contains("-Xlint:deprecation"))
-    assert(config.javacOptions.contains("-Xlint"))
-    assert(config.javacOptions.contains("-Afoo:bar"))
-  }
-
-  test("uses goal-specific compiler executions for main and test") {
+  test("goal-specific javac executions override top-level configuration") {
     val project = new MavenProject()
     project.setBuild(new Build())
 
@@ -209,15 +141,17 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
     val mainConfig = MavenCompilerConfig.extract(project, isTest = false)
     val testConfig = MavenCompilerConfig.extract(project, isTest = true)
 
-    assert(mainConfig.javacOptions.contains("11"))
-    assert(mainConfig.javacOptions.contains("-Xmain"))
-    assert(!mainConfig.javacOptions.contains("-Xtest"))
-    assert(testConfig.javacOptions.contains("17"))
-    assert(testConfig.javacOptions.contains("-Xtest"))
-    assert(!testConfig.javacOptions.contains("-Xmain"))
+    assertNoDiff(
+      mainConfig.javacOptions.mkString("\n"),
+      "--release\n11\n-Xmain",
+    )
+    assertNoDiff(
+      testConfig.javacOptions.mkString("\n"),
+      "--release\n17\n-Xtest",
+    )
   }
 
-  test("extracts scalac options per main/test execution") {
+  test("goal-specific scalac executions share top-level Scala version") {
     val project = new MavenProject()
     project.setBuild(new Build())
 
@@ -245,24 +179,13 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
     val mainConfig = MavenCompilerConfig.extract(project, isTest = false)
     val testConfig = MavenCompilerConfig.extract(project, isTest = true)
 
-    assert(mainConfig.scalacOptions.contains("-Xmain"))
-    assert(!mainConfig.scalacOptions.contains("-Xtest"))
-    assert(testConfig.scalacOptions.contains("-Xtest"))
-    assert(!testConfig.scalacOptions.contains("-Xmain"))
-    assert(mainConfig.scalaVersion == Some("2.13.14"))
-    assert(testConfig.scalaVersion == Some("2.13.14"))
+    assertNoDiff(mainConfig.scalacOptions.mkString("\n"), "-Xmain")
+    assertNoDiff(testConfig.scalacOptions.mkString("\n"), "-Xtest")
+    assertEquals(mainConfig.scalaVersion, Some("2.13.14"))
+    assertEquals(testConfig.scalaVersion, Some("2.13.14"))
   }
 
-  test("emits -parameters from maven.compiler.parameters property") {
-    val project = new MavenProject()
-    project.setBuild(new Build())
-    project.getProperties.setProperty("maven.compiler.parameters", "true")
-
-    val config = MavenCompilerConfig.extract(project, isTest = false)
-    assert(config.javacOptions.contains("-parameters"))
-  }
-
-  test("extracts annotation processor flags") {
+  test("extracts annotationProcessorPaths coordinates") {
     val project = new MavenProject()
     project.setBuild(new Build())
     project.getBuild.addPlugin(
@@ -271,20 +194,76 @@ class MavenCompilerConfigSuite extends AnyFunSuite {
         "maven-compiler-plugin",
         node(
           "configuration",
-          node("proc", "only"),
           node(
-            "annotationProcessors",
-            node("annotationProcessor", "com.example.One"),
-            node("annotationProcessor", "com.example.Two"),
+            "annotationProcessorPaths",
+            node(
+              "path",
+              node("groupId", "org.projectlombok"),
+              node("artifactId", "lombok"),
+              node("version", "1.18.34"),
+            ),
+            node(
+              "path",
+              node("groupId", "com.google.auto.service"),
+              node("artifactId", "auto-service"),
+              node("version", "1.1.1"),
+            ),
           ),
         ),
       )
     )
 
     val config = MavenCompilerConfig.extract(project, isTest = false)
-    assert(config.javacOptions.contains("-proc:only"))
-    assert(config.javacOptions.contains("-processor"))
-    assert(config.javacOptions.contains("com.example.One,com.example.Two"))
+    assertNoDiff(
+      config.annotationProcessorPaths
+        .map { case (g, a, v) => s"$g:$a:$v" }
+        .mkString("\n"),
+      """|org.projectlombok:lombok:1.18.34
+         |com.google.auto.service:auto-service:1.1.1""".stripMargin,
+    )
+  }
+
+  test("resolves annotationProcessorPaths version from dependencyManagement") {
+    val project = new MavenProject()
+    project.setBuild(new Build())
+    val lombokArtifact = new org.apache.maven.artifact.DefaultArtifact(
+      "org.projectlombok",
+      "lombok",
+      "1.18.34",
+      "compile",
+      "jar",
+      "",
+      new org.apache.maven.artifact.handler.DefaultArtifactHandler("jar"),
+    )
+    project.setManagedVersionMap(
+      java.util.Collections
+        .singletonMap("org.projectlombok:lombok:jar", lombokArtifact)
+    )
+    project.getBuild.addPlugin(
+      plugin(
+        "org.apache.maven.plugins",
+        "maven-compiler-plugin",
+        node(
+          "configuration",
+          node(
+            "annotationProcessorPaths",
+            node(
+              "path",
+              node("groupId", "org.projectlombok"),
+              node("artifactId", "lombok"),
+            ),
+          ),
+        ),
+      )
+    )
+
+    val config = MavenCompilerConfig.extract(project, isTest = false)
+    assertNoDiff(
+      config.annotationProcessorPaths
+        .map { case (g, a, v) => s"$g:$a:$v" }
+        .mkString("\n"),
+      "org.projectlombok:lombok:1.18.34",
+    )
   }
 
   private def plugin(

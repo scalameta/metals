@@ -9,6 +9,7 @@ private[maven] case class CompilerConfig(
     javacOptions: List[String],
     scalacOptions: List[String],
     scalaVersion: Option[String],
+    annotationProcessorPaths: List[(String, String, String)] = Nil,
 )
 
 private[maven] object MavenCompilerConfig {
@@ -24,8 +25,9 @@ private[maven] object MavenCompilerConfig {
 
     val javacOpts = extractJavacOptions(plugins, prop, isTest)
     val (scalacOpts, scalaVer) = extractScalaOptions(plugins, isTest)
+    val procPaths = extractAnnotationProcessorPaths(plugins, project, isTest)
 
-    CompilerConfig(javacOpts, scalacOpts, scalaVer)
+    CompilerConfig(javacOpts, scalacOpts, scalaVer, procPaths)
   }
 
   private def extractJavacOptions(
@@ -112,6 +114,39 @@ private[maven] object MavenCompilerConfig {
 
     args.result()
   }
+
+  private def extractAnnotationProcessorPaths(
+      plugins: ju.Map[String, Plugin],
+      project: MavenProject,
+      isTest: Boolean,
+  ): List[(String, String, String)] =
+    Option(plugins.get(JavaCompilerPlugin))
+      .flatMap(compilerPluginConfiguration(_, isTest))
+      .flatMap(cfg => Option(cfg.getChild("annotationProcessorPaths")))
+      .toList
+      .flatMap { paths =>
+        paths.getChildren("path").toList.flatMap { path =>
+          for {
+            g <- childText(path, "groupId")
+            a <- childText(path, "artifactId")
+            v <- childText(path, "version").orElse(
+              managedVersion(project, g, a, childText(path, "type"))
+            )
+          } yield (g, a, v)
+        }
+      }
+
+  private def managedVersion(
+      project: MavenProject,
+      groupId: String,
+      artifactId: String,
+      tpe: Option[String],
+  ): Option[String] =
+    Option(project.getManagedVersionMap)
+      .flatMap(m =>
+        Option(m.get(s"$groupId:$artifactId:${tpe.getOrElse("jar")}"))
+      )
+      .map(_.getBaseVersion)
 
   private def extractScalaOptions(
       plugins: ju.Map[String, Plugin],

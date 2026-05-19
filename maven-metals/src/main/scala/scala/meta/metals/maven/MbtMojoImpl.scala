@@ -18,7 +18,11 @@ object MbtMojoImpl {
 
   def run(mojo: MbtMojo): Unit = {
     val log = mojo.getLog
-    val projects = mojo.getReactorProjects.asScala
+    val reactorProjects = mojo.getReactorProjects.asScala.toList
+    val allProjects =
+      MavenProfileModules.includeProfileModules(reactorProjects, mojo, log)
+
+    val projects = allProjects
       .filterNot(_.getPackaging == "pom")
       .toList
 
@@ -164,7 +168,14 @@ object MbtMojoImpl {
     NamespaceJson(
       sources = MavenSourceRoots.existingSources(roots, project, isTest).asJava,
       scalacOptions = compilerConfig.scalacOptions.asJava,
-      javacOptions = compilerConfig.javacOptions.asJava,
+      javacOptions = (compilerConfig.javacOptions ++ MavenDependencyResolver
+        .annotationProcessorPathArgs(
+          compilerConfig.annotationProcessorPaths,
+          artifactFiles,
+          localRepoBase,
+          mojo,
+          log,
+        )).asJava,
       dependencyModules = MavenDependencyResolver
         .collectDeps(
           project,
@@ -209,18 +220,25 @@ object MbtMojoImpl {
           reactorByCoords.get((a.getGroupId, a.getArtifactId, a.getVersion))
         )
         .toList
-        .distinct
 
-    val upstream = graphUpstream.getOrElse(artifactUpstream)
+    val declaredUpstream =
+      directDeclaredReactorDeps(project, isTest, reactorByCoords)
+
+    val upstream =
+      graphUpstream match {
+        case Some(fromGraph) =>
+          (fromGraph ++ declaredUpstream).distinct
+        case None =>
+          (artifactUpstream ++ declaredUpstream).distinct
+      }
+    val compileCoords = compileReactorCoords(project, reactorByCoords)
     val filteredUpstream =
       if (isTest) upstream.filter(_.getPackaging != "pom")
-      else {
-        val compileCoords = compileReactorCoords(project, reactorByCoords)
+      else
         upstream.filter(p =>
           p.getPackaging != "pom" &&
             compileCoords.contains(projectCoords(p)._1)
         )
-      }
 
     val mainDepsOn = filteredUpstream.map(p =>
       s"${p.getGroupId}:${p.getArtifactId}:${p.getVersion}"
@@ -236,14 +254,39 @@ object MbtMojoImpl {
   private def compileReactorCoords(
       project: MavenProject,
       reactorByCoords: Map[(String, String, String), MavenProject],
-  ): Set[(String, String, String)] =
-    project.getArtifacts.asScala
+  ): Set[(String, String, String)] = {
+    val fromArtifacts = project.getArtifacts.asScala
       .filter(a => MavenDependencyResolver.CompileScopes.contains(a.getScope))
       .flatMap(a =>
         reactorByCoords.get((a.getGroupId, a.getArtifactId, a.getVersion))
       )
       .map(projectCoords(_)._1)
-      .toSet
+
+    val fromDeclared = project.getDependencies.asScala
+      .filter(d => MavenDependencyResolver.CompileScopes.contains(d.getScope))
+      .flatMap { d =>
+        val version = resolvedDependencyVersion(d, project).orNull
+        reactorByCoords.get((d.getGroupId, d.getArtifactId, version))
+      }
+      .map(projectCoords(_)._1)
+
+    (fromArtifacts ++ fromDeclared).toSet
+  }
+
+  private def directDeclaredReactorDeps(
+      project: MavenProject,
+      isTest: Boolean,
+      reactorByCoords: Map[(String, String, String), MavenProject],
+  ): List[MavenProject] =
+    project.getDependencies.asScala.toList
+      .filter { dep =>
+        isTest || MavenDependencyResolver.CompileScopes.contains(dep.getScope)
+      }
+      .flatMap { dep =>
+        val version = resolvedDependencyVersion(dep, project).orNull
+        reactorByCoords.get((dep.getGroupId, dep.getArtifactId, version))
+      }
+      .distinct
 
   private def testJarNamespaceDeps(
       project: MavenProject,

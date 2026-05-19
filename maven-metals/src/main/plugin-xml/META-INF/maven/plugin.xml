@@ -72,6 +72,10 @@
           <role>org.apache.maven.toolchain.ToolchainManager</role>
           <field-name>toolchainManager</field-name>
         </requirement>
+        <requirement>
+          <role>org.apache.maven.project.ProjectBuilder</role>
+          <field-name>projectBuilder</field-name>
+        </requirement>
       </requirements>
     </mojo>
   </mojos>

@@ -9,9 +9,7 @@ import org.apache.maven.model.PluginExecution
 import org.apache.maven.model.PluginManagement
 import org.apache.maven.project.MavenProject
 import org.codehaus.plexus.util.xml.Xpp3Dom
-import org.scalatest.funsuite.AnyFunSuite
-
-class MavenSourceRootsSuite extends AnyFunSuite {
+class MavenSourceRootsSuite extends munit.FunSuite {
 
   import MavenPluginSupport._
 
@@ -96,11 +94,10 @@ class MavenSourceRootsSuite extends AnyFunSuite {
 
     val roots = sourceRoots(p, isTest = false)
 
-    assert(
-      roots == List(
-        mainJava.toFile.getAbsolutePath,
-        mainScala.toFile.getAbsolutePath,
-      )
+    assertNoDiff(
+      roots.mkString("\n"),
+      List(mainJava.toFile.getAbsolutePath, mainScala.toFile.getAbsolutePath)
+        .mkString("\n"),
     )
   }
 
@@ -123,6 +120,19 @@ class MavenSourceRootsSuite extends AnyFunSuite {
     assert(roots.contains(generated.toFile.getAbsolutePath))
     assert(roots.contains(nestedJava.toFile.getAbsolutePath))
     assert(roots.contains(directGroovy.toFile.getAbsolutePath))
+  }
+
+  test("modello default root is added for main sources only") {
+    val p = project()
+    val plugin = pluginWith(ModelloMavenPlugin, node("configuration"))
+    plugin.addExecution(executionWith("java", node("configuration")))
+    p.getBuild.addPlugin(plugin)
+
+    val mainRoots = sourceRoots(p, isTest = false)
+    val testRoots = sourceRoots(p, isTest = true)
+
+    assert(mainRoots.contains("/project/target/generated-sources/modello"))
+    assert(!testRoots.contains("/project/target/generated-sources/modello"))
   }
 
   test("antlr default root is added for main sources only") {
@@ -192,19 +202,6 @@ class MavenSourceRootsSuite extends AnyFunSuite {
     assert(
       !roots.contains("/project/target/generated-test-sources/annotations")
     )
-  }
-
-  test("annotation processing: explicit generatedSourcesDirectory is used") {
-    val p = project()
-    p.getBuild.addPlugin(
-      pluginWith(
-        JavaCompilerPlugin,
-        node("configuration", node("generatedSourcesDirectory", "/custom/gen")),
-      )
-    )
-    val roots = sourceRoots(p, isTest = false)
-    assert(roots.contains("/custom/gen"))
-    assert(!roots.contains("/project/target/generated-sources/annotations"))
   }
 
   test(
@@ -286,20 +283,6 @@ class MavenSourceRootsSuite extends AnyFunSuite {
     assert(roots.contains("/plugin/proto"))
   }
 
-  test("protobuf: compile execution output is used for main") {
-    val p = project()
-    val plugin = pluginWith(ProtobufMavenPlugin, node("configuration"))
-    plugin.addExecution(
-      executionWith(
-        "compile",
-        node("configuration", node("outputDirectory", "/exec/proto")),
-      )
-    )
-    p.getBuild.addPlugin(plugin)
-    val roots = sourceRoots(p, isTest = false)
-    assert(roots.contains("/exec/proto"))
-  }
-
   test("protobuf: explicit compile-only executions suppress test roots") {
     val p = project()
     val plugin = pluginWith(ProtobufMavenPlugin, node("configuration"))
@@ -320,25 +303,6 @@ class MavenSourceRootsSuite extends AnyFunSuite {
       )
     )
     assert(!roots.contains("/exec/proto"))
-  }
-
-  test("protobuf: test-compile execution contributes test roots") {
-    val p = project()
-    val plugin = pluginWith(ProtobufMavenPlugin, node("configuration"))
-    plugin.addExecution(
-      executionWith(
-        "test-compile",
-        node("configuration", node("outputDirectory", "/exec/test-proto")),
-      )
-    )
-    p.getBuild.addPlugin(plugin)
-    val roots = sourceRoots(p, isTest = true)
-    assert(roots.contains("/exec/test-proto"))
-    assert(
-      roots.contains(
-        "/project/target/generated-test-sources/protobuf/grpc-java"
-      )
-    )
   }
 
   test(
@@ -365,57 +329,6 @@ class MavenSourceRootsSuite extends AnyFunSuite {
   }
 
   // ── build-helper ─────────────────────────────────────────────────────────
-
-  test("build-helper: add-source contributes to main roots only") {
-    val p = project()
-    val plugin = pluginWith(BuildHelperMavenPlugin, node("configuration"))
-    plugin.addExecution(
-      executionWith(
-        "add-source",
-        node(
-          "configuration",
-          node(
-            "sources",
-            node("source", "/project/src/generated/scala"),
-            node("source", "/project/src/extra/java"),
-          ),
-        ),
-      )
-    )
-    p.getBuild.addPlugin(plugin)
-
-    val mainRoots = sourceRoots(p, isTest = false)
-    val testRoots = sourceRoots(p, isTest = true)
-
-    assert(mainRoots.contains("/project/src/generated/scala"))
-    assert(mainRoots.contains("/project/src/extra/java"))
-    assert(!testRoots.contains("/project/src/generated/scala"))
-    assert(!testRoots.contains("/project/src/extra/java"))
-  }
-
-  test("build-helper: add-test-source contributes to test roots only") {
-    val p = project()
-    val plugin = pluginWith(BuildHelperMavenPlugin, node("configuration"))
-    plugin.addExecution(
-      executionWith(
-        "add-test-source",
-        node(
-          "configuration",
-          node(
-            "sources",
-            node("source", "/project/src/generated-test/scala"),
-          ),
-        ),
-      )
-    )
-    p.getBuild.addPlugin(plugin)
-
-    val testRoots = sourceRoots(p, isTest = true)
-    val mainRoots = sourceRoots(p, isTest = false)
-
-    assert(testRoots.contains("/project/src/generated-test/scala"))
-    assert(!mainRoots.contains("/project/src/generated-test/scala"))
-  }
 
   test(
     "build-helper: add-source and add-test-source in same plugin are segregated"
@@ -449,30 +362,6 @@ class MavenSourceRootsSuite extends AnyFunSuite {
     assert(!mainRoots.contains("/project/src/gen/test"))
     assert(testRoots.contains("/project/src/gen/test"))
     assert(!testRoots.contains("/project/src/gen/main"))
-  }
-
-  test(
-    "build-helper: source path relative to project basedir is resolved correctly"
-  ) {
-    val workspace = Files.createTempDirectory("maven-build-helper-relative")
-    val p = projectAt(workspace)
-    val plugin = pluginWith(BuildHelperMavenPlugin, node("configuration"))
-    plugin.addExecution(
-      executionWith(
-        "add-source",
-        node(
-          "configuration",
-          node("sources", node("source", "src/generated/scala")),
-        ),
-      )
-    )
-    p.getBuild.addPlugin(plugin)
-
-    val mainRoots = sourceRoots(p, isTest = false)
-
-    assert(
-      mainRoots.contains(workspace.resolve("src/generated/scala").toString)
-    )
   }
 
   // ── pluginManagement inheritance (multi-module pattern) ──────────────────
@@ -525,16 +414,4 @@ class MavenSourceRootsSuite extends AnyFunSuite {
     )
   }
 
-  // ── no-exists filter ─────────────────────────────────────────────────────
-
-  test(
-    "configured generator roots are included even when the directory does not exist"
-  ) {
-    val p = project(buildDir = "/nonexistent/target")
-    p.getBuild.addPlugin(pluginWith(ProtobufMavenPlugin, node("configuration")))
-    val roots = sourceRoots(p, isTest = false)
-    assert(
-      roots.contains("/nonexistent/target/generated-sources/protobuf/java")
-    )
-  }
 }

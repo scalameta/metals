@@ -31,15 +31,43 @@ private[maven] object MavenDependencyResolver {
       extension: String,
   )
 
+  def annotationProcessorPathArgs(
+      coords: List[(String, String, String)],
+      artifactFiles: Map[ArtifactKey, File],
+      localRepoBase: File,
+      mojo: MbtMojo,
+      log: Log,
+  ): List[String] = {
+    val jars = coords.flatMap { case (g, a, v) =>
+      val key = ArtifactKey(g, a, v, None, "jar")
+      artifactFiles
+        .get(key)
+        .orElse(localArtifactPath(localRepoBase, g, a, v, None, "jar"))
+        .orElse(resolveDependencyJarsBatch(List(key), mojo, log).get(key))
+    }
+    if (jars.isEmpty) Nil
+    else
+      List(
+        "-processorpath",
+        jars.map(_.getAbsolutePath).mkString(File.pathSeparator),
+      )
+  }
+
   def externalCoords(
       projects: List[MavenProject],
       reactorCoords: Set[(String, String, String)],
   ): Set[(String, String, String)] =
     projects.flatMap { project =>
-      project.getArtifacts.asScala
+      val fromArtifacts = project.getArtifacts.asScala
         .map(a => (a.getGroupId, a.getArtifactId, a.getVersion))
         .filterNot(reactorCoords.contains)
         .filter(_._3 != null)
+      val fromDeclared = project.getDependencies.asScala
+        .map(d => (d.getGroupId, d.getArtifactId, resolveVersion(d, project)))
+        .filterNot(reactorCoords.contains)
+        .filter(_._3 != null)
+
+      fromArtifacts ++ fromDeclared
     }.toSet
 
   def resolveDependencyJars(
@@ -50,7 +78,7 @@ private[maven] object MavenDependencyResolver {
       log: Log,
       emit: String => Unit,
   ): Map[ArtifactKey, File] = {
-    val keys = projects
+    val keysFromArtifacts = projects
       .flatMap { project =>
         project.getArtifacts.asScala.flatMap { artifact =>
           val coords =
@@ -58,6 +86,16 @@ private[maven] object MavenDependencyResolver {
           Option.when(!reactorCoords.contains(coords))(artifactKey(artifact))
         }
       }
+
+    val keysFromDeclared = projects.flatMap { project =>
+      project.getDependencies.asScala.flatMap { dep =>
+        val key = dependencyKey(dep, project)
+        val coords = key.map(k => (k.groupId, k.artifactId, k.version))
+        key.filter(_ => !coords.exists(reactorCoords.contains))
+      }
+    }
+
+    val keys = (keysFromArtifacts ++ keysFromDeclared)
       .filter(key => key.version != null && key.extension == "jar")
       .distinct
 
@@ -164,13 +202,13 @@ private[maven] object MavenDependencyResolver {
               dep.getGroupId,
               dep.getArtifactId,
               v,
-              Option(dep.getClassifier).filter(_.nonEmpty).orNull,
+              dependencyClassifier(dep).orNull,
               localArtifactPath(
                 localRepoBase,
                 dep.getGroupId,
                 dep.getArtifactId,
                 v,
-                Option(dep.getClassifier).filter(_.nonEmpty),
+                dependencyClassifier(dep),
                 dependencyExtension(dep),
               ),
             )
@@ -284,11 +322,39 @@ private[maven] object MavenDependencyResolver {
 
   private def resolveVersion(dep: Dependency, project: MavenProject): String =
     Option(dep.getVersion).filter(_.nonEmpty).getOrElse {
-      val key = s"${dep.getGroupId}:${dep.getArtifactId}:jar"
-      Option(project.getManagedVersionMap.get(key))
+      val versionMap = Option(project.getManagedVersionMap)
+      val classifier = Option(dep.getClassifier).filter(_.nonEmpty)
+      val keys = List(
+        classifier
+          .map(c =>
+            s"${dep.getGroupId}:${dep.getArtifactId}:${dep.getType}:$c"
+          ),
+        Some(s"${dep.getGroupId}:${dep.getArtifactId}:${dep.getType}"),
+        Some(s"${dep.getGroupId}:${dep.getArtifactId}:jar"),
+      ).flatten
+
+      keys
+        .flatMap(k => versionMap.flatMap(m => Option(m.get(k))))
+        .headOption
         .map(_.getBaseVersion)
         .orNull
     }
+
+  private def dependencyKey(
+      dep: Dependency,
+      project: MavenProject,
+  ): Option[ArtifactKey] =
+    Option(resolveVersion(dep, project))
+      .filter(_.nonEmpty)
+      .map { version =>
+        ArtifactKey(
+          groupId = dep.getGroupId,
+          artifactId = dep.getArtifactId,
+          version = version,
+          classifier = dependencyClassifier(dep),
+          extension = dependencyExtension(dep),
+        )
+      }
 
   private def artifactKey(artifact: Artifact): ArtifactKey =
     ArtifactKey(
@@ -321,6 +387,11 @@ private[maven] object MavenDependencyResolver {
     Option(dep.getType)
       .filter(v => v.nonEmpty && v != "test-jar")
       .getOrElse("jar")
+
+  private def dependencyClassifier(dep: Dependency): Option[String] =
+    Option(dep.getClassifier)
+      .filter(_.nonEmpty)
+      .orElse(Option.when(dep.getType == "test-jar")("tests"))
 
   private def localArtifactPath(
       base: File,

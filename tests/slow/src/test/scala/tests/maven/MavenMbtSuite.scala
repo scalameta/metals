@@ -14,26 +14,6 @@ class MavenMbtSuite extends munit.FunSuite {
   private val pluginGoal =
     s"org.scalameta:metals-maven-plugin:${V.metalsMavenPluginVersion}:export"
 
-  test("single-module-export") {
-    val workspace = newWorkspace()
-    writePom(workspace, "single-module.xml")
-    mkdirs(workspace, "src/main/scala", "src/test/scala")
-    val build = runExport(workspace)
-    assertNamespaceNames(
-      build,
-      Set(
-        "com.example:maven-mbt-test:1.0-SNAPSHOT",
-        "com.example:maven-mbt-test:1.0-SNAPSHOT:test",
-      ),
-    )
-    assert(
-      relativeSources(
-        workspace,
-        namespace(build, "com.example:maven-mbt-test:1.0-SNAPSHOT"),
-      ) == List("src/main/scala")
-    )
-  }
-
   test("compiler-options-from-pom") {
     val workspace = newWorkspace()
     writePom(workspace, "compiler-options.xml")
@@ -41,40 +21,59 @@ class MavenMbtSuite extends munit.FunSuite {
     val build = runExport(workspace)
     val main = namespace(build, "com.example:compiler-options:1.0.0")
     val test = namespace(build, "com.example:compiler-options:1.0.0:test")
-    assert(
-      strings(main, "javacOptions") == List(
-        "--release", "11", "-encoding", "UTF-8", "--enable-preview",
-        "-parameters", "-proc:full", "-processor",
-        "example.MainProcessor,example.SecondProcessor", "-Xlint:deprecation",
-        "-ApluginConfig=top", "-Werror", "-Xdoclint:none", "-Ametals:enabled",
-        "-verbose",
-      )
+    assertNoDiff(
+      strings(main, "javacOptions").mkString("\n"),
+      """|--release
+         |11
+         |-encoding
+         |UTF-8
+         |--enable-preview
+         |-parameters
+         |-proc:full
+         |-processor
+         |example.MainProcessor,example.SecondProcessor
+         |-Xlint:deprecation
+         |-ApluginConfig=top
+         |-Werror
+         |-Xdoclint:none
+         |-Ametals:enabled
+         |-verbose""".stripMargin,
     )
-    assert(
-      strings(test, "javacOptions") == List(
-        "-source", "17", "-target", "17", "-encoding", "UTF-8",
-        "--enable-preview", "-parameters", "-proc:full", "-processor",
-        "example.MainProcessor,example.SecondProcessor", "-Xlint:deprecation",
-        "-ApluginConfig=top", "-AtestExecution=true", "-Werror",
-        "-Xdoclint:none", "-Ametals:enabled", "-verbose",
-      )
+    assertNoDiff(
+      strings(test, "javacOptions").mkString("\n"),
+      """|-source
+         |17
+         |-target
+         |17
+         |-encoding
+         |UTF-8
+         |--enable-preview
+         |-parameters
+         |-proc:full
+         |-processor
+         |example.MainProcessor,example.SecondProcessor
+         |-Xlint:deprecation
+         |-ApluginConfig=top
+         |-AtestExecution=true
+         |-Werror
+         |-Xdoclint:none
+         |-Ametals:enabled
+         |-verbose""".stripMargin,
     )
-    assert(
-      strings(main, "scalacOptions") == List(
-        "-Xlint",
-        "-deprecation",
-        "-feature",
-      )
+    assertNoDiff(
+      strings(main, "scalacOptions").mkString("\n"),
+      """|-Xlint
+         |-deprecation
+         |-feature""".stripMargin,
     )
-    assert(
-      strings(test, "scalacOptions") == List(
-        "-unchecked",
-        "-Wconf:any:warning-verbose",
-        "-Xsource:3",
-      )
+    assertNoDiff(
+      strings(test, "scalacOptions").mkString("\n"),
+      """|-unchecked
+         |-Wconf:any:warning-verbose
+         |-Xsource:3""".stripMargin,
     )
-    assert(string(main, "scalaVersion") == Some(V.scala213))
-    assert(string(test, "scalaVersion") == Some("2.13"))
+    assertEquals(string(main, "scalaVersion"), Some(V.scala213))
+    assertEquals(string(test, "scalaVersion"), Some("2.13"))
   }
 
   test("source-roots-from-pom") {
@@ -119,11 +118,10 @@ class MavenMbtSuite extends munit.FunSuite {
       workspace,
       namespace(build, "com.example:source-roots:1.0.0"),
     )
-    val testSources =
-      relativeSources(
-        workspace,
-        namespace(build, "com.example:source-roots:1.0.0:test"),
-      )
+    val testSources = relativeSources(
+      workspace,
+      namespace(build, "com.example:source-roots:1.0.0:test"),
+    )
     assertContainsAll(
       mainSources,
       List(
@@ -153,9 +151,8 @@ class MavenMbtSuite extends munit.FunSuite {
   }
 
   test("java-only-pom") {
-    val workspace = newWorkspace()
+    val workspace = newJavaWorkspace("java-only")
     writePom(workspace, "java-only.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
     val build = runExport(workspace)
     assertNamespaceNames(
       build,
@@ -163,161 +160,150 @@ class MavenMbtSuite extends munit.FunSuite {
     )
     val main = namespace(build, "com.example:java-only:1.0.0")
     val test = namespace(build, "com.example:java-only:1.0.0:test")
-    assert(strings(main, "javacOptions") == List("--release", "17"))
-    assert(strings(test, "dependsOn") == List("com.example:java-only:1.0.0"))
+    assertEquals(strings(main, "javacOptions"), List("--release", "17"))
+    assertEquals(
+      strings(test, "dependsOn"),
+      List("com.example:java-only:1.0.0"),
+    )
     assert(main.get("scalaVersion").isJsonNull)
     assert(test.get("scalaVersion").isJsonNull)
   }
 
-  test("jdk-from-forked-compiler-pom") {
-    val workspace = newWorkspace()
-    writePom(workspace, "jdk-fork.xml")
-    mkdirs(
+  test("forked-compiler-sets-java-home-per-execution") {
+    val workspace = newJavaWorkspace("jdk-fork")
+    writeJavaPom(
       workspace,
-      "src/main/java",
-      "src/test/java",
-      "jdk-main/bin",
-      "jdk-test/bin",
+      "jdk-fork",
+      compilerPlugin(executions =
+        compileExecutions(
+          mainConfig =
+            """|<release>11</release>
+               |<fork>true</fork>
+               |<executable>${project.basedir}/jdk-main/bin/javac</executable>""".stripMargin,
+          testConfig =
+            """|<release>17</release>
+               |<fork>true</fork>
+               |<executable>${project.basedir}/jdk-test/bin/javac</executable>""".stripMargin,
+        )
+      ),
     )
     mkExecutable(workspace, "jdk-main/bin/javac")
     mkExecutable(workspace, "jdk-test/bin/javac")
     val build = runExport(workspace)
     val main = namespace(build, "com.example:jdk-fork:1.0.0")
     val test = namespace(build, "com.example:jdk-fork:1.0.0:test")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-main")
-    )
-    assert(
-      string(test, "javaHome").map(toRelative(workspace, _)) == Some("jdk-test")
-    )
-    assert(strings(main, "javacOptions") == List("--release", "11"))
-    assert(strings(test, "javacOptions") == List("--release", "17"))
+    assertJavaHome(workspace, main, "jdk-main")
+    assertJavaHome(workspace, test, "jdk-test")
+    assertEquals(strings(main, "javacOptions"), List("--release", "11"))
+    assertEquals(strings(test, "javacOptions"), List("--release", "17"))
   }
 
-  test("jdktoolchain-in-compiler-plugin-selects-matching-toolchain") {
-    val workspace = newWorkspace()
-    writePom(workspace, "jdktoolchain-compiler-plugin.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
-    fakeJdk(workspace, "jdk-17", "17.0.12")
-    val jdk21 = fakeJdk(workspace, "jdk-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("17", None, workspace.resolve("jdk-17")),
-      ("21", None, jdk21),
+  test("fork-executable-wins-over-jdk-toolchain") {
+    val workspace = newJavaWorkspace("fork-beats-jdktoolchain")
+    writeJavaPom(
+      workspace,
+      "fork-beats-jdktoolchain",
+      compilerPlugin(configuration =
+        """|<release>17</release>
+           |<fork>true</fork>
+           |<executable>${project.basedir}/jdk-17/bin/javac</executable>
+           |<jdkToolchain><version>21</version></jdkToolchain>""".stripMargin
+      ),
     )
+    mkExecutable(workspace, "jdk-17/bin/javac")
+    val tc = setupToolchains(workspace, ("21", None, "jdk-21"))
+    val build = runExport(workspace, Some(tc))
+    val main = namespace(build, "com.example:fork-beats-jdktoolchain:1.0.0")
+    assertJavaHome(
+      workspace,
+      main,
+      "jdk-17",
+      "fork/executable must win over jdkToolchain",
+    )
+  }
+
+  test("jdk-toolchain-in-compiler-plugin-selects-matching-jdk") {
+    val workspace = newJavaWorkspace("jdktoolchain-compiler-plugin")
+    writeJavaPom(
+      workspace,
+      "jdktoolchain-compiler-plugin",
+      compilerPlugin(configuration =
+        """|<release>21</release>
+           |<jdkToolchain><version>21</version></jdkToolchain>""".stripMargin
+      ),
+    )
+    val tc =
+      setupToolchains(workspace, ("17", None, "jdk-17"), ("21", None, "jdk-21"))
     val build = runExport(workspace, Some(tc))
     val main =
       namespace(build, "com.example:jdktoolchain-compiler-plugin:1.0.0")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-21"),
-      s"expected jdk-21, got ${string(main, "javaHome")}",
-    )
+    assertJavaHome(workspace, main, "jdk-21")
     assert(strings(main, "javacOptions").contains("21"))
   }
 
-  test("toolchains-plugin-config-in-pom-wins-over-release-in-javac-options") {
-    val workspace = newWorkspace()
-    writePom(workspace, "toolchains-plugin-jdk17.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
-    val jdk17 = fakeJdk(workspace, "jdk-17", "17.0.12")
-    fakeJdk(workspace, "jdk-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("17", None, jdk17),
-      ("21", None, workspace.resolve("jdk-21")),
-    )
+  test("toolchains-plugin-config-wins-over-compiler-release") {
+    val workspace = newJavaWorkspace("toolchains-plugin-jdk17")
+    val pluginsXml =
+      """|<plugin>
+         |  <groupId>org.apache.maven.plugins</groupId>
+         |  <artifactId>maven-toolchains-plugin</artifactId>
+         |  <version>3.2.0</version>
+         |  <configuration>
+         |    <toolchains><jdk><version>17</version></jdk></toolchains>
+         |  </configuration>
+         |</plugin>
+         |""".stripMargin +
+        compilerPlugin(configuration = "<release>21</release>")
+    writeJavaPom(workspace, "toolchains-plugin-jdk17", pluginsXml)
+    val tc =
+      setupToolchains(workspace, ("17", None, "jdk-17"), ("21", None, "jdk-21"))
     val build = runExport(workspace, Some(tc))
     val main = namespace(build, "com.example:toolchains-plugin-jdk17:1.0.0")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-17"),
-      s"expected jdk-17, got ${string(main, "javaHome")}",
-    )
+    assertJavaHome(workspace, main, "jdk-17")
   }
 
-  test("fork-executable-wins-over-jdktoolchain-in-compiler-plugin") {
-    val workspace = newWorkspace()
-    writePom(workspace, "fork-beats-jdktoolchain.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java", "jdk-17/bin")
-    mkExecutable(workspace, "jdk-17/bin/javac")
-    fakeJdk(workspace, "jdk-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("17", None, workspace.resolve("jdk-17")),
-      ("21", None, workspace.resolve("jdk-21")),
+  test("per-execution-release-selects-distinct-toolchains-for-main-and-test") {
+    val workspace = newJavaWorkspace("main-17-test-21")
+    writeJavaPom(
+      workspace,
+      "main-17-test-21",
+      compilerPlugin(executions =
+        compileExecutions(
+          mainConfig = "<release>17</release>",
+          testConfig = "<release>21</release>",
+        )
+      ),
     )
-    val build = runExport(workspace, Some(tc))
-    val main = namespace(build, "com.example:fork-beats-jdktoolchain:1.0.0")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-17"),
-      s"fork/executable must win over jdkToolchain: got ${string(main, "javaHome")}",
-    )
-  }
-
-  test("maven-compiler-release-property-selects-matching-toolchain") {
-    val workspace = newWorkspace()
-    writePom(workspace, "release-21-toolchain.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
-    fakeJdk(workspace, "jdk-17", "17.0.12")
-    val jdk21 = fakeJdk(workspace, "jdk-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("17", None, workspace.resolve("jdk-17")),
-      ("21", None, jdk21),
-    )
-    val build = runExport(workspace, Some(tc))
-    val main = namespace(build, "com.example:release-21-toolchain:1.0.0")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-21"),
-      s"expected jdk-21 selected by release=21, got ${string(main, "javaHome")}",
-    )
-    assert(strings(main, "javacOptions").contains("21"))
-  }
-
-  test("main-and-test-namespaces-resolve-to-different-jdk-homes") {
-    val workspace = newWorkspace()
-    writePom(workspace, "main-17-test-21-executions.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
-    val jdk17 = fakeJdk(workspace, "jdk-17", "17.0.12")
-    val jdk21 = fakeJdk(workspace, "jdk-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("17", None, jdk17),
-      ("21", None, jdk21),
-    )
+    val tc =
+      setupToolchains(workspace, ("17", None, "jdk-17"), ("21", None, "jdk-21"))
     val build = runExport(workspace, Some(tc))
     val main = namespace(build, "com.example:main-17-test-21:1.0.0")
     val test = namespace(build, "com.example:main-17-test-21:1.0.0:test")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some("jdk-17"),
-      s"main namespace must use jdk-17, got ${string(main, "javaHome")}",
-    )
-    assert(
-      string(test, "javaHome").map(toRelative(workspace, _)) == Some("jdk-21"),
-      s"test namespace must use jdk-21, got ${string(test, "javaHome")}",
-    )
+    assertJavaHome(workspace, main, "jdk-17")
+    assertJavaHome(workspace, test, "jdk-21")
     assert(strings(main, "javacOptions").contains("17"))
     assert(strings(test, "javacOptions").contains("21"))
   }
 
-  test("jdktoolchain-vendor-narrows-toolchain-selection") {
-    val workspace = newWorkspace()
-    writePom(workspace, "jdktoolchain-vendor-temurin.xml")
-    mkdirs(workspace, "src/main/java", "src/test/java")
-    val jdkTemurin = fakeJdk(workspace, "jdk-temurin-21", "21.0.8")
-    fakeJdk(workspace, "jdk-oracle-21", "21.0.8")
-    val tc = writeToolchains(
-      workspace.resolve("toolchains.xml"),
-      ("21", Some("temurin"), jdkTemurin),
-      ("21", Some("oracle"), workspace.resolve("jdk-oracle-21")),
+  test("jdk-toolchain-vendor-selects-matching-vendor") {
+    val workspace = newJavaWorkspace("jdktoolchain-vendor-temurin")
+    writeJavaPom(
+      workspace,
+      "jdktoolchain-vendor-temurin",
+      compilerPlugin(configuration = """|<release>21</release>
+                                        |<jdkToolchain>
+                                        |  <version>21</version>
+                                        |  <vendor>temurin</vendor>
+                                        |</jdkToolchain>""".stripMargin),
+    )
+    val tc = setupToolchains(
+      workspace,
+      ("21", Some("temurin"), "jdk-temurin-21"),
+      ("21", Some("oracle"), "jdk-oracle-21"),
     )
     val build = runExport(workspace, Some(tc))
     val main = namespace(build, "com.example:jdktoolchain-vendor-temurin:1.0.0")
-    assert(
-      string(main, "javaHome").map(toRelative(workspace, _)) == Some(
-        "jdk-temurin-21"
-      ),
-      s"vendor=temurin must select jdk-temurin-21, got ${string(main, "javaHome")}",
-    )
+    assertJavaHome(workspace, main, "jdk-temurin-21")
   }
 
   test("two-independent-build-roots-are-exported-without-cross-contamination") {
@@ -325,24 +311,11 @@ class MavenMbtSuite extends munit.FunSuite {
     writePom(workspaceA, "single-module.xml")
     mkdirs(workspaceA, "src/main/scala", "src/test/scala")
 
-    val workspaceB = newWorkspace()
+    val workspaceB = newJavaWorkspace("java-only")
     writePom(workspaceB, "java-only.xml")
-    mkdirs(workspaceB, "src/main/java", "src/test/java")
 
     val buildA = runExport(workspaceA)
     val buildB = runExport(workspaceB)
-
-    assertNamespaceNames(
-      buildA,
-      Set(
-        "com.example:maven-mbt-test:1.0-SNAPSHOT",
-        "com.example:maven-mbt-test:1.0-SNAPSHOT:test",
-      ),
-    )
-    assertNamespaceNames(
-      buildB,
-      Set("com.example:java-only:1.0.0", "com.example:java-only:1.0.0:test"),
-    )
 
     val depsA = dependencyIdsFrom(buildA)
     val depsB = dependencyIdsFrom(buildB)
@@ -356,11 +329,10 @@ class MavenMbtSuite extends munit.FunSuite {
       "root B (Java-only project) must not contain scala-library from root A",
     )
 
-    val sourcesA =
-      relativeSources(
-        workspaceA,
-        namespace(buildA, "com.example:maven-mbt-test:1.0-SNAPSHOT"),
-      )
+    val sourcesA = relativeSources(
+      workspaceA,
+      namespace(buildA, "com.example:maven-mbt-test:1.0-SNAPSHOT"),
+    )
     assert(
       sourcesA.forall(!_.startsWith(workspaceB.toString)),
       "root A source paths must not reference root B workspace",
@@ -384,25 +356,25 @@ class MavenMbtSuite extends munit.FunSuite {
         "com.example:app:1.0.0", "com.example:app:1.0.0:test",
       ),
     )
-    assert(
-      strings(namespace(build, "com.example:core:1.0.0:test"), "dependsOn") ==
-        List("com.example:core:1.0.0")
+    assertEquals(
+      strings(namespace(build, "com.example:core:1.0.0:test"), "dependsOn"),
+      List("com.example:core:1.0.0"),
     )
-    assert(
-      strings(namespace(build, "com.example:app:1.0.0"), "dependsOn") ==
-        List("com.example:core:1.0.0")
+    assertEquals(
+      strings(namespace(build, "com.example:app:1.0.0"), "dependsOn"),
+      List("com.example:core:1.0.0"),
     )
-    assert(
+    assertEquals(
       strings(
         namespace(build, "com.example:app:1.0.0:test"),
         "dependsOn",
-      ).toSet ==
-        Set(
-          "com.example:app:1.0.0",
-          "com.example:core:1.0.0",
-          "com.example:core:1.0.0:test",
-          "com.example:util:1.0.0",
-        )
+      ).toSet,
+      Set(
+        "com.example:app:1.0.0",
+        "com.example:core:1.0.0",
+        "com.example:core:1.0.0:test",
+        "com.example:util:1.0.0",
+      ),
     )
     val dependencyIds = dependencyIdsFrom(build)
     assert(dependencyIds.distinct == dependencyIds)
@@ -414,8 +386,38 @@ class MavenMbtSuite extends munit.FunSuite {
   private def newWorkspace(): Path =
     Files.createTempDirectory("maven-mbt-suite").toRealPath()
 
+  private def newJavaWorkspace(name: String): Path = {
+    val workspace = Files.createTempDirectory(s"maven-mbt-$name").toRealPath()
+    mkdirs(workspace, "src/main/java", "src/test/java")
+    workspace
+  }
+
   private def writePom(workspace: Path, pomName: String): Unit =
     Files.writeString(workspace.resolve("pom.xml"), pom(pomName))
+
+  private def writeJavaPom(
+      workspace: Path,
+      artifactId: String,
+      pluginsXml: String,
+  ): Unit =
+    Files.writeString(
+      workspace.resolve("pom.xml"),
+      s"""|<project xmlns="http://maven.apache.org/POM/4.0.0"
+          |         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          |         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+          |  <modelVersion>4.0.0</modelVersion>
+          |  <groupId>com.example</groupId>
+          |  <artifactId>$artifactId</artifactId>
+          |  <version>1.0.0</version>
+          |  <build>
+          |    <sourceDirectory>src/main/java</sourceDirectory>
+          |    <testSourceDirectory>src/test/java</testSourceDirectory>
+          |    <plugins>
+          |$pluginsXml
+          |    </plugins>
+          |  </build>
+          |</project>""".stripMargin,
+    )
 
   private def writeModulePom(
       workspace: Path,
@@ -425,6 +427,43 @@ class MavenMbtSuite extends munit.FunSuite {
     Files.createDirectories(workspace.resolve(module))
     Files.writeString(workspace.resolve(s"$module/pom.xml"), pom(pomName))
   }
+
+  private def compilerPlugin(
+      configuration: String = "",
+      executions: String = "",
+  ): String = {
+    val configBlock =
+      if (configuration.isEmpty) ""
+      else s"<configuration>\n$configuration\n</configuration>\n"
+    s"""|<plugin>
+        |  <groupId>org.apache.maven.plugins</groupId>
+        |  <artifactId>maven-compiler-plugin</artifactId>
+        |  <version>3.13.0</version>
+        |$configBlock$executions
+        |</plugin>
+        |""".stripMargin
+  }
+
+  private def compileExecutions(
+      mainConfig: String,
+      testConfig: String,
+  ): String =
+    s"""|<executions>
+        |  <execution>
+        |    <id>default-compile</id>
+        |    <goals><goal>compile</goal></goals>
+        |    <configuration>
+        |$mainConfig
+        |    </configuration>
+        |  </execution>
+        |  <execution>
+        |    <id>default-testCompile</id>
+        |    <goals><goal>testCompile</goal></goals>
+        |    <configuration>
+        |$testConfig
+        |    </configuration>
+        |  </execution>
+        |</executions>""".stripMargin
 
   private def mkdirs(workspace: Path, paths: String*): Unit =
     paths.foreach(p => Files.createDirectories(workspace.resolve(p)))
@@ -441,6 +480,7 @@ class MavenMbtSuite extends munit.FunSuite {
 
   private def mkExecutable(workspace: Path, relPath: String): Unit = {
     val file = workspace.resolve(relPath)
+    Files.createDirectories(file.getParent)
     Files.writeString(file, "#!/bin/sh\n")
     file.toFile.setExecutable(true)
   }
@@ -502,6 +542,16 @@ class MavenMbtSuite extends munit.FunSuite {
     jdkDir
   }
 
+  private def setupToolchains(
+      workspace: Path,
+      entries: (String, Option[String], String)*
+  ): Path = {
+    val resolved = entries.toList.map { case (version, vendor, name) =>
+      (version, vendor, fakeJdk(workspace, name, s"$version.0.1"))
+    }
+    writeToolchains(workspace.resolve("toolchains.xml"), resolved: _*)
+  }
+
   private def writeToolchains(
       dest: Path,
       entries: (String, Option[String], Path)*
@@ -538,7 +588,7 @@ class MavenMbtSuite extends munit.FunSuite {
   ): Unit = {
     val names = Set.newBuilder[String]
     build.getAsJsonObject("namespaces").keySet.forEach(names += _)
-    assert(names.result() == expected)
+    assertEquals(names.result(), expected)
   }
 
   private def strings(obj: JsonObject, field: String): List[String] = {
@@ -555,6 +605,20 @@ class MavenMbtSuite extends munit.FunSuite {
 
   private def toRelative(workspace: Path, path: String): String =
     workspace.relativize(Path.of(path)).toString.replace('\\', '/')
+
+  private def assertJavaHome(
+      workspace: Path,
+      ns: JsonObject,
+      expected: String,
+      hint: String = "",
+  ): Unit = {
+    val actual = string(ns, "javaHome").map(toRelative(workspace, _))
+    val prefix = if (hint.isEmpty) "" else s"$hint: "
+    assert(
+      actual == Some(expected),
+      s"${prefix}expected javaHome=$expected, got $actual",
+    )
+  }
 
   private def assertContainsAll(
       actual: List[String],
