@@ -549,7 +549,9 @@ class MbtReferenceProvider(
           )
           .documents
         result.foreach { doc =>
-          cache.put(doc.uri.toAbsolutePath, doc)
+          doc.uri.toAbsolutePathSafe.foreach { path =>
+            cache.put(path, doc)
+          }
         }
         docs ++= result
         s.TextDocuments(documents = docs.toSeq)
