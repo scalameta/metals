@@ -217,11 +217,7 @@ final class FileDecoderProvider(
 
   private val metalsDecodeExtensions = Set(
     "javap", "javap-verbose", "tasty-decoded", "cfr", "semanticdb-compact",
-    "semanticdb-detailed", "semanticdb-proto", "explain",
-  ) ++ semanticdbExtensions
-
-  val supportedExtensions: Set[String] = Set(
-    "javap", "javap-verbose", "tasty-decoded", "cfr", "class",
+    "semanticdb-detailed", "semanticdb-proto", "explain", "class",
   ) ++ semanticdbExtensions
 
   private def decodeMetalsFile(
@@ -292,6 +288,8 @@ final class FileDecoderProvider(
     val strippedURI = suffixToRemove match {
       case ".explain" =>
         ExplainPosition.toPath(uri.toString)
+      case ".class" =>
+        uri.toString
       case _ =>
         uri.toString.stripSuffix(suffixToRemove)
     }
