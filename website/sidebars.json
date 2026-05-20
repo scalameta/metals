@@ -12,6 +12,7 @@
     ],
     "Features": [
       "features/codeactions",
+      "features/mcp",
       "features/scripts"
     ],
     "Build Tools": [

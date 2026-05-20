@@ -38,11 +38,6 @@ class McpTestRunner(
       case None =>
         new b.ScalaTestSuiteSelection(testClass, Nil.asJava)
     }
-    val testSuites = new b.ScalaTestSuites(
-      List(testSelection).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
     val cancelPromise = Promise[Unit]()
     for {
       path <- optPath
@@ -51,15 +46,24 @@ class McpTestRunner(
       id <- buildTargets
         .inverseSources(path)
         .toRight(s"Could not find build target for $path")
-      projectInfo <- debugProvider.debugConfigCreator.create(
+      jvmTestEnv = debugProvider.jvmTestEnvironment(id)
+      projectFut <- debugProvider.createDebugeeProjectForTests(
         id,
         cancelPromise,
-        isTests = true,
+        jvmTestEnv,
       )
     } yield {
       for {
+        env <- jvmTestEnv
+        settings = DebugProvider.scalaTestLocalRunSettings(workspace, env)
+        testSuites = new b.ScalaTestSuites(
+          List(testSelection).asJava,
+          settings.jvmOptions.asJava,
+          settings.environmentVariablesAsStrings.asJava,
+        )
         discovered <- debugProvider.discoverTests(id, testSuites)
-        project <- projectInfo
+        project <- projectFut
+        listener = new McpDebuggeeListener(verbose)
         adapter = new TestSuiteDebugAdapter(
           workspace,
           testSuites,
@@ -68,7 +72,6 @@ class McpTestRunner(
           discovered,
           isDebug = false,
         )
-        listener = new McpDebuggeeListener(verbose)
         _ <- adapter.run(listener).future
       } yield listener.result
     }

@@ -285,7 +285,7 @@ class McpConfigSuite extends BaseSuite {
       activeClientExtensionIds = activeClientExtensionIds,
     )
     val vscodeConfigFile = projectPath.resolve(".vscode/mcp.json")
-    val kiloConfigFile = projectPath.resolve(".kilocode/mcp.json")
+    val kiloConfigFile = projectPath.resolve(".kilo/kilo.json")
     assert(vscodeConfigFile.exists, "VSCode config file should exist")
     assert(kiloConfigFile.exists, "KiloCode extension config file should exist")
     val vscodeFirstContent = vscodeConfigFile.readText
@@ -304,10 +304,11 @@ class McpConfigSuite extends BaseSuite {
     assertNoDiff(
       kiloContent,
       """{
-        |  "mcpServers": {
+        |  "$schema": "https://app.kilo.ai/config.json",
+        |  "mcp": {
         |    "test-project-metals": {
         |      "url": "http://localhost:1234/mcp",
-        |      "type": "streamable-http"
+        |      "type": "remote"
         |    }
         |  }
         |}""".stripMargin,
@@ -337,10 +338,11 @@ class McpConfigSuite extends BaseSuite {
     assertNoDiff(
       kiloSecondContent,
       """{
-        |  "mcpServers": {
+        |  "$schema": "https://app.kilo.ai/config.json",
+        |  "mcp": {
         |    "test-project-metals": {
         |      "url": "http://localhost:5678/mcp",
-        |      "type": "streamable-http"
+        |      "type": "remote"
         |    }
         |  }
         |}""".stripMargin,

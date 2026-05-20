@@ -50,6 +50,7 @@ import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.server.AttachRemoteDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
+import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.Discovered
 import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
@@ -409,6 +410,23 @@ class DebugProvider(
         handler.uri
       }
     }
+
+  def jvmTestEnvironment(
+      buildTargetId: BuildTargetIdentifier
+  ): Future[Option[b.JvmEnvironmentItem]] =
+    buildTargetClasses.jvmRunEnvironment(buildTargetId, isTests = true)
+
+  def createDebugeeProjectForTests(
+      id: BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
+      jvmTestEnvironment: Future[Option[b.JvmEnvironmentItem]],
+  ): Either[String, Future[DebugeeProject]] =
+    debugConfigCreator.create(
+      id,
+      cancelPromise,
+      isTests = true,
+      Some(jvmTestEnvironment),
+    )
 
   def discoverTests(
       id: BuildTargetIdentifier,
@@ -799,6 +817,38 @@ class DebugProvider(
 }
 
 object DebugProvider {
+
+  /**
+   * JVM options and environment variables for in-Metals ScalaTest runs, merged from workspace
+   * discovery ([[JvmOpts.fromWorkspaceOrEnvForTest]]) and BSP `buildTarget/jvmTestEnvironment`.
+   */
+  final case class ScalaTestLocalRunSettings(
+      jvmOptions: List[String],
+      environmentVariables: Map[String, String],
+  ) {
+    def environmentVariablesAsStrings: List[String] =
+      environmentVariables.map { case (k, v) => s"$k=$v" }.toList
+  }
+
+  def scalaTestLocalRunSettings(
+      workspace: AbsolutePath,
+      envItem: Option[b.JvmEnvironmentItem],
+  ): ScalaTestLocalRunSettings = {
+    val workspaceOpts =
+      JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+    val bspJvmOpts = envItem
+      .flatMap(env => Option(env.getJvmOptions()))
+      .map(_.asScala.toList)
+      .getOrElse(Nil)
+    val envVars = envItem
+      .flatMap(env => Option(env.getEnvironmentVariables()))
+      .map(_.asScala.toMap)
+      .getOrElse(Map.empty)
+    ScalaTestLocalRunSettings(
+      (workspaceOpts ++ bspJvmOpts).distinct,
+      envVars,
+    )
+  }
 
   def createEnvList(env: ju.Map[String, String]): List[String] = {
     env.asScala.map { case (key, value) =>

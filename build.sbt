@@ -20,7 +20,7 @@ def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
   s"$currentVersion-${sys.env.getOrElse("METALS_VERSION_SUFFIX", "SNAPSHOT")}",
 )
-def latestReleaseVersion = "1.6.4"
+def latestReleaseVersion = forkBaseVersion
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 

@@ -477,6 +477,7 @@ class UserConfigurationSuite extends BaseSuite {
     "rule1",
     "rule2"
   ],
+  "scalafixLintEnabled": false,
   "customProjectRoot": "customs",
   "verboseCompilation": true,
   "autoImportBuilds": "all",
@@ -561,6 +562,7 @@ class UserConfigurationSuite extends BaseSuite {
           |scalafix-config-path                         string                         ""              Scalafix config path
           |shim-globs                                   string                         `{}`.           Shim file globs
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
+          |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
           |excluded-packages                            array                          []              Excluded Packages
           |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
@@ -680,7 +682,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "target-build-tool": "invalid-tool"
       |}
     """.stripMargin,
-    "Invalid target-build-tool 'invalid-tool'. Valid values are: bazel, gradle, mill, mvn, sbt, scala-cli",
+    "Invalid target-build-tool 'invalid-tool'. Valid values are: bazel, deder, gradle, mill, mvn, sbt, scala-cli",
   )
 
   checkOK(

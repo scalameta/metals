@@ -331,19 +331,22 @@ final class FileDecoderProvider(
   }
 
   private def decodeBuildTarget(uri: URI): DecoderResponse = {
-    val text = uri
-      .toString()
-      .toAbsolutePathSafe
-      .map { path =>
-        val targetName = path.filename.stripSuffix(".metals-buildtarget")
-        // display name for mill-build is `mill-build/` and `mill-build/mill-build/` for meta builds
-        val withoutSuffix = uri.toString().stripSuffix("/.metals-buildtarget")
+    val uriStr = uri.toString()
+    val text = {
+      val lastSlash = uriStr.lastIndexOf('/')
+      if (lastSlash >= 0) {
+        val encoded = uriStr.substring(lastSlash + 1)
+        val decoded = URIEncoderDecoder.decode(encoded)
+        val targetName = decoded.stripSuffix(".metals-buildtarget")
+        val withoutSuffix = uriStr.stripSuffix(s"/$encoded")
         new BuildTargetInfo(buildTargets).buildTargetDetails(
           targetName,
           withoutSuffix,
         )
+      } else {
+        s"Error transforming $uri: invalid URI format"
       }
-      .getOrElse(s"Error transforming $uri to path")
+    }
     DecoderResponse.success(uri, text)
   }
 
@@ -904,10 +907,12 @@ object FileDecoderProvider {
   def createBuildTargetURI(
       workspaceFolder: AbsolutePath,
       buildTargetName: String,
-  ): URI =
-    URI.create(
-      s"metalsDecode:${workspaceFolder.resolve(s"${buildTargetName}.metals-buildtarget").toURI}"
-    )
+  ): URI = {
+    val workspaceUri = workspaceFolder.toURI.toString.stripSuffix("/")
+    val encodedName =
+      URIEncoderDecoder.encode(s"$buildTargetName.metals-buildtarget")
+    URI.create(s"metalsDecode:$workspaceUri/$encodedName")
+  }
 
   /**
    * Creates a URI for viewing explained diagnostics as a virtual document.
