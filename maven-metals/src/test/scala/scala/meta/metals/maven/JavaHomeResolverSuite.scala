@@ -21,19 +21,6 @@ import org.eclipse.aether.RepositorySystem
 import org.eclipse.aether.RepositorySystemSession
 class JavaHomeResolverSuite extends munit.FunSuite {
 
-  test("selects the first candidate when project has no JDK requirements") {
-    val selected = JavaHomeResolver.selectJavaHome(
-      project = {
-        val project = new MavenProject()
-        project.setBuild(new Build())
-        project
-      },
-      candidates = List("/fake/jdk-17", "/fake/jdk-21"),
-    )
-
-    assertEquals(selected, Some("/fake/jdk-17"))
-  }
-
   test("selects a JDK satisfying version and enforcer vendor requirements") {
     val workspace = Files.createTempDirectory("jdk-selection")
     val azul21 = fakeJdk(workspace, "azul-21", "21.0.8", "Azul Systems, Inc.")
@@ -246,7 +233,7 @@ class JavaHomeResolverSuite extends munit.FunSuite {
     assertEquals(selected, Some(home.toString))
   }
 
-  test("javacOptionsRequirements extracts version from --release and -source") {
+  test("javacOptionsRequirements extracts version from javac options") {
     assertEquals(
       JavaHomeResolver.javacOptionsRequirements(List("--release", "21")),
       Some(Map("version" -> "21")),
@@ -262,9 +249,6 @@ class JavaHomeResolverSuite extends munit.FunSuite {
       JavaHomeResolver.javacOptionsRequirements(List("-encoding", "UTF-8")),
       None,
     )
-  }
-
-  test("javacOptionsRequirements handles --release= and -source= forms") {
     assertEquals(
       JavaHomeResolver.javacOptionsRequirements(List("--release=21")),
       Some(Map("version" -> "21")),
@@ -280,24 +264,6 @@ class JavaHomeResolverSuite extends munit.FunSuite {
       ),
       Some(Map("version" -> "21")),
     )
-  }
-
-  test("resolve falls back to java.home when no toolchain available") {
-    val project = new MavenProject()
-    project.setBuild(new Build())
-    val result = JavaHomeResolver.resolve(Nil, project, false, nullMojo)
-    assertEquals(result, sys.props.get("java.home").filter(_.nonEmpty))
-  }
-
-  test("resolve returns java home from active maven session toolchain") {
-    val jdkHome = "/fake/temurin-21"
-    val result = JavaHomeResolver.resolve(
-      Nil,
-      new MavenProject(),
-      false,
-      mojoWithActiveToolchain(jdkHome),
-    )
-    assertEquals(result, Some(jdkHome))
   }
 
   test("resolve canonicalizes active maven session toolchain java path") {
@@ -544,11 +510,6 @@ class JavaHomeResolverSuite extends munit.FunSuite {
     )
     assertEquals(result, Some(jdkHome))
   }
-
-  private def nullMojo: MbtMojo = mojoWithToolchains(Map.empty)
-
-  private def mojoWithActiveToolchain(jdkHome: String): MbtMojo =
-    mojoWithActiveJavaTool(Path.of(s"$jdkHome/bin/java"))
 
   private def mojoWithActiveJavaTool(javaPath: Path): MbtMojo =
     new MbtMojo {

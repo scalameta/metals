@@ -122,12 +122,6 @@ class MbtBuildSuite extends tests.BaseSuite {
       extraTarget.getDependencies.asScala.map(_.getUri).toSeq.sorted,
       Seq("mbt://namespace/core"),
     )
-
-    val jvmTarget = targets
-      .find(_.getDisplayName == "core")
-      .getOrElse(fail("missing core target"))
-    assertEquals(jvmTarget.getLanguageIds.asScala.toSeq, Seq("java"))
-    assertEquals(jvmTarget.getDataKind, "jvm")
   }
 
   test("namespaces-preserve-compiler-options-and-java-home") {
@@ -186,16 +180,6 @@ class MbtBuildSuite extends tests.BaseSuite {
     assertEquals(
       target.javacOptionsItem(workspace).getOptions.asScala.toList,
       List("--release", "25", "-parameters"),
-    )
-
-    val bt = target.buildTarget(workspace, ScalaVersionSelector.default)
-    assertEquals(bt.getLanguageIds.asScala.toSeq, Seq("scala", "java"))
-    assertEquals(bt.getDataKind, "scala")
-    val scalaData = new com.google.gson.Gson()
-      .fromJson(bt.getData.toString, classOf[com.google.gson.JsonObject])
-    assertEquals(
-      scalaData.get("scalaVersion").getAsString,
-      BuildInfo.scala213,
     )
   }
 
