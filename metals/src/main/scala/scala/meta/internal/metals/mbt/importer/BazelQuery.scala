@@ -93,9 +93,10 @@ case class BazelQuery(
             )
           )
         case code =>
-          Future.failed(
-            new Exception(s"bazel-mbt: bazel query failed with exit code $code")
+          scribe.warn(
+            s"bazel-mbt: bazel query failed with exit code $code, but might be unreleated."
           )
+          Future.successful(buf.toString)
       }
   }
 

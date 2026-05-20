@@ -2,6 +2,7 @@ package scala.meta.internal.mtags
 
 import scala.meta.internal.semanticdb.Range
 import scala.meta.internal.semanticdb.SymbolInformation
+import scala.meta.pc.MemberKind
 
 /**
  * Represents a toplevel member in a source file such as `type A = String` in a package or package object.
@@ -14,5 +15,55 @@ import scala.meta.internal.semanticdb.SymbolInformation
 case class ToplevelMember(
     symbol: String,
     range: Range,
-    kind: SymbolInformation.Kind
+    kind: ToplevelMember.Kind
 )
+
+object ToplevelMember {
+
+  sealed trait Kind
+
+  object Kind {
+    case object Type extends Kind
+    case object ImplicitClass extends Kind
+
+    private final val ImplicitClassId =
+      100 // Custom value, higher than any SymbolInformation.Kind
+
+    def fromId(id: Int): Kind = id match {
+      case SymbolInformation.Kind.TYPE.value =>
+        Type // Trying to keep compatibility with old ids
+      case ImplicitClassId => ImplicitClass
+      case _ =>
+        throw new IllegalArgumentException(
+          s"Unsupported id for ToplevelMember.Kind: $id"
+        )
+    }
+
+    def fromJava(javaKind: MemberKind): Kind = javaKind match {
+      case MemberKind.TOPLEVEL_TYPE => Type
+      case MemberKind.TOPLEVEL_IMPLICIT_CLASS => ImplicitClass
+      case _ =>
+        throw new IllegalArgumentException(
+          s"Unsupported MemberKind: $javaKind"
+        )
+    }
+
+    implicit class KindOps(val kind: Kind) {
+      def toId: Int = kind match {
+        case Type =>
+          SymbolInformation.Kind.TYPE.value // Trying to keep compatibility with old ids
+        case ImplicitClass => ImplicitClassId
+      }
+
+      def toLsp: org.eclipse.lsp4j.SymbolKind = kind match {
+        case Type => org.eclipse.lsp4j.SymbolKind.Class
+        case ImplicitClass => org.eclipse.lsp4j.SymbolKind.Class
+      }
+
+      def toJava: MemberKind = kind match {
+        case Type => MemberKind.TOPLEVEL_TYPE
+        case ImplicitClass => MemberKind.TOPLEVEL_IMPLICIT_CLASS
+      }
+    }
+  }
+}

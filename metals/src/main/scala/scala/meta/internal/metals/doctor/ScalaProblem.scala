@@ -54,32 +54,6 @@ case class FutureScalaVersion(version: String) extends ScalaProblem {
   override def message: String = s"Scala $version is not yet supported, " +
     s"please downgrade to Scala ${ScalaVersions.recommendedVersion(version)}."
 }
-
-case class SemanticDBDisabled(
-    scalaVersion: String,
-    bloopVersion: String,
-    unsupportedBloopVersion: Boolean,
-) extends ScalaProblem {
-  override def message: String = {
-    if (unsupportedBloopVersion) {
-      s"""|The installed Bloop server version is $bloopVersion while Metals requires at least Bloop version ${BuildInfo.bloopVersion},
-          |To fix this problem please update your Bloop server.""".stripMargin
-    } else if (
-      ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion)
-    ) {
-      hint.capitalize
-    } else {
-      "Semanticdb is required for code navigation to work correctly in your project," +
-        " however the semanticdb plugin doesn't seem to be enabled. " +
-        "Please enable the semanticdb plugin for this project in order for code navigation to work correctly"
-    }
-  }
-}
-case class MissingSourceRoot(sourcerootOption: String) extends ScalaProblem {
-  override def message: String =
-    s"Add the compiler option $sourcerootOption to ensure code navigation works."
-}
-
 case object UnsupportedSbtVersion extends ScalaProblem {
   override def message: String =
     "Code navigation is not supported for this sbt version, please " +
@@ -117,4 +91,11 @@ case class MissingJdkSources(candidates: List[AbsolutePath])
   private val candidateString = candidates.mkString(", ")
   override def message: String =
     s"Goto definition for Java classes will not work, please install jdk sources in java home. Searched: $candidateString"
+}
+
+case class WrongScalaReleaseVersion(current: String, needed: String)
+    extends ScalaProblem {
+  override def message: String =
+    s"Metals is currently running on Java $current, but the build definition requires Java $needed due to the `-release` flag. " +
+      s"Please change the Java version used by Metals to at least $needed."
 }

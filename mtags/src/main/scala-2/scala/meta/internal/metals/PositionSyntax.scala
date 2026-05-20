@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.inputs.XtensionInput
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 
 import org.eclipse.{lsp4j => l}
 import org.slf4j.Logger
@@ -178,7 +179,7 @@ object PositionSyntax {
     def formatMessage(input: Input): String = {
       d.getRange.formatMessage(
         d.getSeverity.toString.toLowerCase(),
-        d.getMessage,
+        d.getMessageAsString,
         input
       )
     }

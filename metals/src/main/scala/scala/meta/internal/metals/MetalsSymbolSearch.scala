@@ -11,11 +11,7 @@ import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.ContentType
-import scala.meta.pc.ParentSymbols
-import scala.meta.pc.SymbolDocumentation
-import scala.meta.pc.SymbolSearch
-import scala.meta.pc.SymbolSearchVisitor
+import scala.meta.pc._
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location
@@ -138,12 +134,22 @@ class MetalsSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    def search(query: WorkspaceSymbolQuery): (SymbolSearch.Result, Int) =
+    search(query, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[MemberKind],
+      visitor: SymbolSearchVisitor,
+  ): SymbolSearch.Result = {
+    def search(query: WorkspaceSymbolQuery) =
       wsp.search(
         query,
         visitor,
         if (buildTargetIdentifier.isEmpty()) None
         else Some(new BuildTargetIdentifier(buildTargetIdentifier)),
+        kind,
       )
 
     val wQuery = WorkspaceSymbolQuery.exact(query)

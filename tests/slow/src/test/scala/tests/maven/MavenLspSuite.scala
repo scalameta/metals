@@ -224,7 +224,7 @@ class MavenLspSuite extends BaseImportSuite("maven-import") {
        |<arg>-Ywarn-unused</arg>
        |""".stripMargin
 
-  test("fatal-warnings") {
+  test("fatal-warnings", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(

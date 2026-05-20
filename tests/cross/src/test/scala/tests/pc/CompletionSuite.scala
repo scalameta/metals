@@ -1932,7 +1932,7 @@ class CompletionSuite extends BaseCompletionSuite {
        |  val f = 1.foofoo@@
        |}
        |""".stripMargin,
-    ""
+    "foofoo(): Nothing (implicit)"
   )
 
   check(

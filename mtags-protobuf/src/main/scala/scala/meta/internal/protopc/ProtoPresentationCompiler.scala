@@ -69,7 +69,7 @@ case class ProtoPresentationCompiler(
 
   private def protoConfig: ProtobufLspConfig = config.protobufLspConfig()
 
-  private def request[T](params: VirtualFileParams, default: T)(
+  private def request[T](default: T)(
       f: ProtoMetalsCompiler => T
   ): CompletableFuture[T] = {
     CompletableFuture.supplyAsync(
@@ -93,8 +93,8 @@ case class ProtoPresentationCompiler(
     if (!protoConfig.completions()) {
       CompletableFuture.completedFuture(new CompletionList())
     } else {
-      request(params, new CompletionList()) { pc =>
-        new ProtoCompletionProvider(pc, params, config).completions()
+      request(new CompletionList()) { pc =>
+        new ProtoCompletionProvider(pc, params).completions()
       }
     }
 
@@ -115,7 +115,7 @@ case class ProtoPresentationCompiler(
     if (!protoConfig.semanticTokens()) {
       CompletableFuture.completedFuture(util.Collections.emptyList[Node]())
     } else {
-      request(params, util.Collections.emptyList[Node]()) { pc =>
+      request(util.Collections.emptyList[Node]()) { pc =>
         new ProtoSemanticTokensProvider(pc, params).semanticTokens()
       }
     }
@@ -126,7 +126,7 @@ case class ProtoPresentationCompiler(
     if (!protoConfig.hover()) {
       CompletableFuture.completedFuture(Optional.empty[HoverSignature]())
     } else {
-      request(params, Optional.empty[HoverSignature]()) { pc =>
+      request(Optional.empty[HoverSignature]()) { pc =>
         Optional.ofNullable(
           new ProtoHoverProvider(pc, params, config.hoverContentType())
             .hover()
@@ -147,7 +147,7 @@ case class ProtoPresentationCompiler(
     if (!protoConfig.definition()) {
       CompletableFuture.completedFuture(DefinitionResultImpl.empty)
     } else {
-      request(params, DefinitionResultImpl.empty) { pc =>
+      request(DefinitionResultImpl.empty) { pc =>
         new ProtoDefinitionProvider(pc, params).definition()
       }
     }
@@ -215,7 +215,7 @@ case class ProtoPresentationCompiler(
     if (!config.emitDiagnostics() || !protoConfig.diagnostics()) {
       CompletableFuture.completedFuture(Nil.asJava)
     } else {
-      request(params, util.Collections.emptyList[Diagnostic]()) { pc =>
+      request(util.Collections.emptyList[Diagnostic]()) { pc =>
         new ProtoDiagnosticProvider(pc, params).diagnostics().asJava
       }
     }

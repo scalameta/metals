@@ -454,7 +454,7 @@ object ScalacpCopyPaste {
     private def sig(linkMode: LinkMode): s.Signature =
       s.NoSignature // scalacp deviation
 
-    private def annotations: List[s.Annotation] = {
+    private def annotations: List[s.AnnotationTree] = {
       Nil // scalacp deviation
     }
 

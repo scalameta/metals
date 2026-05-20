@@ -204,6 +204,21 @@ class InlineValueSuite extends BaseCodeActionSuite with CommonMtagsEnrichments {
        |}""".stripMargin
   )
 
+  checkEdit(
+    "lambda-param-no-shadow",
+    """|object Main {
+       |  def test(x: Int) = {
+       |    val pq = List(1, 2, 3).map(x => x + 1)
+       |    <<pq>>.sum
+       |  }
+       |}""".stripMargin,
+    """|object Main {
+       |  def test(x: Int) = {
+       |    List(1, 2, 3).map(x => x + 1).sum
+       |  }
+       |}""".stripMargin
+  )
+
   checkError(
     "inline-all-not-local",
     """|object Main {

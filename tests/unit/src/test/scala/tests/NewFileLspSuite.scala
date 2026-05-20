@@ -13,6 +13,7 @@ import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
+import scala.meta.internal.metals.clients.language.RawMetalsReadClipboardResult
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
 import scala.meta.internal.metals.{BuildInfo => V}
 
@@ -23,7 +24,12 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
 class NewFileLspSuite extends BaseLspSuite("new-file") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
-    Some(InitializationOptions.Default.copy(inputBoxProvider = Some(true)))
+    Some(
+      InitializationOptions.Default.copy(
+        inputBoxProvider = Some(true),
+        readClipboardProvider = Some(true),
+      )
+    )
 
   checkScala("new-worksheet-picked")(
     directory = Some("a/src/main/scala/"),
@@ -356,6 +362,54 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |""".stripMargin,
   )
 
+  checkScala("empty-file-name-with-extension")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(ScalaFile),
+    fileName = Right("Foo.scala"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |
+                          |""".stripMargin,
+  )
+
+  checkScala("new-class-name-with-extension")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Bar.scala"),
+    expectedFilePath = "a/src/main/scala/foo/Bar.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Bar {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+  )
+
+  checkScala("new-file-from-clipboard")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(FromClipboard),
+    fileName = Right("Demo"),
+    expectedFilePath = "a/src/main/scala/foo/Demo.scala",
+    expectedContent = """|package foo
+                         |
+                         |object Demo { def x = 1 }
+                         |""".stripMargin,
+    expectedSnippet = Some("object Demo { def x = 1 }"),
+  )
+
+  checkScala("new-file-from-clipboard2")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(FromClipboard),
+    fileName = Right("Demo2"),
+    expectedFilePath = "a/src/main/scala/foo/Demo2.scala",
+    expectedContent = """|package foo
+                         |
+                         |sealed trait Demo2 { def x = 1 }
+                         |""".stripMargin,
+    expectedSnippet = Some("sealed trait Demo2 { def x = 1 }"),
+  )
+
   checkScala("new-class-infer-base-package")(
     directory = Some("a/src/main/scala/foo/bar"),
     fileType = Right(Class),
@@ -573,6 +627,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       existingFiles: String = "",
       expectedException: List[Class[_]] = Nil,
       scalaVersion: Option[String] = None,
+      expectedSnippet: Option[String] = None,
   )(implicit loc: Location): Unit = check(testName)(
     directory,
     fileType,
@@ -583,6 +638,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     existingFiles,
     expectedException,
     scalaVersion,
+    expectedSnippet,
   )
 
   /**
@@ -599,6 +655,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       existingFiles: String,
       expectedException: List[Class[_]],
       scalaVersion: Option[String],
+      expectedSnippet: Option[String] = None,
   )(implicit loc: Location): Unit =
     test(testName) {
       val localScalaVersion = scalaVersion.getOrElse(V.scala213)
@@ -618,6 +675,14 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
         fileType match {
           case Left(providedType) => providedType.label
           case Right(pickedType) =>
+            expectedSnippet match {
+              case Some(snippet) if pickedType == FromClipboard =>
+                client.readClipboardHandler = () =>
+                  RawMetalsReadClipboardResult(
+                    value = snippet
+                  )
+              case _ =>
+            }
             client.showMessageRequestHandler = { params =>
               if (isSelectTheKindOfFile(params)) {
                 params.getActions().asScala.find(_.getTitle() == pickedType.id)

@@ -287,7 +287,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     }
 
     progress.message = "updating classes"
-    val targets = buildTargets.allBuildTargetIds
+    val targets = buildTargets.activeBuildTargetIds
     buildTargetClasses
       .rebuildIndex(targets)
       .foreach { _ =>
@@ -382,13 +382,27 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       def update(
           content: String
       ): (Input.VirtualFile, Position => Position, AdjustLspData) = {
-        val adjustLspData = AdjustedLspData.create(fromScala)
+        val wrappedFilePath =
+          generatedPath.toNIO.toString.stripSuffix(".scala") + ".sc.scala"
+
+        val originalUri = sourceItem.getUri
+
+        def adjustUri(uri: String): String = {
+          val normalizedUri = uri.toAbsolutePath.toNIO.toString
+          if (normalizedUri == wrappedFilePath) {
+            originalUri
+          } else {
+            uri
+          }
+        }
+
+        val adjustLspData =
+          AdjustedLspData.create(fromScala, adjustUri = adjustUri)
         val updatedContent =
           sourceItem.getTopWrapper + content + sourceItem.getBottomWrapper
         (
           Input.VirtualFile(
-            generatedPath.toNIO.toString
-              .stripSuffix(".scala") + ".sc.scala",
+            wrappedFilePath,
             updatedContent,
           ),
           toScala,
@@ -440,6 +454,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     val sourcesToIndex = mutable.ArrayBuffer.empty[SourceToIndex]
     for {
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
+      if sourceItem.exists
       source <- sourceItem.listRecursiveOrJar
       if source.isScalaOrJava
     } {
@@ -528,7 +543,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     var cacheHits = 0
     var cacheMisses = 0
     try {
-      if (path.isJar && path.exists) {
+      if (!path.exists) {
+        scribe.warn(s"dependency missing at absolute path: $path")
+      } else if (path.isJar) {
         if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
           usedJars += path
           if (addSourceJarSymbols(path)) cacheHits += 1

@@ -12,7 +12,7 @@ Global / resolvers += "scala-nightlies" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.4"
+val forkBaseVersion = "1.6.7"
 
 val currentVersion = "2.0.0"
 
@@ -20,6 +20,7 @@ def localSnapshotVersion = sys.env.getOrElse(
   "METALS_VERSION",
   s"$currentVersion-${sys.env.getOrElse("METALS_VERSION_SUFFIX", "SNAPSHOT")}",
 )
+def latestReleaseVersion = forkBaseVersion
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -235,6 +236,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
     "-Wconf:src=*.InheritanceContext.scala&msg=parameter ec in method getLocations is never used:silent",
     "-Wconf:src=*.CompilerWrapper.scala&msg=parameter params in method compiler is never used:silent",
+    "-Wconf:src=*.MetalsLanguageClient.scala&msg=parameter params in method showMessageRequest is never used:silent",
     // silence "The outer reference in this type test cannot be checked at run time."
     "-Wconf:src=.*(CompletionProvider|ArgCompletions|Completions|Keywords|IndentOnPaste).scala&msg=The outer reference:silent",
   )
@@ -406,7 +408,7 @@ lazy val mtagsShared = project
       "com.google.protobuf" % "protobuf-java" % V.protobuf,
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
-      "org.lz4" % "lz4-java" % "1.8.0",
+      "org.lz4" % "lz4-java" % "1.8.1",
       "org.slf4j" % "slf4j-api" % "1.7.36",
     ),
     libraryDependencies ++= {
@@ -478,7 +480,7 @@ val mtagsSettings = List(
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
     "io.get-coursier" % "interface" % V.coursierInterfaces,
-    "org.lz4" % "lz4-java" % "1.8.0",
+    "org.lz4" % "lz4-java" % "1.8.1",
   ),
   libraryDependencies ++= {
     crossSetting(
@@ -625,6 +627,23 @@ lazy val `mtags-protobuf` = project
   )
   .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
+lazy val `gradle-extractor` = project
+  .in(file("gradle-extractor"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "gradle-extractor",
+    scalaVersion := V.scala213,
+    crossScalaVersions := Seq(V.scala213),
+    resolvers += "Gradle Releases" at "https://repo.gradle.org/gradle/libs-releases",
+    libraryDependencies ++= Seq(
+      "org.gradle" % "gradle-tooling-api" % V.gradleToolingApi,
+      "com.lihaoyi" %% "upickle" % "4.3.2",
+      "org.scalameta" %% "munit" % V.munit % Test,
+    ),
+  )
+  .settings(sharedScalacOptions)
+  .dependsOn(interfaces)
+
 lazy val metals = project
   .settings(
     sharedSettings,
@@ -642,7 +661,7 @@ lazy val metals = project
       "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
       "org.slf4j" % "slf4j-api" % "1.7.36",
-      "org.scalameta" %% "metaconfig-core" % "0.16.0",
+      "org.scalameta" %% "metaconfig-core" % "0.18.2",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -651,7 +670,7 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "11.14.0",
+      "org.flywaydb" % "flyway-core" % "12.0.3",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
@@ -694,9 +713,9 @@ lazy val metals = project
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
       // for JSON formatted doctor
-      "com.lihaoyi" %% "ujson" % "4.3.2",
+      "com.lihaoyi" %% "ujson" % "4.4.3",
       // For fetching projects' templates
-      "com.lihaoyi" %% "requests" % "0.9.0",
+      "com.lihaoyi" %% "requests" % "0.9.3",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
       "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
@@ -710,9 +729,12 @@ lazy val metals = project
       // For test frameworks
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
-      "io.modelcontextprotocol.sdk" % "mcp" % "0.12.1",
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.20.0",
+      "io.modelcontextprotocol.sdk" % "mcp" % V.modelContextProtocol,
+      "io.modelcontextprotocol.sdk" % "mcp-json-jackson2" % V.modelContextProtocol,
+      "com.fasterxml.jackson.core" % "jackson-databind" % "2.21.1",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
+      // For Twirl
+      "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
     ),
     Compile / resourceGenerators += packageJavaHeaderCompiler,
     Compile / resourceGenerators += Def.task {
@@ -767,6 +789,15 @@ lazy val metals = project
   )
   .dependsOn(mtags, `mtags-java`, `mtags-protobuf`)
   .enablePlugins(BuildInfoPlugin)
+
+lazy val `metals-mcp` = project
+  .in(file("metals-mcp"))
+  .settings(
+    sharedSettings,
+    moduleName := "metals-mcp",
+    Compile / mainClass := Some("scala.meta.metals.McpMain"),
+  )
+  .dependsOn(metals)
 
 lazy val `sbt-metals` = project
   .settings(
@@ -948,6 +979,8 @@ lazy val mtest = project
       List(
         "org.scalameta" %% "munit" % {
           if (scalaVersion.value.startsWith("2.11")) "1.0.0-M10"
+          else if (scalaVersion.value == "2.13.17") "1.2.1"
+          else if (scalaVersion.value == "2.13.16") "1.2.0"
           else if (scalaVersion.value == "2.13.15") "1.0.4"
           else if (scalaVersion.value == "2.13.13") "1.0.0"
           else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
@@ -1105,20 +1138,22 @@ lazy val slow = project
     sharedSettings,
     Test / testOnly := (Test / testOnly)
       .dependsOn(
-        (`sbt-metals` / publishLocal),
-        publishBinaryMtags,
         `maven-metals` / publishLocal,
+        `sbt-metals` / publishLocal,
+        `gradle-extractor` / publishLocal,
+        publishBinaryMtags,
       )
       .evaluated,
     Test / test := (Test / test)
       .dependsOn(
         `sbt-metals` / publishLocal,
-        publishBinaryMtags,
         `maven-metals` / publishLocal,
+        `gradle-extractor` / publishLocal,
+        publishBinaryMtags,
       )
       .value,
   )
-  .dependsOn(unit)
+  .dependsOn(unit, `metals-mcp`)
 
 lazy val bench = project
   .in(file("metals-bench"))
@@ -1129,6 +1164,11 @@ lazy val bench = project
     publish / skip := true,
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
+    libraryDependencies ++= List(
+      "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+        scalaVersion.value
+      ) cross CrossVersion.full
+    ),
     buildInfoPackage := "bench",
     libraryDependencies ++= List(
       "tools.profiler" % "async-profiler" % "4.2",
@@ -1150,7 +1190,11 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.16.0",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.2",
+    buildInfoPackage := "docs",
+    buildInfoKeys := Seq[BuildInfoKey](
+      "latestReleaseVersion" -> latestReleaseVersion
+    ),
   )
   .dependsOn(metals)
-  .enablePlugins(DocusaurusPlugin)
+  .enablePlugins(DocusaurusPlugin, BuildInfoPlugin)

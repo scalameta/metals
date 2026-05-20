@@ -24,4 +24,9 @@
         <<INSERT>>/*keyword*/ <<INTO>>/*keyword*/ <<users>>/*variable*/ (<<id>>/*variable*/, <<name>>/*variable*/, <<age>>/*variable*/, <<created_at>>/*variable*/)
         <<VALUES>>/*keyword*/ (<<1>>/*number*/, <<'John Doe'>>/*string*/, <<25>>/*number*/, <<CURRENT_TIMESTAMP>>/*variable*/)
         <<""">>/*string*/
+
+    <<val>>/*keyword*/ <<nestedInterpolators>>/*variable,definition,readonly*/ = <<sql>>/*keyword*/<<""">>/*string*/
+        <<SELECT>>/*keyword*/ <<name>>/*variable*/, <<age>>/*variable*/
+        <<$>>/*keyword*/{<<s>>/*keyword*/<<">>/*string*/<<FROM >>/*string*/<<$>>/*keyword*/{<<sql>>/*keyword*/<<">>/*string*/<<users>>/*variable*/<<">>/*string*/}<< WHERE>>/*string*/<<">>/*string*/} <<age>>/*variable*/ <<>>>/*operator*/ <<30.5>>/*number*/
+        <<""">>/*string*/
 }

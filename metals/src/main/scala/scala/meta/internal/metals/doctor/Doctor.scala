@@ -79,7 +79,6 @@ final class Doctor(
 
   private val problemResolver =
     new ProblemResolver(
-      workspace,
       mtagsResolver,
       currentBuildServer,
       () => clientConfig.isTestExplorerProvider(),

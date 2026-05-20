@@ -74,7 +74,6 @@ class CompletionIdentifierSuite extends BaseJavaCompletionSuite {
       |OneMore
       |""".stripMargin,
   )
-
   check(
     "import-list",
     """

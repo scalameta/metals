@@ -114,12 +114,13 @@ final class TestDebugger(
   def shutdown: Future[Unit] = {
     Debug.printEnclosing()
     for {
-      _ <- terminated.future.withTimeout(60, TimeUnit.SECONDS).recoverWith {
-        case _: TimeoutException =>
+      _ <- terminated.future
+        .withTimeout(60, TimeUnit.SECONDS, reason = None)
+        .recoverWith { case _: TimeoutException =>
           terminated.trySuccess(())
           scribe.warn("We never got the terminate message")
           Future.unit
-      }
+        }
       _ = scribe.info("TestingDebugger terminated")
       _ <- debugger.shutdown(60).recoverWith { case _: TimeoutException =>
         scribe.warn("The debugger is most likely already shut down.")
@@ -134,7 +135,7 @@ final class TestDebugger(
     ifNotFailed {
       output
         .awaitPrefix(prefix.replaceAll("\n", System.lineSeparator()))
-        .withTimeout(seconds, TimeUnit.SECONDS)
+        .withTimeout(seconds, TimeUnit.SECONDS, reason = None)
         .recoverWith { case timeout: TimeoutException =>
           val error = s"No prefix [$prefix] in [${output()}]"
           Future.failed(new Exception(error, timeout))

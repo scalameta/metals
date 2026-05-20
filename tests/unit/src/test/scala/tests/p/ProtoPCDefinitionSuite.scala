@@ -167,7 +167,7 @@ class ProtoPCDefinitionSuite extends BaseProtoPCSuite("proto-pc-definition") {
       _ <- server.assertDefinition(
         "a/src/main/proto/event.proto",
         "import \"google/protobuf/timest@@amp.proto\";",
-        """|protobuf-java-4.32.1.jar!/google/protobuf/timestamp.proto:1:1: definition
+        """|protobuf-java-4.34.0.jar!/google/protobuf/timestamp.proto:1:1: definition
            |// Protocol Buffers - Google's data interchange format
            |^
            |""".stripMargin,

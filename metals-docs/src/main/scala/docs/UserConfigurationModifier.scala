@@ -2,6 +2,7 @@ package docs
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.UserConfigurationOption
 
 import mdoc.Reporter
 import mdoc.StringModifier
@@ -21,7 +22,7 @@ class UserConfigurationModifier extends StringModifier {
            |
            |${option.description}
            |
-           |**Default**: ${option.default}
+           |**Default**: ${markdownDefault(option)}
            |
            |**Example**:
            |```json
@@ -34,5 +35,15 @@ class UserConfigurationModifier extends StringModifier {
            |""".stripMargin
       }
       .mkString("\n")
+  }
+
+  private def markdownDefault(option: UserConfigurationOption): String = {
+    option.defaultDescription.getOrElse {
+      option.default match {
+        case "" => """empty string `""`."""
+        case "[]" => "`[]`."
+        case other => s"`$other`."
+      }
+    }
   }
 }

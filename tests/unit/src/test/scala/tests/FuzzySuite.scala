@@ -183,4 +183,8 @@ class FuzzySuite extends BaseSuite {
     assert(bloom.bloom.expectedFpp() < 0.02)
   }
 
+  test("empty symbol") {
+    val obtained = Fuzzy.matches("a", "")
+    assertEquals(obtained, false)
+  }
 }

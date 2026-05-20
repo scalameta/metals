@@ -15,6 +15,7 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite
+import tests.BaseMbtSuite
 import tests.BazelBuildLayout
 import tests.BazelMbtTestInitializer
 import tests.TestHovers
@@ -25,7 +26,8 @@ import tests.TestHovers
  */
 class BazelMbtLspSuite
     extends BaseLspSuite("bazel-mbt", BazelMbtTestInitializer)
-    with TestHovers {
+    with TestHovers
+    with BaseMbtSuite {
 
   private val bazelVersion = "8.2.1"
 
@@ -48,13 +50,6 @@ class BazelMbtLspSuite
 
   private val catsVersion = "2.13.0"
   private val jsoupVersion = "1.21.1"
-  private def escapeMbtFile(mbtFile: String): String = {
-
-    mbtFile.replaceAll(
-      """"(jar|sources)":\s*"[^"]+"""",
-      """"$1": "<$1-path>"""",
-    )
-  }
 
   /** Same targets as [[BazelLspSuite]], plus a project view so MBT import scopes `bazel query`. */
   private def bazelWorkspaceLayout: String = {
@@ -182,6 +177,42 @@ class BazelMbtLspSuite
        |}
        |""".stripMargin
 
+  private def filegroupBazelWorkspaceLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/lib/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_library")
+       |
+       |filegroup(
+       |    name = "library_sources",
+       |    srcs = [
+       |        "Library.scala",
+       |        "More.scala",
+       |    ],
+       |)
+       |
+       |scala_library(
+       |    name = "library",
+       |    srcs = [":library_sources"],
+       |)
+       |
+       |/lib/Library.scala
+       |package lib
+       |
+       |class Library {
+       |  def message: String = "hello"
+       |}
+       |
+       |/lib/More.scala
+       |package lib
+       |
+       |class More {
+       |  def library = new Library().message
+       |}
+       |""".stripMargin
+
   private def pinMaven(workspace: AbsolutePath): Unit = {
     workspace.resolve("maven_install.json").touch()
     ShellRunner.runSync(
@@ -193,6 +224,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-server-hover") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -314,7 +346,42 @@ class BazelMbtLspSuite
     } yield ()
   }
 
+  test("bazel-import-mbt-filegroup-srcs") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          filegroupBazelWorkspaceLayout,
+          V.scala213,
+          bazelVersion,
+        )
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [],
+            |  "namespaces": {
+            |    "//lib": {
+            |      "sources": [
+            |        "lib/Library.scala",
+            |        "lib/More.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": []
+            |    }
+            |  }
+            |}""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("bazel-import-mbt-single-target") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -426,6 +493,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-java-workspace") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -507,6 +575,7 @@ class BazelMbtLspSuite
   }
 
   test("bazel-import-mbt-workspace-namespace-choice") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     client.chooseBazelMbtNamespaceMode =
       Messages.BazelMbtNamespaceChoice.workspace

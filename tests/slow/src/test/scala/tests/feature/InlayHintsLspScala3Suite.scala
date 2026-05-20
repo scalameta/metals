@@ -22,7 +22,7 @@ class InlayHintsLspScala3Suite
          |class A {
          |  type Validated[A] = ValidatedNec[Nothing, A]
          |
-         |  val a = implicitly[Applicative[Validated]]/*(using catsDataApplicativeErrorForValidated<<cats/data/ValidatedInstances#catsDataApplicativeErrorForValidated().>>)*/.pure(1)
+         |  val a = implicitly[Applicative[Validated]]/*(using catsDataApplicativeErrorForValidated<<cats/data/ValidatedInstances#catsDataApplicativeErrorForValidated().>>(catsDataSemigroupForNonEmptyChain<<cats/data/NonEmptyChainInstances#catsDataSemigroupForNonEmptyChain().>>))*/.pure(1)
          |}
          |""".stripMargin,
     dependencies = List("org.typelevel::cats-core:2.10.0"),

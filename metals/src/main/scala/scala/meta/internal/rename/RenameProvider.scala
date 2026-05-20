@@ -45,6 +45,7 @@ import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.ResourceOperation
+import org.eclipse.lsp4j.SnippetTextEdit
 import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
@@ -412,7 +413,9 @@ final class RenameProvider(
     openedEdits.map { case (file, edits) =>
       val textId = new VersionedTextDocumentIdentifier()
       textId.setUri(file.toURI.toString())
-      val ed = new TextDocumentEdit(textId, edits.asJava)
+      val editsAsEither =
+        edits.map(e => LSPEither.forLeft[TextEdit, SnippetTextEdit](e)).asJava
+      val ed = new TextDocumentEdit(textId, editsAsEither)
       LSPEither.forLeft[TextDocumentEdit, ResourceOperation](ed)
     }.toList
   }

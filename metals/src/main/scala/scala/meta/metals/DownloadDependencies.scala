@@ -271,6 +271,7 @@ object DownloadDependencies {
 
     (allSupportedScala3Versions ++ BuildInfo.supportedScalaVersions)
       .filter(filterVersions)
+      .filter(scalaVersion => !SemVer.isLaterVersion("3.7.4", scalaVersion))
       .flatMap { scalaVersion =>
         val noExpressionCompiler = Seq("3.6.0", "2.11.12")
         val expressionCompilerJars =

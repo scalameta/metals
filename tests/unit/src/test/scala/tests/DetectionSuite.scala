@@ -194,6 +194,81 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**
+   * ------------ Mill ------------*
+   */
+  def checkNotMill(name: String, layout: String)(implicit
+      loc: Location
+  ): Unit = {
+    checkMill(name, layout, isTrue = false)
+  }
+  def checkMill(
+      name: String,
+      layout: String,
+      isTrue: Boolean = true,
+  )(implicit loc: Location): Unit = {
+    test(s"mill-$name") {
+      check(
+        layout,
+        p => BuildTools.default(p).isMill,
+        isTrue,
+      )
+    }
+  }
+
+  checkMill(
+    "build.sc",
+    """|/build.sc
+       |import mill._
+       |""".stripMargin,
+  )
+
+  checkMill(
+    "build.mill",
+    """|/build.mill
+       |package build
+       |import mill._
+       |""".stripMargin,
+  )
+
+  checkMill(
+    "build.mill.yaml",
+    """|/build.mill.yaml
+       |mill-version: 0.12.0
+       |""".stripMargin,
+  )
+
+  checkMill(
+    "build.mill.scala",
+    """|/build.mill.scala
+       |package build
+       |import mill._
+       |""".stripMargin,
+  )
+
+  checkMill(
+    "mill-script",
+    """|/mill
+       |#!/usr/bin/env sh
+       |DEFAULT_MILL_VERSION=0.12.0
+       |""".stripMargin,
+  )
+
+  checkMill(
+    "mill.bat-script",
+    """|/mill.bat
+       |@echo off
+       |set DEFAULT_MILL_VERSION=0.12.0
+       |""".stripMargin,
+  )
+
+  checkNotMill(
+    "sbt-only",
+    """|/build.sbt
+       |lazy val a = project
+       |""".stripMargin,
+  )
+
+  /**
    * ------------ Multiple Build Files ------------*
    */
   def checkMulti(name: String, layout: String, isTrue: Boolean = true)(implicit

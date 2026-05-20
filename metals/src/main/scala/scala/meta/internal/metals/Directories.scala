@@ -38,6 +38,8 @@ object Directories {
     RelativePath(".metals").resolve("out")
   def rules: RelativePath =
     RelativePath(".metals").resolve("rules")
+  def explainedDiagnostics: RelativePath =
+    RelativePath(".metals").resolve("explained-diagnostics")
 
   val stacktraceFilename = "stacktrace.scala"
   val dependenciesName = "dependencies"

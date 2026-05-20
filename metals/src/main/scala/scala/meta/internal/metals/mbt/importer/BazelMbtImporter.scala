@@ -54,8 +54,12 @@ abstract class BazelMbtImporter(
       repositoryName = BazelMavenJsonImporter
         .extractRepositoryNameFromBazelConfig(projectRoot)
       _ = scribe.info(s"bazel-mbt: found repository name: $repositoryName")
+      mavenImportStart = System.nanoTime()
       dependencyModules = BazelMavenJsonImporter
         .importMaven(projectRoot, outputBase, repositoryName)
+      _ = scribe.debug(
+        s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
+      )
       ruleKindsQueryOutput <- BazelQuery
         .buildRuleKindsQuery(patterns)
         .run(queryEnv)

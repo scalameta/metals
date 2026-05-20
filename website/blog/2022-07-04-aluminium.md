@@ -82,11 +82,11 @@ Metals settings. This could result in two possible notifications:
 
 - Metals changing Java version:
 
-![metals-java-home](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/BH8AS5c.png?raw=true)
+![metals-java-home](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/BH8AS5c.png)
 
 - Metals detecting an existing Bloop Java configuration:
 
-![metals-java-home-existing](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/PCyyNVT.png?raw=true)
+![metals-java-home-existing](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/PCyyNVT.png)
 
 However, this caused a couple of issues:
 
@@ -128,7 +128,7 @@ release you should be able to apply all currently defined
 By default it's bound to `alt` + `ctrl` + `shift` + `o` shortcut in Visual
 Studio Code.
 
-![scalafix-run](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/DLe5sYT.gif?raw=true)
+![scalafix-run](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/DLe5sYT.gif)
 
 One major drawback of the current approach is that we are unable to run some of
 the custom rules. Only the default rules and the contributed Hygiene rules are
@@ -156,7 +156,7 @@ concrete class, you could only see the completion to override particular
 members. However, you needed to add those members one by one. Now you'll see a
 code action to implement all the members at once.
 
-![implement-all](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/foU3oHL.gif?raw=true)
+![implement-all](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/foU3oHL.gif)
 
 Great work by [tanishiking](https://github.com/tanishiking).
 
@@ -167,7 +167,7 @@ would be the name of the method. With snippets we can now add additional `()`
 with cursor ending in or after the parenthesis depending on whether the method
 accepts parameters.
 
-![snippets](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/QEbPSTd.gif?raw=true)
+![snippets](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/QEbPSTd.gif)
 
 For editors that do not support snippets the previous behaviour is preserved.
 
@@ -177,7 +177,7 @@ A file name completion feature has been available only in the Scala 2 project,
 but thanks to the effort by [riiswa](https://github.com/riiswa), Metals 0.11.7
 will complete class name based on the enclosing file, in Scala3!
 
-![filename-completion](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/f10pnJ6.gif?raw=true)
+![filename-completion](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/f10pnJ6.gif)
 
 ## [Scala 3] Expression evaluation for debugger.
 
@@ -187,7 +187,7 @@ however it was still missing for Scala 3. Thanks to the main work by
 bug fixes by [adpi2](https://github.com/adpi2) it is now possible to to evaluate
 your code on breakpoints in the Scala 3 code.
 
-![debug](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/jYs7QdM.gif?raw=true)
+![debug](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/jYs7QdM.gif)
 
 It was added in the previous 0.11.6 version of Metals, however it was still not
 working correctly enough to promote it. Currently, it should be working
@@ -205,7 +205,7 @@ it's sometimes hard to tell which arguments match which parameters at a glance.
 In this situation you may want to make them named arguments. Now you will be
 able to automatically convert all those arguments into named arguments.
 
-![convert-to-named-vscode](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/SiUYUSY.gif?raw=true)
+![convert-to-named-vscode](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/SiUYUSY.gif)
 
 We'd like to thank [@camgraff](https://github.com/camgraff) for
 [implementing this feature](https://github.com/scalameta/metals/pull/3971) 🥳
@@ -220,7 +220,7 @@ This is purely a syntactic sugar which gives us an ability to offer a code
 action to automatically convert any chain of the mentioned methods with a for
 comprehensions.
 
-![for-comp](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-07-04-aluminium/MOZLYi0.gif?raw=true)
+![for-comp](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-07-04-aluminium/MOZLYi0.gif)
 
 There is currently one known issue with two separate chains being inside one
 another, which might cause unexpected issues. Please report any other issues you

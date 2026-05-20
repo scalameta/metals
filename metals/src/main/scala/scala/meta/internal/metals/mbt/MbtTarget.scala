@@ -82,30 +82,26 @@ case class MbtTarget(
       ju.Collections.emptyList(),
     )
     val jvmBt = new bsp4j.JvmBuildTarget()
-    val javaPath = Paths.get(javaHome.getOrElse(Properties.javaHome))
-    jvmBt.setJavaHome(
-      javaPath.toUri().toString()
-    )
-
-    val (languageIds, dataKind, data) =
-      if (this.scalaVersion.isDefined) {
-        scalaTarget.setJvmBuildTarget(jvmBt)
-        (List("scala", "java").asJava, "scala", MbtTarget.toGson(scalaTarget))
-      } else {
-        (List("java").asJava, "jvm", MbtTarget.toGson(jvmBt))
+    val javaHomeUri = javaHome
+      .map {
+        case home if home.startsWith("file://") => home
+        case home => Paths.get(home).toUri().toString()
       }
+      .getOrElse(Paths.get(Properties.javaHome).toUri().toString())
+    jvmBt.setJavaHome(javaHomeUri)
+    scalaTarget.setJvmBuildTarget(jvmBt)
 
     val target = new bsp4j.BuildTarget(
       id,
       ju.Collections.emptyList(),
-      languageIds,
+      List("scala", "java").asJava,
       dependsOn.asJava,
       capabilities,
     )
     target.setDisplayName(name)
     target.setBaseDirectory(baseDirectory(workspace).toURI.toString)
-    target.setDataKind(dataKind)
-    target.setData(data)
+    target.setDataKind("scala")
+    target.setData(MbtTarget.toGson(scalaTarget))
     target
   }
 

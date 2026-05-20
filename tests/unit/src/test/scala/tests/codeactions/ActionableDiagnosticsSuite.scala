@@ -13,6 +13,7 @@ class ActionableDiagnosticsSuite
        |<<private private val x = 1>>
        |""".stripMargin,
     s"""|Remove repeated modifier: "private"
+        |Explain with -explain
         |""".stripMargin,
     """|
        |private  val x = 1

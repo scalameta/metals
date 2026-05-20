@@ -5,6 +5,7 @@ import java.util.Optional
 import java.{util => ju}
 
 import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -16,6 +17,15 @@ object EmptySymbolSearch extends SymbolSearch {
   override def search(
       query: String,
       buildTargetIdentifier: String,
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
+    SymbolSearch.Result.COMPLETE
+  }
+
+  override def search(
+      query: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[MemberKind],
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
     SymbolSearch.Result.COMPLETE

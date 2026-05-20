@@ -119,6 +119,10 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
+import org.eclipse.lsp4j.TypeHierarchyItem
+import org.eclipse.lsp4j.TypeHierarchyPrepareParams
+import org.eclipse.lsp4j.TypeHierarchySubtypesParams
+import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -776,6 +780,16 @@ final case class TestingServer(
 
   def waitFor(millis: Long): Future[Unit] = Future { Thread.sleep(millis) }
 
+  def awaitNextDiagnostics(
+      filename: String,
+      condition: Seq[l.Diagnostic] => Boolean = _ => true,
+  ): Future[Unit] = {
+    val path = toPath(filename)
+    client
+      .nextDiagnosticsFor(path, condition)
+      .withTimeout(30, util.concurrent.TimeUnit.SECONDS, reason = None)
+  }
+
   /**
    * @param target the build target to debug, like "myproject.test"
    * @param kind one of the constants in [[ch.epfl.scala.bsp4j.TestParamsDataKind]] or [[ch.epfl.scala.bsp4j.DebugSessionParamsDataKind]].
@@ -1246,7 +1260,7 @@ final case class TestingServer(
       .codeLens(params)
       .asScala
       .map(_.asScala)
-      .withTimeout(10, util.concurrent.TimeUnit.SECONDS)
+      .withTimeout(10, util.concurrent.TimeUnit.SECONDS, reason = None)
       .recover { _ =>
         scribe.info(s"Timeout for fetching lenses reached for $filename")
         Nil
@@ -1281,7 +1295,7 @@ final case class TestingServer(
           if (lenses.size >= minExpectedLenses) Future.successful(lenses)
           else codeLenses.future
         }
-        .withTimeout(60, util.concurrent.TimeUnit.SECONDS)
+        .withTimeout(60, util.concurrent.TimeUnit.SECONDS, reason = None)
     } yield lenses.toList
   }
 
@@ -2015,6 +2029,48 @@ final case class TestingServer(
     for {
       result <- fullServer
         .callHierarchyOutgoingCalls(new CallHierarchyOutgoingCallsParams(item))
+        .asScala
+    } yield {
+      result.asScala.toList
+    }
+  }
+
+  def prepareTypeHierarchy(
+      filename: String,
+      query: String,
+  ): Future[Option[TypeHierarchyItem]] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      prepareParams = new TypeHierarchyPrepareParams(
+        params.getTextDocument(),
+        params.getPosition(),
+      )
+      result <- fullServer.prepareTypeHierarchy(prepareParams).asScala
+    } yield {
+      result.asScala.headOption
+    }
+  }
+
+  def typeHierarchySupertypes(
+      item: TypeHierarchyItem
+  ): Future[List[TypeHierarchyItem]] = {
+    item.setData(item.getData.toJsonObject)
+    for {
+      result <- fullServer
+        .typeHierarchySupertypes(new TypeHierarchySupertypesParams(item))
+        .asScala
+    } yield {
+      result.asScala.toList
+    }
+  }
+
+  def typeHierarchySubtypes(
+      item: TypeHierarchyItem
+  ): Future[List[TypeHierarchyItem]] = {
+    item.setData(item.getData.toJsonObject)
+    for {
+      result <- fullServer
+        .typeHierarchySubtypes(new TypeHierarchySubtypesParams(item))
         .asScala
     } yield {
       result.asScala.toList

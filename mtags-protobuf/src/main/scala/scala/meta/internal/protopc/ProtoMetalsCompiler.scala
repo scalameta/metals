@@ -336,17 +336,17 @@ class EnclosingDeclarationFinder(offset: Int) {
   private var result: Option[Proto] = None
 
   def find(file: ProtoFile): Option[Proto] = {
-    file.declarations().forEach(d => visitDeclaration(d, None))
+    file.declarations().forEach(d => visitDeclaration(d))
     result
   }
 
-  private def visitDeclaration(decl: Proto, parent: Option[Proto]): Unit = {
+  private def visitDeclaration(decl: Proto): Unit = {
     if (decl.position() <= offset && offset < decl.endPosition()) {
       result = Some(decl)
       decl match {
         case m: MessageDecl =>
-          m.nestedMessages().forEach(nm => visitDeclaration(nm, Some(m)))
-          m.nestedEnums().forEach(ne => visitDeclaration(ne, Some(m)))
+          m.nestedMessages().forEach(nm => visitDeclaration(nm))
+          m.nestedEnums().forEach(ne => visitDeclaration(ne))
         case _ =>
       }
     }

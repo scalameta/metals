@@ -8,13 +8,11 @@ import tests.BaseNonCompilingLspSuite
 class BestEffortCompilationSuite
     extends BaseNonCompilingLspSuite("best-effort-compilation") {
 
-  val scalaVersion = BuildInfo.latestScala3Next
+  override def scalaVersion: String = BuildInfo.latestScala3Next
 
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(enableBestEffort = true)
 
-  override val scalaVersionConfig: String =
-    s"\"scalaVersion\": \"${scalaVersion}\""
   override val saveAfterChanges: Boolean = true
   override val scala3Diagnostics: Boolean = true
 
@@ -285,24 +283,27 @@ class BestEffortCompilationSuite
            |Required: Int
            |  def completionFoo: Int = "error"
            |                           ^^^^^^^
-           |b/src/main/scala/b/B.scala:15:5: error: Failure to generate given instance for type ?{ pos: ? } from argument of type ?1.tasty.Tree)
+           |b/src/main/scala/b/B.scala:15:5: error: value pos is not a member of ?1.tasty.Tree.
+           |Extension methods were tried, but the search failed with:
            |
-           |I found: <skolem>.tasty.pos(unseal(given_QC[Any]))
-           |But the part corresponding to `<skolem>` is not a reference that can be generated.
-           |This might be because resolution yielded as given instance a function that is not
-           |known to be total and side-effect free.
+           |    cannot construct a tree referring to ?1.tasty.type because of skolem prefix (?1 : B.QC)
+           |    
+           |    where:    ?1 is an unknown value of type B.QC
+           |    
            |
            |where:    ?1 is an unknown value of type B.QC
            |
            |    unseal.pos  // error
-           |    ^^^^^^
+           |    ^^^^^^^^^^
+           |
            |""".stripMargin,
       )
       // there should be no "completionAdded" in completions
       // but the previous symbols should be there
       _ <- assertCompletion(
         "B.completion@@",
-        """|completionBar: String
+        """|completionAdded: String
+           |completionBar: String
            |completionFoo: Int
         """.stripMargin,
       )

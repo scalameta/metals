@@ -56,7 +56,7 @@ Metals shows the scaladoc on hover for Scala3 projects. (Before this release,
 Metals was unable to show the scaladoc for the symbols from third-party
 modules).
 
-![override-completion](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/Go3sMxy.gif?raw=true)
+![override-completion](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/Go3sMxy.gif)
 
 ## [Scala3] Show scaladoc on hover for Scala 3 project
 
@@ -64,7 +64,7 @@ Previously, scaladocs were missing for a lot of classes and methods in Scala 3,
 especially for the symbols from third-party modules. From this release, Metals
 will always show the scaladoc on hover for Scala3 projects.
 
-![hover-scala3](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/Svzq5DD.png?raw=true)
+![hover-scala3](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/Svzq5DD.png)
 
 ### [Scala3] Support `completionItem/resolve`
 
@@ -73,7 +73,7 @@ information when moving through the list of suggested completions. It will show
 documentation, proper parameter names for Java methods, and default values for
 Scala 3 methods. Now, this is also available for use in Scala 3.
 
-![completion-item-resolve](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/Tz6AOsx.gif?raw=true)
+![completion-item-resolve](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/Tz6AOsx.gif)
 
 ## Show parent scaladoc if implementation is returning empty
 
@@ -109,7 +109,7 @@ usages of those helper methods and display them in Test Explorer.
 
 This feature is available for Bloop and SBT 1.7.0-M2 or later.
 
-![MUnit-helper-methods](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/GGRDpXA.gif?raw=true)
+![MUnit-helper-methods](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/GGRDpXA.gif)
 
 ## Support Cats Effect stacktraces in stacktrace analyzer
 
@@ -120,7 +120,7 @@ Now, Stacktrace Analyzer is able to recognize CE's stacktraces and provide link
 to location in code. Say no to tedious debugging when you have only stacktrace
 from the logs!
 
-![cats-effect-stacktraces](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/5fMvcYd.gif?raw=true)
+![cats-effect-stacktraces](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/5fMvcYd.gif)
 
 ## Improve implement all completion and code action
 
@@ -134,7 +134,7 @@ Sometimes, it wasn't clear which code would be affected by
 [rewrite to braces/parenthesis](https://scalameta.org/metals/blog/2021/09/06/tungsten#replace--with--in-functions-and-vice-versa)
 code action. Now, code action's description contains name of the function/method
 which will be affected by executing action.
-![rewrite-braces-parens](https://github.com/scalameta/gh-pages-images/blob/master/metals/2022-06-03-aluminium/SkHolsJ.gif?raw=true) Theme:
+![rewrite-braces-parens](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2022-06-03-aluminium/SkHolsJ.gif) Theme:
 [One Dark Pro](https://marketplace.visualstudio.com/items?itemName=zhuangtongfa.Material-theme)
 
 ## Automatically setup java home for the Bloop build server

@@ -5,7 +5,6 @@ import scala.jdk.CollectionConverters._
 import scala.meta.internal.proto.tree.Proto
 import scala.meta.internal.proto.tree.Proto._
 import scala.meta.pc.OffsetParams
-import scala.meta.pc.PresentationCompilerConfig
 
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
@@ -16,8 +15,7 @@ import org.eclipse.lsp4j.CompletionList
  */
 class ProtoCompletionProvider(
     compiler: ProtoMetalsCompiler,
-    params: OffsetParams,
-    config: PresentationCompilerConfig
+    params: OffsetParams
 ) {
 
   // Scalar types in proto3

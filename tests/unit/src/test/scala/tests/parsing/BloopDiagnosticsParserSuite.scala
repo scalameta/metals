@@ -62,7 +62,10 @@ class BloopDiagnosticsParserSuite extends BaseSuite {
              |  code = null
              |  codeDescription = null
              |  source = "sbt"
-             |  message = "warning: method sonatypeRepo in class ResolverFunctions is deprecated (since 1.7.0): Sonatype OSS Repository Hosting (OSSRH) was sunset on 2025-06-30; remove this resolver. If snapshots are required, use:"
+             |  message = Either [
+             |    left = warning: method sonatypeRepo in class ResolverFunctions is deprecated (since 1.7.0): Sonatype OSS Repository Hosting (OSSRH) was sunset on 2025-06-30; remove this resolver. If snapshots are required, use:
+             |    right = null
+             |  ]
              |  tags = null
              |  relatedInformation = null
              |  data = null

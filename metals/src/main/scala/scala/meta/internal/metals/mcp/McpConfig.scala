@@ -18,20 +18,50 @@ object McpConfig {
     .setPrettyPrinting()
     .create()
 
+  private val oldEndpoint = "/sse"
+
   def writeConfig(
       port: Int,
       projectName: String,
       projectPath: AbsolutePath,
       client: Client = CursorEditor,
+      activeClientExtensionIds: Set[String],
   ): Unit = {
-    val filename = client.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${client.settingsPath}$filename")
-    val serverName = client.serverEntry.getOrElse(s"$projectName-metals")
+    val (configFile, _) = resolveConfigFile(projectPath, client)
+    val serverName = client.projectName(projectName)
 
     // Read existing config if it exists
     val config = if (configFile.exists) configFile.readText else "{ }"
     val newConfig = createConfig(config, port, serverName, client)
     configFile.writeText(newConfig)
+    client.extraExtensions
+      .collect { case (id, ext) if activeClientExtensionIds(id) => ext }
+      .foreach { ext =>
+        writeConfig(
+          port,
+          projectName,
+          projectPath,
+          ext,
+          activeClientExtensionIds,
+        )
+      }
+  }
+
+  /**
+   * Resolves the config file for a client.
+   * - Returns the first existing file from client.fileNames
+   * - If none exist, uses the last fileNames entry as the default for creation
+   */
+  private def resolveConfigFile(
+      projectPath: AbsolutePath,
+      client: Client,
+  ): (AbsolutePath, String) = {
+    val files = client.fileNames.map { name =>
+      projectPath.resolve(s"${client.settingsPath}$name") -> name
+    }
+
+    // Find first existing file, or use last one as default
+    files.find { case (file, _) => file.exists }.getOrElse(files.last)
   }
 
   def deleteConfig(
@@ -39,8 +69,13 @@ object McpConfig {
       projectName: String,
       client: Client,
   ): Unit = {
-    val configFile = projectPath.resolve(s"${client.settingsPath}mcp.json")
-    if (configFile.exists) {
+    // Check all possible config files for this client
+    val configFiles = client.fileNames
+      .map { name =>
+        projectPath.resolve(s"${client.settingsPath}$name")
+      }
+      .filter(_.exists)
+    configFiles.foreach { configFile =>
       val configContent = configFile.readText
       val updatedConfig = removeMetalsEntry(configContent, projectName, client)
 
@@ -57,6 +92,55 @@ object McpConfig {
     }
   }
 
+  /**
+   * Check if the config contains the old /sse endpoint for the given project
+   * and rewrite it to use the new /mcp endpoint if needed.
+   */
+  def rewriteOldEndpointIfNeeded(
+      projectPath: AbsolutePath,
+      projectName: String,
+      client: Client,
+      port: Int,
+  ): Unit = {
+    val (configFile, _) = resolveConfigFile(projectPath, client)
+    if (configFile.exists) {
+      val configContent = configFile.readText
+      rewriteOldEndpoint(configContent, projectName, client, port) match {
+        case Some(newContent) =>
+          configFile.writeText(newContent)
+        case None =>
+      }
+    }
+  }
+
+  /**
+   * If the config contains the old /sse endpoint for metals, rewrite it to use /mcp.
+   * Returns Some(newConfig) if rewriting was needed, None otherwise.
+   */
+  def rewriteOldEndpoint(
+      configInput: String,
+      projectName: String,
+      client: Client,
+      port: Int,
+  ): Option[String] = {
+    Try {
+      val config = JsonParser.parseString(configInput).getAsJsonObject()
+      val serverEntry = client.projectName(projectName)
+
+      if (config.has(client.serverField)) {
+        val mcpServers = config.getAsJsonObject(client.serverField)
+        if (mcpServers.has(serverEntry)) {
+          val serverConfig = mcpServers.getAsJsonObject(serverEntry)
+          val url = serverConfig.get("url").getAsString
+          if (url.endsWith(oldEndpoint)) {
+            val newConfig = createConfig(configInput, port, serverEntry, client)
+            Some(newConfig)
+          } else None
+        } else None
+      } else None
+    }.toOption.flatten
+  }
+
   private def removeMetalsEntry(
       configInput: String,
       projectName: String,
@@ -67,7 +151,7 @@ object McpConfig {
 
       if (config.has(client.serverField)) {
         val mcpServers = config.getAsJsonObject(client.serverField)
-        val metalsKey = s"$projectName-metals"
+        val metalsKey = client.projectName(projectName)
 
         if (mcpServers.has(metalsKey)) {
           mcpServers.remove(metalsKey)
@@ -87,7 +171,9 @@ object McpConfig {
       config.size() == 0 ||
       (config.has(client.serverField) && config
         .getAsJsonObject(client.serverField)
-        .size() == 0 && config.size() == 1)
+        .size() == 0 && config.size() <= client.rootProperties.size + 1) ||
+      (!config
+        .has(client.serverField) && config.size() <= client.rootProperties.size)
     }.getOrElse(false)
   }
 
@@ -98,6 +184,11 @@ object McpConfig {
       editor: Client = CursorEditor,
   ): String = {
     val config = JsonParser.parseString(inputConfig).getAsJsonObject
+
+    // Add root-level properties (e.g., $schema)
+    editor.rootProperties.foreach { case (key, value) =>
+      config.addProperty(key, value)
+    }
 
     // Get or create mcpServers object
     val mcpServers = if (config.has(editor.serverField)) {
@@ -110,9 +201,16 @@ object McpConfig {
 
     // Add or update the server config
     val serverConfig = new JsonObject()
-    serverConfig.addProperty("url", s"http://localhost:$port/sse")
+    serverConfig.addProperty(
+      "url",
+      s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}",
+    )
     editor.additionalProperties.foreach { case (key, value) =>
-      serverConfig.addProperty(key, value)
+      value match {
+        case v: String => serverConfig.addProperty(key, v)
+        case v: Boolean => serverConfig.addProperty(key, v)
+        case v: Number => serverConfig.addProperty(key, v)
+      }
     }
     mcpServers.add(serverEntry, serverConfig)
     gson.toJson(config)
@@ -123,8 +221,7 @@ object McpConfig {
       projectName: String,
       editor: Client,
   ): Option[Int] = {
-    val filename = editor.fileName.getOrElse("mcp.json")
-    val configFile = projectPath.resolve(s"${editor.settingsPath}$filename")
+    val (configFile, _) = resolveConfigFile(projectPath, editor)
     if (configFile.exists)
       getPort(configFile.readText, projectName, editor)
     else None
@@ -144,7 +241,11 @@ object McpConfig {
         editor.serverEntry.getOrElse(s"$projectName-metals")
       )
       url <- serverConfig.getStringOption("url")
-      port <- Try(url.stripSuffix("/sse").split(":").last.toInt).toOption
+      // Handle both new /mcp and old /sse endpoints
+      normalizedUrl = url
+        .stripSuffix(MetalsMcpServer.mcpEndpoint)
+        .stripSuffix(oldEndpoint)
+      port <- Try(normalizedUrl.split(":").last.toInt).toOption
     } yield port
   }
 
@@ -154,30 +255,50 @@ case class Client(
     names: List[String],
     settingsPath: String,
     serverField: String,
-    additionalProperties: List[(String, String)],
+    additionalProperties: List[(String, Any)],
     serverEntry: Option[String] = None,
-    fileName: Option[String] = None,
+    fileNames: List[String] = List("mcp.json"),
     shouldCleanUpServerEntry: Boolean = false,
-)
+    extraExtensions: Map[String, Client] = Map.empty,
+    rootProperties: List[(String, String)] = Nil,
+) {
+  def projectName(project: String): String =
+    serverEntry.getOrElse(s"$project-metals")
+}
 
 object VSCodeEditor
     extends Client(
       names = List(
-        "Visual Studio Code",
-        "Visual Studio Code - Insiders",
-        "VSCodium",
-        "VSCodium - Insiders",
+        "Visual Studio Code", "Visual Studio Code - Insiders", "VSCodium",
+        "vscode", "VSCodium - Insiders",
       ),
       settingsPath = ".vscode/",
       serverField = "servers",
       additionalProperties = List(
-        "type" -> "sse"
+        "type" -> "http"
       ),
+      extraExtensions = Map("kilocode.kilo-code" -> KiloCodeEditor),
+    )
+
+object KiloCodeEditor
+    extends Client(
+      names = List(
+        "Kilo",
+        "kilo",
+      ),
+      settingsPath = ".kilo/",
+      fileNames = List("kilo.json"),
+
+      serverField = "mcp",
+      additionalProperties = List(
+        "type" -> "remote"
+      ),
+      rootProperties = List("$schema" -> "https://app.kilo.ai/config.json"),
     )
 
 object CursorEditor
     extends Client(
-      names = List("Cursor"),
+      names = List("Cursor", "cursor"),
       settingsPath = ".cursor/",
       serverField = "mcpServers",
       additionalProperties = Nil,
@@ -190,10 +311,24 @@ object Claude
       settingsPath = "./",
       serverField = "mcpServers",
       additionalProperties = List(
-        "type" -> "sse"
+        "type" -> "http"
       ),
       serverEntry = Some("metals"),
-      fileName = Some(".mcp.json"),
+      fileNames = List(".mcp.json"),
+    )
+
+object OpenCode
+    extends Client(
+      names = List("opencode", "OpenCode"),
+      settingsPath = "./",
+      serverField = "mcp",
+      additionalProperties = List(
+        "type" -> "remote",
+        "enabled" -> true,
+      ),
+      serverEntry = Some("metals-lsp"),
+      fileNames = List("opencode.json", "opencode.jsonc"),
+      rootProperties = List("$schema" -> "https://opencode.ai/config.json"),
     )
 
 object NoClient
@@ -205,5 +340,6 @@ object NoClient
     )
 
 object Client {
-  val allClients: List[Client] = List(VSCodeEditor, CursorEditor, Claude)
+  val allClients: List[Client] =
+    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude, OpenCode)
 }

@@ -29,7 +29,7 @@ class FindTextInDependencyJarsSuite
         s"""/metals.json
            |{
            |  "a": {
-           |    "scalaVersion": "${V.scala212}",
+           |    "scalaVersion": "${V.scala213}",
            |    "libraryDependencies": ["com.typesafe.akka::akka-actor-typed:2.6.16"]
            |  }
            |}
@@ -48,16 +48,16 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         akkaLocations,
         s"""|
-            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:96:3: info: result
+            |akka-actor_2.13-${akkaVersion}.jar/reference.conf:96:3: info: result
             |  jvm-shutdown-hooks = on
             |  ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}.jar/reference.conf:1178:41: info: result
+            |akka-actor_2.13-${akkaVersion}.jar/reference.conf:1178:41: info: result
             |    # This property is related to `akka.jvm-shutdown-hooks` above.
             |                                        ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:96:3: info: result
+            |akka-actor_2.13-${akkaVersion}-sources.jar/reference.conf:96:3: info: result
             |  jvm-shutdown-hooks = on
             |  ^^^^^^^^^^^^^^^^^^
-            |akka-actor_2.12-${akkaVersion}-sources.jar/reference.conf:1178:41: info: result
+            |akka-actor_2.13-${akkaVersion}-sources.jar/reference.conf:1178:41: info: result
             |    # This property is related to `akka.jvm-shutdown-hooks` above.
             |                                        ^^^^^^^^^^^^^^^^^^
             |""".stripMargin,
@@ -66,7 +66,9 @@ class FindTextInDependencyJarsSuite
       assertLocations(
         jdkLocations, {
           val line =
-            if (isJava24) 1545
+            if (isJava25) 1548
+            else if (isJava24) 1545
+            else if (isJava21 && !isMacOS && !isWindows) 1476
             else if (isJava21) 1487
             else if (
               SemVer.isCompatibleVersion(
@@ -75,15 +77,9 @@ class FindTextInDependencyJarsSuite
                 scala.util.Properties.javaVersion.replaceAll("(\\+|\\-).*", ""),
               )
             ) 1449
-            else if (isJava17) 1445
-            else if (isJava11) 626
-            else 578
+            else 1445
 
-          val pathPrefix =
-            if (isJava11) "/java.base/"
-            else "/"
-
-          s"""|src.zip${pathPrefix}java/lang/String.java:$line:5: info: result
+          s"""|src.zip/java.base/java/lang/String.java:$line:5: info: result
               |    public String(StringBuffer buffer) {
               |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
               |""".stripMargin

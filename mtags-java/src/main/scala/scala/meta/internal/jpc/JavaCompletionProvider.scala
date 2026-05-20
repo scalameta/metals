@@ -208,6 +208,7 @@ class JavaCompletionProvider(
     val inScope = scopeCompletion.map(_.toString()).toSet
     autoImportItems(
       identifier,
+      inScope,
       (elem, item) => {
         if (!inScope.contains(elem)) {
           items += item
@@ -220,45 +221,76 @@ class JavaCompletionProvider(
 
   private def autoImportItems(
       query: String,
+      inScope: Set[String],
       onMatch: (String, CompletionItem) => Unit
   ): Unit = {
-    compiler.doSearch(query).foreach { fqn =>
-      val parts = fqn.split('.')
-      val simpleName = parts.last
-      val packageName = parts.dropRight(1).mkString(".")
-      val item = new l.CompletionItem()
-      item.setKind(CompletionItemKind.Class)
-      if (includeDetailInLabel) {
-        item.setLabel(s"${simpleName} - ${packageName}")
-      } else {
-        item.setLabel(simpleName)
-        item.setDetail(packageName)
-      }
-      val edit = new l.TextEdit(
-        new l.Range(
-          Positions.toLspPosition(
-            scanner.root.getLineMap(),
-            params.offset() - identifier.length(),
-            params.text()
+    val simpleNamesInScope = inScope.map(_.split('.').last)
+    compiler.doSearch(query).filter(fqn => !inScope.contains(fqn)).foreach {
+      fqn =>
+        val parts = fqn.split('.')
+        val simpleName = parts.last
+        val isSimpleNameInScope = simpleNamesInScope.contains(simpleName)
+        val insertText =
+          if (isSimpleNameInScope) fqn else simpleName
+        val packageName = parts.dropRight(1).mkString(".")
+        val item = new l.CompletionItem()
+        item.setKind(CompletionItemKind.Class)
+        if (includeDetailInLabel) {
+          item.setLabel(s"${simpleName} - ${packageName}")
+        } else {
+          item.setLabel(simpleName)
+          item.setDetail(packageName)
+        }
+        val edit = new l.TextEdit(
+          new l.Range(
+            Positions.toLspPosition(
+              scanner.root.getLineMap(),
+              params.offset() - identifier.length(),
+              params.text()
+            ),
+            Positions.toLspPosition(
+              scanner.root.getLineMap(),
+              params.offset(),
+              params.text()
+            )
           ),
-          Positions.toLspPosition(
-            scanner.root.getLineMap(),
-            params.offset(),
-            params.text()
-          )
-        ),
-        simpleName
-      )
-      item.setTextEdit(edit)
-      item.setKind(CompletionItemKind.Class)
-      // TODO?: move auto-import computation to completionItem/resolve so we
-      // don't compute this eagerly for all items here.
-      val additionalEdit =
-        new JavaAutoImportEditor(params.text(), fqn).textEdit()
-      item.setAdditionalTextEdits(List(additionalEdit).asJava)
-      onMatch(fqn, item)
-      item
+          insertText
+        )
+        item.setTextEdit(edit)
+        item.setKind(CompletionItemKind.Class)
+        // TODO?: move auto-import computation to completionItem/resolve so we
+        // don't compute this eagerly for all items here.
+        if (!isSimpleNameInScope) {
+          val additionalEdit =
+            new JavaAutoImportEditor(params.text(), fqn).textEdit()
+          item.setAdditionalTextEdits(List(additionalEdit).asJava)
+        }
+        onMatch(fqn, item)
+        item
     }
+  }
+
+  private def textEdit(
+      params: OffsetParams,
+      identifier: String,
+      insertText: String
+  ): l.TextEdit = {
+    val edit = new l.TextEdit(
+      new l.Range(
+        Positions.toLspPosition(
+          scanner.root.getLineMap(),
+          Math.max(0, params.offset() - identifier.length()),
+          params.text()
+        ),
+        Positions.toLspPosition(
+          scanner.root.getLineMap(),
+          params.offset(),
+          params.text()
+        )
+      ),
+      insertText
+    )
+    edit
   }
 
   private def completePackageType(
@@ -429,8 +461,8 @@ class JavaCompletionProvider(
 
     if (isCompletionSnippetsEnabled)
       item.setInsertTextFormat(InsertTextFormat.Snippet)
-
-    item.setInsertText(insertText)
+    val identifier = extractIdentifier
+    item.setTextEdit(textEdit(params, identifier, insertText))
 
     val kind = completionKind(element.getKind)
     kind.foreach(item.setKind)

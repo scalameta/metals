@@ -81,7 +81,8 @@ trait CommonMtagsEnrichments {
 
     def trimWhitespaceInRange: Option[OffsetParams] = {
       def isWhitespace(i: Int): Boolean =
-        params.text.charAt(i).isWhitespace
+        i < params.text.length &&
+          params.text.charAt(i).isWhitespace
 
       @tailrec
       def trim(start: Int, end: Int): Option[(Int, Int)] =
@@ -182,6 +183,18 @@ trait CommonMtagsEnrichments {
       )
   }
 
+  implicit class XtensionDiagnosticLSPMtags(d: l.Diagnostic) {
+
+    /** Converts diagnostic message from Either[String, MarkupContent] to String (LSP 1.0+) */
+    def getMessageAsString: String = {
+      val msg = d.getMessage()
+      if (msg == null) ""
+      else if (msg.isLeft) msg.getLeft
+      else msg.getRight.getValue
+    }
+
+  }
+
   implicit class XtensionNIOPath(path: Path) {
     def filename: String = path.getFileName().toString()
     def exists: Boolean = {
@@ -252,7 +265,10 @@ trait CommonMtagsEnrichments {
     def isWorksheet: Boolean =
       doc.endsWith(".worksheet.sc")
     def isScalaFilename: Boolean =
-      doc.isScala || isScalaScript || isSbt || isMill
+      doc.isScala || isScalaScript || isSbt || isMill || isTwirlTemplate
+    def isTwirlTemplate: Boolean =
+      doc.endsWith(".scala.html") || doc.endsWith(".scala.js") ||
+        doc.endsWith(".scala.xml") || doc.endsWith(".scala.txt")
     def isScalaOrJavaFilename: Boolean =
       isScalaFilename || isJavaFilename
     def isScalaOrJavaOrProtoFilename: Boolean =

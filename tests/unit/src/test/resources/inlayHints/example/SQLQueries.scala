@@ -24,4 +24,9 @@ class SQLQueries {
         INSERT INTO users (id, name, age, created_at)
         VALUES (1, 'John Doe', 25, CURRENT_TIMESTAMP)
         """/*)*/
+
+    val nestedInterpolators/*: String<<scala/Predef.String#>>*/ = /*SQLStringContext<<(3:19)>>(*/sql"""
+        SELECT name, age
+        ${/*args = */s"FROM ${/*SQLStringContext<<(3:19)>>(*/sql"users"/*)*/} WHERE"} age > 30.5
+        """/*)*/
 }

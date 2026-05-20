@@ -461,6 +461,33 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("inspect-java-generic-type (Issue #7932)") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      path = server.toPath("a/src/main/scala/Main.scala")
+      result <- server.headServer.queryEngine.inspect(
+        "java.util.function.Consumer",
+        path,
+      )
+      _ = assertNoDiff(
+        result.show,
+        """|trait Consumer
+           |	 - accept(x$1: _$1): Unit
+           |	 - andThen(x$1: Consumer[_ >: _$1 <: Object]): Consumer[_$1]
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("docstrings") {
     cleanWorkspace()
     for {
@@ -586,6 +613,529 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  // Smart fallback tests - no path provided, should auto-detect build target
+  test("inspect-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/MyClass.scala
+           |package com.test
+           |
+           |class MyClass {
+           |  def myMethod(x: Int): Int = x * 2
+           |}
+           |
+           |object MyClass {
+           |  def apply(): MyClass = new MyClass()
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/MyClass.scala")
+      _ = assertNoDiagnostics()
+      // Call inspect without path - should use smart fallback
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.MyClass",
+        path = None,
+        module = None,
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class MyClass
+           |	 - <init>(): MyClass
+           |	 - myMethod(x: Int): Int
+           |object MyClass
+           |	 - apply(): MyClass
+           |""".stripMargin,
+      )
+      // Verify primary target is detected
+      _ = assert(
+        res.primaryTarget.isDefined,
+        "Primary target should be detected via smart fallback",
+      )
+    } yield ()
+  }
+
+  test("docstrings-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/DocClass.scala
+           |package com.test
+           |
+           |class DocClass {
+           |  /**
+           |   * Multiplies the input by two.
+           |   * @param x the input value
+           |   * @return x multiplied by 2
+           |   */
+           |  def double(x: Int): Int = x * 2
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/DocClass.scala")
+      _ = assertNoDiagnostics()
+      // Call getDocumentation without path - should use smart fallback
+      res = server.headServer.queryEngine.getDocumentation(
+        "com.test.DocClass.double",
+        path = None,
+        module = None,
+      )
+      _ = assertNoDiff(
+        res.map(_.show).getOrElse(""),
+        """|Multiplies the input by two.
+           |
+           |@param x: the input value
+           |
+           |@returns x multiplied by 2
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages-smart-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/UsageClass.scala
+           |package com.test
+           |
+           |class UsageClass {
+           |  def helper(x: Int): Int = x + 1
+           |  def useHelper(x: Int): Int = helper(x) + 1
+           |}
+           |
+           |/a/src/main/scala/com/test/UsageConsumer.scala
+           |package com.test
+           |
+           |object UsageConsumer {
+           |  def foo = new UsageClass().helper(5)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/test/UsageClass.scala")
+      _ = assertNoDiagnostics()
+      // Call getUsages without path - should use smart fallback
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "com.test.UsageClass.helper",
+            path = None,
+            module = None,
+          )
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/test/UsageClass.scala")}:4
+            |${Path.of("a/src/main/scala/com/test/UsageClass.scala")}:5
+            |${Path.of("a/src/main/scala/com/test/UsageConsumer.scala")}:4
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // Test explicit module parameter
+  test("inspect-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/ModuleClass.scala
+           |package com.test
+           |
+           |class ModuleClass {
+           |  def moduleMethod(): String = "test"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/ModuleClass.scala")
+      _ = assertNoDiagnostics()
+      // Inspect with explicit module "a"
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.ModuleClass",
+        path = None,
+        module = Some("a"),
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class ModuleClass
+           |	 - <init>(): ModuleClass
+           |	 - moduleMethod(): String
+           |""".stripMargin,
+      )
+      _ = assertEquals(res.primaryTarget, Some("a"))
+    } yield ()
+  }
+
+  test("docstrings-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/a/src/main/scala/com/module_a/DocA.scala
+           |package com.module_a
+           |
+           |class DocA {
+           |  /**
+           |   * Method in module A.
+           |   * @return greeting from A
+           |   */
+           |  def greetA(): String = "Hello from A"
+           |}
+           |
+           |/b/src/main/scala/com/module_b/DocB.scala
+           |package com.module_b
+           |
+           |class DocB {
+           |  /**
+           |   * Method in module B.
+           |   * @return greeting from B
+           |   */
+           |  def greetB(): String = "Hello from B"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/module_a/DocA.scala")
+      _ <- server.didOpen("b/src/main/scala/com/module_b/DocB.scala")
+      _ = assertNoDiagnostics()
+      // Get docs for DocA using explicit module "a"
+      resA = server.headServer.queryEngine.getDocumentation(
+        "com.module_a.DocA.greetA",
+        path = None,
+        module = Some("a"),
+      )
+      _ = assertNoDiff(
+        resA.map(_.show).getOrElse(""),
+        """|Method in module A.
+           |
+           |@returns greeting from A
+           |""".stripMargin,
+      )
+      // Get docs for DocB using explicit module "b"
+      resB = server.headServer.queryEngine.getDocumentation(
+        "com.module_b.DocB.greetB",
+        path = None,
+        module = Some("b"),
+      )
+      _ = assertNoDiff(
+        resB.map(_.show).getOrElse(""),
+        """|Method in module B.
+           |
+           |@returns greeting from B
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("usages-with-module") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"dependsOn": ["a"]}
+           |}
+           |/a/src/main/scala/com/shared/SharedUtil.scala
+           |package com.shared
+           |
+           |object SharedUtil {
+           |  def sharedMethod(x: Int): Int = x * 2
+           |}
+           |
+           |/a/src/main/scala/com/shared/SharedConsumer.scala
+           |package com.shared
+           |
+           |object SharedConsumer {
+           |  def useShared = SharedUtil.sharedMethod(5)
+           |}
+           |
+           |/b/src/main/scala/com/app/AppConsumer.scala
+           |package com.app
+           |
+           |import com.shared.SharedUtil
+           |
+           |object AppConsumer {
+           |  def useFromApp = SharedUtil.sharedMethod(10)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/shared/SharedUtil.scala")
+      _ <- server.didOpen("b/src/main/scala/com/app/AppConsumer.scala")
+      _ = assertNoDiagnostics()
+      // Get usages with explicit module "a"
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "com.shared.SharedUtil.sharedMethod",
+            path = None,
+            module = Some("a"),
+          )
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/shared/SharedConsumer.scala")}:4
+            |${Path.of("a/src/main/scala/com/shared/SharedUtil.scala")}:4
+            |${Path.of("b/src/main/scala/com/app/AppConsumer.scala")}:6
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("inspect-searchAllTargets") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/SearchClass.scala
+           |package com.test
+           |
+           |class SearchClass {
+           |  def searchMethod(): Int = 42
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/SearchClass.scala")
+      _ = assertNoDiagnostics()
+      // Inspect with searchAllTargets=true (single module)
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.SearchClass",
+        path = None,
+        module = None,
+        searchAllTargets = true,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class SearchClass
+           |	 - <init>(): SearchClass
+           |	 - searchMethod(): Int
+           |""".stripMargin,
+      )
+      // Verify at least one target was searched
+      _ = assert(
+        res.searchedTargets.nonEmpty,
+        s"Expected at least 1 searched target, got: ${res.searchedTargets}",
+      )
+    } yield ()
+  }
+
+  test("inspect-invalid-module-fallback") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/FallbackClass.scala
+           |package com.test
+           |
+           |class FallbackClass {
+           |  def fallbackMethod(): Int = 99
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/FallbackClass.scala")
+      _ = assertNoDiagnostics()
+      // Call with invalid module name - should fall back to smart fallback
+      res <- server.headServer.queryEngine.inspect(
+        "com.test.FallbackClass",
+        path = None,
+        module = Some("nonexistent-module"),
+        searchAllTargets = false,
+      )
+      _ = assertNoDiff(
+        res.results.map(_.show).mkString("\n"),
+        """|class FallbackClass
+           |	 - <init>(): FallbackClass
+           |	 - fallbackMethod(): Int
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("get-source") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      path = server.toPath("a/src/main/scala/Main.scala")
+      // Default (detailed=false): shortened bodies with ???
+      resShort = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable",
+        Some(path),
+        module = None,
+        detailed = false,
+      )
+      _ = resShort match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            """|package scala
+               |package util
+               |import java.lang.InheritableThreadLocal
+               |class DynamicVariable[T](init: T) {
+               |  private[this] val tl = ???
+               |  /** Retrieve the current value */
+               |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
+               |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
+               |  def value_=(newval: T) = ???
+               |  override def toString: String = ???
+               |}
+               |""".stripMargin,
+          )
+        case None =>
+          fail(
+            "Source should be found for scala.util.DynamicVariable (detailed)"
+          )
+      }
+      // detailed=true: full method bodies
+      resFull = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable",
+        Some(path),
+        module = None,
+        detailed = true,
+      )
+      _ = resFull match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            fullDynamicVariableSource,
+          )
+        case None =>
+          fail(
+            "Source should be found for scala.util.DynamicVariable (detailed)"
+          )
+      }
+      // Get source via a method - should return the containing file
+      methodRes = server.headServer.queryEngine.getSource(
+        "scala.util.DynamicVariable.value",
+        Some(path),
+      )
+      _ = methodRes match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(resPath.toString, "/scala/util/DynamicVariable.scala")
+          assertNoDiff(
+            contents,
+            """|package scala
+               |package util
+               |import java.lang.InheritableThreadLocal
+               |class DynamicVariable[T](init: T) {
+               |  private[this] val tl = ???
+               |  /** Retrieve the current value */
+               |  def value: T = ???
+               |  /** Set the value of the variable while executing the specified
+               |    * thunk.
+               |    *
+               |    * @param newval The value to which to set the variable
+               |    * @param thunk The code to evaluate under the new setting
+               |    */
+               |  def withValue[S](newval: T)(thunk: => S): S = ???
+               |  /** Change the currently bound value, discarding the old value.
+               |    * Usually withValue() gives better semantics.
+               |    */
+               |  def value_=(newval: T) = ???
+               |  override def toString: String = ???
+               |}
+               |""".stripMargin,
+          )
+        case None =>
+          fail("Source should be found for scala.util.DynamicVariable.value")
+      }
+    } yield ()
+  }
+
+  test("get-source-java-dependency-shortened") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+      res = server.headServer.queryEngine.getSource(
+        "java.nio.file.FileTreeIterator",
+        Some(server.toPath("a/src/main/scala/Main.scala")),
+        module = None,
+        detailed = false,
+      )
+      _ = res match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(
+            resPath.toString,
+            "/java.base/java/nio/file/FileTreeIterator.java",
+          )
+          assertContains(contents, "private void fetchNextIfNeeded() {}")
+        case None =>
+          fail(
+            "Source should be found for java.nio.file.FileTreeIterator"
+          )
+      }
+      res2 = server.headServer.queryEngine.getSource(
+        "java.nio.file.FileTreeIterator",
+        Some(server.toPath("a/src/main/scala/Main.scala")),
+        module = None,
+        detailed = true,
+      )
+      _ = res2 match {
+        case Some((resPath, contents)) =>
+          assertNoDiff(
+            resPath.toString,
+            "/java.base/java/nio/file/FileTreeIterator.java",
+          )
+          assertContains(
+            contents,
+            "FileTreeWalker.Event ev = walker.next();".stripMargin,
+          )
+        case None =>
+          fail(
+            "Source should be found for java.nio.file.FileTreeIterator"
+          )
+      }
+    } yield ()
+  }
+
   def timed[T](f: => T): T = {
     val start = System.currentTimeMillis()
     val res = f
@@ -593,4 +1143,77 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     scribe.info(s"Time taken: ${time}ms")
     res
   }
+
+  private val fullDynamicVariableSource =
+    """|/*
+       | * Scala (https://www.scala-lang.org)
+       | *
+       | * Copyright EPFL and Lightbend, Inc. dba Akka
+       | *
+       | * Licensed under Apache License 2.0
+       | * (http://www.apache.org/licenses/LICENSE-2.0).
+       | *
+       | * See the NOTICE file distributed with this work for
+       | * additional information regarding copyright ownership.
+       | */
+       |
+       |package scala
+       |package util
+       |
+       |import java.lang.InheritableThreadLocal
+       |
+       |/** `DynamicVariables` provide a binding mechanism where the current
+       | *  value is found through dynamic scope, but where access to the
+       | *  variable itself is resolved through static scope.
+       | *
+       | *  The current value can be retrieved with the value method. New values
+       | *  should be pushed using the `withValue` method. Values pushed via
+       | *  `withValue` only stay valid while the `withValue`'s second argument, a
+       | *  parameterless closure, executes. When the second argument finishes,
+       | *  the variable reverts to the previous value.
+       | *
+       | *  {{{
+       | *  someDynamicVariable.withValue(newValue) {
+       | *    // ... code called in here that calls value ...
+       | *    // ... will be given back the newValue ...
+       | *  }
+       | *  }}}
+       | *
+       | *  Each thread gets its own stack of bindings.  When a
+       | *  new thread is created, the `DynamicVariable` gets a copy
+       | *  of the stack of bindings from the parent thread, and
+       | *  from then on the bindings for the new thread
+       | *  are independent of those for the original thread.
+       | */
+       |class DynamicVariable[T](init: T) {
+       |  private[this] val tl = new InheritableThreadLocal[T] {
+       |    override def initialValue: T with AnyRef = init.asInstanceOf[T with AnyRef]
+       |  }
+       |
+       |  /** Retrieve the current value */
+       |  def value: T = tl.get.asInstanceOf[T]
+       |
+       |  /** Set the value of the variable while executing the specified
+       |    * thunk.
+       |    *
+       |    * @param newval The value to which to set the variable
+       |    * @param thunk The code to evaluate under the new setting
+       |    */
+       |  def withValue[S](newval: T)(thunk: => S): S = {
+       |    val oldval = value
+       |    tl set newval
+       |
+       |    try thunk
+       |    finally tl set oldval
+       |  }
+       |
+       |  /** Change the currently bound value, discarding the old value.
+       |    * Usually withValue() gives better semantics.
+       |    */
+       |  def value_=(newval: T) = tl set newval
+       |
+       |  override def toString: String = "DynamicVariable(" + value + ")"
+       |}
+       |""".stripMargin
+
 }

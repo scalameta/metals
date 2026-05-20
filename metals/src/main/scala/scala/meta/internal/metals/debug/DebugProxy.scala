@@ -192,7 +192,11 @@ private[debug] final class DebugProxy(
           response.setResult(responseArgs.toJson)
           client.consume(response)
         }
-        .withTimeout(5, TimeUnit.SECONDS)
+        .withTimeout(
+          5,
+          TimeUnit.SECONDS,
+          Some("completing the completions request"),
+        )
 
     case HotCodeReplace(req) =>
       scribe.info("Hot code replace triggered")

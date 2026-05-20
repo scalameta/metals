@@ -7,6 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.bsp.BspResolvedResult
 import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.RegenerateBspConfig
 import scala.meta.internal.bsp.ResolvedBloop
 import scala.meta.internal.bsp.ResolvedBspOne
 import scala.meta.internal.bsp.ResolvedMultiple
@@ -99,7 +100,8 @@ class GithubNewIssueUrlCreator(
                 s"Disconnected: ${details.getName()}"
               case ResolvedMultiple(_, details) =>
                 s"Disconnected: Multiple Found ${details.map(_.getName()).mkString("; ")}"
-              case ResolvedNone => s"Disconnected: None Found"
+              case ResolvedNone => "Disconnected: None Found"
+              case RegenerateBspConfig => "Regenerate bsp config"
             }
           }
         buildServer

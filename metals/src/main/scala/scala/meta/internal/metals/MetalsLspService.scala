@@ -59,6 +59,7 @@ import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
+import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinderGranularity
@@ -142,7 +143,7 @@ abstract class MetalsLspService(
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.ec", ec)
 
-  def getVisibleName: String = folderVisibleName.getOrElse(folder.toString())
+  def getVisibleName: String = folderVisibleName.getOrElse(folder.filename)
 
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
@@ -300,6 +301,7 @@ abstract class MetalsLspService(
     downstreamTargets,
     initialServerConfig,
     () => userConfig,
+    clientConfig,
   )
 
   protected def semanticdbs(): Semanticdbs
@@ -606,6 +608,7 @@ abstract class MetalsLspService(
     packageProvider,
     scalaVersionSelector,
     clientConfig.icons(),
+    clientConfig.isReadClipboardProvider(),
     onCreate = path => {
       for {
         _ <- onCreate(path)
@@ -653,12 +656,28 @@ abstract class MetalsLspService(
     () => userConfig.protobufLspConfig,
   )
 
+  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
+    buffers,
+    () => userConfig,
+    folder,
+    workDoneProgress,
+    compilations,
+    languageClient,
+    buildTargets,
+    interactiveSemanticdbs,
+    tables,
+    buildHasErrors,
+    diagnostics,
+    statusBar,
+  )
+
   val semanticDBIndexer: SemanticdbIndexer = new SemanticdbIndexer(
     List(
       referencesProvider,
       implementationProvider,
       testProvider,
       buildTargetClasses,
+      scalafixProvider,
     ),
     buildTargets,
     folder,
@@ -675,6 +694,13 @@ abstract class MetalsLspService(
       trees,
       buildTargets,
       supermethods,
+    )
+
+  protected val typeHierarchyProvider: TypeHierarchyProvider =
+    new TypeHierarchyProvider(
+      semanticdbs,
+      definitionProvider,
+      implementationProvider,
     )
 
   protected val renameProvider: RenameProvider = new RenameProvider(
@@ -694,28 +720,16 @@ abstract class MetalsLspService(
   def buildHasErrors(path: scala.meta.io.AbsolutePath): Boolean =
     buildClient.buildHasErrors(path)
 
-  protected val scalafixProvider: ScalafixProvider = ScalafixProvider(
-    buffers,
-    () => userConfig,
-    folder,
-    workDoneProgress,
-    compilations,
-    languageClient,
-    buildTargets,
-    interactiveSemanticdbs,
-    tables,
-    buildHasErrors,
-    statusBar,
-  )
-
   protected val codeActionProvider: CodeActionProvider = new CodeActionProvider(
     compilers,
+    folder,
     buffers,
     buildTargets,
     scalafixProvider,
     trees,
     diagnostics,
     languageClient,
+    clientConfig,
   )
 
   protected val inlayHintResolveProvider: InlayHintResolveProvider =
@@ -903,6 +917,14 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.activatePlatformForTarget)
+      .foreach { platform =>
+        buildTargetClasses.rebuildIndex(
+          buildTargets.targetsByPlatform(platform)
+        )
+      }
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -1021,6 +1043,17 @@ abstract class MetalsLspService(
       prevBuildTarget: b.BuildTargetIdentifier,
   ): Future[DidFocusResult.Value] = {
     userConfigPromise.future.flatMap { _ =>
+      focusedDocumentBuildTarget.set(
+        buildTargets.inverseSources(path).getOrElse(null)
+      )
+      buildTargets
+        .inverseSources(path)
+        .flatMap(buildTargets.activatePlatformForTarget)
+        .foreach { platform =>
+          buildTargetClasses.rebuildIndex(
+            buildTargets.targetsByPlatform(platform)
+          )
+        }
       buildTargets.inverseSources(path) match {
         case Some(target)
             if userConfig.buildOnFocus && prevBuildTarget != target =>
@@ -1536,6 +1569,27 @@ abstract class MetalsLspService(
       callHierarchyProvider.outgoingCalls(params, token).map(_.asJava)
     }
 
+  override def prepareTypeHierarchy(
+      params: TypeHierarchyPrepareParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.prepare(params).map(_.asJava)
+    }
+
+  override def typeHierarchySupertypes(
+      params: TypeHierarchySupertypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.supertypes(params).map(_.asJava)
+    }
+
+  override def typeHierarchySubtypes(
+      params: TypeHierarchySubtypesParams
+  ): CompletableFuture[util.List[TypeHierarchyItem]] =
+    CancelTokens.future { _ =>
+      typeHierarchyProvider.subtypes(params).map(_.asJava)
+    }
+
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
@@ -2037,6 +2091,7 @@ abstract class MetalsLspService(
     semanticDBIndexer.reset()
     worksheetProvider.reset()
     symbolSearch.reset()
+    buildTargets.resetActivePlatforms()
   }
 
   def fileWatcher: FileWatcher
@@ -2070,7 +2125,7 @@ abstract class MetalsLspService(
   ): Future[Unit] = {
     paths
       .find { path =>
-        if (clientConfig.isDidFocusProvider() || focusedDocument.isDefined) {
+        if (clientConfig.isDidFocusProvider()) {
           focusedDocument.contains(path) &&
           path.isWorksheet
         } else {

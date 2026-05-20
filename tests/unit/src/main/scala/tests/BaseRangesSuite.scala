@@ -62,15 +62,16 @@ abstract class BaseRangesSuite(name: String) extends BaseLspSuite(name) {
           files.map(file => server.didOpen(s"${file._1}"))
         )
         _ <- additionalEdits()
-        allChecks = for {
-          query <- allReferenceLocations
-        } yield () =>
-          assertCheck(
-            query.filename,
-            query.query.replaceAll("(<<|>>)", ""),
-            expected,
-            base,
-          )
+        allChecks =
+          for {
+            query <- allReferenceLocations
+          } yield () =>
+            assertCheck(
+              query.filename,
+              query.query.replaceAll("(<<|>>)", ""),
+              expected,
+              base,
+            )
         _ <- MetalsTestEnrichments.orderly(allChecks)
         _ <- server.shutdown()
       } yield ()

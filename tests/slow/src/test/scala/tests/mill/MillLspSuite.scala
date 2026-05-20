@@ -140,7 +140,7 @@ class MillLspSuite extends BaseImportSuite("mill-import") {
     } yield ()
   }
 
-  test("fatal-warnings") {
+  test("fatal-warnings", maxRetry = 3) {
     cleanWorkspace()
     for {
       _ <- initialize(

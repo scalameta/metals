@@ -15,12 +15,14 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
+import tests.BaseBazelServerSuite
 import tests.BaseImportSuite
 import tests.BazelModuleLayout
 import tests.BazelServerInitializer
 
 class BazelTestDiscoverySuite
-    extends BaseImportSuite("bazel-test-discovery", BazelServerInitializer) {
+    extends BaseImportSuite("bazel-test-discovery", BazelServerInitializer)
+    with BaseBazelServerSuite {
 
   val bazelVersion = "8.2.1"
 
@@ -57,24 +59,8 @@ class BazelTestDiscoverySuite
   ): Option[String] = BazelDigest.current(workspace)
 
   override def afterEach(context: AfterEach): Unit = {
-    try {
-      // Shutdown Bazel server after each test
-      ShellRunner.runSync(
-        List("bazel", "shutdown"),
-        workspace,
-        redirectErrorOutput = false,
-      ) match {
-        case Some(output) =>
-          scribe.info(s"Bazel shutdown completed: $output")
-        case None =>
-          scribe.warn("Bazel shutdown command failed or produced no output")
-      }
-    } catch {
-      case e: Exception =>
-        scribe.warn(s"Failed to shutdown Bazel server: ${e.getMessage}")
-    } finally {
-      super.afterEach(context)
-    }
+    super.afterEach(context)
+    cleanBazelServer()
   }
 
   test("simple-scalatest-discovery") {

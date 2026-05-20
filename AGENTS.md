@@ -8,8 +8,7 @@ codebase.
 To run tests, use the following command:
 
 ```bash
-source .envrc
-coursier launch sbt -- --client SBT_PROJECT/testOnly TEST_CLASS "-- *TEST_NAME_GLOB"
+sbt --client SBT_PROJECT/testOnly TEST_CLASS "-- *TEST_NAME_GLOB"
 ```
 
 **Note:** By convention, test names should be kebab-case with no spaces (e.g.,
@@ -18,8 +17,7 @@ coursier launch sbt -- --client SBT_PROJECT/testOnly TEST_CLASS "-- *TEST_NAME_G
 ### Example
 
 ```bash
-source .envrc
-coursier launch sbt -- --client javapc/testOnly pc.CompletionIdentifierSuite "-- *private-member"
+sbt --client javapc/testOnly pc.CompletionIdentifierSuite "-- *private-member"
 ```
 
 For more information on filtering tests in MUnit, see the
@@ -27,20 +25,22 @@ For more information on filtering tests in MUnit, see the
 
 ## Preparing for PRs
 
-Once all tests are passing and the feature is ready for review, run the
-following commands:
+Before committing, ALWAYS format all changed Scala files using `./bin/scalafmt`  and run `sbt --client scalafixAll`
 
-```
-coursier launch sbt -- --client scalafixAll
-```
-
-Then run:
-
-```
-./bin/scalafmt --diff --diff-branch databricks
-```
 ## Working with Scala code
 
-- Don't use `.iterator` unless really necessary. Prefer working with higher order functions, like filter, map, flatmap directly on collections
-- Prefer for-loops over map/flatmap, unless they fit in one line (one or maximum two calls)
-- don't call `.toList` unless it's necessary
+* Don't use `.iterator` unless really necessary. Prefer working with higher order functions, like filter, map, flatmap directly on collections
+* Prefer for-loops over map/flatmap, unless they fit in one line (one or maximum two calls)
+* don't call `.toList` unless it's necessary
+* ALWAYS use Metals MCP tools to compile and run tests instead of relying on bash commands
+* If MCP tools are not available report that to the user
+* after adding a dependency to `build.sbt`, ALWAYS run the `import-build` tool
+* to lookup a dependency or the latest version, use the `find-dep` tool
+* to lookup the API of a class, use the `inspect` tool
+* use `sbt --client` instead of `sbt` to connect to a running sbt server for
+  faster execution
+* NEVER use non-local returns
+
+# Git
+
+* always create new commits, instead of amending existing ones

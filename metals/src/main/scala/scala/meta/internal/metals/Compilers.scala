@@ -4,7 +4,6 @@ import java.net.URI
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
-import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -59,6 +58,9 @@ import scala.meta.pc.VirtualFileParams
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.CompileReport
+import com.google.common.cache.CacheBuilder
+import com.google.common.cache.RemovalListener
+import com.google.common.cache.RemovalNotification
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -151,18 +153,49 @@ class Compilers(
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
 
+  private val presentationCompilerCache = CacheBuilder
+    .newBuilder()
+    .maximumSize(32)
+    .removalListener(
+      new RemovalListener[PresentationCompilerKey, MtagsPresentationCompiler] {
+        def onRemoval(
+            notification: RemovalNotification[
+              PresentationCompilerKey,
+              MtagsPresentationCompiler,
+            ]
+        ): Unit = {
+          notification.getValue.shutdown()
+        }
+      }
+    )
+    .build[PresentationCompilerKey, MtagsPresentationCompiler]()
+
   // Not a TrieMap because we want to avoid loading duplicate compilers for the same build target.
   // Not a `j.u.c.ConcurrentHashMap` because it can deadlock in `computeIfAbsent` when the absent
   // function is expensive, which is the case here.
   val jcache: ju.Map[PresentationCompilerKey, MtagsPresentationCompiler] =
-    Collections.synchronizedMap(
-      new java.util.HashMap[PresentationCompilerKey, MtagsPresentationCompiler]
+    presentationCompilerCache.asMap()
+
+  private val presentationCompilerWorksheetsCache = CacheBuilder
+    .newBuilder()
+    .maximumSize(32)
+    .removalListener(
+      new RemovalListener[AbsolutePath, MtagsPresentationCompiler] {
+        def onRemoval(
+            notification: RemovalNotification[
+              AbsolutePath,
+              MtagsPresentationCompiler,
+            ]
+        ): Unit = {
+          notification.getValue.shutdown()
+        }
+      }
     )
+    .build[AbsolutePath, MtagsPresentationCompiler]()
+
   private val jworksheetsCache
       : ju.Map[AbsolutePath, MtagsPresentationCompiler] =
-    Collections.synchronizedMap(
-      new java.util.HashMap[AbsolutePath, MtagsPresentationCompiler]
-    )
+    presentationCompilerWorksheetsCache.asMap()
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
@@ -274,17 +307,8 @@ class Compilers(
     cache.values.count(_.await.isLoaded())
 
   override def cancel(): Unit = {
-    // this may be tempting, but cancel is called after every sync/import,
-    // but the Compilers instance is reused, causing eviction to stop working
-    // idleCompilerEvictionTask.cancel(false)
-    Cancelable.cancelEach(cache.values)(_.shutdown())
-    Cancelable.cancelEach(worksheetsCache.values)(_.shutdown())
-    // important not to leak presentation compilers, they come with
-    // a background thread that holds a reference to the compiler
-    // without a proper shutdown, the thread and MetalsGlobal stay around
-    cache.values.foreach(_.shutdown())
-    cache.clear()
-    worksheetsCache.clear()
+    presentationCompilerCache.invalidateAll()
+    presentationCompilerWorksheetsCache.invalidateAll()
     worksheetsDigests.clear()
     outlineFilesProvider.clear()
   }
@@ -372,47 +396,106 @@ class Compilers(
       changedFiles => {
         for {
           _ <- sh.sleep(diagnosticsDebouncerDelay)
-          futures = for {
-            file <- changedFiles.distinct
-            pc <- this.loadCompiler(file).toList
-            contents <- buffers.get(file).toList
-          } yield {
-            val token = new CompletableCancelToken()
-            inFlightDidChange.put(file, token).foreach { old =>
-              old.cancel()
+          futures =
+            for {
+              file <- changedFiles.distinct
+              pc <- this.loadCompiler(file).toList
+              contents <- buffers.get(file).toList
+            } yield {
+              val token = new CompletableCancelToken()
+              inFlightDidChange.put(file, token).foreach { old =>
+                old.cancel()
+              }
+              val params = CompilerVirtualFileParams(
+                file.toNIO.toUri,
+                contents,
+                token = token,
+                shouldReturnDiagnostics =
+                  userConfig().presentationCompilerDiagnostics,
+              )
+              timerProvider
+                .withTimer(
+                  "computed diagnostics",
+                  reportStatus = false,
+                  onlyIf = false,
+                ) {
+                  pc.didChange(params).asScala
+                }
+                .map { case (timer, reportedDiagnostics) =>
+                  diagnostics.publishDiagnosticsNotAdjusted(
+                    file,
+                    reportedDiagnostics.asScala.toList,
+                  )
+                  metrics.recordEvent(
+                    Event
+                      .duration("diagnostics", timer.elapsed)
+                      .withLanguage(file.toJLanguage)
+                  )
+                }
             }
-            val params = CompilerVirtualFileParams(
-              file.toNIO.toUri,
-              contents,
-              token = token,
-              shouldReturnDiagnostics =
-                userConfig().presentationCompilerDiagnostics,
-            )
-            timerProvider
-              .withTimer(
-                "computed diagnostics",
-                reportStatus = false,
-                onlyIf = false,
-              ) {
-                pc.didChange(params).asScala
-              }
-              .map { case (timer, reportedDiagnostics) =>
-                diagnostics.publishDiagnosticsNotAdjusted(
-                  file,
-                  reportedDiagnostics.asScala.toList,
-                )
-                metrics.recordEvent(
-                  Event
-                    .duration("diagnostics", timer.elapsed)
-                    .withLanguage(file.toJLanguage)
-                )
-              }
-          }
           _ <- Future.sequence(futures)
         } yield ()
       },
       "fileDidChange",
     )
+
+  /**
+   * Compile a file with the -explain flag to get detailed error explanations.
+   * This creates a temporary presentation compiler with the -explain option.
+   */
+  def compileWithExplain(path: AbsolutePath): Future[List[Diagnostic]] = {
+    buildTargets.inverseSources(path) match {
+      case Some(targetId) =>
+        buildTargets.scalaTarget(targetId) match {
+          case Some(scalaTarget)
+              if ScalaVersions.isScala3Version(scalaTarget.scalaVersion) =>
+            compileWithExplainForTarget(path, scalaTarget)
+          case Some(_) =>
+            // -explain is only available for Scala 3
+            Future.successful(Nil)
+          case None =>
+            Future.successful(Nil)
+        }
+      case None =>
+        Future.successful(Nil)
+    }
+  }
+
+  private def compileWithExplainForTarget(
+      path: AbsolutePath,
+      scalaTarget: ScalaTarget,
+  ): Future[List[Diagnostic]] = {
+    val scalaVersion = scalaTarget.scalaVersion
+    mtagsResolver.resolve(scalaVersion) match {
+      case Some(mtags) =>
+        val explainCompiler = ScalaLazyCompiler(
+          scalaTarget,
+          mtags,
+          search,
+          completionItemPriority(),
+          serverConfig.compilers.sourcePathMode,
+          additionalOptions = Seq("-explain"),
+        )
+
+        val input = path.toInputFromBuffers(buffers)
+        val params = Compilers.DidChangeCompilerFileParams(
+          path.toNIO.toUri(),
+          input.value,
+          shouldReturnDiagnostics = true,
+        )
+        explainCompiler.await
+          .didChange(params)
+          .asScala
+          .map(_.asScala.toList)
+          .andThen { case _ =>
+            // Clean up the temporary compiler
+            explainCompiler.shutdown()
+          }
+
+      case None =>
+        Future.successful(Nil)
+    }
+  }
 
   private def didChangeBSPDiagnostics(
       path: AbsolutePath,
@@ -712,11 +795,11 @@ class Compilers(
       params: SemanticTokensParams,
       token: CancelToken,
   ): Future[SemanticTokens] = {
-    val emptyTokens = Collections.emptyList[Integer]();
-    if (!userConfig().enableSemanticHighlighting) {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    val emptyTokens = ju.Collections.emptyList[Integer]();
+    if (!userConfig().enableSemanticHighlighting || path.isTwirlTemplate) {
       Future { new SemanticTokens(emptyTokens) }
     } else {
-      val path = params.getTextDocument.getUri.toAbsolutePath
       loadCompiler(path)
         .map { compiler =>
           val (input, _, adjust) =
@@ -1179,21 +1262,27 @@ class Compilers(
       codeActionId: String,
       codeActionPayload: Option[Object],
   ): Future[ju.List[TextEdit]] = {
-    withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      pc.codeAction(
-        CompilerOffsetParamsUtils.fromPos(
-          pos,
-          token,
-          outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
-        ),
-        codeActionId,
-        codeActionPayload.asJava,
-      ).asScala
-        .map { edits =>
-          adjust.adjustTextEdits(edits)
-        }
+    // disable code actions completely for Twirl templates
+    val isTwirl = params.getTextDocument.getUri.isTwirlTemplate
+    if (isTwirl) {
+      Future.successful(Nil.asJava)
+    } else {
+      withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
+        pc.codeAction(
+          CompilerOffsetParamsUtils.fromPos(
+            pos,
+            token,
+            outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
+          ),
+          codeActionId,
+          codeActionPayload.asJava,
+        ).asScala
+          .map { edits =>
+            adjust.adjustTextEdits(edits)
+          }
+      }.getOrElse(Future.successful(Nil.asJava))
     }
-  }.getOrElse(Future.successful(Nil.asJava))
+  }
 
   def supportedCodeActions(path: AbsolutePath): ju.List[String] = {
     loadCompiler(path).map { pc =>
@@ -1298,37 +1387,38 @@ class Compilers(
       findTypeDef: Boolean,
   ): Future[DefinitionResult] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
-      val params = CompilerOffsetParamsUtils.fromPos(
+      val paramsWithOutline = CompilerOffsetParamsUtils.fromPos(
         pos,
         token,
         outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
       )
+
       val defResult =
-        if (findTypeDef) pc.typeDefinition(params)
+        if (findTypeDef) pc.typeDefinition(paramsWithOutline)
         else
           pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
 
       for {
         c <- defResult.asScala
-        locations <-
-          if (c.isResolved())
-            Future.successful(
-              adjust.adjustLocations(c.locations()).asScala.toSeq
+        originalUri = paramsWithOutline.uri
+        locations = c.locations()
+        resolvedLocations <-
+          if (c.isResolved()) {
+            val adjustable = locations.asScala.filter(loc =>
+              originalUri.toString == loc.getUri()
             )
-          else
+            adjust.adjustLocations(adjustable.asJava).asScala.toSeq
+            Future.successful(locations.asScala)
+          } else
             locateInsideDecompiledJar(c.symbol(), c.locations().asScala.toSeq)
       } yield {
-        val definitionPaths = locations.map { loc =>
-          loc.getUri().toAbsolutePath
-        }.toSet
-
-        val definitionPath = if (definitionPaths.size == 1) {
-          Some(definitionPaths.head)
-        } else {
-          None
-        }
+        val definitionPaths =
+          resolvedLocations.map(_.getUri().toAbsolutePath).toSet
+        val definitionPath =
+          if (definitionPaths.size == 1) Some(definitionPaths.head)
+          else None
         DefinitionResult(
-          locations.asJava,
+          resolvedLocations.asJava,
           c.symbol(),
           definitionPath,
           None,

@@ -14,6 +14,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.util.Failure
+import scala.util.Properties
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
@@ -26,6 +27,7 @@ import com.swoval.files.FileTreeViews.Observer
 import com.swoval.files.PathWatcher
 import com.swoval.files.PathWatchers
 import com.swoval.files.PathWatchers.Event.Kind
+import com.swoval.files.apple.CreateStreamException
 
 /**
  * Watch selected files and execute  a callback on file events.
@@ -241,7 +243,21 @@ object ProjectFileWatcher {
 
     watcher.addObserver(new Observer[PathWatchers.Event] {
       override def onError(t: Throwable): Unit = {
-        scribe.error(s"Error encountered during file watching", t)
+        t match {
+          case e: CreateStreamException =>
+            if (Properties.isMac) {
+              scribe.error(
+                s"Error encountered during file watching, you can try to increase 'metals.macos-max-watch-roots' server property, the default uses 32 roots.",
+                t,
+              )
+            } else {
+              scribe.debug(
+                s"File watching: skipping symlink to non-directory: ${e.getMessage}"
+              )
+            }
+          case _ =>
+            scribe.error(s"Error encountered during file watching", t)
+        }
       }
 
       override def onNext(event: PathWatchers.Event): Unit = {

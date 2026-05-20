@@ -89,16 +89,22 @@ final class RunTestCodeLens(
       buffers.tokenEditDistance(path, textDocument.text, scalaVersionSelector)
     val targetIds = buildTargets
       .inverseSourcesAll(path)
-      .flatMap(buildTargets.allInverseDependencies)
       .distinct
-    val lenses = for {
-      buildTargetId <- targetIds
-      if canActuallyCompile(buildTargetId, diagnostics)
+
+    val firstLegitimateTargetId = for {
+      buildTargetId <- targetIds.iterator
       buildTarget <- buildTargets.info(buildTargetId)
-      if buildTarget.getCapabilities().getCanDebug()
+      capabilities = buildTarget.getCapabilities
+      if Option(capabilities.getCanDebug).exists(_.booleanValue) ||
+        Option(capabilities.getCanRun).exists(_.booleanValue)
+      if canActuallyCompile(buildTargetId, diagnostics)
       isJVM = buildTarget.asScalaBuildTarget.forall(
         _.getPlatform == b.ScalaPlatform.JVM
       )
+    } yield (buildTargetId, isJVM)
+
+    val lenses = for {
+      (buildTargetId, isJVM) <- firstLegitimateTargetId.headOption.toSeq
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
@@ -152,7 +158,7 @@ final class RunTestCodeLens(
    */
   private def isMainMethod(signature: Signature, textDocument: TextDocument) = {
     signature match {
-      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType) =>
+      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType, _) =>
         def isVoid = returnType match {
           case TypeRef(_, symbol, _) => symbol == "scala/Unit#"
           case _ => false

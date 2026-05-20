@@ -97,6 +97,56 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
+  // Regression for https://github.com/scalameta/metals/issues/8305 — MCP test runs
+  // must pass workspace `.test-jvmopts` into the forked test JVM (alongside BSP options).
+  test("mcp-run-tests-respects-test-jvmopts", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/.test-jvmopts
+           |-Dmetals.issue8305.jvmopts=from-test-jvmopts
+           |/a/src/test/scala/a/JvmOptsMcpSuite.scala
+           |package a
+           |
+           |class JvmOptsMcpSuite extends munit.FunSuite {
+           |  test("sees -D from .test-jvmopts in forked mcp test jvm") {
+           |    assertEquals(
+           |      System.getProperty("metals.issue8305.jvmopts"),
+           |      "from-test-jvmopts",
+           |    )
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/test/scala/a/JvmOptsMcpSuite.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/JvmOptsMcpSuite.scala")
+      result <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.JvmOptsMcpSuite",
+          Some(path),
+          None,
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        result.contains("1 tests, 1 passed, 0 failed"),
+        s"Expected munit to pass when forked JVM receives -D from .test-jvmopts; got:\n$result",
+      )
+    } yield ()
+  }
+
   test("zio-test", maxRetry = 3) {
     cleanWorkspace()
     for {
@@ -172,6 +222,77 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
       )
       // ZIO test framework doesn't seem to support individual test selection properly yet
       // So we just verify the test ran and contains our target test
+    } yield ()
+  }
+
+  test("testng", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.testng:testng:7.7.1", "com.lihaoyi:mill-contrib-testng:0.12.1"]
+           |  }
+           |}
+           |/a/src/main/scala/a/b/TestNGSuite.scala
+           |package a.b
+           |
+           |import org.testng.annotations.Test
+           |
+           |class TestNGSuite {
+           |  @Test
+           |  def testOK(): Unit = {
+           |    println("TestNG output message")
+           |    assert(true)
+           |  }
+           |
+           |  @Test
+           |  def testFail(): Unit = {
+           |    println("This test will fail")
+           |    assert(false)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/scala/a/b/TestNGSuite.scala"
+      )
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/main/scala/a/b/TestNGSuite.scala")
+
+      // Test with explicit path and verbose output
+      res1 <- server.headServer.mcpTestRunner
+        .runTests(
+          "a.b.TestNGSuite",
+          Some(path),
+          None,
+          verbose = true,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assertNoDiff(
+        res1.replaceAll("\\d+\\.?\\d*m?s", "x ms"),
+        """|SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+           |SLF4J: Defaulting to no-operation (NOP) logger implementation
+           |SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+           |a.b.TestNGSuite testFail This test will fail
+           |X
+           |a.b.TestNGSuite testOK TestNG output message
+           |+
+           |===============================================
+           |Command line suite
+           |Total tests run: 2, Passes: 1, Failures: 1, Skips: 0
+           |===============================================
+           |
+           |Execution took x ms
+           |2 tests, 1 passed, 1 failed
+           |""".stripMargin,
+      )
     } yield ()
   }
 

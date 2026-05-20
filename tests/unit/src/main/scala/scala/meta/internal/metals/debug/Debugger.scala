@@ -187,8 +187,14 @@ final class Debugger(server: RemoteServer)(implicit ec: ExecutionContext) {
   }
 
   def shutdown(timeout: Int = 20): Future[Unit] = {
-    server.listening.withTimeout(timeout, TimeUnit.SECONDS).andThen { case _ =>
-      server.cancel()
-    }
+    server.listening
+      .withTimeout(
+        timeout,
+        TimeUnit.SECONDS,
+        Some("shutting down the debugger"),
+      )
+      .andThen { case _ =>
+        server.cancel()
+      }
   }
 }

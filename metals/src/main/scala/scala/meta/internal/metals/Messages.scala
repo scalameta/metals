@@ -6,13 +6,14 @@ import scala.collection.mutable
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.VersionRecommendation
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
+import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
@@ -295,6 +296,73 @@ object Messages {
     }
   }
 
+  object ExplainDiagnostic {
+
+    def content(
+        matchingDiag: Option[Diagnostic],
+        diagnostics: List[Diagnostic],
+        line: Int,
+        column: Int,
+        relativePath: RelativePath,
+    ): String = {
+
+      def extractOriginalError(diag: Diagnostic): String = {
+        val range = diag.getRange()
+        val severity = Option(diag.getSeverity())
+          .map(_.toString.toLowerCase())
+          .getOrElse("error")
+        val source = Option(diag.getSource()).getOrElse("scalac")
+        s"[$source] $severity at line ${range.getStart().getLine() + 1}"
+      }
+
+      def formatDiagnosticMessage(message: String): String = {
+        // Remove the "longer explanation available" hint since we're showing the explanation
+        val cleanedMessage = message.replace(
+          "\nlonger explanation available when compiling with `-explain`",
+          "",
+        )
+        // Format any remaining content
+        cleanedMessage.trim
+      }
+      matchingDiag match {
+        case Some(diag) =>
+          val originalError = extractOriginalError(diag)
+          s"""|# Explained Diagnostic
+              |
+              |**Source File**: $relativePath
+              |**Position**: Line ${line + 1}, Column ${column + 1}
+              |
+              |## Detailed Explanation
+              |
+              |```
+              |$originalError
+              |```
+              |
+              |${formatDiagnosticMessage(diag.getMessageAsString)}
+              |""".stripMargin
+        case None =>
+          // No matching diagnostic found at position, show all diagnostics
+          val allDiags = diagnostics
+            .map { d =>
+              s"Line ${d.getRange().getStart().getLine() + 1}: ${d.getMessageAsString}"
+            }
+            .mkString("\n\n---\n\n")
+
+          s"""|# Explained Diagnostics
+              |
+              |**Source File**: $relativePath
+              |
+              |No diagnostic found at the exact position (Line ${line + 1}, Column ${column + 1}).
+              |
+              |## All Diagnostics in File
+              |
+              |$allDiags
+              |""".stripMargin
+      }
+
+    }
+  }
+
   object GenerateBspAndConnect {
     def yes = new MessageActionItem("Connect")
 
@@ -350,8 +418,7 @@ object Messages {
     val switch = new MessageActionItem("yes")
     val dontSwitch = new MessageActionItem("no")
     def notificationParams(
-        newBuildTool: String,
-        currentBuildTool: String,
+        newBuildTool: String
     ): MessageParams = {
       new MessageParams(
         MessageType.Info,
@@ -388,20 +455,20 @@ object Messages {
     def problemsFixed: MessageParams =
       new MessageParams(
         MessageType.Info,
-        "Build is correctly configured now, navigation will work for all build targets.",
+        "Build is correctly configured now, Metals should work correctly for all build targets.",
       )
 
     def moreInfo: String =
       " Select 'More information' to learn how to fix this problem."
 
     def allProjectsMisconfigured: String =
-      "Navigation will not work for this build due to mis-configuration." + moreInfo
+      "Metals might not work correctly for this build due to mis-configuration." + moreInfo
 
     def singleMisconfiguredProject(name: String): String =
-      s"Navigation will not work in project '$name' due to mis-configuration." + moreInfo
+      s"Metals might not work correctly in project '$name' due to mis-configuration." + moreInfo
 
     def multipleMisconfiguredProjects(count: Int): String =
-      s"Code navigation will not work for $count build targets in this workspace due to mis-configuration. " + moreInfo
+      s"Metals might not work correctly for $count build targets in this workspace due to mis-configuration. " + moreInfo
 
     def multipleProblemsDetected: String =
       s"Multiple problems detected in your build."

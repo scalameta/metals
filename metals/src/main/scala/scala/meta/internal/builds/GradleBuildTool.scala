@@ -4,11 +4,13 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
+import scala.concurrent.ExecutionContext
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.io.AbsolutePath
 
 import coursier.MavenRepository
@@ -19,8 +21,10 @@ import coursier.ivy.IvyRepository
 
 case class GradleBuildTool(
     userConfig: () => UserConfiguration,
-    projectRoot: AbsolutePath,
-) extends BuildTool
+    override val projectRoot: AbsolutePath,
+)(implicit ec: ExecutionContext)
+    extends GradleMbtImporter(projectRoot)
+    with BuildTool
     with BloopInstallProvider
     with VersionRecommendation {
 

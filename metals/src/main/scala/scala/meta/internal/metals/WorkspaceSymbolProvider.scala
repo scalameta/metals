@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -14,9 +15,11 @@ import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolSearchParams
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.ToplevelMember
+import scala.meta.internal.mtags.ToplevelMember.Kind._
 import scala.meta.internal.pc.InterruptException
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
+import scala.meta.pc.MemberKind
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -109,27 +112,36 @@ final class WorkspaceSymbolProvider(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
+      kind: ju.Optional[MemberKind] = ju.Optional.empty(),
   ): (SymbolSearch.Result, Int) = {
-    val workspaceCount =
-      // the mbt-based index still doesn't support buildtarget-based search
-      // so we fallback to the non-mbt index for those queries.
-      if (target.isEmpty && userConfig().workspaceSymbolProvider.isMBT) {
-        mbtWorkspaceSymbolProvider.workspaceSymbolSearch(
-          MbtWorkspaceSymbolSearchParams(
-            query.query,
-            target.fold("")(_.getUri),
-          ),
-          visitor,
-        )
-        0
+    // the mbt-based index still doesn't support buildtarget-based search
+    // so we fallback to the non-mbt index for those queries.
+    if (target.isEmpty && userConfig().workspaceSymbolProvider.isMBT) {
+      mbtWorkspaceSymbolProvider.workspaceSymbolSearch(
+        MbtWorkspaceSymbolSearchParams(
+          query.query,
+          target.fold("")(_.getUri),
+        ),
+        visitor,
+      )
+      val (res, inDepsCount) = inDependencies.search(query, visitor)
+      (res, inDepsCount)
+    } else {
+      if (kind.isPresent) {
+        val typeCount = workspaceToplevelSearch(query, visitor, kind)
+        (SymbolSearch.Result.COMPLETE, typeCount)
       } else {
-        val workspaceCount = workspaceSearch(query, visitor, target)
-        val typeCount = workspaceTopelevelSearch(query, visitor)
-        workspaceCount + typeCount
+        if (kind.isPresent) {
+          val typeCount = workspaceToplevelSearch(query, visitor, kind)
+          (SymbolSearch.Result.COMPLETE, typeCount)
+        } else {
+          val workspaceCount = workspaceSearch(query, visitor, target)
+          val typeCount = workspaceToplevelSearch(query, visitor, kind)
+          val (res, inDepsCount) = inDependencies.search(query, visitor)
+          (res, workspaceCount + inDepsCount + typeCount)
+        }
       }
-    // NOTE: we don't count the number of matches from the workspace
-    val (res, inDepsCount) = inDependencies.search(query, visitor)
-    (res, workspaceCount + inDepsCount)
+    }
   }
 
   def searchMethods(
@@ -316,14 +328,19 @@ final class WorkspaceSymbolProvider(
       )
   }
 
-  private def workspaceTopelevelSearch(
+  private def workspaceToplevelSearch(
       query: WorkspaceSymbolQuery,
       visitor: SymbolSearchVisitor,
+      kindFilter: ju.Optional[MemberKind],
   ): Int = {
+    val excludedPackages = excludedPackageHandler()
     val all = for {
       (path, symbols) <- topLevelMembers.iterator
       symbol <- symbols
+      if query.isClasspath
+      if !kindFilter.isPresent || kindFilter.get() == symbol.kind.toJava
       if query.matches(symbol.symbol)
+      if !excludedPackages.isExcludedPackage(symbol.symbol)
     } yield {
       visitor.visitWorkspaceSymbol(
         path.toNIO,
@@ -469,6 +486,7 @@ final class WorkspaceSymbolProvider(
       }
     }
   }
+
 }
 case class PackageNode(
     children: TrieMap[String, PackageNode] = TrieMap.empty

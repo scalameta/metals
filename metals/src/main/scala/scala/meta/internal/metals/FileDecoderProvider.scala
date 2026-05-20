@@ -40,6 +40,7 @@ import scala.meta.metap.Format.Detailed
 import scala.meta.metap.Settings
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.Diagnostic
 
 /* Response which is sent to the lsp client. Because of java serialization we cannot use
  * sealed hierarchy to model union type of success and error.
@@ -145,6 +146,10 @@ final class FileDecoderProvider(
    * metalsDecode:file:///somePath/someFile.scala.tasty-decoded
    * metalsDecode:file:///somePath/someFile.tasty.tasty-decoded
    *
+   * explain (Scala 3 -explain diagnostics):
+   * metalsDecode:file:///somePath/someFile.scala.L5-C10.explain
+   * (L5 = line 5, C10 = column 10, both 0-based)
+   *
    * jar:
    * metalsDecode:jar:file:///somePath/someFile-sources.jar!/somePackage/someFile.java
    *
@@ -211,14 +216,8 @@ final class FileDecoderProvider(
   )
 
   private val metalsDecodeExtensions = Set(
-    "javap",
-    "javap-verbose",
-    "tasty-decoded",
-    "cfr",
-  ) ++ semanticdbExtensions
-
-  val supportedExtensions: Set[String] = Set(
-    "javap", "javap-verbose", "tasty-decoded", "cfr", "class",
+    "javap", "javap-verbose", "tasty-decoded", "cfr", "semanticdb-compact",
+    "semanticdb-detailed", "semanticdb-proto", "explain", "class",
   ) ++ semanticdbExtensions
 
   private def decodeMetalsFile(
@@ -265,6 +264,8 @@ final class FileDecoderProvider(
               Future.successful(
                 decodeSemanticDb(path, Format.Proto)
               )
+            case "explain" =>
+              decodeExplainedDiagnostic(uri)
           }
       }
     } else
@@ -284,7 +285,14 @@ final class FileDecoderProvider(
       uri: URI,
       suffixToRemove: String,
   ): Either[DecoderResponse, AbsolutePath] = {
-    val strippedURI = uri.toString.stripSuffix(suffixToRemove)
+    val strippedURI = suffixToRemove match {
+      case ".explain" =>
+        ExplainPosition.toPath(uri.toString)
+      case ".class" =>
+        uri.toString
+      case _ =>
+        uri.toString.stripSuffix(suffixToRemove)
+    }
     Try {
       strippedURI.toAbsolutePath
     }.filter(_.exists)
@@ -323,19 +331,22 @@ final class FileDecoderProvider(
   }
 
   private def decodeBuildTarget(uri: URI): DecoderResponse = {
-    val text = uri
-      .toString()
-      .toAbsolutePathSafe
-      .map { path =>
-        val targetName = path.filename.stripSuffix(".metals-buildtarget")
-        // display name for mill-build is `mill-build/` and `mill-build/mill-build/` for meta builds
-        val withoutSuffix = uri.toString().stripSuffix("/.metals-buildtarget")
+    val uriStr = uri.toString()
+    val text = {
+      val lastSlash = uriStr.lastIndexOf('/')
+      if (lastSlash >= 0) {
+        val encoded = uriStr.substring(lastSlash + 1)
+        val decoded = URIEncoderDecoder.decode(encoded)
+        val targetName = decoded.stripSuffix(".metals-buildtarget")
+        val withoutSuffix = uriStr.stripSuffix(s"/$encoded")
         new BuildTargetInfo(buildTargets).buildTargetDetails(
           targetName,
           withoutSuffix,
         )
+      } else {
+        s"Error transforming $uri: invalid URI format"
       }
-      .getOrElse(s"Error transforming $uri to path")
+    }
     DecoderResponse.success(uri, text)
   }
 
@@ -801,6 +812,76 @@ final class FileDecoderProvider(
         )
     }
 
+  /**
+   * Decodes explained diagnostics for a Scala 3 file.
+   * The URI format is: metalsDecode:file:///path/to/file.scala.L5-C10.explain
+   * where L5 is line number (0-based) and C10 is column number (0-based).
+   */
+  private def decodeExplainedDiagnostic(
+      originalUri: URI
+  ): Future[DecoderResponse] = {
+    ExplainPosition.fromPath(originalUri.toString) match {
+      case Some(ExplainPosition(filePath, line, column)) =>
+        val sourcePath = filePath.toAbsolutePath
+        if (!sourcePath.exists) {
+          Future.successful(
+            DecoderResponse.failed(originalUri, s"File $filePath doesn't exist")
+          )
+        } else {
+          compilers.compileWithExplain(sourcePath).map { diagnostics =>
+            val matchingDiag =
+              findMatchingDiagnosticForPosition(diagnostics, line, column)
+            val content = formatExplainedDiagnostic(
+              sourcePath,
+              diagnostics,
+              matchingDiag,
+              line,
+              column,
+            )
+            DecoderResponse.success(originalUri, content)
+          }
+        }
+      case None =>
+        Future.successful(
+          DecoderResponse.failed(
+            originalUri,
+            "Invalid explain URI format. Expected: file.scala.L<line>-C<col>.explain",
+          )
+        )
+    }
+  }
+
+  private def findMatchingDiagnosticForPosition(
+      diagnostics: List[Diagnostic],
+      line: Int,
+      column: Int,
+  ): Option[Diagnostic] = {
+    diagnostics.find { diag =>
+      val range = diag.getRange()
+      range.getStart().getLine() == line &&
+      range.getStart().getCharacter() == column
+    }
+  }
+
+  private def formatExplainedDiagnostic(
+      sourcePath: AbsolutePath,
+      diagnostics: List[Diagnostic],
+      matchingDiag: Option[Diagnostic],
+      line: Int,
+      column: Int,
+  ): String = {
+    val relativePath = sourcePath.toRelative(workspace)
+
+    Messages.ExplainDiagnostic.content(
+      matchingDiag,
+      diagnostics,
+      line,
+      column,
+      relativePath,
+    )
+
+  }
+
   def getTastyForURI(
       uri: URI
   ): Future[Either[String, String]] = {
@@ -826,8 +907,62 @@ object FileDecoderProvider {
   def createBuildTargetURI(
       workspaceFolder: AbsolutePath,
       buildTargetName: String,
+  ): URI = {
+    val workspaceUri = workspaceFolder.toURI.toString.stripSuffix("/")
+    val encodedName =
+      URIEncoderDecoder.encode(s"$buildTargetName.metals-buildtarget")
+    URI.create(s"metalsDecode:$workspaceUri/$encodedName")
+  }
+
+  /**
+   * Creates a URI for viewing explained diagnostics as a virtual document.
+   * Format: metalsDecode:file:///path/to/file.scala.L<line>-C<column>.explain
+   *
+   * @param sourcePath the source file path
+   * @param line 0-based line number
+   * @param column 0-based column number
+   */
+  def createExplainURI(
+      sourcePath: AbsolutePath,
+      line: Int,
+      column: Int,
   ): URI =
     URI.create(
-      s"metalsDecode:${workspaceFolder.resolve(s"${buildTargetName}.metals-buildtarget").toURI}"
+      s"metalsDecode:${sourcePath.toURI}.L$line-C$column.explain"
     )
+}
+
+/**
+ * Represents position information parsed from an explain URI.
+ * The URI format is: file.scala.L<line>-C<column>.explain
+ */
+private[metals] case class ExplainPosition(
+    filePath: String,
+    line: Int,
+    column: Int,
+)
+
+private[metals] object ExplainPosition {
+  // Pattern to match .L<line>-C<column>.explain at the end of a path
+  private val positionPattern = """^(.+)\.L(\d+)-C(\d+)\.explain$""".r
+
+  def toPath(pathStr: String): String = {
+    pathStr match {
+      case positionPattern(filePath, _, _) =>
+        filePath
+      case _ =>
+        pathStr
+    }
+  }
+
+  def fromPath(pathStr: String): Option[ExplainPosition] = {
+    pathStr match {
+      case positionPattern(filePath, lineStr, columnStr) =>
+        for {
+          line <- lineStr.toIntOption
+          column <- columnStr.toIntOption
+        } yield ExplainPosition(filePath, line, column)
+      case _ => None
+    }
+  }
 }

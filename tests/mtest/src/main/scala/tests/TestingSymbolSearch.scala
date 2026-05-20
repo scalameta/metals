@@ -15,6 +15,7 @@ import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.ContentType
+import scala.meta.pc.MemberKind
 import scala.meta.pc.ParentSymbols
 import scala.meta.pc.SymbolDocumentation
 import scala.meta.pc.SymbolSearch
@@ -87,9 +88,20 @@ class TestingSymbolSearch(
       buildTargetIdentifier: String,
       visitor: SymbolSearchVisitor
   ): SymbolSearch.Result = {
+    search(textQuery, buildTargetIdentifier, ju.Optional.empty(), visitor)
+  }
+
+  override def search(
+      textQuery: String,
+      buildTargetIdentifier: String,
+      kind: ju.Optional[MemberKind],
+      visitor: SymbolSearchVisitor
+  ): SymbolSearch.Result = {
     val query = WorkspaceSymbolQuery.exact(textQuery)
     workspace.search(query, visitor)
-    classpath.search(query, visitor)._1
+    if (!kind.isPresent || kind.get() != MemberKind.TOPLEVEL_IMPLICIT_CLASS)
+      classpath.search(query, visitor)._1
+    else SymbolSearch.Result.COMPLETE
   }
 
   override def searchMethods(

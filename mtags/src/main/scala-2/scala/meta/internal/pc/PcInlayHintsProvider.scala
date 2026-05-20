@@ -424,7 +424,7 @@ final class PcInlayHintsProvider(
             make(args.map(_.tpe.widen), pos)
           /* Case matching <<.>>> in the following code:
            *
-          * class Foo[T](val t: T)
+           * class Foo[T](val t: T)
            * val foo = <<new Foo/*[String]*/>>("foo")
            */
           case New(tpt: TypeTree)

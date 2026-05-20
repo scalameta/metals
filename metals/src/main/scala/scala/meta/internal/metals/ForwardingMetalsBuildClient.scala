@@ -148,6 +148,11 @@ final class ForwardingMetalsBuildClient(
         case l.MessageType.Log =>
           forwarders.get().foreach(_.log(params.getMessage()))
           scribe.info(noANSICodes)
+        case l.MessageType.Debug =>
+          forwarders.get().foreach(_.log(params.getMessage()))
+          scribe.debug(noANSICodes)
+        case _ =>
+          scribe.info(noANSICodes)
       }
     }
   }

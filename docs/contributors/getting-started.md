@@ -26,7 +26,10 @@ The main Metals module is located in the `metals` directory.
 The first LSP request (`initialize`) is handled by `MetalsLanguageServer`, which then instantiates `WorkspaceLspService` to manage all subsequent LSP requests. Acting as a dispatcher, `WorkspaceLspService` handles multiple projects within a single workspace by creating a separate `ProjectMetalsLspService` for each one and routing LSP queries accordingly. In addition to these project-specific services, there's a fallback service — `FallbackMetalsLspService` — responsible for handling standalone files. Shared logic between `ProjectMetalsLspService` and `FallbackMetalsLspService` is encapsulated in the `MetalsLspService` class.
 
 ### Presentation Compiler
-Many of Metals features (e.g., go to references) work primarily using [Semantic DB](https://scalameta.org/docs/semanticdb/guide.html) -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. Presentation compiler for Scala 2 is in the the cross-published `mtags` module in Metals, for Scala 3 in the `scala3-presentation-compiler` module in the `scala/scala3` repository. 
+Many of Metals features (e.g., go to references) work primarily using [Semantic DB](https://scalameta.org/docs/semanticdb/guide.html) -- semantic information produced during compilation. However, for actions, that require very up-to-date information, Metals uses presentation compiler (pc). Presentation compiler uses Scala (interactive) compiler, so it is published for a specific Scala version. 
+
+- **Scala 2**: The Presentation Compiler for Scala 2 is located in the cross-published `mtags` module in this repository.
+- **Scala 3**: The Presentation Compiler for Scala 3 is **not** hosted here. It is developed and maintained within the [scala/scala3](https://github.com/scala/scala3) repository (specifically in the `scala3-presentation-compiler` module).
 
 Metals loads a presentation compiler instance for a module (build target) using the required Scala version. The interfaces for communication with presentation compiler are in `mtags-interfaces`, where `PresentationCompiler.java` is the presentation compiler API.
 
@@ -35,10 +38,18 @@ Additionally, Metals has a limited implementation of a presentation compiler for
 To avoid repetition, common utilities of presentation compilers are in `mtags-shared`. Since Scala 3 compiler cannot have dependencies on Scala projects, `mtags-shared` sources are currently automatically copied to the compiler repository.
 
 ### Tests
-- `tests/unit` - moderately fast-running unit tests. Mostly contain LSP test, that use Bloop with a quick setup.
-- `tests/cross` - tests targeting cross builds for Scala 2 presentation compiler. Analogical tests for Scala 3 are in the compiler repository.
-- `tests/slow` - slow integration tests. Contain tests for different build tools and build servers. Mtags are cross published for slow tests, so LSP test for testing non-default Scala 2 versions should also go here.
-- `tests/input` - example Scala code that is used as testing data for unit tests.
+- `tests/unit` - **(Recommended for most changes)** Fast-running unit tests. Mostly contain LSP test, that use Bloop with a quick setup.
+  - Use these for testing new LSP features (e.g. code actions, formatting, rename).
+  - To run: `sbt unit/test`.
+- `tests/cross` - Tests targeting cross builds for Scala 2 presentation compiler. 
+  - These verify compiler-centric features like completions, hover, and signature help across multiple Scala 2 versions.
+  - **Note**: Scala 3 PC tests are located in the [scala/scala3](https://github.com/scala/scala3) repository.
+  - To run: `sbt cross/test` (for default Scala 2 version) or `sbt +cross/test` (for all supported versions).
+- `tests/slow` - Slow integration tests. 
+  - These tests run against actual build tools (sbt, Maven, Gradle, Mill) to ensure Metals works correctly with them.
+  - Use these only when working on build-tool specific integrations or when you need to verify end-to-end behavior that `unit` tests cannot capture.
+  - To run: `sbt slow/test`.
+- `tests/input` - Example Scala code that is used as testing data for unit tests.
 
 ### Other modules
 - `sbt-metals` - the sbt plugin used when users are using the BSP support from
@@ -52,7 +63,7 @@ To avoid repetition, common utilities of presentation compilers are in `mtags-sh
 Below diagram shows project structure and dependencies among modules. Note that
 `default-<suffix>` is a [default root project](https://www.scala-sbt.org/1.x/docs/Multi-Project.html#Default+root+project)
 created implicitly by sbt.
-![Projects diagram](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/oIhXd5l.png?raw=true)
+![Projects diagram](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/oIhXd5l.png)
 
 ## Related projects
 
@@ -177,11 +188,11 @@ Then you can attach IDE with opened Metals repository to the debugged instance:
 
   Then pick such a defined configuration and run debug.
 
-  ![Attach debugger](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/ySAo6Um.png?raw=true)
+  ![Attach debugger](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/ySAo6Um.png)
 
 - IntelliJ - Select Attach to the process and pick proper process from the list
 
-  ![Attach to the process](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/lHSl57l.png?raw=true)
+  ![Attach to the process](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/lHSl57l.png)
 
 ## Unit tests
 
@@ -254,7 +265,7 @@ sbt
 
 > publishLocal
 
-> ++2.12.20 mtags/publishLocal
+> ++2.12.21 mtags/publishLocal
 ```
 
 You can also do a full cross publish with `sbt +publishLocal`, however this will
@@ -271,7 +282,7 @@ Next, update the "Server version" setting under preferences to point to the
 version you published locally via `sbt publishLocal`. You'll notice that version has the format
 `<version>-SNAPSHOT`.
 
-![Metals server version setting](https://github.com/scalameta/gh-pages-images/blob/master/metals/getting-started/ogVWI1t.png?raw=true)
+![Metals server version setting](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/getting-started/ogVWI1t.png)
 
 When you make changes in the Metals Scala codebase
 

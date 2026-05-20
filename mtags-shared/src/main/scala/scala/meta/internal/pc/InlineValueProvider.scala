@@ -32,6 +32,11 @@ trait InlineValueProvider {
         ref.range,
         s"""(${definition.rhs})"""
       )
+    else if (definition.requiresCurlyBraces && ref.requiresCurlyBraces)
+      new l.TextEdit(
+        ref.range,
+        s"""{${definition.rhs}}"""
+      )
     else new l.TextEdit(ref.range, definition.rhs)
 
   private def definitionTextEdit(definition: Definition): l.TextEdit =
@@ -90,11 +95,13 @@ case class Definition(
     rhs: String,
     rangeOffsets: RangeOffset,
     requiresBrackets: Boolean,
+    requiresCurlyBraces: Boolean,
     shouldBeRemoved: Boolean
 )
 
 case class Reference(
     range: l.Range,
     parentOffsets: Option[RangeOffset],
-    requiresBrackets: Boolean
+    requiresBrackets: Boolean,
+    requiresCurlyBraces: Boolean
 )

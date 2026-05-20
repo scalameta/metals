@@ -118,7 +118,7 @@ symbols. For example:
 will make vars red and values light blue while also crossing out any deprecated
 methods or classes.
 
-![semantic-tokens](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-03-02-aluminium/vkllczg.png?raw=true)
+![semantic-tokens](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2023-03-02-aluminium/vkllczg.png)
 
 For setting up semantic tokens in editors other than VS Code please consult the
 relevant documentation.
@@ -132,13 +132,13 @@ the same file. This works in two ways:
 
 - if inlining at a reference we will only replace the current value reference
 
-![replace-one](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-03-02-aluminium/yLuM079.gif?raw=true)
+![replace-one](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2023-03-02-aluminium/yLuM079.gif)
 
 - if inlining at the definition we will try to replace all the references and
   remove the definition if the definition cannot be accessed from outside the
   current file
 
-![replace-all](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-03-02-aluminium/LdlSQsB.gif?raw=true)
+![replace-all](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2023-03-02-aluminium/LdlSQsB.gif)
 
 ## Expanded workspace symbol search to include fields
 
@@ -149,7 +149,7 @@ convenient. This release adds the ability to also search for method, types or
 values within the workspace. This will not work for dependencies in order to not
 increase indexes used by Metals too much.
 
-![search](https://github.com/scalameta/gh-pages-images/blob/master/metals/2023-03-02-aluminium/YQCinNz.gif?raw=true)
+![search](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/2023-03-02-aluminium/YQCinNz.gif)
 
 Another great contribution from [kasiaMarek](https://github.com/kasiaMarek)!
 

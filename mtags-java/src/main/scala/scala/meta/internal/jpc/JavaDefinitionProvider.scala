@@ -8,6 +8,7 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.TypeElement
 
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
@@ -52,8 +53,9 @@ class JavaDefinitionProvider(
 ) {
 
   def definition(): DefinitionResult = {
+    val compileAndNode = compiler.nodeAtPosition(params)
     val result: Option[DefinitionResult] = for {
-      (compile, node) <- compiler.nodeAtPosition(params)
+      (compile, node) <- compileAndNode
       trees = Trees.instance(compile.task)
       element <- processor
         .transformElement(trees.getElement(node))
@@ -96,7 +98,58 @@ class JavaDefinitionProvider(
     }
 
     result
+      .orElse(compileAndNode.flatMap { case (_, node) =>
+        importFallback(node, params)
+      })
       .getOrElse(DefinitionResultImpl.empty)
+  }
+
+  /**
+   * Fallback for when element is null but we're at an import statement.
+   * This handles static imports where the element resolution fails.
+   */
+  private def importFallback(
+      n: TreePath,
+      params: OffsetParams
+  ): Option[DefinitionResult] = {
+    val parentPath = n.getParentPath()
+    if (
+      parentPath != null && parentPath.getLeaf().getKind() == Tree.Kind.IMPORT
+    ) {
+      val leafString = n.getLeaf().toString
+      val symbol = convertImportToSemanticdbSymbol(leafString)
+      if (symbol.nonEmpty) try {
+        val locations =
+          compiler.search.definition(symbol, params.uri()).asScala.toList
+        Some(DefinitionResultImpl(symbol, locations.asJava))
+      } catch {
+        case NonFatal(
+              _
+            ) => // in case a symbol is invalid, we don't want to crash
+          None
+      }
+      else {
+        None
+      }
+    } else {
+      None
+    }
+  }
+
+  /**
+   * Converts an import path like "java.lang.Math.max" to a semanticdb symbol
+   * like "java/lang/Math.max()." for static method imports.
+   */
+  private def convertImportToSemanticdbSymbol(importPath: String): String = {
+    val parts = importPath.split("\\.")
+    if (parts.length >= 2) {
+      val methodName = parts.last
+      val classPath = parts.init.mkString("/")
+      // we use # since there are no objects in Java, and () since we don't know which method is imported
+      s"$classPath#$methodName()."
+    } else {
+      ""
+    }
   }
 
   private def definitionSource(

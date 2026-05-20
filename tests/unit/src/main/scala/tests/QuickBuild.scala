@@ -76,6 +76,7 @@ case class QuickBuild(
     // a missing value as false and it's not worth going through the effort of custom
     // deserialization for this one field.
     skipSources: Boolean,
+    repositories: Array[String],
 ) {
   def withId(id: String): QuickBuild =
     QuickBuild(
@@ -91,6 +92,7 @@ case class QuickBuild(
       orEmpty(sbtAutoImports),
       platformJavaHome,
       skipSources,
+      orEmpty(repositories),
     )
   private def orEmpty(array: Array[String]): Array[String] =
     if (array == null) new Array(0) else array
@@ -148,8 +150,10 @@ case class QuickBuild(
         )
       }
     val allDependencies = scalaDependencies ++ libraryDependencies
+    val additionalRepositories = repositories.map(MavenRepository.of)
     val allJars = QuickBuild.fetch(
       allDependencies,
+      additionalRepositories.toList,
       scalaVersion,
       binaryVersion,
       sources = !skipSources,
@@ -176,7 +180,10 @@ case class QuickBuild(
         .toDependency(plugin, scalaVersion, binaryVersion)
         .withTransitive(false)
     )
-    val pluginJars = QuickBuild.fetchDependencies(pluginDependencies)
+    val pluginJars = QuickBuild.fetchDependencies(
+      pluginDependencies,
+      additionalRepositories.toList,
+    )
     val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
     val allScalacOptions =
       if (ScalaVersions.isScala3Version(scalaVersion)) {
@@ -265,6 +272,7 @@ case class QuickBuild(
               scalaCompiler,
               "jline:jline:2.14.6",
             ),
+            additionalRepositories.toList,
             scalaVersion,
             binaryVersion,
           ),
@@ -337,6 +345,7 @@ object QuickBuild {
     }
   def fetch(
       dependencies: Array[String],
+      repositories: List[Repository],
       scalaVersion: String,
       scalaBinaryVersion: String,
       sources: Boolean = false,
@@ -345,10 +354,12 @@ object QuickBuild {
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
+      repositories,
       sources,
     )
   def fetchDependencies(
       dependencies: List[Dependency],
+      additionalRepositories: List[Repository],
       sources: Boolean = false,
   ): List[Path] = {
     val classifiers =

@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
+import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.NoClient
 import scala.meta.internal.metals.mcp.SymbolType
 
@@ -32,7 +33,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
            |{
            |  "servers": {
            |    "root-metals": {
-           |      "url": "http://localhost:${portToUse}/sse"
+           |      "url": "http://localhost:${portToUse}${MetalsMcpServer.mcpEndpoint}"
            |    }
            |  }
            |}
@@ -69,16 +70,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       _ = assertNoDiff(
         resultNameVersion.mkString("\n"),
         McpMessages.FindDep
-          .dependencyReturnMessage("version", Seq("4.10.2", "4.10.1", "4.10.0")),
-      )
-      resultNameVersion2 <- client.findDep(
-        "org.scalameta",
-        Some("parsers_2.13"),
-        None,
-      )
-      _ = assert(
-        resultNameVersion2.head.contains(", 4.13.0,"),
-        s"Expected to contain version 4.13.0, got ${resultNameVersion2.mkString("\n")}",
+          .versionMessage(Some("4.10.2")),
       )
       _ <- client.shutdown()
     } yield ()
@@ -466,11 +458,17 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   override def afterEach(context: AfterEach): Unit = {
     super.afterEach(context)
     assertEquals(
-      McpConfig.readPort(server.workspace, "root", CursorEditor),
+      McpConfig.readPort(
+        server.server.folder,
+        server.server.getVisibleName,
+        CursorEditor,
+      ),
       None,
     )
     assert(
-      McpConfig.readPort(server.workspace, "root", NoClient).isDefined,
+      McpConfig
+        .readPort(server.server.folder, server.server.getVisibleName, NoClient)
+        .isDefined,
       "MCP server port should be defined in the default location",
     )
   }

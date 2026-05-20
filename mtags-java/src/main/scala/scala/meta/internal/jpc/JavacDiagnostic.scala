@@ -1,5 +1,7 @@
 package scala.meta.internal.jpc
 
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
+
 import org.eclipse.{lsp4j => l}
 
 object JavacDiagnostic {
@@ -26,7 +28,7 @@ object JavacDiagnostic {
     private val WithoutLocation =
       """cannot find symbol(?m)\s+symbol:\s+([^ ]+)\s+(.*)""".r
     def unapply(d: l.Diagnostic): Option[CannotFindSymbol] =
-      d.getMessage().trim() match {
+      d.getMessageAsString.trim() match {
         case WithLocation(kind, symbol, location) if d.getCode().isLeft() =>
           Some(
             new CannotFindSymbol(d.getCode().getLeft(), kind, symbol, location)

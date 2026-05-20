@@ -332,6 +332,25 @@ class CompletionDapSuite
        |""".stripMargin
   )
 
+  assertCompletion(
+    "completion-with-auto-import",
+    expression = "ListBuff@@",
+    expectedCompletions = "ListBuffer - scala.collection.mutable",
+    expectedEdit = "ListBuffer",
+    noResults = false,
+  )(
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |object Main {
+       |  def main(args: Array[String]): Unit = {
+       |>>  println()
+       |    System.exit(0)
+       |  }
+       |}
+       |""".stripMargin
+  )
+
   def assertCompletion(
       name: TestOptions,
       expression: String,

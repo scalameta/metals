@@ -206,7 +206,13 @@ private[debug] final class RemoteServer(
       }
     }
 
-    response.onTimeout(90, TimeUnit.SECONDS)(logTimeout(endpoint)).asJava
+    response
+      .onTimeout(
+        90,
+        TimeUnit.SECONDS,
+        Some(s"waiting for a response to $endpoint request"),
+      )(logTimeout(endpoint))
+      .asJava
   }
 
   private def logTimeout(endpoint: String): Unit = {

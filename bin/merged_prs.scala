@@ -1,7 +1,7 @@
 //> using jvm 17
 //> using scala 3
 //> using dep org.kohsuke:github-api:1.330
-//> using dep com.lihaoyi::os-lib:0.11.5
+//> using dep com.lihaoyi::os-lib:0.11.8
 //> using options -Wunused:all -deprecation
 
 import scala.collection.mutable.ListBuffer
@@ -177,8 +177,6 @@ def template(
       |$$ git shortlog -sn --no-merges $firstTag..$lastTag
       |${contributors.mkString("\n")}
       |```
-      |
-      |## Merged PRs
       |
       |## [$lastTag](https://github.com/scalameta/metals/tree/$lastTag) (${today})
       |

@@ -102,7 +102,8 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
               else Nil,
             allParents,
             compilerSymbol.annotations.map(_.toString()).distinct,
-            defnAnn.map(_.toString()).toList.distinct
+            defnAnn.map(_.toString()).toList.distinct,
+            typeParameters = compilerSymbol.typeParams.map(semanticdbSymbol)
           )
         )
       case _ => None

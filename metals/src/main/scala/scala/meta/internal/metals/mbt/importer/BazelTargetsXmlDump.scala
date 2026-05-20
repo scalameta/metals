@@ -1,16 +1,32 @@
 package scala.meta.internal.metals.mbt.importer
 
 import scala.xml.XML
+
 class BazelTargetsXmlDump(xmlDump: String) {
 
   private lazy val root = XML.loadString(xmlDump)
+
+  private lazy val filegroupSrcLabelsByTarget: Map[String, List[String]] = {
+    val targetLabels = for {
+      rule <- root \\ "rule"
+      target = (rule \ "@name").text
+      if target.nonEmpty && isFilegroupRule(rule)
+    } yield target -> labelsFromRuleAttribute(rule, Some("srcs")).toList
+    targetLabels.toMap
+  }
 
   def getLabels(attributeName: String): Map[String, List[String]] = {
     val targetLabels = for {
       rule <- root \\ "rule"
       target = (rule \ "@name").text
       if target.nonEmpty
-    } yield target -> labelsFromRuleAttribute(rule, Some(attributeName)).toList
+    } yield {
+      val labels = labelsFromRuleAttribute(rule, Some(attributeName)).toList
+      val expandedLabels =
+        if (attributeName == "srcs") expandFilegroups(labels)
+        else labels
+      target -> expandedLabels
+    }
     targetLabels.toMap
   }
 
@@ -48,6 +64,21 @@ class BazelTargetsXmlDump(xmlDump: String) {
 
   private def isExternalDep(label: String): Boolean =
     label.startsWith("@") && !label.startsWith("@@")
+
+  private def isFilegroupRule(rule: scala.xml.Node): Boolean =
+    (rule \ "@class").text == "filegroup"
+
+  private def expandFilegroups(labels: List[String]): List[String] = {
+    def expand(label: String, stack: Set[String]): List[String] =
+      filegroupSrcLabelsByTarget.get(label) match {
+        case Some(srcs) if !stack.contains(label) =>
+          srcs.flatMap(src => expand(src, stack + label))
+        case _ =>
+          List(label)
+      }
+
+    labels.flatMap(label => expand(label, Set.empty)).distinct
+  }
 
   private def reachableLabels(
       rootLabels: List[String]

@@ -58,6 +58,7 @@ final class PcInlineValueProviderImpl(
         rhsSourceString,
         RangeOffset(defPos.start, defPos.end),
         definitionNeedsBrackets(rhsSourceString),
+        definitionNeedsCurlyBraces(definition.tree.rhs),
         deleteDefinition
       )
 
@@ -69,6 +70,15 @@ final class PcInlineValueProviderImpl(
     def validateSymbol(symbol: Symbol) =
       !symbol.isSynthetic && !symbol.isImplicit
 
+    def isLocalToRhs(symbol: Symbol): Boolean = {
+      // Check if the symbol is defined within the RHS expression itself
+      // (e.g., lambda parameters, local vals in blocks)
+      // Such symbols should not be checked for shadowing since they are
+      // locally bound and won't be affected by external shadowing
+      symbol.pos.isDefined && rhs.pos.isDefined &&
+      symbol.pos.start >= rhs.pos.start && symbol.pos.end <= rhs.pos.end
+    }
+
     @tailrec
     def collectNames(
         symbols: List[Symbol],
@@ -78,9 +88,12 @@ final class PcInlineValueProviderImpl(
         case tree :: toTraverse => {
           val nextSymbols =
             tree match {
-              case id: Ident if validateSymbol(id.symbol) =>
+              case id: Ident
+                  if validateSymbol(id.symbol) && !isLocalToRhs(id.symbol) =>
                 id.symbol :: symbols
-              case s: Select if validateSymbol(s.symbol) => s.symbol :: symbols
+              case s: Select
+                  if validateSymbol(s.symbol) && !isLocalToRhs(s.symbol) =>
+                s.symbol :: symbols
               case _ => symbols
             }
           collectNames(nextSymbols, toTraverse ++ tree.children)
@@ -141,7 +154,8 @@ final class PcInlineValueProviderImpl(
           Reference(
             ref.pos.toLsp,
             parentPos,
-            referenceNeedsBrackets(parentPos)
+            referenceNeedsBrackets(parentPos),
+            ref.pos.start > 0 && text(ref.pos.start - 1) == '$'
           )
         )
       } else Left(Errors.variablesAreShadowed(conflicts.mkString(", ")))
@@ -182,6 +196,12 @@ final class PcInlineValueProviderImpl(
       case _ => false
     }
   }
+
+  def definitionNeedsCurlyBraces(rhs: Tree): Boolean =
+    rhs match {
+      case _: Ident => false
+      case _ => true
+    }
 
   case class Occurence(tree: Tree, parent: Option[Tree], pos: Position) {
     def isDefn: Boolean =

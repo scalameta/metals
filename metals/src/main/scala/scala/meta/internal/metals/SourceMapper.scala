@@ -1,5 +1,7 @@
 package scala.meta.internal.metals
 
+import scala.util.Try
+
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -47,6 +49,37 @@ final case class SourceMapper(
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
       ) {
         WorksheetProvider.worksheetScala3Adjustments(input)
+      } else if (path.isTwirlTemplate) {
+        val playVersion = buildTargets
+          .inverseSources(path)
+          .flatMap { targetId =>
+            buildTargets
+              .targetData(targetId)
+              .flatMap { data =>
+                data.buildTargetDependencyModules
+                  .getOrElse(targetId, Nil)
+                  .find { m =>
+                    val isPlayOrg =
+                      m.getOrganization() == "org.playframework" ||
+                        m.getOrganization() == "com.typesafe.play"
+                    isPlayOrg && m.getName().startsWith("play_")
+                  }
+                  .map(_.getVersion())
+              }
+              .orElse {
+                buildTargets
+                  .targetJarClasspath(targetId)
+                  .getOrElse(Nil)
+                  .collectFirst {
+                    case jar if jar.filename.startsWith("play_") =>
+                      val noExt = jar.filename.stripSuffix(".jar")
+                      val dashIdx = noExt.indexOf('-')
+                      if (dashIdx >= 0) noExt.substring(dashIdx + 1)
+                      else "3.0"
+                  }
+              }
+          }
+        Try(TwirlAdjustments(input, scalaVersion, playVersion)).toOption
       } else None
 
     forScripts.getOrElse(default)

@@ -23,6 +23,7 @@ final case class ClientExperimentalCapabilities(
     inputBoxProvider: Option[Boolean],
     openFilesOnRenameProvider: Option[Boolean],
     quickPickProvider: Option[Boolean],
+    readClipboardProvider: Option[Boolean],
     statusBarProvider: Option[String],
     treeViewProvider: Option[Boolean],
 ) {
@@ -36,6 +37,7 @@ final case class ClientExperimentalCapabilities(
 object ClientExperimentalCapabilities {
   import scala.meta.internal.metals.JsonParser._
   val Default: ClientExperimentalCapabilities = ClientExperimentalCapabilities(
+    None,
     None,
     None,
     None,
@@ -79,6 +81,7 @@ object ClientExperimentalCapabilities {
       openFilesOnRenameProvider =
         jsonObj.getBooleanOption("openFilesOnRenameProvider"),
       quickPickProvider = jsonObj.getBooleanOption("quickPickProvider"),
+      readClipboardProvider = jsonObj.getBooleanOption("readClipboardProvider"),
       statusBarProvider = jsonObj.getStringOption("statusBarProvider"),
       treeViewProvider = jsonObj.getBooleanOption("treeViewProvider"),
     )

@@ -4,7 +4,6 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatusBarConfig
@@ -48,10 +47,6 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
                                                             |""".stripMargin)
       _ <- server.didSave("src/com/App.scala")
       _ = Thread.sleep(sleepTime)
-      _ = assertNoDiff(
-        server.client.workspaceMessageRequests,
-        Messages.CheckDoctor.allProjectsMisconfigured,
-      )
       _ <- server.server.bspSession.get.main.mainClasses(
         new ScalaMainClassesParams(
           List(
@@ -66,10 +61,6 @@ class ServerLivenessMonitorLspSuite extends BaseLspSuite("liveness-monitor") {
       noResponseParams = ConnectionBspStatus.noResponseParams(
         "Bill",
         Icons.default,
-      )
-      _ = assertContains(
-        server.client.workspaceMessageRequests,
-        Messages.CheckDoctor.allProjectsMisconfigured,
       )
       _ = assertContains(
         server.client.workspaceMessageRequests,

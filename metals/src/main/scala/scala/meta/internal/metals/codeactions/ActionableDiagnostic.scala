@@ -24,7 +24,7 @@ class ActionableDiagnostic() extends CodeAction {
     ): l.CodeAction = {
       action match {
         case Left(textEdit) =>
-          val diagMessage = diagnostic.getMessage
+          val diagMessage = diagnostic.getMessageAsString
           val uri = params.getTextDocument().getUri()
 
           CodeActionBuilder.build(

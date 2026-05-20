@@ -383,4 +383,18 @@ class DefinitionSuite extends BaseJavaDefinitionSuite {
        |""".stripMargin,
     "",
   )
+
+  check(
+    "static-import-site-import",
+    """|import static java.lang.Math.m@@ax;
+       |
+       |class A {
+       |    public static void main(String args[]){
+       |      int x = max(1, 2);
+       |    }
+       |}
+       |""".stripMargin,
+    "java/lang/Math#max(). Math.java",
+  )
+
 }

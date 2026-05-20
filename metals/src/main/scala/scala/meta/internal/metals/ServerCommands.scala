@@ -49,6 +49,13 @@ object ServerCommands {
       |""".stripMargin,
   )
 
+  val DisconnectBuildServerAndShutdown = new Command(
+    "build-disconnect-and-shutdown",
+    "Disconnect from build server and shut it down",
+    """|Disconnect from the build server and shut it down so that its process exits.
+       |Use when closing the editor if you want no leftover Bloop (or other build server) process.""".stripMargin,
+  )
+
   val RestartBuildServer = new Command(
     "build-restart",
     "Restart build server",
@@ -490,6 +497,24 @@ object ServerCommands {
     """|MetalsPasteParams""".stripMargin,
   )
 
+  val ExplainDiagnostic = new ParametrizedCommand[TextDocumentPositionParams](
+    "explain-diagnostic",
+    "Explain Diagnostic",
+    """|Run the presentation compiler with -explain flag to get detailed error explanation.
+       |
+       |This command compiles the file with the -explain option and renders
+       |the expanded diagnostic message in a readable file.
+       |""".stripMargin,
+    """|Object with uri and diagnostic position info:
+       |```json
+       |{
+       |  document: "file:///home/dev/foo/Bar.scala",
+       |  position: {line: 5, character: 12}
+       |}
+       |```
+       |""".stripMargin,
+  )
+
   final case class ChooseClassRequest(
       textDocument: TextDocumentIdentifier,
       kind: String,
@@ -606,6 +631,7 @@ object ServerCommands {
         |The currently allowed Scala file types that can be passed in are:
         |
         | - ${NewFileTypes.ScalaFile.id} (${NewFileTypes.ScalaFile.label})
+        | - ${NewFileTypes.FromClipboard.id} (${NewFileTypes.FromClipboard.label})
         | - ${NewFileTypes.Class.id} (${NewFileTypes.Class.label})
         | - ${NewFileTypes.CaseClass.id} (${NewFileTypes.CaseClass.label})
         | - ${NewFileTypes.Enum.id} (${NewFileTypes.Enum.label})
@@ -847,6 +873,7 @@ object ServerCommands {
       DecodeFile,
       DisconnectBuildServer,
       SyncFile,
+      DisconnectBuildServerAndShutdown,
       ListBuildTargets,
       ScanWorkspaceSources,
       StartDebugAdapter,
@@ -863,6 +890,7 @@ object ServerCommands {
       ZipReports,
       ResetWorkspace,
       ShowReportsForBuildTarget,
+      ExplainDiagnostic,
     )
 
   val allIds: Set[String] = all.map(_.id).toSet

@@ -326,7 +326,7 @@ pattern matches and more.
 
 See the expression type and symbol signature under the cursor.
 
-![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/2MfQvsM.gif?raw=true)
+![Hover](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/overview/2MfQvsM.gif)
 
 - **Expression type**: shows the non-generic type of the highlighted expression.
 - **Symbol signature**: shows the generic signature of symbol under the cursor
@@ -336,7 +336,7 @@ See the expression type and symbol signature under the cursor.
 
 View a method signature and method overloads as you fill in the arguments.
 
-![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/DAWIrHu.gif?raw=true)
+![Signature help](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/overview/DAWIrHu.gif)
 
 ## Find references
 
@@ -377,7 +377,7 @@ Fuzzy search a symbol in the workspace of library dependencies by its name.
 - Queries ending with a dot `.` list nested symbols.
 - Queries containing a semicolon `;` search library dependencies.
 
-![Fuzzy symbol search example](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/w5yrK1w.gif?raw=true)
+![Fuzzy symbol search example](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/overview/w5yrK1w.gif)
 
 ## Formatting
 
@@ -393,13 +393,13 @@ https://scalameta.org/scalafmt/docs/configuration.html.
 
 Fold ranges such as large multi-line expressions, import groups and comments.
 
-![](https://camo.githubusercontent.com/3fdd7ae28907ac61c0a1ac5fdc07d085245957aa/68747470733a2f2f692e696d6775722e636f6d2f667149554a54472e676966)
+![Code folding](https://camo.githubusercontent.com/3fdd7ae28907ac61c0a1ac5fdc07d085245957aa/68747470733a2f2f692e696d6775722e636f6d2f667149554a54472e676966)
 
 ## Document highlight
 
 Highlight references to the same symbol in the open file.
 
-![](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/0uhc9P5.gif?raw=true)
+![Document highlight](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/overview/0uhc9P5.gif)
 
 ## Package explorer
 
@@ -413,7 +413,7 @@ tree representation of tests. Although it was implemented in order to use Visual
 Studio Code's
 [Testing API](https://code.visualstudio.com/api/extension-guides/testing). The
 Test Explorer API is editor agnostic and can be used by other editors than just
-VS Code. ![test-explorer](https://github.com/scalameta/gh-pages-images/blob/master/metals/overview/Z3VtS0O.gif?raw=true)
+VS Code. ![test-explorer](https://raw.githubusercontent.com/scalameta/gh-pages-images/main/metals/overview/Z3VtS0O.gif)
 
 Work on the Test Explorer is still in progress and the feature has some known
 limitations:

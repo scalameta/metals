@@ -24,6 +24,11 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       workspace: AbsolutePath
   ): Option[String] = GradleDigest.current(workspace)
 
+  val expectedImportBuildMessage: String =
+    s"""|${Messages.ChooseBuildServer.params(buildTool.name).getMessage()}
+        |$importBuildMessage
+        |""".stripMargin
+
   test("basic") {
     cleanWorkspace()
     for {
@@ -44,7 +49,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -174,7 +179,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ = client.messageRequests.clear() // restart
       _ = assertStatus(_.isInstalled)
@@ -224,7 +229,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ = client.messageRequests.clear()
       _ = assertStatus(_.isInstalled)
@@ -266,7 +271,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ = client.messageRequests.clear()
       _ = assertStatus(_.isInstalled)
@@ -293,7 +298,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ <- server.server.buildServerPromise.future
       _ = client.progressParams.clear() // restart
@@ -301,9 +306,9 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = assertNoDiff(
         client.beginProgressMessages,
         List(
+          "Import",
           progressMessage,
           Messages.importingBuild,
-          Messages.indexing,
         ).mkString("\n"),
       )
     } yield ()
@@ -365,7 +370,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       )
       _ = assertNoDiff(
         client.workspaceMessageRequests,
-        importBuildMessage,
+        expectedImportBuildMessage,
       )
       _ = assertNoDiff(
         client.workspaceShowMessages,

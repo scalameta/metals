@@ -9,11 +9,11 @@ object V {
 
   val scala213 = "2.13.18"
 
-  val scala3 = "3.3.6"
+  val scala3 = "3.3.7"
 
-  val scala3ForSBT2 = "3.7.2"
+  val scala3ForSBT2 = "3.7.4"
 
-  val latestScala3Next = "3.8.0-RC1"
+  val latestScala3Next = "3.8.3"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.21"
@@ -21,17 +21,17 @@ object V {
   val sbtMill = "2.13.15"
 
   // Rules need to be manually updated to support
-  val bazelScalaVersion = "2.13.12"
+  val bazelScalaVersion = "2.13.16"
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.0.17"
+  val bloop = "2.0.19"
 
   val bloopConfig = "2.3.3"
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M19"
+  val coursier = "2.1.25-M23"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
@@ -45,23 +45,27 @@ object V {
 
   val gradleBloop = "1.6.4"
 
+  val gradleToolingApi = "8.14"
+
   val java8Compat = "1.0.2"
 
-  val javaSemanticdb = "0.11.1"
+  val javaSemanticdb = "0.11.2"
 
-  val jsoup = "1.21.2"
+  val jsoup = "1.22.1"
 
   val kindProjector = "0.13.4"
 
-  val lsp4jV = "0.24.0"
+  val lsp4jV = "1.0.0"
 
-  val mavenBloop = "2.0.1"
+  val mavenBloop = "2.0.3"
 
-  val mill = "1.0.6"
+  val mill = "1.1.3"
 
-  val mdoc = "2.7.2"
+  val mdoc = "2.8.2"
 
-  val munit = "1.2.3"
+  val munit = "1.2.4"
+
+  val modelContextProtocol = "1.0.0"
 
   val pprint = "0.7.3"
 
@@ -69,15 +73,15 @@ object V {
 
   val sbtJdiTools = "1.2.0"
 
-  val scalaCli = "1.9.1"
+  val scalaCli = "1.12.4"
 
-  val scalafix = "0.14.4"
+  val scalafix = "0.14.6"
 
-  val scalafmt = "3.10.0"
+  val scalafmt = "3.10.7"
 
-  val scalameta = "4.14.4"
+  val scalameta = "4.15.2"
 
-  val scribe = "3.17.0"
+  val scribe = "3.18.0"
 
   // scribe dropped Scala 2.12 support after 3.15.2
   def scribe(scalaVersion: String): String =
@@ -85,9 +89,9 @@ object V {
 
   val qdox = "2.2.0"
 
-  val protobuf = "4.32.1"
+  val protobuf = "4.34.0"
 
-  val sbt2Version = "2.0.0-RC6"
+  val sbt2Version = "2.0.0-RC8"
 
   val guava = "com.google.guava" % "guava" % "33.5.0-jre"
 

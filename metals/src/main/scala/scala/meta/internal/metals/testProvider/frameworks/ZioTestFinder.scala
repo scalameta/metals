@@ -87,9 +87,21 @@ class ZioTestFinder(
       case Term.Block(stats) =>
         stats.foreach(stat => processSpecTree(stat, prefix, testCases, uri))
 
-      // Handle multiple tests or suites as separate arguments: suite("name")(test1, test2, ...)
-      case Term.Apply(_, args) =>
-        args.foreach(arg => processSpecTree(arg, prefix, testCases, uri))
+      // Handle method calls on suite expressions (e.g., .provideLayer(), .timeout(), etc.)
+      // These wrap the suite but shouldn't stop traversal
+      case appl @ Term.Apply(receiver, _) =>
+        // First try to process as a normal apply (suite/test with arguments)
+        // If it doesn't match those patterns, unwrap method calls and continue
+        receiver match {
+          case Term.Apply(_, _) | Term.Name(_) =>
+            // This looks like it could be suite(...) or test(...), process arguments
+            appl.children.foreach(child =>
+              processSpecTree(child, prefix, testCases, uri)
+            )
+          case _ =>
+            // This is likely a method call wrapper, process the receiver
+            processSpecTree(receiver, prefix, testCases, uri)
+        }
 
       // Other cases - continue traversing
       case _ =>

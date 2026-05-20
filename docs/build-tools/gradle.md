@@ -43,3 +43,8 @@ Now we can run `gradle bloopInstall`, which will create all of the Bloop
 configuration files.
 
 This will enable us to work with Metals and all features should work.
+
+Add this line to `gradle.properties` to prevent Metals from trying to re-download and initialize bloop:
+```yaml
+bloop.configured=true
+```

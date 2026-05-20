@@ -306,23 +306,32 @@ object MetalsEnrichments
       }
     }
 
-    def withTimeout(length: Int, unit: TimeUnit)(implicit
-        ec: ExecutionContext
-    ): Future[A] = withTimeout(FiniteDuration(length, unit))
+    def withTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
+        implicit ec: ExecutionContext
+    ): Future[A] = withTimeout(FiniteDuration(length, unit), reason)
 
     def withTimeout(
-        duration: FiniteDuration
+        duration: FiniteDuration,
+        reason: Option[String],
     )(implicit ec: ExecutionContext): Future[A] = {
-      Future(Await.result(future, duration))
+      Future {
+        try { Await.result(future, duration) }
+        catch {
+          case e: TimeoutException =>
+            reason.foreach(r => scribe.error(s"Timeout while $r", e))
+            throw e
+        }
+      }
     }
 
-    def onTimeout(length: Int, unit: TimeUnit)(
+    def onTimeout(length: Int, unit: TimeUnit, reason: Option[String])(
         action: => Unit
     )(implicit ec: ExecutionContext): Future[A] = {
       // schedule action to execute on timeout
-      future.withTimeout(length, unit).recoverWith { case e: TimeoutException =>
-        action
-        Future.failed(e)
+      future.withTimeout(length, unit, reason).recoverWith {
+        case e: TimeoutException =>
+          action
+          Future.failed(e)
       }
     }
 
@@ -901,6 +910,11 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticLSP(d: l.Diagnostic) {
+
+    def formatMessage(uri: String, hint: String): String = {
+      val severity = d.getSeverity.toString.toLowerCase()
+      s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessageAsString}"
+    }
     def asTextEdit: Option[l.TextEdit] = {
       decodeJson(d.getData, classOf[l.TextEdit])
     }
@@ -1037,7 +1051,10 @@ object MetalsEnrichments
   }
 
   implicit class XtensionDiagnosticBsp(diag: b.Diagnostic) {
-    def toLsp: l.Diagnostic = {
+    def toLsp(
+        path: AbsolutePath,
+        isVirtualDocumentSupported: Boolean,
+    ): l.Diagnostic = {
       val ld = new l.Diagnostic(
         diag.getRange.toLsp,
         fansi.Str(diag.getMessage, ErrorMode.Strip).plainText,
@@ -1045,10 +1062,19 @@ object MetalsEnrichments
         else diag.getSeverity.toLsp,
         if (diag.getSource == null) "scalac" else diag.getSource,
       )
+      val explainUrl = FileDecoderProvider.createExplainURI(
+        path,
+        diag.getRange.toLsp.getStart.getLine(),
+        diag.getRange.toLsp.getStart.getCharacter(),
+      )
 
-      Option(diag.getCode()).foreach { code =>
-        ld.setCode(diag.getCode())
-      }
+      if (isVirtualDocumentSupported)
+        Option(diag.getCode()).foreach { code =>
+          ld.setCode("Explain the error")
+          ld.setCodeDescription(
+            new l.DiagnosticCodeDescription(explainUrl.toString())
+          )
+        }
 
       Option(diag.getTags()).foreach { tags =>
         val converted = tags.asScala.flatMap {
@@ -1243,6 +1269,22 @@ object MetalsEnrichments
       item.getOptions.asScala
         .find(_.startsWith(flag))
         .map(_.stripPrefix(flag))
+    }
+
+    /**
+     * Extracts the release version from scalac options.
+     * Supports: -release X, -release:X, --release X
+     */
+    def releaseVersion: Option[String] = {
+      val options = item.getOptions.asScala.toList
+      options.zipWithIndex.collectFirst {
+        case (opt, idx) if opt == "-release" || opt == "--release" =>
+          options.lift(idx + 1)
+        case (opt, _) if opt.startsWith("-release:") =>
+          Some(opt.stripPrefix("-release:"))
+        case (opt, _) if opt.startsWith("--release:") =>
+          Some(opt.stripPrefix("--release:"))
+      }.flatten
     }
   }
 

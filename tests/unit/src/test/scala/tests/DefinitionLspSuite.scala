@@ -578,6 +578,44 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  test("weird-symbol") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  import `onConflictIg@@nore(_.i)`._
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |
+           |/a/src/main/scala/a/other.scala
+           |
+           |package a
+           |object `onConflictIgnore(_.i)`
+           |
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(
+        locations.head.getUri().endsWith("a/src/main/scala/a/other.scala")
+      )
+    } yield ()
+  }
+
   test("scaladoc-definition-this") {
     for {
       _ <- initialize(

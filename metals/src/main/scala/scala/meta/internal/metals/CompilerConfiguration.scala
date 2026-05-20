@@ -322,6 +322,7 @@ class CompilerConfiguration(
       referenceCounter: CompletionItemPriority,
       overrideSourcePathMode: SourcePathMode,
       additionalClasspath: Seq[Path] = Nil,
+      additionalOptions: Seq[String] = Nil,
   ) extends LazyCompiler {
 
     def buildTargetId: BuildTargetIdentifier = scalaTarget.id
@@ -331,7 +332,7 @@ class CompilerConfiguration(
         srcFiles: Supplier[ju.List[Path]] = () => Nil.asJava,
     ): PresentationCompiler = {
       val name = scalaTarget.scalac.getTarget().getUri
-      val options = enrichWithReleaseOption(scalaTarget)
+      val options = enrichWithReleaseOption(scalaTarget) ++ additionalOptions
       // Best Effort option `-Ybest-effort` is useless for PC,
       // and it may unnecesarily dump semanticdb and tasty files
       val bestEffortOpt = "-Ybest-effort"

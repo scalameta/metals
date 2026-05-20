@@ -218,6 +218,13 @@ object ScalatestTestFinder {
           (acc, Some(newPrefix))
         // format: on
 
+        // behavior.of("An empty Set") - alternative style for behavior of "An empty Set"
+        case Term.Apply(
+              Term.Select(Term.Name("behavior"), Term.Name("of")),
+              List(Lit.String(newPrefix)),
+            ) =>
+          (acc, Some(newPrefix))
+
         // format: off
         // "An empty Set" should "have size 0" in { ... }
         case Term.ApplyInfix(appl @ Term.ApplyInfix(Lit.String(newPrefix), Term.Name(infixOp), _, List(Lit.String(right))), _: Term.Name, _, _) =>
@@ -269,7 +276,8 @@ object ScalatestTestFinder {
         // collect test entry from it
         case Term.Apply(appl @ Term.Apply(Term.Name("it"), (name: Lit.String) :: Nil), _) =>
         // format: on
-          val testname = s"$prefix ${name.value}"
+          val testname =
+            if (prefix.isEmpty) name.value else s"$prefix ${name.value}"
           val test =
             TestCaseEntry(testname, appl.pos.toLsp.toLocation(path.toURI))
           test :: acc

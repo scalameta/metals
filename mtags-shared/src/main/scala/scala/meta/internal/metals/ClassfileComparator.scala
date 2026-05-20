@@ -26,10 +26,13 @@ class ClassfileComparator(query: String)
       )
       if (byInnerclassDepth != 0) byInnerclassDepth
       else {
-        val byFirstQueryCharacter = Integer.compare(
-          o1.filename.indexOf(query.head),
-          o2.filename.indexOf(query.head)
-        )
+        val byFirstQueryCharacter =
+          if (query.isEmpty) 0
+          else
+            Integer.compare(
+              o1.filename.indexOf(query.head),
+              o2.filename.indexOf(query.head)
+            )
         if (byFirstQueryCharacter != 0) {
           byFirstQueryCharacter
         } else {

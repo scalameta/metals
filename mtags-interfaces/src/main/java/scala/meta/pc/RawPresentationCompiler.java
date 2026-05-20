@@ -4,6 +4,7 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.CompletionTriggerKind;
@@ -173,6 +174,10 @@ public abstract class RawPresentationCompiler {
    */
   public abstract RawPresentationCompiler withSearch(SymbolSearch search);
 
+  public RawPresentationCompiler withProgressBars(ProgressBars progressBars) {
+    return this;
+  }
+
   /** Provide custom configuration for features like signature help and completions. */
   public abstract RawPresentationCompiler withConfiguration(PresentationCompilerConfig config);
 
@@ -182,6 +187,11 @@ public abstract class RawPresentationCompiler {
   /** Provide CompletionItemPriority for additional sorting completion items. */
   public abstract RawPresentationCompiler withCompletionItemPriority(
       CompletionItemPriority priority);
+
+  public RawPresentationCompiler withSemanticdbFileManager(
+      SemanticdbFileManager semanticdbFileManager) {
+    return this;
+  }
 
   /** Provide a reporting context for reporting errors. */
   public abstract RawPresentationCompiler withReportContext(ReportContext reportContext);
@@ -198,6 +208,26 @@ public abstract class RawPresentationCompiler {
    */
   public abstract RawPresentationCompiler newInstance(
       String buildTargetIdentifier, List<Path> classpath, List<String> options);
+
+  /**
+   * Construct a new presentation compiler with the given parameters.
+   *
+   * @param buildTargetIdentifier the build target containing this source file. This is needed for
+   *     {@link #completionItemResolve(CompletionItem, String)}.
+   * @param classpath the classpath of this build target.
+   * @param options the compiler flags for the new compiler. Important, it is recommended to disable
+   *     all compiler plugins excluding org.scalamacros:paradise, kind-projector and
+   *     better-monadic-for.
+   * @param sourcePath A supplier that returns the source path for this build target, used by the PC
+   *     to locate types that have not been built yet.
+   */
+  public RawPresentationCompiler newInstance(
+      String buildTargetIdentifier,
+      List<Path> classpath,
+      List<String> options,
+      Supplier<List<Path>> sourcePath) {
+    return newInstance(buildTargetIdentifier, classpath, options);
+  }
 
   /** Scala version for the current presentation compiler */
   public abstract String scalaVersion();

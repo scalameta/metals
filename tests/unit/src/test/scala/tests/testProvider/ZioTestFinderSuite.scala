@@ -304,6 +304,83 @@ class ZioTestFinderSuite extends FunSuite {
     ),
   )
 
+  check(
+    "with-provide-layer",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |trait SomeLayer {}
+       |
+       |object HelloTest extends ZIOSpecDefault {
+       |  def spec = suite("HelloTest")(
+       |    test("testA1") {
+       |      assertTrue(true)
+       |    },
+       |    test("testA2") {
+       |      assertTrue(true)
+       |    },
+       |    test("testA3") {
+       |      assertTrue(true)
+       |    }
+       |  ).provideLayer(ZLayer.succeed(new SomeLayer {}))
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("HelloTest"),
+    Set(
+      (
+        "HelloTest",
+        QuickRange(6, 13, 16, 3),
+      ),
+      (
+        "testA1",
+        QuickRange(7, 4, 9, 5),
+      ),
+      (
+        "testA2",
+        QuickRange(10, 4, 12, 5),
+      ),
+      (
+        "testA3",
+        QuickRange(13, 4, 15, 5),
+      ),
+    ),
+  )
+
+  check(
+    "with-chained-method-calls",
+    """|import zio.test._
+       |import zio.test.Assertion._
+       |
+       |trait SomeLayer {}
+       |
+       |object HelloTest extends ZIOSpecDefault {
+       |  def spec = suite("HelloTest")(
+       |    test("testB1") {
+       |      assertTrue(true)
+       |    },
+       |    test("testB2") {
+       |      assertTrue(true)
+       |    }
+       |  ).provideLayer(ZLayer.succeed(new SomeLayer {})).timeout(java.time.Duration.ofSeconds(30))
+       |}
+       |""".stripMargin,
+    FullyQualifiedName("HelloTest"),
+    Set(
+      (
+        "HelloTest",
+        QuickRange(6, 13, 13, 3),
+      ),
+      (
+        "testB1",
+        QuickRange(7, 4, 9, 5),
+      ),
+      (
+        "testB2",
+        QuickRange(10, 4, 12, 5),
+      ),
+    ),
+  )
+
   def check(
       name: String,
       code: String,

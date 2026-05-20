@@ -261,6 +261,9 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
         """|Duration - java.time
            |Duration - javax.xml.datatype
            |Duration - scala.concurrent.duration
+           |DurationConversions - scala.concurrent.duration
+           |DurationConverters - scala.jdk
+           |DurationConverters - scala.jdk.javaapi
            |DurationDouble - scala.concurrent.duration.package
            |DurationDouble - scala.concurrent.duration.package
            |DurationInt - scala.concurrent.duration.package
@@ -269,6 +272,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
            |DurationLong - scala.concurrent.duration.package
            |DurationLong - scala.concurrent.duration.package
            |FiniteDuration - scala.concurrent.duration
+           |FiniteDurationIsOrdered - scala.concurrent.duration.FiniteDuration
            |JavaDurationOps - scala.jdk.DurationConverters
            |JavaDurationOps - scala.jdk.DurationConverters
            |ScalaDurationOps - scala.jdk.DurationConverters
@@ -478,6 +482,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |FutureConverters - scala.jdk
           |FutureConverters - scala.jdk.javaapi
           |CompletableFuture - java.util.concurrent
+          |FutureConvertersImpl - scala.concurrent.impl
           |""".stripMargin,
         saveCompletionOrder = true,
       )
@@ -530,6 +535,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |FutureConverters - scala.jdk
           |FutureConverters - scala.jdk.javaapi
           |CompletableFuture - java.util.concurrent
+          |FutureConvertersImpl - scala.concurrent.impl
           |""".stripMargin,
         saveCompletionOrder = true,
       )
@@ -577,6 +583,7 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
           |FutureConverters - scala.jdk
           |FutureConverters - scala.jdk.javaapi
           |CompletableFuture - java.util.concurrent
+          |FutureConvertersImpl - scala.concurrent.impl
           |""".stripMargin,
         saveCompletionOrder = true,
       )

@@ -39,9 +39,12 @@ final class Trees(
   private val tokenized = TrieMap.empty[AbsolutePath, Tokens]
 
   def get(path: AbsolutePath): Option[Tree] =
-    trees.get(path).orElse {
-      // Fallback to parse without caching result.
-      parse(path, scalaVersionSelector.getDialect(path)).flatMap(_.toOption)
+    if (path.isTwirlTemplate) None
+    else {
+      trees.get(path).orElse {
+        // Fallback to parse without caching result.
+        parse(path, scalaVersionSelector.getDialect(path)).flatMap(_.toOption)
+      }
     }
 
   def didClose(fileUri: AbsolutePath): Unit = {
@@ -169,7 +172,7 @@ final class Trees(
   def didChange(path: AbsolutePath): List[Diagnostic] = {
     val dialect = scalaVersionSelector.getDialect(path)
     parse(path, dialect) match {
-      case Some(parsed) =>
+      case Some(parsed) if !path.isTwirlTemplate =>
         parsed match {
           case Parsed.Error(pos, message, _) =>
             List(
@@ -213,59 +216,60 @@ final class Trees(
   ): Option[Parsed[Tree]] = {
     for {
       text <- buffers.get(path).orElse(path.readTextOpt)
-    } yield try {
-      val skipFistShebang =
-        if (text.startsWith("#!")) text.replaceFirst("#!", "//") else text
-      val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
-      val possiblyParsed = if (path.isMill) {
-        val ammoniteInput = Input.Ammonite(input)
-        ammoniteInput.safeParse[MultiSource](dialect)
-      } else {
-        input.safeParse[Source](dialect)
-      }
+    } yield
+      try {
+        val skipFistShebang =
+          if (text.startsWith("#!")) text.replaceFirst("#!", "//") else text
+        val input = Input.VirtualFile(path.toURI.toString(), skipFistShebang)
+        val possiblyParsed = if (path.isMill) {
+          val ammoniteInput = Input.Ammonite(input)
+          ammoniteInput.safeParse[MultiSource](dialect)
+        } else {
+          input.safeParse[Source](dialect)
+        }
 
-      /* If the parse failed, try tokenizing the file to allow tokenization based
-       * functionality to work.
-       */
-      possiblyParsed match {
-        case err: Parsed.Error =>
-          val tokens = tokenize(path)
-          input.safeParseWithExperimentalFallback[Source](
-            dialect,
-            () => tokens,
-          ) match {
-            case Parsed.Success(tree) =>
-              Parsed.Success(tree)
-            case _ =>
-              tokens.foreach(tokens => tokenized(path) = tokens)
-              err
-          }
-        case succes: Parsed.Success[_] =>
-          tokenized.remove(path)
-          succes
-      }
-    } catch {
-      // if the parsers breaks we should not throw the exception further
-      case _: StackOverflowError =>
-        val newPathCopy = reports
-          .unsanitized()
-          .create(() =>
-            Report(
-              s"stackoverflow_${path.filename}",
-              text,
-              s"Stack overflow in ${path.filename}",
-              path = Optional.of(path.toURI),
+        /* If the parse failed, try tokenizing the file to allow tokenization based
+         * functionality to work.
+         */
+        possiblyParsed match {
+          case err: Parsed.Error =>
+            val tokens = tokenize(path)
+            input.safeParseWithExperimentalFallback[Source](
+              dialect,
+              () => tokens,
+            ) match {
+              case Parsed.Success(tree) =>
+                Parsed.Success(tree)
+              case _ =>
+                tokens.foreach(tokens => tokenized(path) = tokens)
+                err
+            }
+          case succes: Parsed.Success[_] =>
+            tokenized.remove(path)
+            succes
+        }
+      } catch {
+        // if the parsers breaks we should not throw the exception further
+        case _: StackOverflowError =>
+          val newPathCopy = reports
+            .unsanitized()
+            .create(() =>
+              Report(
+                s"stackoverflow_${path.filename}",
+                text,
+                s"Stack overflow in ${path.filename}",
+                path = Optional.of(path.toURI),
+              )
             )
+          val message =
+            s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
+          scribe.warn(message)
+          Parsed.Error(
+            Position.None,
+            message,
+            new ParseException(Position.None, message),
           )
-        val message =
-          s"Could not parse $path, saved the current snapshot to ${newPathCopy}"
-        scribe.warn(message)
-        Parsed.Error(
-          Position.None,
-          message,
-          new ParseException(Position.None, message),
-        )
-    }
+      }
   }
 
 }
