@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Metals Maven Plugin</name>
+  <description>Exports a Maven build to .metals/mbt.json for Metals IDE support.</description>
+  <groupId>org.scalameta</groupId>
+  <artifactId>metals-maven-plugin</artifactId>
+  <version>@@VERSION@@</version>
+  <goalPrefix>metals</goalPrefix>
+  <isolatedRealm>false</isolatedRealm>
+  <inheritedByDefault>true</inheritedByDefault>
+  <requiredJavaVersion>11</requiredJavaVersion>
+  <requiredMavenVersion>3.9.5</requiredMavenVersion>
+  <mojos>
+    <mojo>
+      <goal>export</goal>
+      <description>Exports the Maven build structure to a .metals/mbt-maven.json file.</description>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>true</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <phase>generate-sources</phase>
+      <implementation>scala.meta.metals.maven.MbtMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <requiresDependencyCollection>test</requiresDependencyCollection>
+      <threadSafe>true</threadSafe>
+      <parameters>
+        <parameter>
+          <name>downloadSources</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Whether to resolve and attach sources JARs for external dependencies. Enabled by default; disable with -DdownloadSources=false.</description>
+        </parameter>
+        <parameter>
+          <name>outputFile</name>
+          <type>java.io.File</type>
+          <required>true</required>
+          <editable>true</editable>
+          <description>Path where the plugin writes its JSON output. Set by Metals via -DmbtOutputFile=.</description>
+        </parameter>
+        <parameter>
+          <name>reactorProjects</name>
+          <type>java.util.List</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description></description>
+        </parameter>
+        <parameter>
+          <name>session</name>
+          <type>org.apache.maven.execution.MavenSession</type>
+          <required>true</required>
+          <editable>false</editable>
+          <description></description>
+        </parameter>
+      </parameters>
+      <configuration>
+        <downloadSources implementation="boolean" default-value="true">${downloadSources}</downloadSources>
+        <outputFile implementation="java.io.File">${mbtOutputFile}</outputFile>
+        <reactorProjects implementation="java.util.List" default-value="${reactorProjects}"/>
+        <session implementation="org.apache.maven.execution.MavenSession" default-value="${session}"/>
+      </configuration>
+      <requirements>
+        <requirement>
+          <role>org.eclipse.aether.RepositorySystem</role>
+          <field-name>repoSystem</field-name>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.toolchain.ToolchainManager</role>
+          <field-name>toolchainManager</field-name>
+        </requirement>
+        <requirement>
+          <role>org.apache.maven.project.ProjectBuilder</role>
+          <field-name>projectBuilder</field-name>
+        </requirement>
+      </requirements>
+    </mojo>
+  </mojos>
+  <dependencies>
+    <dependency>
+      <groupId>org.scala-lang</groupId>
+      <artifactId>scala-library</artifactId>
+      <type>jar</type>
+      <version>@@SCALA_VERSION@@</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.gson</groupId>
+      <artifactId>gson</artifactId>
+      <type>jar</type>
+      <version>2.14.0</version>
+    </dependency>
+    <dependency>
+      <groupId>com.google.errorprone</groupId>
+      <artifactId>error_prone_annotations</artifactId>
+      <type>jar</type>
+      <version>2.48.0</version>
+    </dependency>
+  </dependencies>
+</plugin>

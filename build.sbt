@@ -112,6 +112,39 @@ addCommandAlias(
   "+publishLocal; metals/runMain scala.meta.metals.DownloadDependencies ",
 )
 
+lazy val `maven-metals` = project
+  .in(file("maven-metals"))
+  .settings(sharedSettings)
+  .settings(
+    moduleName := "metals-maven-plugin",
+    crossPaths := false,
+    publish / skip := false,
+    publishLocal := publishM2.value,
+    testFrameworks := List(TestFrameworks.MUnit),
+    libraryDependencies ++= List(
+      "org.apache.maven" % "maven-core" % "3.9.5" % "provided",
+      "org.apache.maven" % "maven-plugin-api" % "3.9.5" % "provided",
+      "org.apache.maven.plugin-tools" % "maven-plugin-annotations" % "3.15.1" % "provided",
+      "org.apache.maven" % "maven-model" % "3.9.5" % "provided",
+      "com.google.code.gson" % "gson" % "2.14.0",
+      "org.scalameta" %% "munit" % V.munit % Test,
+    ),
+    Compile / resourceGenerators += Def.task {
+      val template = IO.read(
+        (Compile / sourceDirectory).value / "plugin-xml" / "META-INF" / "maven" / "plugin.xml"
+      )
+      val dest =
+        (Compile / resourceManaged).value / "META-INF" / "maven" / "plugin.xml"
+      IO.write(
+        dest,
+        template
+          .replace("@@VERSION@@", version.value)
+          .replace("@@SCALA_VERSION@@", V.scala213),
+      )
+      Seq(dest)
+    }.taskValue,
+  )
+
 def configureMtagsScalaVersionDynamically(
     state: State,
     scalaV: String,
@@ -167,6 +200,7 @@ commands ++= Seq(
     "interfaces/publishLocal" ::
       "jsemanticdb/publishLocal" ::
       "turbine/publishLocal" ::
+      "maven-metals/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
       "semanticdb-protoc/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
@@ -728,6 +762,7 @@ lazy val metals = project
       "gitter8Version" -> V.gitter8Version,
       "gradleBloopVersion" -> V.gradleBloop,
       "mavenBloopVersion" -> V.mavenBloop,
+      "metalsMavenPluginVersion" -> version.value,
       "sbt2Version" -> V.sbt2Version,
       "scalametaVersion" -> V.scalameta,
       "semanticdbVersion" -> V.semanticdb(scalaVersion.value),
@@ -1103,6 +1138,7 @@ lazy val slow = project
     sharedSettings,
     Test / testOnly := (Test / testOnly)
       .dependsOn(
+        `maven-metals` / publishLocal,
         `sbt-metals` / publishLocal,
         `gradle-extractor` / publishLocal,
         publishBinaryMtags,
@@ -1111,6 +1147,7 @@ lazy val slow = project
     Test / test := (Test / test)
       .dependsOn(
         `sbt-metals` / publishLocal,
+        `maven-metals` / publishLocal,
         `gradle-extractor` / publishLocal,
         publishBinaryMtags,
       )

@@ -122,6 +122,14 @@ jobs:
             name: Scala javapc tests
             os: ubuntu-latest
             java: "17"
+          - type: maven-metals
+            command: |
+              sbt maven-metals/test
+              bin/test.sh quick-publish-local
+              bin/test.sh 'slow/testOnly -- tests.maven.MavenMbtSuite'
+            name: Maven integration
+            os: ubuntu-latest
+            java: "17"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs

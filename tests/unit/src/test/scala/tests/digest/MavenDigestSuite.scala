@@ -182,4 +182,101 @@ class MavenDigestSuite extends BaseDigestSuite {
        |$projectString
     """.stripMargin,
   )
+
+  checkDiff(
+    "mvn-maven-config-added",
+    s"""
+       |/pom.xml
+       |$projectString
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/maven.config
+       |-T2
+       |-U
+    """.stripMargin,
+  )
+
+  checkDiff(
+    "mvn-maven-config-changed",
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/maven.config
+       |-T2
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/maven.config
+       |-T4
+    """.stripMargin,
+  )
+
+  checkDiff(
+    "mvn-jvm-config-added",
+    s"""
+       |/pom.xml
+       |$projectString
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/jvm.config
+       |-Xmx1g
+    """.stripMargin,
+  )
+
+  checkDiff(
+    "mvn-jvm-config-changed",
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/jvm.config
+       |-Xmx1g
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/jvm.config
+       |-Xmx2g
+    """.stripMargin,
+  )
+
+  checkDiff(
+    "mvn-extensions-xml-added",
+    s"""
+       |/pom.xml
+       |$projectString
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/.mvn/extensions.xml
+       |<extensions xmlns="http://maven.apache.org/EXTENSIONS/1.1.0">
+       |  <extension>
+       |    <groupId>com.example</groupId>
+       |    <artifactId>example-extension</artifactId>
+       |    <version>1.0.0</version>
+       |  </extension>
+       |</extensions>
+    """.stripMargin,
+  )
+
+  checkSame(
+    "non-build-file-ignored",
+    s"""
+       |/pom.xml
+       |$projectString
+       |/src/main/java/Foo.java
+       |class Foo {}
+    """.stripMargin,
+    s"""
+       |/pom.xml
+       |$projectString
+       |/src/main/java/Bar.java
+       |class Bar {}
+    """.stripMargin,
+  )
 }

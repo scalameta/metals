@@ -224,8 +224,8 @@ final class BuildTools(
   def allAvailable: List[BuildTool] = {
     List(
       SbtBuildTool(workspaceVersion = None, workspace, userConfig),
+      MavenBuildTool(userConfig, workspace, shellRunner, ec),
       GradleBuildTool(userConfig, workspace)(ec),
-      MavenBuildTool(userConfig, workspace),
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
       BazelBuildTool(userConfig, workspace, shellRunner, ec),
@@ -256,8 +256,8 @@ final class BuildTools(
     val buf = List.newBuilder[BuildTool]
 
     sbtProject.foreach(buf += SbtBuildTool(_, userConfig))
+    mavenProject.foreach(buf += MavenBuildTool(userConfig, _, shellRunner, ec))
     gradleProject.foreach(buf += GradleBuildTool(userConfig, _)(ec))
-    mavenProject.foreach(buf += MavenBuildTool(userConfig, _))
     millProject.foreach(buf += MillBuildTool(userConfig, _))
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
     bazelProject.foreach { root =>

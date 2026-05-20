@@ -4,11 +4,14 @@ import java.nio.charset.StandardCharsets
 
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenDigest
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.InputStreamIO
+import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -19,7 +22,12 @@ import tests.maven.MavenLspSuite.defaultPom
 
 class MavenLspSuite extends BaseImportSuite("maven-import") {
 
-  def buildTool: MavenBuildTool = MavenBuildTool(() => userConfig, workspace)
+  def buildTool: MavenBuildTool = MavenBuildTool(
+    () => userConfig,
+    workspace,
+    new ShellRunner(Time.system, EmptyWorkDoneProgress, () => userConfig),
+    ex,
+  )
 
   override def currentDigest(
       workspace: AbsolutePath

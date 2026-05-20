@@ -124,6 +124,65 @@ class MbtBuildSuite extends tests.BaseSuite {
     )
   }
 
+  test("namespaces-preserve-compiler-options-and-java-home") {
+    val dir = Files.createTempDirectory("mbt-options")
+    val f = dir.resolve("mbt.json")
+    val jarUri = Paths.get("/tmp/example.jar").toUri.toString
+    val javaHome = Paths.get("/tmp/jdk-25").toString.replace("\\", "\\\\")
+    Files.writeString(
+      f,
+      s"""|{
+          |  "dependencyModules": [
+          |    {
+          |      "id": "com.example:example:1.0.0",
+          |      "jar": "$jarUri"
+          |    }
+          |  ],
+          |  "namespaces": {
+          |    "app": {
+          |      "sources": [
+          |        "src/main/java"
+          |      ],
+          |      "scalacOptions": [
+          |        "-deprecation",
+          |        "-Xlint"
+          |      ],
+          |      "javacOptions": [
+          |        "--release",
+          |        "25",
+          |        "-parameters"
+          |      ],
+          |      "dependencyModules": [
+          |        "com.example:example:1.0.0"
+          |      ],
+          |      "scalaVersion": "${BuildInfo.scala213}",
+          |      "javaHome": "$javaHome"
+          |    }
+          |  }
+          |}
+          |""".stripMargin,
+    )
+
+    val workspace = AbsolutePath(dir)
+    val target = MbtBuild
+      .fromFile(f)
+      .mbtTargets
+      .find(_.name == "app")
+      .getOrElse(fail("missing app target"))
+
+    assertEquals(target.scalacOptions, Seq("-deprecation", "-Xlint"))
+    assertEquals(target.javacOptions, Seq("--release", "25", "-parameters"))
+    assertEquals(target.javaHome, Some(Paths.get("/tmp/jdk-25").toString))
+    assertEquals(
+      target.scalacOptionsItem(workspace).getClasspath.asScala.toList,
+      List(jarUri),
+    )
+    assertEquals(
+      target.javacOptionsItem(workspace).getOptions.asScala.toList,
+      List("--release", "25", "-parameters"),
+    )
+  }
+
   test("glob-inverse-sources") {
     val dir = Files.createTempDirectory("mbt-glob")
     val ws = AbsolutePath(dir)

@@ -71,10 +71,10 @@ case class MbtTarget(
     capabilities.setCanRun(false)
     capabilities.setCanTest(false)
 
-    val scalaVersion = this.scalaVersion.getOrElse(
+    lazy val scalaVersion = this.scalaVersion.getOrElse(
       scalaVersionSelector.fallbackScalaVersion()
     )
-    val scalaTarget = new bsp4j.ScalaBuildTarget(
+    lazy val scalaTarget = new bsp4j.ScalaBuildTarget(
       "org.scala-lang",
       scalaVersion,
       scalaBinaryVersion(scalaVersion),
@@ -153,6 +153,6 @@ case class MbtTarget(
 
 object MbtTarget {
   private val gson = new com.google.gson.Gson()
-  private def toGson(value: bsp4j.ScalaBuildTarget) =
+  private[mbt] def toGson[T](value: T) =
     gson.toJsonTree(value)
 }

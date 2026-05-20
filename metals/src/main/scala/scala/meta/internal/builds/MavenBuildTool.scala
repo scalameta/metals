@@ -1,15 +1,21 @@
 package scala.meta.internal.builds
 
+import scala.concurrent.ExecutionContext
+
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
 case class MavenBuildTool(
     userConfig: () => UserConfiguration,
-    projectRoot: AbsolutePath,
-) extends BuildTool
+    override val projectRoot: AbsolutePath,
+    shellRunner: ShellRunner,
+    ec: ExecutionContext,
+) extends MavenMbtImporter(projectRoot, shellRunner, userConfig)(ec)
+    with BuildTool
     with BloopInstallProvider
     with VersionRecommendation {
 
@@ -32,34 +38,30 @@ case class MavenBuildTool(
         s"ch.epfl.scala:bloop-maven-plugin:$bloopMavenPluginVersion:bloopInstall",
         "-DdownloadSources=true",
       )
+    mavenBaseCommand() ::: command
+  }
+
+  override def mavenBaseCommand(): List[String] =
     userConfig().mavenScript match {
-      case Some(script) =>
-        script :: command
+      case Some(script) => List(script)
       case None =>
         writeProperties()
-        val javaArgs = List[String](
+        List(
           JavaBinary(userConfig().javaHome),
           "-Dfile.encoding=UTF-8",
           s"-Dmaven.multiModuleProjectDirectory=$projectRoot",
           s"-Dmaven.home=$tempDir",
-        )
-
-        val jarArgs = List(
           "-cp",
           embeddedMavenLauncher.toString(),
           "org.apache.maven.wrapper.MavenWrapperMain",
         )
-        List(
-          javaArgs,
-          jarArgs,
-          command,
-        ).flatten
     }
-  }
 
-  def digest(workspace: AbsolutePath): Option[String] = {
+  override def isBuildRelated(path: AbsolutePath): Boolean =
+    MavenBuildTool.isMavenRelatedPath(projectRoot, path)
+
+  override def digest(workspace: AbsolutePath): Option[String] =
     MavenDigest.current(projectRoot)
-  }
 
   override def minimumVersion: String = "3.5.2"
 
@@ -78,6 +80,10 @@ object MavenBuildTool {
       workspace: AbsolutePath,
       path: AbsolutePath,
   ): Boolean = {
-    path.toNIO.startsWith(workspace.toNIO) && path.filename == "pom.xml"
+    val nio = path.toNIO
+    val ws = workspace.toNIO
+    nio.startsWith(ws) &&
+    (path.filename == "pom.xml" ||
+      nio.startsWith(ws.resolve(".mvn")))
   }
 }
