@@ -64,6 +64,7 @@ object GradleInfoExtractor {
     config.gradleUserHome.foreach(connector.useGradleUserHomeDir)
 
     val connection: ProjectConnection = connector.connect()
+    scribe.info("Successfully obtained connection")
     try {
       val env = fetchModel(connection, classOf[BuildEnvironment], config)
 
