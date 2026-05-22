@@ -538,6 +538,9 @@ class BuildServerConnection private (
       timeout: Option[Timeout] = None,
       restartByDefault: Boolean = false,
   ): CompletableFuture[T] = {
+    val spanName =
+      "bsp/" + implicitly[ClassTag[T]].runtimeClass.getSimpleName
+    val span = MetalsTracer.startSpan(spanName, "span.kind" -> "CLIENT")
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
@@ -586,13 +589,18 @@ class BuildServerConnection private (
             })
       }
 
-    CancelTokens.future { token =>
+    val result = CancelTokens.future { token =>
       token.onCancel().asScala.onComplete {
         case Success(java.lang.Boolean.TRUE) => localCancelable.cancel()
         case _ =>
       }
       actionFuture
     }
+    result.whenComplete { (_, error) =>
+      if (error != null) MetalsTracer.recordException(span, error)
+      MetalsTracer.endSpan(span)
+    }
+    result
   }
 
 }
