@@ -164,7 +164,10 @@ object GradleInfoExtractor {
       extraArgs: List[String] = Nil,
   ): T = {
     val builder: ModelBuilder[T] = connection.model(modelType)
-    config.gradleJvm.foreach(builder.setJavaHome)
+    config.gradleJvm.foreach { javaHome =>
+      scribe.info(s"Setting Java home for the Gradle daemon: $javaHome")
+      builder.setJavaHome(javaHome)
+    }
     if (extraArgs.nonEmpty) builder.withArguments(extraArgs: _*)
     builder.get()
   }
