@@ -15,7 +15,7 @@ import scala.meta.internal.tvp.{
   TreeViewNodeRevealResult,
   TreeViewParentParams,
   TreeViewParentResult,
-  TreeViewVisibilityDidChangeParams
+  TreeViewVisibilityDidChangeParams,
 }
 
 import org.eclipse.lsp4j._
@@ -54,14 +54,20 @@ class TracedScalaLspService(
   override def didOpen(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] =
-    traceRequest("textDocument/didOpen", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/didOpen",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.didOpen(params)
     }
 
   override def didChange(
       params: DidChangeTextDocumentParams
   ): CompletableFuture[Unit] =
-    traceRequest("textDocument/didChange", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/didChange",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.didChange(params)
     }
 
@@ -71,94 +77,138 @@ class TracedScalaLspService(
   override def didSave(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] =
-    traceRequest("textDocument/didSave", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/didSave",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.didSave(params)
     }
 
   override def definition(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    traceRequest("textDocument/definition", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/definition",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.definition(params)
     }
 
   override def typeDefinition(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    traceRequest("textDocument/typeDefinition", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/typeDefinition",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.typeDefinition(params)
     }
 
   override def implementation(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =
-    traceRequest("textDocument/implementation", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/implementation",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.implementation(params)
     }
 
   override def hover(params: HoverExtParams): CompletableFuture[Hover] =
-    traceRequest("textDocument/hover", "file.uri" -> params.textDocument.getUri) {
+    traceRequest(
+      "textDocument/hover",
+      "file.uri" -> params.textDocument.getUri,
+    ) {
       underlying.hover(params)
     }
 
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    traceRequest("textDocument/documentHighlight", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/documentHighlight",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.documentHighlights(params)
     }
 
   override def documentSymbol(
       params: DocumentSymbolParams
-  ): CompletableFuture[JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]] =
-    traceRequest("textDocument/documentSymbol", "file.uri" -> params.getTextDocument.getUri) {
+  ): CompletableFuture[
+    JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
+  ] =
+    traceRequest(
+      "textDocument/documentSymbol",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.documentSymbol(params)
     }
 
   override def formatting(
       params: DocumentFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    traceRequest("textDocument/formatting", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/formatting",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.formatting(params)
     }
 
   override def onTypeFormatting(
       params: DocumentOnTypeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    traceRequest("textDocument/onTypeFormatting", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/onTypeFormatting",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.onTypeFormatting(params)
     }
 
   override def rangeFormatting(
       params: DocumentRangeFormattingParams
   ): CompletableFuture[util.List[TextEdit]] =
-    traceRequest("textDocument/rangeFormatting", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/rangeFormatting",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.rangeFormatting(params)
     }
 
   override def prepareRename(
       params: TextDocumentPositionParams
   ): CompletableFuture[Range] =
-    traceRequest("textDocument/prepareRename", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/prepareRename",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.prepareRename(params)
     }
 
   override def rename(params: RenameParams): CompletableFuture[WorkspaceEdit] =
-    traceRequest("textDocument/rename", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/rename",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.rename(params)
     }
 
   override def references(
       params: ReferenceParams
   ): CompletableFuture[util.List[Location]] =
-    traceRequest("textDocument/references", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/references",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.references(params)
     }
 
   override def prepareCallHierarchy(
       params: CallHierarchyPrepareParams
   ): CompletableFuture[util.List[CallHierarchyItem]] =
-    traceRequest("textDocument/prepareCallHierarchy", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/prepareCallHierarchy",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.prepareCallHierarchy(params)
     }
 
@@ -179,7 +229,10 @@ class TracedScalaLspService(
   override def prepareTypeHierarchy(
       params: TypeHierarchyPrepareParams
   ): CompletableFuture[util.List[TypeHierarchyItem]] =
-    traceRequest("textDocument/prepareTypeHierarchy", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/prepareTypeHierarchy",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.prepareTypeHierarchy(params)
     }
 
@@ -200,7 +253,10 @@ class TracedScalaLspService(
   override def completion(
       params: CompletionParams
   ): CompletableFuture[CompletionList] =
-    traceRequest("textDocument/completion", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/completion",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.completion(params)
     }
 
@@ -214,14 +270,20 @@ class TracedScalaLspService(
   override def signatureHelp(
       params: TextDocumentPositionParams
   ): CompletableFuture[SignatureHelp] =
-    traceRequest("textDocument/signatureHelp", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/signatureHelp",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.signatureHelp(params)
     }
 
   override def codeAction(
       params: CodeActionParams
   ): CompletableFuture[util.List[CodeAction]] =
-    traceRequest("textDocument/codeAction", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/codeAction",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.codeAction(params)
     }
 
@@ -235,35 +297,50 @@ class TracedScalaLspService(
   override def codeLens(
       params: CodeLensParams
   ): CompletableFuture[util.List[CodeLens]] =
-    traceRequest("textDocument/codeLens", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/codeLens",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.codeLens(params)
     }
 
   override def foldingRange(
       params: FoldingRangeRequestParams
   ): CompletableFuture[util.List[FoldingRange]] =
-    traceRequest("textDocument/foldingRange", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/foldingRange",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.foldingRange(params)
     }
 
   override def selectionRange(
       params: SelectionRangeParams
   ): CompletableFuture[util.List[SelectionRange]] =
-    traceRequest("textDocument/selectionRange", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/selectionRange",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.selectionRange(params)
     }
 
   override def semanticTokensFull(
       params: SemanticTokensParams
   ): CompletableFuture[SemanticTokens] =
-    traceRequest("textDocument/semanticTokens/full", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/semanticTokens/full",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.semanticTokensFull(params)
     }
 
   override def inlayHints(
       params: InlayHintParams
   ): CompletableFuture[util.List[InlayHint]] =
-    traceRequest("textDocument/inlayHint", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "textDocument/inlayHint",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.inlayHints(params)
     }
 
@@ -337,14 +414,20 @@ class TracedScalaLspService(
   override def treeViewReveal(
       params: TextDocumentPositionParams
   ): CompletableFuture[TreeViewNodeRevealResult] =
-    traceRequest("metals/treeViewReveal", "file.uri" -> params.getTextDocument.getUri) {
+    traceRequest(
+      "metals/treeViewReveal",
+      "file.uri" -> params.getTextDocument.getUri,
+    ) {
       underlying.treeViewReveal(params)
     }
 
   override def findTextInDependencyJars(
       params: FindTextInDependencyJarsRequest
   ): CompletableFuture[util.List[Location]] =
-    traceRequest("metals/findTextInDependencyJars", "query" -> params.query.pattern) {
+    traceRequest(
+      "metals/findTextInDependencyJars",
+      "query" -> params.query.pattern,
+    ) {
       underlying.findTextInDependencyJars(params)
     }
 
@@ -358,14 +441,20 @@ class TracedScalaLspService(
   override def treeViewVisibilityDidChange(
       params: TreeViewVisibilityDidChangeParams
   ): CompletableFuture[Unit] =
-    traceRequest("metals/treeViewVisibilityDidChange", "viewId" -> params.viewId) {
+    traceRequest(
+      "metals/treeViewVisibilityDidChange",
+      "viewId" -> params.viewId,
+    ) {
       underlying.treeViewVisibilityDidChange(params)
     }
 
   override def treeViewNodeCollapseDidChange(
       params: TreeViewNodeCollapseDidChangeParams
   ): CompletableFuture[Unit] =
-    traceRequest("metals/treeViewNodeCollapseDidChange", "viewId" -> params.viewId) {
+    traceRequest(
+      "metals/treeViewNodeCollapseDidChange",
+      "viewId" -> params.viewId,
+    ) {
       underlying.treeViewNodeCollapseDidChange(params)
     }
 
