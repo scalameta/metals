@@ -12,6 +12,7 @@ import scala.meta.internal.builds.GradleDigest
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.meta.mbt.MbtExtractor
 
@@ -20,7 +21,8 @@ import scala.meta.mbt.MbtExtractor
  * The extractor is downloaded on-demand using Coursier and loaded via ServiceLoader.
  */
 class GradleMbtImporter(
-    val projectRoot: AbsolutePath
+    val projectRoot: AbsolutePath,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext)
     extends MbtImportProvider {
 
@@ -32,7 +34,14 @@ class GradleMbtImporter(
 
     val timer = new Timer(Time.system)
     val extractor = loadExtractor()
-    extractor.extract(projectRoot.toNIO, out.toNIO)
+    val toolJdkHome = userConfig().javaHome
+      .orElse(sys.env.get("JAVA_HOME"))
+      .map(AbsolutePath.apply)
+    extractor.extract(
+      projectRoot.toNIO,
+      out.toNIO,
+      toolJdkHome.map(_.toNIO).getOrElse(null),
+    )
     scribe.info(s"time: gradle-extractor extract in $timer")
   }
 

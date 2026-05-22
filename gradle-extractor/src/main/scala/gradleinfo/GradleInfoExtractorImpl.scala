@@ -19,9 +19,11 @@ class GradleInfoExtractorImpl extends MbtExtractor {
   override def extract(
       projectDir: Path,
       outputFile: Path,
+      jdkHome: Path,
   ): Unit = try {
     val config = ExtractorConfig(
-      projectDir = projectDir
+      projectDir = projectDir,
+      gradleJvm = Option(jdkHome).map(_.toFile()),
     )
     val report = GradleInfoExtractor.extract(config)
     val json = report.toMbtJson
