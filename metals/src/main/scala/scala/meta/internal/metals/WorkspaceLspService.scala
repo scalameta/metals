@@ -448,16 +448,21 @@ class WorkspaceLspService(
               }
           }
       }
-    currentService().flatMap {
-      case Some(service) => f(service)
-      case None =>
-        languageClient
-          .showMessage(
-            lsp4j.MessageType.Info,
-            s"No workspace folder chosen to execute $actionName.",
-          )
-        Future.successful(default())
-    }
+    currentService()
+      .flatMap {
+        case Some(service) => f(service)
+        case None =>
+          languageClient
+            .showMessage(
+              lsp4j.MessageType.Info,
+              s"No workspace folder chosen to execute $actionName.",
+            )
+          Future.successful(default())
+      }
+      .recover { case ex =>
+        scribe.error(s"$actionName failed: ${ex}")
+        default()
+      }
   }
 
   def onCurrentFolder(

@@ -320,7 +320,7 @@ final class MbtBuildServer(
       params: CleanCacheParams
   ): CompletableFuture[CleanCacheResult] =
     CompletableFuture.completedFuture {
-      val result = new CleanCacheResult(false)
+      val result = new CleanCacheResult(true)
       result.setMessage("MBT build server is read-only.")
       result
     }
