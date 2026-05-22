@@ -37,6 +37,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -650,6 +651,10 @@ object BuildServerConnection {
             .setLocalService(localClient)
             .setRemoteInterface(classOf[MetalsBuildServer])
             .setExecutorService(ec)
+            .configureGson(new java.util.function.Consumer[GsonBuilder] {
+              override def accept(b: GsonBuilder): Unit =
+                b.registerTypeAdapterFactory(new TraceContextAdapterFactory())
+            })
             .wrapMessages(wrapper(_))
             .create()
         val listening = launcher.startListening()

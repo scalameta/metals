@@ -5,6 +5,7 @@ import io.opentelemetry.api.trace.Span
 import io.opentelemetry.api.trace.StatusCode
 import io.opentelemetry.api.trace.Tracer
 import io.opentelemetry.context.Context
+import io.opentelemetry.context.propagation.TextMapPropagator
 
 /**
  * Thin facade over the OpenTelemetry API.
@@ -19,6 +20,9 @@ object MetalsTracer {
 
   private val tracer: Tracer =
     GlobalOpenTelemetry.get().tracerBuilder("metals").build()
+
+  private val propagator: TextMapPropagator =
+    GlobalOpenTelemetry.getPropagators().getTextMapPropagator()
 
   def startSpan(name: String, attributes: (String, String)*): Span = {
     val builder = tracer.spanBuilder(name)
@@ -41,5 +45,19 @@ object MetalsTracer {
 
   def currentContext(): Context = {
     Context.current()
+  }
+
+  /**
+   * Injects the current W3C trace context (traceparent, tracestate) into
+   * the given string-keyed map carrier.  When no OTEL SDK is on the classpath,
+   * the no-op propagator is used and the carrier is left unchanged.
+   */
+  def injectTraceContext(carrier: java.util.Map[String, String]): Unit = {
+    val setter: io.opentelemetry.context.propagation.TextMapSetter[
+      java.util.Map[String, String]
+    ] =
+      (map: java.util.Map[String, String], k: String, v: String) =>
+        map.put(k, v)
+    propagator.inject(Context.current(), carrier, setter)
   }
 }
