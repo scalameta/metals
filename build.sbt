@@ -445,6 +445,8 @@ lazy val metals = project
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
       "com.outr" %% "scribe-slf4j2" % V.scribe, // needed for flyway database migrations
+      // for tracing
+      "io.opentelemetry" % "opentelemetry-api" % V.opentelemetry,
       // for JSON formatted doctor
       "com.lihaoyi" %% "ujson" % "4.4.3",
       // For fetching projects' templates
