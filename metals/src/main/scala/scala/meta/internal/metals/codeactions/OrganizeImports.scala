@@ -147,6 +147,7 @@ class OrganizeImportsQuickFix(
       .nonEmpty
 
   override def dontShowErrorToUser: Boolean = true
+
 }
 
 object OrganizeImportsQuickFix {
