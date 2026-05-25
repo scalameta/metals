@@ -171,7 +171,11 @@ final class FileDecoderProvider(
           case "metalsDecode" =>
             decodedFileContents(uri.getSchemeSpecificPart())
           case "metalsfs" =>
-            decodedFileContents(uriMapper.convertToLocal(uriAsStr))
+            Try(uriMapper.convertToLocal(uriAsStr)) match {
+              case Success(local) => decodedFileContents(local)
+              case Failure(e) =>
+                Future.successful(DecoderResponse.failed(uri, e))
+            }
           case _ =>
             Future.successful(
               DecoderResponse.failed(

@@ -204,6 +204,7 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
         )
       }
     if (clientConfig.isLibraryFileSystemSupported()) {
+      folderUriMapper.rebuildIndexes()
       lspFileSystemProvider.sendLibraryFileSystemReady()
     }
     // Schedule removal of unused toplevel symbols from cache

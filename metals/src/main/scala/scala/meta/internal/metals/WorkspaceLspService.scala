@@ -127,10 +127,12 @@ class WorkspaceLspService(
       serverInputs.initialServerConfig,
       initializeParams,
     )
-  private def uriMapper: URIMapper =
-    folderServices.headOption
-      .map(_.uriMapper)
-      .getOrElse(fallbackService.uriMapper)
+
+  private val jarFileSystemCache: JarFileSystemCache = new JarFileSystemCache
+
+  private val uriMapper: WorkspaceURIMapper = new WorkspaceURIMapper(() =>
+    folderServices.map(_.folderUriMapper) :+ fallbackService.folderUriMapper
+  )
 
   private val languageClient = {
     val languageClient =
@@ -243,6 +245,8 @@ class WorkspaceLspService(
       workDoneProgress,
       bspStatus,
       moduleStatus,
+      jarFileSystemCache,
+      uriMapper,
     )
   }
 
@@ -267,6 +271,8 @@ class WorkspaceLspService(
           workDoneProgress,
           maxScalaCliServers = 3,
           moduleStatus,
+          jarFileSystemCache,
+          uriMapper,
         )
     }
 
@@ -357,7 +363,7 @@ class WorkspaceLspService(
 
   def getServiceForOpt(uri: String): Option[ProjectMetalsLspService] = {
     // "metalsDecode" prefix is used for showing special files and is not an actual file system
-    val strippedUri = uriMapper.convertToLocal(uri).stripPrefix("metalsDecode:")
+    val strippedUri = uriMapper.convertToLocal(uri.stripPrefix("metalsDecode:"))
     for {
       path <- strippedUri.toAbsolutePathSafe()
       service <-

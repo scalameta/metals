@@ -1,13 +1,13 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.nio.file.FileSystem
-import java.nio.file.FileSystemNotFoundException
-import java.nio.file.FileSystems
+import java.nio.file.Files
 import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.atomic.AtomicReference
 
-import scala.annotation.tailrec
-import scala.util.Properties
+import scala.util.Using
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.URIEncoderDecoder
@@ -15,229 +15,49 @@ import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.lsp4j.TextDocumentPositionParams
 
 /**
  * Bidirectional mapper between virtual `metalsfs://` URIs exposed to
  * the LSP client and local `jar:file://` URIs used internally by Metals.
  *
- * Maintains lazy NIO file system handles for JAR archives and provides
- * overloaded conversions for common LSP4J parameter types.
+ * `try*` variants return `None` when the receiving mapper does not own
+ * the archive in question, so an aggregator can fall through to another
+ * folder's mapper.
  */
-final case class URIMapper(
-    buildTargets: BuildTargets,
-    userJavaHome: () => Option[String],
-) {
+trait URIMapper {
 
-  private lazy val isWindows: Boolean = Properties.isWin
+  def convertToLocal(uri: String): String
+  def convertToMetalsFS(uri: String): String
 
-  private def changeCase(uri: String): String =
-    if (isWindows) uri.toLowerCase() else uri
+  def tryConvertToLocal(uri: String): Option[String]
+  def tryConvertToMetalsFS(uri: String): Option[String]
 
-  /**
-   * Walks up the path to find a meaningful JDK directory name,
-   * skipping intermediate segments like `lib` or `src.zip`.
-   */
-  @tailrec
-  private def getDecentJDKName(path: Path): String =
-    if (
-      path.getParent == null || !List("lib", "src.zip").contains(path.filename)
+  def getJDKs: Iterator[String]
+  def getWorkspaceJars: Iterator[String]
+  def getSourceJars: Iterator[String]
+
+  def tryGetJDKFileSystem(name: String): Option[FileSystemInfo]
+  def tryGetWorkspaceJarFileSystem(name: String): Option[FileSystemInfo]
+  def tryGetSourceJarFileSystem(name: String): Option[FileSystemInfo]
+
+  final def getJDKFileSystem(name: String): FileSystemInfo =
+    tryGetJDKFileSystem(name).getOrElse(
+      throw new NoSuchElementException(s"JDK not found: $name")
     )
-      path.filename
-    else
-      getDecentJDKName(path.getParent)
 
-  private def jdkSources: Option[AbsolutePath] =
-    JdkSources(userJavaHome()).toOption
+  final def getWorkspaceJarFileSystem(name: String): FileSystemInfo =
+    tryGetWorkspaceJarFileSystem(name).getOrElse(
+      throw new NoSuchElementException(s"Workspace jar not found: $name")
+    )
 
-  /** Returns the display names of all available JDK source archives. */
-  def getJDKs: Iterator[String] =
-    jdkSources.iterator.map(jdk => getDecentJDKName(jdk.toNIO))
+  final def getSourceJarFileSystem(name: String): FileSystemInfo =
+    tryGetSourceJarFileSystem(name).getOrElse(
+      throw new NoSuchElementException(s"Source jar not found: $name")
+    )
 
-  /** Returns the filenames of all workspace dependency JARs. */
-  def getWorkspaceJars: Iterator[String] =
-    buildTargets.allWorkspaceJars.map(_.filename)
-
-  /** Returns the filenames of all source JARs. */
-  def getSourceJars: Iterator[String] =
-    buildTargets.allSourceJars.map(_.filename)
-
-  /**
-   * Returns an existing NIO [[FileSystem]] for the given archive,
-   * creating one if it does not yet exist.
-   */
-  private def getOrCreateFileSystem(localPath: AbsolutePath): FileSystemInfo = {
-    val fileUri = localPath.toNIO.toUri.toString.stripSuffix("/")
-    val localUri = s"jar:$fileUri"
-    val zipURI = URI.create(localUri)
-    val fs =
-      try {
-        FileSystems.getFileSystem(zipURI)
-      } catch {
-        case _: FileSystemNotFoundException =>
-          FileSystems.newFileSystem(zipURI, new java.util.HashMap[String, Any])
-      }
-    FileSystemInfo(fs, fileUri)
-  }
-
-  private def findJdkByName(name: String): Option[AbsolutePath] =
-    jdkSources.find(jdk => getDecentJDKName(jdk.toNIO) == name)
-
-  private def findWorkspaceJarByName(name: String): Option[AbsolutePath] =
-    buildTargets.allWorkspaceJars.find(_.filename == name)
-
-  private def findSourceJarByName(name: String): Option[AbsolutePath] =
-    buildTargets.allSourceJars.find(_.filename == name)
-
-  /** Opens the NIO file system for a JDK source archive identified by name. */
-  def getJDKFileSystem(name: String): FileSystemInfo =
-    findJdkByName(name)
-      .map(getOrCreateFileSystem)
-      .getOrElse(throw new NoSuchElementException(s"JDK not found: $name"))
-
-  /** Opens the NIO file system for a workspace JAR identified by filename. */
-  def getWorkspaceJarFileSystem(name: String): FileSystemInfo =
-    findWorkspaceJarByName(name)
-      .map(getOrCreateFileSystem)
-      .getOrElse(
-        throw new NoSuchElementException(s"Workspace jar not found: $name")
-      )
-
-  /** Opens the NIO file system for a source JAR identified by filename. */
-  def getSourceJarFileSystem(name: String): FileSystemInfo =
-    findSourceJarByName(name)
-      .map(getOrCreateFileSystem)
-      .getOrElse(
-        throw new NoSuchElementException(s"Source jar not found: $name")
-      )
-
-  /**
-   * Determines the virtual category (jdk, jar, or source) for a local
-   * `file://` JAR path by matching it against known build dependencies.
-   *
-   * @param decodedJarPath a decoded `file:///path/to/some.jar` string
-   * @return the corresponding `metalsfs:/metalsLibraries/<category>/<name>`
-   *         prefix, or `None` if the path is not a known dependency
-   */
-  private def classifyLocalUri(
-      decodedJarPath: String
-  ): Option[String] = {
-    val path =
-      try Some(AbsolutePath(java.nio.file.Paths.get(new URI(decodedJarPath))))
-      catch { case _: Exception => None }
-
-    path.flatMap { absPath =>
-      val filename = absPath.filename
-      jdkSources match {
-        case Some(jdk)
-            if changeCase(
-              absPath.toURI.toString.stripSuffix("/")
-            ) == changeCase(jdk.toURI.toString.stripSuffix("/")) =>
-          val name = getDecentJDKName(jdk.toNIO)
-          Some(s"${URIMapper.jdkURI}/$name")
-        case _ =>
-          if (
-            buildTargets.allWorkspaceJars.exists(j =>
-              changeCase(j.toURI.toString.stripSuffix("/")) == changeCase(
-                absPath.toURI.toString.stripSuffix("/")
-              )
-            )
-          )
-            Some(s"${URIMapper.workspaceJarURI}/$filename")
-          else if (
-            buildTargets.allSourceJars.exists(j =>
-              changeCase(j.toURI.toString.stripSuffix("/")) == changeCase(
-                absPath.toURI.toString.stripSuffix("/")
-              )
-            )
-          )
-            Some(s"${URIMapper.sourceJarURI}/$filename")
-          else
-            None
-      }
-    }
-  }
-
-  /**
-   * Percent-encodes the given URI according to its scheme.
-   *
-   * `metalsfs:` URIs are returned as-is because constructing them via
-   * `new URI("metalsfs", "", path, null)` would produce triple slashes.
-   */
-  def encodeUri(uri: String): String = {
-    if (uri.startsWith("file://")) {
-      val path = uri.stripPrefix("file://")
-      new URI("file", "", path, null).toString
-    } else if (uri.startsWith("jar:")) {
-      val ssp = uri.stripPrefix("jar:")
-      new URI("jar", ssp, null).toString
-    } else if (uri.startsWith("metalsfs:")) {
-      uri
-    } else
-      throw new IllegalStateException(s"Why here? $uri")
-  }
-
-  /**
-   * Converts a virtual `metalsfs://` URI into a local `jar:file://` URI.
-   *
-   * If the URI points to an archive root (no inner path), the plain
-   * `file://` URI of the archive is returned. Otherwise the full
-   * `jar:file:///archive.jar!/inner/path` form is produced.
-   * The returned URI is already percent-encoded by `Path#toUri`.
-   */
-  def convertToLocal(uri: String): String = {
-    if (uri.startsWith(URIMapper.parentURI)) {
-      val (fs, fsPath) = URIEncoderDecoder.decode(uri) match {
-        case jdk if jdk.startsWith(URIMapper.jdkURI) =>
-          val (name, remaining) = URIMapper.getURIParts(jdk, URIMapper.jdkURI)
-          val fs = getJDKFileSystem(name)
-          (fs, remaining)
-        case workspaceJar
-            if workspaceJar.startsWith(URIMapper.workspaceJarURI) =>
-          val (name, remaining) =
-            URIMapper.getURIParts(workspaceJar, URIMapper.workspaceJarURI)
-          val fs = getWorkspaceJarFileSystem(name)
-          (fs, remaining)
-        case sourceJar if sourceJar.startsWith(URIMapper.sourceJarURI) =>
-          val (name, remaining) =
-            URIMapper.getURIParts(sourceJar, URIMapper.sourceJarURI)
-          val fs = getSourceJarFileSystem(name)
-          (fs, remaining)
-      }
-      if (fsPath.isEmpty) fs.fileUri
-      else fs.fs.getPath(fsPath.get).toUri.toString
-    } else uri
-  }
-
-  /**
-   * Converts a local `jar:file://` URI into a virtual `metalsfs://` URI
-   * by classifying the archive and rewriting the path.
-   */
-  def convertToMetalsFS(uri: String): String = {
-    val decodedURI = URIEncoderDecoder.decode(uri)
-    val metalsfsUri = if (uri.startsWith("jar:")) {
-      val path = decodedURI.stripPrefix("jar:")
-      val splitter = path.indexOf('!')
-      if (splitter == -1) {
-        classifyLocalUri(path).getOrElse(path)
-      } else {
-        val remainder = path.substring(splitter + 1)
-        val localJarPath = path.substring(0, splitter)
-        val metalsJarPath =
-          classifyLocalUri(localJarPath).getOrElse(localJarPath)
-        s"${metalsJarPath}${remainder}"
-      }
-    } else {
-      classifyLocalUri(decodedURI).getOrElse(decodedURI)
-    }
-    encodeUri(metalsfsUri)
-  }
-
-  /** Rewrites the location URI inside a [[SymbolInformation]] to `metalsfs://`. */
-  def convertToMetalsFS(
+  final def convertToMetalsFS(
       symbolInformation: SymbolInformation
   ): SymbolInformation = {
     val symbolInfo = new SymbolInformation(
@@ -250,22 +70,18 @@ final case class URIMapper(
     symbolInfo
   }
 
-  def convertToMetalsFS(location: Location): Location =
+  final def convertToMetalsFS(location: Location): Location =
     new Location(convertToMetalsFS(location.getUri), location.getRange)
 
-  def convertToLocal(
+  final def convertToLocal(
       params: TextDocumentIdentifier
   ): TextDocumentIdentifier =
     new TextDocumentIdentifier(convertToLocal(params.getUri))
 
-  def convertToLocal(
-      params: HoverExtParams
-  ): HoverExtParams =
+  final def convertToLocal(params: HoverExtParams): HoverExtParams =
     params.copy(textDocument = convertToLocal(params.textDocument))
 
-  def convertToLocal(
-      params: CodeActionParams
-  ): CodeActionParams =
+  final def convertToLocal(params: CodeActionParams): CodeActionParams =
     new CodeActionParams(
       convertToLocal(params.getTextDocument()),
       params.getRange(),
@@ -273,15 +89,231 @@ final case class URIMapper(
     )
 }
 
-/** Handle to an open NIO [[FileSystem]] together with its source `file://` URI. */
-final case class FileSystemInfo(fs: FileSystem, fileUri: String)
+/**
+ * Per-folder [[URIMapper]] backed by that folder's [[BuildTargets]] and
+ * the shared [[JarFileSystemCache]].
+ */
+final class FolderURIMapper(
+    buildTargets: BuildTargets,
+    userJavaHome: () => Option[String],
+    jarFileSystemCache: JarFileSystemCache,
+) extends URIMapper {
+
+  private val emptyIndex: Map[String, AbsolutePath] = Map.empty
+  private val jdkIndex = new AtomicReference(emptyIndex)
+  private val workspaceJarIndex = new AtomicReference(emptyIndex)
+  private val sourceJarIndex = new AtomicReference(emptyIndex)
+
+  /**
+   * Derives a display name for a JDK source archive (`src.zip`) by reading
+   * `JAVA_VERSION`/`IMPLEMENTOR` from the `release` file in `JAVA_HOME`.
+   * Falls back to the JDK home directory name when `release` is missing
+   * (e.g. JDKs older than Java 9).
+   */
+  private def getDecentJDKName(srcZipPath: Path): String = {
+    val jdkHome = Option(srcZipPath.getParent).map { parent =>
+      if (parent.filename == "lib") parent.getParent else parent
+    }
+    jdkHome
+      .flatMap(readReleaseName)
+      .orElse(jdkHome.map(_.filename))
+      .getOrElse("JDK")
+  }
+
+  private def readReleaseName(jdkHome: Path): Option[String] = {
+    val release = jdkHome.resolve("release")
+    if (!Files.exists(release)) None
+    else {
+      val props = new Properties()
+      val loaded =
+        try {
+          Using.resource(Files.newBufferedReader(release))(props.load)
+          true
+        } catch {
+          case NonFatal(e) =>
+            scribe.warn(s"Failed to read JDK release file at $release", e)
+            false
+        }
+      if (!loaded) None
+      else {
+        val version = Option(props.getProperty("JAVA_VERSION")).map(unquote)
+        val implementor = Option(props.getProperty("IMPLEMENTOR")).map(unquote)
+        (implementor, version) match {
+          case (Some(impl), Some(ver)) => Some(s"$impl $ver")
+          case (_, Some(ver)) => Some(s"JDK $ver")
+          case _ => None
+        }
+      }
+    }
+  }
+
+  private def unquote(s: String): String =
+    s.stripPrefix("\"").stripSuffix("\"")
+
+  private def jdkSources: Option[AbsolutePath] =
+    JdkSources(userJavaHome()).toOption
+
+  /** Call after indexing the build so listings reflect current state. */
+  def rebuildIndexes(): Unit = synchronized {
+    val newJdk =
+      jdkSources.iterator.map(j => getDecentJDKName(j.toNIO) -> j).toMap
+    val newWs = buildTargets.allWorkspaceJars.map(j => j.filename -> j).toMap
+    val newSrc = buildTargets.allSourceJars.map(j => j.filename -> j).toMap
+
+    val newKnownPaths =
+      newJdk.values.toSet ++ newWs.values.toSet ++ newSrc.values.toSet
+    jarFileSystemCache.closeObsolete(newKnownPaths)
+
+    jdkIndex.set(newJdk)
+    workspaceJarIndex.set(newWs)
+    sourceJarIndex.set(newSrc)
+  }
+
+  def getJDKs: Iterator[String] = jdkIndex.get().keys.iterator
+  def getWorkspaceJars: Iterator[String] =
+    workspaceJarIndex.get().keys.iterator
+  def getSourceJars: Iterator[String] = sourceJarIndex.get().keys.iterator
+
+  def tryGetJDKFileSystem(name: String): Option[FileSystemInfo] =
+    jdkIndex.get().get(name).map(jarFileSystemCache.open)
+  def tryGetWorkspaceJarFileSystem(name: String): Option[FileSystemInfo] =
+    workspaceJarIndex.get().get(name).map(jarFileSystemCache.open)
+  def tryGetSourceJarFileSystem(name: String): Option[FileSystemInfo] =
+    sourceJarIndex.get().get(name).map(jarFileSystemCache.open)
+
+  private def classifyLocalUri(decodedJarPath: String): Option[String] = {
+    val pathOpt =
+      try Some(AbsolutePath(java.nio.file.Paths.get(new URI(decodedJarPath))))
+      catch {
+        case NonFatal(e) =>
+          scribe.warn(
+            s"Failed to parse $decodedJarPath while classifying local URI",
+            e,
+          )
+          None
+      }
+
+    pathOpt.flatMap { path =>
+      val absPathUri = path.toURI.toString.stripSuffix("/")
+      val matchesJdk = jdkSources.exists { jdk =>
+        absPathUri.isUriEqual(jdk.toURI.toString.stripSuffix("/"))
+      }
+      if (matchesJdk)
+        jdkSources
+          .map(jdk => s"${URIMapper.jdkURI}/${getDecentJDKName(jdk.toNIO)}")
+      else if (
+        buildTargets.allWorkspaceJars
+          .exists(j => absPathUri.isUriEqual(j.toURI.toString.stripSuffix("/")))
+      )
+        Some(s"${URIMapper.workspaceJarURI}/${path.filename}")
+      else if (
+        buildTargets.allSourceJars
+          .exists(j => absPathUri.isUriEqual(j.toURI.toString.stripSuffix("/")))
+      )
+        Some(s"${URIMapper.sourceJarURI}/${path.filename}")
+      else
+        None
+    }
+  }
+
+  /**
+   * `metalsfs:` URIs are returned as-is — `new URI("metalsfs", "", path, null)`
+   * would otherwise produce triple slashes.
+   */
+  def encodeUri(uri: String): String = uri match {
+    case s if s.startsWith("file://") =>
+      new URI("file", "", s.stripPrefix("file://"), null).toString
+    case s if s.startsWith("jar:") =>
+      new URI("jar", s.stripPrefix("jar:"), null).toString
+    case s if s.startsWith("metalsfs:") =>
+      s
+    case _ =>
+      throw new IllegalArgumentException(s"Unsupported URI scheme: $uri")
+  }
+
+  def convertToLocal(uri: String): String =
+    tryConvertToLocal(uri).getOrElse(uri)
+
+  def convertToMetalsFS(uri: String): String =
+    tryConvertToMetalsFS(uri).getOrElse(encodeUri(uri))
+
+  def tryConvertToLocal(uri: String): Option[String] = {
+    if (!uri.startsWith(URIMapper.parentURI)) None
+    else {
+      val decoded = URIEncoderDecoder.decode(uri)
+      val resolved = decoded match {
+        case jdk if jdk.startsWith(URIMapper.jdkURI) =>
+          val (name, remaining) = URIMapper.getURIParts(jdk, URIMapper.jdkURI)
+          tryGetJDKFileSystem(name).map(fs => (fs, remaining))
+        case ws if ws.startsWith(URIMapper.workspaceJarURI) =>
+          val (name, remaining) =
+            URIMapper.getURIParts(ws, URIMapper.workspaceJarURI)
+          tryGetWorkspaceJarFileSystem(name).map(fs => (fs, remaining))
+        case src if src.startsWith(URIMapper.sourceJarURI) =>
+          val (name, remaining) =
+            URIMapper.getURIParts(src, URIMapper.sourceJarURI)
+          tryGetSourceJarFileSystem(name).map(fs => (fs, remaining))
+        case _ => None
+      }
+      resolved.map { case (fs, fsPath) =>
+        fsPath.fold(fs.fileUri)(p => fs.fs.getPath(p).toUri.toString)
+      }
+    }
+  }
+
+  def tryConvertToMetalsFS(uri: String): Option[String] = {
+    val decodedURI = URIEncoderDecoder.decode(uri)
+    val metalsfsUri =
+      if (uri.startsWith("jar:")) {
+        val path = decodedURI.stripPrefix("jar:")
+        val splitter = path.indexOf('!')
+        if (splitter == -1) classifyLocalUri(path)
+        else {
+          val remainder = path.substring(splitter + 1)
+          val localJarPath = path.substring(0, splitter)
+          classifyLocalUri(localJarPath).map(prefix => s"$prefix$remainder")
+        }
+      } else classifyLocalUri(decodedURI)
+    metalsfsUri.map(encodeUri)
+  }
+}
 
 /**
- * Constants and utilities for the `metalsfs://` virtual file system URI scheme.
- *
- * VS Code normalises `metalsfs:///` to `metalsfs:/`, so all paths
- * use the single-slash form.
+ * Aggregating [[URIMapper]] that delegates to per-folder mappers,
+ * returning the first non-empty match. Used by the workspace-level
+ * service so requests from any folder are handled correctly.
  */
+final class WorkspaceURIMapper(folders: () => Iterable[URIMapper])
+    extends URIMapper {
+
+  private def tryAll[A](f: URIMapper => Option[A]): Option[A] =
+    folders().iterator.flatMap(m => f(m).iterator).nextOption()
+
+  def convertToLocal(uri: String): String =
+    tryConvertToLocal(uri).getOrElse(uri)
+  def convertToMetalsFS(uri: String): String =
+    tryConvertToMetalsFS(uri).getOrElse(uri)
+
+  def tryConvertToLocal(uri: String): Option[String] =
+    tryAll(_.tryConvertToLocal(uri))
+  def tryConvertToMetalsFS(uri: String): Option[String] =
+    tryAll(_.tryConvertToMetalsFS(uri))
+
+  def getJDKs: Iterator[String] = folders().iterator.flatMap(_.getJDKs).distinct
+  def getWorkspaceJars: Iterator[String] =
+    folders().iterator.flatMap(_.getWorkspaceJars).distinct
+  def getSourceJars: Iterator[String] =
+    folders().iterator.flatMap(_.getSourceJars).distinct
+
+  def tryGetJDKFileSystem(name: String): Option[FileSystemInfo] =
+    tryAll(_.tryGetJDKFileSystem(name))
+  def tryGetWorkspaceJarFileSystem(name: String): Option[FileSystemInfo] =
+    tryAll(_.tryGetWorkspaceJarFileSystem(name))
+  def tryGetSourceJarFileSystem(name: String): Option[FileSystemInfo] =
+    tryAll(_.tryGetSourceJarFileSystem(name))
+}
+
+/** Single-slash form because VS Code normalises `metalsfs:///` to `metalsfs:/`. */
 object URIMapper {
   val rootDir: String = "metalsLibraries"
   val parentURI: String = s"metalsfs:/$rootDir"

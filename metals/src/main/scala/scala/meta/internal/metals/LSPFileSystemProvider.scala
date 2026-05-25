@@ -4,10 +4,9 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.util.stream.Collectors
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
+import scala.util.Using
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -40,16 +39,13 @@ class LSPFileSystemProvider(
     languageClient: MetalsLanguageClient,
     uriMapper: URIMapper,
     fileDecoderProvider: FileDecoderProvider,
-    clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
 
-  /** Notifies the client that the library file system is ready for use. */
+  /** Callers must gate on [[ClientConfiguration.isLibraryFileSystemSupported]]. */
   def sendLibraryFileSystemReady(): Unit = {
-    if (clientConfig.isLibraryFileSystemSupported()) {
-      val params =
-        ClientCommands.LibraryFileSystemReady.toExecuteCommandParams()
-      languageClient.metalsExecuteClientCommand(params)
-    }
+    val params =
+      ClientCommands.LibraryFileSystemReady.toExecuteCommandParams()
+    languageClient.metalsExecuteClientCommand(params)
   }
 
   /**
@@ -83,17 +79,18 @@ class LSPFileSystemProvider(
       case _ =>
         val (fs, innerPath) = resolveInnerPath(uri)
         val path = fs.fs.getPath(innerPath.getOrElse("/"))
-        Files
-          .list(path)
-          .collect(Collectors.toList())
-          .asScala
-          .map(p =>
-            FSReadDirectoryResponse(
-              p.getFileName.toString,
-              isFile = Files.isRegularFile(p),
+        Using.resource(Files.list(path)) { stream =>
+          stream
+            .collect(Collectors.toList())
+            .asScala
+            .map(p =>
+              FSReadDirectoryResponse(
+                p.getFileName.toString,
+                isFile = Files.isRegularFile(p),
+              )
             )
-          )
-          .toArray
+            .toArray
+        }
     }
     FSReadDirectoriesResponse(uri, entries, "")
   }
@@ -104,19 +101,23 @@ class LSPFileSystemProvider(
    * For `.class` files the bytecode is decompiled via CFR through
    * [[FileDecoderProvider]]. All other files are read as UTF-8 text.
    */
-  def readFile(uri: String): Future[FSReadFileResponse] = Future {
-    val (fs, innerPath) = resolveInnerPath(uri)
-    val path = fs.fs.getPath(innerPath.getOrElse("/"))
-    val contents =
-      if (path.getFileName.toString.endsWith(".class")) {
-        val fut = fileDecoderProvider.decodedFileContents(path.toUri.toString)
-        val res = Await.result(fut, 10.minutes)
-        Option(res.value).filter(_.nonEmpty).getOrElse(res.error)
-      } else {
-        new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
-      }
-    FSReadFileResponse(uri, contents, "")
-  }
+  def readFile(uri: String): Future[FSReadFileResponse] =
+    Future(resolveInnerPath(uri)).flatMap { case (fs, innerPath) =>
+      val path = fs.fs.getPath(innerPath.getOrElse("/"))
+      if (path.getFileName.toString.endsWith(".class"))
+        fileDecoderProvider.decodedFileContents(path.toUri.toString).map {
+          res =>
+            val contents = Option(res.value).filter(_.nonEmpty).getOrElse("")
+            val error = Option(res.error).getOrElse("")
+            FSReadFileResponse(uri, contents, error)
+        }
+      else
+        Future {
+          val contents =
+            new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
+          FSReadFileResponse(uri, contents, "")
+        }
+    }
 
   /**
    * Returns metadata for the given URI, indicating whether it
@@ -151,9 +152,8 @@ class LSPFileSystemProvider(
    */
   private def resolveInnerPath(
       uri: String
-  ): (FileSystemInfo, Option[String]) = {
-    val decoded = URIEncoderDecoder.decode(uri)
-    decoded match {
+  ): (FileSystemInfo, Option[String]) =
+    URIEncoderDecoder.decode(uri) match {
       case jdk if jdk.startsWith(URIMapper.jdkURI) =>
         val (name, path) = URIMapper.getURIParts(jdk, URIMapper.jdkURI)
         (uriMapper.getJDKFileSystem(name), path)
@@ -165,6 +165,7 @@ class LSPFileSystemProvider(
         val (name, path) =
           URIMapper.getURIParts(src, URIMapper.sourceJarURI)
         (uriMapper.getSourceJarFileSystem(name), path)
+      case other =>
+        throw new IllegalArgumentException(s"Unknown metalsfs URI: $other")
     }
-  }
 }

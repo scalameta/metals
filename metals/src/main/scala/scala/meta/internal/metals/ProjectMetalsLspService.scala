@@ -63,6 +63,8 @@ class ProjectMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
     moduleStatus: ModuleStatus,
+    jarFileSystemCache: JarFileSystemCache,
+    uriMapper: WorkspaceURIMapper,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -80,6 +82,8 @@ class ProjectMetalsLspService(
       workDoneProgress,
       maxScalaCliServers,
       moduleStatus,
+      jarFileSystemCache,
+      uriMapper,
     ) {
 
   scribe.debug(clientConfig.toString())
@@ -938,5 +942,4 @@ class ProjectMetalsLspService(
     super.resetService()
     treeView.reset()
   }
-
 }
