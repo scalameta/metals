@@ -559,7 +559,12 @@ class BuildServerConnection private (
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>
-        runWithCanceling(launcherConnection)
+        val scope = span.makeCurrent()
+        try {
+          runWithCanceling(launcherConnection)
+        } finally {
+          scope.close()
+        }
       }
       .recoverWith {
         case io: JsonRpcException if io.getCause.isInstanceOf[IOException] =>
