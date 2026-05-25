@@ -528,4 +528,84 @@ class MbtBuildServerLspSuite
       )
     } yield ()
   }
+
+  test("mbt-duplicate-source-filenames-in-same-package") {
+    cleanWorkspace()
+    val mbtJson =
+      s"""|{
+          |  "namespaces": {
+          |    "core": {
+          |      "sources": ["main/src/**", "test/src/**"],
+          |      "scalaVersion": "${BuildInfo.scalaVersion}"
+          |    }
+          |  }
+          |}""".stripMargin
+
+    val appFile = "main/src/app/App.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/main/src/util/Utils.scala
+            |package util
+            |
+            |object MainUtils {
+            |  val value: String = "main"
+            |}
+            |/test/src/util/Utils.scala
+            |package util
+            |
+            |object TestUtils {
+            |  val value: String = "test"
+            |}
+            |/$appFile
+            |package app
+            |
+            |import util.MainUtils
+            |import util.TestUtils
+            |
+            |object App {
+            |  def runMain: String = MainUtils.value
+            |  def runTest: String = TestUtils.value
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen(appFile)
+      _ = assertNoDiagnostics()
+      _ <- server.assertHover(
+        appFile,
+        """|package app
+           |
+           |import util.MainUtils
+           |import util.TestUtils
+           |
+           |object App {
+           |  def runMain: String = MainUtils.val@@ue
+           |  def runTest: String = TestUtils.value
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+      _ <- server.assertHover(
+        appFile,
+        """|package app
+           |
+           |import util.MainUtils
+           |import util.TestUtils
+           |
+           |object App {
+           |  def runMain: String = MainUtils.value
+           |  def runTest: String = TestUtils.val@@ue
+           |}""".stripMargin,
+        """|```scala
+           |val value: String
+           |```
+           |""".stripMargin.hover,
+      )
+    } yield ()
+  }
 }
