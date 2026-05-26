@@ -14,7 +14,7 @@ case class MbtNamespace(
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
     @Nullable classDirectory: String = null,
-    @Nullable activeProfiles: ju.List[String] = null,
+    @Nullable configurations: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =
     Option(this.sources).getOrElse(ju.Collections.emptyList())
@@ -28,8 +28,8 @@ case class MbtNamespace(
     Option(this.dependencyModules).getOrElse(ju.Collections.emptyList())
   def getDependsOn: ju.List[String] =
     Option(this.dependsOn).getOrElse(ju.Collections.emptyList())
-  def getActiveProfiles: Seq[String] =
-    Option(this.activeProfiles)
+  def getConfigurations: Seq[String] =
+    Option(this.configurations)
       .map(_.asScala.toSeq)
       .getOrElse(Nil)
 }

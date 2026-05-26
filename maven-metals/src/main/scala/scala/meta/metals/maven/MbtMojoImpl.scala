@@ -207,9 +207,12 @@ object MbtMojoImpl {
           else project.getBuild.getOutputDirectory
         if (dir == null || dir.isEmpty) null else dir
       },
-      activeProfiles =
+      configurations =
         if (activeProfiles.isEmpty) null
-        else new ju.ArrayList(activeProfiles.toList.sorted.asJava),
+        else
+          new ju.ArrayList(
+            List("-P", activeProfiles.toList.sorted.mkString(",")).asJava
+          ),
     )
   }
 
@@ -362,5 +365,5 @@ private[maven] case class NamespaceJson(
     javaHome: String,
     dependsOn: ju.List[String],
     classDirectory: String,
-    activeProfiles: ju.List[String],
+    configurations: ju.List[String],
 )

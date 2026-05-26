@@ -27,7 +27,7 @@ case class MbtTarget(
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
     classDirectory: Option[String] = None,
-    activeProfiles: Seq[String] = Nil,
+    configurations: Seq[String] = Nil,
 ) {
 
   // mbt doesn't produce any classfiles

@@ -32,7 +32,7 @@ class MavenBuildToolSuite extends BaseSuite {
   private def mbtTarget(
       name: String,
       classDirectory: String,
-      activeProfiles: Seq[String] = Nil,
+      configurations: Seq[String] = Nil,
   ): MbtTarget =
     MbtTarget(
       name = name,
@@ -43,7 +43,7 @@ class MavenBuildToolSuite extends BaseSuite {
       javacOptions = Nil,
       dependencyModules = Nil,
       classDirectory = Some(classDirectory),
-      activeProfiles = activeProfiles,
+      configurations = configurations,
     )
 
   test("maven-mbt-compile-command") {
@@ -51,7 +51,7 @@ class MavenBuildToolSuite extends BaseSuite {
     val target = mbtTarget(
       "com.example:app:1.0.0",
       "target/classes",
-      activeProfiles = Seq("dev", "ci"),
+      configurations = Seq("-P", "dev,ci"),
     )
 
     assertEquals(

@@ -98,12 +98,9 @@ case class MavenBuildTool(
       val parts = target.name.split(':')
       if (parts.length >= 2) parts(1) else target.name
     }
-    val profileArgs =
-      if (target.activeProfiles.isEmpty) Nil
-      else List("-P", target.activeProfiles.mkString(","))
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
-    ) ::: profileArgs ::: List(
+    ) ::: target.configurations.toList ::: List(
       "-pl",
       s":$artifactId",
       "--also-make",
@@ -155,7 +152,7 @@ case class MavenBuildTool(
       s"$jvmOpts -classpath %classpath ${mainClass.getClassName} $appArgs".trim
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
-    ) ::: moduleArgs ::: List(
+    ) ::: target.configurations.toList ::: moduleArgs ::: List(
       "exec:exec",
       "-Dexec.executable=java",
       s"-Dexec.args=$execArgs",
