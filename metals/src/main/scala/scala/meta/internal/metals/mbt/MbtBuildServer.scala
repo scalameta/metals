@@ -89,6 +89,8 @@ import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams
 import ch.epfl.scala.bsp4j.ScalaTestClassesResult
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.bsp4j.ScalacOptionsParams
 import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourcesParams
@@ -96,6 +98,8 @@ import ch.epfl.scala.bsp4j.SourcesResult
 import ch.epfl.scala.bsp4j.StatusCode
 import ch.epfl.scala.bsp4j.TaskId
 import ch.epfl.scala.bsp4j.TestParams
+import ch.epfl.scala.bsp4j.TestParamsDataKind
+import ch.epfl.scala.bsp4j.TestProvider
 import ch.epfl.scala.bsp4j.TestResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
 import org.eclipse.lsp4j.jsonrpc.Launcher
@@ -206,6 +210,9 @@ final class MbtBuildServer(
         )
         capabilities.setRunProvider(
           new RunProvider(List("scala", "java").asJava)
+        )
+        capabilities.setTestProvider(
+          new TestProvider(List("scala", "java").asJava)
         )
       }
       new InitializeBuildResult(
@@ -354,12 +361,103 @@ final class MbtBuildServer(
 
   override def buildTargetTest(
       params: TestParams
-  ): CompletableFuture[TestResult] =
-    CompletableFuture.failedFuture(
-      new UnsupportedOperationException(
-        "MBT build server does not support 'buildTarget/test'."
-      )
-    )
+  ): CompletableFuture[TestResult] = {
+    val result = new CompletableFuture[TestResult]()
+    debugStarter match {
+      case None =>
+        result.completeExceptionally(
+          new UnsupportedOperationException(
+            "MBT build server has no test session starter configured."
+          )
+        )
+      case Some(starter) =>
+        val outcome: Either[String, Future[Int]] = for {
+          testSuites <- asScalaTestSuites(params)
+          target <- importedBuildTargets
+            .find(_.id == params.getTargets.asScala.headOption.orNull)
+            .toRight(
+              s"buildTarget/test: no MBT target for ${params.getTargets}"
+            )
+        } yield starter.test(
+          target,
+          testSuites,
+          workspace,
+          line => testPrint(params, "mbt-test", line, isError = false),
+          line => testPrint(params, "mbt-test", line, isError = true),
+        )
+
+        outcome match {
+          case Left(error) =>
+            result.completeExceptionally(new IllegalArgumentException(error))
+          case Right(future) =>
+            future.onComplete {
+              case Success(0) =>
+                result.complete(new TestResult(StatusCode.OK))
+              case Success(_) =>
+                result.complete(new TestResult(StatusCode.ERROR))
+              case Failure(ex) =>
+                result.completeExceptionally(ex)
+            }
+        }
+    }
+    result
+  }
+
+  private def asScalaTestSuites(
+      params: TestParams
+  ): Either[String, ScalaTestSuites] =
+    params.getDataKind match {
+      case TestParamsDataKind.SCALA_TEST_SUITES_SELECTION =>
+        params.getData match {
+          case json: com.google.gson.JsonElement =>
+            json
+              .as[ScalaTestSuites]
+              .toOption
+              .toRight("buildTarget/test: cannot decode ScalaTestSuites")
+          case _ =>
+            Left("buildTarget/test: expected ScalaTestSuites data")
+        }
+      case TestParamsDataKind.SCALA_TEST_SUITES =>
+        params.getData match {
+          case json: com.google.gson.JsonElement =>
+            json
+              .as[java.util.List[String]]
+              .toOption
+              .map { tests =>
+                val suites = tests.asScala
+                  .map(new ScalaTestSuiteSelection(_, List.empty.asJava))
+                  .asJava
+                new ScalaTestSuites(
+                  suites,
+                  List.empty.asJava,
+                  List.empty.asJava,
+                )
+              }
+              .toRight("buildTarget/test: cannot decode test class names")
+          case _ =>
+            Left("buildTarget/test: expected test class names list")
+        }
+      case _ =>
+        Left(
+          s"buildTarget/test: unsupported data kind: ${params.getDataKind}"
+        )
+    }
+
+  private def testPrint(
+      params: TestParams,
+      taskId: String,
+      message: String,
+      isError: Boolean,
+  ): Unit = {
+    Option(buildClient.get()).foreach { client =>
+      val originId =
+        Option(params.getOriginId).getOrElse("metals-mbt-test")
+      val printParams = new PrintParams(originId, message + "\n")
+      printParams.setTask(new TaskId(taskId))
+      if (isError) client.onRunPrintStderr(printParams)
+      else client.onRunPrintStdout(printParams)
+    }
+  }
 
   override def buildTargetRun(
       params: RunParams
@@ -530,8 +628,7 @@ final class MbtBuildServer(
           )
         )
       case Some(starter) =>
-        val outcome: Either[String, Future[URI]] = for {
-          mainClass <- params.asScalaMainClass()
+        val targetEither = for {
           targetId <- params
             .getTargets()
             .asScala
@@ -540,7 +637,21 @@ final class MbtBuildServer(
           target <- importedBuildTargets
             .find(_.id == targetId)
             .toRight(s"debugSessionStart: no MBT target for $targetId")
-        } yield starter.start(target, mainClass, workspace)
+        } yield target
+
+        val outcome: Either[String, Future[URI]] = targetEither.flatMap {
+          target =>
+            params.asScalaMainClass() match {
+              case Right(mainClass) =>
+                Right(starter.start(target, mainClass, workspace))
+              case Left(_) =>
+                params
+                  .asScalaTestSuites()
+                  .map(testSuites =>
+                    starter.startDebugTest(target, testSuites, workspace)
+                  )
+            }
+        }
 
         outcome match {
           case Left(error) =>

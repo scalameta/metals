@@ -43,7 +43,7 @@ final class OpenClassLoader extends URLClassLoader(Array.empty) {
   }
 
   def resolve(relpath: Path): Option[Path] = {
-    val uri = relpath.toURI(isDirectory = false).toString
+    val uri = relpath.toRelativeURI(isDirectory = false).toString
     resolve(uri)
   }
 

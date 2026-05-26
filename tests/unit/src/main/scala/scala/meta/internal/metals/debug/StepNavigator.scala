@@ -89,7 +89,7 @@ object StepNavigator {
     override def exists: Boolean = root.resolve(relativePath).exists
     override def file: String = root.resolve(relativePath).toString
     override def line: Long = lineNum
-    override def toString: String = s"$root$file:$line"
+    override def toString: String = s"$file:$line"
   }
   case class DependencyLocation(
       path: AbsolutePath,

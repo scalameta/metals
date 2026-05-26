@@ -227,6 +227,7 @@ abstract class MetalsLspService(
       () => compilers,
       definitionIndex,
       () => Some(mbtSymbolSearch),
+      workDoneProgress,
     )
 
   val scalaVersionSelector = new ScalaVersionSelector(

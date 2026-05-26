@@ -201,11 +201,11 @@ trait CommonMtagsEnrichments {
       Files.exists(path)
     }
 
-    def toURI: URI = {
-      toURI(Files.isDirectory(path))
+    def toRelativeURI: URI = {
+      toRelativeURI(Files.isDirectory(path))
     }
 
-    def toURI(isDirectory: Boolean): URI = {
+    def toRelativeURI(isDirectory: Boolean): URI = {
       val suffix = if (isDirectory) "/" else ""
       // Can't use toNIO.toUri because it produces an absolute URI.
       val names = path.iterator().asScala

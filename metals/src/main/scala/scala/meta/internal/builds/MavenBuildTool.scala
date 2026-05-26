@@ -15,6 +15,7 @@ import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 case class MavenBuildTool(
     userConfig: () => UserConfiguration,
@@ -86,6 +87,10 @@ case class MavenBuildTool(
   private def hasMvnw(workspace: AbsolutePath): Boolean =
     Files.isRegularFile(workspace.resolve(mvnwName).toNIO)
 
+  /* -------------------------------------------------------------
+   * MBT specific commands, invoke Maven directly
+   * -------------------------------------------------------------
+   */
   private def mbtMavenBaseCommand(workspace: AbsolutePath): List[String] =
     if (hasMvnw(workspace)) List(s"./$mvnwName")
     else mavenBaseCommand()
@@ -98,13 +103,18 @@ case class MavenBuildTool(
       val parts = target.name.split(':')
       if (parts.length >= 2) parts(1) else target.name
     }
+    // For test targets we need test-compile so target/test-classes is populated
+    // before the DAP server's SourceLookUpProvider scans the class directory.
+    // Otherwise breakpoints in test sources can't be bound. For main targets we
+    // keep `install` so downstream modules can resolve the artifact.
+    val phase = if (target.isTestTarget) "test-compile" else "install"
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
     ) ::: mavenCliConfigurations(target) ::: List(
       "-pl",
       s":$artifactId",
       "--also-make",
-      "install",
+      phase,
       "-DskipTests",
       "-Denforcer.skip=true",
     )
@@ -163,6 +173,84 @@ case class MavenBuildTool(
 
   private def mavenCliConfigurations(target: MbtTarget): List[String] =
     target.configurations.toList
+
+  override def mbtTestCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): List[String] =
+    mbtTestExecCommand(
+      mbtMavenBaseCommand(workspace),
+      workspace,
+      target,
+      testSuites,
+    )
+
+  override def mbtTestDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+  ): List[String] = {
+    // Fallback: use mbtTestDebugCommandWithPort with port 0 (will be replaced)
+    mbtTestDebugCommandWithPort(workspace, target, testSuites)(5005)
+  }
+
+  override def supportsForkedTestDebug: Boolean = true
+
+  override def mbtTestDebugCommandWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Int => List[String] = { port =>
+    // Use Surefire's forked JVM with a pre-assigned debug port.
+    // This allows proper source mapping since tests run in a separate JVM.
+    val debugAgentFlag =
+      s"\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port\""
+    mbtTestExecCommand(
+      mbtMavenBaseCommand(workspace),
+      workspace,
+      target,
+      testSuites,
+      forkedDebugAgentFlag = Some(debugAgentFlag),
+    )
+  }
+
+  private def mbtTestExecCommand(
+      baseCommand: List[String],
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      forkedDebugAgentFlag: Option[String] = None,
+  ): List[String] = {
+    val moduleArgs =
+      target
+        .projectPath match {
+        case Some(pom) =>
+          pprint.log(pom)
+          List("-f", pom.toString())
+        case _ => Nil
+      }
+    val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)
+    val testFilter = suites.flatMap { suite =>
+      val className = suite.getClassName
+      val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+      if (tests.isEmpty) List(className)
+      else tests.map(test => s"$className#$test")
+    }
+    val testArgs =
+      if (testFilter.isEmpty) Nil
+      else List(s"-Dtest=${testFilter.mkString(",")}")
+    val userJvmOpts = MbtDebugLauncher.listOrNil(testSuites.getJvmOptions)
+    val jvmArgs =
+      if (userJvmOpts.isEmpty) Nil
+      else List(s"-DargLine=${userJvmOpts.mkString(" ")}")
+    val debugArgs =
+      forkedDebugAgentFlag.map(flag => s"-Dmaven.surefire.debug=$flag").toList
+    baseCommand ::: target.configurations.toList ::: moduleArgs ::: List(
+      "test"
+    ) ::: testArgs ::: jvmArgs ::: debugArgs
+  }
 }
 
 object MavenBuildTool {

@@ -14,11 +14,13 @@ import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
+import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.{debugadapter => dap}
 
 class MbtDebugSessionStarter(
@@ -36,6 +38,13 @@ class MbtDebugSessionStarter(
   ): Future[URI] = {
     launchVia(buildTool, target, mainClass, workspace)
   }
+
+  def startDebugTest(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      workspace: AbsolutePath,
+  ): Future[URI] =
+    launchTestVia(buildTool, target, testSuites, workspace)
 
   def compile(
       target: MbtTarget,
@@ -91,6 +100,37 @@ class MbtDebugSessionStarter(
 
   }
 
+  def test(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      workspace: AbsolutePath,
+      out: String => Unit,
+      err: String => Unit,
+  ): Future[Int] = {
+    val command = buildTool.mbtTestCommand(workspace, target, testSuites)
+    val toolName = buildTool.executableName
+    scribe.info(
+      s"MBT test session via $toolName: ${redactedCommand(command)}"
+    )
+    val artifactId = {
+      val parts = target.name.split(':')
+      if (parts.length >= 2) parts(1) else target.name
+    }
+    workDoneProgress.trackFuture(
+      s"Testing $artifactId",
+      SystemProcess
+        .run(
+          command,
+          workspace,
+          redirectErrorOutput = false,
+          env = javaHomeEnv(target),
+          processOut = Some(out),
+          processErr = Some(err),
+        )
+        .complete,
+    )
+  }
+
   private def launchVia(
       launcher: MbtDebugLauncher,
       target: MbtTarget,
@@ -131,6 +171,75 @@ class MbtDebugSessionStarter(
     }
   }
 
+  private def launchTestVia(
+      launcher: MbtDebugLauncher,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      workspace: AbsolutePath,
+  ): Future[URI] = {
+    val toolName = launcher.executableName
+    val cancelPromise = Promise[Unit]()
+    compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
+      debugConfigCreator.create(
+        target.id,
+        cancelPromise,
+        isTests = true,
+      ) match {
+        case Left(error) => Future.failed(new IllegalStateException(error))
+        case Right(projectFuture) =>
+          projectFuture.map { project =>
+            val patched =
+              patchProjectForRun(project, target, workspace, toolName)
+            val debuggee =
+              if (launcher.supportsForkedTestDebug) {
+                val commandWithPort =
+                  launcher.mbtTestDebugCommandWithPort(
+                    workspace,
+                    target,
+                    testSuites,
+                  )
+                scribe.info(
+                  s"MBT test debug session via $toolName (forked): ${redactedCommand(commandWithPort(0))}"
+                )
+                new ForkedTestDebugAdapter(
+                  commandWithPort,
+                  workspace,
+                  env = javaHomeEnv(target),
+                  patched,
+                  userJavaHome(),
+                )
+              } else {
+                val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
+                val command = launcher.mbtTestDebugCommand(
+                  workspace,
+                  target,
+                  testSuites,
+                  debugAgentFlag,
+                )
+                scribe.info(
+                  s"MBT test debug session via $toolName: ${redactedCommand(command)}"
+                )
+                new BuildToolDebugAdapter(
+                  command,
+                  workspace,
+                  env = javaHomeEnv(target),
+                  patched,
+                  userJavaHome(),
+                )
+              }
+            val handler = dap.DebugServer.run(
+              debuggee,
+              new MetalsDebugToolsResolver(),
+              new DebugLogger(),
+              gracePeriod =
+                Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
+            )
+            handler.uri
+          }
+      }
+    }
+  }
+
   private def javaHomeEnv(target: MbtTarget): Map[String, String] =
     target.javaHome
       .map { raw =>
@@ -163,6 +272,7 @@ class MbtDebugSessionStarter(
       val primary = realClassDirs.head.toNIO
       val patchedModules = project.modules.map { m =>
         if (
+          m.name == target.name &&
           m.absolutePath.toString.replace('\\', '/').contains(".metals/mbt-out")
         )
           m.copy(absolutePath = primary)

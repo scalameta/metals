@@ -23,6 +23,11 @@ public interface VirtualFileParams {
     return false;
   }
 
+  /** Returns true if SemanticDB generation may prune method and field bodies for this file. */
+  default boolean shouldPruneSemanticdb() {
+    return false;
+  }
+
   /** This can be used to pass some additional data to the compiler. */
   default Object data() {
     return null;

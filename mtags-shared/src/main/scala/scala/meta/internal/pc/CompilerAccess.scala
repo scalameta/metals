@@ -1,5 +1,6 @@
 package scala.meta.internal.pc
 
+import java.time.Duration
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
@@ -81,7 +82,8 @@ abstract class CompilerAccess[Reporter, Compiler](
    */
   def withInterruptableCompiler[T](
       default: T,
-      token: CancelToken
+      token: CancelToken,
+      customTimeout: Option[Duration] = None
   )(
       thunk: CompilerWrapper[Reporter, Compiler] => T
   )(implicit queryInfo: PcQueryContext): CompletableFuture[T] = {
@@ -93,7 +95,8 @@ abstract class CompilerAccess[Reporter, Compiler](
         try withSharedCompiler(default)(thunk)
         finally isFinished.set(true)
       },
-      token
+      token,
+      customTimeout
     )
 
     // Interrupt the queue thread
@@ -203,7 +206,8 @@ abstract class CompilerAccess[Reporter, Compiler](
 
   private def onCompilerJobQueue[T](
       thunk: () => T,
-      token: CancelToken
+      token: CancelToken,
+      customTimeout: Option[Duration] = None
   ): CompletableFuture[T] = {
     val result = new CompletableFuture[T]()
     jobs.submit(
@@ -249,8 +253,8 @@ abstract class CompilerAccess[Reporter, Compiler](
             }
           }
         },
-        config.timeoutDelay(),
-        config.timeoutUnit()
+        customTimeout.map(_.getSeconds()).getOrElse(config.timeoutDelay()),
+        customTimeout.map(_ => TimeUnit.SECONDS).getOrElse(config.timeoutUnit())
       )
     }
 
