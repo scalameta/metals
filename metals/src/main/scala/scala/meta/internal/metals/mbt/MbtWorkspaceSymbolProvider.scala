@@ -110,6 +110,7 @@ class MbtWorkspaceSymbolProvider(
     protobufLspConfig: () => ProtobufLspConfig = () =>
       ProtobufLspConfig.default,
     metalsOutDir: Option[Path] = None,
+    mbtBuild: () => MbtBuild = () => MbtBuild.empty,
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
@@ -234,7 +235,16 @@ class MbtWorkspaceSymbolProvider(
 
     val timer = new Timer(time)
     // Step 1: list all files in HEAD and include OIDs.
-    val files = GitVCS.lsFilesStage(workspace)
+    val gitFiles = GitVCS.lsFilesStage(workspace)
+    val uncheckedSources = mbtBuild().getUncheckedSources.asScala.toSeq
+    val (genSrcJarStrs, genDirStrs) =
+      uncheckedSources.partition(_.endsWith(".srcjar"))
+    val genDirs = genDirStrs.map(workspace.resolve)
+    val srcJars =
+      genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+    val files = gitFiles ++ GitVCS.lsFilesFromDirs(genDirs) ++ GitVCS
+      .lsFilesFromSrcJars(srcJars, workspace)
+
     if (files.isEmpty) {
       // A more detailed error message is logged if GitVCS.lsFilesStage fails.
       return IndexingStats.empty

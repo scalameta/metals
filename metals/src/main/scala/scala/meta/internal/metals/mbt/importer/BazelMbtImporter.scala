@@ -70,6 +70,11 @@ abstract class BazelMbtImporter(
         .run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
+      (genSrcOutputsByTarget, genSrcLabels) <- BazelQuery
+        .queryGenSrcOutputsByTarget(srcs, queryEnv)
+      filteredSrcs = srcs.map { case (t, labels) =>
+        t -> labels.filterNot(genSrcLabels)
+      }
       scalacOptions = targetsXmlDump.getStrings("scalacopts")
       javacOptions = targetsXmlDump.getStrings("javacopts")
       deps = queryDeps(targets.toSet, targets, targetsXmlDump)
@@ -87,13 +92,14 @@ abstract class BazelMbtImporter(
       build = BazelMbtBuildSupport.fromDiscovery(
         namespaceMode,
         targets,
-        srcs,
+        filteredSrcs,
         scalacOptions,
         javacOptions,
         deps,
         externalDepModules,
         dependencyModules,
         effectiveScalaVersion,
+        genSrcOutputsByTarget,
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()
@@ -239,5 +245,4 @@ abstract class BazelMbtImporter(
         case _ => None
       }
   }
-
 }

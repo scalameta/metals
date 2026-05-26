@@ -15,6 +15,7 @@ import ch.epfl.scala.bsp4j
 case class MbtBuild(
     @Nullable dependencyModules: ju.List[MbtDependencyModule],
     @Nullable namespaces: ju.Map[String, MbtNamespace],
+    @Nullable uncheckedSources: ju.List[String],
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
@@ -23,9 +24,20 @@ case class MbtBuild(
   def getNamespaces: ju.Map[String, MbtNamespace] =
     Option(this.namespaces).getOrElse(ju.Collections.emptyMap())
 
+  def getUncheckedSources: ju.List[String] = {
+    val topLevel =
+      Option(this.uncheckedSources)
+        .getOrElse(ju.Collections.emptyList())
+        .asScala
+    val fromNamespaces =
+      getNamespaces.values.asScala.flatMap(_.getUncheckedSources.asScala)
+    (topLevel ++ fromNamespaces).distinct.asJava
+  }
+
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
-      Option(this.namespaces).forall(_.isEmpty)
+      Option(this.namespaces).forall(_.isEmpty) &&
+      Option(this.uncheckedSources).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
@@ -105,6 +117,7 @@ case class MbtBuild(
           scalaVersion = Option(namespace.scalaVersion),
           javaHome = Option(namespace.javaHome),
           dependsOn = dependsOnIds,
+          uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
         )
       }
     }
@@ -148,6 +161,7 @@ object MbtBuild {
     MbtBuild(
       ju.Collections.emptyList(),
       new ju.LinkedHashMap[String, MbtNamespace](),
+      ju.Collections.emptyList(),
     )
 
   def fromWorkspace(workspace: AbsolutePath): MbtBuild =
@@ -200,7 +214,15 @@ object MbtBuild {
       mergedNamespaces.put(key, ns)
     }
 
-    MbtBuild(mergedModules, mergedNamespaces)
+    val mergedUncheckedSources =
+      (Option(a.uncheckedSources)
+        .getOrElse(ju.Collections.emptyList())
+        .asScala ++
+        Option(b.uncheckedSources)
+          .getOrElse(ju.Collections.emptyList())
+          .asScala).distinct.asJava
+
+    MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
   }
 
 }
