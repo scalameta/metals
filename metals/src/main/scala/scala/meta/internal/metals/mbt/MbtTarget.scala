@@ -161,17 +161,6 @@ case class MbtTarget(
     }
   }
 
-  def jvmRunEnvironmentItem(workspace: AbsolutePath): bsp4j.JvmEnvironmentItem =
-    new bsp4j.JvmEnvironmentItem(
-      id,
-      (emptyClassDirectory(
-        workspace
-      ).toURI.toString +: classpathEntries).asJava,
-      ju.Collections.emptyList(),
-      workspace.toURI.toString,
-      ju.Collections.emptyMap(),
-    )
-
   def sourcesItem(
       workspace: AbsolutePath,
       globbedSources: Seq[AbsolutePath] = Nil,

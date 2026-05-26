@@ -121,7 +121,10 @@ class MavenDapMbtLspSuite
             |}
             |""".stripMargin
       )
-      _ = workspace.resolve("mvnw").toFile.setExecutable(true)
+      _ = assert(
+        workspace.resolve("mvnw").toFile.setExecutable(true),
+        "Failed to make mvnw executable",
+      )
       _ <- server.headServer.connectionProvider.buildServerPromise.future
       _ <- server.didOpen("src/main/java/a/Main.java")
       debugger <- server.startDebugging(

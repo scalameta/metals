@@ -67,17 +67,20 @@ class MbtDebugSessionStarter(
   ): Future[Int] = {
     detectBuildTool() match {
       case None =>
-        scribe.warn(
-          "MBT compile: no MbtDebugLauncher build tool detected, skipping pre-compile"
+        Future.failed(
+          new IllegalStateException(
+            "MBT compile: no MbtDebugLauncher build tool detected, skipping pre-compile"
+          )
         )
-        Future.successful(0)
 
       case Some(tool) =>
         tool match {
           case launcher: MbtDebugLauncher =>
             val command = launcher.mbtCompileCommand(workspace, target)
             val toolName = mbtNameFor(tool)
-            scribe.info(s"MBT compile via $toolName: ${command.mkString(" ")}")
+            scribe.info(
+              s"MBT compile via $toolName: ${redactedCommand(command)}"
+            )
             val artifactId = {
               val parts = target.name.split(':')
               if (parts.length >= 2) parts(1) else target.name
@@ -96,11 +99,12 @@ class MbtDebugSessionStarter(
                 .complete,
             )
           case other =>
-            scribe.warn(
-              s"MBT compile: build tool '${other.executableName}' does not " +
-                s"implement MbtDebugLauncher, skipping pre-compile"
+            Future.failed(
+              new IllegalStateException(
+                s"MBT compile: build tool '${other.executableName}' does not " +
+                  s"implement MbtDebugLauncher, skipping pre-compile"
+              )
             )
-            Future.successful(0)
         }
     }
   }
@@ -125,7 +129,7 @@ class MbtDebugSessionStarter(
           case launcher: MbtDebugLauncher =>
             val command = launcher.mbtRunCommand(workspace, target, mainClass)
             scribe.info(
-              s"MBT run session via ${mbtNameFor(tool)}: ${command.mkString(" ")}"
+              s"MBT run session via ${mbtNameFor(tool)}: ${redactedCommand(command)}"
             )
             SystemProcess
               .run(
@@ -169,7 +173,7 @@ class MbtDebugSessionStarter(
         projectFuture.map { project =>
           val patched = patchProjectForRun(project, target, workspace, toolName)
           scribe.info(
-            s"MBT debug session via $toolName: ${command.mkString(" ")}"
+            s"MBT debug session via $toolName: ${redactedCommand(command)}"
           )
           val debuggee = new BuildToolDebugAdapter(
             command,
@@ -204,6 +208,9 @@ class MbtDebugSessionStarter(
     case other => other.executableName
   }
 
+  private def redactedCommand(command: List[String]): String =
+    command.headOption.getOrElse("<empty>")
+
   private def patchProjectForRun(
       project: DebugeeProject,
       target: MbtTarget,
@@ -222,7 +229,9 @@ class MbtDebugSessionStarter(
     } else {
       val primary = realClassDirs.head.toNIO
       val patchedModules = project.modules.map { m =>
-        if (m.absolutePath.toString.contains(".metals/mbt-out"))
+        if (
+          m.absolutePath.toString.replace('\\', '/').contains(".metals/mbt-out")
+        )
           m.copy(absolutePath = primary)
         else m
       }

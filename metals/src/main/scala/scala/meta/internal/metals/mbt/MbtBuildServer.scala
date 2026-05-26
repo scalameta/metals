@@ -200,8 +200,6 @@ final class MbtBuildServer(
       )
       capabilities.setResourcesProvider(false)
       capabilities.setJvmCompileClasspathProvider(true)
-      capabilities.setJvmRunEnvironmentProvider(true)
-      capabilities.setJvmTestEnvironmentProvider(true)
       if (debugStarter.isDefined) {
         capabilities.setDebugProvider(
           new DebugProvider(List("scala", "java").asJava)
@@ -561,17 +559,10 @@ final class MbtBuildServer(
 
   override def buildTargetJvmRunEnvironment(
       params: JvmRunEnvironmentParams
-  ): CompletableFuture[JvmRunEnvironmentResult] = {
-    val requestedTargets = params.getTargets.asScala.toSet
+  ): CompletableFuture[JvmRunEnvironmentResult] =
     CompletableFuture.completedFuture(
-      new JvmRunEnvironmentResult(
-        importedBuildTargets
-          .filter(t => requestedTargets(t.id))
-          .map(_.jvmRunEnvironmentItem(workspace))
-          .asJava
-      )
+      new JvmRunEnvironmentResult(List.empty.asJava)
     )
-  }
 
   override def buildTargetJvmTestEnvironment(
       params: JvmTestEnvironmentParams

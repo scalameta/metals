@@ -225,6 +225,7 @@ final class Compilations(
         }
         (buildServer, targets0)
       }
+      .filterNot { case (_, targets0) => targets0.isEmpty }
 
     targetsByBuildServer.toList match {
       case Nil =>

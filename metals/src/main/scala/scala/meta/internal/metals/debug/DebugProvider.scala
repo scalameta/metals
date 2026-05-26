@@ -56,7 +56,6 @@ import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
-import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
@@ -247,7 +246,7 @@ class DebugProvider(
     val connectToServer = () => {
       val targets = parameters.getTargets().asScala.toSeq
 
-      (if (targets.exists(t => isMbtTarget(t)))
+      (if (targets.exists(t => buildTargets.buildServerOf(t).exists(_.isMbt)))
          Future.unit
        else
          compilations.compilationFinished(
@@ -322,11 +321,6 @@ class DebugProvider(
 
     connectedToServer.future.map(_ => server)
   }
-  private def isMbtTarget(target: BuildTargetIdentifier): Boolean =
-    buildTargets
-      .buildServerOf(target)
-      .exists(c => MbtBuildServer.isMbtServer(c.name))
-
   private def startDebugSession(
       buildServer: BuildServerConnection,
       params: DebugSessionParams,

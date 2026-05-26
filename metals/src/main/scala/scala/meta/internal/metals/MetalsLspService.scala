@@ -1786,15 +1786,10 @@ abstract class MetalsLspService(
   def cleanCompile(): Future[Unit] = compilations.clean(recompile = true)
 
   def compileTarget(target: b.BuildTargetIdentifier): Future[b.CompileResult] =
-    if (isMbtTarget(target))
+    if (buildTargets.buildServerOf(target).exists(_.isMbt))
       Future.successful(new b.CompileResult(b.StatusCode.OK))
     else
       compilations.compileTarget(target)
-
-  private def isMbtTarget(target: b.BuildTargetIdentifier): Boolean =
-    buildTargets
-      .buildServerOf(target)
-      .exists(c => MbtBuildServer.isMbtServer(c.name))
 
   def cancelCompile(): Future[Unit] = Future {
     // We keep this in here to provide a way for clients that aren't work done progress cancel providers
@@ -2033,6 +2028,10 @@ abstract class MetalsLspService(
                     Future.failed(
                       new Exception(s"MBT compile failed for $target")
                     )
+                  else if (result.getStatusCode == b.StatusCode.CANCELLED)
+                    Future.failed(
+                      new Exception(s"MBT compile cancelled for $target")
+                    )
                   else action(params)
                 }
             }
@@ -2092,18 +2091,22 @@ abstract class MetalsLspService(
     val compileFuture =
       if (mbtConnections.isEmpty) Future.unit
       else {
-        val (conn, _) = mbtConnections.head
-        val compileParams = new b.CompileParams(targets.asJava)
-        conn
-          .compile(compileParams, timeout = None)
-          .asScala
-          .flatMap { result =>
-            if (result.getStatusCode == b.StatusCode.ERROR)
-              Future.failed(
-                new Exception("MBT compile failed before debug session")
-              )
-            else Future.unit
+        val byConn = mbtConnections.groupBy(_._1).view.mapValues(_.map(_._2))
+        Future
+          .traverse(byConn.toSeq) { case (conn, connTargets) =>
+            val compileParams = new b.CompileParams(connTargets.asJava)
+            conn
+              .compile(compileParams, timeout = None)
+              .asScala
+              .flatMap { result =>
+                if (result.getStatusCode == b.StatusCode.ERROR)
+                  Future.failed(
+                    new Exception("MBT compile failed before debug session")
+                  )
+                else Future.unit
+              }
           }
+          .map(_ => ())
       }
     compileFuture.flatMap { _ =>
       debugProvider
