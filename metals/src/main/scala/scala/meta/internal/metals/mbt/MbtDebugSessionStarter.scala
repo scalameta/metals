@@ -12,11 +12,11 @@ import scala.concurrent.duration.Duration
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
-import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -210,13 +210,13 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       toolName: String,
   ): DebugeeProject = {
-    val realClassDirs = target.runClassOutputDirs(workspace, toolName)
+    val realClassDirs = target.runClassDirectories(workspace, toolName)
     if (realClassDirs.isEmpty) {
       scribe.warn(
         s"MBT debug session: no compiled output dir for $toolName target " +
           s"'${target.name}' in $workspace — breakpoints will not bind. " +
           s"The build tool must compile before the session starts, or the " +
-          s"importer should set MbtNamespace.classOutputDir."
+          s"importer should set MbtNamespace.classDirectory."
       )
       project
     } else {

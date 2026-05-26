@@ -154,8 +154,8 @@ object GradleInfoExtractor {
       externalDependencies =
         externalDeps.sortBy(d => (d.group, d.name, d.version, d.scope)),
       projectDependencies = projectDeps.sortBy(d => (d.targetModule, d.scope)),
-      classOutputDir = mainClassDir,
-      testClassOutputDir = testClassDir,
+      classDirectory = mainClassDir,
+      testClassDirectory = testClassDir,
     )
   }
   private def classifyDependencies(

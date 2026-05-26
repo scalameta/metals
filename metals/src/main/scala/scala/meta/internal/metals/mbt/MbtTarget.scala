@@ -26,7 +26,7 @@ case class MbtTarget(
     scalaVersion: Option[String] = None,
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
-    classOutputDir: Option[String] = None,
+    classDirectory: Option[String] = None,
     activeProfiles: Seq[String] = Nil,
 ) {
 
@@ -128,19 +128,19 @@ case class MbtTarget(
       emptyClassDirectory(workspace).toURI.toString(),
     )
 
-  def runClassOutputDirs(
+  def runClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
   ): List[AbsolutePath] = {
-    classOutputDir.map(resolveClassDir(workspace, _)) match {
+    classDirectory.map(resolveClassDir(workspace, _)) match {
       case Some(dir) => List(dir)
       case None =>
-        MbtTarget.conventionalClassOutputDirs(workspace, buildToolName)
+        MbtTarget.conventionalClassDirectories(workspace, buildToolName)
     }
   }
 
   def mavenModuleDirectory(workspace: AbsolutePath): Option[AbsolutePath] =
-    classOutputDir
+    classDirectory
       .map(resolveClassDir(workspace, _))
       .flatMap { output =>
         Iterator
@@ -207,7 +207,7 @@ object MbtTarget {
   private[mbt] def toGson[T](value: T) =
     gson.toJsonTree(value)
 
-  def conventionalClassOutputDirs(
+  def conventionalClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
   ): List[AbsolutePath] = {

@@ -16,7 +16,6 @@ import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
-
 import coursier.MavenRepository
 import coursier.Repositories
 import coursier.Repository
