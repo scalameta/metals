@@ -21,7 +21,7 @@ case class MbtDependencyModule(
   def sourcesURI: Option[URI] =
     Option(sources).map(MbtDependencyModule.parseUri)
   private def idParts: Array[String] = id.split(":", 3)
-  def isValid: Boolean = idParts.length == 3
+  def isValid: Boolean = idParts.length > 0
   def organization: String =
     idParts.lift(0).getOrElse(s"INVALID_ORGANIZATION=$id")
   def name: String =
