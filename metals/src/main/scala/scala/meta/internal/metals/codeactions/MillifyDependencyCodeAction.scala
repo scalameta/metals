@@ -68,7 +68,7 @@ class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
       .getOrElse(List.empty)
   }
 
-  override def isScala: Boolean = false;
+  override def isScala: Boolean = false
 }
 
 object MillifyDependencyCodeAction {
