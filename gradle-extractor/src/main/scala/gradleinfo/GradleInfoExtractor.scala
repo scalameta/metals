@@ -129,18 +129,6 @@ object GradleInfoExtractor {
 
     val (externalDeps, projectDeps) = classifyDependencies(m)
 
-    val compilerOutput = Option(m.getCompilerOutput)
-    val mainClassDir =
-      compilerOutput
-        .flatMap(co => Option(co.getOutputDir))
-        .map(_.toPath())
-        .map(relativize)
-    val testClassDir =
-      compilerOutput
-        .flatMap(co => Option(co.getTestOutputDir))
-        .map(_.toPath())
-        .map(relativize)
-
     ModuleReport(
       name = m.getName,
       projectPath = projectPath,
@@ -154,8 +142,6 @@ object GradleInfoExtractor {
       externalDependencies =
         externalDeps.sortBy(d => (d.group, d.name, d.version, d.scope)),
       projectDependencies = projectDeps.sortBy(d => (d.targetModule, d.scope)),
-      classDirectory = mainClassDir,
-      testClassDirectory = testClassDir,
     )
   }
   private def classifyDependencies(
