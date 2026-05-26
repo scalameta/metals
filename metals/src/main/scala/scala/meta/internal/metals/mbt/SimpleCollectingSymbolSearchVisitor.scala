@@ -3,7 +3,6 @@ package scala.meta.internal.metals.mbt
 import java.nio.file.Path
 import java.{util => ju}
 
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags.Symbol
 import scala.meta.pc.SymbolSearchVisitor
 
@@ -25,7 +24,7 @@ class SimpleCollectingSymbolSearchVisitor extends SymbolSearchVisitor {
       new l.SymbolInformation(
         sym.displayName,
         kind,
-        new l.Location(path.toURI.toString(), range),
+        new l.Location(path.toUri().toString(), range),
         sym.owner.value.replace('/', '.'),
       )
     )
