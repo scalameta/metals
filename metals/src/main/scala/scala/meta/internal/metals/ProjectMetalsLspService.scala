@@ -203,13 +203,14 @@ class ProjectMetalsLspService(
   )
 
   private val mbtDebugStarter =
-    new MbtDebugSessionStarter(
-      debugProvider.debugConfigCreator,
-      detectBuildTool = () =>
-        buildTools.current().find(_.isInstanceOf[MbtDebugLauncher]),
-      userJavaHome = () => userConfig.javaHome,
-      workDoneProgress = workDoneProgress,
-    )(ec)
+    buildTools.current().collectFirst { case buildTool: MbtDebugLauncher =>
+      new MbtDebugSessionStarter(
+        debugProvider.debugConfigCreator,
+        buildTool = buildTool,
+        userJavaHome = () => userConfig.javaHome,
+        workDoneProgress = workDoneProgress,
+      )(ec)
+    }
 
   val connectionProvider: ConnectionProvider = {
     val provider = new ConnectionProvider(
@@ -234,7 +235,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
-      mbtDebugStarter = Some(mbtDebugStarter),
+      mbtDebugStarter = mbtDebugStarter,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider

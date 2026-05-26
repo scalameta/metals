@@ -79,7 +79,7 @@ case class MavenBuildTool(
 
   override def toString(): String = "Maven"
 
-  def executableName = MavenBuildTool.name
+  override def executableName = MavenBuildTool.name
 
   private val mvnwName: String = if (Properties.isWin) "mvnw.cmd" else "mvnw"
 

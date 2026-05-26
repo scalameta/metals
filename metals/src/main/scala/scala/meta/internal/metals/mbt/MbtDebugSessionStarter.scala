@@ -9,14 +9,12 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 
-import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
-import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -25,7 +23,7 @@ import ch.epfl.scala.{debugadapter => dap}
 
 class MbtDebugSessionStarter(
     debugConfigCreator: DebugeeParamsCreator,
-    detectBuildTool: () => Option[BuildTool],
+    buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
     debuggeeGracePeriodSeconds: Long = 5L,
@@ -36,27 +34,7 @@ class MbtDebugSessionStarter(
       mainClass: ScalaMainClass,
       workspace: AbsolutePath,
   ): Future[URI] = {
-    detectBuildTool() match {
-      case None =>
-        Future.failed(
-          new IllegalStateException(
-            "MBT debug session: no build tool detected in workspace"
-          )
-        )
-
-      case Some(tool) =>
-        tool match {
-          case launcher: MbtDebugLauncher =>
-            launchVia(launcher, tool, target, mainClass, workspace)
-          case other =>
-            Future.failed(
-              new IllegalStateException(
-                s"MBT debug session: build tool '${other.executableName}' " +
-                  s"does not implement MbtDebugLauncher"
-              )
-            )
-        }
-    }
+    launchVia(buildTool, target, mainClass, workspace)
   }
 
   def compile(
@@ -65,48 +43,28 @@ class MbtDebugSessionStarter(
       out: String => Unit,
       err: String => Unit,
   ): Future[Int] = {
-    detectBuildTool() match {
-      case None =>
-        Future.failed(
-          new IllegalStateException(
-            "MBT compile: no MbtDebugLauncher build tool detected, skipping pre-compile"
-          )
-        )
-
-      case Some(tool) =>
-        tool match {
-          case launcher: MbtDebugLauncher =>
-            val command = launcher.mbtCompileCommand(workspace, target)
-            val toolName = mbtNameFor(tool)
-            scribe.info(
-              s"MBT compile via $toolName: ${redactedCommand(command)}"
-            )
-            val artifactId = {
-              val parts = target.name.split(':')
-              if (parts.length >= 2) parts(1) else target.name
-            }
-            workDoneProgress.trackFuture(
-              s"Compiling $artifactId",
-              SystemProcess
-                .run(
-                  command,
-                  workspace,
-                  redirectErrorOutput = false,
-                  env = javaHomeEnv(target),
-                  processOut = Some(out),
-                  processErr = Some(err),
-                )
-                .complete,
-            )
-          case other =>
-            Future.failed(
-              new IllegalStateException(
-                s"MBT compile: build tool '${other.executableName}' does not " +
-                  s"implement MbtDebugLauncher, skipping pre-compile"
-              )
-            )
-        }
+    val command = buildTool.mbtCompileCommand(workspace, target)
+    val toolName = buildTool.executableName
+    scribe.info(
+      s"MBT compile via $toolName: ${redactedCommand(command)}"
+    )
+    val artifactId = {
+      val parts = target.name.split(':')
+      if (parts.length >= 2) parts(1) else target.name
     }
+    workDoneProgress.trackFuture(
+      s"Compiling $artifactId",
+      SystemProcess
+        .run(
+          command,
+          workspace,
+          redirectErrorOutput = false,
+          env = javaHomeEnv(target),
+          processOut = Some(out),
+          processErr = Some(err),
+        )
+        .complete,
+    )
   }
 
   def run(
@@ -116,45 +74,25 @@ class MbtDebugSessionStarter(
       out: String => Unit,
       err: String => Unit,
   ): Future[Int] = {
-    detectBuildTool() match {
-      case None =>
-        Future.failed(
-          new IllegalStateException(
-            "MBT run session: no build tool detected in workspace"
-          )
-        )
+    val command = buildTool.mbtRunCommand(workspace, target, mainClass)
+    scribe.info(
+      s"MBT run session via ${buildTool.executableName}: ${redactedCommand(command)}"
+    )
+    SystemProcess
+      .run(
+        command,
+        workspace,
+        redirectErrorOutput = false,
+        env = javaHomeEnv(target),
+        processOut = Some(out),
+        processErr = Some(err),
+      )
+      .complete
 
-      case Some(tool) =>
-        tool match {
-          case launcher: MbtDebugLauncher =>
-            val command = launcher.mbtRunCommand(workspace, target, mainClass)
-            scribe.info(
-              s"MBT run session via ${mbtNameFor(tool)}: ${redactedCommand(command)}"
-            )
-            SystemProcess
-              .run(
-                command,
-                workspace,
-                redirectErrorOutput = false,
-                env = javaHomeEnv(target),
-                processOut = Some(out),
-                processErr = Some(err),
-              )
-              .complete
-          case other =>
-            Future.failed(
-              new IllegalStateException(
-                s"MBT run session: build tool '${other.executableName}' does not " +
-                  s"implement MbtDebugLauncher - cannot run without a supported build tool"
-              )
-            )
-        }
-    }
   }
 
   private def launchVia(
       launcher: MbtDebugLauncher,
-      tool: BuildTool,
       target: MbtTarget,
       mainClass: ScalaMainClass,
       workspace: AbsolutePath,
@@ -165,7 +103,7 @@ class MbtDebugSessionStarter(
       mainClass,
       MbtDebugLauncher.DebugAgentFlag,
     )
-    val toolName = mbtNameFor(tool)
+    val toolName = launcher.executableName
     val cancelPromise = Promise[Unit]()
     debugConfigCreator.create(target.id, cancelPromise, isTests = false) match {
       case Left(error) => Future.failed(new IllegalStateException(error))
@@ -202,11 +140,6 @@ class MbtDebugSessionStarter(
         Map("JAVA_HOME" -> path)
       }
       .getOrElse(Map.empty)
-
-  private def mbtNameFor(tool: BuildTool): String = tool match {
-    case importer: MbtImportProvider => importer.name
-    case other => other.executableName
-  }
 
   private def redactedCommand(command: List[String]): String =
     command.headOption.getOrElse("<empty>")
