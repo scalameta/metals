@@ -38,8 +38,14 @@ object PruneJavaFile {
         // This is a JDK source and we need special handling because of modules
         val path =
           embedded.targetDir().resolve(filename.stripPrefix("/"))
-        Files.createDirectories(path.getParent())
-        Files.write(path, params.text().getBytes(StandardCharsets.UTF_8))
+        val bytes = params.text().getBytes(StandardCharsets.UTF_8)
+        if (
+          !Files.exists(path) ||
+          Files.size(path) != bytes.length
+        ) {
+          Files.createDirectories(path.getParent())
+          Files.write(path, bytes)
+        }
         val fileObjects =
           standardFileManager.getJavaFileObjectsFromPaths(List(path).asJava)
         val moduleName =
