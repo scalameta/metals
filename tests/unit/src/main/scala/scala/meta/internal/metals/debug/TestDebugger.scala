@@ -206,7 +206,12 @@ final class TestDebugger(
           !output.contains("WARNING: Use --enable-native-access=ALL-UNNAMED") &&
           !output.contains(
             "WARNING: Restricted methods will be blocked in a future release"
-          )
+          ) &&
+          !output.contains(
+            "WARNING: A restricted method in java.lang.System has been called"
+          ) &&
+          !output.contains("WARNING: java.lang.System::") &&
+          !output.isBlank
         )
           fail(new IllegalStateException(output))
       case _ =>

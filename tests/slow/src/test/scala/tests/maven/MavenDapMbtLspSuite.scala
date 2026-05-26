@@ -60,38 +60,6 @@ class MavenDapMbtLspSuite
        |  </build>
        |</project>""".stripMargin
 
-  private def mvnw: String =
-    """|#!/bin/sh
-       |set -eu
-       |
-       |if [ "$#" -gt 0 ] && [ "$1" = "-q" ]; then
-       |  shift
-       |fi
-       |
-       |case " $* " in
-       |  *" install "*)
-       |    mkdir -p target/classes
-       |    javac -d target/classes src/main/java/a/Main.java
-       |    exit 0
-       |    ;;
-       |esac
-       |
-       |exec_args=""
-       |for arg in "$@"; do
-       |  case "$arg" in
-       |    -Dexec.args=*) exec_args=${arg#-Dexec.args=} ;;
-       |  esac
-       |done
-       |
-       |if [ -z "$exec_args" ]; then
-       |  echo "missing -Dexec.args" >&2
-       |  exit 1
-       |fi
-       |
-       |exec_args=$(printf '%s' "$exec_args" | sed "s|%classpath|target/classes|g")
-       |eval "exec java $exec_args"
-       |""".stripMargin
-
   test("maven-mbt-debug-session") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
@@ -106,8 +74,6 @@ class MavenDapMbtLspSuite
       _ <- initialize(
         s"""|/pom.xml
             |$pom
-            |/mvnw
-            |$mvnw
             |/src/main/java/a/Main.java
             |package a;
             |
@@ -120,10 +86,6 @@ class MavenDapMbtLspSuite
             |  }
             |}
             |""".stripMargin
-      )
-      _ = assert(
-        workspace.resolve("mvnw").toFile.setExecutable(true),
-        "Failed to make mvnw executable",
       )
       _ <- server.headServer.connectionProvider.buildServerPromise.future
       _ <- server.didOpen("src/main/java/a/Main.java")
