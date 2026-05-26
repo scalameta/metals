@@ -99,7 +99,7 @@ trait CodeAction {
       }
     }
 
-  def isScala: Boolean = true;
+  def isScala: Boolean = true
 
-  def isJava: Boolean = false;
+  def isJava: Boolean = false
 }

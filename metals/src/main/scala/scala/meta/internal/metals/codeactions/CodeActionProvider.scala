@@ -67,7 +67,7 @@ final class CodeActionProvider(
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val supportedCodeActions = compilers.supportedCodeActions(path)
-    val isScala = path.filename.isScala;
+    val isScala = path.filename.isScala
     val isJava = path.isJavaFilename
     allActions
       .filter(action =>
