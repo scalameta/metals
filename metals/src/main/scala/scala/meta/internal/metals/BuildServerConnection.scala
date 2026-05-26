@@ -35,6 +35,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.logging.JvmRunEnvironmentNotSupported
 import scala.meta.internal.metals.logging.LogOnce
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.utils.RequestRegistry
 import scala.meta.internal.metals.utils.Timeout
@@ -117,6 +118,8 @@ class BuildServerConnection private (
   def isBazel: Boolean = name == BazelBuildTool.bspName
 
   def isScalaCLI: Boolean = ScalaCli.names(name)
+
+  def isMbt: Boolean = MbtBuildServer.isMbtServer(name)
 
   def supportsLazyClasspathResolution: Boolean =
     capabilities.getJvmCompileClasspathProvider()

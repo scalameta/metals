@@ -1,13 +1,20 @@
 package scala.meta.internal.builds
 
+import java.nio.file.Files
+
 import scala.concurrent.ExecutionContext
+import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtDebugLauncher
+import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.ScalaMainClass
 
 case class MavenBuildTool(
     userConfig: () => UserConfiguration,
@@ -17,7 +24,8 @@ case class MavenBuildTool(
 ) extends MavenMbtImporter(projectRoot, shellRunner, userConfig)(ec)
     with BuildTool
     with BloopInstallProvider
-    with VersionRecommendation {
+    with VersionRecommendation
+    with MbtDebugLauncher {
 
   private lazy val embeddedMavenLauncher: AbsolutePath = {
     val out = BuildTool.copyFromResource(tempDir, "maven-wrapper.jar")
@@ -72,10 +80,89 @@ case class MavenBuildTool(
   override def toString(): String = "Maven"
 
   def executableName = MavenBuildTool.name
+
+  private val mvnwName: String = if (Properties.isWin) "mvnw.cmd" else "mvnw"
+
+  private def hasMvnw(workspace: AbsolutePath): Boolean =
+    Files.isRegularFile(workspace.resolve(mvnwName).toNIO)
+
+  private def mbtMavenBaseCommand(workspace: AbsolutePath): List[String] =
+    if (hasMvnw(workspace)) List(s"./$mvnwName")
+    else mavenBaseCommand()
+
+  override def mbtCompileCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+  ): List[String] = {
+    val artifactId = {
+      val parts = target.name.split(':')
+      if (parts.length >= 2) parts(1) else target.name
+    }
+    mbtMavenBaseCommand(workspace) ::: List(
+      "-q"
+    ) ::: target.configurations.toList ::: List(
+      "-pl",
+      s":$artifactId",
+      "--also-make",
+      "install",
+      "-DskipTests",
+      "-Denforcer.skip=true",
+    )
+  }
+
+  override def mbtRunCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+  ): List[String] = {
+    mbtExecCommand(workspace, target, mainClass, debugAgentFlag = None)
+  }
+
+  override def mbtDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: String,
+  ): List[String] = {
+    mbtExecCommand(workspace, target, mainClass, Some(debugAgentFlag))
+  }
+
+  private def mbtExecCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    val moduleArgs =
+      target
+        .mavenModuleDirectory(workspace)
+        .map(_.resolve("pom.xml"))
+        .filter(_.isFile) match {
+        case Some(pom) =>
+          List("-f", pom.toString())
+        case _ => Nil
+      }
+    val jvmOpts =
+      (debugAgentFlag.toList ::: MbtDebugLauncher
+        .listOrNil(mainClass.getJvmOptions))
+        .mkString(" ")
+    val appArgs =
+      MbtDebugLauncher.listOrNil(mainClass.getArguments).mkString(" ")
+    val execArgs =
+      s"$jvmOpts -classpath %classpath ${mainClass.getClassName} $appArgs".trim
+    mbtMavenBaseCommand(workspace) ::: List(
+      "-q"
+    ) ::: target.configurations.toList ::: moduleArgs ::: List(
+      "exec:exec",
+      "-Dexec.executable=java",
+      s"-Dexec.args=$execArgs",
+    )
+  }
 }
 
 object MavenBuildTool {
   def name = "mvn"
+
   def isMavenRelatedPath(
       workspace: AbsolutePath,
       path: AbsolutePath,

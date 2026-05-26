@@ -32,6 +32,7 @@ import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtDebugSessionStarter
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.process.SystemProcess
@@ -58,6 +59,7 @@ final class BspServers(
     workDoneProgress: WorkDoneProgress,
     scalaVersionSelector: ScalaVersionSelector,
     hasMbtImporters: () => Boolean = () => false,
+    mbtDebugStarter: Option[MbtDebugSessionStarter] = None,
 )(implicit ec: ExecutionContextExecutorService) {
   private def customProjectRoot =
     userConfig().getCustomProjectRoot(mainWorkspace)
@@ -186,6 +188,7 @@ final class BspServers(
         workDoneProgress,
         scalaVersionSelector,
         userConfig,
+        debugStarter = mbtDebugStarter,
       )
     } else {
       BuildServerConnection.fromSockets(

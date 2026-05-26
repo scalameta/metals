@@ -246,8 +246,13 @@ class DebugProvider(
     val connectToServer = () => {
       val targets = parameters.getTargets().asScala.toSeq
 
-      compilations
-        .compilationFinished(targets, compileInverseDependencies = false)
+      (if (targets.exists(t => buildTargets.buildServerOf(t).exists(_.isMbt)))
+         Future.unit
+       else
+         compilations.compilationFinished(
+           targets,
+           compileInverseDependencies = false,
+         ))
         .flatMap { _ =>
           val conn =
             startDebugSession(buildServer, parameters, cancelPromise)
@@ -316,7 +321,6 @@ class DebugProvider(
 
     connectedToServer.future.map(_ => server)
   }
-
   private def startDebugSession(
       buildServer: BuildServerConnection,
       params: DebugSessionParams,

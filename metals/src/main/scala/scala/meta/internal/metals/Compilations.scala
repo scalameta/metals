@@ -14,6 +14,7 @@ import scala.util.Try
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.utils.Timeout
 import scala.meta.io.AbsolutePath
 
@@ -217,11 +218,14 @@ final class Compilations(
       }
       .map { case (buildServer, targets) =>
         val targets0 = targets.collect {
-          case (_, target) if buildTargets.canCompile(target) =>
+          case (_, target)
+              if buildTargets.canCompile(target) &&
+                !MbtBuildServer.isMbtServer(buildServer.name) =>
             target
         }
         (buildServer, targets0)
       }
+      .filterNot { case (_, targets0) => targets0.isEmpty }
 
     targetsByBuildServer.toList match {
       case Nil =>

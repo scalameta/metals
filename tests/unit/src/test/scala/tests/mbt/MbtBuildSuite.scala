@@ -294,7 +294,12 @@ class MbtBuildSuite extends tests.BaseSuite {
 
     val build = MbtBuild.fromWorkspace(workspace)
     val server =
-      new MbtBuildServer(workspace, () => build, ScalaVersionSelector.default)
+      new MbtBuildServer(
+        workspace,
+        () => build,
+        ScalaVersionSelector.default,
+        debugStarter = None,
+      )(scala.concurrent.ExecutionContext.global)
     val targets = build.mbtTargets
     val result =
       server

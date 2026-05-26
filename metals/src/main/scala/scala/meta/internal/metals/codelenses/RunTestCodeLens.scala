@@ -76,7 +76,10 @@ final class RunTestCodeLens(
         buildTargetId: BuildTargetIdentifier,
         isJvm: Boolean,
     ): Future[Unit] = {
-      if (isJvm)
+      val isMbt = buildTargetClasses.buildTargets
+        .buildServerOf(buildTargetId)
+        .exists(_.isMbt)
+      if (isJvm && !isMbt)
         buildTargetClasses
           .jvmRunEnvironment(buildTargetId, isTests = false)
           .map(_ => ())
@@ -257,6 +260,7 @@ final class RunTestCodeLens(
       commands = {
         val main = classes.mainClasses
           .get(symbol)
+          .filter(_ => !path.isJava)
           .map(mainCommand(target, _, isJVM))
           .getOrElse(Nil)
         lazy val tests =
@@ -345,7 +349,8 @@ final class RunTestCodeLens(
       )
       .orElse(userConfig().usedJavaBinary())
     val (data, shellCommandAdded) =
-      if (!isJVM) (main.toJson, false)
+      if (!isJVM || buildTargets.buildServerOf(target).exists(_.isMbt))
+        (main.toJson, false)
       else
         buildTargetClasses
           .jvmRunEnvironmentSync(target, isTests = false)

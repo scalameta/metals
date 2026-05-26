@@ -52,6 +52,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -221,7 +222,12 @@ abstract class MetalsLspService(
     new FileChanges(buildTargets, () => folder, () => userConfig)
 
   val buildTargetClasses =
-    new BuildTargetClasses(buildTargets, () => compilers, definitionIndex)
+    new BuildTargetClasses(
+      buildTargets,
+      () => compilers,
+      definitionIndex,
+      () => Some(mbtSymbolSearch),
+    )
 
   val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -1780,7 +1786,10 @@ abstract class MetalsLspService(
   def cleanCompile(): Future[Unit] = compilations.clean(recompile = true)
 
   def compileTarget(target: b.BuildTargetIdentifier): Future[b.CompileResult] =
-    compilations.compileTarget(target)
+    if (buildTargets.buildServerOf(target).exists(_.isMbt))
+      Future.successful(new b.CompileResult(b.StatusCode.OK))
+    else
+      compilations.compileTarget(target)
 
   def cancelCompile(): Future[Unit] = Future {
     // We keep this in here to provide a way for clients that aren't work done progress cancel providers
@@ -2004,15 +2013,38 @@ abstract class MetalsLspService(
 
     buildTarget match {
       case Some(target) =>
-        compilations
-          .compileTarget(target)
-          .flatMap { result =>
-            if (result.getStatusCode == b.StatusCode.CANCELLED) {
-              Future.failed(DiscoveryFailures.WorkspaceResetException)
-            } else {
-              action(params)
+        val connectionOpt = buildTargets.buildServerOf(target)
+        val isMbt =
+          connectionOpt.exists(c => MbtBuildServer.isMbtServer(c.name))
+        if (isMbt) {
+          connectionOpt
+            .map { connection =>
+              val compileParams = new b.CompileParams(List(target).asJava)
+              connection
+                .compile(compileParams, timeout = None)
+                .asScala
+                .flatMap { result =>
+                  if (result.getStatusCode == b.StatusCode.ERROR)
+                    Future.failed(
+                      new Exception(s"MBT compile failed for $target")
+                    )
+                  else if (result.getStatusCode == b.StatusCode.CANCELLED)
+                    Future.failed(
+                      new Exception(s"MBT compile cancelled for $target")
+                    )
+                  else action(params)
+                }
             }
-          }
+            .getOrElse(action(params))
+        } else {
+          compilations
+            .compileTarget(target)
+            .flatMap { result =>
+              if (result.getStatusCode == b.StatusCode.CANCELLED)
+                Future.failed(DiscoveryFailures.WorkspaceResetException)
+              else action(params)
+            }
+        }
       case None =>
         action(params)
     }
@@ -2048,10 +2080,40 @@ abstract class MetalsLspService(
     .startTestSuite(target, params)
     .flatMap(debugProvider.asSession)
 
-  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] =
-    debugProvider
-      .ensureNoWorkspaceErrors(params.getTargets.asScala.toSeq)
-      .flatMap(_ => debugProvider.asSession(params))
+  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] = {
+    val targets = params.getTargets.asScala.toSeq
+    val mbtConnections = targets.flatMap { target =>
+      val connOpt = buildTargets.buildServerOf(target)
+      connOpt
+        .filter(c => MbtBuildServer.isMbtServer(c.name))
+        .map(conn => (conn, target))
+    }
+    val compileFuture =
+      if (mbtConnections.isEmpty) Future.unit
+      else {
+        val byConn = mbtConnections.groupBy(_._1).view.mapValues(_.map(_._2))
+        Future
+          .traverse(byConn.toSeq) { case (conn, connTargets) =>
+            val compileParams = new b.CompileParams(connTargets.asJava)
+            conn
+              .compile(compileParams, timeout = None)
+              .asScala
+              .flatMap { result =>
+                if (result.getStatusCode == b.StatusCode.ERROR)
+                  Future.failed(
+                    new Exception("MBT compile failed before debug session")
+                  )
+                else Future.unit
+              }
+          }
+          .map(_ => ())
+      }
+    compileFuture.flatMap { _ =>
+      debugProvider
+        .ensureNoWorkspaceErrors(targets)
+        .flatMap(_ => debugProvider.asSession(params))
+    }
+  }
 
   def discoverMainClasses(
       unresolvedParams: DebugDiscoveryParams

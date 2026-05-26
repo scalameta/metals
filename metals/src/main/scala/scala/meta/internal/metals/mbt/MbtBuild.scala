@@ -105,6 +105,8 @@ case class MbtBuild(
           scalaVersion = Option(namespace.scalaVersion),
           javaHome = Option(namespace.javaHome),
           dependsOn = dependsOnIds,
+          classDirectory = Option(namespace.classDirectory),
+          configurations = namespace.getConfigurations,
         )
       }
     }

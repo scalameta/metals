@@ -3,6 +3,8 @@ package scala.meta.internal.metals.mbt
 import java.{util => ju}
 import javax.annotation.Nullable
 
+import scala.jdk.CollectionConverters._
+
 case class MbtNamespace(
     @Nullable sources: ju.List[String],
     @Nullable scalacOptions: ju.List[String],
@@ -11,6 +13,8 @@ case class MbtNamespace(
     @Nullable scalaVersion: String,
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
+    @Nullable classDirectory: String = null,
+    @Nullable configurations: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =
     Option(this.sources).getOrElse(ju.Collections.emptyList())
@@ -24,4 +28,8 @@ case class MbtNamespace(
     Option(this.dependencyModules).getOrElse(ju.Collections.emptyList())
   def getDependsOn: ju.List[String] =
     Option(this.dependsOn).getOrElse(ju.Collections.emptyList())
+  def getConfigurations: Seq[String] =
+    Option(this.configurations)
+      .map(_.asScala.toSeq)
+      .getOrElse(Nil)
 }

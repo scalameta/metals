@@ -55,8 +55,10 @@ final class InteractiveSemanticdbs(
   }
 
   override def textDocument(
-      source: AbsolutePath
-  ): TextDocumentLookup = textDocument(source, unsavedContents = None)
+      source: AbsolutePath,
+      requestInteractive: Boolean,
+  ): TextDocumentLookup =
+    textDocument(source, unsavedContents = None, requestInteractive)
 
   def onClose(path: AbsolutePath): Unit = {
     textDocumentCache.remove(path)
@@ -65,6 +67,7 @@ final class InteractiveSemanticdbs(
   def textDocument(
       source: AbsolutePath,
       unsavedContents: Option[String],
+      requestInteractive: Boolean,
   ): TextDocumentLookup = {
     def doesNotBelongToBuildTarget = buildTargets.inverseSources(source).isEmpty
     lazy val sourceText =
@@ -74,7 +77,7 @@ final class InteractiveSemanticdbs(
       }
     def shouldTryCalculateInteractiveSemanticdb = {
       source.isLocalFileSystem(workspace) && (
-        isInteractiveSemanticdbEnabled ||
+        isInteractiveSemanticdbEnabled || requestInteractive ||
           unsavedContents.isDefined ||
           source.isInReadonlyDirectory(workspace) || // dependencies
           source.isSbt || // sbt files
