@@ -26,7 +26,7 @@ private[maven] object MavenProfileModules {
       reactorProjects: List[MavenProject],
       mojo: MbtMojo,
       log: Log,
-  ): List[MavenProject] = {
+  ): (List[MavenProject], Map[MavenProject, Set[String]]) = {
     val reactorByPom =
       reactorProjects
         .flatMap(p => projectPomFile(p).map(_ -> p))
@@ -41,16 +41,23 @@ private[maven] object MavenProfileModules {
     )
 
     val missing = discovered.filterNot(d => reactorByPom.contains(d.pom))
-    val extraProjects = missing.flatMap { discoveredPom =>
-      buildProject(discoveredPom, mojo, log)
+    val extraWithProfiles = missing.flatMap { discoveredPom =>
+      buildProject(discoveredPom, mojo, log).map(
+        _ -> discoveredPom.activeProfiles
+      )
     }
-    if (extraProjects.nonEmpty) {
+    if (extraWithProfiles.nonEmpty) {
       log.info(
-        s"metals-maven-plugin: discovered ${extraProjects.size} module(s) from Maven profiles"
+        s"metals-maven-plugin: discovered ${extraWithProfiles.size} module(s) from Maven profiles"
       )
     }
 
-    (reactorProjects ++ extraProjects).distinctBy(projectKey)
+    val extraProjects = extraWithProfiles.map(_._1)
+    val profileMap: Map[MavenProject, Set[String]] =
+      extraWithProfiles.toMap ++ reactorProjects.map(_ -> Set.empty[String])
+
+    val allProjects = (reactorProjects ++ extraProjects).distinctBy(projectKey)
+    (allProjects, profileMap)
   }
 
   private def discoverPomClosure(

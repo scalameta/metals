@@ -106,6 +106,7 @@ case class MbtBuild(
           javaHome = Option(namespace.javaHome),
           dependsOn = dependsOnIds,
           classOutputDir = Option(namespace.classOutputDir),
+          activeProfiles = namespace.getActiveProfiles,
         )
       }
     }

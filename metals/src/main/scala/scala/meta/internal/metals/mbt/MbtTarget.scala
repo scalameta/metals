@@ -27,6 +27,7 @@ case class MbtTarget(
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
     classOutputDir: Option[String] = None,
+    activeProfiles: Seq[String] = Nil,
 ) {
 
   // mbt doesn't produce any classfiles
@@ -145,6 +146,7 @@ case class MbtTarget(
         Iterator
           .iterate(output.parent)(_.parent)
           .takeWhile(p => p != workspace && p.toNIO.startsWith(workspace.toNIO))
+          .filterNot(dir => dir.filename == "target" || dir.filename == "build")
           .find(dir => dir.resolve("pom.xml").isFile)
       }
 

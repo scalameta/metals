@@ -19,7 +19,7 @@ object MbtMojoImpl {
   def run(mojo: MbtMojo): Unit = {
     val log = mojo.getLog
     val reactorProjects = mojo.getReactorProjects.asScala.toList
-    val allProjects =
+    val (allProjects, profileMap) =
       MavenProfileModules.includeProfileModules(reactorProjects, mojo, log)
 
     val projects = allProjects
@@ -64,6 +64,7 @@ object MbtMojoImpl {
       val mainName =
         s"${project.getGroupId}:${project.getArtifactId}:${project.getVersion}"
 
+      val activeProfiles = profileMap.getOrElse(project, Set.empty[String])
       emit(s"[metals-maven] namespace: $mainName")
       namespaces.put(
         mainName,
@@ -78,6 +79,7 @@ object MbtMojoImpl {
           localRepoBase,
           artifactFiles,
           sourcesCache,
+          activeProfiles,
           mojo,
           log,
         ),
@@ -95,6 +97,7 @@ object MbtMojoImpl {
           localRepoBase,
           artifactFiles,
           sourcesCache,
+          activeProfiles,
           mojo,
           log,
         ),
@@ -158,6 +161,7 @@ object MbtMojoImpl {
       localRepoBase: File,
       artifactFiles: Map[MavenDependencyResolver.ArtifactKey, File],
       sourcesCache: Map[String, File],
+      activeProfiles: Set[String],
       mojo: MbtMojo,
       log: Log,
   ): NamespaceJson = {
@@ -203,6 +207,9 @@ object MbtMojoImpl {
           else project.getBuild.getOutputDirectory
         if (dir == null || dir.isEmpty) null else dir
       },
+      activeProfiles =
+        if (activeProfiles.isEmpty) null
+        else new ju.ArrayList(activeProfiles.toList.sorted.asJava),
     )
   }
 
@@ -355,4 +362,5 @@ private[maven] case class NamespaceJson(
     javaHome: String,
     dependsOn: ju.List[String],
     classOutputDir: String,
+    activeProfiles: ju.List[String],
 )
