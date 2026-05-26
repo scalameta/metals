@@ -10,8 +10,12 @@ import scala.util.Properties
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtDebugLauncher
+import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.io.AbsolutePath
+
+import ch.epfl.scala.bsp4j.ScalaMainClass
 
 import coursier.MavenRepository
 import coursier.Repositories
@@ -26,7 +30,8 @@ case class GradleBuildTool(
     extends GradleMbtImporter(projectRoot)
     with BuildTool
     with BloopInstallProvider
-    with VersionRecommendation {
+    with VersionRecommendation
+    with MbtDebugLauncher {
 
   private val initScriptName = "init-script.gradle"
   private val gradleBloopVersion = BuildInfo.gradleBloopVersion
@@ -120,6 +125,56 @@ case class GradleBuildTool(
   override def toString: String = "Gradle"
 
   def executableName = GradleBuildTool.name
+
+  override def mbtCompileCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+  ): List[String] = {
+    val _ = target
+    val wrapper =
+      if (Files.isRegularFile(workspace.resolve(gradleWrapper).toNIO))
+        s"./$gradleWrapper"
+      else "gradle"
+    List(wrapper, "classes", "-q")
+  }
+
+  override def mbtRunCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+  ): List[String] = {
+    val _ = target
+    mbtGradleRunCommand(workspace, mainClass, jvmArgs = Nil)
+  }
+
+  private def mbtGradleRunCommand(
+      workspace: AbsolutePath,
+      mainClass: ScalaMainClass,
+      jvmArgs: List[String],
+  ): List[String] = {
+    val wrapper =
+      if (Files.isRegularFile(workspace.resolve(gradleWrapper).toNIO))
+        s"./$gradleWrapper"
+      else "gradle"
+    val jvmArgsParam =
+      if (jvmArgs.isEmpty) Nil
+      else List(s"-Dorg.gradle.jvmargs=${jvmArgs.mkString(" ")}")
+    val argsList = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+    val argsParam =
+      if (argsList.isEmpty) Nil
+      else List(s"--args=${argsList.mkString(" ")}")
+    List(wrapper, "run", "-q") ::: jvmArgsParam ::: argsParam
+  }
+
+  override def mbtDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: String,
+  ): List[String] = {
+    val _ = target
+    mbtGradleRunCommand(workspace, mainClass, jvmArgs = List(debugAgentFlag))
+  }
 }
 
 object GradleBuildTool {

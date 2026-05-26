@@ -22,7 +22,7 @@ final class CodeLensProvider(
     } else {
       val enabledCodelenses = codeLensProviders.filter(_.isEnabled)
       val semanticdbCodeLenses = semanticdbs()
-        .textDocument(path)
+        .textDocument(path, requestInteractive = true)
         .documentIncludingStale
         .map { textDocument =>
           val doc = TextDocumentWithPath(textDocument, path)

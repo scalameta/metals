@@ -197,6 +197,12 @@ object MbtMojoImpl {
         reactorByCoords,
         mojo,
       ).asJava,
+      classOutputDir = {
+        val dir =
+          if (isTest) project.getBuild.getTestOutputDirectory
+          else project.getBuild.getOutputDirectory
+        if (dir == null || dir.isEmpty) null else dir
+      },
     )
   }
 
@@ -348,4 +354,5 @@ private[maven] case class NamespaceJson(
     scalaVersion: String,
     javaHome: String,
     dependsOn: ju.List[String],
+    classOutputDir: String,
 )

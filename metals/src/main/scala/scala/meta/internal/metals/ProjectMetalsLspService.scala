@@ -27,6 +27,8 @@ import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtDebugLauncher
+import scala.meta.internal.metals.mbt.MbtDebugSessionStarter
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
@@ -200,6 +202,15 @@ class ProjectMetalsLspService(
     sh,
   )
 
+  private val mbtDebugStarter =
+    new MbtDebugSessionStarter(
+      debugProvider.debugConfigCreator,
+      detectBuildTool = () =>
+        buildTools.current().find(_.isInstanceOf[MbtDebugLauncher]),
+      userJavaHome = () => userConfig.javaHome,
+      workDoneProgress = workDoneProgress,
+    )(ec)
+
   val connectionProvider: ConnectionProvider = {
     val provider = new ConnectionProvider(
       buildToolProvider,
@@ -223,6 +234,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
+      mbtDebugStarter = Some(mbtDebugStarter),
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider

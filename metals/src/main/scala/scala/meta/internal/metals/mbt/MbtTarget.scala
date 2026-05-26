@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.mbt
 
+import java.net.URI
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.{util => ju}
@@ -24,6 +26,7 @@ case class MbtTarget(
     scalaVersion: Option[String] = None,
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
+    classOutputDir: Option[String] = None,
 ) {
 
   // mbt doesn't produce any classfiles
@@ -31,8 +34,11 @@ case class MbtTarget(
     workspace.resolve(".metals/mbt-out").createDirectories()
   }
 
+  private def classpathEntries: Seq[String] =
+    dependencyModules.flatMap(_.jarUri.map(_.toString))
+
   private def classpath: ju.List[String] =
-    dependencyModules.flatMap(_.jarUri.map(_.toString)).asJava
+    classpathEntries.asJava
 
   private def baseDirectory(workspace: AbsolutePath): AbsolutePath =
     workspace
@@ -66,9 +72,9 @@ case class MbtTarget(
       scalaVersionSelector: ScalaVersionSelector,
   ): bsp4j.BuildTarget = {
     val capabilities = new bsp4j.BuildTargetCapabilities
-    capabilities.setCanCompile(false)
-    capabilities.setCanDebug(false)
-    capabilities.setCanRun(false)
+    capabilities.setCanCompile(true)
+    capabilities.setCanDebug(true)
+    capabilities.setCanRun(true)
     capabilities.setCanTest(false)
 
     lazy val scalaVersion = this.scalaVersion.getOrElse(
@@ -121,6 +127,49 @@ case class MbtTarget(
       emptyClassDirectory(workspace).toURI.toString(),
     )
 
+  def runClassOutputDirs(
+      workspace: AbsolutePath,
+      buildToolName: String,
+  ): List[AbsolutePath] = {
+    classOutputDir.map(resolveClassDir(workspace, _)) match {
+      case Some(dir) => List(dir)
+      case None =>
+        MbtTarget.conventionalClassOutputDirs(workspace, buildToolName)
+    }
+  }
+
+  def mavenModuleDirectory(workspace: AbsolutePath): Option[AbsolutePath] =
+    classOutputDir
+      .map(resolveClassDir(workspace, _))
+      .flatMap { output =>
+        Iterator
+          .iterate(output.parent)(_.parent)
+          .takeWhile(p => p != workspace && p.toNIO.startsWith(workspace.toNIO))
+          .find(dir => dir.resolve("pom.xml").isFile)
+      }
+
+  private def resolveClassDir(
+      workspace: AbsolutePath,
+      raw: String,
+  ): AbsolutePath = {
+    if (raw.startsWith("file:")) AbsolutePath(Paths.get(URI.create(raw)))
+    else {
+      val p = Paths.get(raw)
+      if (p.isAbsolute) AbsolutePath(p) else workspace.resolve(raw)
+    }
+  }
+
+  def jvmRunEnvironmentItem(workspace: AbsolutePath): bsp4j.JvmEnvironmentItem =
+    new bsp4j.JvmEnvironmentItem(
+      id,
+      (emptyClassDirectory(
+        workspace
+      ).toURI.toString +: classpathEntries).asJava,
+      ju.Collections.emptyList(),
+      workspace.toURI.toString,
+      ju.Collections.emptyMap(),
+    )
+
   def sourcesItem(
       workspace: AbsolutePath,
       globbedSources: Seq[AbsolutePath] = Nil,
@@ -155,4 +204,23 @@ object MbtTarget {
   private val gson = new com.google.gson.Gson()
   private[mbt] def toGson[T](value: T) =
     gson.toJsonTree(value)
+
+  def conventionalClassOutputDirs(
+      workspace: AbsolutePath,
+      buildToolName: String,
+  ): List[AbsolutePath] = {
+    val relative = buildToolName match {
+      case "maven" => List("target/classes")
+      case "gradle" =>
+        List(
+          "build/classes/java/main",
+          "build/classes/scala/main",
+          "build/resources/main",
+        )
+      case _ => Nil
+    }
+    relative
+      .map(workspace.resolve)
+      .filter(path => Files.isDirectory(path.toNIO))
+  }
 }

@@ -22,6 +22,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scope
@@ -257,6 +258,7 @@ final class RunTestCodeLens(
       commands = {
         val main = classes.mainClasses
           .get(symbol)
+          .filter(_ => !path.isJava)
           .map(mainCommand(target, _, isJVM))
           .getOrElse(Nil)
         lazy val tests =
@@ -345,7 +347,7 @@ final class RunTestCodeLens(
       )
       .orElse(userConfig().usedJavaBinary())
     val (data, shellCommandAdded) =
-      if (!isJVM) (main.toJson, false)
+      if (!isJVM || isMbtTarget(target)) (main.toJson, false)
       else
         buildTargetClasses
           .jvmRunEnvironmentSync(target, isTests = false)
@@ -373,6 +375,11 @@ final class RunTestCodeLens(
       List(command("run" + adjustName, StartRunSession, params))
     else Nil
   }
+
+  private def isMbtTarget(target: b.BuildTargetIdentifier): Boolean =
+    buildTargets
+      .buildServerOf(target)
+      .exists(c => MbtBuildServer.isMbtServer(c.name))
 
   private def sessionParams(
       target: b.BuildTargetIdentifier,

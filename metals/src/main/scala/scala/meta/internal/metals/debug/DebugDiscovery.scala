@@ -716,6 +716,9 @@ object DebugDiscovery {
 
   }
 
+  def mainSymbolFromScala3MainMethod(symbol: String): Option[String] =
+    dropSourceFromToplevelSymbol(symbol)
+
   def syntheticMains(
       textDocument: TextDocument,
       classes: BuildTargetClasses.Classes,

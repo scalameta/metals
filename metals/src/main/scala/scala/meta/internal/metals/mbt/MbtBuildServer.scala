@@ -14,10 +14,13 @@ import java.util.concurrent.atomic.AtomicReference
 
 import scala.build.bsp.WrappedSourcesResult
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.jdk.CollectionConverters._
+import scala.util.Failure
+import scala.util.Success
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BuildInfo
@@ -28,6 +31,8 @@ import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
+import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -48,8 +53,10 @@ import ch.epfl.scala.bsp4j.CleanCacheResult
 import ch.epfl.scala.bsp4j.CompileParams
 import ch.epfl.scala.bsp4j.CompileProvider
 import ch.epfl.scala.bsp4j.CompileResult
+import ch.epfl.scala.bsp4j.DebugProvider
 import ch.epfl.scala.bsp4j.DebugSessionAddress
 import ch.epfl.scala.bsp4j.DebugSessionParams
+import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.DependencyModulesParams
 import ch.epfl.scala.bsp4j.DependencyModulesResult
 import ch.epfl.scala.bsp4j.DependencySourcesParams
@@ -70,11 +77,14 @@ import ch.epfl.scala.bsp4j.JvmTestEnvironmentParams
 import ch.epfl.scala.bsp4j.JvmTestEnvironmentResult
 import ch.epfl.scala.bsp4j.OutputPathsParams
 import ch.epfl.scala.bsp4j.OutputPathsResult
+import ch.epfl.scala.bsp4j.PrintParams
 import ch.epfl.scala.bsp4j.ReadParams
 import ch.epfl.scala.bsp4j.ResourcesParams
 import ch.epfl.scala.bsp4j.ResourcesResult
 import ch.epfl.scala.bsp4j.RunParams
+import ch.epfl.scala.bsp4j.RunProvider
 import ch.epfl.scala.bsp4j.RunResult
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams
@@ -84,6 +94,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourcesParams
 import ch.epfl.scala.bsp4j.SourcesResult
 import ch.epfl.scala.bsp4j.StatusCode
+import ch.epfl.scala.bsp4j.TaskId
 import ch.epfl.scala.bsp4j.TestParams
 import ch.epfl.scala.bsp4j.TestResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
@@ -93,7 +104,9 @@ final class MbtBuildServer(
     workspace: AbsolutePath,
     build: () => MbtBuild,
     scalaVersionSelector: ScalaVersionSelector,
-) extends MetalsBuildServer {
+    debugStarter: Option[MbtDebugSessionStarter],
+)(implicit ec: ExecutionContext)
+    extends MetalsBuildServer {
 
   private val buildClient = new AtomicReference[BuildClient]()
   private val importedBuild =
@@ -187,6 +200,16 @@ final class MbtBuildServer(
       )
       capabilities.setResourcesProvider(false)
       capabilities.setJvmCompileClasspathProvider(true)
+      capabilities.setJvmRunEnvironmentProvider(true)
+      capabilities.setJvmTestEnvironmentProvider(true)
+      if (debugStarter.isDefined) {
+        capabilities.setDebugProvider(
+          new DebugProvider(List("scala", "java").asJava)
+        )
+        capabilities.setRunProvider(
+          new RunProvider(List("scala", "java").asJava)
+        )
+      }
       new InitializeBuildResult(
         MbtBuildServer.name,
         BuildInfo.metalsVersion,
@@ -295,8 +318,41 @@ final class MbtBuildServer(
 
   override def buildTargetCompile(
       params: CompileParams
-  ): CompletableFuture[CompileResult] =
-    CompletableFuture.completedFuture(new CompileResult(StatusCode.OK))
+  ): CompletableFuture[CompileResult] = {
+    val result = new CompletableFuture[CompileResult]()
+    debugStarter match {
+      case None =>
+        result.complete(new CompileResult(StatusCode.OK))
+      case Some(starter) =>
+        val targets = params.getTargets.asScala.toSeq.flatMap { id =>
+          importedBuildTargets.find(_.id == id)
+        }
+        if (targets.isEmpty) {
+          result.complete(new CompileResult(StatusCode.OK))
+        } else {
+          val futures = targets.map { target =>
+            starter.compile(
+              target,
+              workspace,
+              out = line => scribe.info(s"[mbt-compile] $line"),
+              err = line => scribe.warn(s"[mbt-compile] $line"),
+            )
+          }
+          Future
+            .sequence(futures)
+            .map { codes =>
+              val status =
+                if (codes.forall(_ == 0)) StatusCode.OK else StatusCode.ERROR
+              result.complete(new CompileResult(status))
+            }
+            .recover { case ex =>
+              scribe.error("MBT compile failed", ex)
+              result.complete(new CompileResult(StatusCode.ERROR))
+            }
+        }
+    }
+    result
+  }
 
   override def buildTargetTest(
       params: TestParams
@@ -309,12 +365,75 @@ final class MbtBuildServer(
 
   override def buildTargetRun(
       params: RunParams
-  ): CompletableFuture[RunResult] =
-    CompletableFuture.failedFuture(
-      new UnsupportedOperationException(
-        "MBT build server does not support 'buildTarget/run'."
-      )
-    )
+  ): CompletableFuture[RunResult] = {
+    val result = new CompletableFuture[RunResult]()
+    debugStarter match {
+      case None =>
+        result.completeExceptionally(
+          new UnsupportedOperationException(
+            "MBT build server has no run session starter configured."
+          )
+        )
+      case Some(starter) =>
+        val outcome: Either[String, Future[Int]] = for {
+          mainClass <- asScalaMainClass(params)
+          target <- importedBuildTargets
+            .find(_.id == params.getTarget)
+            .toRight(s"buildTarget/run: no MBT target for ${params.getTarget}")
+        } yield starter.run(
+          target,
+          mainClass,
+          workspace,
+          line => runPrint(params, "mbt-run", line, isError = false),
+          line => runPrint(params, "mbt-run", line, isError = true),
+        )
+
+        outcome match {
+          case Left(error) =>
+            result.completeExceptionally(new IllegalArgumentException(error))
+          case Right(future) =>
+            future.onComplete {
+              case Success(0) =>
+                result.complete(new RunResult(StatusCode.OK))
+              case Success(_) =>
+                result.complete(new RunResult(StatusCode.ERROR))
+              case Failure(ex) =>
+                result.completeExceptionally(ex)
+            }
+        }
+    }
+    result
+  }
+
+  private def asScalaMainClass(
+      params: RunParams
+  ): Either[String, ScalaMainClass] =
+    params.getData match {
+      case json: com.google.gson.JsonElement
+          if params.getDataKind == DebugSessionParamsDataKind.SCALA_MAIN_CLASS =>
+        json
+          .as[ScalaMainClass]
+          .toOption
+          .toRight("buildTarget/run: cannot decode ScalaMainClass")
+      case _ =>
+        Left("buildTarget/run: expected ScalaMainClass data")
+    }
+
+  private def runPrint(
+      params: RunParams,
+      taskId: String,
+      message: String,
+      isError: Boolean,
+  ): Unit = {
+    Option(buildClient.get()).foreach { client =>
+      val originId =
+        Option(params.getOriginId).getOrElse("metals-mbt-run")
+      val printParams = new PrintParams(originId, message + "\n")
+      printParams.setTask(new TaskId(taskId))
+      if (isError) client.onRunPrintStderr(printParams)
+      else client.onRunPrintStdout(printParams)
+    }
+  }
 
   override def buildTargetCleanCache(
       params: CleanCacheParams
@@ -403,19 +522,56 @@ final class MbtBuildServer(
 
   override def debugSessionStart(
       params: DebugSessionParams
-  ): CompletableFuture[DebugSessionAddress] =
-    CompletableFuture.failedFuture(
-      new UnsupportedOperationException(
-        "MBT build server does not support debug sessions."
-      )
-    )
+  ): CompletableFuture[DebugSessionAddress] = {
+    val result = new CompletableFuture[DebugSessionAddress]()
+    debugStarter match {
+      case None =>
+        result.completeExceptionally(
+          new UnsupportedOperationException(
+            "MBT build server has no debug session starter configured."
+          )
+        )
+      case Some(starter) =>
+        val outcome: Either[String, Future[URI]] = for {
+          mainClass <- params.asScalaMainClass()
+          targetId <- params
+            .getTargets()
+            .asScala
+            .headOption
+            .toRight("debugSessionStart: no targets in params")
+          target <- importedBuildTargets
+            .find(_.id == targetId)
+            .toRight(s"debugSessionStart: no MBT target for $targetId")
+        } yield starter.start(target, mainClass, workspace)
+
+        outcome match {
+          case Left(error) =>
+            result.completeExceptionally(new IllegalArgumentException(error))
+          case Right(future) =>
+            future.onComplete {
+              case Success(uri) =>
+                result.complete(new DebugSessionAddress(uri.toString))
+              case Failure(ex) =>
+                result.completeExceptionally(ex)
+            }
+        }
+    }
+    result
+  }
 
   override def buildTargetJvmRunEnvironment(
       params: JvmRunEnvironmentParams
-  ): CompletableFuture[JvmRunEnvironmentResult] =
+  ): CompletableFuture[JvmRunEnvironmentResult] = {
+    val requestedTargets = params.getTargets.asScala.toSet
     CompletableFuture.completedFuture(
-      new JvmRunEnvironmentResult(List.empty.asJava)
+      new JvmRunEnvironmentResult(
+        importedBuildTargets
+          .filter(t => requestedTargets(t.id))
+          .map(_.jvmRunEnvironmentItem(workspace))
+          .asJava
+      )
     )
+  }
 
   override def buildTargetJvmTestEnvironment(
       params: JvmTestEnvironmentParams
@@ -459,6 +615,7 @@ object MbtBuildServer {
       workDoneProgress: WorkDoneProgress,
       scalaVersionSelector: ScalaVersionSelector,
       userConfig: () => UserConfiguration,
+      debugStarter: Option[MbtDebugSessionStarter] = None,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -474,7 +631,12 @@ object MbtBuildServer {
         else updatedBuild
       }
       val server =
-        new MbtBuildServer(workspace, eagerBuild, scalaVersionSelector)
+        new MbtBuildServer(
+          workspace,
+          eagerBuild,
+          scalaVersionSelector,
+          debugStarter,
+        )
       val serverLauncher = new Launcher.Builder[BuildClient]()
         .setInput(serverInput)
         .setOutput(serverOutput)

@@ -46,6 +46,8 @@ final case class ModuleReport(
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
     projectDependencies: Seq[ProjectDependency],
+    classOutputDir: Option[String] = None,
+    testClassOutputDir: Option[String] = None,
 )
 
 /** Top-level information about the Gradle build. */
@@ -88,6 +90,7 @@ final case class ProjectReport(
         scalaVersion = null,
         javaHome = javaHome,
         dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
+        classOutputDir = m.classOutputDir.orNull,
       )
     }.toMap
 
@@ -119,6 +122,7 @@ final case class MbtNamespaceJson(
     scalaVersion: String,
     javaHome: String,
     dependsOn: Seq[String],
+    classOutputDir: String,
 )
 
 object MbtNamespaceJson {

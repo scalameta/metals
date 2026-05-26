@@ -25,7 +25,11 @@ final class FileSystemSemanticdbs(
     scalaCliServers: => ScalaCliServers,
 ) extends Semanticdbs {
 
-  override def textDocument(file: AbsolutePath): TextDocumentLookup = {
+  override def textDocument(
+      file: AbsolutePath,
+      requestInteractive: Boolean,
+  ): TextDocumentLookup = {
+    val _ = requestInteractive
     if (
       (!file.toLanguage.isScala && !file.toLanguage.isJava) ||
       file.toNIO.getFileSystem != mainWorkspace.toNIO.getFileSystem ||

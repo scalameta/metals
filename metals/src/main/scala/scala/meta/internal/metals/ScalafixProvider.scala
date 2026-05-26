@@ -361,7 +361,7 @@ case class ScalafixProvider(
       contents: String,
   ) = {
     interactive
-      .textDocument(file, Some(contents))
+      .textDocument(file, Some(contents), requestInteractive = true)
       .documentIncludingStale
       .flatMap { semanticdb =>
         /* We remove all diagnostics if there is an error so that

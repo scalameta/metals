@@ -18,7 +18,10 @@ import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.RelativePath
 
 trait Semanticdbs {
-  def textDocument(path: AbsolutePath): TextDocumentLookup
+  def textDocument(
+      path: AbsolutePath,
+      requestInteractive: Boolean = false
+  ): TextDocumentLookup
 }
 object Semanticdbs {
 

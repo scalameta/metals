@@ -11,6 +11,7 @@ case class MbtNamespace(
     @Nullable scalaVersion: String,
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
+    @Nullable classOutputDir: String = null,
 ) {
   def getSources: ju.List[String] =
     Option(this.sources).getOrElse(ju.Collections.emptyList())

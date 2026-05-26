@@ -37,6 +37,7 @@ import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtDebugSessionStarter
 import scala.meta.internal.metals.mbt.importer.MbtImport
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -68,6 +69,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
+    mbtDebugStarter: Option[MbtDebugSessionStarter] = None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
     with Cancelable {
@@ -103,6 +105,7 @@ class ConnectionProvider(
     workDoneProgress,
     scalaVersionSelector,
     hasMbtImporters = () => buildTools.hasMbtImporters,
+    mbtDebugStarter = mbtDebugStarter,
   )
 
   val bspConnector: BspConnector = new BspConnector(

@@ -1,24 +1,36 @@
 package scala.meta.internal.metals.debug
 
+import java.time.Duration
+
 import scala.collection.concurrent.TrieMap
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
+import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtPossibleReferencesParams
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.ClassSignature
+import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
+import scala.meta.internal.semanticdb.Scope
+import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
+import scala.meta.internal.semanticdb.ValueSignature
+import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -31,6 +43,7 @@ final class BuildTargetClasses(
     val buildTargets: BuildTargets,
     val compilers: () => Compilers,
     symbolIndex: OnDemandSymbolIndex,
+    mbt: () => Option[MbtWorkspaceSymbolProvider] = () => None,
 )(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
@@ -164,6 +177,10 @@ final class BuildTargetClasses(
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
+            _ <-
+              if (MbtBuildServer.isMbtServer(connection.name))
+                populateMbtMainClasses(classes, targets0)
+              else Future.unit
           } yield {
             targetsList.forEach(invalidate)
             classes.foreach { case (id, classes) =>
@@ -478,9 +495,9 @@ final class BuildTargetClasses(
     }
   }
 
-  private def symbolToClassName(symbol: String): String = {
+  private def symbolToClassName(symbol: String, suffix: Char = '#'): String = {
     val withoutPrefix = symbol.stripPrefix("_empty_/")
-    val withoutHashAndAfter = withoutPrefix.indexOf('#') match {
+    val withoutHashAndAfter = withoutPrefix.indexOf(suffix) match {
       case -1 => withoutPrefix
       case index => withoutPrefix.substring(0, index)
     }
@@ -511,6 +528,162 @@ final class BuildTargetClasses(
       }
     }
   }
+
+  private def populateMbtMainClasses(
+      classes: Map[b.BuildTargetIdentifier, Classes],
+      targets: Seq[b.BuildTargetIdentifier],
+  ): Future[Unit] = {
+    mbt() match {
+      case None =>
+        scribe.warn("mbt-run: MBT workspace symbol provider is not available.")
+        Future.unit
+      case Some(mbtProvider) =>
+        val targetSet = targets.toSet
+        val pathsFromMainSymbols =
+          mbtProvider
+            .queryWorkspaceSymbol("main")
+            .flatMap(info => Option(info.getLocation()))
+            .map(_.getUri.toAbsolutePath)
+        val pathsFromReferences =
+          mbtProvider.possibleReferences(
+            MbtPossibleReferencesParams(
+              references = Seq("scala/main#", "scala/App#")
+            )
+          )
+        val candidatePaths =
+          (pathsFromMainSymbols ++ pathsFromReferences)
+            .filter(path =>
+              path.isScalaOrJava &&
+                buildTargets.inverseSourcesAll(path).exists(targetSet)
+            )
+            .distinct
+
+        if (candidatePaths.isEmpty) Future.unit
+        else {
+          compilers()
+            .batchSemanticdbTextDocuments(
+              candidatePaths,
+              EmptyCancelToken,
+              Duration.ofSeconds(15),
+            )
+            .map { documents =>
+              documents.documents.foreach { doc =>
+                val targetIds =
+                  buildTargets
+                    .inverseSourcesAll(doc.uri.toAbsolutePath)
+                    .filter(targetSet)
+                if (targetIds.nonEmpty) {
+                  val mainClasses = extractMbtMainClasses(doc)
+                  for {
+                    target <- targetIds
+                    (symbol, mc) <- mainClasses
+                  } {
+                    classes(target).mainClasses.put(symbol, mc)
+                  }
+                }
+              }
+            }
+        }
+    }
+  }
+
+  private def extractMbtMainClasses(
+      textDocument: TextDocument
+  ): List[(String, b.ScalaMainClass)] = {
+    val result = mutable.LinkedHashMap.empty[String, b.ScalaMainClass]
+    textDocument.symbols.foreach { info =>
+      val symbol = info.symbol
+      if (isJavaMainMethod(info, textDocument)) {
+        val classSymbol = symbol.stripSuffix("#main().")
+        result.put(symbol, mbtMainClass(classSymbol))
+      } else if (isScalaMainMethod(info, textDocument)) {
+        val classSymbol = symbol.stripSuffix(".main().") + "."
+        val className = symbolToClassName(classSymbol, '.')
+        result.put(classSymbol, mbtMainClass(className))
+      } else if (isScalaApp(info)) {
+        val className = symbolToClassName(symbol, '.')
+        result.put(symbol, mbtMainClass(className))
+      } else {
+        mainFromScalaMainAnnotation(info).foreach { mainSymbol =>
+          result.put(mainSymbol, mbtMainClass(mainSymbol))
+        }
+      }
+    }
+    result.toList
+  }
+
+  private def isJavaMainMethod(
+      info: SymbolInformation,
+      textDocument: TextDocument,
+  ): Boolean =
+    info.symbol.endsWith("#main().") &&
+      info.isPublic &&
+      info.isStatic &&
+      isMainMethodSignature(info.signature, textDocument)
+
+  private def isScalaMainMethod(
+      info: SymbolInformation,
+      textDocument: TextDocument,
+  ): Boolean =
+    info.symbol.endsWith(".main().") &&
+      isMainMethodSignature(info.signature, textDocument)
+
+  private def isMainMethodSignature(
+      signature: Signature,
+      textDocument: TextDocument,
+  ): Boolean =
+    signature match {
+      case MethodSignature(_, Seq(Scope(Seq(param), _)), returnType, _) =>
+        def isUnit = returnType match {
+          case TypeRef(_, symbol, _) => symbol == "scala/Unit#"
+          case _ => false
+        }
+        def isStringArray(sym: String) =
+          textDocument.symbols.find(_.symbol == sym).exists {
+            _.signature match {
+              case ValueSignature(
+                    TypeRef(
+                      _,
+                      "scala/Array#",
+                      Vector(TypeRef(_, str, _)),
+                    )
+                  )
+                  if str == "scala/Predef.String#" || str == "java/lang/String#" =>
+                true
+              case _ => false
+            }
+          }
+        isUnit && isStringArray(param)
+      case _ => false
+    }
+
+  private def isScalaApp(info: SymbolInformation): Boolean =
+    (info.kind.isClass || info.kind.isObject) &&
+      (info.signature match {
+        case ClassSignature(_, parents, _, _) =>
+          parents.exists {
+            case TypeRef(_, "scala/App#", _) => true
+            case _ => false
+          }
+        case _ => false
+      })
+
+  private def mainFromScalaMainAnnotation(
+      info: SymbolInformation
+  ): Option[String] = {
+    val hasMainAnnotation = info.annotations.exists {
+      _.tpe match {
+        case TypeRef(_, "scala/main#", _) => true
+        case _ => false
+      }
+    }
+    Option
+      .when(hasMainAnnotation)(info.symbol)
+      .flatMap(DebugDiscovery.mainSymbolFromScala3MainMethod)
+  }
+
+  private def mbtMainClass(symbol: String): b.ScalaMainClass =
+    new b.ScalaMainClass(symbolToClassName(symbol), Nil.asJava, Nil.asJava)
 
 }
 

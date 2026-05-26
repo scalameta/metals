@@ -36,7 +36,11 @@ final case class SemanticdbClasspath(
     loader.resolve(resourcePath(scalaOrJavaPath).toNIO).map(AbsolutePath.apply)
   }
 
-  def textDocument(scalaOrJavaPath: AbsolutePath): TextDocumentLookup = {
+  def textDocument(
+      scalaOrJavaPath: AbsolutePath,
+      requestInteractive: Boolean = false
+  ): TextDocumentLookup = {
+    val _ = requestInteractive
     Semanticdbs.loadTextDocument(
       scalaOrJavaPath,
       sourceroot,

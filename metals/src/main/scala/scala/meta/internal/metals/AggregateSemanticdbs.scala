@@ -11,7 +11,10 @@ import scala.meta.io.AbsolutePath
  */
 final case class AggregateSemanticdbs(underlying: List[Semanticdbs])
     extends Semanticdbs {
-  override def textDocument(path: AbsolutePath): TextDocumentLookup = {
+  override def textDocument(
+      path: AbsolutePath,
+      requestInteractive: Boolean = false,
+  ): TextDocumentLookup = {
     def loop(
         xs: List[Semanticdbs],
         errors: List[TextDocumentLookup],
@@ -27,7 +30,7 @@ final case class AggregateSemanticdbs(underlying: List[Semanticdbs])
               TextDocumentLookup.Aggregate(errors)
           }
         case head :: tail =>
-          val result = head.textDocument(path)
+          val result = head.textDocument(path, requestInteractive)
           if (result.isSuccess) result
           else if (result.isNotFound) loop(tail, errors)
           else loop(tail, result :: errors)
