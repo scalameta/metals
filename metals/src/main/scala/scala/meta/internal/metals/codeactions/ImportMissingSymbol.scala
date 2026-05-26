@@ -242,6 +242,7 @@ class ImportMissingSymbolQuickFix(
   override protected val allSymbolsTitle: String =
     ImportMissingSymbol.allSymbolsTitle
   override protected def isImportAllSourceAction: Boolean = false
+  override def isJava: Boolean = true
 }
 
 object ImportMissingSymbolQuickFix {

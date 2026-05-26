@@ -98,4 +98,8 @@ trait CodeAction {
         }
       }
     }
+
+  def isScala: Boolean = true
+
+  def isJava: Boolean = false
 }
