@@ -125,7 +125,10 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/"
+            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "configurations": [
+            |        "projectPath=:"
+            |      ]
             |    }
             |  }
             |}
@@ -232,7 +235,10 @@ class GradleMbtLspSuite
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/"
+            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "configurations": [
+            |        "projectPath=:"
+            |      ]
             |    }
             |  }
             |}
@@ -258,6 +264,50 @@ class GradleMbtLspSuite
            |public java.lang.String title()
            |```
            |Get the string contents of the document's `title` element.
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("code-lens-java-main") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/build.gradle
+            |plugins {
+            |    id 'java'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |/src/main/java/a/Main.java
+            |package a;
+            |
+            |public class Main {
+            |  public static void main(String[] args) {
+            |    System.out.println("Hello!");
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("src/main/java/a/Main.java")
+      obtained <- server
+        .codeLensesText("src/main/java/a/Main.java")(maxRetries = 4)
+        .recover { case _: NoSuchElementException =>
+          server.textContents("src/main/java/a/Main.java")
+        }
+      _ = assertNoDiff(
+        obtained,
+        """|package a;
+           |
+           |public class Main {
+           |<<run>><<debug>>
+           |  public static void main(String[] args) {
+           |    System.out.println("Hello!");
+           |  }
+           |}
            |""".stripMargin,
       )
     } yield ()

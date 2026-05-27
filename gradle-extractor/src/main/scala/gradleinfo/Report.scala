@@ -42,6 +42,7 @@ final case class ModuleReport(
     description: Option[String],
     javaSourceLevel: Option[String],
     javaTargetLevel: Option[String],
+    classDirectory: Option[String],
     sourceDirectories: Seq[String],
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
@@ -88,6 +89,9 @@ final case class ProjectReport(
         scalaVersion = null,
         javaHome = javaHome,
         dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
+        classDirectory = m.classDirectory.orNull,
+        configurations =
+          Seq(s"${MbtNamespaceJson.projectPathPrefix}${m.projectPath}"),
       )
     }.toMap
 
@@ -119,9 +123,12 @@ final case class MbtNamespaceJson(
     scalaVersion: String,
     javaHome: String,
     dependsOn: Seq[String],
+    classDirectory: String,
+    configurations: Seq[String],
 )
 
 object MbtNamespaceJson {
+  val projectPathPrefix: String = "projectPath="
   implicit val rw: ReadWriter[MbtNamespaceJson] = macroRW
 }
 

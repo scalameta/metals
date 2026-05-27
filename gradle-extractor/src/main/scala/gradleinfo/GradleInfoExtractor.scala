@@ -126,6 +126,11 @@ object GradleInfoExtractor {
     val javaTarget = javaSettings
       .flatMap(s => Option(s.getTargetBytecodeVersion))
       .map(_.toString)
+    val classDirectory =
+      Option(m.getCompilerOutput)
+        .flatMap(output => Option(output.getOutputDir))
+        .map(_.toPath)
+        .map(relativize)
 
     val (externalDeps, projectDeps) = classifyDependencies(m)
 
@@ -137,6 +142,7 @@ object GradleInfoExtractor {
         Option(gradleProject).flatMap(p => Option(p.getDescription)),
       javaSourceLevel = javaSource,
       javaTargetLevel = javaTarget,
+      classDirectory = classDirectory,
       sourceDirectories = sourceDirs,
       testSourceDirectories = testSourceDirs,
       externalDependencies =

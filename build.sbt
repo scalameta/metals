@@ -201,6 +201,7 @@ commands ++= Seq(
       "jsemanticdb/publishLocal" ::
       "turbine/publishLocal" ::
       "maven-metals/publishLocal" ::
+      "gradle-extractor/publishLocal" ::
       "semanticdb-javac/publishLocal" ::
       "semanticdb-protoc/publishLocal" ::
       s"++${V.scala213} metals/publishLocal" ::
@@ -640,6 +641,7 @@ lazy val `gradle-extractor` = project
       "com.lihaoyi" %% "upickle" % "4.3.2",
       "org.scalameta" %% "munit" % V.munit % Test,
     ),
+    testFrameworks := List(TestFrameworks.MUnit),
   )
   .settings(sharedScalacOptions)
   .dependsOn(interfaces)
