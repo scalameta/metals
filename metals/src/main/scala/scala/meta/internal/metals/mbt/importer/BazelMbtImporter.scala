@@ -118,7 +118,8 @@ abstract class BazelMbtImporter(
     output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
 
   private def isRunnableRule(ruleClass: String): Boolean =
-    ruleClass == "scala_binary" || ruleClass == "java_binary"
+    ruleClass == "scala_binary" || ruleClass == "java_binary" ||
+      ruleClass == "scala_test" || ruleClass == "java_test"
 
   private def classDirectoriesForRunTargets(
       bazelBin: Option[Path],

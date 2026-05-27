@@ -1,15 +1,24 @@
 package tests.bazel
 
-import scala.jdk.CollectionConverters._
+import java.util.concurrent.TimeUnit
 
+import scala.concurrent.Future
+import scala.concurrent.duration._
+
+import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.DebugUnresolvedTestClassParams
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -40,6 +49,27 @@ class BazelDapMbtLspSuite
 
   override def initializeGitRepo: Boolean = true
 
+  private def awaitMbtTestClassDiscovery(testFile: String): Future[Unit] = {
+    val metals = server.server
+    val targets = metals.buildTargets.allBuildTargetIds
+    for {
+      _ <- server.didSave(testFile)
+      _ <- metals.mbtSymbolSearch.recompileTurbineClasspath()
+      _ <- metals.buildTargetClasses.rebuildIndex(targets)
+      _ <- server.waitFor(TimeUnit.SECONDS.toMillis(10))
+    } yield ()
+  }
+
+  private def pinMaven(workspace: AbsolutePath): Unit = {
+    workspace.resolve("maven_install.json").touch()
+    ShellRunner.runSync(
+      List("bazel", "run", "@maven//:pin"),
+      workspace,
+      redirectErrorOutput = false,
+      timeout = 1.minute,
+    )
+  }
+
   private def bazelWorkspaceLayout: String =
     """|/.bazelproject
        |targets:
@@ -64,6 +94,100 @@ class BazelDapMbtLspSuite
        |  }
        |}
        |""".stripMargin
+
+  test("bazel-mbt-test-session") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          bazelTestWorkspaceLayout,
+          V.scala213,
+          bazelVersion,
+          List("junit:junit:4.13.2"),
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("test/FooTest.java")
+      _ <- awaitMbtTestClassDiscovery("test/FooTest.java")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams("test.FooTest").toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertContains(output, "OK (1 test)")
+  }
+
+  test("bazel-mbt-test-breakpoint") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+
+    val debugLayout = DebugWorkspaceLayout(
+      """|/test/FooTest2.java
+         |package test;
+         |
+         |import org.junit.Test;
+         |import static org.junit.Assert.*;
+         |
+         |public class FooTest2 {
+         |  @Test
+         |  public void testAddition() {
+         |    int result = 2 + 2;
+         |>>  assertEquals(4, result);
+         |  }
+         |}
+         |""".stripMargin,
+      workspace,
+    )
+
+    val navigator = navigateExpectedBreakpoints(debugLayout)
+
+    val testBuildFile =
+      """|/test/BUILD
+         |java_test(
+         |    name = "FooTest2",
+         |    srcs = ["FooTest2.java"],
+         |    test_class = "test.FooTest2",
+         |    deps = ["@maven//:junit_junit"],
+         |)
+         |""".stripMargin
+
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          s"""|/.bazelproject
+              |targets:
+              |    //...
+              |
+              |$testBuildFile
+              |${debugLayout.toString}
+              |""".stripMargin,
+          V.scala213,
+          bazelVersion,
+          List("junit:junit:4.13.2"),
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("test/FooTest2.java")
+      _ <- awaitMbtTestClassDiscovery("test/FooTest2.java")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams("test.FooTest2").toJson,
+        navigator,
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- setBreakpoints(debugger, debugLayout)
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertContains(output, "OK (1 test)")
+  }
 
   test("bazel-mbt-debug-session") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
@@ -97,4 +221,32 @@ class BazelDapMbtLspSuite
       output <- debugger.allOutput
     } yield assertContains(output, "FooBar")
   }
+
+  private def bazelTestWorkspaceLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/test/BUILD
+       |java_test(
+       |    name = "FooTest",
+       |    srcs = ["FooTest.java"],
+       |    test_class = "test.FooTest",
+       |    deps = ["@maven//:junit_junit"],
+       |)
+       |
+       |/test/FooTest.java
+       |package test;
+       |
+       |import org.junit.Test;
+       |import static org.junit.Assert.*;
+       |
+       |public class FooTest {
+       |  @Test
+       |  public void testAddition() {
+       |    assertEquals(4, 2 + 2);
+       |  }
+       |}
+       |""".stripMargin
+
 }

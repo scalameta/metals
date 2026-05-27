@@ -14,6 +14,7 @@ import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 import coursier.Dependency
 
 case class BazelBuildTool(
@@ -123,6 +124,74 @@ case class BazelBuildTool(
       bazelRunTarget(target),
       "--",
     ) ::: jvmFlags.map(flag => s"--jvm_flag=$flag") ::: appArgs
+  }
+
+  override def mbtTestCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): List[String] =
+    mbtTestExecCommand(target, testSuites, debugAgentFlag = None)
+
+  override def mbtTestDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+  ): List[String] =
+    mbtTestExecCommand(
+      target,
+      testSuites,
+      debugAgentFlag = Some(debugAgentFlag),
+    )
+
+  override def supportsForkedTestDebug: Boolean = true
+
+  override def mbtTestDebugCommandWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Int => List[String] = { port =>
+    mbtTestExecCommand(
+      target,
+      testSuites,
+      debugAgentFlag = None,
+    ) ::: List(
+      "--nocache_test_results",
+      "--test_output=streamed",
+      "--test_strategy=exclusive",
+      s"--test_arg=--wrapper_script_flag=--debug=$port",
+    )
+  }
+
+  private def mbtTestExecCommand(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    val jvmFlags =
+      debugAgentFlag.toList ::: MbtDebugLauncher
+        .listOrNil(testSuites.getJvmOptions)
+    val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)
+    val testFilter = suites.flatMap { suite =>
+      val className = suite.getClassName
+      val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+      if (tests.isEmpty) List(className)
+      else tests.map(test => s"$className#$test")
+    }
+    val testFilterArgs =
+      if (testFilter.isEmpty) Nil
+      else List(s"--test_filter=${testFilter.mkString(",")}")
+    val jvmFlagsArgs =
+      jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
+    List(
+      "bazel",
+      "test",
+      "--ui_event_filters=-info,-stderr,-warning",
+      "--noshow_progress",
+      "--test_output=all",
+      bazelRunTarget(target),
+    ) ::: testFilterArgs ::: jvmFlagsArgs
   }
 
   private def bazelBuildTargets(target: MbtTarget): List[String] =
