@@ -2,11 +2,14 @@ package scala.meta.internal.metals.mbt
 
 import scala.jdk.CollectionConverters.ListHasAsScala
 
+import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
 
-trait MbtDebugLauncher {
+trait MbtDebugLauncher { self: BuildTool =>
+
+  def executableName: String = self.executableName
 
   def mbtCompileCommand(
       workspace: AbsolutePath,
