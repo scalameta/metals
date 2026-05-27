@@ -14,6 +14,7 @@ case class MbtNamespace(
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
     @Nullable classDirectories: ju.List[String] = null,
+    @Nullable testClassDirectory: ju.List[String] = null,
     @Nullable projectPath: String = null,
     @Nullable configurations: ju.List[String] = null,
 ) {

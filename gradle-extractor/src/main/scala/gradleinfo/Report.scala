@@ -43,6 +43,7 @@ final case class ModuleReport(
     javaSourceLevel: Option[String],
     javaTargetLevel: Option[String],
     classDirectories: Seq[String],
+    testClassDirectory: Seq[String],
     sourceDirectories: Seq[String],
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
@@ -90,6 +91,7 @@ final case class ProjectReport(
         javaHome = javaHome,
         dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
         classDirectories = m.classDirectories,
+        testClassDirectory = m.testClassDirectory,
         projectPath = m.projectPath,
         configurations = null,
       )
@@ -124,6 +126,7 @@ final case class MbtNamespaceJson(
     javaHome: String,
     dependsOn: Seq[String],
     classDirectories: Seq[String],
+    testClassDirectory: Seq[String],
     projectPath: String,
     configurations: Seq[String],
 )

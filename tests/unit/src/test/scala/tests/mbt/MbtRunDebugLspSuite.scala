@@ -5,7 +5,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -16,9 +15,6 @@ import tests.MbtJsonBuilder
 
 class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
 
-  override protected def initializationOptions: Option[InitializationOptions] =
-    Some(InitializationOptions.Default.copy(testExplorerProvider = Some(true)))
-
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       buildOnChange = false,
@@ -27,7 +23,7 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
       referenceProvider = ReferenceProviderConfig.mbt,
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
-      testUserInterface = TestUserInterfaceKind.TestExplorer,
+      testUserInterface = TestUserInterfaceKind.CodeLenses,
     )
 
   override def initializeGitRepo: Boolean = true
@@ -185,8 +181,8 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
            |
            |<<test>><<debug test>>
            |public class JunitTest {
-           |<<test case>><<debug test case>>
            |  @Test
+           |<<test case>><<debug test case>>
            |  public void sampleTest() {
            |    assertTrue(true);
            |  }

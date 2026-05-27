@@ -130,6 +130,10 @@ class GradleMbtLspSuite
             |        "build/classes/java/main",
             |        "build/classes/scala/main"
             |      ],
+            |      "testClassDirectory": [
+            |        "build/classes/java/test",
+            |        "build/classes/scala/test"
+            |      ],
             |      "projectPath": ":"
             |    }
             |  }
@@ -239,6 +243,7 @@ class GradleMbtLspSuite
             |      ],
             |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
             |      "classDirectories": ["<classDirectories-path>"],
+            |      "testClassDirectory": ["<testClassDirectories-path>"],
             |      "projectPath": ":"
             |    }
             |  }

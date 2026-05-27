@@ -17,6 +17,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 import coursier.MavenRepository
 import coursier.Repositories
 import coursier.Repository
@@ -123,7 +124,7 @@ case class GradleBuildTool(
   ): List[String] =
     gradleBaseCommand() ::: List(
       "--console=plain",
-      gradleTask(target, "classes"),
+      gradleTask(target, gradleCompileTask(target)),
     )
 
   override def mbtRunCommand(
@@ -156,6 +157,13 @@ case class GradleBuildTool(
       case Some(path) if path.endsWith(":") => s"$path$task"
       case Some(path) => s"$path:$task"
     }
+
+  private def gradleCompileTask(target: MbtTarget): String = {
+    val hasTestSources =
+      target.sources.exists(_.replace('\\', '/').contains("/test/"))
+    if (target.isTestTarget || hasTestSources) "testClasses"
+    else "classes"
+  }
 
   private def gradleRunCommand(
       target: MbtTarget,
@@ -229,12 +237,92 @@ case class GradleBuildTool(
       script.getBytes(StandardCharsets.UTF_8),
     )
   }
+
+  override def mbtTestCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): List[String] =
+    gradleTestCommand(target, testSuites, debugAgentFlag = None)
+
+  override def mbtTestDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+  ): List[String] =
+    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+
+  override def supportsForkedTestDebug: Boolean = true
+
+  override def mbtTestDebugCommandWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Int => List[String] = { port =>
+    val debugAgentFlag =
+      s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
+    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+  }
+
+  private def gradleTestCommand(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    val jvmOptions =
+      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
+        testSuites.getJvmOptions
+      )
+    val initScriptArgs =
+      if (jvmOptions.isEmpty) Nil
+      else List("--init-script", gradleTestInitScript(jvmOptions).toString)
+
+    gradleBaseCommand() ::: List(
+      "--console=plain"
+    ) ::: initScriptArgs ::: List(
+      gradleTask(target, "test")
+    ) ::: gradleTestFilterArgs(testSuites)
+  }
+
+  private def gradleTestFilterArgs(
+      testSuites: ScalaTestSuites
+  ): List[String] = {
+    val filters =
+      MbtDebugLauncher.listOrNil(testSuites.getSuites).flatMap { suite =>
+        val className = suite.getClassName
+        val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+        if (tests.isEmpty) List(className)
+        else tests.map(test => s"$className.$test")
+      }
+    filters.flatMap(filter => List("--tests", filter))
+  }
+
+  private def gradleTestInitScript(jvmOptions: List[String]): Path = {
+    val script =
+      s"""|gradle.projectsEvaluated {
+          |  allprojects { project ->
+          |    project.tasks.withType(Test).configureEach { task ->
+          |      task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+          |    }
+          |  }
+          |}
+          |""".stripMargin
+
+    val digest = MD5.compute(script)
+    Files.write(
+      tempDir.resolve(s"${GradleBuildTool.metalsTestTask}-$digest.gradle"),
+      script.getBytes(StandardCharsets.UTF_8),
+    )
+  }
+
 }
 
 object GradleBuildTool {
   def name = "gradle"
 
   private val metalsRunTask = "__metalsRun"
+  private val metalsTestTask = "__metalsTest"
 
   private def groovyList(values: List[String]): String =
     values.map(groovyString).mkString("[", ", ", "]")

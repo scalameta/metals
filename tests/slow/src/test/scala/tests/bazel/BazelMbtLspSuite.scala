@@ -563,6 +563,7 @@ class BazelMbtLspSuite
       )
       _ <- server.didOpen("lib/Parser.java")
       _ <- server.didFocus("lib/Parser.java")
+      _ <- server.didSave("lib/Parser.java")
       _ <- server.assertHover(
         "lib/Parser.java",
         s"""|package lib;

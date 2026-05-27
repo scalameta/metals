@@ -27,6 +27,7 @@ case class MbtTarget(
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
     classDirectories: Seq[String] = Nil,
+    testClassDirectory: Seq[String] = Nil,
     projectPath: Option[String] = None,
     configurations: Seq[String] = Nil,
 ) {
@@ -129,38 +130,45 @@ case class MbtTarget(
       emptyClassDirectory(workspace).toURI.toString(),
     )
 
-  def isTestTarget: Boolean = name.endsWith(":test")
+  def isTestTarget: Boolean = testClassDirectory.nonEmpty
 
   def runClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
-  ): List[AbsolutePath] =
-    if (classDirectories.nonEmpty)
-      classDirectories.map(resolveClassDir(workspace, _)).toList
-    else
-      MbtTarget.conventionalClassDirectories(workspace, buildToolName)
-  // ): List[AbsolutePath] = {
-  //   classDirectory.map(resolveClassDir(workspace, _)) match {
-  //     case Some(dir) => List(dir)
-  //     case None =>
-  //       MbtTarget.conventionalClassDirectories(
-  //         workspace,
-  //         buildToolName,
-  //         isTestTarget,
-  //       )
-  //   }
-  // }
+      includeTests: Boolean = false,
+  ): List[AbsolutePath] = {
+    val directories =
+      if (includeTests) classDirectories ++ testClassDirectory
+      else classDirectories
+    if (directories.nonEmpty) {
+      directories.distinct.map(resolveClassDir(workspace, _)).toList
+    } else
+      MbtTarget.conventionalClassDirectories(
+        workspace,
+        buildToolName,
+        includeTests,
+      )
+  }
 
-  // def mavenModuleDirectory(workspace: AbsolutePath): Option[AbsolutePath] =
-  //   classDirectory
-  //     .map(resolveClassDir(workspace, _))
-  //     .flatMap { output =>
-  //       Iterator
-  //         .iterate(output.parent)(_.parent)
-  //         .takeWhile(p => p != workspace && p.toNIO.startsWith(workspace.toNIO))
-  //         .filterNot(dir => dir.filename == "target" || dir.filename == "build")
-  //         .find(dir => dir.resolve("pom.xml").isFile)
-  //     }
+  def primaryClassDirectory(
+      workspace: AbsolutePath,
+      buildToolName: String,
+  ): AbsolutePath = {
+    val primary =
+      if (isTestTarget) testClassDirectory.headOption
+      else classDirectories.headOption
+    primary
+      .map(resolveClassDir(workspace, _))
+      .getOrElse(
+        MbtTarget
+          .conventionalClassDirectories(
+            workspace,
+            buildToolName,
+            isTestTarget,
+          )
+          .head
+      )
+  }
 
   private def resolveClassDir(
       workspace: AbsolutePath,

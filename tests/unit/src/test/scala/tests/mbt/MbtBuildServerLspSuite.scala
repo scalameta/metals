@@ -223,7 +223,7 @@ class MbtBuildServerLspSuite
       assertNoDiff(
         testEvents.mkString("\n"),
         s"""|AddTestSuite(example.JunitTest,JunitTest,example/JunitTest#,Location [
-            |  uri = "file:///Users/tgodzik/Documents/metals/tests/unit/target/e2e/mbt-build-server/mbt-junit-test-discovery/src/JunitTest.java"
+            |  uri = "${workspace.toURI}src/JunitTest.java"
             |  range = Range [
             |    start = Position [
             |      line = 5

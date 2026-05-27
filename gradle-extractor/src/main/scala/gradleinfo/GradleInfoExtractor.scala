@@ -17,6 +17,8 @@ import org.gradle.tooling.model.idea.IdeaModule
 import org.gradle.tooling.model.idea.IdeaModuleDependency
 import org.gradle.tooling.model.idea.IdeaProject
 import org.gradle.tooling.model.idea.IdeaSingleEntryLibraryDependency
+import upickle.default.ReadWriter
+import upickle.default.macroRW
 import upickle.default.read
 
 /** Configuration for a single extraction run. */
@@ -40,6 +42,14 @@ final case class ExtractorConfig(
 
 /** Pulls structural information out of a Gradle build via the Tooling API. */
 object GradleInfoExtractor {
+  private final case class SourceSetDirectories(
+      classDirectories: List[String] = Nil,
+      testClassDirectory: List[String] = Nil,
+  )
+
+  private object SourceSetDirectories {
+    implicit val rw: ReadWriter[SourceSetDirectories] = macroRW
+  }
 
   def extract(config: ExtractorConfig): ProjectReport = {
     val absRoot = config.projectDir.toFile.getCanonicalFile()
@@ -96,8 +106,16 @@ object GradleInfoExtractor {
           |    def sourceSets = project.extensions.findByName('sourceSets')
           |    if (sourceSets != null) {
           |      def main = sourceSets.findByName('main')
+          |      def test = sourceSets.findByName('test')
+          |      def outputs = [:]
           |      if (main != null) {
-          |        result[project.path] = main.output.classesDirs.files.collect { it.absolutePath }
+          |        outputs['classDirectories'] = main.output.classesDirs.files.collect { it.absolutePath }
+          |      }
+          |      if (test != null) {
+          |        outputs['testClassDirectory'] = test.output.classesDirs.files.collect { it.absolutePath }
+          |      }
+          |      if (!outputs.isEmpty()) {
+          |        result[project.path] = outputs
           |      }
           |    }
           |  }
@@ -109,10 +127,12 @@ object GradleInfoExtractor {
     initFile
   }
 
-  private def readSourceSetsMap(outputFile: Path): Map[String, List[String]] =
+  private def readSourceSetsMap(
+      outputFile: Path
+  ): Map[String, SourceSetDirectories] =
     try {
       if (Files.exists(outputFile) && Files.size(outputFile) > 0)
-        read[Map[String, List[String]]](Files.readString(outputFile))
+        read[Map[String, SourceSetDirectories]](Files.readString(outputFile))
       else Map.empty
     } catch {
       case NonFatal(_) => Map.empty
@@ -137,7 +157,7 @@ object GradleInfoExtractor {
   private def extractModule(
       m: IdeaModule,
       config: ExtractorConfig,
-      sourceSetsMap: Map[String, List[String]],
+      sourceSetsMap: Map[String, SourceSetDirectories],
   ): ModuleReport = {
     val gradleProject = m.getGradleProject
     val projectPath = Option(gradleProject).map(_.getPath).getOrElse(":")
@@ -184,8 +204,8 @@ object GradleInfoExtractor {
       .map(_.toString)
     val classDirectories: Seq[String] =
       sourceSetsMap.get(projectPath) match {
-        case Some(dirs) if dirs.nonEmpty =>
-          dirs.map(d => relativize(java.nio.file.Paths.get(d)))
+        case Some(dirs) if dirs.classDirectories.nonEmpty =>
+          dirs.classDirectories.map(d => relativize(java.nio.file.Paths.get(d)))
         case _ =>
           val ideaDir =
             Option(m.getCompilerOutput)
@@ -193,6 +213,13 @@ object GradleInfoExtractor {
               .map(_.toPath)
           ideaDir.map(relativize).toSeq
       }
+    val testClassDirectory: Seq[String] =
+      sourceSetsMap
+        .get(projectPath)
+        .map(
+          _.testClassDirectory.map(d => relativize(java.nio.file.Paths.get(d)))
+        )
+        .getOrElse(Nil)
 
     val (externalDeps, projectDeps) = classifyDependencies(m)
 
@@ -205,6 +232,7 @@ object GradleInfoExtractor {
       javaSourceLevel = javaSource,
       javaTargetLevel = javaTarget,
       classDirectories = classDirectories,
+      testClassDirectory = testClassDirectory,
       sourceDirectories = sourceDirs,
       testSourceDirectories = testSourceDirs,
       externalDependencies =

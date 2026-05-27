@@ -1,6 +1,7 @@
 package scala.meta.internal.builds
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContext
 import scala.util.Properties
@@ -181,7 +182,6 @@ case class MavenBuildTool(
   ): List[String] =
     mbtTestExecCommand(
       mbtMavenBaseCommand(workspace),
-      workspace,
       target,
       testSuites,
     )
@@ -209,7 +209,6 @@ case class MavenBuildTool(
       s"\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port\""
     mbtTestExecCommand(
       mbtMavenBaseCommand(workspace),
-      workspace,
       target,
       testSuites,
       forkedDebugAgentFlag = Some(debugAgentFlag),
@@ -218,17 +217,14 @@ case class MavenBuildTool(
 
   private def mbtTestExecCommand(
       baseCommand: List[String],
-      workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       forkedDebugAgentFlag: Option[String] = None,
   ): List[String] = {
     val moduleArgs =
-      target
-        .projectPath match {
+      target.projectPath match {
         case Some(pom) =>
-          pprint.log(pom)
-          List("-f", pom.toString())
+          List("-f", Paths.get(pom).resolve("pom.xml").toString())
         case _ => Nil
       }
     val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)
