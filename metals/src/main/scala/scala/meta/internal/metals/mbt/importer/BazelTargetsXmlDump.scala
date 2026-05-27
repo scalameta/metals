@@ -39,6 +39,32 @@ class BazelTargetsXmlDump(xmlDump: String) {
     targetLabels.toMap
   }
 
+  lazy val ruleClassesByTarget: Map[String, String] = {
+    val targetLabels = for {
+      rule <- root \\ "rule"
+      target = (rule \ "@name").text
+      ruleClass = (rule \ "@class").text
+      if target.nonEmpty && ruleClass.nonEmpty
+    } yield target -> ruleClass
+    targetLabels.toMap
+  }
+
+  lazy val ruleOutputsByTarget: Map[String, List[String]] = {
+    val targetLabels = for {
+      rule <- root \\ "rule"
+      target = (rule \ "@name").text
+      if target.nonEmpty
+    } yield {
+      val outputs = for {
+        output <- rule \ "rule-output"
+        value = (output \ "@name").text
+        if value.nonEmpty
+      } yield value
+      target -> outputs.toList
+    }
+    targetLabels.toMap
+  }
+
   lazy val depsByTarget: Map[String, List[String]] = {
     val targetLabels = for {
       rule <- root \\ "rule"

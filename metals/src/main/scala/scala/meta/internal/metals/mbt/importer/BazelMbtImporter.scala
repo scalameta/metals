@@ -51,6 +51,7 @@ abstract class BazelMbtImporter(
     val patterns = BazelProjectViewTargets.patterns(projectRoot)
     for {
       outputBase <- queryOutputBase()
+      bazelBin <- queryBazelBin()
       repositoryName = BazelMavenJsonImporter
         .extractRepositoryNameFromBazelConfig(projectRoot)
       _ = scribe.info(s"bazel-mbt: found repository name: $repositoryName")
@@ -72,6 +73,18 @@ abstract class BazelMbtImporter(
       srcs = targetsXmlDump.getLabels("srcs")
       scalacOptions = targetsXmlDump.getStrings("scalacopts")
       javacOptions = targetsXmlDump.getStrings("javacopts")
+      runTargets = targets
+        .filter(target =>
+          targetsXmlDump.ruleClassesByTarget
+            .get(target)
+            .exists(isRunnableRule)
+        )
+        .toSet
+      classDirectories = classDirectoriesForRunTargets(
+        bazelBin,
+        runTargets,
+        targetsXmlDump.ruleOutputsByTarget,
+      )
       deps = queryDeps(targets.toSet, targets, targetsXmlDump)
       externalDeps = targetsXmlDump.externalDepsByTarget(targets)
       externalDepModules = matchExternalDepsToModules(
@@ -92,6 +105,8 @@ abstract class BazelMbtImporter(
         javacOptions,
         deps,
         externalDepModules,
+        runTargets,
+        classDirectories,
         dependencyModules,
         effectiveScalaVersion,
       )
@@ -101,6 +116,32 @@ abstract class BazelMbtImporter(
 
   private def asLines(output: String) =
     output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
+
+  private def isRunnableRule(ruleClass: String): Boolean =
+    ruleClass == "scala_binary" || ruleClass == "java_binary"
+
+  private def classDirectoriesForRunTargets(
+      bazelBin: Option[Path],
+      runTargets: Set[String],
+      ruleOutputsByTarget: Map[String, List[String]],
+  ): Map[String, String] =
+    bazelBin.toList.flatMap { bin =>
+      for {
+        target <- runTargets.toList
+        output <- ruleOutputsByTarget
+          .getOrElse(target, Nil)
+          .find(isClassJarOutput)
+        relative <- BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(
+          output
+        )
+      } yield target -> bin.resolve(relative).toString
+    }.toMap
+
+  private def isClassJarOutput(label: String): Boolean =
+    label.endsWith(".jar") &&
+      !label.endsWith("-src.jar") &&
+      !label.endsWith("_deploy.jar") &&
+      !label.endsWith("_deploy-src.jar")
 
   private def selectedNamespaceMode(): Future[BazelMbtNamespaceMode] =
     rememberedNamespaceMode match {
@@ -220,11 +261,19 @@ abstract class BazelMbtImporter(
   }
 
   private def queryOutputBase(): Future[Option[Path]] = {
+    queryBazelInfo("output_base")
+  }
+
+  private def queryBazelBin(): Future[Option[Path]] = {
+    queryBazelInfo("bazel-bin")
+  }
+
+  private def queryBazelInfo(key: String): Future[Option[Path]] = {
     val buf = new StringBuilder()
     shellRunner
       .run(
         "bazel-info",
-        List("bazel", "info", "output_base"),
+        List("bazel", "info", key),
         projectRoot,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,

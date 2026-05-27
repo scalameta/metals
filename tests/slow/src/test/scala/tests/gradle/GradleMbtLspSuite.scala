@@ -238,9 +238,7 @@ class GradleMbtLspSuite
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
             |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
-            |      "classDirectories": [
-            |        "build/classes/java/main"
-            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
             |      "projectPath": ":"
             |    }
             |  }

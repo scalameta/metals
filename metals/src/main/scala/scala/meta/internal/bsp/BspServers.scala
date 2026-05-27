@@ -59,7 +59,7 @@ final class BspServers(
     workDoneProgress: WorkDoneProgress,
     scalaVersionSelector: ScalaVersionSelector,
     hasMbtImporters: () => Boolean = () => false,
-    mbtDebugStarter: Option[MbtDebugSessionStarter] = None,
+    mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService) {
   private def customProjectRoot =
     userConfig().getCustomProjectRoot(mainWorkspace)
@@ -188,7 +188,7 @@ final class BspServers(
         workDoneProgress,
         scalaVersionSelector,
         userConfig,
-        debugStarter = mbtDebugStarter,
+        debugStarter = mbtDebugStarter(),
       )
     } else {
       BuildServerConnection.fromSockets(
