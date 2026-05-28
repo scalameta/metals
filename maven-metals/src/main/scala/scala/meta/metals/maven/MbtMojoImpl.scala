@@ -208,16 +208,15 @@ object MbtMojoImpl {
         if (dir == null || dir.isEmpty) null
         else ju.List.of(dir)
       },
+      projectPath = project.getBasedir.getAbsolutePath,
       configurations = {
-        val projectDirEntry =
-          s"${NamespaceJson.projectDirPrefix}${project.getBasedir.getAbsolutePath}"
-        val profileEntries =
-          if (activeProfiles.isEmpty) Nil
-          else
+        if (activeProfiles.isEmpty) null
+        else
+          new ju.ArrayList(
             List(
               s"${NamespaceJson.profilesPrefix}${activeProfiles.toList.sorted.mkString(",")}"
-            )
-        new ju.ArrayList((projectDirEntry :: profileEntries).asJava)
+            ).asJava
+          )
       },
     )
   }
@@ -363,7 +362,6 @@ private[maven] case class DepModuleEntry(
 )
 
 private[maven] object NamespaceJson {
-  val projectDirPrefix = "projectDir="
   val profilesPrefix = "profiles="
 }
 
@@ -376,5 +374,6 @@ private[maven] case class NamespaceJson(
     javaHome: String,
     dependsOn: ju.List[String],
     classDirectories: ju.List[String],
+    projectPath: String,
     configurations: ju.List[String],
 )

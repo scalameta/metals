@@ -159,14 +159,7 @@ case class MavenBuildTool(
   }
 
   private def mavenModuleDirectory(target: MbtTarget): Option[AbsolutePath] =
-    target.configurations
-      .find(_.startsWith(MavenBuildTool.projectDirPrefix))
-      .map(c =>
-        AbsolutePath(
-          java.nio.file.Paths
-            .get(c.substring(MavenBuildTool.projectDirPrefix.length))
-        )
-      )
+    target.projectPath.map(p => AbsolutePath(java.nio.file.Paths.get(p)))
 
   private def mavenCliConfigurations(target: MbtTarget): List[String] =
     target.configurations.toList.flatMap {
@@ -179,7 +172,6 @@ case class MavenBuildTool(
 object MavenBuildTool {
   def name = "mvn"
 
-  val projectDirPrefix = "projectDir="
   val profilesPrefix = "profiles="
 
   def isMavenRelatedPath(

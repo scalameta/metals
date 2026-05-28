@@ -108,6 +108,7 @@ case class MbtBuild(
           classDirectories = Option(namespace.classDirectories)
             .map(_.asScala.toSeq)
             .getOrElse(Nil),
+          projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
         )
       }

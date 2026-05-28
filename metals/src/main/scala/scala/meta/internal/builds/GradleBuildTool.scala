@@ -151,7 +151,7 @@ case class GradleBuildTool(
     }
 
   private def gradleTask(target: MbtTarget, task: String): String =
-    GradleBuildTool.gradleProjectPath(target) match {
+    target.projectPath match {
       case Some(":") | Some("") | None => task
       case Some(path) if path.endsWith(":") => s"$path$task"
       case Some(path) => s"$path:$task"
@@ -181,8 +181,7 @@ case class GradleBuildTool(
         mainClass.getJvmOptions
       )
     val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
-    val projectPath = GradleBuildTool.gradleProjectPath(target)
-    val projectBlock = projectPath match {
+    val projectBlock = target.projectPath match {
       case Some(path) =>
         val gradlePath =
           if (path == ":" || path.isEmpty) ":"
@@ -236,13 +235,6 @@ object GradleBuildTool {
   def name = "gradle"
 
   private val metalsRunTask = "__metalsRun"
-
-  private val projectPathPrefix = "projectPath="
-
-  private def gradleProjectPath(target: MbtTarget): Option[String] =
-    target.configurations
-      .find(_.startsWith(projectPathPrefix))
-      .map(_.substring(projectPathPrefix.length))
 
   private def groovyList(values: List[String]): String =
     values.map(groovyString).mkString("[", ", ", "]")

@@ -35,7 +35,7 @@ class GradleBuildToolSuite extends BaseSuite {
       scalacOptions = Nil,
       javacOptions = Nil,
       dependencyModules = Nil,
-      configurations = Seq(s"projectPath=$gradleProjectPath"),
+      projectPath = Some(gradleProjectPath),
     )
 
   test("gradle-mbt-compile-command") {

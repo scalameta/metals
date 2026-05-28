@@ -6,7 +6,6 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.MavenBuildTool.profilesPrefix
-import scala.meta.internal.builds.MavenBuildTool.projectDirPrefix
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -46,8 +45,8 @@ class MavenBuildToolSuite extends BaseSuite {
       javacOptions = Nil,
       dependencyModules = Nil,
       classDirectories = Seq(classDirectory),
-      configurations =
-        configurations ++ projectDir.map(d => s"${projectDirPrefix}$d"),
+      projectPath = projectDir.map(_.toString),
+      configurations = configurations,
     )
 
   test("maven-mbt-compile-command") {

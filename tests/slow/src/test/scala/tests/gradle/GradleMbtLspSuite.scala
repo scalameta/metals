@@ -130,9 +130,7 @@ class GradleMbtLspSuite
             |        "build/classes/java/main",
             |        "build/classes/scala/main"
             |      ],
-            |      "configurations": [
-            |        "projectPath=:"
-            |      ]
+            |      "projectPath": ":"
             |    }
             |  }
             |}
@@ -243,9 +241,7 @@ class GradleMbtLspSuite
             |      "classDirectories": [
             |        "build/classes/java/main"
             |      ],
-            |      "configurations": [
-            |        "projectPath=:"
-            |      ]
+            |      "projectPath": ":"
             |    }
             |  }
             |}

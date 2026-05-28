@@ -90,8 +90,8 @@ final case class ProjectReport(
         javaHome = javaHome,
         dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
         classDirectories = m.classDirectories,
-        configurations =
-          Seq(s"${MbtNamespaceJson.projectPathPrefix}${m.projectPath}"),
+        projectPath = m.projectPath,
+        configurations = null,
       )
     }.toMap
 
@@ -124,11 +124,11 @@ final case class MbtNamespaceJson(
     javaHome: String,
     dependsOn: Seq[String],
     classDirectories: Seq[String],
+    projectPath: String,
     configurations: Seq[String],
 )
 
 object MbtNamespaceJson {
-  val projectPathPrefix: String = "projectPath="
   implicit val rw: ReadWriter[MbtNamespaceJson] = macroRW
 }
 

@@ -27,6 +27,7 @@ case class MbtTarget(
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
     classDirectories: Seq[String] = Nil,
+    projectPath: Option[String] = None,
     configurations: Seq[String] = Nil,
 ) {
 
