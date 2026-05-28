@@ -301,6 +301,7 @@ class ProjectMetalsLspService(
     new McpTestRunner(
       debugProvider,
       buildTargets,
+      compilations,
       folder,
       () => userConfig,
       mcpSearch,
