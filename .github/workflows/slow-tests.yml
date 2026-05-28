@@ -1,0 +1,77 @@
+name: Slow Integration Tests
+
+on:
+  push:
+    branches:
+      - main-v2
+  pull_request:
+    branches:
+      - main-v2
+
+jobs:
+  publish-local:
+    name: Publish artifacts to local Ivy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: sbt
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      - name: Publish local
+        # Keep quiet, as there are other jobs to check warnings etc.
+        run: sbt --error +publishLocal
+
+      # Upload the freshly-published artifacts so test jobs can reuse them.
+      - name: Upload local Ivy artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: ivy2-local-${{ github.run_id }}
+          path: ~/.ivy2/local
+          retention-days: 1
+          if-no-files-found: error
+
+  slow-tests:
+    name: Slow integration tests for ${{ matrix.suite }}
+    needs: publish-local
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - bazel
+          - gradle
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: sbt
+
+      - name: Set up sbt
+        uses: sbt/setup-sbt@v1
+
+      # This is required for some tests that create a git repo
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@scalameta.org"
+          git config --global user.name "CI Bot"
+
+      - name: Restore local Ivy artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: ivy2-local-${{ github.run_id }}
+          path: ~/.ivy2/local
+
+      - name: Run tests for ${{ matrix.suite }} integration
+        run: bin/test.sh 'slow/testOnly -- tests.${{ matrix.suite }}.*'
