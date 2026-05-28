@@ -117,5 +117,6 @@ object ZioTestFinder {
     "zio/test/DefaultRunnableSpec#",
     "zio/test/RunnableSpec#",
     "zio/test/ZIOSpecDefault#",
+    "zio/test/ZIOSpecAbstract#",
   )
 }

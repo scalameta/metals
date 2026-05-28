@@ -449,6 +449,7 @@ class DebugProvider(
         s"Found infos about: ${infos.flatten.map(_._2.symbol).mkString(", ")} test classes"
       )
       val allInfo = infos.flatten
+
       if (allInfo.isEmpty) {
         val suitesString =
           testClasses.getSuites().asScala.map(_.getClassName()).mkString(", ")
@@ -456,21 +457,30 @@ class DebugProvider(
           s"Could not get information from the compiler about $suitesString"
         )
       }
-      infos.flatten.groupBy(_._1.framework).map {
-        case (framework, testSuites) =>
+
+      // Prefer `#` over `.` to avoid synthetic companion objects
+      allInfo
+        .groupBy(_._1.fullyQualifiedName)
+        .values
+        .map { entries =>
+          val (info, pcInfo) = entries
+            .find(e => !e._2.symbol.endsWith("."))
+            .getOrElse(entries.head)
           (
-            framework,
-            testSuites.map { case (testInfo, pcInfo) =>
-              new Discovered(
-                pcInfo.symbol,
-                testInfo.fullyQualifiedName,
-                pcInfo.recursiveParents.map(_.symbolToFullyQualifiedName).toSet,
-                (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
-                isModule = pcInfo.symbol.endsWith("."),
-              )
-            },
+            info.framework,
+            new Discovered(
+              pcInfo.symbol,
+              info.fullyQualifiedName,
+              pcInfo.recursiveParents.map(_.symbolToFullyQualifiedName).toSet,
+              (pcInfo.annotations ++ pcInfo.memberDefsAnnotations).toSet,
+              isModule = pcInfo.symbol.endsWith("."),
+            ),
           )
-      }
+        }
+        .groupBy(_._1)
+        .map { case (framework, entries) =>
+          framework -> entries.map(_._2).toList
+        }
     }
   }
 
