@@ -202,7 +202,7 @@ class ProjectMetalsLspService(
     sh,
   )
 
-  private val mbtDebugStarter =
+  private def mbtDebugStarter =
     buildTools.current().collectFirst { case buildTool: MbtDebugLauncher =>
       new MbtDebugSessionStarter(
         debugProvider.debugConfigCreator,
@@ -235,7 +235,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
-      mbtDebugStarter = mbtDebugStarter,
+      mbtDebugStarter = () => mbtDebugStarter,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider

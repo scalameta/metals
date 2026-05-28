@@ -8,9 +8,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.mbt.MbtDebugLauncher
+import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import coursier.Dependency
 
 case class BazelBuildTool(
@@ -29,7 +32,8 @@ case class BazelBuildTool(
     )(ec)
     with BuildTool
     with BuildServerProvider
-    with VersionRecommendation {
+    with VersionRecommendation
+    with MbtDebugLauncher {
 
   override def digest(workspace: AbsolutePath): Option[String] = {
     BazelDigest.current(projectRoot)
@@ -80,6 +84,55 @@ case class BazelBuildTool(
       case _ =>
     }
   }
+
+  override def mbtCompileCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+  ): List[String] =
+    List("bazel", "build") ::: bazelBuildTargets(target)
+
+  override def mbtRunCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+  ): List[String] =
+    mbtRunCommand(target, mainClass, debugAgentFlag = None)
+
+  override def mbtDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: String,
+  ): List[String] =
+    mbtRunCommand(target, mainClass, debugAgentFlag = Some(debugAgentFlag))
+
+  private def mbtRunCommand(
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    val jvmFlags =
+      debugAgentFlag.toList ::: MbtDebugLauncher
+        .listOrNil(mainClass.getJvmOptions)
+    val appArgs = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+    List(
+      "bazel",
+      "run",
+      "--ui_event_filters=-info,-stderr",
+      "--noshow_progress",
+      bazelRunTarget(target),
+      "--",
+    ) ::: jvmFlags.map(flag => s"--jvm_flag=$flag") ::: appArgs
+  }
+
+  private def bazelBuildTargets(target: MbtTarget): List[String] =
+    target.configurations.toList match {
+      case Nil => List(target.name)
+      case targets => targets
+    }
+
+  private def bazelRunTarget(target: MbtTarget): String =
+    target.configurations.headOption.getOrElse(target.name)
 
 }
 

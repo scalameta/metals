@@ -274,7 +274,8 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
             |      "scalaVersion": "2.13.16",
-            |      "dependsOn": []
+            |      "dependsOn": [],
+            |      "classDirectories": []
             |    },
             |    "//app": {
             |      "sources": [
@@ -291,6 +292,10 @@ class BazelMbtLspSuite
             |      "scalaVersion": "2.13.16",
             |      "dependsOn": [
             |        "//core"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "configurations": [
+            |        "//app:hello"
             |      ]
             |    }
             |  }
@@ -372,7 +377,8 @@ class BazelMbtLspSuite
             |      "javacOptions": [],
             |      "dependencyModules": [],
             |      "scalaVersion": "2.13.18",
-            |      "dependsOn": []
+            |      "dependsOn": [],
+            |      "classDirectories": []
             |    }
             |  }
             |}""".stripMargin,
@@ -437,7 +443,8 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
             |      "scalaVersion": "2.13.16",
-            |      "dependsOn": []
+            |      "dependsOn": [],
+            |      "classDirectories": []
             |    }
             |  }
             |}""".stripMargin,
@@ -530,7 +537,8 @@ class BazelMbtLspSuite
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
             |      "scalaVersion": "2.13.18",
-            |      "dependsOn": []
+            |      "dependsOn": [],
+            |      "classDirectories": []
             |    },
             |    "//app": {
             |      "sources": [
@@ -544,6 +552,10 @@ class BazelMbtLspSuite
             |      "scalaVersion": "2.13.18",
             |      "dependsOn": [
             |        "//lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "configurations": [
+            |        "//app:main"
             |      ]
             |    }
             |  }
@@ -631,7 +643,11 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
             |      "scalaVersion": "2.13.16",
-            |      "dependsOn": []
+            |      "dependsOn": [],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "configurations": [
+            |        "//app:hello"
+            |      ]
             |    }
             |  }
             |}""".stripMargin,
