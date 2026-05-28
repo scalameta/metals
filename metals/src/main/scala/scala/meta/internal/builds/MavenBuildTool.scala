@@ -162,17 +162,11 @@ case class MavenBuildTool(
     target.projectPath.map(p => AbsolutePath(java.nio.file.Paths.get(p)))
 
   private def mavenCliConfigurations(target: MbtTarget): List[String] =
-    target.configurations.toList.flatMap {
-      case p if p.startsWith(MavenBuildTool.profilesPrefix) =>
-        List("-P", p.substring(MavenBuildTool.profilesPrefix.length))
-      case _ => Nil
-    }
+    target.configurations.toList
 }
 
 object MavenBuildTool {
   def name = "mvn"
-
-  val profilesPrefix = "profiles="
 
   def isMavenRelatedPath(
       workspace: AbsolutePath,

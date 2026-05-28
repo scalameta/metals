@@ -5,7 +5,6 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.builds.MavenBuildTool
-import scala.meta.internal.builds.MavenBuildTool.profilesPrefix
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -54,7 +53,7 @@ class MavenBuildToolSuite extends BaseSuite {
     val target = mbtTarget(
       "com.example:app:1.0.0",
       "target/classes",
-      configurations = Seq(s"${profilesPrefix}dev,ci"),
+      configurations = Seq("-P", "dev,ci"),
     )
 
     assertEquals(

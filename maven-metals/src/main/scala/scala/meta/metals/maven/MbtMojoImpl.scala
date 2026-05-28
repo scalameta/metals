@@ -213,9 +213,7 @@ object MbtMojoImpl {
         if (activeProfiles.isEmpty) null
         else
           new ju.ArrayList(
-            List(
-              s"${NamespaceJson.profilesPrefix}${activeProfiles.toList.sorted.mkString(",")}"
-            ).asJava
+            List("-P", activeProfiles.toList.sorted.mkString(",")).asJava
           )
       },
     )
@@ -361,9 +359,7 @@ private[maven] case class DepModuleEntry(
     sources: String,
 )
 
-private[maven] object NamespaceJson {
-  val profilesPrefix = "profiles="
-}
+private[maven] object NamespaceJson
 
 private[maven] case class NamespaceJson(
     sources: ju.List[String],
