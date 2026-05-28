@@ -13,7 +13,8 @@ case class MbtNamespace(
     @Nullable scalaVersion: String,
     @Nullable javaHome: String,
     @Nullable dependsOn: ju.List[String] = null,
-    @Nullable classDirectory: String = null,
+    @Nullable classDirectories: ju.List[String] = null,
+    @Nullable projectPath: String = null,
     @Nullable configurations: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =

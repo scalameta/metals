@@ -10,9 +10,13 @@ import scala.util.Properties
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtDebugLauncher
+import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
+import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.ScalaMainClass
 import coursier.MavenRepository
 import coursier.Repositories
 import coursier.Repository
@@ -26,7 +30,8 @@ case class GradleBuildTool(
     extends GradleMbtImporter(projectRoot)
     with BuildTool
     with BloopInstallProvider
-    with VersionRecommendation {
+    with VersionRecommendation
+    with MbtDebugLauncher {
 
   private val initScriptName = "init-script.gradle"
   private val gradleBloopVersion = BuildInfo.gradleBloopVersion
@@ -96,16 +101,7 @@ case class GradleBuildTool(
       }
     }
 
-    userConfig().gradleScript match {
-      case Some(script) =>
-        script :: cmd
-      case None =>
-        val projectGradle = projectGradleLauncher
-        if (projectGradle.isFile)
-          projectGradle.toString() :: cmd
-        else
-          embeddedGradleLauncher.toString() :: cmd
-    }
+    gradleBaseCommand() ::: cmd
   }
 
   // @tgodzik This is the wrapper version we specify it as such,
@@ -119,11 +115,136 @@ case class GradleBuildTool(
 
   override def toString: String = "Gradle"
 
-  def executableName = GradleBuildTool.name
+  override def executableName = GradleBuildTool.name
+
+  override def mbtCompileCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+  ): List[String] =
+    gradleBaseCommand() ::: List(
+      "--console=plain",
+      gradleTask(target, "classes"),
+    )
+
+  override def mbtRunCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+  ): List[String] =
+    gradleRunCommand(target, mainClass, debugAgentFlag = None)
+
+  override def mbtDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: String,
+  ): List[String] =
+    gradleRunCommand(target, mainClass, Some(debugAgentFlag))
+
+  private def gradleBaseCommand(): List[String] =
+    userConfig().gradleScript match {
+      case Some(script) => List(script)
+      case None =>
+        val projectGradle = projectGradleLauncher
+        if (projectGradle.isFile) List(projectGradle.toString())
+        else List(embeddedGradleLauncher.toString())
+    }
+
+  private def gradleTask(target: MbtTarget, task: String): String =
+    target.projectPath match {
+      case Some(":") | Some("") | None => task
+      case Some(path) if path.endsWith(":") => s"$path$task"
+      case Some(path) => s"$path:$task"
+    }
+
+  private def gradleRunCommand(
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    gradleBaseCommand() ::: List(
+      "--console=plain",
+      "-q",
+      "--init-script",
+      gradleRunInitScript(target, mainClass, debugAgentFlag).toString,
+      gradleTask(target, GradleBuildTool.metalsRunTask),
+    )
+  }
+
+  private def gradleRunInitScript(
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): Path = {
+    val jvmOptions =
+      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
+        mainClass.getJvmOptions
+      )
+    val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+    val projectBlock = target.projectPath match {
+      case Some(path) =>
+        val gradlePath =
+          if (path == ":" || path.isEmpty) ":"
+          else if (path.startsWith(":")) path
+          else s":$path"
+
+        val projectLookup =
+          if (gradlePath == ":") "gradle.rootProject"
+          else
+            s"gradle.rootProject.findProject(${GradleBuildTool.groovyString(gradlePath)})"
+
+        s"""|  def project = $projectLookup
+            |  if (project == null) {
+            |    throw new GradleException("Could not find Gradle project ${GradleBuildTool.groovyString(gradlePath)}")
+            |  }
+            |  def sourceSets = project.extensions.findByName('sourceSets')
+            |  def main = sourceSets?.findByName('main')
+            |  if (main == null) {
+            |    throw new GradleException("Project ${GradleBuildTool.groovyString(gradlePath)} does not have a main source set")
+            |  }
+            |  project.tasks.register('${GradleBuildTool.metalsRunTask}', JavaExec) { task ->
+            |    task.group = 'metals'
+            |    task.classpath = main.runtimeClasspath
+            |    if (task.hasProperty('mainClass')) {
+            |      task.mainClass.set(${GradleBuildTool.groovyString(mainClass.getClassName)})
+            |    } else {
+            |      task.main = ${GradleBuildTool.groovyString(mainClass.getClassName)}
+            |    }
+            |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+            |    task.args(${GradleBuildTool.groovyList(args)})
+            |  }""".stripMargin
+      case None =>
+        s"""|  throw new GradleException("Missing Gradle project path for Metals run/debug")
+            |""".stripMargin
+    }
+    val script =
+      s"""|gradle.projectsEvaluated {
+          |$projectBlock
+          |}
+          |""".stripMargin
+
+    val digest = MD5.compute(script)
+    Files.write(
+      tempDir.resolve(s"${GradleBuildTool.metalsRunTask}-$digest.gradle"),
+      script.getBytes(StandardCharsets.UTF_8),
+    )
+  }
 }
 
 object GradleBuildTool {
   def name = "gradle"
+
+  private val metalsRunTask = "__metalsRun"
+
+  private def groovyList(values: List[String]): String =
+    values.map(groovyString).mkString("[", ", ", "]")
+
+  private def groovyString(value: String): String =
+    "'" + value
+      .replace("\\", "\\\\")
+      .replace("'", "\\'")
+      .replace("\n", "\\n")
+      .replace("\r", "\\r") + "'"
 
   def isGradleRelatedPath(
       workspace: AbsolutePath,

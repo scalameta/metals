@@ -33,6 +33,7 @@ class MavenBuildToolSuite extends BaseSuite {
       name: String,
       classDirectory: String,
       configurations: Seq[String] = Nil,
+      projectDir: Option[AbsolutePath] = None,
   ): MbtTarget =
     MbtTarget(
       name = name,
@@ -42,7 +43,8 @@ class MavenBuildToolSuite extends BaseSuite {
       scalacOptions = Nil,
       javacOptions = Nil,
       dependencyModules = Nil,
-      classDirectory = Some(classDirectory),
+      classDirectories = Seq(classDirectory),
+      projectPath = projectDir.map(_.toString),
       configurations = configurations,
     )
 
@@ -98,7 +100,11 @@ class MavenBuildToolSuite extends BaseSuite {
     assertEquals(
       mavenBuildTool(workspace).mbtDebugCommand(
         workspace,
-        mbtTarget("com.example:app:1.0.0", "app/target/classes"),
+        mbtTarget(
+          "com.example:app:1.0.0",
+          "app/target/classes",
+          projectDir = Some(workspace.resolve("app")),
+        ),
         mainClass,
         "debug-agent",
       ),

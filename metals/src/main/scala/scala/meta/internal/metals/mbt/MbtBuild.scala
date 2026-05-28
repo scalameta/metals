@@ -105,7 +105,10 @@ case class MbtBuild(
           scalaVersion = Option(namespace.scalaVersion),
           javaHome = Option(namespace.javaHome),
           dependsOn = dependsOnIds,
-          classDirectory = Option(namespace.classDirectory),
+          classDirectories = Option(namespace.classDirectories)
+            .map(_.asScala.toSeq)
+            .getOrElse(Nil),
+          projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
         )
       }
@@ -141,7 +144,10 @@ case class MbtBuild(
 object MbtBuild {
   private val gson = new com.google.gson.Gson()
   private val gsonPretty =
-    new com.google.gson.GsonBuilder().setPrettyPrinting().create()
+    new com.google.gson.GsonBuilder()
+      .setPrettyPrinting()
+      .disableHtmlEscaping()
+      .create()
   val LegacyTargetName = "default"
 
   def toJson(build: MbtBuild): String = gsonPretty.toJson(build)

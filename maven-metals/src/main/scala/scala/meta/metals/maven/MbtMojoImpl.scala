@@ -201,18 +201,21 @@ object MbtMojoImpl {
         reactorByCoords,
         mojo,
       ).asJava,
-      classDirectory = {
+      classDirectories = {
         val dir =
           if (isTest) project.getBuild.getTestOutputDirectory
           else project.getBuild.getOutputDirectory
-        if (dir == null || dir.isEmpty) null else dir
+        if (dir == null || dir.isEmpty) null
+        else ju.List.of(dir)
       },
-      configurations =
+      projectPath = project.getBasedir.getAbsolutePath,
+      configurations = {
         if (activeProfiles.isEmpty) null
         else
           new ju.ArrayList(
             List("-P", activeProfiles.toList.sorted.mkString(",")).asJava
-          ),
+          )
+      },
     )
   }
 
@@ -356,6 +359,8 @@ private[maven] case class DepModuleEntry(
     sources: String,
 )
 
+private[maven] object NamespaceJson
+
 private[maven] case class NamespaceJson(
     sources: ju.List[String],
     scalacOptions: ju.List[String],
@@ -364,6 +369,7 @@ private[maven] case class NamespaceJson(
     scalaVersion: String,
     javaHome: String,
     dependsOn: ju.List[String],
-    classDirectory: String,
+    classDirectories: ju.List[String],
+    projectPath: String,
     configurations: ju.List[String],
 )
