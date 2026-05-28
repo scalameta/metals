@@ -594,6 +594,7 @@ lazy val `semanticdb-javac` = project
 
 lazy val `mtags-java` = project
   .settings(
+    crossScalaVersions := Seq(V.scala213),
     libraryDependencies ++= pprintDebuggingDependency,
     Compile / javaOptions ++= toolchainJavaOptions,
     Compile / javacOptions ++= toolchainJavaOptions,
