@@ -74,8 +74,7 @@ class GradleBuildToolSuite extends BaseSuite {
     val script =
       Files.readString(Paths.get(command(command.indexOf("--init-script") + 1)))
     assert(script.contains("project.tasks.register('__metalsRun', JavaExec)"))
-    assert(script.contains("project.sourceSets.main.output"))
-    assert(script.contains("project.sourceSets.main.runtimeClasspath"))
+    assert(script.contains("main.runtimeClasspath"))
     assert(script.contains("task.mainClass.set('a.Main')"))
     assert(script.contains("task.jvmArgs(['-Dproperty=Foo'])"))
     assert(script.contains("task.args(['Bar'])"))

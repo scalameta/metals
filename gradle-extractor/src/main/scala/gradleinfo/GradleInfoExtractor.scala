@@ -1,9 +1,11 @@
 package gradleinfo
 
 import java.io.File
+import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.jdk.CollectionConverters._
+import scala.util.control.NonFatal
 
 import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ModelBuilder
@@ -15,6 +17,7 @@ import org.gradle.tooling.model.idea.IdeaModule
 import org.gradle.tooling.model.idea.IdeaModuleDependency
 import org.gradle.tooling.model.idea.IdeaProject
 import org.gradle.tooling.model.idea.IdeaSingleEntryLibraryDependency
+import upickle.default.read
 
 /** Configuration for a single extraction run. */
 final case class ExtractorConfig(
@@ -50,10 +53,28 @@ object GradleInfoExtractor {
     val connection: ProjectConnection = connector.connect()
     try {
       val env = fetchModel(connection, classOf[BuildEnvironment], config)
-      val idea = fetchModel(connection, classOf[IdeaProject], config)
+
+      val sourceSetsOutputFile =
+        Files.createTempFile("metals-sourcesets", ".json")
+      val initScriptFile = writeSourceSetsInitScript(sourceSetsOutputFile)
+      val (idea, sourceSetsMap) =
+        try {
+          val ideaModel = fetchModel(
+            connection,
+            classOf[IdeaProject],
+            config,
+            extraArgs = List("--init-script", initScriptFile.toString),
+          )
+          val map = readSourceSetsMap(sourceSetsOutputFile)
+          (ideaModel, map)
+        } finally {
+          Files.deleteIfExists(initScriptFile)
+          Files.deleteIfExists(sourceSetsOutputFile)
+        }
 
       val modules: Seq[ModuleReport] =
-        idea.getModules.asScala.toSeq.map(extractModule(_, config))
+        idea.getModules.asScala.toSeq
+          .map(extractModule(_, config, sourceSetsMap))
 
       ProjectReport(
         rootName = idea.getName,
@@ -65,6 +86,38 @@ object GradleInfoExtractor {
     } finally connection.close()
   }
 
+  private def writeSourceSetsInitScript(outputFile: Path): Path = {
+    val escapedPath =
+      outputFile.toString.replace("\\", "\\\\").replace("'", "\\'")
+    val script =
+      s"""|gradle.projectsEvaluated {
+          |  def result = [:]
+          |  gradle.rootProject.allprojects { project ->
+          |    def sourceSets = project.extensions.findByName('sourceSets')
+          |    if (sourceSets != null) {
+          |      def main = sourceSets.findByName('main')
+          |      if (main != null) {
+          |        result[project.path] = main.output.classesDirs.files.collect { it.absolutePath }
+          |      }
+          |    }
+          |  }
+          |  new File('$escapedPath').text = groovy.json.JsonOutput.toJson(result)
+          |}
+          |""".stripMargin
+    val initFile = Files.createTempFile("metals-sourcesets-init", ".gradle")
+    Files.writeString(initFile, script)
+    initFile
+  }
+
+  private def readSourceSetsMap(outputFile: Path): Map[String, List[String]] =
+    try {
+      if (Files.exists(outputFile) && Files.size(outputFile) > 0)
+        read[Map[String, List[String]]](Files.readString(outputFile))
+      else Map.empty
+    } catch {
+      case NonFatal(_) => Map.empty
+    }
+
   /**
    * Build a model with all per-operation Tooling API settings applied
    * (currently just the optional Java home for the daemon).
@@ -73,15 +126,18 @@ object GradleInfoExtractor {
       connection: ProjectConnection,
       modelType: Class[T],
       config: ExtractorConfig,
+      extraArgs: List[String] = Nil,
   ): T = {
     val builder: ModelBuilder[T] = connection.model(modelType)
     config.gradleJvm.foreach(builder.setJavaHome)
+    if (extraArgs.nonEmpty) builder.withArguments(extraArgs: _*)
     builder.get()
   }
 
   private def extractModule(
       m: IdeaModule,
       config: ExtractorConfig,
+      sourceSetsMap: Map[String, List[String]],
   ): ModuleReport = {
     val gradleProject = m.getGradleProject
     val projectPath = Option(gradleProject).map(_.getPath).getOrElse(":")
@@ -126,11 +182,17 @@ object GradleInfoExtractor {
     val javaTarget = javaSettings
       .flatMap(s => Option(s.getTargetBytecodeVersion))
       .map(_.toString)
-    val classDirectory =
-      Option(m.getCompilerOutput)
-        .flatMap(output => Option(output.getOutputDir))
-        .map(_.toPath)
-        .map(relativize)
+    val classDirectories: Seq[String] =
+      sourceSetsMap.get(projectPath) match {
+        case Some(dirs) if dirs.nonEmpty =>
+          dirs.map(d => relativize(java.nio.file.Paths.get(d)))
+        case _ =>
+          val ideaDir =
+            Option(m.getCompilerOutput)
+              .flatMap(output => Option(output.getOutputDir))
+              .map(_.toPath)
+          ideaDir.map(relativize).toSeq
+      }
 
     val (externalDeps, projectDeps) = classifyDependencies(m)
 
@@ -142,7 +204,7 @@ object GradleInfoExtractor {
         Option(gradleProject).flatMap(p => Option(p.getDescription)),
       javaSourceLevel = javaSource,
       javaTargetLevel = javaTarget,
-      classDirectory = classDirectory,
+      classDirectories = classDirectories,
       sourceDirectories = sourceDirs,
       testSourceDirectories = testSourceDirs,
       externalDependencies =

@@ -100,7 +100,7 @@ case class MavenBuildTool(
     }
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
-    ) ::: target.configurations.toList ::: List(
+    ) ::: mavenCliConfigurations(target) ::: List(
       "-pl",
       s":$artifactId",
       "--also-make",
@@ -134,8 +134,7 @@ case class MavenBuildTool(
       debugAgentFlag: Option[String],
   ): List[String] = {
     val moduleArgs =
-      target
-        .mavenModuleDirectory(workspace)
+      mavenModuleDirectory(target)
         .map(_.resolve("pom.xml"))
         .filter(_.isFile) match {
         case Some(pom) =>
@@ -152,16 +151,36 @@ case class MavenBuildTool(
       s"$jvmOpts -classpath %classpath ${mainClass.getClassName} $appArgs".trim
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
-    ) ::: target.configurations.toList ::: moduleArgs ::: List(
+    ) ::: mavenCliConfigurations(target) ::: moduleArgs ::: List(
       "exec:exec",
       "-Dexec.executable=java",
       s"-Dexec.args=$execArgs",
     )
   }
+
+  private def mavenModuleDirectory(target: MbtTarget): Option[AbsolutePath] =
+    target.configurations
+      .find(_.startsWith(MavenBuildTool.projectDirPrefix))
+      .map(c =>
+        AbsolutePath(
+          java.nio.file.Paths
+            .get(c.substring(MavenBuildTool.projectDirPrefix.length))
+        )
+      )
+
+  private def mavenCliConfigurations(target: MbtTarget): List[String] =
+    target.configurations.toList.flatMap {
+      case p if p.startsWith(MavenBuildTool.profilesPrefix) =>
+        List("-P", p.substring(MavenBuildTool.profilesPrefix.length))
+      case _ => Nil
+    }
 }
 
 object MavenBuildTool {
   def name = "mvn"
+
+  val projectDirPrefix = "projectDir="
+  val profilesPrefix = "profiles="
 
   def isMavenRelatedPath(
       workspace: AbsolutePath,

@@ -42,7 +42,7 @@ final case class ModuleReport(
     description: Option[String],
     javaSourceLevel: Option[String],
     javaTargetLevel: Option[String],
-    classDirectory: Option[String],
+    classDirectories: Seq[String],
     sourceDirectories: Seq[String],
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
@@ -89,7 +89,7 @@ final case class ProjectReport(
         scalaVersion = null,
         javaHome = javaHome,
         dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
-        classDirectory = m.classDirectory.orNull,
+        classDirectories = m.classDirectories,
         configurations =
           Seq(s"${MbtNamespaceJson.projectPathPrefix}${m.projectPath}"),
       )
@@ -123,7 +123,7 @@ final case class MbtNamespaceJson(
     scalaVersion: String,
     javaHome: String,
     dependsOn: Seq[String],
-    classDirectory: String,
+    classDirectories: Seq[String],
     configurations: Seq[String],
 )
 

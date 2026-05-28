@@ -126,6 +126,10 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
             |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "classDirectories": [
+            |        "build/classes/java/main",
+            |        "build/classes/scala/main"
+            |      ],
             |      "configurations": [
             |        "projectPath=:"
             |      ]
@@ -236,6 +240,9 @@ class GradleMbtLspSuite
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
             |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "classDirectories": [
+            |        "build/classes/java/main"
+            |      ],
             |      "configurations": [
             |        "projectPath=:"
             |      ]

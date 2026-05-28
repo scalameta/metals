@@ -166,12 +166,13 @@ case class GradleBuildTool(
       "--console=plain",
       "-q",
       "--init-script",
-      gradleRunInitScript(mainClass, debugAgentFlag).toString,
+      gradleRunInitScript(target, mainClass, debugAgentFlag).toString,
       gradleTask(target, GradleBuildTool.metalsRunTask),
     )
   }
 
   private def gradleRunInitScript(
+      target: MbtTarget,
       mainClass: ScalaMainClass,
       debugAgentFlag: Option[String],
   ): Path = {
@@ -180,26 +181,46 @@ case class GradleBuildTool(
         mainClass.getJvmOptions
       )
     val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+    val projectPath = GradleBuildTool.gradleProjectPath(target)
+    val projectBlock = projectPath match {
+      case Some(path) =>
+        val gradlePath =
+          if (path == ":" || path.isEmpty) ":"
+          else if (path.startsWith(":")) path
+          else s":$path"
+
+        val projectLookup =
+          if (gradlePath == ":") "gradle.rootProject"
+          else
+            s"gradle.rootProject.findProject(${GradleBuildTool.groovyString(gradlePath)})"
+
+        s"""|  def project = $projectLookup
+            |  if (project == null) {
+            |    throw new GradleException("Could not find Gradle project ${GradleBuildTool.groovyString(gradlePath)}")
+            |  }
+            |  def sourceSets = project.extensions.findByName('sourceSets')
+            |  def main = sourceSets?.findByName('main')
+            |  if (main == null) {
+            |    throw new GradleException("Project ${GradleBuildTool.groovyString(gradlePath)} does not have a main source set")
+            |  }
+            |  project.tasks.register('${GradleBuildTool.metalsRunTask}', JavaExec) { task ->
+            |    task.group = 'metals'
+            |    task.classpath = main.runtimeClasspath
+            |    if (task.hasProperty('mainClass')) {
+            |      task.mainClass.set(${GradleBuildTool.groovyString(mainClass.getClassName)})
+            |    } else {
+            |      task.main = ${GradleBuildTool.groovyString(mainClass.getClassName)}
+            |    }
+            |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+            |    task.args(${GradleBuildTool.groovyList(args)})
+            |  }""".stripMargin
+      case None =>
+        s"""|  throw new GradleException("Missing Gradle project path for Metals run/debug")
+            |""".stripMargin
+    }
     val script =
       s"""|gradle.projectsEvaluated {
-          |  allprojects { project ->
-          |    if (project.extensions.findByName('sourceSets') != null) {
-          |      project.tasks.register('${GradleBuildTool.metalsRunTask}', JavaExec) { task ->
-          |        task.group = 'metals'
-          |        task.classpath = project.files(
-          |          project.sourceSets.main.output,
-          |          project.sourceSets.main.runtimeClasspath
-          |        )
-          |        if (task.hasProperty('mainClass')) {
-          |          task.mainClass.set(${GradleBuildTool.groovyString(mainClass.getClassName)})
-          |        } else {
-          |          task.main = ${GradleBuildTool.groovyString(mainClass.getClassName)}
-          |        }
-          |        task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
-          |        task.args(${GradleBuildTool.groovyList(args)})
-          |      }
-          |    }
-          |  }
+          |$projectBlock
           |}
           |""".stripMargin
 

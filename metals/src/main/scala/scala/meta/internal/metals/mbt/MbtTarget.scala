@@ -26,7 +26,7 @@ case class MbtTarget(
     scalaVersion: Option[String] = None,
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
-    classDirectory: Option[String] = None,
+    classDirectories: Seq[String] = Nil,
     configurations: Seq[String] = Nil,
 ) {
 
@@ -131,24 +131,11 @@ case class MbtTarget(
   def runClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
-  ): List[AbsolutePath] = {
-    classDirectory.map(resolveClassDir(workspace, _)) match {
-      case Some(dir) => List(dir)
-      case None =>
-        MbtTarget.conventionalClassDirectories(workspace, buildToolName)
-    }
-  }
-
-  def mavenModuleDirectory(workspace: AbsolutePath): Option[AbsolutePath] =
-    classDirectory
-      .map(resolveClassDir(workspace, _))
-      .flatMap { output =>
-        Iterator
-          .iterate(output.parent)(_.parent)
-          .takeWhile(p => p != workspace && p.toNIO.startsWith(workspace.toNIO))
-          .filterNot(dir => dir.filename == "target" || dir.filename == "build")
-          .find(dir => dir.resolve("pom.xml").isFile)
-      }
+  ): List[AbsolutePath] =
+    if (classDirectories.nonEmpty)
+      classDirectories.map(resolveClassDir(workspace, _)).toList
+    else
+      MbtTarget.conventionalClassDirectories(workspace, buildToolName)
 
   private def resolveClassDir(
       workspace: AbsolutePath,

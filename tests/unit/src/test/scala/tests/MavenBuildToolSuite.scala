@@ -5,6 +5,8 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.builds.MavenBuildTool
+import scala.meta.internal.builds.MavenBuildTool.profilesPrefix
+import scala.meta.internal.builds.MavenBuildTool.projectDirPrefix
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -33,6 +35,7 @@ class MavenBuildToolSuite extends BaseSuite {
       name: String,
       classDirectory: String,
       configurations: Seq[String] = Nil,
+      projectDir: Option[AbsolutePath] = None,
   ): MbtTarget =
     MbtTarget(
       name = name,
@@ -42,8 +45,9 @@ class MavenBuildToolSuite extends BaseSuite {
       scalacOptions = Nil,
       javacOptions = Nil,
       dependencyModules = Nil,
-      classDirectory = Some(classDirectory),
-      configurations = configurations,
+      classDirectories = Seq(classDirectory),
+      configurations =
+        configurations ++ projectDir.map(d => s"${projectDirPrefix}$d"),
     )
 
   test("maven-mbt-compile-command") {
@@ -51,7 +55,7 @@ class MavenBuildToolSuite extends BaseSuite {
     val target = mbtTarget(
       "com.example:app:1.0.0",
       "target/classes",
-      configurations = Seq("-P", "dev,ci"),
+      configurations = Seq(s"${profilesPrefix}dev,ci"),
     )
 
     assertEquals(
@@ -98,7 +102,11 @@ class MavenBuildToolSuite extends BaseSuite {
     assertEquals(
       mavenBuildTool(workspace).mbtDebugCommand(
         workspace,
-        mbtTarget("com.example:app:1.0.0", "app/target/classes"),
+        mbtTarget(
+          "com.example:app:1.0.0",
+          "app/target/classes",
+          projectDir = Some(workspace.resolve("app")),
+        ),
         mainClass,
         "debug-agent",
       ),
