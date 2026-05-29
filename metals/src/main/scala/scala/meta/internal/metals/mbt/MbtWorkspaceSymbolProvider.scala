@@ -31,6 +31,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
@@ -542,6 +543,105 @@ class MbtWorkspaceSymbolProvider(
    */
   def findProtoRpcDefinition(methodSymbol: String): List[l.Location] = {
     protobufWorkspace.findProtoRpcDefinition(methodSymbol, documents)
+  }
+
+  /**
+   * Holds candidate main class information extracted from the MBT index.
+   * This is used for lazy main class discovery without loading semanticdb.
+   *
+   * @param path The file path containing the potential main class
+   * @param candidateSymbol The symbol that suggests this might be a main class.
+   *                        For Java/Scala main methods, this is the class symbol (e.g., "com/example/Main#").
+   *                        For @main annotated methods, this is the method symbol.
+   *                        For App extending classes, this is the class symbol.
+   */
+  case class MbtMainClassCandidate(
+      path: AbsolutePath,
+      candidateSymbol: String,
+  )
+
+  /**
+   * Extracts potential main class candidates from the MBT index without loading semanticdb.
+   * Returns candidates that need to be confirmed via semanticdb before use.
+   *
+   * Candidates are identified by:
+   * 1. Symbols ending in "#main()." or ".main()." (Java/Scala main methods)
+   * 2. Files referencing "scala/main#" (@main annotation)
+   * 3. Files referencing "scala/App#" (App trait extension)
+   */
+  def candidateMainClasses(
+      filterPath: AbsolutePath => Boolean
+  ): Seq[MbtMainClassCandidate] = {
+    val candidates =
+      scala.collection.mutable.ArrayBuffer.empty[MbtMainClassCandidate]
+    val javaMain = "#main()."
+    val scalaMain = ".main()."
+    val mainAnnotRef = FingerprintedCharSequence.fuzzyReference("scala/main#")
+    val appRef = FingerprintedCharSequence.fuzzyReference("scala/App#")
+    val pathsFromMainSymbols =
+      queryWorkspaceSymbol("main")
+        .flatMap(info => Option(info.getLocation()))
+        .map(_.getUri.toAbsolutePath)
+    val pathsFromReferences =
+      possibleReferences(
+        MbtPossibleReferencesParams(
+          references = Seq(mainAnnotRef.value.toString, appRef.value.toString)
+        )
+      )
+    for {
+      path <- pathsFromMainSymbols.distinct
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+
+      // Check for main method symbols in the document
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        // Java main method pattern: com/example/Main#main().
+        if (symbol.endsWith(javaMain)) {
+          val classSymbol = symbol.stripSuffix("main().")
+          candidates += MbtMainClassCandidate(path, classSymbol)
+        }
+        // Scala main method pattern: com/example/Main.main().
+        else if (symbol.endsWith(scalaMain)) {
+          val objectSymbol = symbol.stripSuffix("main().")
+          candidates += MbtMainClassCandidate(path, objectSymbol)
+        }
+      }
+    }
+
+    for {
+      path <- pathsFromReferences
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+      // Check bloom filter for @main annotation reference
+      if (doc.bloomFilter.mightContain(mainAnnotRef)) {
+        // For @main annotated methods, we need to find method symbols
+        // that could be annotated. We'll add all method symbols as candidates.
+        for (symbolInfo <- doc.symbols) {
+          val symbol = symbolInfo.getSymbol()
+          val kind = symbolInfo.getKind()
+          // Methods that could have @main annotation
+          if (kind == Semanticdb.SymbolInformation.Kind.METHOD) {
+            candidates += MbtMainClassCandidate(path, symbol)
+          }
+        }
+      }
+      // For App extension, we add class/object symbols as candidates
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        val kind = symbolInfo.getKind()
+        if (
+          kind == Semanticdb.SymbolInformation.Kind.OBJECT &&
+          Symbol(symbol).isToplevel
+        ) {
+          candidates += MbtMainClassCandidate(path, symbol)
+        }
+
+      }
+    }
+    candidates.toSeq
   }
 
   def possibleReferences(

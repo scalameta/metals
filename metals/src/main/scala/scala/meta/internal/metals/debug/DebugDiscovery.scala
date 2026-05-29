@@ -187,17 +187,22 @@ class DebugDiscovery(
       path: AbsolutePath,
       position: Position,
   ): Future[b.DebugSessionParams] = {
-    val semanticDocOpt =
-      semanticdbs()
-        .textDocument(path)
-        .documentIncludingStale
+    // First confirm any candidate main classes for this file
+    buildTargetClasses
+      .confirmMbtMainClassCandidates(path, buildTarget)
+      .flatMap { _ =>
+        val semanticDocOpt =
+          semanticdbs()
+            .textDocument(path)
+            .documentIncludingStale
 
-    semanticDocOpt match {
-      case Some(textDocument) =>
-        findClosestRunnableTarget(textDocument, buildTarget, path, position)
-      case None =>
-        Future.failed(SemanticDbNotFoundException)
-    }
+        semanticDocOpt match {
+          case Some(textDocument) =>
+            findClosestRunnableTarget(textDocument, buildTarget, path, position)
+          case None =>
+            Future.failed(SemanticDbNotFoundException)
+        }
+      }
   }
 
   sealed trait Distance
@@ -444,12 +449,29 @@ class DebugDiscovery(
       params: DebugDiscoveryParams,
       classes: List[(b.BuildTargetIdentifier, b.ScalaMainClass)],
   ): Future[b.DebugSessionParams] = {
-    val targetToMainClasses =
-      classes.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
-    findMainToRun(
-      targetToMainClasses,
-      params,
-    )
+    // Get the target IDs from the classes list
+    val targetIds = classes.map(_._1).distinct
+
+    // Confirm candidate main classes for the specific targets, filtered by class name if provided
+    buildTargetClasses
+      .confirmMbtMainClassCandidatesForTargets(
+        targetIds,
+        Option(params.mainClass),
+      )
+      .flatMap { _ =>
+        // Re-fetch the classes after confirmation in case new ones were added
+        val updatedClasses = targetIds.flatMap { targetId =>
+          mainClasses(targetId).values.map(mc => (targetId, mc))
+        }
+        val finalClasses =
+          if (updatedClasses.nonEmpty) updatedClasses else classes
+        val targetToMainClasses =
+          finalClasses.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+        findMainToRun(
+          targetToMainClasses,
+          params,
+        )
+      }
   }
 
   private def testFile(
@@ -504,28 +526,33 @@ class DebugDiscovery(
       params: DebugDiscoveryParams,
       path: AbsolutePath,
   ): Future[b.DebugSessionParams] = {
-    semanticdbs()
-      .textDocument(path)
-      .documentIncludingStale
-      .fold[Future[b.DebugSessionParams]] {
-        Future.failed(SemanticDbNotFoundException)
-      } { textDocument =>
-        val classes = buildTargetClasses.classesOf(buildTarget)
-        lazy val tests = for {
-          symbolInfo <- textDocument.symbols
-          symbol = symbolInfo.symbol
-          testSymbolInfo <- classes.testClasses.get(symbol)
-        } yield testSymbolInfo.fullyQualifiedName
-        val mainWithFallback = findMainClasses(textDocument, classes)
-        if (mainWithFallback.nonEmpty) {
-          findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
-        } else if (tests.nonEmpty) {
-          val suiteSelections =
-            tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
-          createScalaTestSuites(buildTarget, suiteSelections, params)
-        } else {
-          Future.failed(NoRunOptionException)
-        }
+    // First confirm any candidate main classes for this file
+    buildTargetClasses
+      .confirmMbtMainClassCandidates(path, buildTarget)
+      .flatMap { _ =>
+        semanticdbs()
+          .textDocument(path)
+          .documentIncludingStale
+          .fold[Future[b.DebugSessionParams]] {
+            Future.failed(SemanticDbNotFoundException)
+          } { textDocument =>
+            val classes = buildTargetClasses.classesOf(buildTarget)
+            lazy val tests = for {
+              symbolInfo <- textDocument.symbols
+              symbol = symbolInfo.symbol
+              testSymbolInfo <- classes.testClasses.get(symbol)
+            } yield testSymbolInfo.fullyQualifiedName
+            val mainWithFallback = findMainClasses(textDocument, classes)
+            if (mainWithFallback.nonEmpty) {
+              findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
+            } else if (tests.nonEmpty) {
+              val suiteSelections =
+                tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
+              createScalaTestSuites(buildTarget, suiteSelections, params)
+            } else {
+              Future.failed(NoRunOptionException)
+            }
+          }
       }
   }
 
