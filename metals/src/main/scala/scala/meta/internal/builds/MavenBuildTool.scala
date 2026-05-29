@@ -50,20 +50,7 @@ case class MavenBuildTool(
   }
 
   override def mavenBaseCommand(): List[String] =
-    userConfig().mavenScript match {
-      case Some(script) => List(script)
-      case None =>
-        writeProperties()
-        List(
-          JavaBinary(userConfig().javaHome),
-          "-Dfile.encoding=UTF-8",
-          s"-Dmaven.multiModuleProjectDirectory=$projectRoot",
-          s"-Dmaven.home=$tempDir",
-          "-cp",
-          embeddedMavenLauncher.toString(),
-          "org.apache.maven.wrapper.MavenWrapperMain",
-        )
-    }
+    mbtMavenBaseCommand(projectRoot)
 
   override def isBuildRelated(path: AbsolutePath): Boolean =
     MavenBuildTool.isMavenRelatedPath(projectRoot, path)
@@ -88,7 +75,21 @@ case class MavenBuildTool(
 
   private def mbtMavenBaseCommand(workspace: AbsolutePath): List[String] =
     if (hasMvnw(workspace)) List(s"./$mvnwName")
-    else mavenBaseCommand()
+    else
+      userConfig().mavenScript match {
+        case Some(script) => List(script)
+        case None =>
+          writeProperties()
+          List(
+            JavaBinary(userConfig().javaHome),
+            "-Dfile.encoding=UTF-8",
+            s"-Dmaven.multiModuleProjectDirectory=$projectRoot",
+            s"-Dmaven.home=$tempDir",
+            "-cp",
+            embeddedMavenLauncher.toString(),
+            "org.apache.maven.wrapper.MavenWrapperMain",
+          )
+      }
 
   override def mbtCompileCommand(
       workspace: AbsolutePath,
