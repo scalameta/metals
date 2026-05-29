@@ -88,10 +88,6 @@ case class MavenBuildTool(
   private def hasMvnw(workspace: AbsolutePath): Boolean =
     Files.isRegularFile(workspace.resolve(mvnwName).toNIO)
 
-  /* -------------------------------------------------------------
-   * MBT specific commands, invoke Maven directly
-   * -------------------------------------------------------------
-   */
   private def mbtMavenBaseCommand(workspace: AbsolutePath): List[String] =
     if (hasMvnw(workspace)) List(s"./$mvnwName")
     else mavenBaseCommand()
@@ -192,7 +188,6 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
   ): List[String] = {
-    // Fallback: use mbtTestDebugCommandWithPort with port 0 (will be replaced)
     mbtTestDebugCommandWithPort(workspace, target, testSuites)(5005)
   }
 

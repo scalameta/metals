@@ -27,7 +27,6 @@ case class MbtTarget(
     javaHome: Option[String] = None,
     dependsOn: Seq[bsp4j.BuildTargetIdentifier] = Nil,
     classDirectories: Seq[String] = Nil,
-    testClassDirectory: Seq[String] = Nil,
     projectPath: Option[String] = None,
     configurations: Seq[String] = Nil,
 ) {
@@ -45,6 +44,10 @@ case class MbtTarget(
 
   private def baseDirectory(workspace: AbsolutePath): AbsolutePath =
     workspace
+
+  def isTestTarget: Boolean = {
+    name.endsWith(":test")
+  }
 
   def stableSourcePaths(workspace: AbsolutePath): Seq[AbsolutePath] =
     sources.distinct.map(workspace.resolve)
@@ -130,18 +133,13 @@ case class MbtTarget(
       emptyClassDirectory(workspace).toURI.toString(),
     )
 
-  def isTestTarget: Boolean = testClassDirectory.nonEmpty
-
   def runClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
       includeTests: Boolean = false,
   ): List[AbsolutePath] = {
-    val directories =
-      if (includeTests) classDirectories ++ testClassDirectory
-      else classDirectories
-    if (directories.nonEmpty) {
-      directories.distinct.map(resolveClassDir(workspace, _)).toList
+    if (classDirectories.nonEmpty) {
+      classDirectories.distinct.map(resolveClassDir(workspace, _)).toList
     } else
       MbtTarget.conventionalClassDirectories(
         workspace,
@@ -154,9 +152,7 @@ case class MbtTarget(
       workspace: AbsolutePath,
       buildToolName: String,
   ): AbsolutePath = {
-    val primary =
-      if (isTestTarget) testClassDirectory.headOption
-      else classDirectories.headOption
+    val primary = classDirectories.headOption
     primary
       .map(resolveClassDir(workspace, _))
       .getOrElse(

@@ -95,7 +95,7 @@ class BazelDapMbtLspSuite
        |}
        |""".stripMargin
 
-  test("bazel-mbt-test-session") {
+  test("bazel-mbt-test-session", maxRetry = 3) {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
 

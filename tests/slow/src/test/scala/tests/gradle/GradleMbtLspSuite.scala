@@ -114,9 +114,7 @@ class GradleMbtLspSuite
             |    "basic": {
             |      "sources": [
             |        "src/main/java",
-            |        "src/main/scala",
-            |        "src/test/java",
-            |        "src/test/scala"
+            |        "src/main/scala"
             |      ],
             |      "scalacOptions": [],
             |      "javacOptions": [],
@@ -130,7 +128,25 @@ class GradleMbtLspSuite
             |        "build/classes/java/main",
             |        "build/classes/scala/main"
             |      ],
-            |      "testClassDirectory": [
+            |      "projectPath": ":"
+            |    },
+            |    "basic:test": {
+            |      "sources": [
+            |        "src/test/java",
+            |        "src/test/scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.scala-lang:scala-library:2.13.18",
+            |        "org.typelevel:cats-core_2.13:2.13.0",
+            |        "org.typelevel:cats-kernel_2.13:2.13.0"
+            |      ],
+            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "dependsOn": [
+            |        "basic"
+            |      ],
+            |      "classDirectories": [
             |        "build/classes/java/test",
             |        "build/classes/scala/test"
             |      ],
@@ -233,8 +249,7 @@ class GradleMbtLspSuite
             |  "namespaces": {
             |    "plain-java": {
             |      "sources": [
-            |        "src/main/java",
-            |        "src/test/java"
+            |        "src/main/java"
             |      ],
             |      "scalacOptions": [],
             |      "javacOptions": [],
@@ -243,7 +258,22 @@ class GradleMbtLspSuite
             |      ],
             |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
             |      "classDirectories": ["<classDirectories-path>"],
-            |      "testClassDirectory": ["<testClassDirectories-path>"],
+            |      "projectPath": ":"
+            |    },
+            |    "plain-java:test": {
+            |      "sources": [
+            |        "src/test/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "dependsOn": [
+            |        "plain-java"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
             |      "projectPath": ":"
             |    }
             |  }

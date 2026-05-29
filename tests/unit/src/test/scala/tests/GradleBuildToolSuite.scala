@@ -29,7 +29,6 @@ class GradleBuildToolSuite extends BaseSuite {
       sources: Seq[String] = Seq("src/main/java"),
       gradleProjectPath: String = ":",
       classDirectories: Seq[String] = Nil,
-      testClassDirectory: Seq[String] = Nil,
   ): MbtTarget =
     MbtTarget(
       name = name,
@@ -41,7 +40,6 @@ class GradleBuildToolSuite extends BaseSuite {
       dependencyModules = Nil,
       projectPath = Some(gradleProjectPath),
       classDirectories = classDirectories,
-      testClassDirectory = testClassDirectory,
     )
 
   test("gradle-mbt-compile-command") {
@@ -224,15 +222,13 @@ class GradleBuildToolSuite extends BaseSuite {
       mbtTarget(
         "app",
         classDirectories = Seq("build/classes/java/main"),
-        testClassDirectory = Seq("build/classes/java/test"),
       ).runClassDirectories(
         workspace,
         GradleBuildTool.name,
         includeTests = true,
       ),
       List(
-        workspace.resolve("build/classes/java/main"),
-        workspace.resolve("build/classes/java/test"),
+        workspace.resolve("build/classes/java/main")
       ),
     )
   }
