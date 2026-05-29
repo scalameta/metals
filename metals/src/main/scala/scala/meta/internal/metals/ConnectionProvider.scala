@@ -679,24 +679,26 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        _ <- refreshMbtTurbineClasspath(session).withInterrupt
+        _ = refreshMbtTurbineClasspath(session)
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
       }
     }
 
-    private def refreshMbtTurbineClasspath(
-        session: BspSession
-    ): Future[Unit] =
+    /**
+     * Refreshes only the turbine classpath without recompiling all source files.
+     * This is a lightweight operation that updates the classpath JARs after
+     * build import without the cost of re-parsing all Java files.
+     */
+    private def refreshMbtTurbineClasspath(session: BspSession): Unit = {
       if (
         MbtBuildServer.isMbtServer(session.main.name) &&
         userConfig.javaSymbolLoader.isTurbineClasspath
       ) {
-        mbtSymbolSearch.recompileTurbineClasspath()
-      } else {
-        Future.unit
+        mbtSymbolSearch.refreshTurbineClasspathOnly()
       }
+    }
 
     private def saveProjectReferencesInfo(
         bspBuilds: List[BspSession.BspBuild]

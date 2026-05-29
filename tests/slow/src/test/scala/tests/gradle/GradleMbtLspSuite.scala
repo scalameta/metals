@@ -34,6 +34,8 @@ class GradleMbtLspSuite
       automaticImportBuild = AutoImportBuildKind.All,
     )
 
+  override def initializeGitRepo: Boolean = true
+
   test("basic") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()

@@ -161,6 +161,14 @@ class MbtWorkspaceSymbolProvider(
     turbineCompiler.compileNow().ignoreValue
   }
 
+  /**
+   * Refreshes only the turbine classpath without recompiling all source files.
+   * This is useful after build import when the classpath has changed.
+   */
+  def refreshTurbineClasspathOnly(): Unit = {
+    turbineCompiler.refreshClasspathOnly()
+  }
+
   def close(): Unit = {}
 
   /**

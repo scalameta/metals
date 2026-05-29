@@ -110,10 +110,12 @@ object TurbineCompiler {
     )
     TurbineCompileResult(boundClasspath, lowered)
   }
-  private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
+
+  private[mbt] def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
     classpath.filter(isJarFile)
   }
-  private def isJarFile(path: Path): Boolean = {
+
+  private[mbt] def isJarFile(path: Path): Boolean = {
     Files.isRegularFile(path) &&
     path.getFileName().toString().endsWith(".jar")
   }
@@ -227,6 +229,19 @@ class TurbineCompiler[T](
 
   def compileNow(): Future[TurbineCompileResult] = Future {
     doCompileNow()
+  }
+
+  /**
+   * Refreshes only the classpath without recompiling all source files.
+   * This is useful when the build has been re-imported and the classpath
+   * has changed, but we don't want to pay the cost of re-parsing all Java files.
+   */
+  def refreshClasspathOnly(): Unit = {
+    val boundClasspath =
+      ClassPathBinder.bindClasspath(
+        TurbineCompiler.validClasspaths(classpath()).asJava
+      )
+    result = result.copy(classpath = boundClasspath)
   }
 
   def onDidChange(
