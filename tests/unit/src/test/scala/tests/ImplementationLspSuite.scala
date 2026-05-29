@@ -682,6 +682,7 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
          |com/sun/nio/sctp/IllegalUnbindException#
          |com/sun/nio/sctp/InvalidStreamException#
          |com/sun/org/apache/bcel/internal/classfile/ClassFormatException#
+         |com/sun/org/apache/bcel/internal/classfile/InvalidMethodSignatureException#
          |com/sun/org/apache/bcel/internal/generic/ClassGenException#
          |com/sun/org/apache/bcel/internal/generic/TargetLostException#
          |com/sun/org/apache/xalan/internal/xsltc/TransletException#
@@ -695,7 +696,6 @@ class ImplementationLspSuite extends BaseImplementationSuite("implementation") {
          |com/sun/org/apache/xerces/internal/impl/dv/InvalidDatatypeFacetException#
          |com/sun/org/apache/xerces/internal/impl/dv/InvalidDatatypeValueException#
          |com/sun/org/apache/xerces/internal/impl/dv/xs/SchemaDateTimeException#
-         |com/sun/org/apache/xerces/internal/impl/io/MalformedByteSequenceException#
          |""".stripMargin,
       topLines = Some(50),
     )
