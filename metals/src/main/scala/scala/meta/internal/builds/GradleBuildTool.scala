@@ -179,16 +179,11 @@ case class GradleBuildTool(
     )
   }
 
-  private def gradleRunInitScript(
+  private def gradleInitScript(
       target: MbtTarget,
-      mainClass: ScalaMainClass,
-      debugAgentFlag: Option[String],
-  ): Path = {
-    val jvmOptions =
-      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
-        mainClass.getJvmOptions
-      )
-    val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+      taskName: String,
+      errorContext: String,
+  )(taskCode: String => String): Path = {
     val projectBlock = target.projectPath match {
       case Some(path) =>
         val gradlePath =
@@ -205,7 +200,38 @@ case class GradleBuildTool(
             |  if (project == null) {
             |    throw new GradleException("Could not find Gradle project ${GradleBuildTool.groovyString(gradlePath)}")
             |  }
-            |  def sourceSets = project.extensions.findByName('sourceSets')
+            |${taskCode(gradlePath)}""".stripMargin
+      case None =>
+        s"""|  throw new GradleException("Missing Gradle project path for Metals $errorContext")
+            |""".stripMargin
+    }
+    val script =
+      s"""|gradle.projectsEvaluated {
+          |$projectBlock
+          |}
+          |""".stripMargin
+
+    val digest = MD5.compute(script)
+    Files.write(
+      tempDir.resolve(s"$taskName-$digest.gradle"),
+      script.getBytes(StandardCharsets.UTF_8),
+    )
+  }
+
+  private def gradleRunInitScript(
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): Path = {
+    val jvmOptions =
+      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
+        mainClass.getJvmOptions
+      )
+    val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+
+    gradleInitScript(target, GradleBuildTool.metalsRunTask, "run/debug") {
+      gradlePath =>
+        s"""|  def sourceSets = project.extensions.findByName('sourceSets')
             |  def main = sourceSets?.findByName('main')
             |  if (main == null) {
             |    throw new GradleException("Project ${GradleBuildTool.groovyString(gradlePath)} does not have a main source set")
@@ -221,21 +247,7 @@ case class GradleBuildTool(
             |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
             |    task.args(${GradleBuildTool.groovyList(args)})
             |  }""".stripMargin
-      case None =>
-        s"""|  throw new GradleException("Missing Gradle project path for Metals run/debug")
-            |""".stripMargin
     }
-    val script =
-      s"""|gradle.projectsEvaluated {
-          |$projectBlock
-          |}
-          |""".stripMargin
-
-    val digest = MD5.compute(script)
-    Files.write(
-      tempDir.resolve(s"${GradleBuildTool.metalsRunTask}-$digest.gradle"),
-      script.getBytes(StandardCharsets.UTF_8),
-    )
   }
 
   override def mbtTestCommand(
@@ -276,7 +288,8 @@ case class GradleBuildTool(
       )
     val initScriptArgs =
       if (jvmOptions.isEmpty) Nil
-      else List("--init-script", gradleTestInitScript(jvmOptions).toString)
+      else
+        List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
 
     gradleBaseCommand() ::: List(
       "--console=plain"
@@ -298,23 +311,15 @@ case class GradleBuildTool(
     filters.flatMap(filter => List("--tests", filter))
   }
 
-  private def gradleTestInitScript(jvmOptions: List[String]): Path = {
-    val script =
-      s"""|gradle.projectsEvaluated {
-          |  allprojects { project ->
-          |    project.tasks.withType(Test).configureEach { task ->
-          |      task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
-          |    }
-          |  }
-          |}
-          |""".stripMargin
-
-    val digest = MD5.compute(script)
-    Files.write(
-      tempDir.resolve(s"${GradleBuildTool.metalsTestTask}-$digest.gradle"),
-      script.getBytes(StandardCharsets.UTF_8),
-    )
-  }
+  private def gradleTestInitScript(
+      target: MbtTarget,
+      jvmOptions: List[String],
+  ): Path =
+    gradleInitScript(target, GradleBuildTool.metalsTestTask, "test") { _ =>
+      s"""|  project.tasks.withType(Test).configureEach { task ->
+          |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+          |  }""".stripMargin
+    }
 
 }
 
