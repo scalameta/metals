@@ -563,6 +563,7 @@ class BazelMbtLspSuite
       )
       _ <- server.didOpen("lib/Parser.java")
       _ <- server.didFocus("lib/Parser.java")
+      _ <- server.waitFor(millis = 10_000)
       _ <- server.assertHover(
         "lib/Parser.java",
         s"""|package lib;
