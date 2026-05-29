@@ -3,6 +3,7 @@ package tests
 import java.nio.file.Files
 
 import scala.concurrent.ExecutionContext
+import scala.util.Properties
 
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.ShellRunner
@@ -62,6 +63,18 @@ class MavenBuildToolSuite extends BaseSuite {
         "mvn", "-q", "-P", "dev,ci", "-pl", ":app", "--also-make", "install",
         "-DskipTests", "-Denforcer.skip=true",
       ),
+    )
+  }
+
+  test("maven-base-command-uses-project-wrapper") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt"))
+    val mvnwName = if (Properties.isWin) "mvnw.cmd" else "mvnw"
+    val mvnw = workspace.resolve(mvnwName)
+    mvnw.writeText("#!/bin/sh\n")
+
+    assertEquals(
+      mavenBuildTool(workspace).mavenBaseCommand(),
+      List(s"./$mvnwName"),
     )
   }
 
