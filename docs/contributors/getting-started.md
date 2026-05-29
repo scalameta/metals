@@ -52,8 +52,8 @@ To avoid repetition, common utilities of presentation compilers are in `mtags-sh
 - `tests/input` - Example Scala code that is used as testing data for unit tests.
 
 ### Other modules
-- `sbt-metals` - the sbt plugin used when users are using the BSP support from
-  sbt to ensure semanticDB is being produced by sbt.
+- `sbt-metals` - an sbt plugin for integration with Metals through the Build Server Protocol.
+  It ensures that SemanticDB files are produced by sbt.
 - `docs` - documentation markdown for the Metals website.
 - `metals-docs` - methods used for generating documentation across multiple pages
   in `docs`.
@@ -235,7 +235,7 @@ possible to investigate why test is failing manually.
 
 ## Cross tests
 
-Tests for Scala 2 presenatation compiler, check common features such as hover, completions or signatures.
+Tests for Scala 2 presentation compiler that check common features such as hover, completions, and signatures.
 
 ```sh
 sbt
@@ -398,9 +398,9 @@ waiting for the debugger to connect:
 ## Updating build tool launcher/wrappers
 
 Metals uses various wrappers or launchers for each build tool that it supports.
-This makes sure that when your in a workspace for you build tool that metals is
-able to correctly launch that build tool, even if it doesn't exist on the users
-`$PATH`. You can see their usages in `<BuildToolName>BuildTool.scala`.
+This ensures that Metals is able to launch the necessary build tool in any workspace, 
+even if the tool isn't present on the users `$PATH`. 
+You can see their usages in `<BuildToolName>BuildTool.scala`.
 
 ### Updating sbt-launcher
 
@@ -411,8 +411,8 @@ command:
 cp "$(cs fetch org.scala-sbt:sbt-launch:<version>)" sbt-launch.jar
 ```
 
-This will allow you to not have to do some of the manual steps with the launcher
-properties file listed [here](https://github.com/sbt/launcher).
+This will allow you to skip some of the manual steps with the launcher
+properties file that are listed [here](https://github.com/sbt/launcher).
 
 ### Updating maven wrappers
 
