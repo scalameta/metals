@@ -1,5 +1,7 @@
 package scala.meta.metals.maven
 
+import java.nio.file.Files
+
 import org.apache.maven.model.Build
 import org.apache.maven.model.Plugin
 import org.apache.maven.model.PluginExecution
@@ -185,6 +187,112 @@ class MavenCompilerConfigSuite extends munit.FunSuite {
     assertEquals(testConfig.scalaVersion, Some("2.13.14"))
   }
 
+  test("prefers default-compile execution over other matching executions") {
+    val workspace = Files.createTempDirectory("maven-compiler-config")
+    val src = workspace.resolve("src")
+    Files.createDirectories(src.resolve("com/example"))
+    Files.writeString(src.resolve("com/example/A.java"), "class A {}")
+    Files.writeString(src.resolve("com/example/B.java"), "class B {}")
+    Files.writeString(src.resolve("module-info.java"), "module example {}")
+
+    val project = new MavenProject()
+    project.setFile(workspace.resolve("pom.xml").toFile)
+    project.setGroupId("com.example")
+    project.setArtifactId("app")
+    project.setBuild(new Build())
+    project.addCompileSourceRoot(src.toString)
+
+    val compiler = plugin(
+      "org.apache.maven.plugins",
+      "maven-compiler-plugin",
+      node(
+        "configuration",
+        node("encoding", "UTF-8"),
+      ),
+    )
+    compiler.addExecution(
+      execution(
+        id = "default-compile",
+        goal = "",
+        node(
+          "configuration",
+          node("source", "8"),
+          node("target", "8"),
+          node("excludes", node("exclude", "module-info.java")),
+          node("compilerArg", "-Xmain"),
+        ),
+      )
+    )
+    compiler.addExecution(
+      execution(
+        id = "compile-java9",
+        goal = "compile",
+        node(
+          "configuration",
+          node("release", "9"),
+          node(
+            "compileSourceRoots",
+            node("compileSourceRoot", "${project.basedir}/src"),
+          ),
+          node("includes", node("include", "module-info.java")),
+          node("compilerArg", "--add-reads=example=ALL-UNNAMED"),
+        ),
+      )
+    )
+    project.getBuild.addPlugin(compiler)
+
+    val config = MavenCompilerConfig.extract(project, isTest = false)
+
+    assertNoDiff(
+      config.javacOptions.mkString("\n"),
+      """|-source
+         |8
+         |-target
+         |8
+         |-encoding
+         |UTF-8
+         |-Xmain""".stripMargin,
+    )
+  }
+
+  test("falls back to last matching execution when default-compile absent") {
+    val project = new MavenProject()
+    project.setGroupId("com.example")
+    project.setArtifactId("app")
+    project.setBuild(new Build())
+
+    val compiler = plugin(
+      "org.apache.maven.plugins",
+      "maven-compiler-plugin",
+      node(
+        "configuration",
+        node("source", "8"),
+        node("target", "8"),
+      ),
+    )
+    compiler.addExecution(
+      execution(
+        id = "compile-java9",
+        goal = "compile",
+        node(
+          "configuration",
+          node("release", "9"),
+          node("compilerArg", "--add-reads=example=ALL-UNNAMED"),
+        ),
+      )
+    )
+    project.getBuild.addPlugin(compiler)
+
+    val config = MavenCompilerConfig.extract(project, isTest = false)
+
+    assertNoDiff(
+      config.javacOptions.mkString("\n"),
+      """|--release
+         |9
+         |--add-reads=example=ALL-UNNAMED""".stripMargin,
+    )
+  }
+
   test("extracts annotationProcessorPaths coordinates") {
     val project = new MavenProject()
     project.setBuild(new Build())
@@ -285,7 +393,7 @@ class MavenCompilerConfigSuite extends munit.FunSuite {
   ): PluginExecution = {
     val exec = new PluginExecution()
     exec.setId(id)
-    exec.addGoal(goal)
+    if (goal.nonEmpty) exec.addGoal(goal)
     exec.setConfiguration(configuration)
     exec
   }

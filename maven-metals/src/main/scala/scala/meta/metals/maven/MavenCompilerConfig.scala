@@ -2,8 +2,12 @@ package scala.meta.metals.maven
 
 import java.{util => ju}
 
+import scala.jdk.CollectionConverters._
+
 import org.apache.maven.model.Plugin
+import org.apache.maven.plugin.logging.Log
 import org.apache.maven.project.MavenProject
+import org.codehaus.plexus.util.xml.Xpp3Dom
 
 private[maven] case class CompilerConfig(
     javacOptions: List[String],
@@ -16,31 +20,35 @@ private[maven] object MavenCompilerConfig {
 
   import MavenPluginSupport._
 
-  def extract(project: MavenProject, isTest: Boolean): CompilerConfig = {
+  def extract(
+      project: MavenProject,
+      isTest: Boolean,
+      log: Log = null,
+  ): CompilerConfig = {
     val plugins = effectivePlugins(project)
     val props = project.getProperties
 
     def prop(key: String): Option[String] =
       Option(props.getProperty(key)).filter(_.nonEmpty)
 
-    val javacOpts = extractJavacOptions(plugins, prop, isTest)
+    val javacConfig =
+      Option(plugins.get(JavaCompilerPlugin)).flatMap(
+        selectCompilerPluginConfiguration(_, isTest, Option(log))
+      )
+
+    val javacOpts = extractJavacOptions(javacConfig, prop, isTest)
     val (scalacOpts, scalaVer) = extractScalaOptions(plugins, isTest)
-    val procPaths = extractAnnotationProcessorPaths(plugins, project, isTest)
+    val procPaths = extractAnnotationProcessorPaths(javacConfig, project)
 
     CompilerConfig(javacOpts, scalacOpts, scalaVer, procPaths)
   }
 
   private def extractJavacOptions(
-      plugins: ju.Map[String, Plugin],
+      cfgOpt: Option[Xpp3Dom],
       prop: String => Option[String],
       isTest: Boolean,
   ): List[String] = {
     val args = List.newBuilder[String]
-
-    val cfgOpt =
-      Option(plugins.get(JavaCompilerPlugin)).flatMap(
-        compilerPluginConfiguration(_, isTest)
-      )
 
     val release =
       (if (isTest) prop("maven.compiler.testRelease") else None)
@@ -98,9 +106,13 @@ private[maven] object MavenCompilerConfig {
       def add(value: String): Unit =
         Option(value).filter(_.nonEmpty).foreach(args += _)
 
-      Option(cfg.getChild("compilerArgs")).foreach(
-        _.getChildren.foreach(arg => add(arg.getValue))
-      )
+      Option(cfg.getChild("compilerArgs")).foreach { compilerArgs =>
+        compilerArgs.getChildren
+          .map(_.getValue)
+          .filter(v => v != null && v.nonEmpty)
+          .distinct
+          .foreach(args += _)
+      }
       childText(cfg, "compilerArg").foreach(add)
       childText(cfg, "compilerArgument").foreach(add)
       Option(cfg.getChild("compilerArguments")).foreach { compilerArgs =>
@@ -116,12 +128,10 @@ private[maven] object MavenCompilerConfig {
   }
 
   private def extractAnnotationProcessorPaths(
-      plugins: ju.Map[String, Plugin],
+      cfgOpt: Option[Xpp3Dom],
       project: MavenProject,
-      isTest: Boolean,
   ): List[(String, String, String)] =
-    Option(plugins.get(JavaCompilerPlugin))
-      .flatMap(compilerPluginConfiguration(_, isTest))
+    cfgOpt
       .flatMap(cfg => Option(cfg.getChild("annotationProcessorPaths")))
       .toList
       .flatMap { paths =>
@@ -167,5 +177,35 @@ private[maven] object MavenCompilerConfig {
       (scalacArgs ++ addScalacArgs, scalaVersion)
     }
     result.getOrElse((Nil, None))
+  }
+
+  private def selectCompilerPluginConfiguration(
+      plugin: Plugin,
+      isTest: Boolean,
+      log: Option[Log],
+  ): Option[Xpp3Dom] = {
+    val goal = if (isTest) "testCompile" else "compile"
+    val defaultId = if (isTest) "default-testCompile" else "default-compile"
+    val matching = plugin.getExecutions.asScala.toList
+      .filter(compilerExecutionMatchesGoal(_, goal))
+
+    val selected = matching
+      .find(_.getId == defaultId)
+      .orElse(matching.lastOption)
+
+    selected match {
+      case Some(execution) =>
+        val skipped = matching.filter(_.getId != execution.getId).map(_.getId)
+        if (skipped.nonEmpty)
+          log.foreach(
+            _.warn(
+              s"metals-maven-plugin: using maven-compiler-plugin execution '${execution.getId}' " +
+                s"for ${if (isTest) "test" else "main"} sources; skipping ${skipped.mkString(", ")}"
+            )
+          )
+        mergedPluginConfiguration(plugin, execution)
+      case None =>
+        compilerPluginConfiguration(plugin, isTest)
+    }
   }
 }

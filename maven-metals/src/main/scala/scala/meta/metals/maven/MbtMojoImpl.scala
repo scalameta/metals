@@ -51,8 +51,10 @@ object MbtMojoImpl {
     val namespaces = new ju.LinkedHashMap[String, NamespaceJson]()
 
     for (project <- projects) {
-      val mainConfig = MavenCompilerConfig.extract(project, isTest = false)
-      val testConfig = MavenCompilerConfig.extract(project, isTest = true)
+      val mainConfig =
+        MavenCompilerConfig.extract(project, isTest = false, log)
+      val testConfig =
+        MavenCompilerConfig.extract(project, isTest = true, log)
       val mainJavaHome =
         JavaHomeResolver
           .resolve(mainConfig.javacOptions, project, isTest = false, mojo)

@@ -70,13 +70,22 @@ private[maven] object MavenPluginSupport {
       )
       .toSeq
     val goalSpecificCfgs = allExecCfgs
-      .filter { case (_, exec) => exec.getGoals.asScala.contains(goalFilter) }
+      .filter { case (_, exec) =>
+        compilerExecutionMatchesGoal(exec, goalFilter)
+      }
       .map(_._1)
     val execCfgs =
       if (goalSpecificCfgs.nonEmpty) goalSpecificCfgs
       else allExecCfgs.map(_._1)
     mergeConfigurations(execCfgs ++ pluginCfg)
   }
+
+  def compilerExecutionMatchesGoal(
+      execution: PluginExecution,
+      goal: String,
+  ): Boolean =
+    execution.getGoals.asScala.contains(goal) ||
+      execution.getId == s"default-$goal"
 
   private def mergeConfigurations(
       configurations: Seq[Xpp3Dom]
