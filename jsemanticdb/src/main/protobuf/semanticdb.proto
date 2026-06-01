@@ -276,9 +276,9 @@ message Tree {
     OriginalTree original_tree = 6;
     SelectTree select_tree = 7;
     TypeApplyTree type_apply_tree = 8;
+    AssignTree assign_tree = 9;
+    AnnotationTree annotation_tree = 10;
     // -- OUT OF SPEC -- //
-    AnnotationTree annotation_tree = 9;
-    AssignTree assign_tree = 10;
     BinaryOperatorTree binop_tree = 11;
     UnaryOperatorTree unaryop_tree = 12;
     CastTree cast_tree = 13;

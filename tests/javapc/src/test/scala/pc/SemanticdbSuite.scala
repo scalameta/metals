@@ -1,9 +1,12 @@
 package pc
 
+import java.net.URI
 import java.nio.charset.StandardCharsets
 
 import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.{semanticdb => s}
 
 import tests.pc.BaseJavaSemanticdbSuite
 
@@ -86,6 +89,59 @@ class SemanticdbSuite extends BaseJavaSemanticdbSuite {
       }
     }
     assert(isFound, "java/lang/String.java not found")
+  }
+
+  test("scalameta-proto-compatibility") {
+    val code =
+      """|package protocompat;
+         |
+         |import java.lang.annotation.Retention;
+         |import java.lang.annotation.RetentionPolicy;
+         |
+         |@Retention(value = RetentionPolicy.RUNTIME)
+         |@interface MyAnnotation {
+         |    String name() default "";
+         |    int count() default 0;
+         |}
+         |
+         |@MyAnnotation(name = "test", count = 42)
+         |class AnnotatedClass {
+         |    @MyAnnotation(name = "method")
+         |    public void annotatedMethod() {}
+         |}
+         |""".stripMargin
+    val uri = URI.create("file:///ProtoCompat.java")
+    val pcParams = CompilerVirtualFileParams(uri, code)
+    val bytes = presentationCompiler.semanticdbTextDocument(pcParams).get()
+
+    val scalametaDoc = s.TextDocument.parseFrom(bytes)
+    assert(
+      scalametaDoc.uri.nonEmpty,
+      "scalameta should parse jsemanticdb output",
+    )
+
+    val allAnnotations = scalametaDoc.symbols.flatMap(_.annotations)
+    assertNoDiff(
+      allAnnotations.mkString("\n"),
+      """|AnnotationTree(TypeRef(Empty,java/lang/annotation/Retention#,Vector()),Vector(AssignTree(IdTree(java/lang/annotation/Retention#value().),SelectTree(IdTree(java/lang/annotation/RetentionPolicy#),Some(IdTree(java/lang/annotation/RetentionPolicy#RUNTIME.))))))
+         |AnnotationTree(TypeRef(Empty,protocompat/MyAnnotation#,Vector()),Vector(AssignTree(IdTree(protocompat/MyAnnotation#name().),LiteralTree(StringConstant(test))), AssignTree(IdTree(protocompat/MyAnnotation#count().),LiteralTree(IntConstant(42)))))
+         |AnnotationTree(TypeRef(Empty,protocompat/MyAnnotation#,Vector()),Vector(AssignTree(IdTree(protocompat/MyAnnotation#name().),LiteralTree(StringConstant(method)))))
+         |""".stripMargin,
+    )
+
+    val assignTrees = allAnnotations.flatMap(_.arguments).collect {
+      case s.AssignTree(lhs, rhs) => (lhs, rhs)
+    }
+
+    assertNoDiff(
+      assignTrees.mkString("\n"),
+      """|(IdTree(java/lang/annotation/Retention#value().),SelectTree(IdTree(java/lang/annotation/RetentionPolicy#),Some(IdTree(java/lang/annotation/RetentionPolicy#RUNTIME.))))
+         |(IdTree(protocompat/MyAnnotation#name().),LiteralTree(StringConstant(test)))
+         |(IdTree(protocompat/MyAnnotation#count().),LiteralTree(IntConstant(42)))
+         |(IdTree(protocompat/MyAnnotation#name().),LiteralTree(StringConstant(method)))
+         |""".stripMargin,
+    )
+
   }
 
 }
