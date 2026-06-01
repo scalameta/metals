@@ -59,13 +59,21 @@ jobs:
           path: |
             ./**/*.hprof
           retention-days: 5
-
+      - name: Upload Metals diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: metals-reports-${{ matrix.os }}-${{ matrix.shard }}
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports-${{ matrix.os }}-${{ matrix.shard }}
-          path: "**/.reports/**/*"
+          name: unit-test-reports-${{ matrix.os }}-${{ matrix.shard }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
@@ -167,12 +175,21 @@ jobs:
           METALS_TEST: true
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      - name: Upload Metals diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: metals-reports-${{ matrix.type }}
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports
-          path: "**/.reports/**/*"
+          name: integration-test-reports-${{ matrix.type }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
