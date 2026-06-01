@@ -204,4 +204,55 @@ class GradleDapMbtLspSuite
       output <- debugger.allOutput
     } yield assertContains(output, "FooBar")
   }
+
+  test("gradle-mbt-test-result-events") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+
+    for {
+      _ <- initialize(
+        s"""|/build.gradle
+            |$buildGradleWithJunit
+            |/src/test/java/a/TestResultTest.java
+            |package a;
+            |
+            |import org.junit.Test;
+            |import static org.junit.Assert.*;
+            |
+            |public class TestResultTest {
+            |  @Test
+            |  public void testOne() {
+            |    assertEquals(1, 1);
+            |  }
+            |
+            |  @Test
+            |  public void testTwo() {
+            |    assertTrue(true);
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("src/test/java/a/TestResultTest.java")
+      _ <- awaitMbtTestClassDiscovery("src/test/java/a/TestResultTest.java")
+      debugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams("a.TestResultTest").toJson
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+      testEvents <- debugger.allTestEvents
+    } yield {
+      assertNoDiff(
+        testEvents,
+        """|
+           |a.TestResultTest
+           |  a.TestResultTest - passed
+           |""".stripMargin,
+      )
+      assertContains(output, "BUILD SUCCESSFUL")
+    }
+  }
 }
