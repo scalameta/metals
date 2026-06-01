@@ -43,6 +43,7 @@ final case class ModuleReport(
     javaSourceLevel: Option[String],
     javaTargetLevel: Option[String],
     classDirectories: Seq[String],
+    testClassDirectory: Seq[String],
     sourceDirectories: Seq[String],
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
@@ -76,23 +77,53 @@ final case class ProjectReport(
       )
     }
 
-    val namespaces = modules.map { m =>
-      val allSources = m.sourceDirectories ++ m.testSourceDirectories
-      val depIds = m.externalDependencies.map(_.gav).distinct
-      val dependsOn = m.projectDependencies.map(_.targetModule).distinct
+    val namespaces = modules.flatMap { m =>
+      val mainDepIds = m.externalDependencies
+        .filter(_.scope != "TEST")
+        .map(_.gav)
+        .distinct
+      val testDepIds = m.externalDependencies.map(_.gav).distinct
+      val mainDependsOn = m.projectDependencies
+        .filter(_.scope != "TEST")
+        .map(_.targetModule)
+        .distinct
+      val testDependsOn = m.projectDependencies.map(_.targetModule).distinct
 
-      m.name -> MbtNamespaceJson(
-        sources = allSources,
+      val mainNamespace = m.name -> MbtNamespaceJson(
+        sources = m.sourceDirectories,
         scalacOptions = Seq.empty,
         javacOptions = Seq.empty,
-        dependencyModules = depIds,
+        dependencyModules = mainDepIds,
         scalaVersion = null,
         javaHome = javaHome,
-        dependsOn = if (dependsOn.nonEmpty) dependsOn else null,
+        dependsOn = if (mainDependsOn.nonEmpty) mainDependsOn else null,
         classDirectories = m.classDirectories,
         projectPath = m.projectPath,
         configurations = null,
       )
+
+      val testNamespace =
+        if (m.testSourceDirectories.isEmpty && m.testClassDirectory.isEmpty)
+          None
+        else {
+          val testDeps = m.name :: testDependsOn.toList
+          Some(
+            s"${m.name}:test" -> MbtNamespaceJson(
+              sources = m.testSourceDirectories,
+              scalacOptions = Seq.empty,
+              javacOptions = Seq.empty,
+              dependencyModules = testDepIds,
+              scalaVersion = null,
+              javaHome = javaHome,
+              dependsOn = testDeps,
+              classDirectories = m.testClassDirectory,
+              projectPath = m.projectPath,
+              configurations = null,
+            )
+          )
+        }
+
+      Seq(Some(mainNamespace), testNamespace).flatten
     }.toMap
 
     val build = MbtBuildJson(

@@ -5,12 +5,13 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BaseCodeLensLspSuite
 import tests.BuildInfo
-import tests.Library
+import tests.MbtJsonBuilder
 
 class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
 
@@ -22,36 +23,17 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
       referenceProvider = ReferenceProviderConfig.mbt,
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
+      testUserInterface = TestUserInterfaceKind.CodeLenses,
     )
 
   override def initializeGitRepo: Boolean = true
 
   test("discover-run-main-classes") {
     cleanWorkspace()
-    val scalaLibJarUri =
-      Library
-        .getScalaLibraryJarPath(BuildInfo.scalaVersion)
-        .toURI
-        .toString
-
-    val mbtJson =
-      s"""|{
-          |  "dependencyModules": [
-          |    {
-          |      "id": "org.scala-lang:scala-library:${BuildInfo.scalaVersion}",
-          |      "jar": "$scalaLibJarUri"
-          |    }
-          |  ],
-          |  "namespaces": {
-          |    "core": {
-          |      "sources": ["src/"],
-          |      "scalaVersion": "${BuildInfo.scalaVersion}",
-          |      "dependencyModules": [
-          |        "org.scala-lang:scala-library:${BuildInfo.scalaVersion}"
-          |      ]
-          |    }
-          |  }
-          |}""".stripMargin
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addNamespace("core", List("src/"))
+      .build()
 
     for {
       _ <- initialize(
@@ -115,6 +97,98 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
                |""".stripMargin,
           ),
         )
+      )
+    } yield ()
+  }
+
+  test("discover-scala-test-classes") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addDependency("org.scalameta", "munit", "0.7.29")
+      .addNamespace("test", List("src/**"))
+      .build()
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/src/MunitTest.scala
+            |package example
+            |
+            |class MunitTest extends munit.FunSuite {
+            |  test("sample-test") {
+            |    assert(1 == 1)
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen("src/MunitTest.scala")
+      _ <- server.discoverTestSuites(List("src/MunitTest.scala"))
+      _ <- assertCodeLenses(
+        "src/MunitTest.scala",
+        """|package example
+           |
+           |<<test>><<debug test>>
+           |class MunitTest extends munit.FunSuite {
+           |<<test case>><<debug test case>>
+           |  test("sample-test") {
+           |    assert(1 == 1)
+           |  }
+           |}
+           |""".stripMargin,
+        minExpectedLenses = 4,
+      )
+    } yield ()
+  }
+
+  test("discover-java-test-classes") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addJavaDependency("junit", "junit", "4.13.2")
+      .addNamespace("test", List("src/**"))
+      .build()
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/src/JunitTest.java
+            |package example;
+            |
+            |import org.junit.Test;
+            |import static org.junit.Assert.*;
+            |
+            |public class JunitTest {
+            |  @Test
+            |  public void sampleTest() {
+            |    assertTrue(true);
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen("src/JunitTest.java")
+      _ <- server.discoverTestSuites(List("src/JunitTest.java"))
+      _ <- assertCodeLenses(
+        "src/JunitTest.java",
+        """|package example;
+           |
+           |import org.junit.Test;
+           |import static org.junit.Assert.*;
+           |
+           |<<test>><<debug test>>
+           |public class JunitTest {
+           |  @Test
+           |<<test case>><<debug test case>>
+           |  public void sampleTest() {
+           |    assertTrue(true);
+           |  }
+           |}
+           |""".stripMargin,
+        minExpectedLenses = 4,
       )
     } yield ()
   }

@@ -719,7 +719,7 @@ case class ScalaPresentationCompiler(
         // we overwrite the URI because the provider relativizes the URI to the workspace path
         try {
           docsBuffer += provider
-            .textDocument(fileParam.uri(), fileParam.text())
+            .textDocument(fileParam)
             .withUri(fileParam.uri().toString())
         } catch {
           case NonFatal(e) =>
@@ -747,7 +747,8 @@ case class ScalaPresentationCompiler(
 
     compilerAccess.withInterruptableCompiler(
       Array.emptyByteArray,
-      param.token()
+      param.token(),
+      Some(timeout)
     ) { pc =>
       val provider = new SemanticdbTextDocumentProvider(
         pc.compiler(),
@@ -833,7 +834,7 @@ case class ScalaPresentationCompiler(
         pc.compiler(virtualFile),
         config.semanticdbCompilerOptions().asScala.toList
       )
-        .textDocument(virtualFile.uri(), virtualFile.text())
+        .textDocument(virtualFile)
         .toByteArray
     }(virtualFile.toQueryContext)
   }

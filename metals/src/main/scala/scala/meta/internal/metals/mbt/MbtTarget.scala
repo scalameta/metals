@@ -45,6 +45,10 @@ case class MbtTarget(
   private def baseDirectory(workspace: AbsolutePath): AbsolutePath =
     workspace
 
+  def isTestTarget: Boolean = {
+    name.endsWith(":test")
+  }
+
   def stableSourcePaths(workspace: AbsolutePath): Seq[AbsolutePath] =
     sources.distinct.map(workspace.resolve)
 
@@ -77,7 +81,7 @@ case class MbtTarget(
     capabilities.setCanCompile(true)
     capabilities.setCanDebug(true)
     capabilities.setCanRun(true)
-    capabilities.setCanTest(false)
+    capabilities.setCanTest(true)
 
     lazy val scalaVersion = this.scalaVersion.getOrElse(
       scalaVersionSelector.fallbackScalaVersion()
@@ -132,11 +136,35 @@ case class MbtTarget(
   def runClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
-  ): List[AbsolutePath] =
-    if (classDirectories.nonEmpty)
-      classDirectories.map(resolveClassDir(workspace, _)).toList
-    else
-      MbtTarget.conventionalClassDirectories(workspace, buildToolName)
+      includeTests: Boolean = false,
+  ): List[AbsolutePath] = {
+    if (classDirectories.nonEmpty) {
+      classDirectories.distinct.map(resolveClassDir(workspace, _)).toList
+    } else
+      MbtTarget.conventionalClassDirectories(
+        workspace,
+        buildToolName,
+        includeTests,
+      )
+  }
+
+  def primaryClassDirectory(
+      workspace: AbsolutePath,
+      buildToolName: String,
+  ): AbsolutePath = {
+    val primary = classDirectories.headOption
+    primary
+      .map(resolveClassDir(workspace, _))
+      .getOrElse(
+        MbtTarget
+          .conventionalClassDirectories(
+            workspace,
+            buildToolName,
+            isTestTarget,
+          )
+          .head
+      )
+  }
 
   private def resolveClassDir(
       workspace: AbsolutePath,
@@ -187,15 +215,25 @@ object MbtTarget {
   def conventionalClassDirectories(
       workspace: AbsolutePath,
       buildToolName: String,
+      isTest: Boolean = false,
   ): List[AbsolutePath] = {
     val relative = buildToolName match {
-      case "maven" => List("target/classes")
+      case "maven" =>
+        if (isTest) List("target/test-classes")
+        else List("target/classes")
       case "gradle" =>
-        List(
-          "build/classes/java/main",
-          "build/classes/scala/main",
-          "build/resources/main",
-        )
+        if (isTest)
+          List(
+            "build/classes/java/test",
+            "build/classes/scala/test",
+            "build/resources/test",
+          )
+        else
+          List(
+            "build/classes/java/main",
+            "build/classes/scala/main",
+            "build/resources/main",
+          )
       case _ => Nil
     }
     relative

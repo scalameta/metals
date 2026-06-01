@@ -2029,6 +2029,7 @@ class Compilers(
       sources: Seq[AbsolutePath],
       cancelToken: CancelToken,
       timeout: Duration,
+      shouldPruneSemanticdb: Boolean = false,
   ): Future[s.TextDocuments] = {
     val futures = for {
       (pc, paths) <- sources
@@ -2041,6 +2042,7 @@ class Compilers(
           s.toInputFromBuffers(buffers).text,
           token = cancelToken,
           shouldReturnDiagnostics = true,
+          shouldPruneSemanticdb = shouldPruneSemanticdb,
         ): VirtualFileParams
       }
       pc.batchSemanticdbTextDocuments(params.asJava, timeout).asScala.map {
@@ -2050,7 +2052,9 @@ class Compilers(
     }
     Future
       .sequence(futures)
-      .map(docss => s.TextDocuments(documents = docss.flatten.toSeq))
+      .map { docss =>
+        s.TextDocuments(documents = docss.flatten.toSeq)
+      }
   }
 
   def semanticdbTextDocument(

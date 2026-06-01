@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import java.net.URI
 import java.time.Duration
 
 import scala.collection.concurrent.TrieMap
@@ -7,10 +8,12 @@ import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
@@ -44,6 +47,7 @@ final class BuildTargetClasses(
     val compilers: () => Compilers,
     symbolIndex: OnDemandSymbolIndex,
     mbt: () => Option[MbtWorkspaceSymbolProvider] = () => None,
+    workDoneProgress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
 )(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
@@ -53,6 +57,8 @@ final class BuildTargetClasses(
     TrieMap.empty[AbsolutePath, List[(String, TestSymbolInfo)]]
 
   private val symbolCache = new SymbolCache(compilers, symbolIndex)
+
+  private val MbtSemanticdbBatchSize = 5
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
@@ -174,13 +180,20 @@ final class BuildTargetClasses(
                 .map(cacheTestClasses(classes, _))
             }
 
+          val populateMbtClasses =
+            if (MbtBuildServer.isMbtServer(connection.name)) {
+              populateMbtMainClasses(classes, targets0).flatMap { _ =>
+                populateMbtTestClasses(classes, targets0)
+              }
+            } else Future.unit
+
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
-            _ <-
-              if (MbtBuildServer.isMbtServer(connection.name))
-                populateMbtMainClasses(classes, targets0)
-              else Future.unit
+            _ <- workDoneProgress.trackFuture(
+              "Discovering main classes and tests",
+              populateMbtClasses,
+            )
           } yield {
             targetsList.forEach(invalidate)
             classes.foreach { case (id, classes) =>
@@ -351,15 +364,21 @@ final class BuildTargetClasses(
   private def extractTestClassesFromDocuments(
       docs: TextDocuments,
       path: AbsolutePath,
+  ): Future[List[(String, TestSymbolInfo)]] =
+    Future
+      .sequence(docs.documents.map(extractTestClassesFromDocument(_, path)))
+      .map(_.flatten.toList)
+
+  private def extractTestClassesFromDocument(
+      doc: TextDocument,
+      path: AbsolutePath,
   ): Future[List[(String, TestSymbolInfo)]] = {
     val testClasses =
       scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
 
-    val futures = docs.documents.flatMap { doc =>
-      doc.symbols.flatMap { symbolInfo =>
-        processTestAnnotations(symbolInfo, testClasses)
-        processTestClassHierarchy(symbolInfo, doc, path, testClasses)
-      }
+    val futures = doc.symbols.flatMap { symbolInfo =>
+      processTestAnnotations(symbolInfo, testClasses)
+      processTestClassHierarchy(symbolInfo, doc, path, testClasses)
     }
 
     Future.sequence(futures).map(_ => testClasses.toList)
@@ -529,6 +548,58 @@ final class BuildTargetClasses(
     }
   }
 
+  private def populateMbtTestClasses(
+      classes: Map[b.BuildTargetIdentifier, Classes],
+      targets: Seq[b.BuildTargetIdentifier],
+  ): Future[Unit] = {
+    mbt() match {
+      case None =>
+        scribe.warn("mbt-test: MBT workspace symbol provider is not available.")
+        Future.unit
+      case Some(mbtProvider) =>
+        val targetSet = targets.toSet
+        val candidatePaths =
+          filterMbtCandidatePaths(
+            mbtProvider.possibleReferences(
+              MbtPossibleReferencesParams(
+                references = TestFrameworkSymbolRegistry.annotationSymbols,
+                implementations = TestFrameworkSymbolRegistry.baseParentSymbols,
+              )
+            ),
+            targetSet,
+          )
+
+        foreachMbtSemanticdbDocument(candidatePaths) { doc =>
+          val path = doc.uri.toAbsolutePath
+          extractTestClassesFromDocument(doc, path).map { testClasses =>
+            cacheExtractedTestClasses(
+              classes,
+              targetSet,
+              path,
+              testClasses,
+            )
+          }
+        }
+    }
+  }
+
+  private def cacheExtractedTestClasses(
+      classes: Map[b.BuildTargetIdentifier, Classes],
+      targetSet: Set[b.BuildTargetIdentifier],
+      path: AbsolutePath,
+      testClasses: List[(String, TestSymbolInfo)],
+  ): Unit = {
+    val targetIds = buildTargets.inverseSourcesAll(path).filter(targetSet)
+    if (targetIds.nonEmpty) {
+      for {
+        target <- targetIds
+        (symbol, testInfo) <- testClasses
+      } {
+        classes(target).testClasses.put(symbol, testInfo)
+      }
+    }
+  }
+
   private def populateMbtMainClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
       targets: Seq[b.BuildTargetIdentifier],
@@ -543,7 +614,9 @@ final class BuildTargetClasses(
           mbtProvider
             .queryWorkspaceSymbol("main")
             .flatMap(info => Option(info.getLocation()))
-            .map(_.getUri.toAbsolutePath)
+            .map { loc =>
+              AbsolutePath.fromAbsoluteUri(URI.create(loc.getUri()))
+            }
         val pathsFromReferences =
           mbtProvider.possibleReferences(
             MbtPossibleReferencesParams(
@@ -551,37 +624,62 @@ final class BuildTargetClasses(
             )
           )
         val candidatePaths =
-          (pathsFromMainSymbols ++ pathsFromReferences)
-            .filter(path =>
-              path.isScalaOrJava &&
-                buildTargets.inverseSourcesAll(path).exists(targetSet)
-            )
-            .distinct
+          filterMbtCandidatePaths(
+            pathsFromMainSymbols ++ pathsFromReferences,
+            targetSet,
+          )
 
-        if (candidatePaths.isEmpty) Future.unit
-        else {
+        foreachMbtSemanticdbDocument(candidatePaths) { doc =>
+          val targetIds =
+            buildTargets
+              .inverseSourcesAll(doc.uri.toAbsolutePath)
+              .filter(targetSet)
+          if (targetIds.nonEmpty) {
+            val mainClasses = extractMbtMainClasses(doc)
+            for {
+              target <- targetIds
+              (symbol, mc) <- mainClasses
+            } {
+              classes(target).mainClasses.put(symbol, mc)
+            }
+          }
+          Future.unit
+        }
+    }
+  }
+
+  private def filterMbtCandidatePaths(
+      paths: Iterable[AbsolutePath],
+      targetSet: Set[b.BuildTargetIdentifier],
+  ): Seq[AbsolutePath] =
+    paths
+      .filter(path =>
+        path.isScalaOrJava &&
+          buildTargets.inverseSourcesAll(path).exists(targetSet)
+      )
+      .toSeq
+      .distinct
+
+  private def foreachMbtSemanticdbDocument(
+      candidatePaths: Seq[AbsolutePath]
+  )(f: TextDocument => Future[Unit]): Future[Unit] = {
+    // TODO batch by build target? run parallel?
+    candidatePaths.grouped(MbtSemanticdbBatchSize).foldLeft(Future.unit) {
+      case (previous, batch) =>
+        previous.flatMap { _ =>
           compilers()
             .batchSemanticdbTextDocuments(
-              candidatePaths,
+              batch,
               EmptyCancelToken,
-              Duration.ofSeconds(15),
+              Duration.ofSeconds(120),
+              shouldPruneSemanticdb = true,
             )
-            .map { documents =>
-              documents.documents.foreach { doc =>
-                val targetIds =
-                  buildTargets
-                    .inverseSourcesAll(doc.uri.toAbsolutePath)
-                    .filter(targetSet)
-                if (targetIds.nonEmpty) {
-                  val mainClasses = extractMbtMainClasses(doc)
-                  for {
-                    target <- targetIds
-                    (symbol, mc) <- mainClasses
-                  } {
-                    classes(target).mainClasses.put(symbol, mc)
-                  }
-                }
-              }
+            .recover { case e =>
+              scribe.error(s"Error parsing semanticdb text documents: $e", e)
+              TextDocuments(documents = Seq.empty)
+            }
+            .flatMap { documents =>
+              Future.sequence(documents.documents.map(f)).map(_ => ())
             }
         }
     }
@@ -733,6 +831,14 @@ object TestFrameworkSymbolRegistry {
   def frameworkForSymbol(symbol: String): Option[TestFramework] = {
     allFrameworkSymbols.get(symbol)
   }
+
+  /** Annotation symbols used by JUnit and TestNG test discovery. */
+  def annotationSymbols: Seq[String] =
+    (junitSymbols.keys ++ testngSymbols.keys).toSeq.distinct
+
+  /** Base class symbols used by ScalaTest, MUnit, Weaver, and ZIO Test discovery. */
+  def baseParentSymbols: Seq[String] =
+    (scalatestSymbols.keys ++ munitSymbols.keys ++ weaverSymbols.keys ++ zioTestSymbols.keys).toSeq.distinct
 }
 
 object TestFrameworkUtils {

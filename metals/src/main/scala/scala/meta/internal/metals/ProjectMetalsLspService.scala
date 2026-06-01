@@ -202,7 +202,7 @@ class ProjectMetalsLspService(
     sh,
   )
 
-  private def mbtDebugStarter =
+  private def mbtDebugStarter(): Option[MbtDebugSessionStarter] =
     buildTools.current().collectFirst { case buildTool: MbtDebugLauncher =>
       new MbtDebugSessionStarter(
         debugProvider.debugConfigCreator,

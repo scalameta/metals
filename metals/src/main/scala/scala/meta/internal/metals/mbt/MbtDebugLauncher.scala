@@ -6,6 +6,7 @@ import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 trait MbtDebugLauncher { self: BuildTool =>
 
@@ -28,6 +29,42 @@ trait MbtDebugLauncher { self: BuildTool =>
       mainClass: ScalaMainClass,
       debugAgentFlag: String,
   ): List[String]
+
+  def mbtTestCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): List[String]
+
+  def mbtTestDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+  ): List[String]
+
+  /**
+   * Returns true if this launcher supports forked test debugging with a pre-assigned port.
+   * When true, mbtTestDebugCommandWithPort should be used instead of mbtTestDebugCommand.
+   */
+  def supportsForkedTestDebug: Boolean = false
+
+  /**
+   * Returns a function that builds the test debug command with a specific port.
+   * The forked test JVM will listen on this port for debugger connections.
+   */
+  def mbtTestDebugCommandWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Int => List[String] = { _ =>
+    mbtTestDebugCommand(
+      workspace,
+      target,
+      testSuites,
+      MbtDebugLauncher.DebugAgentFlag,
+    )
+  }
 }
 
 object MbtDebugLauncher {

@@ -309,6 +309,7 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
           "Import",
           progressMessage,
           Messages.importingBuild,
+          "Discovering main classes and tests",
         ).mkString("\n"),
       )
     } yield ()

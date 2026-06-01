@@ -14,7 +14,8 @@ case class CompilerVirtualFileParams(
     text: String,
     token: CancelToken = EmptyCancelToken,
     override val outlineFiles: Optional[OutlineFiles] = Optional.empty(),
-    override val shouldReturnDiagnostics: Boolean = false
+    override val shouldReturnDiagnostics: Boolean = false,
+    override val shouldPruneSemanticdb: Boolean = false
 ) extends VirtualFileParams {
 
   // The code below is copied from scala.meta InternalInput. Having the

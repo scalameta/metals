@@ -10,6 +10,8 @@ import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -20,6 +22,7 @@ import org.eclipse.lsp4j.FileChangeType
 import tests.BaseCompletionLspSuite
 import tests.BuildInfo
 import tests.Library
+import tests.MbtJsonBuilder
 import tests.TestHovers
 import tests.TestingServer
 
@@ -32,6 +35,9 @@ class MbtBuildServerLspSuite
     extends BaseCompletionLspSuite("mbt-build-server")
     with TestHovers {
 
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(InitializationOptions.Default.copy(testExplorerProvider = Some(true)))
+
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
@@ -43,6 +49,7 @@ class MbtBuildServerLspSuite
       fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
+      testUserInterface = TestUserInterfaceKind.TestExplorer,
     )
 
   override def initializeGitRepo: Boolean = true
@@ -123,6 +130,115 @@ class MbtBuildServerLspSuite
         )
       } yield ()
     }
+
+  test("mbt-munit-test-discovery") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addDependency("org.scalameta", "munit", "0.7.29")
+      .addNamespace("test", List("src/**"))
+      .build()
+    val testFile = "src/MunitTest.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/$testFile
+            |package example
+            |
+            |class MunitTest extends munit.FunSuite {
+            |  def complicateMethod(): Unit = {
+            |    val a = 1
+            |    val b = 2
+            |    val c = a + b
+            |    println(c)
+            |  }
+            |  test("ok") {}
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen(testFile)
+      testSuites <- server.discoverTestSuites(List(testFile))
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assertNoDiff(
+        testEvents.mkString("\n"),
+        s"""|AddTestSuite(example.MunitTest,MunitTest,example/MunitTest#,Location [
+            |  uri = "${workspace.toURI}src/MunitTest.scala"
+            |  range = Range [
+            |    start = Position [
+            |      line = 2
+            |      character = 6
+            |    ]
+            |    end = Position [
+            |      line = 2
+            |      character = 15
+            |    ]
+            |  ]
+            |],true)
+            |""".stripMargin,
+      )
+    }
+  }
+
+  test("mbt-junit-test-discovery") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addJavaDependency("junit", "junit", "4.13.2")
+      .addNamespace("test", List("src/**"))
+      .build()
+    val testFile = "src/JunitTest.java"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/$testFile
+            |package example;
+            |
+            |import org.junit.Test;
+            |import static org.junit.Assert.*;
+            |
+            |public class JunitTest {
+            |  @Test
+            |  public void sampleTest() {
+            |    assertTrue(true);
+            |  }
+            |
+            |  @Test
+            |  public void anotherTest() {
+            |    assertEquals(2, 1 + 1);
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen(testFile)
+      testSuites <- server.discoverTestSuites(List(testFile))
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assertNoDiff(
+        testEvents.mkString("\n"),
+        s"""|AddTestSuite(example.JunitTest,JunitTest,example/JunitTest#,Location [
+            |  uri = "${workspace.toURI}src/JunitTest.java"
+            |  range = Range [
+            |    start = Position [
+            |      line = 5
+            |      character = 13
+            |    ]
+            |    end = Position [
+            |      line = 5
+            |      character = 22
+            |    ]
+            |  ]
+            |],true)
+            |""".stripMargin,
+      )
+    }
+  }
 
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()

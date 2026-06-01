@@ -43,7 +43,7 @@ class PackageIndex() {
         }
       } catch {
         case NonFatal(e) =>
-          logger.error(entry.toURI.toString, e)
+          logger.error(entry.toRelativeURI.toString, e)
       }
     }
   }
@@ -68,7 +68,7 @@ class PackageIndex() {
             .filter(_ => member.endsWith(".class"))
             .foreach { parent =>
               val relpath = dir.relativize(parent)
-              val pkg = relpath.toURI(isDirectory = true).toString
+              val pkg = relpath.toRelativeURI(isDirectory = true).toString
               addMember(pkg, member)
             }
           FileVisitResult.CONTINUE

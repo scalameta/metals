@@ -17,6 +17,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 import coursier.MavenRepository
 import coursier.Repositories
 import coursier.Repository
@@ -123,7 +124,7 @@ case class GradleBuildTool(
   ): List[String] =
     gradleBaseCommand() ::: List(
       "--console=plain",
-      gradleTask(target, "classes"),
+      gradleTask(target, gradleCompileTask(target)),
     )
 
   override def mbtRunCommand(
@@ -157,6 +158,13 @@ case class GradleBuildTool(
       case Some(path) => s"$path:$task"
     }
 
+  private def gradleCompileTask(target: MbtTarget): String = {
+    val hasTestSources =
+      target.sources.exists(_.replace('\\', '/').contains("/test/"))
+    if (target.isTestTarget || hasTestSources) "testClasses"
+    else "classes"
+  }
+
   private def gradleRunCommand(
       target: MbtTarget,
       mainClass: ScalaMainClass,
@@ -171,16 +179,11 @@ case class GradleBuildTool(
     )
   }
 
-  private def gradleRunInitScript(
+  private def gradleInitScript(
       target: MbtTarget,
-      mainClass: ScalaMainClass,
-      debugAgentFlag: Option[String],
-  ): Path = {
-    val jvmOptions =
-      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
-        mainClass.getJvmOptions
-      )
-    val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+      taskName: String,
+      errorContext: String,
+  )(taskCode: String => String): Path = {
     val projectBlock = target.projectPath match {
       case Some(path) =>
         val gradlePath =
@@ -197,7 +200,38 @@ case class GradleBuildTool(
             |  if (project == null) {
             |    throw new GradleException("Could not find Gradle project ${GradleBuildTool.groovyString(gradlePath)}")
             |  }
-            |  def sourceSets = project.extensions.findByName('sourceSets')
+            |${taskCode(gradlePath)}""".stripMargin
+      case None =>
+        s"""|  throw new GradleException("Missing Gradle project path for Metals $errorContext")
+            |""".stripMargin
+    }
+    val script =
+      s"""|gradle.projectsEvaluated {
+          |$projectBlock
+          |}
+          |""".stripMargin
+
+    val digest = MD5.compute(script)
+    Files.write(
+      tempDir.resolve(s"$taskName-$digest.gradle"),
+      script.getBytes(StandardCharsets.UTF_8),
+    )
+  }
+
+  private def gradleRunInitScript(
+      target: MbtTarget,
+      mainClass: ScalaMainClass,
+      debugAgentFlag: Option[String],
+  ): Path = {
+    val jvmOptions =
+      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
+        mainClass.getJvmOptions
+      )
+    val args = MbtDebugLauncher.listOrNil(mainClass.getArguments)
+
+    gradleInitScript(target, GradleBuildTool.metalsRunTask, "run/debug") {
+      gradlePath =>
+        s"""|  def sourceSets = project.extensions.findByName('sourceSets')
             |  def main = sourceSets?.findByName('main')
             |  if (main == null) {
             |    throw new GradleException("Project ${GradleBuildTool.groovyString(gradlePath)} does not have a main source set")
@@ -213,28 +247,87 @@ case class GradleBuildTool(
             |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
             |    task.args(${GradleBuildTool.groovyList(args)})
             |  }""".stripMargin
-      case None =>
-        s"""|  throw new GradleException("Missing Gradle project path for Metals run/debug")
-            |""".stripMargin
     }
-    val script =
-      s"""|gradle.projectsEvaluated {
-          |$projectBlock
-          |}
-          |""".stripMargin
-
-    val digest = MD5.compute(script)
-    Files.write(
-      tempDir.resolve(s"${GradleBuildTool.metalsRunTask}-$digest.gradle"),
-      script.getBytes(StandardCharsets.UTF_8),
-    )
   }
+
+  override def mbtTestCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): List[String] =
+    gradleTestCommand(target, testSuites, debugAgentFlag = None)
+
+  override def mbtTestDebugCommand(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+  ): List[String] =
+    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+
+  override def supportsForkedTestDebug: Boolean = true
+
+  override def mbtTestDebugCommandWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Int => List[String] = { port =>
+    val debugAgentFlag =
+      s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
+    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+  }
+
+  private def gradleTestCommand(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: Option[String],
+  ): List[String] = {
+    val jvmOptions =
+      debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
+        testSuites.getJvmOptions
+      )
+    val initScriptArgs =
+      if (jvmOptions.isEmpty) Nil
+      else
+        List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
+
+    gradleBaseCommand() ::: List(
+      "--console=plain"
+    ) ::: initScriptArgs ::: List(
+      gradleTask(target, "test")
+    ) ::: gradleTestFilterArgs(testSuites)
+  }
+
+  private def gradleTestFilterArgs(
+      testSuites: ScalaTestSuites
+  ): List[String] = {
+    val filters =
+      MbtDebugLauncher.listOrNil(testSuites.getSuites).flatMap { suite =>
+        val className = suite.getClassName
+        val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+        if (tests.isEmpty) List(className)
+        else tests.map(test => s"$className.$test")
+      }
+    filters.flatMap(filter => List("--tests", filter))
+  }
+
+  private def gradleTestInitScript(
+      target: MbtTarget,
+      jvmOptions: List[String],
+  ): Path =
+    gradleInitScript(target, GradleBuildTool.metalsTestTask, "test") { _ =>
+      s"""|  project.tasks.withType(Test).configureEach { task ->
+          |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+          |  }""".stripMargin
+    }
+
 }
 
 object GradleBuildTool {
   def name = "gradle"
 
   private val metalsRunTask = "__metalsRun"
+  private val metalsTestTask = "__metalsTest"
 
   private def groovyList(values: List[String]): String =
     values.map(groovyString).mkString("[", ", ", "]")
