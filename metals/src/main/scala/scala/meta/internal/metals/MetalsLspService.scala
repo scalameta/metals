@@ -1722,9 +1722,7 @@ abstract class MetalsLspService(
     fileDecoderProvider.decodedFileContents(uri)
 
   def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
-    Future {
-      testProvider.discoverTests(uri.map(_.toAbsolutePath))
-    }
+    testProvider.discoverTests(uri.map(_.toAbsolutePath))
 
   def runScalafix(uri: String): Future[ApplyWorkspaceEditResponse] =
     scalafixProvider

@@ -644,6 +644,70 @@ class MbtWorkspaceSymbolProvider(
     candidates.toSeq
   }
 
+  /**
+   * Holds candidate test class information extracted from the MBT index.
+   * This is used for lazy test class discovery without loading semanticdb.
+   *
+   * @param path The file path containing the potential test class
+   * @param candidateSymbol The symbol that suggests this might be a test class.
+   *                        For annotated tests (JUnit, TestNG), this is the class symbol.
+   *                        For framework-extending tests, this is the class symbol.
+   */
+  case class MbtTestClassCandidate(
+      path: AbsolutePath,
+      candidateSymbol: String,
+  )
+
+  /**
+   * Extracts potential test class candidates from the MBT index without loading semanticdb.
+   * Returns candidates that need to be confirmed via semanticdb before use.
+   *
+   * Candidates are identified by:
+   * 1. Files referencing JUnit/TestNG annotation symbols (e.g., "org/junit/Test#")
+   * 2. Files referencing base parent classes of test frameworks (e.g., "munit/FunSuite#")
+   *
+   * @param filterPath A function to filter which paths should be included
+   * @param annotationSymbols JUnit/TestNG annotation symbols to search for
+   * @param baseParentSymbols Base parent class symbols for ScalaTest, MUnit, Weaver, ZIO Test
+   */
+  def candidateTestClasses(
+      filterPath: AbsolutePath => Boolean,
+      annotationSymbols: Seq[String],
+      baseParentSymbols: Seq[String],
+  ): Seq[MbtTestClassCandidate] = {
+    val candidates =
+      scala.collection.mutable.ArrayBuffer.empty[MbtTestClassCandidate]
+
+    val pathsFromReferences = possibleReferences(
+      MbtPossibleReferencesParams(
+        references = annotationSymbols,
+        implementations = baseParentSymbols,
+      )
+    )
+
+    for {
+      path <- pathsFromReferences
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+      // Add all class/object symbols as potential test class candidates
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        val kind = symbolInfo.getKind()
+        // Classes and objects that could be test suites
+        if (
+          kind == Semanticdb.SymbolInformation.Kind.CLASS ||
+          kind == Semanticdb.SymbolInformation.Kind.OBJECT
+        ) {
+          if (Symbol(symbol).isToplevel) {
+            candidates += MbtTestClassCandidate(path, symbol)
+          }
+        }
+      }
+    }
+    candidates.toSeq
+  }
+
   def possibleReferences(
       params: MbtPossibleReferencesParams
   ): Set[AbsolutePath] = {

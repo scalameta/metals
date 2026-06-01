@@ -519,7 +519,7 @@ class DebugProvider(
 
   def findMainClassAndItsBuildTarget(
       params: DebugUnresolvedMainClassParams
-  ): Try[List[(ScalaMainClass, b.BuildTarget)]] =
+  ): Future[Try[List[(ScalaMainClass, b.BuildTarget)]]] =
     buildTargetClassesFinder
       .findMainClassAndItsBuildTarget(
         params.mainClass,
@@ -564,7 +564,7 @@ class DebugProvider(
 
   def findTestClassAndItsBuildTarget(
       params: DebugUnresolvedTestClassParams
-  ): Try[List[(String, b.BuildTarget)]] =
+  )(implicit ec: ExecutionContext): Future[Try[List[(String, b.BuildTarget)]]] =
     buildTargetClassesFinder
       .findTestClassAndItsBuildTarget(
         params.testClass,
@@ -772,8 +772,8 @@ class DebugProvider(
     }
   }
 
-  def retryAfterRebuild[A](previousResult: Try[A], f: () => Try[A])(implicit
-      ec: ExecutionContext
+  def retryAfterRebuild[A](previousResult: Try[A], f: () => Future[Try[A]])(
+      implicit ec: ExecutionContext
   ): Future[Try[A]] =
     previousResult match {
       case Failure(ClassNotFoundInBuildTargetException(_, buildTarget)) =>
@@ -782,14 +782,14 @@ class DebugProvider(
         for {
           _ <- compilations.compileTargets(target)
           _ <- buildTargetClasses.rebuildIndex(target)
-          result <- Future(f())
+          result <- f()
         } yield result
       case Failure(_: NoMainClassFoundException) =>
         val activeTargetIds = buildTargets.activeBuildTargetIds
         for {
           _ <- compilations.compileTargets(activeTargetIds)
           _ <- buildTargetClasses.rebuildIndex(activeTargetIds)
-          result <- Future(f())
+          result <- f()
         } yield result
       case result => Future.successful(result)
     }
@@ -927,15 +927,12 @@ object DebugProvider {
       ec: ExecutionContext
   ) {
     private val searchPromise = Promise[Try[A]]()
-    protected def search(): Try[A]
+    protected def search(): Future[Try[A]]
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
     def createDapSession(args: A): Future[DebugSession] =
       dapSessionParams(args).flatMap(debugProvider.asSession(_))
     def searchResult: Future[(Try[A], ClassSearch[A])] = {
-      Future {
-        val resolved = search()
-        searchPromise.trySuccess(resolved)
-      }
+      search().map(resolved => searchPromise.trySuccess(resolved))
       searchPromise.future.map(e => (e, this))
     }
     def retrySearchResult: Future[(Try[A], ClassSearch[A])] =
@@ -952,8 +949,9 @@ object DebugProvider {
         debugProvider
       ) {
     override protected def search()
-        : Try[List[(ScalaMainClass, b.BuildTarget)]] =
+        : Future[Try[List[(ScalaMainClass, b.BuildTarget)]]] =
       debugProvider.findMainClassAndItsBuildTarget(params)
+
     override protected def dapSessionParams(
         res: List[(ScalaMainClass, b.BuildTarget)]
     ): Future[DebugSessionParams] =
@@ -965,7 +963,8 @@ object DebugProvider {
       params: DebugUnresolvedTestClassParams,
   )(implicit ec: ExecutionContext)
       extends ClassSearch[List[(String, b.BuildTarget)]](debugProvider) {
-    override protected def search(): Try[List[(String, b.BuildTarget)]] =
+    override protected def search()
+        : Future[Try[List[(String, b.BuildTarget)]]] =
       debugProvider.findTestClassAndItsBuildTarget(params)
     override protected def dapSessionParams(
         res: List[(String, b.BuildTarget)]

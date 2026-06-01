@@ -1,6 +1,5 @@
 package scala.meta.internal.metals.debug
 
-import java.net.URI
 import java.time.Duration
 
 import scala.collection.concurrent.TrieMap
@@ -125,6 +124,32 @@ final class BuildTargetClasses(
         .find(_.fullyQualifiedName == name)
         .map(_.fullyQualifiedName)
     )
+
+  def resolveCandidateTestClass(
+      name: String,
+      target: Option[String],
+  ): Future[Unit] = {
+    // Find targets that have candidates that might match this class name
+    val normalizedClassName = name.replace(".", "/")
+    val targetId =
+      target.flatMap(buildTargets.findByDisplayNameOrUri(_).map(_.getId))
+    val requestedTargets = targetId
+      .map(targetId => index.get(targetId).toList.map(targetId -> _))
+      .getOrElse(index.toList)
+    val targetsWithMatchingCandidates = requestedTargets.flatMap {
+      case (targetId, classes) =>
+        val hasMatchingCandidate = classes.candidateTestClasses.values.flatten
+          .exists(_.candidateSymbol.contains(normalizedClassName))
+        if (hasMatchingCandidate) Some(targetId) else None
+    }
+
+    if (targetsWithMatchingCandidates.isEmpty) {
+      Future.unit
+    } else {
+      confirmMbtTestClassCandidatesForTargets(targetsWithMatchingCandidates)
+    }
+
+  }
 
   def getTestClasses(
       name: String,
@@ -547,55 +572,58 @@ final class BuildTargetClasses(
     }
   }
 
+  /**
+   * Populates candidate test classes from the MBT index WITHOUT loading semanticdb.
+   * The candidates are stored in `candidateTestClasses` and will be confirmed
+   * lazily when:
+   * - A file is opened (for code lenses or test explorer)
+   * - User explicitly requests test discovery (test explorer opened)
+   *
+   * This optimization avoids the expensive semanticdb loading at startup.
+   */
   private def populateMbtTestClasses(
       classes: Map[b.BuildTargetIdentifier, Classes],
       targets: Seq[b.BuildTargetIdentifier],
-  ): Future[Unit] = {
+  ): Future[Unit] = Future {
     mbt() match {
       case None =>
         scribe.warn("mbt-test: MBT workspace symbol provider is not available.")
-        Future.unit
       case Some(mbtProvider) =>
         val targetSet = targets.toSet
-        val candidatePaths =
-          filterMbtCandidatePaths(
-            mbtProvider.possibleReferences(
-              MbtPossibleReferencesParams(
-                references = TestFrameworkSymbolRegistry.annotationSymbols,
-                implementations = TestFrameworkSymbolRegistry.baseParentSymbols,
-              )
-            ),
-            targetSet,
-          )
 
-        foreachMbtSemanticdbDocument(candidatePaths) { doc =>
-          val path = doc.uri.toAbsolutePath
-          extractTestClassesFromDocument(doc, path).map { testClasses =>
-            cacheExtractedTestClasses(
-              classes,
-              targetSet,
-              path,
-              testClasses,
+        val candidates = mbtProvider.candidateTestClasses(
+          filterPath = path =>
+            path.isScalaOrJava &&
+              buildTargets.inverseSourcesAll(path).exists(targetSet),
+          annotationSymbols = TestFrameworkSymbolRegistry.annotationSymbols,
+          baseParentSymbols = TestFrameworkSymbolRegistry.baseParentSymbols,
+        )
+
+        // Group candidates by path
+        val candidatesByPath = candidates
+          .groupBy(_.path)
+          .view
+          .mapValues(
+            _.map(c =>
+              BuildTargetClasses.TestClassCandidate(c.path, c.candidateSymbol)
             )
-          }
-        }
-    }
-  }
+          )
+          .toMap
 
-  private def cacheExtractedTestClasses(
-      classes: Map[b.BuildTargetIdentifier, Classes],
-      targetSet: Set[b.BuildTargetIdentifier],
-      path: AbsolutePath,
-      testClasses: List[(String, TestSymbolInfo)],
-  ): Unit = {
-    val targetIds = buildTargets.inverseSourcesAll(path).filter(targetSet)
-    if (targetIds.nonEmpty) {
-      for {
-        target <- targetIds
-        (symbol, testInfo) <- testClasses
-      } {
-        classes(target).testClasses.put(symbol, testInfo)
-      }
+        // Store candidates in the appropriate target classes
+        for {
+          (path, pathCandidates) <- candidatesByPath
+          targetId <- buildTargets.inverseSourcesAll(path).filter(targetSet)
+        } {
+          val existingCandidates =
+            classes(targetId).candidateTestClasses.getOrElse(path, Seq.empty)
+          classes(targetId).candidateTestClasses
+            .put(path, existingCandidates ++ pathCandidates)
+        }
+
+        scribe.debug(
+          s"mbt-test: stored ${candidates.size} test class candidates from ${candidatesByPath.size} files"
+        )
     }
   }
 
@@ -647,7 +675,6 @@ final class BuildTargetClasses(
         scribe.debug(
           s"mbt-run: stored ${candidates.size} main class candidates from ${candidatesByPath.size} files"
         )
-        Future.unit
     }
   }
 
@@ -687,18 +714,6 @@ final class BuildTargetClasses(
         }
     }
   }
-
-  private def filterMbtCandidatePaths(
-      paths: Iterable[AbsolutePath],
-      targetSet: Set[b.BuildTargetIdentifier],
-  ): Seq[AbsolutePath] =
-    paths
-      .filter(path =>
-        path.isScalaOrJava &&
-          buildTargets.inverseSourcesAll(path).exists(targetSet)
-      )
-      .toSeq
-      .distinct
 
   private def foreachMbtSemanticdbDocument(
       candidatePaths: Seq[AbsolutePath]
@@ -767,13 +782,7 @@ final class BuildTargetClasses(
       if mainClassName.forall { className =>
         val normalizedClassName = className.replace(".", "/")
         candidates.exists { candidate =>
-          val candidateSymbol = candidate.candidateSymbol
-          // Check if the candidate symbol might match the requested class name
-          candidateSymbol.contains(normalizedClassName) ||
-          candidateSymbol
-            .stripSuffix("#")
-            .stripSuffix(".")
-            .endsWith(normalizedClassName)
+          candidate.candidateSymbol.contains(normalizedClassName)
         }
       }
     } yield path
@@ -799,6 +808,104 @@ final class BuildTargetClasses(
             )
           }
         }
+    }
+  }
+
+  /**
+   * Confirms candidate test classes for a specific file by loading semanticdb.
+   * This should be called when:
+   * - A file is opened (for code lenses or test explorer)
+   * - User explicitly requests test discovery
+   *
+   * @param path The file path to confirm candidates for
+   * @param targetId The target to limit confirmation to
+   * @return Future that completes when confirmation is done
+   */
+  def confirmMbtTestClassCandidates(
+      path: AbsolutePath,
+      targetId: b.BuildTargetIdentifier,
+  ): Future[Unit] = {
+    val targetIds = Seq(targetId)
+
+    val hasCandidates = targetIds.exists { tid =>
+      index.get(tid).exists(_.candidateTestClasses.contains(path))
+    }
+    if (!hasCandidates) {
+      Future.unit
+    } else {
+      compilers()
+        .batchSemanticdbTextDocuments(
+          Seq(path),
+          EmptyCancelToken,
+          Duration.ofSeconds(15),
+        )
+        .flatMap { documents =>
+          Future
+            .sequence(
+              documents.documents.map { doc =>
+                processMbtTestSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
+              }
+            )
+            .map(_ => ())
+        }
+    }
+  }
+
+  /**
+   * Confirms candidate test classes for specific targets.
+   * This is useful when the user opens the test explorer and wants to discover all tests.
+   *
+   * @param targetIds The build targets to confirm candidates for
+   * @return Future that completes when confirmation is done
+   */
+  def confirmMbtTestClassCandidatesForTargets(
+      targetIds: Seq[b.BuildTargetIdentifier]
+  ): Future[Unit] = {
+    // Collect candidate paths from the specified targets
+    val candidatePaths = for {
+      tid <- targetIds
+      classes <- index.get(tid).toSeq
+      (path, _) <- classes.candidateTestClasses.toSeq
+    } yield path
+    val distinctPaths = candidatePaths.distinct
+
+    if (distinctPaths.isEmpty) {
+      Future.unit
+    } else {
+      foreachMbtSemanticdbDocument(distinctPaths) { doc =>
+        val docPath = doc.uri.toAbsolutePath
+        val docTargetIds = buildTargets.inverseSourcesAll(docPath)
+        processMbtTestSemanticdb(
+          docPath,
+          doc,
+          docTargetIds.filter(targetIds.contains),
+        )
+      }
+    }
+  }
+
+  /**
+   * Processes semanticdb to extract and store confirmed test classes.
+   * Also removes candidates for the processed path.
+   */
+  private def processMbtTestSemanticdb(
+      docPath: AbsolutePath,
+      doc: TextDocument,
+      targetIds: Seq[b.BuildTargetIdentifier],
+  ): Future[Unit] = {
+    extractTestClassesFromDocument(doc, docPath).map { testClasses =>
+      for {
+        tid <- targetIds
+        classes <- index.get(tid)
+      } {
+        // Remove candidates for this path
+        classes.candidateTestClasses.remove(docPath)
+
+        // Extract and store confirmed test classes
+        for ((symbol, testInfo) <- testClasses) {
+          classes.testClasses.put(symbol, testInfo)
+        }
+      }
     }
   }
 
@@ -1012,6 +1119,16 @@ object BuildTargetClasses {
       candidateSymbol: String,
   )
 
+  /**
+   * Represents a candidate test class that has been discovered from the MBT index
+   * without loading semanticdb. The candidate needs to be confirmed before being
+   * added to testClasses.
+   */
+  final case class TestClassCandidate(
+      path: AbsolutePath,
+      candidateSymbol: String,
+  )
+
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
     val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
@@ -1023,6 +1140,14 @@ object BuildTargetClasses {
      */
     val candidateMainClasses =
       new TrieMap[AbsolutePath, Seq[MainClassCandidate]]()
+
+    /**
+     * Candidate test classes discovered from the MBT index without semanticdb.
+     * These are unconfirmed and need semanticdb verification before use.
+     * Key is the file path, value is the list of candidate symbols in that file.
+     */
+    val candidateTestClasses =
+      new TrieMap[AbsolutePath, Seq[TestClassCandidate]]()
 
     def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
   }

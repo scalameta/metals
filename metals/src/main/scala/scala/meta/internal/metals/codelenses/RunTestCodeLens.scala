@@ -112,34 +112,38 @@ final class RunTestCodeLens(
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
     } yield {
-      // First confirm any candidate main classes for this file.
-      // This is needed for MBT build servers where main classes are discovered lazily.
-      val confirmCandidates =
+      // First confirm any candidate main and test classes for this file.
+      // This is needed for MBT build servers where classes are discovered lazily.
+      val confirmMainCandidates =
         buildTargetClasses.confirmMbtMainClassCandidates(path, buildTargetId)
+      val confirmTestCandidates =
+        buildTargetClasses.confirmMbtTestClassCandidates(path, buildTargetId)
 
-      confirmCandidates.flatMap { _ =>
-        requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
-          val classes = buildTargetClasses.classesOf(buildTargetId)
-          val syntheticLenses =
-            if (!path.isWorksheet)
-              syntheticCodeLenses(
-                textDocument,
-                buildTargetId,
-                classes,
-                isJVM,
-              )
-            else Nil
-          val regularLenses =
-            codeLenses(
+      for {
+        _ <- confirmMainCandidates
+        _ <- confirmTestCandidates
+        _ <- requestJvmEnvironment(buildTargetId, isJVM)
+      } yield {
+        val classes = buildTargetClasses.classesOf(buildTargetId)
+        val syntheticLenses =
+          if (!path.isWorksheet)
+            syntheticCodeLenses(
               textDocument,
               buildTargetId,
               classes,
-              distance,
-              path,
               isJVM,
             )
-          syntheticLenses ++ regularLenses
-        }
+          else Nil
+        val regularLenses =
+          codeLenses(
+            textDocument,
+            buildTargetId,
+            classes,
+            distance,
+            path,
+            isJVM,
+          )
+        syntheticLenses ++ regularLenses
       }
     }
     Future.sequence(lenses).map(_.flatten)
