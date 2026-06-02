@@ -31,8 +31,10 @@ class BuildTargetClassesFinder(
   ): Future[Try[List[(b.ScalaMainClass, b.BuildTarget)]]] = {
     val targetId =
       buildTarget.flatMap(buildTargets.findByDisplayNameOrUri(_).map(_.getId))
+    val targetIds =
+      targetId.fold(buildTargets.allBuildTargetIds)(id => List(id))
     buildTargetClasses
-      .confirmMbtMainClassCandidatesForTargets(targetId.toSeq, Some(className))
+      .confirmMbtMainClassCandidatesForTargets(targetIds, Some(className))
       .map { _ =>
         val classes = buildTargetClasses.findMainClassByName(className)
         findClassAndBuildTarget(

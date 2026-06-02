@@ -932,7 +932,10 @@ object DebugProvider {
     def createDapSession(args: A): Future[DebugSession] =
       dapSessionParams(args).flatMap(debugProvider.asSession(_))
     def searchResult: Future[(Try[A], ClassSearch[A])] = {
-      search().map(resolved => searchPromise.trySuccess(resolved))
+      search().onComplete {
+        case Success(resolved) => searchPromise.trySuccess(resolved)
+        case Failure(err) => searchPromise.trySuccess(Failure(err))
+      }
       searchPromise.future.map(e => (e, this))
     }
     def retrySearchResult: Future[(Try[A], ClassSearch[A])] =

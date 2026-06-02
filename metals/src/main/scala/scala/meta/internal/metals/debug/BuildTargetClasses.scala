@@ -707,6 +707,10 @@ final class BuildTargetClasses(
           EmptyCancelToken,
           Duration.ofSeconds(15),
         )
+        .recover { case e =>
+          scribe.error(s"Error parsing semanticdb text documents: $e", e)
+          TextDocuments(documents = Seq.empty)
+        }
         .map { documents =>
           documents.documents.foreach { doc =>
             processMbtSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
@@ -797,6 +801,10 @@ final class BuildTargetClasses(
           EmptyCancelToken,
           Duration.ofSeconds(15),
         )
+        .recover { case e =>
+          scribe.error(s"Error parsing semanticdb text documents: $e", e)
+          TextDocuments(documents = Seq.empty)
+        }
         .map { documents =>
           documents.documents.foreach { doc =>
             val docPath = doc.uri.toAbsolutePath
@@ -839,6 +847,10 @@ final class BuildTargetClasses(
           EmptyCancelToken,
           Duration.ofSeconds(15),
         )
+        .recover { case e =>
+          scribe.error(s"Error parsing semanticdb text documents: $e", e)
+          TextDocuments(documents = Seq.empty)
+        }
         .flatMap { documents =>
           Future
             .sequence(

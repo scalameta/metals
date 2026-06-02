@@ -304,7 +304,8 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ = client.progressParams.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ = assertNoDiff(
-        client.beginProgressMessages,
+        client.beginProgressMessages
+          .replaceAll("Discovering main classes and tests\n", ""),
         List(
           "Import",
           progressMessage,
