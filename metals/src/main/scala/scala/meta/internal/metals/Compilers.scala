@@ -1053,6 +1053,70 @@ class Compilers(
         }
     }.getOrElse(Future.successful(Nil.asJava))
 
+  def inlineValues(
+      params: l.InlineValueParams,
+      token: CancelToken,
+  ): Future[ju.List[l.InlineValue]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path)
+      .flatMap { compiler =>
+        val (input, adjustRequest, adjustResponse) =
+          sourceAdjustments(
+            params.getTextDocument.getUri,
+            compiler.scalaVersion(),
+          )
+        val range = params.getRange
+        val adjustedRange =
+          new LspRange(
+            adjustRequest(range.getStart),
+            adjustRequest(range.getEnd),
+          )
+        val adjustedStopped =
+          Option(params.getContext)
+            .flatMap(context => Option(context.getStoppedLocation))
+            .map(range =>
+              new LspRange(
+                adjustRequest(range.getStart),
+                adjustRequest(range.getEnd),
+              )
+            )
+            .getOrElse(adjustedRange)
+        for {
+          metaRange <- adjustedRange.toMeta(input)
+          metaStopped <- adjustedStopped.toMeta(input)
+        } yield {
+          val rangeParams = CompilerRangeParamsUtils.fromPos(
+            metaRange,
+            token,
+            outlineFilesProvider.getOutlineFiles(compiler.buildTargetId()),
+          )
+          compiler
+            .inlineValues(rangeParams, metaStopped.end)
+            .asScala
+            .map(values => adjustInlineValues(values, adjustResponse))
+        }
+      }
+      .getOrElse(Future.successful(Nil.asJava))
+  }
+
+  private def adjustInlineValues(
+      values: ju.List[l.InlineValue],
+      adjust: AdjustLspData,
+  ): ju.List[l.InlineValue] =
+    values.asScala.map { value =>
+      if (value.isInlineValueText()) {
+        val text = value.getInlineValueText()
+        text.setRange(adjust.adjustRange(text.getRange()))
+      } else if (value.isInlineValueVariableLookup()) {
+        val lookup = value.getInlineValueVariableLookup()
+        lookup.setRange(adjust.adjustRange(lookup.getRange()))
+      } else if (value.isInlineValueEvaluatableExpression()) {
+        val expression = value.getInlineValueEvaluatableExpression()
+        expression.setRange(adjust.adjustRange(expression.getRange()))
+      }
+      value
+    }.asJava
+
   def documentHighlight(
       params: TextDocumentPositionParams,
       token: CancelToken,

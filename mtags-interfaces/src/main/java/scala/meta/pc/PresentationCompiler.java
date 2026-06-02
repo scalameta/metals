@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DocumentHighlight;
+import org.eclipse.lsp4j.InlineValue;
 import org.eclipse.lsp4j.InlayHint;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SelectionRange;
@@ -143,6 +144,12 @@ public abstract class PresentationCompiler {
         () -> {
           throw new DisplayableException("Inline value is not available in this version of Scala");
         });
+  }
+
+  /** Return LSP inline values for the selected range. */
+  public CompletableFuture<List<InlineValue>> inlineValues(
+      RangeParams params, int stoppedLocationOffset) {
+    return CompletableFuture.completedFuture(Collections.emptyList());
   }
 
   /**

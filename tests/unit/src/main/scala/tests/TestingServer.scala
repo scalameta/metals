@@ -1671,6 +1671,36 @@ final case class TestingServer(
     } yield inlayHints.asScala.toList
   }
 
+  def inlineValues(
+      filename: String,
+      range: l.Range,
+      stoppedLocation: l.Range = new l.Range(
+        new l.Position(0, 0),
+        new l.Position(0, 0),
+      ),
+  ): Future[List[l.InlineValue]] = {
+    val path = toPath(filename)
+    val params = new l.InlineValueParams(
+      path.toTextDocumentIdentifier,
+      range,
+      new l.InlineValueContext(0, stoppedLocation),
+    )
+    fullServer.inlineValue(params).asScala.map(_.asScala.toList)
+  }
+
+  def inlineValuesText(
+      filename: String,
+      range: l.Range,
+      stoppedLocation: l.Range = new l.Range(
+        new l.Position(0, 0),
+        new l.Position(0, 0),
+      ),
+  ): Future[String] =
+    for {
+      values <- inlineValues(filename, range, stoppedLocation)
+      textEdits = InlineValuesTextEdits(textContents(filename), values)
+    } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
+
   def assertHighlight(
       filename: String,
       query: String,

@@ -574,6 +574,11 @@ class WorkspaceLspService(
       .map(_.inlayHintResolve(inlayHint))
       .getOrElse(Future.successful(inlayHint).asJava)
 
+  override def inlineValue(
+      params: lsp4j.InlineValueParams
+  ): CompletableFuture[java.util.List[lsp4j.InlineValue]] =
+    getServiceFor(params.getTextDocument.getUri()).inlineValue(params)
+
   override def documentHighlights(
       params: TextDocumentPositionParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
@@ -1621,6 +1626,9 @@ class WorkspaceLspService(
         val inlayHintsCapabilities = new lsp4j.InlayHintRegistrationOptions()
         inlayHintsCapabilities.setResolveProvider(true)
         capabilities.setInlayHintProvider(inlayHintsCapabilities)
+        capabilities.setInlineValueProvider(
+          new lsp4j.InlineValueRegistrationOptions()
+        )
 
         val textDocumentSyncOptions = new lsp4j.TextDocumentSyncOptions
         textDocumentSyncOptions.setChange(lsp4j.TextDocumentSyncKind.Full)
