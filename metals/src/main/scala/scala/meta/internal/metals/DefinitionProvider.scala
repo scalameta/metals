@@ -89,6 +89,7 @@ final class DefinitionProvider(
     saveDefFileToDisk,
     sourceMapper,
     scalaVersionSelector,
+    mbt,
   )
 
   val scaladocDefinitionProvider =
@@ -445,6 +446,7 @@ class DestinationProvider(
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     scalaVersionSelector: ScalaVersionSelector,
+    mbt: MbtWorkspaceSymbolProvider,
 ) {
 
   private def bestTextDocument(
@@ -490,18 +492,46 @@ class DestinationProvider(
       allowedBuildTargets: Set[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
-    if (allowedBuildTargets.isEmpty)
-      definitions.headOption
-    else {
-      val matched = definitions.find { defn =>
-        sourceBuildTargets(defn.path).exists(id =>
-          allowedBuildTargets.contains(id)
-        )
+    val result =
+      if (allowedBuildTargets.isEmpty)
+        definitions.headOption
+      else {
+        val matched = definitions.find { defn =>
+          sourceBuildTargets(defn.path).exists(id =>
+            allowedBuildTargets.contains(id)
+          )
+        }
+        // Fallback to any definition - it's needed for worksheets
+        // They might have dynamic `import $dep` and these sources jars
+        // aren't registered in buildTargets
+        matched.orElse(definitions.headOption)
       }
-      // Fallback to any definition - it's needed for worksheets
-      // They might have dynamic `import $dep` and these sources jars
-      // aren't registered in buildTargets
-      matched.orElse(definitions.headOption)
+    result.orElse(definitionFromMbt(symbol))
+  }
+
+  private def definitionFromMbt(symbol: String): Option[SymbolDefinition] = {
+    val mbtDefinitions = mbt.definition(symbol)
+    scribe.info(
+      s"MBT fallback for symbol $symbol: found ${mbtDefinitions.size} definitions"
+    )
+    mbtDefinitions.headOption.map { location =>
+      val path = location.getUri.toAbsolutePath
+      val lspRange = location.getRange
+      val range = semanticdb.Range(
+        lspRange.getStart.getLine,
+        lspRange.getStart.getCharacter,
+        lspRange.getEnd.getLine,
+        lspRange.getEnd.getCharacter,
+      )
+      SymbolDefinition(
+        querySymbol = Symbol(symbol),
+        definitionSymbol = Symbol(symbol),
+        path = path,
+        dialect = scalaVersionSelector.getDialect(path),
+        range = Some(range),
+        kind = None,
+        properties = 0,
+      )
     }
   }
 

@@ -2037,10 +2037,15 @@ final case class TestingServer(
 
   def prepareTypeHierarchy(
       filename: String,
-      query: String,
+      subQuery: String,
   ): Future[Option[TypeHierarchyItem]] = {
+    val text = buffers
+      .get(toPath(filename))
+      .map(
+        _.replace(subQuery.replace("@@", ""), subQuery)
+      )
     for {
-      (_, params) <- offsetParams(filename, query, workspace)
+      (_, params) <- offsetParams(filename, text.getOrElse(subQuery), workspace)
       prepareParams = new TypeHierarchyPrepareParams(
         params.getTextDocument(),
         params.getPosition(),

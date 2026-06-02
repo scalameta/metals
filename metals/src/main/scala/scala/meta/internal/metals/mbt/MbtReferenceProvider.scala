@@ -104,15 +104,25 @@ class MbtReferenceProvider(
     groupSize,
     timeout,
   )
+
   def implementations(
       params: l.TextDocumentPositionParams
-  ): Future[List[l.Location]] =
+  ): Future[List[l.Location]] = implementations(
+    params.getTextDocument.getUri.toAbsolutePath,
+    params.getPosition(),
+    createOutput = (location, info) => location,
+  )
+
+  def implementations[T](
+      path: AbsolutePath,
+      pos: l.Position,
+      createOutput: (l.Location, s.SymbolInformation) => T,
+  ): Future[List[T]] =
     workDoneProgress.trackProgressFuture(
       "Finding implementations",
       taskProgress => {
         val timer = new Timer(time)
-        val path = params.getTextDocument.getUri.toAbsolutePath
-        Future(doImplementations(params, taskProgress)).map {
+        Future(doImplementations(path, pos, taskProgress, createOutput)).map {
           case (results, symbol) =>
             metrics.recordEvent(
               Event
@@ -126,13 +136,13 @@ class MbtReferenceProvider(
       },
     )
 
-  private def doImplementations(
-      params: l.TextDocumentPositionParams,
+  private def doImplementations[T](
+      path: AbsolutePath,
+      pos: l.Position,
       taskProgress: TaskProgress,
-  ): (List[l.Location], Option[String]) = {
+      createOutput: (l.Location, s.SymbolInformation) => T,
+  ): (List[T], Option[String]) = {
     val timer = new Timer(time)
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    val pos = params.getPosition()
     val requestDoc = cache.indexSingle(path)
     val enclosingOccurrences = this.enclosingOccurrences(requestDoc, pos)
     scribe.info(
@@ -140,7 +150,7 @@ class MbtReferenceProvider(
     )
 
     if (path.isProtoFilename) {
-      return protobufReferences.implementations(
+      protobufReferences.implementations(
         path,
         requestDoc,
         enclosingOccurrences,
@@ -148,28 +158,32 @@ class MbtReferenceProvider(
         timer,
         cache.index,
         commonPrefixLength,
+        createOutput,
+      )
+    } else {
+      doScalaJavaImplementations(
+        path,
+        enclosingOccurrences,
+        taskProgress,
+        timer,
+        createOutput,
       )
     }
-    doScalaJavaImplementations(
-      path,
-      enclosingOccurrences,
-      taskProgress,
-      timer,
-    )
   }
 
-  private def doScalaJavaImplementations(
+  private def doScalaJavaImplementations[T](
       path: AbsolutePath,
       enclosingOccurrences: Seq[s.SymbolOccurrence],
       taskProgress: TaskProgress,
       timer: Timer,
-  ): (List[l.Location], Option[String]) = {
+      createOutput: (l.Location, s.SymbolInformation) => T,
+  ): (List[T], Option[String]) = {
     val enclosingSymbols = enclosingOccurrences.map(_.symbol)
     val primarySymbol = enclosingSymbols.headOption
     val isOverridenSymbol = mutable.Set.from(enclosingSymbols)
     val isVisitedMethodName = mutable.Set.empty[String]
     var lastQueryRound = Set.empty[String]
-    val result = mutable.ListBuffer.empty[l.Location]
+    val result = mutable.ListBuffer.empty[T]
     val isVisitedURI = mutable.Set.empty[String]
 
     def visitDoc(doc: s.TextDocument): Boolean = {
@@ -208,7 +222,7 @@ class MbtReferenceProvider(
           isVisitedMethodName += info.displayName
         }
         isOverridenSymbol += occ.symbol
-        result += range.toLocation(doc.uri)
+        result += createOutput(range.toLocation(doc.uri), info)
       }
       true
     }
@@ -560,3 +574,10 @@ class MbtReferenceProvider(
   }
 
 }
+
+case class MbtClassImplementation(
+    symbol: String,
+    path: AbsolutePath,
+    range: l.Range,
+    info: Option[s.SymbolInformation],
+)

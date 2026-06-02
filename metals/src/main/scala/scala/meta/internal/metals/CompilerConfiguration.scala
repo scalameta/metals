@@ -59,6 +59,7 @@ class CompilerConfiguration(
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
     mtags: () => Mtags,
+    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext) {
 
   private val plugins = new CompilerPlugins()
@@ -557,6 +558,7 @@ class CompilerConfiguration(
       saveSymbolFileToDisk = !config.isVirtualDocumentSupported(),
       sourceMapper,
       mtags,
+      mbtWorkspaceSymbolProvider,
       workspaceFallback,
     )
   } catch {

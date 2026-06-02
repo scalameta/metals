@@ -565,6 +565,7 @@ abstract class MetalsLspService(
       metrics,
       featureFlags,
       () => mbtBuild,
+      mbt2,
     )
   )
 
@@ -708,6 +709,7 @@ abstract class MetalsLspService(
       semanticdbs,
       definitionProvider,
       implementationProvider,
+      Some(mbtReferenceProvider),
     )
 
   protected val renameProvider: RenameProvider = new RenameProvider(
