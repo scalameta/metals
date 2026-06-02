@@ -50,6 +50,7 @@ import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
@@ -546,21 +547,6 @@ class MbtWorkspaceSymbolProvider(
   }
 
   /**
-   * Holds candidate main class information extracted from the MBT index.
-   * This is used for lazy main class discovery without loading semanticdb.
-   *
-   * @param path The file path containing the potential main class
-   * @param candidateSymbol The symbol that suggests this might be a main class.
-   *                        For Java/Scala main methods, this is the class symbol (e.g., "com/example/Main#").
-   *                        For @main annotated methods, this is the method symbol.
-   *                        For App extending classes, this is the class symbol.
-   */
-  case class MbtMainClassCandidate(
-      path: AbsolutePath,
-      candidateSymbol: String,
-  )
-
-  /**
    * Extracts potential main class candidates from the MBT index without loading semanticdb.
    * Returns candidates that need to be confirmed via semanticdb before use.
    *
@@ -571,9 +557,10 @@ class MbtWorkspaceSymbolProvider(
    */
   def candidateMainClasses(
       filterPath: AbsolutePath => Boolean
-  ): Seq[MbtMainClassCandidate] = {
+  ): Seq[BuildTargetClasses.MainClassCandidate] = {
     val candidates =
-      scala.collection.mutable.ArrayBuffer.empty[MbtMainClassCandidate]
+      scala.collection.mutable.ArrayBuffer
+        .empty[BuildTargetClasses.MainClassCandidate]
     val javaMain = "#main()."
     val scalaMain = ".main()."
     val mainAnnotRef = FingerprintedCharSequence.fuzzyReference("scala/main#")
@@ -600,12 +587,15 @@ class MbtWorkspaceSymbolProvider(
         // Java main method pattern: com/example/Main#main().
         if (symbol.endsWith(javaMain)) {
           val classSymbol = symbol.stripSuffix("main().")
-          candidates += MbtMainClassCandidate(path, classSymbol)
+          candidates += BuildTargetClasses.MainClassCandidate(path, classSymbol)
         }
         // Scala main method pattern: com/example/Main.main().
         else if (symbol.endsWith(scalaMain)) {
           val objectSymbol = symbol.stripSuffix("main().")
-          candidates += MbtMainClassCandidate(path, objectSymbol)
+          candidates += BuildTargetClasses.MainClassCandidate(
+            path,
+            objectSymbol,
+          )
         }
       }
     }
@@ -624,7 +614,7 @@ class MbtWorkspaceSymbolProvider(
           val kind = symbolInfo.getKind()
           // Methods that could have @main annotation
           if (kind == Semanticdb.SymbolInformation.Kind.METHOD) {
-            candidates += MbtMainClassCandidate(path, symbol)
+            candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
           }
         }
       }
@@ -636,27 +626,13 @@ class MbtWorkspaceSymbolProvider(
           kind == Semanticdb.SymbolInformation.Kind.OBJECT &&
           Symbol(symbol).isToplevel
         ) {
-          candidates += MbtMainClassCandidate(path, symbol)
+          candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
         }
 
       }
     }
     candidates.toSeq
   }
-
-  /**
-   * Holds candidate test class information extracted from the MBT index.
-   * This is used for lazy test class discovery without loading semanticdb.
-   *
-   * @param path The file path containing the potential test class
-   * @param candidateSymbol The symbol that suggests this might be a test class.
-   *                        For annotated tests (JUnit, TestNG), this is the class symbol.
-   *                        For framework-extending tests, this is the class symbol.
-   */
-  case class MbtTestClassCandidate(
-      path: AbsolutePath,
-      candidateSymbol: String,
-  )
 
   /**
    * Extracts potential test class candidates from the MBT index without loading semanticdb.
@@ -674,9 +650,10 @@ class MbtWorkspaceSymbolProvider(
       filterPath: AbsolutePath => Boolean,
       annotationSymbols: Seq[String],
       baseParentSymbols: Seq[String],
-  ): Seq[MbtTestClassCandidate] = {
+  ): Seq[BuildTargetClasses.TestClassCandidate] = {
     val candidates =
-      scala.collection.mutable.ArrayBuffer.empty[MbtTestClassCandidate]
+      scala.collection.mutable.ArrayBuffer
+        .empty[BuildTargetClasses.TestClassCandidate]
 
     val pathsFromReferences = possibleReferences(
       MbtPossibleReferencesParams(
@@ -700,7 +677,7 @@ class MbtWorkspaceSymbolProvider(
           kind == Semanticdb.SymbolInformation.Kind.OBJECT
         ) {
           if (Symbol(symbol).isToplevel) {
-            candidates += MbtTestClassCandidate(path, symbol)
+            candidates += BuildTargetClasses.TestClassCandidate(path, symbol)
           }
         }
       }
