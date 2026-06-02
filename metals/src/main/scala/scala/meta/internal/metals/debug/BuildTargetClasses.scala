@@ -701,28 +701,17 @@ final class BuildTargetClasses(
     if (!hasCandidates) {
       Future.unit
     } else {
-      compilers()
-        .batchSemanticdbTextDocuments(
-          Seq(path),
-          EmptyCancelToken,
-          Duration.ofSeconds(15),
-        )
-        .recover { case e =>
-          scribe.error(s"Error parsing semanticdb text documents: $e", e)
-          TextDocuments(documents = Seq.empty)
+      foreachMbtSemanticdbDocument(Seq(path)) { doc =>
+        Future {
+          processMbtSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
         }
-        .map { documents =>
-          documents.documents.foreach { doc =>
-            processMbtSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
-          }
-        }
+      }
     }
   }
 
   private def foreachMbtSemanticdbDocument(
       candidatePaths: Seq[AbsolutePath]
   )(f: TextDocument => Future[Unit]): Future[Unit] = {
-    // TODO batch by build target? run parallel?
     candidatePaths.grouped(MbtSemanticdbBatchSize).foldLeft(Future.unit) {
       case (previous, batch) =>
         previous.flatMap { _ =>
@@ -795,27 +784,17 @@ final class BuildTargetClasses(
     if (distinctPaths.isEmpty) {
       Future.unit
     } else {
-      compilers()
-        .batchSemanticdbTextDocuments(
-          distinctPaths,
-          EmptyCancelToken,
-          Duration.ofSeconds(15),
-        )
-        .recover { case e =>
-          scribe.error(s"Error parsing semanticdb text documents: $e", e)
-          TextDocuments(documents = Seq.empty)
+      foreachMbtSemanticdbDocument(distinctPaths) { doc =>
+        Future {
+          val docPath = doc.uri.toAbsolutePath
+          val docTargetIds = buildTargets.inverseSourcesAll(docPath)
+          processMbtSemanticdb(
+            docPath,
+            doc,
+            docTargetIds.filter(targetIds.contains),
+          )
         }
-        .map { documents =>
-          documents.documents.foreach { doc =>
-            val docPath = doc.uri.toAbsolutePath
-            val docTargetIds = buildTargets.inverseSourcesAll(docPath)
-            processMbtSemanticdb(
-              docPath,
-              doc,
-              docTargetIds.filter(targetIds.contains),
-            )
-          }
-        }
+      }
     }
   }
 
@@ -841,25 +820,9 @@ final class BuildTargetClasses(
     if (!hasCandidates) {
       Future.unit
     } else {
-      compilers()
-        .batchSemanticdbTextDocuments(
-          Seq(path),
-          EmptyCancelToken,
-          Duration.ofSeconds(15),
-        )
-        .recover { case e =>
-          scribe.error(s"Error parsing semanticdb text documents: $e", e)
-          TextDocuments(documents = Seq.empty)
-        }
-        .flatMap { documents =>
-          Future
-            .sequence(
-              documents.documents.map { doc =>
-                processMbtTestSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
-              }
-            )
-            .map(_ => ())
-        }
+      foreachMbtSemanticdbDocument(Seq(path)) { doc =>
+        processMbtTestSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
+      }
     }
   }
 
