@@ -81,6 +81,8 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
@@ -583,6 +585,12 @@ class WorkspaceLspService(
       params: TextDocumentPositionParams
   ): CompletableFuture[ju.List[DocumentHighlight]] =
     getServiceFor(params.getTextDocument.getUri()).documentHighlights(params)
+
+  override def documentLink(
+      params: DocumentLinkParams
+  ): CompletableFuture[ju.List[DocumentLink]] = {
+    getServiceFor(params.getTextDocument.getUri()).documentLink(params)
+  }
 
   override def documentSymbol(params: DocumentSymbolParams): CompletableFuture[
     messages.Either[ju.List[DocumentSymbol], ju.List[SymbolInformation]]
@@ -1586,6 +1594,10 @@ class WorkspaceLspService(
         renameOptions.setPrepareProvider(true)
         capabilities.setRenameProvider(renameOptions)
         capabilities.setDocumentHighlightProvider(true)
+        // TODO https://github.com/scalameta/metals/issues/8303
+        capabilities.setDocumentLinkProvider(
+          new lsp4j.DocumentLinkOptions(false)
+        )
         capabilities.setDocumentOnTypeFormattingProvider(
           new lsp4j.DocumentOnTypeFormattingOptions(
             "\n",

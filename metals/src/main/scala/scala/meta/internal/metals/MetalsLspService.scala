@@ -64,6 +64,7 @@ import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags._
 import scala.meta.internal.parsing.ClassFinderGranularity
+import scala.meta.internal.parsing.DocumentLinksProvider
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
 import scala.meta.internal.parsing.Trees
@@ -297,6 +298,8 @@ abstract class MetalsLspService(
     clientConfig.initialConfig.foldingRageMinimumSpan,
     scalaVersionSelector,
   )
+
+  protected val documentLinksProvider = new DocumentLinksProvider(buffers)
 
   val diagnostics: Diagnostics = new Diagnostics(
     buffers,
@@ -1428,6 +1431,16 @@ abstract class MetalsLspService(
       CancelTokens.future { token =>
         compilers.documentHighlight(params, token)
       }
+  }
+
+  override def documentLink(
+      params: DocumentLinkParams
+  ): CompletableFuture[util.List[DocumentLink]] = {
+    CancelTokens { _ =>
+      documentLinksProvider.getLinks(
+        params.getTextDocument().getUri().toAbsolutePath
+      )
+    }
   }
 
   override def documentSymbol(

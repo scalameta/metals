@@ -87,6 +87,11 @@ class DelegatingScalaService(
   ): CompletableFuture[util.List[DocumentHighlight]] =
     underlying.documentHighlights(params)
 
+  override def documentLink(
+      params: DocumentLinkParams
+  ): CompletableFuture[util.List[DocumentLink]] =
+    underlying.documentLink(params)
+
   override def documentSymbol(params: DocumentSymbolParams): CompletableFuture[
     JEither[util.List[DocumentSymbol], util.List[SymbolInformation]]
   ] = underlying.documentSymbol(params)

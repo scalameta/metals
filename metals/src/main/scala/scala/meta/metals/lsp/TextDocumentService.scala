@@ -56,6 +56,11 @@ trait TextDocumentService {
       params: TextDocumentPositionParams
   ): CompletableFuture[util.List[DocumentHighlight]]
 
+  @JsonRequest("textDocument/documentLink")
+  def documentLink(
+      params: DocumentLinkParams
+  ): CompletableFuture[util.List[DocumentLink]]
+
   @JsonRequest("textDocument/documentSymbol")
   def documentSymbol(
       params: DocumentSymbolParams
