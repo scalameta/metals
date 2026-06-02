@@ -224,7 +224,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |
           |public class Main {
           |  void run(int[] items, int i) {
-          |    int value<<value>> = items[i<<i>>]<<items[i]>>;
+          |    int value<<value>> = items[i];
           |    System.out.println(value<<value>>);
           |  }
           |}
@@ -390,7 +390,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |  String name = "World";
           |  static final String GREETING = "Hello";
           |  void run() {
-          |    String hello<<hello>> = name<<this.name>>;
+          |    String hello<<hello>> = name;
           |    String label<<label>> = GREETING<<a.Main.GREETING>> + " " + name<<this.name>>;
           |  }
           |}
@@ -434,7 +434,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |
           |public class Main {
           |  void run() {
-          |    double radius<<radius>> = PI<<java.lang.Math.PI>>;
+          |    double radius<<radius>> = PI;
           |    double PI<<PI>> = 1.0;
           |    System.out.println(PI<<PI>>);
           |  }
@@ -661,7 +661,50 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |public class A {
           |  static class Other { String name; }
           |  void foo(Other other) {
-          |    String name<<name>> = other.name<<other.name>>;
+          |    String name<<name>> = other.name;
+          |  }
+          |}
+          |""".stripMargin,
+      )
+    }
+  }
+
+  test("simple-assignment-skips-value-expression") {
+    val file = "a/src/main/java/a/A.java"
+    val layout =
+      """|
+         |/metals.json
+         |{
+         |  "a": {}
+         |}
+         |/a/src/main/java/a/A.java
+         |package a;
+         |
+         |public class A {
+         |  String name;
+         |  void foo() {
+         |    String shown = "";
+         |    <<start>>shown = this.name;
+         |    System.out.println(shown);<<end>>
+         |  }
+         |}
+         |""".stripMargin
+    val (range, _) = markedRanges(file, layout)
+    for {
+      _ <- initialize(cleanMarkedLayout(layout))
+      _ <- server.didOpen(file)
+      rendered <- server.inlineValuesText(file, range, range)
+    } yield {
+      assertNoDiff(
+        rendered,
+        """package a;
+          |
+          |public class A {
+          |  String name;
+          |  void foo() {
+          |    String shown = "";
+          |    shown<<shown>> = this.name;
+          |    System.out.println(shown<<shown>>);
           |  }
           |}
           |""".stripMargin,
@@ -702,7 +745,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |public class A {
           |  int getIndex() { return 0; }
           |  void foo(int[] arr, int i) {
-          |    int a<<a>> = arr[i<<i>>]<<arr[i]>>;
+          |    int a<<a>> = arr[i];
           |    int b<<b>> = arr[i<<i>>++];
           |    int c<<c>> = arr[getIndex()];
           |  }
@@ -1093,7 +1136,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |public class A {
           |  int x;
           |  static int y;
-          |  static int z<<a.A.z>> = y<<a.A.y>>;
+          |  static int z<<a.A.z>> = y;
           |}
           |""".stripMargin,
       )
@@ -1128,7 +1171,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |
           |public class A {
           |  int x;
-          |  int y<<this.y>> = x<<this.x>>;
+          |  int y<<this.y>> = x;
           |}
           |""".stripMargin,
       )

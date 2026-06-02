@@ -11,6 +11,7 @@ import scala.jdk.CollectionConverters._
 import scala.meta.pc.RangeParams
 
 import com.sun.source.tree.ArrayAccessTree
+import com.sun.source.tree.AssignmentTree
 import com.sun.source.tree.BlockTree
 import com.sun.source.tree.CatchTree
 import com.sun.source.tree.ClassTree
@@ -226,7 +227,12 @@ final class JavaInlineValueProvider(
         emitFieldName(node, element, name)
       }
       scan(node.getNameExpression(), p)
-      scan(node.getInitializer(), p)
+      scanValueExpression(node.getInitializer(), p)
+    }
+
+    override def visitAssignment(node: AssignmentTree, p: Unit): Unit = {
+      scan(node.getVariable(), p)
+      scanValueExpression(node.getExpression(), p)
     }
 
     override def visitNewClass(node: NewClassTree, p: Unit): Unit = {
@@ -281,6 +287,11 @@ final class JavaInlineValueProvider(
     }
 
     def result(): List[l.InlineValue] = emitter.result()
+
+    private def scanValueExpression(tree: Tree, p: Unit): Unit =
+      if (!JavaSafeExpression.isEvaluatable(tree)) {
+        scan(tree, p)
+      }
 
     private def emitElementReference(
         name: String,
