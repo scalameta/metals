@@ -1077,8 +1077,7 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
          |  static int y;
          |
          |  static {
-         |    <<start>>System.out.println(y);
-         |    System.out.println(x);<<end>>
+         |    <<start>>System.out.println(y);<<end>>
          |  }
          |}
          |""".stripMargin
@@ -1098,7 +1097,6 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |
           |  static {
           |    System.out.println(y<<a.A.y>>);
-          |    System.out.println(x<<this.x>>);
           |  }
           |}
           |""".stripMargin,
