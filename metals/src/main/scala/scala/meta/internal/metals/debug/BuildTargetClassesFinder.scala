@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.debug
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
@@ -21,56 +23,73 @@ class BuildTargetClassesFinder(
     index: OnDemandSymbolIndex,
 ) {
 
-  // In case of success returns non-empty list
   def findMainClassAndItsBuildTarget(
       className: String,
       buildTarget: Option[String],
-  ): Try[List[(b.ScalaMainClass, b.BuildTarget)]] = {
-    findClassAndBuildTarget(
-      className,
-      buildTarget,
-      buildTargetClasses.findMainClassByName(_),
-      buildTargetClasses
-        .classesOf(_)
-        .mainClasses
-        .values,
-      { (clazz: b.ScalaMainClass) => clazz.getClassName },
-    ).recoverWith { case ex =>
-      val found = ex match {
-        // We check whether there is a main in dependencies that is not reported via BSP
-        case ClassNotFoundInBuildTargetException(className, target) =>
-          revertToDependencies(
-            className,
-            buildTargets.findByDisplayNameOrUri(target),
-          )
-        case _: NoMainClassFoundException =>
-          revertToDependencies(className, buildTarget = None)
-        case _ => Nil
+  )(implicit
+      ec: ExecutionContext
+  ): Future[Try[List[(b.ScalaMainClass, b.BuildTarget)]]] = {
+    val targetId =
+      buildTarget.flatMap(buildTargets.findByDisplayNameOrUri(_).map(_.getId))
+    val targetIds =
+      targetId.fold(buildTargets.allBuildTargetIds)(id => List(id))
+    buildTargetClasses
+      .confirmMbtMainClassCandidatesForTargets(targetIds, Some(className))
+      .map { _ =>
+        val classes = buildTargetClasses.findMainClassByName(className)
+        findClassAndBuildTarget(
+          className,
+          buildTarget,
+          classes,
+          buildTargetClasses
+            .classesOf(_)
+            .mainClasses
+            .values,
+          { (clazz: b.ScalaMainClass) => clazz.getClassName },
+        ).recoverWith { case ex =>
+          val found = ex match {
+            // We check whether there is a main in dependencies that is not reported via BSP
+            case ClassNotFoundInBuildTargetException(className, target) =>
+              revertToDependencies(
+                className,
+                buildTargets.findByDisplayNameOrUri(target),
+              )
+            case _: NoMainClassFoundException =>
+              revertToDependencies(className, buildTarget = None)
+            case _ => Nil
+          }
+          found match {
+            case Nil => Failure(ex)
+            case deps => Success(deps)
+          }
+        }
       }
-      found match {
-        case Nil => Failure(ex)
-        case deps => Success(deps)
-      }
-    }
   }
 
   // In case of success returns non-empty list
   def findTestClassAndItsBuildTarget(
       className: String,
       buildTarget: Option[String],
-  ): Try[List[(String, b.BuildTarget)]] =
-    findClassAndBuildTarget[String](
-      className,
-      buildTarget,
-      buildTargetClasses.findTestClassByName(_),
-      id =>
-        buildTargetClasses
-          .classesOf(id)
-          .testClasses
-          .values
-          .map(_.fullyQualifiedName),
-      clazz => clazz,
-    )
+  )(implicit
+      ec: ExecutionContext
+  ): Future[Try[List[(String, b.BuildTarget)]]] = {
+    buildTargetClasses.resolveCandidateTestClass(className, buildTarget).map {
+      _ =>
+        val classes = buildTargetClasses.findTestClassByName(className)
+        findClassAndBuildTarget[String](
+          className,
+          buildTarget,
+          classes,
+          id =>
+            buildTargetClasses
+              .classesOf(id)
+              .testClasses
+              .values
+              .map(_.fullyQualifiedName),
+          clazz => clazz,
+        )
+    }
+  }
 
   private def revertToDependencies(
       className: String,
@@ -99,22 +118,25 @@ class BuildTargetClassesFinder(
   private def findClassAndBuildTarget[A](
       className: String,
       buildTarget: Option[String],
-      findClassesByName: String => List[(A, b.BuildTargetIdentifier)],
+      classes: List[(A, b.BuildTargetIdentifier)],
       classesByBuildTarget: b.BuildTargetIdentifier => Iterable[A],
       getClassName: A => String,
   ): Try[List[(A, b.BuildTarget)]] =
     buildTarget.fold {
-      val classes =
-        findClassesByName(className)
-          .collect { case (clazz, BuildTargetIdOf(buildTarget)) =>
-            (clazz, buildTarget)
-          }
-          .sortBy { case (_, target) =>
-            buildTargets.buildTargetsOrder(target.getId())
-          }
-          .reverse
-      if (classes.nonEmpty) Success(classes)
-      else Failure(new NoMainClassFoundException(className))
+      if (classes.nonEmpty) {
+        Success(
+          classes
+            .collect { case (clazz, BuildTargetIdOf(buildTarget)) =>
+              (clazz, buildTarget)
+            }
+            .sortBy { case (_, target) =>
+              buildTargets.buildTargetsOrder(target.getId())
+            }
+            .reverse
+        )
+      } else {
+        Failure(new NoMainClassFoundException(className))
+      }
     } { targetName =>
       buildTargets
         .findByDisplayNameOrUri(targetName)

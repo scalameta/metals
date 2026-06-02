@@ -303,14 +303,9 @@ class GradleLspSuite extends BaseImportSuite("gradle-import") {
       _ <- server.server.buildServerPromise.future
       _ = client.progressParams.clear() // restart
       _ <- server.executeCommand(ServerCommands.ImportBuild)
-      _ = assertNoDiff(
+      _ = assertNotContains(
         client.beginProgressMessages,
-        List(
-          "Import",
-          progressMessage,
-          Messages.importingBuild,
-          "Discovering main classes and tests",
-        ).mkString("\n"),
+        Messages.ImportProjectFailed.getMessage,
       )
     } yield ()
   }

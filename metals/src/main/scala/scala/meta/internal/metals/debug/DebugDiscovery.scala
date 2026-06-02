@@ -4,9 +4,7 @@ import java.util.Collections.singletonList
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.Failure
 import scala.util.Success
-import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.DebugDiscoveryParams
@@ -70,7 +68,7 @@ class DebugDiscovery(
 
   private def validate(
       params: DebugDiscoveryParams
-  ): Try[ValidRunType.Value] = {
+  ): Future[ValidRunType.Value] = {
 
     val runType = RunType.fromString(params.runType)
     val pathOpt = Option(params.path).map(_.toAbsolutePath)
@@ -80,28 +78,43 @@ class DebugDiscovery(
         .map(_.getId())
     }
 
+    // Check if there are test classes or pending candidates (for lazy MBT discovery)
+    def hasTestsOrCandidates(target: b.BuildTargetIdentifier): Boolean = {
+      val classes = buildTargetClasses.classesOf(target)
+      classes.testClasses.nonEmpty || classes.candidateTestClasses.nonEmpty
+    }
+
+    def hasTestsOrCandidatesForPath(
+        target: b.BuildTargetIdentifier,
+        path: AbsolutePath,
+    ): Boolean = {
+      val classes = buildTargetClasses.classesOf(target)
+      classes.testClasses.nonEmpty ||
+      classes.candidateTestClasses.contains(path)
+    }
+
     (runType, buildTarget, pathOpt) match {
       case (_, Some(buildTarget), _)
           if buildClient.buildHasErrors(buildTarget) =>
-        Failure(WorkspaceErrorsException)
+        Future.failed(WorkspaceErrorsException)
       case (_, None, Some(path)) =>
-        Failure(BuildTargetNotFoundForPathException(path))
+        Future.failed(BuildTargetNotFoundForPathException(path))
       case (None, _, _) =>
-        Failure(RunType.UnknownRunTypeException(params.runType))
+        Future.failed(RunType.UnknownRunTypeException(params.runType))
       case (Some(TestFile), Some(target), Some(path))
-          if testClasses(target).isEmpty =>
-        Failure(
+          if !hasTestsOrCandidatesForPath(target, path) =>
+        Future.failed(
           NoTestsFoundException("file", path.toString())
         )
       case (Some(TestFile | TestTarget), Some(target), _)
-          if testClasses(target).isEmpty =>
-        Failure(
+          if !hasTestsOrCandidates(target) =>
+        Future.failed(
           NoTestsFoundException("build target", displayName(target))
         )
       case (Some(TestTarget | RunClosest), None, _) =>
-        Failure(NoBuildTargetSpecified)
+        Future.failed(NoBuildTargetSpecified)
       case (Some(tpe @ (TestFile | RunOrTestFile | RunClosest)), _, None) =>
-        Failure(UndefinedPathException(tpe))
+        Future.failed(UndefinedPathException(tpe))
       case (Some(Run), target, _) =>
         val targetIds = target match {
           case None => buildTargets.allBuildTargetIds
@@ -114,10 +127,14 @@ class DebugDiscovery(
                 main,
                 buildTarget.map(displayName),
               )
-              .map(found =>
-                ValidRunType.Run(found.map { case (mainClass, target) =>
-                  target.getId() -> mainClass
-                })
+              .flatMap(classes =>
+                Future
+                  .fromTry(classes)
+                  .map(found =>
+                    ValidRunType.Run(found.map { case (mainClass, target) =>
+                      target.getId() -> mainClass
+                    })
+                  )
               )
 
           case None =>
@@ -127,27 +144,29 @@ class DebugDiscovery(
             if (classes.isEmpty) {
               target match {
                 case None =>
-                  Failure(NothingToRun)
+                  Future.failed(NothingToRun)
                 case Some(targetId) =>
-                  Failure(
+                  Future.failed(
                     BuildTargetContainsNoMainException(displayName(targetId))
                   )
               }
             } else {
-              Success(ValidRunType.Run(classes))
+              Future.successful(ValidRunType.Run(classes))
             }
         }
       case (Some(RunOrTestFile), Some(target), Some(path)) =>
-        Success(ValidRunType.RunOrTestFile(target, path))
+        Future.successful(ValidRunType.RunOrTestFile(target, path))
       case (Some(TestFile), Some(target), Some(path)) =>
-        Success(ValidRunType.TestFile(target, path))
+        Future.successful(ValidRunType.TestFile(target, path))
       case (Some(TestTarget), Some(target), _) =>
-        Success(ValidRunType.TestTarget(target))
+        Future.successful(ValidRunType.TestTarget(target))
       case (Some(RunClosest), Some(target), Some(path)) =>
         if (params.position == null) {
-          Failure(UndefinedPositionException(RunClosest))
+          Future.failed(UndefinedPositionException(RunClosest))
         } else {
-          Success(ValidRunType.RunClosest(target, path, params.position))
+          Future.successful(
+            ValidRunType.RunClosest(target, path, params.position)
+          )
         }
     }
   }
@@ -161,7 +180,7 @@ class DebugDiscovery(
   def debugDiscovery(
       params: DebugDiscoveryParams
   ): Future[b.DebugSessionParams] = {
-    val validated = Future.fromTry(validate(params))
+    val validated = validate(params)
 
     validated.flatMap {
       case ValidRunType.Run(classes) =>
@@ -187,17 +206,22 @@ class DebugDiscovery(
       path: AbsolutePath,
       position: Position,
   ): Future[b.DebugSessionParams] = {
-    val semanticDocOpt =
-      semanticdbs()
-        .textDocument(path)
-        .documentIncludingStale
+    // First confirm any candidate main classes for this file
+    buildTargetClasses
+      .confirmMbtMainClassCandidates(path, buildTarget)
+      .flatMap { _ =>
+        val semanticDocOpt =
+          semanticdbs()
+            .textDocument(path)
+            .documentIncludingStale
 
-    semanticDocOpt match {
-      case Some(textDocument) =>
-        findClosestRunnableTarget(textDocument, buildTarget, path, position)
-      case None =>
-        Future.failed(SemanticDbNotFoundException)
-    }
+        semanticDocOpt match {
+          case Some(textDocument) =>
+            findClosestRunnableTarget(textDocument, buildTarget, path, position)
+          case None =>
+            Future.failed(SemanticDbNotFoundException)
+        }
+      }
   }
 
   sealed trait Distance
@@ -215,27 +239,28 @@ class DebugDiscovery(
   ): Future[b.DebugSessionParams] = {
     val classes = buildTargetClasses.classesOf(buildTarget)
     val mains = findMainClasses(textDocument, classes)
-    val allTestCases = discoverTestCases(path)
+    discoverTestCases(path)
+      .flatMap { allTestCases =>
+        val allDistances: Seq[Distance] =
+          calculateMainDistances(textDocument, mains, classes, position) ++
+            calculateTestCaseDistances(allTestCases, position) ++
+            calculateTestSuiteDistances(textDocument, allTestCases, position)
 
-    val allDistances: Seq[Distance] =
-      calculateMainDistances(textDocument, mains, classes, position) ++
-        calculateTestCaseDistances(allTestCases, position) ++
-        calculateTestSuiteDistances(textDocument, allTestCases, position)
-
-    findClosestTarget(allDistances) match {
-      case Some(MainDistance(_, mainClass)) =>
-        createMainParams(
-          DebugDiscoveryParams(path.toURI.toString, "run"),
-          mainClass,
-          buildTarget,
-        )
-      case Some(TestSuiteDistance(_, suiteFqn)) =>
-        createTestSuiteParams(buildTarget, suiteFqn)
-      case Some(TestCaseDistance(_, testName, suiteFqn)) =>
-        createTestCaseParams(buildTarget, suiteFqn, testName)
-      case None =>
-        Future.failed(NoRunOptionException)
-    }
+        findClosestTarget(allDistances) match {
+          case Some(MainDistance(_, mainClass)) =>
+            createMainParams(
+              DebugDiscoveryParams(path.toURI.toString, "run"),
+              mainClass,
+              buildTarget,
+            )
+          case Some(TestSuiteDistance(_, suiteFqn)) =>
+            createTestSuiteParams(buildTarget, suiteFqn)
+          case Some(TestCaseDistance(_, testName, suiteFqn)) =>
+            createTestCaseParams(buildTarget, suiteFqn, testName)
+          case None =>
+            Future.failed(NoRunOptionException)
+        }
+      }
   }
 
   private def findMainClasses(
@@ -261,17 +286,19 @@ class DebugDiscovery(
 
   private def discoverTestCases(
       path: AbsolutePath
-  ): List[(String, List[TestCaseEntry])] = {
+  ): Future[List[(String, List[TestCaseEntry])]] = {
     import scala.jdk.CollectionConverters._
     import scala.meta.internal.metals.testProvider.TestExplorerEvent.AddTestCases
 
     val testUpdates = testProvider.discoverTests(Some(path))
-    testUpdates
-      .flatMap(_.events.asScala)
-      .collect { case AddTestCases(fqn, _, testCases) =>
-        (fqn, testCases.asScala.toList)
-      }
-      .toList
+    testUpdates.map { updates =>
+      updates
+        .flatMap(_.events.asScala)
+        .collect { case AddTestCases(fqn, _, testCases) =>
+          (fqn, testCases.asScala.toList)
+        }
+        .toList
+    }
   }
 
   private def calculateMainDistances(
@@ -444,89 +471,124 @@ class DebugDiscovery(
       params: DebugDiscoveryParams,
       classes: List[(b.BuildTargetIdentifier, b.ScalaMainClass)],
   ): Future[b.DebugSessionParams] = {
-    val targetToMainClasses =
-      classes.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
-    findMainToRun(
-      targetToMainClasses,
-      params,
-    )
+    // Get the target IDs from the classes list
+    val targetIds = classes.map(_._1).distinct
+
+    // Confirm candidate main classes for the specific targets, filtered by class name if provided
+    buildTargetClasses
+      .confirmMbtMainClassCandidatesForTargets(
+        targetIds,
+        Option(params.mainClass),
+      )
+      .flatMap { _ =>
+        // Re-fetch the classes after confirmation in case new ones were added
+        val updatedClasses = targetIds.flatMap { targetId =>
+          mainClasses(targetId).values.map(mc => (targetId, mc))
+        }
+        val finalClasses =
+          if (updatedClasses.nonEmpty) updatedClasses else classes
+        val targetToMainClasses =
+          finalClasses.groupBy(_._1).view.mapValues(_.map(_._2)).toMap
+        findMainToRun(
+          targetToMainClasses,
+          params,
+        )
+      }
   }
 
   private def testFile(
       path: AbsolutePath,
       target: b.BuildTargetIdentifier,
   ): Future[b.DebugSessionParams] =
-    semanticdbs()
-      .textDocument(path)
-      .documentIncludingStale
-      .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
-        Future.failed(SemanticDbNotFoundException)
-      } { textDocument =>
-        Future {
-          for {
-            symbolInfo <- textDocument.symbols
-            symbol = symbolInfo.symbol
-            testSymbolInfo <- testClasses(target).get(symbol)
-          } yield testSymbolInfo.fullyQualifiedName
-        }
-      }
-      .map { tests =>
-        val params = new b.DebugSessionParams(
-          singletonList(target)
-        )
-        params.setDataKind(
-          b.TestParamsDataKind.SCALA_TEST_SUITES
-        )
-        params.setData(tests.asJava.toJson)
-        params
+    // First confirm any candidate test classes for this file
+    buildTargetClasses
+      .confirmMbtTestClassCandidates(path, target)
+      .flatMap { _ =>
+        semanticdbs()
+          .textDocument(path)
+          .documentIncludingStale
+          .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
+            Future.failed(SemanticDbNotFoundException)
+          } { textDocument =>
+            Future {
+              for {
+                symbolInfo <- textDocument.symbols
+                symbol = symbolInfo.symbol
+                testSymbolInfo <- testClasses(target).get(symbol)
+              } yield testSymbolInfo.fullyQualifiedName
+            }
+          }
+          .map { tests =>
+            val params = new b.DebugSessionParams(
+              singletonList(target)
+            )
+            params.setDataKind(
+              b.TestParamsDataKind.SCALA_TEST_SUITES
+            )
+            params.setData(tests.asJava.toJson)
+            params
+          }
       }
 
   private def testTarget(
       target: b.BuildTargetIdentifier
   ): Future[b.DebugSessionParams] = {
-    Future {
-      val params = new b.DebugSessionParams(
-        singletonList(target)
-      )
-      params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
-      params.setData(
-        testClasses(target).values
-          .map(_.fullyQualifiedName)
-          .toList
-          .asJava
-          .toJson
-      )
-      params
-    }
+    // First confirm all candidate test classes for this target
+    buildTargetClasses
+      .confirmMbtTestClassCandidatesForTargets(Seq(target))
+      .map { _ =>
+        val params = new b.DebugSessionParams(
+          singletonList(target)
+        )
+        params.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES)
+        params.setData(
+          testClasses(target).values
+            .map(_.fullyQualifiedName)
+            .toList
+            .asJava
+            .toJson
+        )
+        params
+      }
   }
   private def runOrTestFile(
       buildTarget: b.BuildTargetIdentifier,
       params: DebugDiscoveryParams,
       path: AbsolutePath,
   ): Future[b.DebugSessionParams] = {
-    semanticdbs()
-      .textDocument(path)
-      .documentIncludingStale
-      .fold[Future[b.DebugSessionParams]] {
-        Future.failed(SemanticDbNotFoundException)
-      } { textDocument =>
-        val classes = buildTargetClasses.classesOf(buildTarget)
-        lazy val tests = for {
-          symbolInfo <- textDocument.symbols
-          symbol = symbolInfo.symbol
-          testSymbolInfo <- classes.testClasses.get(symbol)
-        } yield testSymbolInfo.fullyQualifiedName
-        val mainWithFallback = findMainClasses(textDocument, classes)
-        if (mainWithFallback.nonEmpty) {
-          findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
-        } else if (tests.nonEmpty) {
-          val suiteSelections =
-            tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
-          createScalaTestSuites(buildTarget, suiteSelections, params)
-        } else {
-          Future.failed(NoRunOptionException)
+    // First confirm any candidate main and test classes for this file
+    val confirmMainCandidates =
+      buildTargetClasses.confirmMbtMainClassCandidates(path, buildTarget)
+    val confirmTestCandidates =
+      buildTargetClasses.confirmMbtTestClassCandidates(path, buildTarget)
+
+    for {
+      _ <- confirmMainCandidates
+      _ <- confirmTestCandidates
+      result <- semanticdbs()
+        .textDocument(path)
+        .documentIncludingStale
+        .fold[Future[b.DebugSessionParams]] {
+          Future.failed(SemanticDbNotFoundException)
+        } { textDocument =>
+          val classes = buildTargetClasses.classesOf(buildTarget)
+          lazy val tests = for {
+            symbolInfo <- textDocument.symbols
+            symbol = symbolInfo.symbol
+            testSymbolInfo <- classes.testClasses.get(symbol)
+          } yield testSymbolInfo.fullyQualifiedName
+          val mainWithFallback = findMainClasses(textDocument, classes)
+          if (mainWithFallback.nonEmpty) {
+            findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
+          } else if (tests.nonEmpty) {
+            val suiteSelections =
+              tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
+            createScalaTestSuites(buildTarget, suiteSelections, params)
+          } else {
+            Future.failed(NoRunOptionException)
+          }
         }
-      }
+    } yield result
   }
 
   private def findMainToRun(

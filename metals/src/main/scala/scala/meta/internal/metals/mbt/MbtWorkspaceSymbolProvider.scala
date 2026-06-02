@@ -31,6 +31,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.jpc.SourceJavaFileObject
+import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
@@ -49,6 +50,7 @@ import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
@@ -542,6 +544,145 @@ class MbtWorkspaceSymbolProvider(
    */
   def findProtoRpcDefinition(methodSymbol: String): List[l.Location] = {
     protobufWorkspace.findProtoRpcDefinition(methodSymbol, documents)
+  }
+
+  /**
+   * Extracts potential main class candidates from the MBT index without loading semanticdb.
+   * Returns candidates that need to be confirmed via semanticdb before use.
+   *
+   * Candidates are identified by:
+   * 1. Symbols ending in "#main()." or ".main()." (Java/Scala main methods)
+   * 2. Files referencing "scala/main#" (@main annotation)
+   * 3. Files referencing "scala/App#" (App trait extension)
+   */
+  def candidateMainClasses(
+      filterPath: AbsolutePath => Boolean
+  ): Seq[BuildTargetClasses.MainClassCandidate] = {
+    val candidates =
+      scala.collection.mutable.ArrayBuffer
+        .empty[BuildTargetClasses.MainClassCandidate]
+    val javaMain = "#main()."
+    val scalaMain = ".main()."
+    val mainAnnotRef = FingerprintedCharSequence.fuzzyReference("scala/main#")
+    val appRef = FingerprintedCharSequence.fuzzyReference("scala/App#")
+    val pathsFromMainSymbols =
+      queryWorkspaceSymbol("main")
+        .flatMap(info => Option(info.getLocation()))
+        .map(_.getUri.toAbsolutePath)
+    val pathsFromReferences =
+      possibleReferences(
+        MbtPossibleReferencesParams(
+          references = Seq(mainAnnotRef.value.toString, appRef.value.toString)
+        )
+      )
+    for {
+      path <- pathsFromMainSymbols.distinct
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+
+      // Check for main method symbols in the document
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        // Java main method pattern: com/example/Main#main().
+        if (symbol.endsWith(javaMain)) {
+          val classSymbol = symbol.stripSuffix("main().")
+          candidates += BuildTargetClasses.MainClassCandidate(path, classSymbol)
+        }
+        // Scala main method pattern: com/example/Main.main().
+        else if (symbol.endsWith(scalaMain)) {
+          val objectSymbol = symbol.stripSuffix("main().")
+          candidates += BuildTargetClasses.MainClassCandidate(
+            path,
+            objectSymbol,
+          )
+        }
+      }
+    }
+
+    for {
+      path <- pathsFromReferences
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+      // Check bloom filter for @main annotation reference
+      if (doc.bloomFilter.mightContain(mainAnnotRef)) {
+        // For @main annotated methods, we need to find method symbols
+        // that could be annotated. We'll add all method symbols as candidates.
+        for (symbolInfo <- doc.symbols) {
+          val symbol = symbolInfo.getSymbol()
+          val kind = symbolInfo.getKind()
+          // Methods that could have @main annotation
+          if (kind == Semanticdb.SymbolInformation.Kind.METHOD) {
+            candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
+          }
+        }
+      }
+      // For App extension, we add class/object symbols as candidates
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        val kind = symbolInfo.getKind()
+        if (
+          kind == Semanticdb.SymbolInformation.Kind.OBJECT &&
+          Symbol(symbol).isToplevel
+        ) {
+          candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
+        }
+
+      }
+    }
+    candidates.toSeq
+  }
+
+  /**
+   * Extracts potential test class candidates from the MBT index without loading semanticdb.
+   * Returns candidates that need to be confirmed via semanticdb before use.
+   *
+   * Candidates are identified by:
+   * 1. Files referencing JUnit/TestNG annotation symbols (e.g., "org/junit/Test#")
+   * 2. Files referencing base parent classes of test frameworks (e.g., "munit/FunSuite#")
+   *
+   * @param filterPath A function to filter which paths should be included
+   * @param annotationSymbols JUnit/TestNG annotation symbols to search for
+   * @param baseParentSymbols Base parent class symbols for ScalaTest, MUnit, Weaver, ZIO Test
+   */
+  def candidateTestClasses(
+      filterPath: AbsolutePath => Boolean,
+      annotationSymbols: Seq[String],
+      baseParentSymbols: Seq[String],
+  ): Seq[BuildTargetClasses.TestClassCandidate] = {
+    val candidates =
+      scala.collection.mutable.ArrayBuffer
+        .empty[BuildTargetClasses.TestClassCandidate]
+
+    val pathsFromReferences = possibleReferences(
+      MbtPossibleReferencesParams(
+        references = annotationSymbols,
+        implementations = baseParentSymbols,
+      )
+    )
+
+    for {
+      path <- pathsFromReferences
+      if filterPath(path)
+      doc <- documents.get(path).toList
+    } {
+      // Add all class/object symbols as potential test class candidates
+      for (symbolInfo <- doc.symbols) {
+        val symbol = symbolInfo.getSymbol()
+        val kind = symbolInfo.getKind()
+        // Classes and objects that could be test suites
+        if (
+          kind == Semanticdb.SymbolInformation.Kind.CLASS ||
+          kind == Semanticdb.SymbolInformation.Kind.OBJECT
+        ) {
+          if (Symbol(symbol).isToplevel) {
+            candidates += BuildTargetClasses.TestClassCandidate(path, symbol)
+          }
+        }
+      }
+    }
+    candidates.toSeq
   }
 
   def possibleReferences(

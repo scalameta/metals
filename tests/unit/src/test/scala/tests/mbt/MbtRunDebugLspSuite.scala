@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -15,6 +16,12 @@ import tests.MbtJsonBuilder
 
 class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
 
+  override protected def initializationOptions: Some[InitializationOptions] =
+    Some(
+      InitializationOptions.Default
+        .copy(testExplorerProvider = Some(true), debuggingProvider = Some(true))
+    )
+
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       buildOnChange = false,
@@ -23,7 +30,7 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
       referenceProvider = ReferenceProviderConfig.mbt,
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
-      testUserInterface = TestUserInterfaceKind.CodeLenses,
+      testUserInterface = TestUserInterfaceKind.TestExplorer,
     )
 
   override def initializeGitRepo: Boolean = true
@@ -126,6 +133,11 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
       _ = assertConnectedToBuildServer("MBT")
       _ <- server.didOpen("src/MunitTest.scala")
       _ <- server.discoverTestSuites(List("src/MunitTest.scala"))
+      _ <- server.didChangeConfiguration(
+        userConfig
+          .copy(testUserInterface = TestUserInterfaceKind.CodeLenses)
+          .toString()
+      )
       _ <- assertCodeLenses(
         "src/MunitTest.scala",
         """|package example
@@ -172,6 +184,11 @@ class MbtRunDebugLspSuite extends BaseCodeLensLspSuite("mbt-run-debug") {
       _ = assertConnectedToBuildServer("MBT")
       _ <- server.didOpen("src/JunitTest.java")
       _ <- server.discoverTestSuites(List("src/JunitTest.java"))
+      _ <- server.didChangeConfiguration(
+        userConfig
+          .copy(testUserInterface = TestUserInterfaceKind.CodeLenses)
+          .toString()
+      )
       _ <- assertCodeLenses(
         "src/JunitTest.java",
         """|package example;

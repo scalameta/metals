@@ -111,27 +111,40 @@ final class RunTestCodeLens(
       // although hasDebug is already available in BSP capabilities
       // see https://github.com/build-server-protocol/build-server-protocol/pull/161
       // most of the bsp servers such as bloop and sbt might not support it.
-    } yield requestJvmEnvironment(buildTargetId, isJVM).map { _ =>
-      val classes = buildTargetClasses.classesOf(buildTargetId)
-      val syntheticLenses =
-        if (!path.isWorksheet)
-          syntheticCodeLenses(
+    } yield {
+      // First confirm any candidate main and test classes for this file.
+      // This is needed for MBT build servers where classes are discovered lazily.
+      val confirmMainCandidates =
+        buildTargetClasses.confirmMbtMainClassCandidates(path, buildTargetId)
+      val confirmTestCandidates =
+        buildTargetClasses.confirmMbtTestClassCandidates(path, buildTargetId)
+
+      for {
+        _ <- confirmMainCandidates
+        _ <- confirmTestCandidates
+        _ <- requestJvmEnvironment(buildTargetId, isJVM)
+      } yield {
+        val classes = buildTargetClasses.classesOf(buildTargetId)
+        val syntheticLenses =
+          if (!path.isWorksheet)
+            syntheticCodeLenses(
+              textDocument,
+              buildTargetId,
+              classes,
+              isJVM,
+            )
+          else Nil
+        val regularLenses =
+          codeLenses(
             textDocument,
             buildTargetId,
             classes,
+            distance,
+            path,
             isJVM,
           )
-        else Nil
-      val regularLenses =
-        codeLenses(
-          textDocument,
-          buildTargetId,
-          classes,
-          distance,
-          path,
-          isJVM,
-        )
-      syntheticLenses ++ regularLenses
+        syntheticLenses ++ regularLenses
+      }
     }
     Future.sequence(lenses).map(_.flatten)
   }

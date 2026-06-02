@@ -28,7 +28,7 @@ class MbtDebugSessionStarter(
     buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
-    debuggeeGracePeriodSeconds: Long = 5L,
+    debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
   def start(

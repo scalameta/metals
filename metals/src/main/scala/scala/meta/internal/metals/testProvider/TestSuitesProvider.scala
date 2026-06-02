@@ -172,13 +172,31 @@ final class TestSuitesProvider(
 
   /**
    * Check if opened file contains test suite and update test cases if yes.
+   * For MBT build servers, this also confirms any pending test class candidates.
    */
-  def didOpen(file: AbsolutePath): Future[Unit] =
-    if (isExplorerEnabled && index.contains(file)) Future {
-      val buildTargetUpdates = getTestCasesForPath(file, None)
-      updateClientIfNonEmpty(buildTargetUpdates)
+  def didOpen(file: AbsolutePath): Future[Unit] = {
+    if (!isExplorerEnabled) {
+      Future.unit
+    } else {
+      // First confirm any candidate test classes for this file (MBT lazy discovery)
+      discoverMbtTestsForPath(file).map { _ =>
+        if (index.contains(file)) {
+          val buildTargetUpdates = getTestCasesForPath(file, None)
+          updateClientIfNonEmpty(buildTargetUpdates)
+        }
+      }
     }
-    else Future.unit
+  }
+
+  private def discoverMbtTestsForPath(
+      path: AbsolutePath
+  ): Future[Unit] = {
+    val targetIds = buildTargets.inverseSourcesAll(path)
+    val confirmFutures = targetIds.map { targetId =>
+      buildTargetClasses.confirmMbtTestClassCandidates(path, targetId)
+    }
+    Future.sequence(confirmFutures).flatMap(_ => doRefreshTestSuites())
+  }
 
   /**
    * Discover tests:
@@ -187,17 +205,55 @@ final class TestSuitesProvider(
    */
   def discoverTests(
       path: Option[AbsolutePath]
-  ): List[BuildTargetUpdate] = {
+  ): Future[List[BuildTargetUpdate]] = {
     path match {
-      case Some(path0) => getTestCasesForPath(path0, None)
+      case Some(path0) =>
+        discoverMbtTestsForPath(path0)
+          .map { _ =>
+            getTestCasesForPath(path0, None)
+          }
       case None =>
-        index.allSuites.map { case (buildTarget, entries) =>
+        val result = index.allSuites.map { case (buildTarget, entries) =>
           buildTargetUpdate(
             buildTarget,
             entries.map(_.suiteDetails.asAddEvent).toList,
           )
         }.toList
+        Future.successful(result)
     }
+  }
+
+  /**
+   * Discovers all test suites by confirming any pending test class candidates.
+   * This is intended to be called when the test explorer is opened, triggering
+   * a full discovery of all test classes that were lazily indexed.
+   *
+   * For MBT build servers, test classes are discovered lazily from the index
+   * without loading semanticdb at startup. This method confirms all candidates
+   * and updates the test suites index.
+   *
+   * @return Future that completes when discovery is done, containing the updated test suites
+   */
+  def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] = {
+    val targetIds = buildTargets.allBuildTargetIds.toList
+      .filter { id =>
+        buildTargets
+          .scalaTarget(id)
+          .forall(_.scalaInfo.getPlatform == ScalaPlatform.JVM)
+      }
+      .flatMap(buildTargets.info)
+      .filterNot(_.isSbtBuild)
+      .map(_.getId)
+
+    // First confirm all candidate test classes
+    buildTargetClasses
+      .confirmMbtTestClassCandidatesForTargets(targetIds)
+      .flatMap { _ =>
+        // Then refresh the test suites
+        refreshTestSuites(()).flatMap { _ =>
+          discoverTests(None)
+        }
+      }
   }
 
   /**
@@ -392,14 +448,12 @@ final class TestSuitesProvider(
 
     val deletedSuites = removeStaleTestSuites(symbolsPerTarget)
     val addedEntries = getTestEntries(symbolsPerTarget)
-
     // update cached suites with currently discovered
     addedEntries.foreach { case (_, entries) =>
       entries.foreach(index.put(_))
     }
 
     if (isCodeLensEnabled) client.refreshModel()
-
     if (isExplorerEnabled) {
       val addedTestCases = addedEntries.mapValues {
         _.flatMap { entry =>
@@ -413,7 +467,6 @@ final class TestSuitesProvider(
 
       val addedSuites =
         addedEntries.mapValues(_.map(_.suiteDetails.asAddEvent)).toMap
-
       val buildTargetUpdates =
         getBuildTargetUpdates(
           deletedSuites = deletedSuites,
