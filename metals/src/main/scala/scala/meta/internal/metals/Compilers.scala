@@ -1093,7 +1093,10 @@ class Compilers(
           compiler
             .inlineValues(rangeParams, metaStopped.end)
             .asScala
-            .map(values => adjustInlineValues(values, adjustResponse))
+            .map { values =>
+              adjustInlineValues(values, adjustResponse)
+              values
+            }
         }
       }
       .getOrElse(Future.successful(Nil.asJava))
@@ -1102,8 +1105,8 @@ class Compilers(
   private def adjustInlineValues(
       values: ju.List[l.InlineValue],
       adjust: AdjustLspData,
-  ): ju.List[l.InlineValue] =
-    values.asScala.map { value =>
+  ): Unit =
+    values.forEach { value =>
       if (value.isInlineValueText()) {
         val text = value.getInlineValueText()
         text.setRange(adjust.adjustRange(text.getRange()))
@@ -1114,8 +1117,7 @@ class Compilers(
         val expression = value.getInlineValueEvaluatableExpression()
         expression.setRange(adjust.adjustRange(expression.getRange()))
       }
-      value
-    }.asJava
+    }
 
   def documentHighlight(
       params: TextDocumentPositionParams,
