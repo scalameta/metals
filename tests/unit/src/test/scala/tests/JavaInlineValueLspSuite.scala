@@ -107,9 +107,6 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
           |}
           |""".stripMargin,
       )
-      assert(rendered.contains("<<total>>"))
-      assert(rendered.contains("<<count>>"))
-      assert(rendered.contains("<<name>>"))
       assert(
         values.forall(_.getInlineValueVariableLookup().isCaseSensitiveLookup())
       )

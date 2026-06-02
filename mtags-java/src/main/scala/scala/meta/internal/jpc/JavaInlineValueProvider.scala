@@ -8,6 +8,7 @@ import javax.lang.model.element.TypeElement
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
+import scala.meta.internal.semanticdb.javac.RangeFinder
 import scala.meta.pc.RangeParams
 
 import com.sun.source.tree.ArrayAccessTree
@@ -222,7 +223,7 @@ final class JavaInlineValueProvider(
       val element = trees.getElement(getCurrentPath())
       val name = node.getName().toString()
       if (isVariableLike(element)) {
-        emitVariableName(node, name)
+        emitVariableName(node, element, name)
       } else if (isField(element) && node.getInitializer() != null) {
         emitFieldName(node, element, name)
       }
@@ -322,8 +323,12 @@ final class JavaInlineValueProvider(
         emitter.emitQualified(name, "this", start, end)
       }
 
-    private def emitVariableName(node: VariableTree, name: String): Unit =
-      locateDeclaredName(node, name).foreach { start =>
+    private def emitVariableName(
+        node: VariableTree,
+        element: Element,
+        name: String
+    ): Unit =
+      locateDeclaredName(node, element, name).foreach { start =>
         emitter.emitVariable(name, start, start + name.length())
       }
 
@@ -332,13 +337,14 @@ final class JavaInlineValueProvider(
         element: Element,
         name: String
     ): Unit =
-      locateDeclaredName(node, name).foreach { start =>
+      locateDeclaredName(node, element, name).foreach { start =>
         val end = start + name.length()
         emitFieldReference(element, name, start, end)
       }
 
     private def locateDeclaredName(
         node: VariableTree,
+        element: Element,
         name: String
     ): Option[Int] = {
       val (treeStart, treeEnd) = bounds.of(node)
@@ -353,39 +359,20 @@ final class JavaInlineValueProvider(
         if (searchEnd <= searchStart) None
         else {
           val text = cu.getSourceFile().getCharContent(true).toString()
-          findNameStart(text, name, searchStart, searchEnd)
+          val found =
+            RangeFinder.findRange(
+              element,
+              name,
+              searchStart,
+              searchEnd,
+              text,
+              false
+            )
+          if (found.isPresent()) Some(found.get().start)
+          else None
         }
       }
     }
-
-    private def findNameStart(
-        text: String,
-        name: String,
-        treeStart: Int,
-        treeEnd: Int
-    ): Option[Int] = {
-      var index = treeStart
-      var result = Option.empty[Int]
-      while (
-        result.isEmpty &&
-        index >= 0 &&
-        index < treeEnd &&
-        index < text.length
-      ) {
-        val found = text.indexOf(name, index)
-        if (found < 0 || found >= treeEnd) index = treeEnd
-        else if (isIdentifierAt(text, found, found + name.length())) {
-          result = Some(found)
-        } else index = found + name.length()
-      }
-      result
-    }
-
-    private def isIdentifierAt(text: String, start: Int, end: Int): Boolean =
-      (start == 0 || !Character.isJavaIdentifierPart(text.charAt(start - 1))) &&
-        (end >= text.length || !Character.isJavaIdentifierPart(
-          text.charAt(end)
-        ))
 
     private def isSubExpressionOfOuter(): Boolean = {
       val leaf = getCurrentPath().getLeaf()

@@ -1107,17 +1107,34 @@ class Compilers(
       adjust: AdjustLspData,
   ): Unit =
     values.forEach { value =>
-      if (value.isInlineValueText()) {
-        val text = value.getInlineValueText()
-        text.setRange(adjust.adjustRange(text.getRange()))
-      } else if (value.isInlineValueVariableLookup()) {
-        val lookup = value.getInlineValueVariableLookup()
-        lookup.setRange(adjust.adjustRange(lookup.getRange()))
-      } else if (value.isInlineValueEvaluatableExpression()) {
-        val expression = value.getInlineValueEvaluatableExpression()
-        expression.setRange(adjust.adjustRange(expression.getRange()))
+      value.get() match {
+        case text: l.InlineValueText =>
+          adjustInlineValueText(text, adjust)
+        case lookup: l.InlineValueVariableLookup =>
+          adjustInlineValueVariableLookup(lookup, adjust)
+        case expression: l.InlineValueEvaluatableExpression =>
+          adjustInlineValueEvaluatableExpression(expression, adjust)
+        case _ =>
       }
     }
+
+  private def adjustInlineValueText(
+      text: l.InlineValueText,
+      adjust: AdjustLspData,
+  ): Unit =
+    text.setRange(adjust.adjustRange(text.getRange()))
+
+  private def adjustInlineValueVariableLookup(
+      lookup: l.InlineValueVariableLookup,
+      adjust: AdjustLspData,
+  ): Unit =
+    lookup.setRange(adjust.adjustRange(lookup.getRange()))
+
+  private def adjustInlineValueEvaluatableExpression(
+      expression: l.InlineValueEvaluatableExpression,
+      adjust: AdjustLspData,
+  ): Unit =
+    expression.setRange(adjust.adjustRange(expression.getRange()))
 
   def documentHighlight(
       params: TextDocumentPositionParams,
