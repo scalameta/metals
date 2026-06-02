@@ -10,7 +10,7 @@ object BazelDigest extends Digestable {
       workspace: AbsolutePath,
       digest: MessageDigest,
   ): Boolean = {
-    workspace.listRecursive.forall {
+    workspace.list.forall {
       case file
           if file.isBazelRelatedPath && !file.isInBazelBspDirectory(
             workspace
