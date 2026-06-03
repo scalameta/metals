@@ -1276,6 +1276,13 @@ abstract class MetalsLspService(
       result.map(_.locations)
     }
 
+  override def declaration(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[util.List[Location]] =
+    CancelTokens.future { token =>
+      compilers.declaration(position, token).map(_.locations)
+    }
+
   override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =

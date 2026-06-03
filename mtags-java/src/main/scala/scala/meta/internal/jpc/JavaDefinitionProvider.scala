@@ -5,6 +5,8 @@ import javax.lang.model.`type`.ExecutableType
 import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.`type`.TypeVariable
 import javax.lang.model.element.Element
+import javax.lang.model.element.ElementKind
+import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.TypeElement
 
 import scala.jdk.CollectionConverters._
@@ -29,6 +31,12 @@ import org.eclipse.{lsp4j => l}
 trait DefinitionProcessor {
   def transformElement(element: Element): Option[Element]
 }
+trait CompileDefinitionProcessor extends DefinitionProcessor {
+  def transformElement(
+      element: Element,
+      compile: JavaSourceCompile
+  ): Option[Element]
+}
 object NoopDefinitionProcessor extends DefinitionProcessor {
   def transformElement(element: Element): Option[Element] =
     Option(element)
@@ -45,6 +53,64 @@ object TypeDefinitionProcessor extends DefinitionProcessor {
       case _ => None // Primitive types have no definition
     }
 }
+object DeclarationDefinitionProcessor extends CompileDefinitionProcessor {
+  def transformElement(element: Element): Option[Element] =
+    NoopDefinitionProcessor.transformElement(element)
+
+  def transformElement(
+      element: Element,
+      compile: JavaSourceCompile
+  ): Option[Element] =
+    Option(element)
+      .flatMap {
+        case method: ExecutableElement
+            if method.getKind() == ElementKind.METHOD =>
+          topmostOverriddenMethod(method, compile)
+        case _ => None
+      }
+      .orElse(transformElement(element))
+
+  private def topmostOverriddenMethod(
+      method: ExecutableElement,
+      compile: JavaSourceCompile
+  ): Option[ExecutableElement] = {
+    val elements = compile.task.getElements()
+    val types = compile.task.getTypes()
+
+    def asTypeElement(e: Element): Option[TypeElement] = e match {
+      case t: TypeElement => Some(t)
+      case _ => None
+    }
+
+    def directlyOverridden(
+        m: ExecutableElement
+    ): Option[ExecutableElement] =
+      for {
+        owner <- asTypeElement(m.getEnclosingElement())
+        parent <- types
+          .directSupertypes(owner.asType())
+          .asScala
+          .view
+          .flatMap(st => asTypeElement(types.asElement(st)))
+          .flatMap(_.getEnclosedElements().asScala)
+          .collectFirst {
+            case c: ExecutableElement
+                if c.getKind() == ElementKind.METHOD &&
+                  elements.overrides(m, c, owner) =>
+              c
+          }
+      } yield parent
+
+    @scala.annotation.tailrec
+    def loop(m: ExecutableElement): ExecutableElement =
+      directlyOverridden(m) match {
+        case Some(parent) => loop(parent)
+        case None => m
+      }
+
+    directlyOverridden(method).map(loop)
+  }
+}
 
 class JavaDefinitionProvider(
     compiler: JavaMetalsCompiler,
@@ -52,22 +118,32 @@ class JavaDefinitionProvider(
     processor: DefinitionProcessor = NoopDefinitionProcessor
 ) {
 
+  private def transformElement(
+      element: Element,
+      compile: JavaSourceCompile
+  ): Option[Element] =
+    processor match {
+      case compileProcessor: CompileDefinitionProcessor =>
+        compileProcessor.transformElement(element, compile)
+      case _ =>
+        processor.transformElement(element)
+    }
+
   def definition(): DefinitionResult = {
     val compileAndNode = compiler.nodeAtPosition(params)
     val result: Option[DefinitionResult] = for {
       (compile, node) <- compileAndNode
       trees = Trees.instance(compile.task)
-      element <- processor
-        .transformElement(trees.getElement(node))
+      element <- transformElement(trees.getElement(node), compile)
         .orElse(Option(trees.getElement(node)))
     } yield {
       val sourcePositions = trees.getSourcePositions()
-      val source = definitionSource(node, trees, element)
+      val source = definitionSource(compile, node, trees, element)
       source match {
         case Sourcepath(all @ (firstPath :: _)) =>
           val locations = for {
             p <- all.iterator
-            pElement <- processor.transformElement(trees.getElement(p)).toList
+            pElement <- transformElement(trees.getElement(p), compile).toList
             defn <- sourceDefinition(
               compile,
               sourcePositions,
@@ -153,6 +229,7 @@ class JavaDefinitionProvider(
   }
 
   private def definitionSource(
+      compile: JavaSourceCompile,
       node: TreePath,
       trees: Trees,
       element: Element
@@ -173,7 +250,7 @@ class JavaDefinitionProvider(
                 val ambiguousElements = (for {
                   elem <- c.getEnclosedElements().asScala.iterator
                   if elem.getSimpleName().toString() == elementName
-                  processed <- processor.transformElement(elem).toList
+                  processed <- transformElement(elem, compile).toList
                 } yield processed).distinct.toList
                 val ambiguousPaths = for {
                   member <- ambiguousElements

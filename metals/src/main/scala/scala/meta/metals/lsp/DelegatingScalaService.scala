@@ -69,6 +69,10 @@ class DelegatingScalaService(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] = underlying.definition(position)
 
+  override def declaration(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[util.List[Location]] = underlying.declaration(position)
+
   override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]] =

@@ -38,6 +38,11 @@ trait TextDocumentService {
       position: TextDocumentPositionParams
   ): CompletableFuture[util.List[Location]]
 
+  @JsonRequest("textDocument/declaration")
+  def declaration(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[util.List[Location]]
+
   @JsonRequest("textDocument/typeDefinition")
   def typeDefinition(
       position: TextDocumentPositionParams
