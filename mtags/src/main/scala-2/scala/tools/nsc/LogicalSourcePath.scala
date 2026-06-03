@@ -4,13 +4,11 @@ package scala.tools.nsc
 
 import java.io.File
 import java.net.URL
-import java.nio.file.Files
 import java.nio.file.Path
 import java.{util => ju}
 
 import scala.jdk.CollectionConverters._
 import scala.reflect.io.AbstractFile
-import scala.reflect.io.VirtualFile
 import scala.tools.nsc.classpath._
 import scala.tools.nsc.reporters.ConsoleReporter
 import scala.tools.nsc.reporters.Reporter
@@ -50,29 +48,8 @@ class LogicalSourcePath(val dirs: Seq[File], rootPackage: LogicalPackage)
     }
   }
 
-  private def sourcesIn(pkg: LogicalPackage): Seq[SourceFileEntry] = {
-    val byName = pkg.sources.groupBy(p => new File(p).getName)
-    byName.flatMap { case (filename, paths) =>
-      paths.zipWithIndex.map { case (p, i) =>
-        if (i == 0) SourceFileEntryImpl(AbstractFile.getFile(p))
-        else {
-          // AggregateClassPath deduplicates SourceFileEntry by filename, so duplicate-named
-          // files in the same package (e.g. main/util/reporter.scala defined in package util
-          // and test/util/reporter.scala also defined in package util)
-          // would be silently dropped. We rename them to avoid this.
-          val ext = filename.lastIndexOf('.')
-          val uniqueName =
-            filename.substring(0, ext) + "$" + i + filename.substring(ext)
-          val vf = new VirtualFile(uniqueName)
-          val bytes = Files.readAllBytes(new File(p).toPath)
-          val os = vf.output
-          try os.write(bytes)
-          finally os.close()
-          SourceFileEntryImpl(vf)
-        }
-      }
-    }.toSeq
-  }
+  private def sourcesIn(pkg: LogicalPackage): Seq[SourceFileEntry] =
+    pkg.sources.map(p => SourceFileEntryImpl(AbstractFile.getFile(p)))
 
   private def packagesIn(pkg: LogicalPackage, prefix: String) = {
     val pre = if (prefix.isEmpty) prefix else s"$prefix."
