@@ -103,4 +103,37 @@ class DeclarationSuite extends BaseJavaDefinitionSuite {
        |         ^^^^^^^^^
        |""".stripMargin,
   )
+
+  check(
+    "overridden-multiple-supertypes",
+    """|interface Walker {
+       |    void move();
+       |}
+       |
+       |interface Swimmer {
+       |    void move();
+       |}
+       |
+       |class Duck implements Walker, Swimmer {
+       |    @Override
+       |    public void move() {
+       |        System.out.println("Waddle");
+       |    }
+       |}
+       |
+       |class A {
+       |    public static void main(String args[]){
+       |        Duck duck = new Duck();
+       |        duck.mo@@ve();
+       |    }
+       |}
+       |""".stripMargin,
+    """|Definition.java:3:10: info: definition
+       |    void move();
+       |         ^^^^
+       |Definition.java:7:10: info: definition
+       |    void move();
+       |         ^^^^
+       |""".stripMargin,
+  )
 }
