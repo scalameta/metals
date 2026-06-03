@@ -1053,6 +1053,89 @@ class Compilers(
         }
     }.getOrElse(Future.successful(Nil.asJava))
 
+  def inlineValues(
+      params: l.InlineValueParams,
+      token: CancelToken,
+  ): Future[ju.List[l.InlineValue]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    loadCompiler(path)
+      .flatMap { compiler =>
+        val (input, adjustRequest, adjustResponse) =
+          sourceAdjustments(
+            params.getTextDocument.getUri,
+            compiler.scalaVersion(),
+          )
+        val range = params.getRange
+        val adjustedRange =
+          new LspRange(
+            adjustRequest(range.getStart),
+            adjustRequest(range.getEnd),
+          )
+        val adjustedStopped =
+          Option(params.getContext)
+            .flatMap(context => Option(context.getStoppedLocation))
+            .map(range =>
+              new LspRange(
+                adjustRequest(range.getStart),
+                adjustRequest(range.getEnd),
+              )
+            )
+            .getOrElse(adjustedRange)
+        for {
+          metaRange <- adjustedRange.toMeta(input)
+          metaStopped <- adjustedStopped.toMeta(input)
+        } yield {
+          val rangeParams = CompilerRangeParamsUtils.fromPos(
+            metaRange,
+            token,
+            outlineFilesProvider.getOutlineFiles(compiler.buildTargetId()),
+          )
+          compiler
+            .inlineValues(rangeParams, metaStopped.end)
+            .asScala
+            .map { values =>
+              adjustInlineValues(values, adjustResponse)
+              values
+            }
+        }
+      }
+      .getOrElse(Future.successful(Nil.asJava))
+  }
+
+  private def adjustInlineValues(
+      values: ju.List[l.InlineValue],
+      adjust: AdjustLspData,
+  ): Unit =
+    values.forEach { value =>
+      value.get() match {
+        case text: l.InlineValueText =>
+          adjustInlineValueText(text, adjust)
+        case lookup: l.InlineValueVariableLookup =>
+          adjustInlineValueVariableLookup(lookup, adjust)
+        case expression: l.InlineValueEvaluatableExpression =>
+          adjustInlineValueEvaluatableExpression(expression, adjust)
+        case _ =>
+      }
+    }
+
+  private def adjustInlineValueText(
+      text: l.InlineValueText,
+      adjust: AdjustLspData,
+  ): Unit =
+    text.setRange(adjust.adjustRange(text.getRange()))
+
+  private def adjustInlineValueVariableLookup(
+      lookup: l.InlineValueVariableLookup,
+      adjust: AdjustLspData,
+  ): Unit =
+    lookup.setRange(adjust.adjustRange(lookup.getRange()))
+
+  private def adjustInlineValueEvaluatableExpression(
+      expression: l.InlineValueEvaluatableExpression,
+      adjust: AdjustLspData,
+  ): Unit =
+    expression.setRange(adjust.adjustRange(expression.getRange()))
+
   def documentHighlight(
       params: TextDocumentPositionParams,
       token: CancelToken,

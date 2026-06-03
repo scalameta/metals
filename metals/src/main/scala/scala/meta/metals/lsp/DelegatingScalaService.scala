@@ -232,6 +232,11 @@ class DelegatingScalaService(
   ): CompletableFuture[util.List[InlayHint]] =
     underlying.inlayHints(params)
 
+  override def inlineValue(
+      params: InlineValueParams
+  ): CompletableFuture[util.List[InlineValue]] =
+    underlying.inlineValue(params)
+
   override def inlayHintResolve(
       inlayHint: InlayHint
   ): CompletableFuture[InlayHint] =

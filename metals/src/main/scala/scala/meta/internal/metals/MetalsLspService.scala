@@ -744,7 +744,6 @@ abstract class MetalsLspService(
       definitionProvider,
       compilers,
     )
-
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
   protected def fileDecoderProvider: FileDecoderProvider
@@ -1411,6 +1410,13 @@ abstract class MetalsLspService(
   ): CompletableFuture[InlayHint] =
     CancelTokens.future { token =>
       inlayHintResolveProvider.resolve(inlayHint, token)
+    }
+
+  def inlineValue(
+      params: InlineValueParams
+  ): CompletableFuture[util.List[InlineValue]] =
+    CancelTokens.future { token =>
+      compilers.inlineValues(params, token)
     }
 
   override def documentHighlights(

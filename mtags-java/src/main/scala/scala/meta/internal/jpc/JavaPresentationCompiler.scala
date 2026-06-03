@@ -229,6 +229,16 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[util.List[TextEdit]] =
     CompletableFuture.completedFuture(Nil.asJava)
 
+  override def inlineValues(
+      params: RangeParams,
+      stoppedLocationOffset: Int
+  ): CompletableFuture[util.List[lsp4j.InlineValue]] =
+    request(params, util.Collections.emptyList[lsp4j.InlineValue]()) { pc =>
+      new JavaInlineValueProvider(pc, params, stoppedLocationOffset)
+        .inlineValues()
+        .asJava
+    }
+
   override def extractMethod(
       range: RangeParams,
       extractionPos: OffsetParams
