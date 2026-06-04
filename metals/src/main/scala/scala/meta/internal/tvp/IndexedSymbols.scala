@@ -105,7 +105,10 @@ class IndexedSymbols(
 
   private def javaSymbols(in: AbsolutePath) = {
     val mtags = new JavacMtags(
-      Input.VirtualFile(in.toString(), buffers.get(in).getOrElse(in.readText)),
+      Input.VirtualFile(
+        in.toURI.toString(),
+        buffers.get(in).getOrElse(in.readText),
+      ),
       includeMembers = true,
     )
     mtags
