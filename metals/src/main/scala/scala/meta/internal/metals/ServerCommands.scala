@@ -827,6 +827,7 @@ object ServerCommands {
       GotoPosition,
       GotoSuperMethod,
       GotoSymbol,
+      GotoLog,
       ImportBuild,
       InsertInferredType,
       InsertInferredMethod,
