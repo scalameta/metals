@@ -16,7 +16,6 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.NoopLanguageClient
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -436,7 +435,7 @@ class BazelLspSuite
     val bazelVersion821 = "8.2.1"
     for {
       _ <- initialize(
-        BazelModuleLayout(moduleWorkspaceLayout, V.scala3, bazelVersion821)
+        BazelModuleLayout(moduleWorkspaceLayout, "3.3.7", bazelVersion821)
       )
       _ = assert(bazelBspConfig.exists)
 
