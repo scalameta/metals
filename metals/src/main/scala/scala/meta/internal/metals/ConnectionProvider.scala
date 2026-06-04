@@ -693,7 +693,7 @@ class ConnectionProvider(
         MbtBuildServer.isMbtServer(session.main.name) &&
         userConfig.javaSymbolLoader.isTurbineClasspath
       ) {
-        mbtSymbolSearch.recompileTurbineClasspath()
+        mbtSymbolSearch.scheduleRecompileTurbineClasspath()
       } else {
         Future.unit
       }

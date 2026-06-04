@@ -163,6 +163,10 @@ class MbtWorkspaceSymbolProvider(
     turbineCompiler.compileNow().ignoreValue
   }
 
+  def scheduleRecompileTurbineClasspath(): Future[Unit] = {
+    turbineCompiler.scheduleCompile().ignoreValue
+  }
+
   def close(): Unit = {}
 
   /**
