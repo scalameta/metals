@@ -96,6 +96,10 @@ class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
            |Returns the length of this string.
            |The length is equal to the number of [Unicode
            |code units]() in the string.
+           |
+           |
+           |**Returns:** the length of the sequence of characters represented by this
+           |object.
            |""".stripMargin.trim,
       )
     } yield ()
