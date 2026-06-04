@@ -8,6 +8,7 @@ import scala.concurrent.Promise
 
 import scala.meta.internal.ansi.AnsiFilter
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
@@ -22,6 +23,7 @@ import ch.epfl.scala.{bsp4j => b}
 class McpTestRunner(
     debugProvider: DebugProvider,
     buildTargets: BuildTargets,
+    compilations: Compilations,
     workspace: AbsolutePath,
     userConfig: () => UserConfiguration,
     mcpSearch: McpSymbolSearch,
@@ -54,6 +56,7 @@ class McpTestRunner(
       )
     } yield {
       for {
+        _ <- compilations.compileFile(path)
         env <- jvmTestEnv
         settings = DebugProvider.scalaTestLocalRunSettings(workspace, env)
         testSuites = new b.ScalaTestSuites(

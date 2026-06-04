@@ -78,22 +78,22 @@ import org.eclipse.{lsp4j => l}
 /**
  * Metals implementation of the Scala Language Service.
  * @param ec
- *  Execution context used for submitting tasks. This class DO NOT manage the
- *  lifecycle of this execution context.
+ *  Execution context used for submitting tasks.
+ *  This class DOES NOT manage the lifecycle of this execution context.
  * @param sh
- *  Scheduled executor service used for scheduling tasks. This class DO NOT
- *  manage the lifecycle of this executor.
+ *  Scheduled executor service used for scheduling tasks.
+ *  This class DOES NOT manage the lifecycle of this executor.
  * @param serverInputs
- *  Collection of different parameters used by Metals for running,
- *  which main purpose is allowing for custom behavior in tests.
+ *  Collection of different parameters used by Metals for running.
+ *  Their main purpose is allowing for custom behavior in tests.
  * @param workspace
  *  An absolute path to the workspace.
  * @param client
- *  Metals client used for sending notifications to the client. This class DO
- *  NOT manage the lifecycle of this client. It is the responsibility of the
- *  caller to shut down the client.
+ *  Metals client used for sending notifications to the client.
+ *  This class DOES NOT manage the lifecycle of this client.
+ *  It is the responsibility of the caller to shut down the client.
  * @param initializeParams
- *  Initialization parameters send by the client in the initialize request,
+ *  Initialization parameters received from the client in the initialize request,
  *  which is the first request sent to the server by the client.
  */
 abstract class MetalsLspService(
