@@ -583,7 +583,6 @@ class BazelMbtLspSuite
            |```
            |Get the string contents of the document's `title` element.
            |
-           |
            |**Returns:** Trimmed title, or empty string if none set.
            |""".stripMargin.hover,
       )
