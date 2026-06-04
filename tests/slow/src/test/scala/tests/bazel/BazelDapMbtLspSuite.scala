@@ -113,7 +113,10 @@ class BazelDapMbtLspSuite
       _ <- server.didOpen("test/FooTest.java")
       _ <- awaitMbtTestClassDiscovery("test/FooTest.java")
       debugger <- server.startDebuggingUnresolved(
-        new DebugUnresolvedTestClassParams("test.FooTest").toJson
+        new DebugUnresolvedTestClassParams(
+          "test.FooTest",
+          noDebug = false,
+        ).toJson
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -177,7 +180,10 @@ class BazelDapMbtLspSuite
       _ <- server.didOpen("test/FooTest2.java")
       _ <- awaitMbtTestClassDiscovery("test/FooTest2.java")
       debugger <- server.startDebuggingUnresolved(
-        new DebugUnresolvedTestClassParams("test.FooTest2").toJson,
+        new DebugUnresolvedTestClassParams(
+          "test.FooTest2",
+          noDebug = false,
+        ).toJson,
         navigator,
       )
       _ <- debugger.initialize

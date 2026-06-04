@@ -2057,16 +2057,19 @@ abstract class MetalsLspService(
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     afterCompilationFinished(params)(debugDiscovery.debugDiscovery)
-      .flatMap(debugProvider.asSession)
+      .flatMap(debugProvider.asSession(_, noDebug = params.noDebug))
 
   def runClosest(params: DebugDiscoveryParams): Future[DebugSession] =
     afterCompilationFinished(params)(debugDiscovery.debugDiscovery)
-      .flatMap(debugProvider.asSession)
+      .flatMap(debugProvider.asSession(_, noDebug = params.noDebug))
 
   def createDebugSession(
-      target: b.BuildTargetIdentifier
+      target: b.BuildTargetIdentifier,
+      noDebug: Boolean,
   ): Future[DebugSession] =
-    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
+    debugProvider
+      .createDebugSession(target)
+      .flatMap(debugProvider.asSession(_, noDebug))
 
   def testClassSearch(
       params: DebugUnresolvedTestClassParams
@@ -2083,9 +2086,12 @@ abstract class MetalsLspService(
       params: ScalaTestSuitesDebugRequest,
   ): Future[DebugSession] = debugProvider
     .startTestSuite(target, params)
-    .flatMap(debugProvider.asSession)
+    .flatMap(debugProvider.asSession(_, noDebug = params.noDebug))
 
-  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] = {
+  def startDebugProvider(
+      params: b.DebugSessionParams,
+      noDebug: Boolean,
+  ): Future[DebugSession] = {
     val targets = params.getTargets.asScala.toSeq
     val mbtConnections = targets.flatMap { target =>
       val connOpt = buildTargets.buildServerOf(target)
@@ -2116,7 +2122,7 @@ abstract class MetalsLspService(
     compileFuture.flatMap { _ =>
       debugProvider
         .ensureNoWorkspaceErrors(targets)
-        .flatMap(_ => debugProvider.asSession(params))
+        .flatMap(_ => debugProvider.asSession(params, noDebug))
     }
   }
 

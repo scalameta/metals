@@ -122,7 +122,8 @@ class DebugProvider(
   }
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val cancelPromise = Promise[Unit]()
     for {
@@ -148,6 +149,7 @@ class DebugProvider(
               jvmOptionsTranslatedParams,
               buildServer,
               cancelPromise,
+              noDebug,
             ),
             Some(() => cancelPromise.trySuccess(())),
           )
@@ -231,6 +233,7 @@ class DebugProvider(
       parameters: b.DebugSessionParams,
       buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val proxyServer = new ServerSocket(0, 50, localAddress)
     val host = InetAddresses.toUriString(proxyServer.getInetAddress)
@@ -255,7 +258,7 @@ class DebugProvider(
          ))
         .flatMap { _ =>
           val conn =
-            startDebugSession(buildServer, parameters, cancelPromise)
+            startDebugSession(buildServer, parameters, cancelPromise, noDebug)
               .map { uri =>
                 val socket = connect(uri)
                 connectedToServer.trySuccess(())
@@ -325,9 +328,10 @@ class DebugProvider(
       buildServer: BuildServerConnection,
       params: DebugSessionParams,
       cancelPromise: Promise[Unit],
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext) =
     if (buildServer.isDebuggingProvider || buildServer.isSbt) {
-      buildServer.startDebugSession(params, cancelPromise)
+      buildServer.startDebugSession(params, cancelPromise, noDebug)
     } else {
       def getDebugee: Either[String, Future[MetalsDebuggee]] = {
         def buildTarget = params
@@ -507,10 +511,11 @@ class DebugProvider(
   }
 
   def asSession(
-      debugParams: DebugSessionParams
+      debugParams: DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
     for {
-      server <- start(debugParams)
+      server <- start(debugParams, noDebug)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)
@@ -929,8 +934,8 @@ object DebugProvider {
     private val searchPromise = Promise[Try[A]]()
     protected def search(): Future[Try[A]]
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
-    def createDapSession(args: A): Future[DebugSession] =
-      dapSessionParams(args).flatMap(debugProvider.asSession(_))
+    def createDapSession(args: A, noDebug: Boolean): Future[DebugSession] =
+      dapSessionParams(args).flatMap(debugProvider.asSession(_, noDebug))
     def searchResult: Future[(Try[A], ClassSearch[A])] = {
       search().onComplete {
         case Success(resolved) => searchPromise.trySuccess(resolved)
@@ -976,19 +981,24 @@ object DebugProvider {
   }
 
   def getResultFromSearches[A](
-      searches: List[ClassSearch[A]]
+      searches: List[ClassSearch[A]],
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugSession] =
     Future
       .sequence(searches.map(_.searchResult))
-      .getFirstOrError
+      .getFirstOrError(noDebug)
       .recoverWith { case _ =>
-        Future.sequence(searches.map(_.retrySearchResult)).getFirstOrError
+        Future
+          .sequence(searches.map(_.retrySearchResult))
+          .getFirstOrError(noDebug)
       }
 
   private implicit class FindFirstDebugSession[A](
       from: Future[List[(Try[A], ClassSearch[A])]]
   ) {
-    def getFirstOrError(implicit ec: ExecutionContext): Future[DebugSession] =
+    def getFirstOrError(
+        noDebug: Boolean
+    )(implicit ec: ExecutionContext): Future[DebugSession] =
       from.flatMap { all =>
         def mostRelevantError() = all
           .collect { case (Failure(error), _) =>
@@ -998,7 +1008,7 @@ object DebugProvider {
           .head
         all
           .collectFirst { case (Success(dapSession), search) =>
-            search.createDapSession(dapSession)
+            search.createDapSession(dapSession, noDebug)
           }
           .getOrElse(Future.failed(mostRelevantError()))
       }

@@ -322,6 +322,7 @@ class DebugProtocolSuite
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome", "MIDDLE_NAME" -> "Olivia").asJava,
           envFile.getFileName.toString,
+          noDebug = false,
         ).toJson
       )
       _ <- debugger.initialize
@@ -369,6 +370,7 @@ class DebugProtocolSuite
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome").asJava,
           envFile.toString,
+          noDebug = false,
         ).toJson
       )
       _ <- debugger.initialize
@@ -416,6 +418,7 @@ class DebugProtocolSuite
           singletonList("-Dname=Megan"),
           Map("GREETING" -> "Welcome").asJava,
           envFile.toString,
+          noDebug = false,
         ).toJson
       )
       _ <- debugger.initialize
@@ -465,6 +468,7 @@ class DebugProtocolSuite
           "a.Main",
           "a",
           singletonList("Foo"),
+          noDebug = false,
         ).toJson
       )
       _ <- debugger.initialize
@@ -515,6 +519,7 @@ class DebugProtocolSuite
               "a.Main",
               "a",
               singletonList("Foo"),
+              noDebug = false,
             ).toJson
           )
           .recover { case e: ResponseErrorException =>
@@ -550,7 +555,8 @@ class DebugProtocolSuite
       _ <- server.didOpen("a/src/main/scala/a/Foo.scala")
       debugger <- server.startDebuggingUnresolved(
         new DebugUnresolvedTestClassParams(
-          "a.Foo"
+          "a.Foo",
+          noDebug = false,
         ).toJson
       )
       _ <- debugger.initialize
@@ -593,7 +599,8 @@ class DebugProtocolSuite
         server
           .startDebuggingUnresolved(
             new DebugUnresolvedTestClassParams(
-              "a.Foo"
+              "a.Foo",
+              noDebug = false,
             ).toJson
           )
           .recover { case e: ResponseErrorException =>
@@ -632,7 +639,8 @@ class DebugProtocolSuite
         server
           .startDebuggingUnresolved(
             new DebugUnresolvedTestClassParams(
-              "a.Foo"
+              "a.Foo",
+              noDebug = false,
             ).toJson
           )
       _ <- debugger.initialize
