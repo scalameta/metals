@@ -196,7 +196,7 @@ class MbtDebugSessionStarter(
                 toolName,
                 isTests = true,
               )
-            val debuggee =
+            val innerDebuggee =
               if (launcher.supportsForkedTestDebug) {
                 val commandWithPort =
                   launcher.mbtTestDebugCommandWithPort(
@@ -233,6 +233,7 @@ class MbtDebugSessionStarter(
                   userJavaHome(),
                 )
               }
+            val debuggee = MbtTestResultAdapter(innerDebuggee, testSuites)
             val handler = dap.DebugServer.run(
               debuggee,
               new MetalsDebugToolsResolver(),
