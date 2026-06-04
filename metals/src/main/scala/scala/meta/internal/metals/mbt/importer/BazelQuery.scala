@@ -36,8 +36,42 @@ object BazelQuery {
     BazelQuery(query, outputMode = Label)
   }
 
+  private val reservedKeywords: Set[String] =
+    Set("except", "in", "intersect", "let", "set", "union")
+
+  private val unquotedWordChars: Set[Char] =
+    (('a' to 'z') ++ ('A' to 'Z') ++ ('0' to '9')).toSet ++
+      Set('*', '/', '@', '.', '-', '_', ':', '$', '~', '[', ']')
+
+  private def needsQuoting(target: String): Boolean =
+    reservedKeywords.contains(target) || target.headOption.exists {
+      case '-' | '*' => true
+      case _ =>
+        val allowPlus = target.startsWith("@@")
+        !target.forall { c =>
+          unquotedWordChars.contains(c) || (c == '+' && allowPlus)
+        }
+    }
+
+  private def quoteTarget(target: String): Option[String] =
+    if (needsQuoting(target)) {
+      val hasDouble = target.contains('"')
+      val hasSingle = target.contains('\'')
+      if (hasDouble && hasSingle) {
+        scribe.warn(
+          s"bazel-mbt: skipping target '$target' because it contains both single and double quotes, " +
+            "which cannot be represented in Bazel query language"
+        )
+        None
+      } else if (hasDouble)
+        Some(s"'$target'")
+      else
+        Some(s""""$target"""")
+    } else Some(target)
+
   def fullInformationQuery(targets: List[String]): BazelQuery = {
-    val query = s"deps(set(${targets.mkString(" ")}))"
+    val escaped = targets.flatMap(quoteTarget)
+    val query = s"deps(set(${escaped.mkString(" ")}))"
     BazelQuery(query, outputMode = Xml)
   }
 
