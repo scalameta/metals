@@ -205,6 +205,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiff(
         uppercase.show,
         """|class javax.swing.text.MaskFormatter.UpperCaseCharacter
+           |constructor javax.swing.text.MaskFormatter.UpperCaseCharacter.
            |method com.test.UPPERCASE_OBJECT.UPPERCASE_METHOD
            |object com.test.UPPERCASE_OBJECT
            |""".stripMargin,
@@ -219,6 +220,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiff(
         lowercase.show,
         """|class javax.swing.text.MaskFormatter.LowerCaseCharacter
+           |constructor javax.swing.text.MaskFormatter.LowerCaseCharacter.
            |method com.test.lowercase_object.lowercase_method
            |object com.test.lowercase_object
            |""".stripMargin,
