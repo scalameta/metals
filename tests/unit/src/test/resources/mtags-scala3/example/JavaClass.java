@@ -2,10 +2,10 @@ package example;
 
 public class JavaClass/*example.JavaClass#*/ {
 
-    private JavaClass() {
+    private JavaClass/*example.JavaClass#`<init>`().*/() {
 
     }
-    public JavaClass/*example.JavaClass#`<init>`().*/(int d) {
+    public JavaClass/*example.JavaClass#`<init>`(+1).*/(int d) {
         this.d = d;
     }
 
