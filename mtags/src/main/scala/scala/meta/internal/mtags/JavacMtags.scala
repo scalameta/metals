@@ -380,6 +380,28 @@ class JavacMtags(
         val typeParams = extractTypeParamNames(node)
         onClass(currentOwner, name, typeParams, getDocComment(node))
 
+        lazy val constructorCount = node.getMembers().asScala.count {
+          case method: MethodTree =>
+            val ctorName = method.getName()
+            ctorName.length() > 0 && ctorName.charAt(0) == '<'
+          case _ => false
+        }
+        val isImplicitConstructor =
+          node.getKind() == Tree.Kind.RECORD ||
+            (node.getKind() == Tree.Kind.CLASS && constructorCount == 0) ||
+            // The implicit enum constructor could technically be dropped, but
+            // we include it for compatibility with semanticdb-javac.
+            (node.getKind() == Tree.Kind.ENUM && constructorCount == 0)
+        if (isImplicitConstructor) {
+          mtags.withOwner() {
+            mtags.ctor(
+              if (constructorCount == 0) "()" else s"(+$constructorCount)",
+              pos,
+              0
+            )
+          }
+        }
+
         // Scan members
         var r = scan(node.getModifiers(), p)
         r = scanAndReduceIterable(node.getTypeParameters(), p, r)

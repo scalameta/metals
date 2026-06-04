@@ -20,7 +20,7 @@ public enum JavaEnum/*example.JavaEnum#*/ {
     public static int c/*example.JavaEnum#c.*/ = 2;
     public int d/*example.JavaEnum#d.*/ = 2;
 
-    public class C/*example.JavaEnum#C#*/ {
+    public class C/*example.JavaEnum#C#*//*example.JavaEnum#C#`<init>`().*/ {
         public int b/*example.JavaEnum#C#b().*/() {
             return 1;
         }
@@ -29,7 +29,7 @@ public enum JavaEnum/*example.JavaEnum#*/ {
         public int d/*example.JavaEnum#C#d.*/ = 2;
     }
 
-    public static class F/*example.JavaEnum#F#*/ {
+    public static class F/*example.JavaEnum#F#*//*example.JavaEnum#F#`<init>`().*/ {
         public static void a/*example.JavaEnum#F#a().*/() {
         }
 
