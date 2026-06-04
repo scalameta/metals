@@ -7,7 +7,6 @@ import scala.meta.internal.mtags.proto.ProtoMtagsV2
 import scala.meta.internal.{semanticdb => s}
 
 final case class MtagsConfig(
-    useQdox: Boolean = false,
     /**
      * If true (default), use ProtoMtagsV1 (scanner-based) for proto indexing.
      * If false, use ProtoMtagsV2 (Java parser-based).
@@ -28,15 +27,11 @@ final case class MtagsConfig(
       includeMembers: Boolean,
       includeReferences: Boolean = false
   )(implicit rc: ReportContext): MtagsIndexer = {
-    if (useQdox) {
-      new QdoxJavaMtags(input, includeMembers)
-    } else {
-      new JavacMtags(
-        input,
-        includeMembers,
-        includeFuzzyReferences = includeReferences
-      )
-    }
+    new JavacMtags(
+      input,
+      includeMembers,
+      includeFuzzyReferences = includeReferences
+    )
   }
   def javaInstanceWithOccurrenceVisitor(
       virtualFile: Input.VirtualFile,
@@ -45,37 +40,25 @@ final case class MtagsConfig(
   )(onOccurrence: (s.SymbolOccurrence, s.SymbolInformation, String) => Unit)(
       implicit rc: ReportContext
   ): MtagsIndexer = {
-    if (useQdox) {
-      new QdoxJavaMtags(virtualFile, includeMembers) {
-        override def visitOccurrence(
-            occ: s.SymbolOccurrence,
-            info: s.SymbolInformation,
-            owner: String
-        ): Unit = {
-          onOccurrence(occ, info, owner)
+    val emptyInfo = s.SymbolInformation()
+    new JavacMtags(
+      virtualFile,
+      includeMembers,
+      includeFuzzyReferences = includeReferences
+    ) {
+      override def visitFuzzyReferenceOccurrence(
+          occ: s.SymbolOccurrence
+      ): Unit = {
+        if (includeReferences) {
+          onOccurrence(occ, emptyInfo, owner)
         }
       }
-    } else {
-      val emptyInfo = s.SymbolInformation()
-      new JavacMtags(
-        virtualFile,
-        includeMembers,
-        includeFuzzyReferences = includeReferences
-      ) {
-        override def visitFuzzyReferenceOccurrence(
-            occ: s.SymbolOccurrence
-        ): Unit = {
-          if (includeReferences) {
-            onOccurrence(occ, emptyInfo, owner)
-          }
-        }
-        override def visitOccurrence(
-            occ: s.SymbolOccurrence,
-            info: s.SymbolInformation,
-            owner: String
-        ): Unit = {
-          onOccurrence(occ, info, owner)
-        }
+      override def visitOccurrence(
+          occ: s.SymbolOccurrence,
+          info: s.SymbolInformation,
+          owner: String
+      ): Unit = {
+        onOccurrence(occ, info, owner)
       }
     }
   }

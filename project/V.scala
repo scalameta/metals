@@ -87,8 +87,6 @@ object V {
   def scribe(scalaVersion: String): String =
     if (scalaVersion.startsWith("2.12")) "3.15.2" else scribe
 
-  val qdox = "2.2.0"
-
   val protobuf = "4.34.0"
 
   val sbt2Version = "2.0.0-RC8"

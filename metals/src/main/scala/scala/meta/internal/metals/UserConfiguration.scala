@@ -18,7 +18,6 @@ import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
-import scala.meta.internal.metals.Configs.JavaOutlineProviderConfig
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
 import scala.meta.internal.metals.Configs.ProtoOutlineProviderConfig
@@ -102,8 +101,6 @@ case class UserConfiguration(
       DefinitionProviderConfig.default,
     definitionIndexStrategy: DefinitionIndexStrategy =
       DefinitionIndexStrategy.default,
-    javaOutlineProvider: JavaOutlineProviderConfig =
-      JavaOutlineProviderConfig.default,
     protoOutlineProvider: ProtoOutlineProviderConfig =
       ProtoOutlineProviderConfig.default,
     javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
@@ -281,12 +278,6 @@ case class UserConfiguration(
           (
             "definitionIndexStrategy",
             definitionIndexStrategy.value,
-          )
-        ),
-        Some(
-          (
-            "javaOutlineProvider",
-            javaOutlineProvider.value,
           )
         ),
         Some(
@@ -1366,14 +1357,6 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(DefinitionProviderConfig.default)
-    val javaOutlineProvider = getParsedKey(
-      "java-outline-provider",
-      value =>
-        JavaOutlineProviderConfig.fromConfigOrFeatureFlag(
-          value,
-          featureFlags,
-        ),
-    ).getOrElse(JavaOutlineProviderConfig.default)
     val protoOutlineProvider = getParsedKey(
       "proto-outline-provider",
       value =>
@@ -1519,7 +1502,6 @@ object UserConfiguration {
           workspaceSymbolProvider,
           definitionProviders,
           definitionIndexStrategy,
-          javaOutlineProvider,
           protoOutlineProvider,
           javaSymbolLoader,
           javaTurbineRecompileDelay,
