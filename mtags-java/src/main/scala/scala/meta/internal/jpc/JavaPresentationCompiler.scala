@@ -182,6 +182,15 @@ case class JavaPresentationCompiler(
     }
   }
 
+  override def declaration(
+      params: OffsetParams
+  ): CompletableFuture[DefinitionResult] = {
+    request(params, DefinitionResultImpl.empty) { pc =>
+      new JavaDefinitionProvider(pc, params, DeclarationDefinitionProcessor)
+        .definition()
+    }
+  }
+
   override def typeDefinition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =

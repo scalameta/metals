@@ -1430,14 +1430,32 @@ class Compilers(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[DefinitionResult] = {
-    definition(params = params, token = token, findTypeDef = false)
+    definition(
+      params = params,
+      token = token,
+      Compilers.DefinitionMode.Definition,
+    )
   }
+
+  def declaration(
+      params: TextDocumentPositionParams,
+      token: CancelToken,
+  ): Future[DefinitionResult] =
+    definition(
+      params = params,
+      token = token,
+      Compilers.DefinitionMode.Declaration,
+    )
 
   def typeDefinition(
       params: TextDocumentPositionParams,
       token: CancelToken,
   ): Future[DefinitionResult] = {
-    definition(params = params, token = token, findTypeDef = true)
+    definition(
+      params = params,
+      token = token,
+      Compilers.DefinitionMode.TypeDefinition,
+    )
   }
 
   def info(
@@ -1467,7 +1485,7 @@ class Compilers(
   private def definition(
       params: TextDocumentPositionParams,
       token: CancelToken,
-      findTypeDef: Boolean,
+      mode: Compilers.DefinitionMode,
   ): Future[DefinitionResult] =
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       val paramsWithOutline = CompilerOffsetParamsUtils.fromPos(
@@ -1477,9 +1495,14 @@ class Compilers(
       )
 
       val defResult =
-        if (findTypeDef) pc.typeDefinition(paramsWithOutline)
-        else
-          pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
+        mode match {
+          case Compilers.DefinitionMode.Definition =>
+            pc.definition(paramsWithOutline)
+          case Compilers.DefinitionMode.Declaration =>
+            pc.declaration(paramsWithOutline)
+          case Compilers.DefinitionMode.TypeDefinition =>
+            pc.typeDefinition(paramsWithOutline)
+        }
 
       for {
         c <- defResult.asScala
@@ -2237,6 +2260,13 @@ class Compilers(
 }
 
 object Compilers {
+
+  private sealed trait DefinitionMode
+  private object DefinitionMode {
+    case object Definition extends DefinitionMode
+    case object Declaration extends DefinitionMode
+    case object TypeDefinition extends DefinitionMode
+  }
 
   sealed trait PresentationCompilerKey
   object PresentationCompilerKey {

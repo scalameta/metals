@@ -549,6 +549,11 @@ class WorkspaceLspService(
   ): CompletableFuture[ju.List[Location]] =
     getServiceFor(position.getTextDocument().getUri()).definition(position)
 
+  override def declaration(
+      position: TextDocumentPositionParams
+  ): CompletableFuture[ju.List[Location]] =
+    getServiceFor(position.getTextDocument().getUri()).declaration(position)
+
   override def typeDefinition(
       position: TextDocumentPositionParams
   ): CompletableFuture[ju.List[Location]] =
@@ -1578,6 +1583,7 @@ class WorkspaceLspService(
         capabilities.setSemanticTokensProvider(semanticTokenOptions)
         capabilities.setCodeLensProvider(new lsp4j.CodeLensOptions(false))
         capabilities.setDefinitionProvider(true)
+        capabilities.setDeclarationProvider(true)
         capabilities.setTypeDefinitionProvider(true)
         capabilities.setImplementationProvider(true)
         capabilities.setHoverProvider(true)

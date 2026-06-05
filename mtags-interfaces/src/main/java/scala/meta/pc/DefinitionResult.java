@@ -1,9 +1,24 @@
 package scala.meta.pc;
 
+import java.util.Collections;
 import java.util.List;
 import org.eclipse.lsp4j.Location;
 
 public interface DefinitionResult {
+  static DefinitionResult empty() {
+    return new DefinitionResult() {
+      @Override
+      public String symbol() {
+        return "";
+      }
+
+      @Override
+      public List<Location> locations() {
+        return Collections.emptyList();
+      }
+    };
+  }
+
   String symbol();
 
   List<Location> locations();
