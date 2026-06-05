@@ -92,7 +92,7 @@ public abstract class PresentationCompiler {
 
   /** Returns the declaration of the symbol at the given position. */
   public CompletableFuture<DefinitionResult> declaration(OffsetParams params) {
-    return CompletableFuture.completedFuture(DefinitionResult.empty());
+    return definition(params);
   }
 
   /** Returns location of the expression's type definition at the given position. */

@@ -1440,16 +1440,12 @@ class Compilers(
   def declaration(
       params: TextDocumentPositionParams,
       token: CancelToken,
-  ): Future[DefinitionResult] = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    if (path.isJavaFilename)
-      definition(
-        params = params,
-        token = token,
-        Compilers.DefinitionMode.Declaration,
-      )
-    else Future.successful(DefinitionResult.empty)
-  }
+  ): Future[DefinitionResult] =
+    definition(
+      params = params,
+      token = token,
+      Compilers.DefinitionMode.Declaration,
+    )
 
   def typeDefinition(
       params: TextDocumentPositionParams,
@@ -1501,9 +1497,9 @@ class Compilers(
       val defResult =
         mode match {
           case Compilers.DefinitionMode.Definition =>
-            pc.definition(CompilerOffsetParamsUtils.fromPos(pos, token))
+            pc.definition(paramsWithOutline)
           case Compilers.DefinitionMode.Declaration =>
-            pc.declaration(CompilerOffsetParamsUtils.fromPos(pos, token))
+            pc.declaration(paramsWithOutline)
           case Compilers.DefinitionMode.TypeDefinition =>
             pc.typeDefinition(paramsWithOutline)
         }
