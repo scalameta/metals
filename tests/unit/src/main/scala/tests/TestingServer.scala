@@ -98,6 +98,8 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
+import org.eclipse.lsp4j.DocumentLink
+import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolCapabilities
@@ -1700,6 +1702,15 @@ final case class TestingServer(
       values <- inlineValues(filename, range, stoppedLocation)
       textEdits = InlineValuesTextEdits(textContents(filename), values)
     } yield TextEdits.applyEdits(textContents(filename), textEdits.toList)
+
+  def documentLinks(filename: String): Future[List[DocumentLink]] = {
+    val path = toPath(filename)
+    val params = new DocumentLinkParams(path.toTextDocumentIdentifier)
+    fullServer.documentLink(params).asScala.map(_.asScala.toList)
+  }
+
+  def documentLinkResolve(link: DocumentLink): Future[DocumentLink] =
+    fullServer.documentLinkResolve(link).asScala
 
   def assertHighlight(
       filename: String,

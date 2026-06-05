@@ -33,7 +33,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class Baz {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val obtained = provider.getLinks(path)
     val expected = List(
       documentLink(3, 44, 63, "https://example.com", "https://example.com"),
@@ -52,7 +52,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
     val path = workspace.resolve("Foo.scala")
     val url = "http://example.com/api/%2Z"
     buffers.put(path, url)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -64,7 +64,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
     val buffers = new Buffers()
     val path = workspace.resolve("Foo.scala")
     buffers.put(path, "// See https://metals.scalameta.org.")
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -77,7 +77,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
     val buffers = new Buffers()
     val path = workspace.resolve("Foo.scala")
     buffers.put(path, "(see http://link.com)")
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -91,7 +91,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
     val path = workspace.resolve("Foo.scala")
     val url = "https://en.wikipedia.org/wiki/Foo_(disambiguation)"
     buffers.put(path, s"// See $url")
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -108,7 +108,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -130,7 +130,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -149,7 +149,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -168,7 +168,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -176,6 +176,28 @@ class DocumentLinksProviderSuite extends BaseSuite {
     assertEquals(links.head.getRange.getEnd.getCharacter, 26)
     assertEquals(links.head.getTooltip, "java.util.List#add")
     assertJavadocData(link = links.head, "java.util.List#add")
+  }
+
+  test("java-see-tag-method-with-params") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.java")
+    val content =
+      """|/**
+         | * @see #getMaterializedView(ConnectorSession, SchemaTableName)
+         | */
+         |class App {}
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.length, 1)
+    assertEquals(
+      links.head.getTooltip,
+      "#getMaterializedView(ConnectorSession, SchemaTableName)",
+    )
+    assertEquals(links.head.getRange.getStart.getCharacter, 8)
+    assertEquals(links.head.getRange.getEnd.getCharacter, 63)
   }
 
   test("java-link-tag-label-ignored") {
@@ -188,7 +210,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -207,7 +229,7 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -225,7 +247,24 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(links.length, 1)
+    assertEquals(links.head.getTarget, "https://example.com/docs")
+  }
+
+  test("java-see-html-anchor-not-duplicated") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.java")
+    val content =
+      """|/**
+         | * @see <a href="https://example.com/docs">Documentation</a>
+         | */
+         |class App {}
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 1)
@@ -242,12 +281,47 @@ class DocumentLinksProviderSuite extends BaseSuite {
          |class App {}
          |""".stripMargin
     buffers.put(path, content)
-    val provider = new DocumentLinksProvider(buffers)
+    val provider = new DocumentLinksProvider(buffers, None)
     val links = provider.getLinks(path).asScala.toList
 
     assertEquals(links.length, 2)
     assertEquals(links(0).getTooltip, "com.example.Foo")
     assertEquals(links(1).getTooltip, "com.example.Bar")
+  }
+
+  test("resolve-url-link-unchanged") {
+    val buffers = new Buffers()
+    val provider = new DocumentLinksProvider(buffers, None)
+
+    val link = documentLink(0, 0, 20, "https://example.com", "Example")
+    val resolved = provider.resolve(link)
+
+    assertEquals(resolved.getTarget, "https://example.com")
+  }
+
+  test("resolve-javadoc-link-without-definition-provider") {
+    val buffers = new Buffers()
+    val provider = new DocumentLinksProvider(buffers, None)
+
+    val data = new JsonObject()
+    data.addProperty("symbol", "java.util.List#add")
+    data.addProperty("uri", "file:///test/App.java")
+
+    val link = new DocumentLink()
+    link.setData(data)
+    link.setTooltip("java.util.List#add")
+    link.setRange(
+      new lsp4j.Range(
+        new lsp4j.Position(0, 0),
+        new lsp4j.Position(0, 10),
+      )
+    )
+
+    val resolved = provider.resolve(link)
+    assert(
+      resolved.getTarget == null,
+      "target should remain null without definition provider",
+    )
   }
 }
 

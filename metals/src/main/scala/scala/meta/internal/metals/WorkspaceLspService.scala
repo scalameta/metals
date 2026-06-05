@@ -592,6 +592,22 @@ class WorkspaceLspService(
     getServiceFor(params.getTextDocument.getUri()).documentLink(params)
   }
 
+  override def documentLinkResolve(
+      params: DocumentLink
+  ): CompletableFuture[DocumentLink] = {
+    Option(params.getTarget) match {
+      case Some(_) =>
+        CompletableFuture.completedFuture(params)
+      case None =>
+        val uri = Option(params.getData)
+          .collect { case j: com.google.gson.JsonElement => j.getAsJsonObject }
+          .flatMap(obj => Option(obj.get("uri")).map(_.getAsString))
+          .getOrElse("")
+        if (uri.isEmpty) CompletableFuture.completedFuture(params)
+        else getServiceFor(uri).documentLinkResolve(params)
+    }
+  }
+
   override def documentSymbol(params: DocumentSymbolParams): CompletableFuture[
     messages.Either[ju.List[DocumentSymbol], ju.List[SymbolInformation]]
   ] =
@@ -1594,9 +1610,8 @@ class WorkspaceLspService(
         renameOptions.setPrepareProvider(true)
         capabilities.setRenameProvider(renameOptions)
         capabilities.setDocumentHighlightProvider(true)
-        // TODO https://github.com/scalameta/metals/issues/8303
         capabilities.setDocumentLinkProvider(
-          new lsp4j.DocumentLinkOptions(false)
+          new lsp4j.DocumentLinkOptions(true)
         )
         capabilities.setDocumentOnTypeFormattingProvider(
           new lsp4j.DocumentOnTypeFormattingOptions(

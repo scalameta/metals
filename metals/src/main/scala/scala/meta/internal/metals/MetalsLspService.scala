@@ -299,7 +299,11 @@ abstract class MetalsLspService(
     scalaVersionSelector,
   )
 
-  protected val documentLinksProvider = new DocumentLinksProvider(buffers)
+  protected lazy val documentLinksProvider =
+    new DocumentLinksProvider(
+      buffers,
+      Some(definitionProvider),
+    )
 
   val diagnostics: Diagnostics = new Diagnostics(
     buffers,
@@ -1440,6 +1444,14 @@ abstract class MetalsLspService(
       documentLinksProvider.getLinks(
         params.getTextDocument().getUri().toAbsolutePath
       )
+    }
+  }
+
+  override def documentLinkResolve(
+      params: DocumentLink
+  ): CompletableFuture[DocumentLink] = {
+    CancelTokens { _ =>
+      documentLinksProvider.resolve(params)
     }
   }
 
