@@ -8,6 +8,7 @@ import javax.lang.model.element.Element
 import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.TypeElement
+import javax.lang.model.util.Types
 
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
@@ -124,7 +125,8 @@ class JavaDefinitionProvider(
         .orElse(Option(trees.getElement(node)).map(List(_)))
     } yield {
       val sourcePositions = trees.getSourcePositions()
-      val source = definitionSource(compile, node, trees, elements)
+      val types = compile.task.getTypes()
+      val source = definitionSource(compile, node, trees, elements, types)
       source match {
         case Sourcepath(all @ (firstPath :: _)) =>
           val locations = for {
@@ -214,11 +216,29 @@ class JavaDefinitionProvider(
     }
   }
 
+  private def matchesSignature(
+      target: Element,
+      candidate: Element,
+      types: Types
+  ): Boolean =
+    (target, candidate) match {
+      case (a: ExecutableElement, b: ExecutableElement) =>
+        val paramsA = a.getParameters().asScala.toList
+        val paramsB = b.getParameters().asScala.toList
+        paramsA.size == paramsB.size &&
+        paramsA.zip(paramsB).forall { case (pa, pb) =>
+          types.isSameType(pa.asType(), pb.asType())
+        }
+      case (_: ExecutableElement, _) | (_, _: ExecutableElement) => false
+      case _ => true
+    }
+
   private def definitionSource(
       compile: JavaSourceCompile,
       node: TreePath,
       trees: Trees,
-      elements: List[Element]
+      elements: List[Element],
+      types: Types
   ): DefinitionSource = {
     val paths = elements.flatMap(e => Option(trees.getPath(e)))
     if (paths.nonEmpty) return Sourcepath(paths)
@@ -231,11 +251,19 @@ class JavaDefinitionProvider(
             parentElement match {
               case c: TypeElement =>
                 val elementName = element.getSimpleName().toString()
-                val ambiguousElements = (for {
+                val candidateElements = (for {
                   elem <- c.getEnclosedElements().asScala.iterator
                   if elem.getSimpleName().toString() == elementName
                   processed <- processor.transformElement(elem, compile)
-                } yield processed).distinct.toList
+                } yield (
+                  matchesSignature(element, elem, types),
+                  processed
+                )).toList
+                val (matched, fallback) = candidateElements.partition(_._1)
+                val ambiguousElements =
+                  (if (matched.nonEmpty) matched else fallback)
+                    .map(_._2)
+                    .distinct
                 val ambiguousPaths = for {
                   member <- ambiguousElements
                   path <- Option(trees.getPath(member)).toList
