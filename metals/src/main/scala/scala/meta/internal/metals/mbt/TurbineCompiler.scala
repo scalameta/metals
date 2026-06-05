@@ -229,6 +229,10 @@ class TurbineCompiler[T](
     doCompileNow()
   }
 
+  def scheduleCompile(): Future[TurbineCompileResult] = {
+    doCompile(())
+  }
+
   def onDidChange(
       packageName: String,
       javaFileObject: JavaFileObject,
