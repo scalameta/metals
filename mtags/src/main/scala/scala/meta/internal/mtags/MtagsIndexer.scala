@@ -74,9 +74,16 @@ trait MtagsIndexer {
   def term(name: Term.Name, kind: Kind, properties: Int): String =
     addSignature(Descriptor.Term(name.value), name.pos, kind, properties)
   def tparam(name: Name, kind: Kind, properties: Int): String =
+    tparam(name.value, name.pos, kind, properties)
+  def tparam(
+      name: String,
+      pos: m.Position,
+      kind: Kind,
+      properties: Int
+  ): String =
     addSignature(
-      Descriptor.TypeParameter(name.value),
-      name.pos,
+      Descriptor.TypeParameter(name),
+      pos,
       kind,
       properties
     )
@@ -102,12 +109,13 @@ trait MtagsIndexer {
       name: String,
       disambiguator: String,
       pos: m.Position,
-      properties: Int
+      properties: Int,
+      kind: Kind = Kind.METHOD
   ): String =
     addSignature(
       Descriptor.Method(name, disambiguator),
       pos,
-      Kind.METHOD,
+      kind,
       properties
     )
   def method(
@@ -142,7 +150,7 @@ trait MtagsIndexer {
         pkg(qual)
         currentOwner = symbol(Descriptor.Package(name))
     }
-  private def addSignature(
+  protected def addSignature(
       signature: Descriptor,
       definition: m.Position,
       kind: s.SymbolInformation.Kind,

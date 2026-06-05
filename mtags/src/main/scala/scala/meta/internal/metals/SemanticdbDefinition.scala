@@ -4,7 +4,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.Dialect
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.JavaMtags
+import scala.meta.internal.mtags.JavacMtags
 import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.mtags.ScalaToplevelMtags
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
@@ -87,7 +87,7 @@ object SemanticdbDefinition {
         }
         Some(mtags)
       case Language.JAVA =>
-        val mtags = new JavaMtags(input, includeMembers) {
+        val mtags = new JavacMtags(input, includeMembers) {
           override def visitOccurrence(
               occ: SymbolOccurrence,
               info: SymbolInformation,

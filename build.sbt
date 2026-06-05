@@ -166,7 +166,7 @@ def lintingOptions(scalaVersion: String) = {
     "-Wconf:src=*.BasePCSuite.scala&msg=parameter (scalaVersion|classpath) in method (extraDependencies|scalacOptions):silent",
     "-Wconf:src=*.CodeLens.scala&msg=parameter (textDocumentWithPath|path) in method codeLenses is never used:silent",
     "-Wconf:src=*.Completions.scala&msg=parameter (member|m) in method (isCandidate|isPrioritized):silent",
-    "-Wconf:src=*.JavaMtags.scala&msg=parameter (ctor|method) in method (visitConstructor|visitMethod):silent",
+    "-Wconf:src=*.JavacMtags.scala&msg=parameter (ctor|method) in method (visitConstructor|visitMethod):silent",
     "-Wconf:src=*.MtagsIndexer.scala&msg=parameter owner in method visitOccurrence:silent",
     "-Wconf:src=*.ScaladocParser.scala&msg=parameter (pos|message) in method reportError:silent",
     "-Wconf:src=*.TreeViewProvider.scala&msg=parameter params in method (children|parent) is never used:silent",
@@ -191,6 +191,25 @@ val sharedJavacOptions = List(
     else
       Seq("--release", "17")
   }
+)
+
+val sharedJavaOptions = Seq(
+  "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.jvm=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.main=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.model=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.processing=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.resources=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+  "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+  "--add-opens=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+  "--add-opens=jdk.compiler/com.sun.tools.javac.comp=ALL-UNNAMED",
+  "--add-opens=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+  "--add-opens=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
 )
 
 val sharedScalacOptions = List(
@@ -334,7 +353,6 @@ val mtagsSettings = List(
   ),
   libraryDependencies ++= Seq(
     "com.lihaoyi" %% "geny" % V.genyVersion,
-    "com.thoughtworks.qdox" % "qdox" % V.qdox, // for java mtags
     "org.scala-lang.modules" %% "scala-java8-compat" % V.java8Compat,
     "org.jsoup" % "jsoup" % V.jsoup, // for extracting HTML from javadocs
     // for ivy completions
@@ -395,6 +413,7 @@ lazy val metals = project
   .settings(
     sharedSettings,
     Compile / run / fork := true,
+    Compile / run / javaOptions ++= sharedJavaOptions,
     Compile / mainClass := Some("scala.meta.metals.Main"),
     // for Java formatting
     libraryDependencies ++= V.eclipseJdt,
@@ -506,6 +525,12 @@ lazy val metals = project
       "latestScala3Next" -> V.latestScala3Next,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
+    Compile / resourceGenerators += Def.task {
+      val file =
+        (Compile / managedResourceDirectories).value.head / "META-INF" / "metals-required-vm-options.txt"
+      IO.write(file, sharedJavaOptions.mkString("\n"))
+      Seq(file)
+    },
   )
   .dependsOn(mtags, `mtags-java`)
   .enablePlugins(BuildInfoPlugin)
@@ -584,6 +609,7 @@ lazy val testSettings: Seq[Def.Setting[_]] = List(
   Test / parallelExecution := false,
   publish / skip := true,
   fork := true,
+  Test / javaOptions ++= sharedJavaOptions,
   testFrameworks := List(TestFrameworks.MUnit),
   Test / testOptions ++= {
     if (isCI) {
@@ -831,6 +857,8 @@ lazy val bench = project
     ),
     buildInfoPackage := "bench",
     Jmh / bspEnabled := false,
+    Jmh / fork := true,
+    Jmh / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(unit)
   .enablePlugins(JmhPlugin)
