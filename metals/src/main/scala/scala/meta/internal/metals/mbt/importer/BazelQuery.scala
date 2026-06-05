@@ -1,14 +1,28 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.nio.file.Files
+import java.nio.file.Path
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
 
 import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
 object BazelQuery {
+
+  /**
+   * If the query is longer than this value, write it to a temporary file
+   * and use `--query_file` when invoking Bazel.
+   * This is necessary to run very long queries on Windows.
+   * @see https://learn.microsoft.com/en-us/troubleshoot/windows-client/shell-experience/command-line-string-limitation
+   */
+  val queryStringMaxLength: Int = 4000
+
   case class Env(
       projectRoot: AbsolutePath,
       shellRunner: ShellRunner,
@@ -90,23 +104,23 @@ case class BazelQuery(
     query: String,
     outputMode: BazelQuery.OutputMode,
 ) {
-  import BazelQuery.Env
+  import BazelQuery._
 
   def run(
       env: Env
   )(implicit ec: ExecutionContext): Future[String] = {
     import env._
     val buf = new StringBuilder()
+    val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner
       .run(
         "bazel-mbt-query",
         List(
           "bazel",
           "query",
-          query,
           s"--output=$outputMode",
           "--keep_going",
-        ),
+        ) ++ queryArgs,
         projectRoot,
         redirectErrorOutput = false,
         javaHome,
@@ -117,6 +131,15 @@ case class BazelQuery(
         processErr = scribe.warn(_),
       )
       .future
+      .andThen {
+        case result => {
+          Try {
+            // Just ignore the possible error; we will have a second attempt to delete the file upon the VM exit
+            queryFile.foreach(Files.delete)
+          }
+          result
+        }
+      }
       .flatMap {
         case ExitCodes.Success =>
           Future.successful(buf.toString)
@@ -132,6 +155,20 @@ case class BazelQuery(
           )
           Future.successful(buf.toString)
       }
+  }
+
+  private def prepareQueryArgs(query: String): (List[String], Option[Path]) = {
+    if (query.length() <= queryStringMaxLength) (List(query), None)
+    else {
+      val queryFile = Files.createTempFile("metals-bazel-query-", ".txt")
+      queryFile.toFile().deleteOnExit()
+      scribe.debug(
+        s"Bazel query exceeds $queryStringMaxLength characters, writing it to $queryFile"
+      )
+      Files.createDirectories(queryFile.getParent)
+      queryFile.writeText(query)
+      (List("--query_file", queryFile.toString()), Some(queryFile))
+    }
   }
 
 }
