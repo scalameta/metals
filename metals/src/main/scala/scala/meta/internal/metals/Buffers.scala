@@ -13,10 +13,20 @@ import scala.meta.io.AbsolutePath
 case class Buffers(
     map: TrieMap[AbsolutePath, String] = TrieMap.empty
 ) {
+  private val versions = TrieMap.empty[AbsolutePath, Int]
+
   def open: Iterable[AbsolutePath] = map.keys
   def put(key: AbsolutePath, value: String): Unit = map.put(key, value)
+  def put(key: AbsolutePath, value: String, version: Int): Unit = {
+    map.put(key, value)
+    versions.put(key, version)
+  }
+  def version(key: AbsolutePath): Option[Int] = versions.get(key)
   def get(key: AbsolutePath): Option[String] = map.get(key)
-  def remove(key: AbsolutePath): Unit = map.remove(key)
+  def remove(key: AbsolutePath): Unit = {
+    map.remove(key)
+    versions.remove(key)
+  }
   def contains(key: AbsolutePath): Boolean = map.contains(key)
 
   def tokenEditDistance(

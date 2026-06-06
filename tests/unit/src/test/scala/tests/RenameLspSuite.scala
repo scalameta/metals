@@ -1,6 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 
 class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
 
@@ -948,6 +949,59 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |""".stripMargin,
     newName = "Foo",
   )
+
+  // https://github.com/scalameta/metals/issues/1665
+  // The rename response must carry the real document version for files that are
+  // open in the editor, not `null`.
+  test("versioned-document-edit") {
+    cleanWorkspace()
+    val file = "a/src/main/scala/a/Main.scala"
+    val code =
+      """|package a
+         |object Main {
+         |  val toRename = 123
+         |  val usage = toRename + 1
+         |}
+         |""".stripMargin
+    val query =
+      """|package a
+         |object Main {
+         |  val toR@@ename = 123
+         |  val usage = toRename + 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {"scalaVersion": "${BuildInfo.scalaVersion}"}}
+            |/$file
+            |$code""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      _ <- server.didChange(file)(identity[String])
+      _ <- server.didSave(file)
+      _ = assertNoDiagnostics()
+      edit <- server.renameToEdit(file, query, "renamed")
+    } yield {
+      val versions = Option(edit.getDocumentChanges())
+        .map(_.asScala.toList)
+        .getOrElse(Nil)
+        .collect {
+          case either if either.isLeft =>
+            either.getLeft().getTextDocument().getVersion()
+        }
+      assert(
+        versions.nonEmpty,
+        s"expected at least one TextDocumentEdit, got ${edit.getDocumentChanges()}",
+      )
+      versions.foreach { version =>
+        assert(
+          version != null,
+          "expected a non-null document version for the open file (see #1665)",
+        )
+      }
+    }
+  }
 
   override protected def libraryDependencies: List[String] =
     List("org.scalatest::scalatest:3.2.12", "io.circe::circe-generic:0.14.1")
