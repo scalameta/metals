@@ -40,7 +40,8 @@ trait AnnotationTestFinder {
           doc
             .toLocation(uri, symbol.symbol)
             .map { location =>
-              val encodedName = NameTransformer.encode(symbol.displayName)
+              val encodedName =
+                NameTransformer.encode(symbol.displayName) + "()"
               TestCaseEntry(
                 encodedName,
                 symbol.displayName,
