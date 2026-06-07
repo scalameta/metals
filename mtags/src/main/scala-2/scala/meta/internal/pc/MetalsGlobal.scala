@@ -91,8 +91,9 @@ class MetalsGlobal(
      * The benefits of disabling blackbox macros are
      * - we insure ourselves from misbehaving macro library that mess up with compiler APIs
      * - we avoid potentially expensive computation during macro expansion
-     * It's safe to disable blackbox macros because they don't affect typing, meaning
-     * they cannot change the results from completions/signatureHelp/hover.
+     * Blackbox macros cannot refine their declared return type, so for term-position
+     * expansions they don't affect typing and skipping them cannot change the results
+     * from completions/signatureHelp/hover.
      *
      * Here are basic benchmark numbers running completions in Exprs.scala from fastparse,
      * a 150 line source file where a scope completion triggers 80 macros.
@@ -105,6 +106,19 @@ class MetalsGlobal(
      *
      * We don't use `analyser.addMacroPlugin()` to disable blackbox macros because benchmarks show that
      * macro plugins add ~10ms overhead compared to overriding this method directly.
+     *
+     * However, while searching for an implicit a blackbox macro DOES affect typing: it is
+     * an implicit materializer whose successful expansion is what makes the implicit
+     * available, and that in turn drives type inference of the enclosing call. Skipping it
+     * makes the implicit unresolvable, so an inferred `val` whose type depends on such a
+     * materialized instance ends up with an error type and offers no completions/hover
+     * (e.g. caliban's `val api = graphQL(RootResolver(queries))`, see
+     * https://github.com/scalameta/metals/issues/2289). We therefore only skip blackbox
+     * macros outside of an implicit search, mirroring how the compiler itself guards the
+     * `-Ymacro-expand:discard` shortcut with `!isSearchingForImplicitParam`
+     * (scala.tools.nsc.typechecker.Macros#MacroExpander). We test `openImplicits` directly
+     * rather than `context.isSearchingForImplicitParam` because the latter does not exist
+     * in 2.11.
      */
     override def pluginsMacroExpand(
         typer: Typer,
@@ -112,7 +126,10 @@ class MetalsGlobal(
         mode: Mode,
         pt: Type
     ): Tree = {
-      if (standardIsBlackbox(expandee.symbol)) expandee
+      if (
+        standardIsBlackbox(expandee.symbol) &&
+        typer.context.openImplicits.isEmpty
+      ) expandee
       else super.pluginsMacroExpand(typer, expandee, mode, pt)
     }
   }
