@@ -44,6 +44,12 @@ class ScriptMbtImporterSuite extends FunSuite {
     assertEquals(importer(script).name, "exporter-sh")
   }
 
+  test("name-strips-mbt-bat") {
+    val dir = AbsolutePath(Files.createTempDirectory("mbt-script-name"))
+    val script = makeScript(dir, "exporter.mbt.bat")
+    assertEquals(importer(script).name, "exporter-bat")
+  }
+
   test("name-unknown-extension-unchanged") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-script-name"))
     val script = makeScript(dir, "weird.txt")
@@ -61,17 +67,25 @@ class ScriptMbtImporterSuite extends FunSuite {
     )
   }
 
-  test("isBuildRelated-true-for-own-script") {
-    val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
-    val script = makeScript(dir, "export.mbt.sh")
-    assert(importer(script).isBuildRelated(script))
+  test("isWatchedFile-false-for-own-script-not-in-watchedFiles") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-related"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    assert(!importer(script).isWatchedFile(script))
   }
 
-  test("isBuildRelated-false-for-other-file") {
-    val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
-    val script = makeScript(dir, "export.mbt.sh")
-    val other = makeScript(dir, "other.mbt.sh")
-    assert(!importer(script).isBuildRelated(other))
+  test("isWatchedFile-true-for-own-script-when-in-watchedFiles") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-related"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    withCache(script, List("export.mbt.sh")) {
+      assert(importer(script).isWatchedFile(script))
+    }
+  }
+
+  test("isWatchedFile-false-for-unrelated-file") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-related"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val other = makeScript(workspace, "other.mbt.sh")
+    assert(!importer(script).isWatchedFile(other))
   }
 
   test("buildCommand-sh-uses-sh") {
@@ -80,6 +94,13 @@ class ScriptMbtImporterSuite extends FunSuite {
     val cmd = importer(script).buildCommand(dir)
     assertEquals(cmd.head, "sh")
     assertEquals(cmd(1), script.toString)
+  }
+
+  test("buildCommand-bat-uses-script-directly") {
+    val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
+    val script = makeScript(dir, "run.mbt.bat")
+    val cmd = importer(script).buildCommand(dir)
+    assertEquals(cmd, List(script.toString))
   }
 
   test("buildCommand-scala-uses-scala-cli") {
@@ -118,12 +139,20 @@ class ScriptMbtImporterSuite extends FunSuite {
     val ws = AbsolutePath(Files.createTempDirectory("mbt-collision-ws"))
     val scalaScript = makeScript(dir, "foo.mbt.scala")
     val shScript = makeScript(dir, "foo.mbt.sh")
+    val batScript = makeScript(dir, "foo.mbt.bat")
     val nameScala = importer(scalaScript).name
     val nameSh = importer(shScript).name
+    val nameBat = importer(batScript).name
     assertNotEquals(nameScala, nameSh)
+    assertNotEquals(nameScala, nameBat)
+    assertNotEquals(nameSh, nameBat)
     assertNotEquals(
       importer(scalaScript).outputPath(ws),
       importer(shScript).outputPath(ws),
+    )
+    assertNotEquals(
+      importer(scalaScript).outputPath(ws),
+      importer(batScript).outputPath(ws),
     )
   }
 
@@ -131,5 +160,52 @@ class ScriptMbtImporterSuite extends FunSuite {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-root"))
     val script = makeScript(dir, "export.mbt.sh")
     assertEquals(importer(script).projectRoot, dir)
+  }
+
+  private def withCache(
+      script: AbsolutePath,
+      patterns: List[String],
+  )(body: => Unit): Unit = {
+    ScriptMbtImporter.setWatchedFiles(script, patterns)
+    try body
+    finally ScriptMbtImporter.setWatchedFiles(script, Nil)
+  }
+
+  test("isWatchedFile-watched-exact-filename") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-watched"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val buildSbt = makeScript(workspace, "build.sbt")
+    withCache(script, List("build.sbt")) {
+      assert(importer(script).isWatchedFile(buildSbt))
+    }
+  }
+
+  test("isWatchedFile-watched-glob-pattern") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-watched-glob"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val subDir = workspace.resolve("sub")
+    Files.createDirectories(subDir.toNIO)
+    val gradleFile =
+      AbsolutePath(Files.createFile(subDir.resolve("build.gradle").toNIO))
+    withCache(script, List("**/*.gradle")) {
+      assert(importer(script).isWatchedFile(gradleFile))
+    }
+  }
+
+  test("isWatchedFile-unwatched-file-false") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-unwatched"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val other = makeScript(workspace, "pom.xml")
+    withCache(script, List("build.sbt")) {
+      assert(!importer(script).isWatchedFile(other))
+    }
+  }
+
+  test("isWatchedFile-no-watched-files-false") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-no-watched"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val other = makeScript(workspace, "build.sbt")
+    // no cache populated → should return false
+    assert(!importer(script).isWatchedFile(other))
   }
 }
