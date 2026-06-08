@@ -83,7 +83,7 @@ object V {
 
   val sbt2Version = "2.0.0-RC8"
 
-  val guava = "com.google.guava" % "guava" % "33.5.0-jre"
+  val guava = "com.google.guava" % "guava" % "33.6.0-jre"
 
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
 
