@@ -599,6 +599,21 @@ class CompletionSuite extends BaseCompletionSuite {
     "Inner a.Outer"
   )
 
+  // `import scala.Function22@@` is a selector completion (cursor past the `.`),
+  // so the prefix-only filter must not run and the already-in-scope
+  // `Function22` type is still offered. Guards #2546 against hiding selector
+  // type completions.
+  check(
+    "import-selector-in-scope-2546",
+    """
+      |package a
+      |object Main {
+      |  import scala.Function22@@
+      |}
+      |""".stripMargin,
+    "Function22 scala"
+  )
+
   check(
     "duplicate2",
     """
