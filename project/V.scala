@@ -79,7 +79,7 @@ object V {
 
   val scalameta = "4.15.2"
 
-  val scribe = "3.18.0"
+  val scribe = "3.19.0"
 
   val sbt2Version = "2.0.0-RC8"
 
