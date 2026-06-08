@@ -357,7 +357,7 @@ final class BloopServers(
                 scribe
                   .debug("Unexpected error while deleting the BSP socket", e)
             }
-          BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
+          BspConnectionAddress.UnixDomainSocket(socketPath)
         },
         bspStdout = bloopLogger.bloopBspStdout,
         bspStderr = bloopLogger.bloopBspStderr,
