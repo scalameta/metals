@@ -53,6 +53,19 @@ class BillLspSuite extends BaseLspSuite("bill") {
     testRoundtripCompilation()
   }
 
+  test("stale-bloop-prefers-custom-bsp") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    // A leftover/committed `.bloop` directory must not override the explicit
+    // custom `.bsp/bill.json`. Without the fix this auto-connects to Bloop and
+    // Bill never initializes, so Bill's round-trip diagnostics below would be
+    // absent. See https://github.com/scalameta/metals/issues/2420
+    val bloop = workspace.resolve(".bloop")
+    bloop.createDirectories()
+    bloop.resolve("bla.json").writeText("{}")
+    testRoundtripCompilation()
+  }
+
   test("reconnect-manual") {
     cleanWorkspace()
     Bill.installWorkspace(workspace)
