@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.security.MessageDigest
+import javax.xml.parsers.SAXParserFactory
 
 import scala.util.Success
 import scala.util.Try
@@ -150,12 +151,32 @@ object Digest {
       }
     }
     try {
-      val xml = XML.loadFile(file.toNIO.toFile)
+      val factory = SAXParserFactory.newInstance()
+      factory.setFeature(
+        "http://apache.org/xml/features/disallow-doctype-decl",
+        false,
+      )
+      factory.setFeature(
+        "http://xml.org/sax/features/external-general-entities",
+        false,
+      )
+      factory.setFeature(
+        "http://xml.org/sax/features/external-parameter-entities",
+        false,
+      )
+      factory.setFeature(
+        "http://apache.org/xml/features/nonvalidating/load-external-dtd",
+        false,
+      )
+      factory.setXIncludeAware(false)
+      val saxParser = factory.newSAXParser()
+      val xml = XML.withSAXParser(saxParser).loadFile(file.toNIO.toFile)
       digestElement(xml)
       xml.text.split("\\s+").foreach(word => digest.update(word.getBytes))
       true
     } catch {
-      case NonFatal(_) =>
+      case NonFatal(ex) =>
+        scribe.error("XML error:", ex)
         false
     }
   }
