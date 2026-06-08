@@ -8,6 +8,7 @@ import java.lang.management.ManagementFactory
 import java.net.ConnectException
 import java.net.Socket
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.ScheduledExecutorService
@@ -357,7 +358,7 @@ final class BloopServers(
                 scribe
                   .debug("Unexpected error while deleting the BSP socket", e)
             }
-          BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
+          unixDomainSocketAddress(socketPath.toNIO)
         },
         bspStdout = bloopLogger.bloopBspStdout,
         bspStderr = bloopLogger.bloopBspStderr,
@@ -373,6 +374,26 @@ final class BloopServers(
         config.copy(javaOpts = opts ++ additionalProperties)
       case _ => config.copy(javaOpts = config.javaOpts ++ additionalProperties)
     }
+  }
+
+  private def unixDomainSocketAddress(socketPath: Path): BspConnectionAddress = {
+    val constructor =
+      Class
+        .forName("bloop.rifle.BspConnectionAddress$UnixDomainSocket")
+        .getConstructors
+        .find(_.getParameterCount == 1)
+        .getOrElse(
+          throw new IllegalStateException(
+            "UnixDomainSocket constructor with one argument not found"
+          )
+        )
+
+    val socketPathArg: AnyRef =
+      if (classOf[Path].isAssignableFrom(constructor.getParameterTypes.head))
+        socketPath
+      else socketPath.toFile
+
+    constructor.newInstance(socketPathArg).asInstanceOf[BspConnectionAddress]
   }
 
   private def connect(
