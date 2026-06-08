@@ -721,6 +721,7 @@ final class BuildTargetClasses(
               EmptyCancelToken,
               Duration.ofSeconds(120),
               shouldPruneSemanticdb = true,
+              useFallbackCompiler = true,
             )
             .recover { case e =>
               scribe.error(s"Error parsing semanticdb text documents: $e", e)

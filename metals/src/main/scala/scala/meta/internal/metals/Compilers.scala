@@ -2113,10 +2113,17 @@ class Compilers(
       cancelToken: CancelToken,
       timeout: Duration,
       shouldPruneSemanticdb: Boolean = false,
+      useFallbackCompiler: Boolean = true,
   ): Future[s.TextDocuments] = {
+    def getCompiler(path: AbsolutePath): Option[PresentationCompiler] =
+      if (useFallbackCompiler && path.isScalaOrJava)
+        Some(fallbackCompiler(path))
+      else
+        loadCompiler(path)
+
     val futures = for {
       (pc, paths) <- sources
-        .flatMap(s => loadCompiler(s).map(pc => (pc, s)))
+        .flatMap(s => getCompiler(s).map(pc => (pc, s)))
         .groupBy(_._1)
     } yield {
       val params = paths.map { case (_, s) =>

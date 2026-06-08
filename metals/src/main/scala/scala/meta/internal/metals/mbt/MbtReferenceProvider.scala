@@ -1,6 +1,8 @@
 package scala.meta.internal.metals.mbt
 
 import java.time.Duration
+import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeoutException
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -47,7 +49,10 @@ class MbtReferenceProvider(
     workDoneProgress: WorkDoneProgress,
     metrics: MonitoringClient,
 )(implicit ec: ExecutionContext) {
-  private val cache = new TextDocumentCache()
+  // Use fallback compiler to avoid starting many per-build-target presentation
+  // compilers. The fallback compiler includes all sources and dependencies
+  // from MBT.
+  private val cache = new TextDocumentCache(useFallbackCompiler = true)
 
   // When looking for usages of a method, we don't visit supermethods from these
   // types because it would result in a ton of noisy results. This list should
@@ -513,7 +518,11 @@ class MbtReferenceProvider(
   // keep this in-memory cache here. Ideally, when we build the shared
   // abstraction, it will also be powered by a persistent cache, and it's able
   // to deal with adjusting positions in stale payloads, etc.
-  private class TextDocumentCache() {
+  // When useFallbackCompiler is true, all files are indexed using the fallback
+  // compiler instead of per-build-target compilers. This avoids starting many
+  // presentation compilers when MBT is available and provides all sources and
+  // dependencies through the fallback compiler.
+  private class TextDocumentCache(useFallbackCompiler: Boolean) {
     private val cache = TrieMap.empty[AbsolutePath, s.TextDocument]
     def indexSingle(path: AbsolutePath): s.TextDocument = {
       index(Seq(path)).documents.headOption.getOrElse {
@@ -537,17 +546,32 @@ class MbtReferenceProvider(
       if (toIndex.isEmpty) {
         s.TextDocuments(documents = docs.toSeq)
       } else {
-        val result = Await
-          .result(
-            compilers.batchSemanticdbTextDocuments(
-              toIndex,
-              EmptyCancelToken,
-              // intentionally smaller than the default PC timeout of 20s
-              Duration.ofSeconds(15),
-            ),
-            timeout,
-          )
-          .documents
+        def fetchDocs(maxRetries: Int): Seq[s.TextDocument] = {
+          try {
+            Await
+              .result(
+                compilers.batchSemanticdbTextDocuments(
+                  toIndex,
+                  EmptyCancelToken,
+                  // intentionally smaller than the default PC timeout of 20s
+                  Duration.ofSeconds(15),
+                  useFallbackCompiler = useFallbackCompiler,
+                ),
+                timeout,
+              )
+              .documents
+          } catch {
+            case _: CancellationException if maxRetries > 0 =>
+              fetchDocs(maxRetries - 1)
+            case e @ (_: CancellationException | _: TimeoutException) =>
+              scribe.warn(
+                s"references: indexing ${toIndex.size} documents failed.",
+                e,
+              )
+              throw e
+          }
+        }
+        val result = fetchDocs(maxRetries = 3)
         result.foreach { doc =>
           doc.uri.toAbsolutePathSafe.foreach { path =>
             cache.put(path, doc)
