@@ -22,6 +22,7 @@ private[typeHierarchy] final class TypeHierarchyItemBuilder {
   ): TypeHierarchyItem = {
     val name = info.map(_.displayName).getOrElse(symbol.desc.name.value)
     val kind = info.map(_.kind.toLsp).getOrElse(SymbolKind.Class)
+
     val detail = extractPackage(symbol)
 
     val item = new TypeHierarchyItem(

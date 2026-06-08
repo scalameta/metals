@@ -7,6 +7,7 @@ import java.{util => ju}
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -31,6 +32,7 @@ class StandaloneSymbolSearch(
     saveSymbolFileToDisk: Boolean,
     sourceMapper: SourceMapper,
     mtags: () => Mtags,
+    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider,
     workspaceFallback: Option[SymbolSearch] = None,
 ) extends SymbolSearch {
 
@@ -62,6 +64,7 @@ class StandaloneSymbolSearch(
       saveSymbolFileToDisk,
       sourceMapper,
       scalaVersionSelector,
+      mbtWorkspaceSymbolProvider,
     )
 
   def documentation(
@@ -158,6 +161,7 @@ object StandaloneSymbolSearch {
       sourceMapper: SourceMapper,
       mtags: () => Mtags,
       workspaceFallback: Option[SymbolSearch] = None,
+      mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider,
   ): StandaloneSymbolSearch = {
     val (sourcesWithExtras, classpathWithExtras) =
       addScalaAndJava(
@@ -178,6 +182,7 @@ object StandaloneSymbolSearch {
       saveSymbolFileToDisk,
       sourceMapper,
       mtags,
+      mbtWorkspaceSymbolProvider,
       workspaceFallback,
     )
   }

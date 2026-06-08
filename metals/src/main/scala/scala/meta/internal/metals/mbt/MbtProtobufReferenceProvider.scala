@@ -31,7 +31,7 @@ final class MbtProtobufReferenceProvider(
     timeout: FiniteDuration,
 ) {
 
-  def implementations(
+  def implementations[T](
       path: AbsolutePath,
       requestDoc: s.TextDocument,
       enclosingOccurrences: Seq[s.SymbolOccurrence],
@@ -39,7 +39,8 @@ final class MbtProtobufReferenceProvider(
       timer: Timer,
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
       commonPrefixLength: (AbsolutePath, AbsolutePath) => Int,
-  ): (List[l.Location], Option[String]) = {
+      createOutput: (l.Location, s.SymbolInformation) => T,
+  ): (List[T], Option[String]) = {
     if (enclosingOccurrences.isEmpty) return (Nil, None)
 
     val protoSymbols = enclosingOccurrences.map(_.symbol)
@@ -100,7 +101,7 @@ final class MbtProtobufReferenceProvider(
       s"proto implementations: found ${candidates.size} candidate files"
     )
 
-    val result = mutable.ListBuffer.empty[l.Location]
+    val result = mutable.ListBuffer.empty[T]
     val isVisitedURI = mutable.Set.empty[String]
     val implBaseClassSymbols = implBaseSymbols.toSet
 
@@ -144,7 +145,7 @@ final class MbtProtobufReferenceProvider(
                   s"${doc.uri}:${range.startLine}:${range.startCharacter}"
                 if (!addedLocations.contains(locKey)) {
                   addedLocations += locKey
-                  result += range.toLocation(doc.uri)
+                  result += createOutput(range.toLocation(doc.uri), info)
                 }
               }
             }
@@ -168,7 +169,7 @@ final class MbtProtobufReferenceProvider(
                   s"${doc.uri}:${range.startLine}:${range.startCharacter}"
                 if (!addedLocations.contains(locKey)) {
                   addedLocations += locKey
-                  result += range.toLocation(doc.uri)
+                  result += createOutput(range.toLocation(doc.uri), info)
                 }
               }
             }
@@ -206,7 +207,7 @@ final class MbtProtobufReferenceProvider(
                 if occ.role.isDefinition
                 range <- occ.range
               } {
-                result += range.toLocation(doc.uri)
+                result += createOutput(range.toLocation(doc.uri), info)
               }
             }
           }

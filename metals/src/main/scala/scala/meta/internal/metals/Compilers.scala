@@ -32,6 +32,7 @@ import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
@@ -122,6 +123,7 @@ class Compilers(
     metrics: MonitoringClient,
     featureFlags: FeatureFlagProvider,
     mbtBuild: () => MbtBuild,
+    mbtWorkspaceSymbolProvider: MbtWorkspaceSymbolProvider,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Cancelable {
 
@@ -145,6 +147,7 @@ class Compilers(
     featureFlags,
     mbtBuild,
     mtags,
+    mbtWorkspaceSymbolProvider,
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 

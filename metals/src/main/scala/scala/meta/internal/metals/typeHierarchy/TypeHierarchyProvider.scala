@@ -7,6 +7,7 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
@@ -21,6 +22,7 @@ final class TypeHierarchyProvider(
     semanticdbs: () => Semanticdbs,
     definitionProvider: DefinitionProvider,
     implementationProvider: ImplementationProvider,
+    mbtReferenceProvider: Option[MbtReferenceProvider] = None,
 )(implicit ec: ExecutionContext) {
 
   private val itemBuilder = new TypeHierarchyItemBuilder()
@@ -29,7 +31,9 @@ final class TypeHierarchyProvider(
       params: TypeHierarchyPrepareParams
   ): Future[List[TypeHierarchyItem]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
-    semanticdbs().textDocument(source).documentIncludingStale match {
+    semanticdbs()
+      .textDocument(source, requestInteractive = true)
+      .documentIncludingStale match {
       case Some(doc) =>
         val results = definitionProvider
           .positionOccurrences(source, params.getPosition, doc)
@@ -64,7 +68,9 @@ final class TypeHierarchyProvider(
       case Some(itemInfo) =>
         val symbol = itemInfo.symbol
         val path = params.getItem.getUri.toAbsolutePath
-        semanticdbs().textDocument(path).documentIncludingStale match {
+        semanticdbs()
+          .textDocument(path, requestInteractive = true)
+          .documentIncludingStale match {
           case Some(doc) =>
             val parentSymbols = doc.symbols
               .find(_.symbol == symbol)
@@ -74,7 +80,6 @@ final class TypeHierarchyProvider(
                   .parentsFromSignature(symbol, info.signature, Some(path))
                   .map(_._1)
               }
-
             val (localItems, externalSymbols) = parentSymbols.partitionMap {
               parentSymbol =>
                 doc.occurrences
@@ -96,18 +101,17 @@ final class TypeHierarchyProvider(
 
             val externalLocations = externalSymbols.flatMap { parentSymbol =>
               definitionProvider
-                .fromSymbol(parentSymbol, None)
+                .fromSymbol(parentSymbol, Some(path))
                 .asScala
                 .headOption
                 .map(loc => (parentSymbol, loc))
             }
-
             val externalItems = externalLocations
               .groupBy { case (_, loc) => loc.getUri.toAbsolutePath }
               .toList
               .flatMap { case (locPath, symbolsWithLocs) =>
                 semanticdbs()
-                  .textDocument(locPath)
+                  .textDocument(locPath, requestInteractive = true)
                   .documentIncludingStale
                   .toList
                   .flatMap { locDoc =>
@@ -139,8 +143,8 @@ final class TypeHierarchyProvider(
         val source = params.getItem.getUri.toAbsolutePath
         implementationProvider
           .findImplementationsBySymbol(symbol, source)
-          .map { classLocations =>
-            classLocations
+          .flatMap { classLocations =>
+            val items = classLocations
               .groupBy(_.file)
               .toList
               .flatMap { case (filePathOpt, locs) =>
@@ -167,7 +171,31 @@ final class TypeHierarchyProvider(
                   )
                 }
               }
+            if (items.isEmpty) subtypesFromMbt(source, params)
+            else Future.successful(items)
           }
+    }
+
+  private def subtypesFromMbt(
+      source: AbsolutePath,
+      params: TypeHierarchySubtypesParams,
+  ): Future[List[TypeHierarchyItem]] =
+    mbtReferenceProvider match {
+      case None => Future.successful(Nil)
+      case Some(mbt) =>
+        mbt.implementations(
+          source,
+          params.getItem().getRange().getStart(),
+          createOutput = { (location, info) =>
+            itemBuilder.build(
+              symbol = info.symbol,
+              info = Some(info),
+              source = location.getUri.toAbsolutePath,
+              range = location.getRange,
+              selectionRange = location.getRange,
+            )
+          },
+        )
     }
 
   private def getItemInfo(data: Object): Option[TypeHierarchyItemInfo] =
