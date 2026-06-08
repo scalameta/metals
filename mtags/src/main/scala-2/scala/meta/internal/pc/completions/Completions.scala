@@ -611,6 +611,12 @@ trait Completions { this: MetalsGlobal =>
           editRange,
           text
         )
+      case (_: Import) :: _ if isImportPrefixPosition(pos, text) =>
+        // Cursor is on the import prefix (`import Inner@@`), a scope
+        // completion. A cursor on a selector (`import a.Outer.Inner@@`,
+        // `import scala.Foo@@`) is left to the default member completion and
+        // not filtered.
+        ImportCompletion(pos)
       case _ =>
         inferCompletionPosition(
           pos,

@@ -48,6 +48,7 @@ class MetalsGlobal(
     with completions.Completions
     with completions.ArgCompletions
     with completions.FilenameCompletions
+    with completions.ImportCompletions
     with completions.InterpolatorCompletions
     with completions.MatchCaseCompletions
     with completions.NewCompletions

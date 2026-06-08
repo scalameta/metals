@@ -573,13 +573,30 @@ class CompletionSuite extends BaseCompletionSuite {
       |""".stripMargin,
     "",
     compat = Map(
-      "3" -> "Inner a.Outer",
-      /* TODO Seems that changes in 2.13.5 made this pop up and this
-       * might have been a bug in presentation compiler that we were using
-       * https://github.com/scalameta/metals/issues/2546
+      /* The already-in-scope type is correctly filtered out on Scala 2.
+       * On Scala 3 the presentation compiler lives in the dotty repo
+       * (`dotty.tools.pc`) and still offers it, so this needs a separate
+       * fix there. https://github.com/scalameta/metals/issues/2546
        */
-      "2.13" -> "Inner a.Outer"
+      "3" -> "Inner a.Outer"
     )
+  )
+
+  check(
+    "import-object-in-scope-2546",
+    """
+      |package a
+      |object Main {
+      |  import a.Outer.Inner
+      |  import Inner@@
+      |}
+      |object Outer {
+      |  object Inner {
+      |    object A
+      |  }
+      |}
+      |""".stripMargin,
+    "Inner a.Outer"
   )
 
   check(
