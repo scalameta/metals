@@ -29,12 +29,28 @@ object BazelQuery {
       javaHome: Option[String],
   )
 
-  sealed abstract class OutputMode(name: String) {
+  sealed abstract class OutputMode(name: String, val extraArgs: List[String]) {
     override def toString(): String = name
   }
   object OutputMode {
-    case object Label extends OutputMode("label")
-    case object Xml extends OutputMode("xml")
+    case object Label extends OutputMode("label", Nil)
+    case object Xml extends OutputMode("xml", Nil)
+
+    /**
+     * `--output=streamed_jsonproto` prints one `Target` protocol buffer per line
+     * as JSON. With `--proto:flatten_selects=false` it preserves each `srcs`
+     * `select()` (every branch keyed by its `config_setting` label), unlike
+     * `xml`/`label`, which flatten every branch into one list. This lets us see
+     * which source files belong to which `scala_version` `config_setting` branch
+     * without configuring (analyzing) the build. `streamed_jsonproto` (rather
+     * than `jsonproto`) emits newline-delimited JSON, sidestepping the
+     * invalid-JSON-for-multiple-targets bug in `jsonproto`.
+     */
+    case object StreamedJsonProto
+        extends OutputMode(
+          "streamed_jsonproto",
+          List("--proto:flatten_selects=false"),
+        )
   }
   import OutputMode._
 
@@ -89,8 +105,17 @@ object BazelQuery {
     BazelQuery(query, outputMode = Xml)
   }
 
-  def allScalaLibrariesQuery: BazelQuery =
-    BazelQuery("filter('scala.library', deps(//...))", outputMode = Label)
+  /**
+   * Queries the targets as `streamed_jsonproto` so each `srcs` `select()` is
+   * preserved. Used to map version-specific source files (e.g. the Scala 3
+   * branch of a `select_for_scala_version` target) to their Scala version,
+   * which the flattened `xml` output of [[fullInformationQuery]] cannot express.
+   */
+  def selectAwareSrcsQuery(targets: List[String]): BazelQuery = {
+    val escaped = targets.flatMap(quoteTarget)
+    val query = s"set(${escaped.mkString(" ")})"
+    BazelQuery(query, outputMode = StreamedJsonProto)
+  }
 
   private val ruleKinds: List[String] =
     List(
@@ -119,8 +144,7 @@ case class BazelQuery(
           "bazel",
           "query",
           s"--output=$outputMode",
-          "--keep_going",
-        ) ++ queryArgs,
+        ) ++ outputMode.extraArgs ++ List("--keep_going") ++ queryArgs,
         projectRoot,
         redirectErrorOutput = false,
         javaHome,

@@ -18,6 +18,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.semver.SemVer.Version
 import scala.meta.io.AbsolutePath
 
 /**
@@ -92,11 +93,30 @@ abstract class BazelMbtImporter(
         dependencyModules,
         repositoryName,
       )
-      scalaVersionFromDeps <- queryScalaVersionFromDeps()
-      effectiveScalaVersion <- scalaVersionFromDeps match {
-        case Some(value) => Future.successful(Some(value))
-        case None => queryScalaVersion(targets)
-      }
+      scalaVersions = targetsXmlDump.getStrings("scala_version")
+      effectiveScalaVersionValue =
+        parseScalaVersionFromBuildFiles()
+          .orElse(
+            scalaVersions.values.flatten.toSeq.maxByOption(Version.fromString)
+          )
+      scalaVersionByTarget = targets.map { target =>
+        val targetScalaVersion = scalaVersions
+          .get(target)
+          .flatMap(_.maxByOption(Version.fromString))
+          .orElse(effectiveScalaVersionValue)
+        target -> targetScalaVersion
+      }.toMap
+      selectAwareSrcsOutput <- BazelQuery
+        .selectAwareSrcsQuery(targets)
+        .run(queryEnv)
+      inactiveSourceVersions = BazelBuildSrcs.inactiveSourceVersions(
+        selectAwareSrcsOutput,
+        scalaVersionByTarget,
+      )
+      _ = scribe.info(
+        s"bazel-mbt: ${inactiveSourceVersions.size} version-specific sources " +
+          "from inactive select() branches"
+      )
       build = BazelMbtBuildSupport.fromDiscovery(
         namespaceMode,
         targets,
@@ -108,7 +128,8 @@ abstract class BazelMbtImporter(
         runTargets,
         classDirectories,
         dependencyModules,
-        effectiveScalaVersion,
+        scalaVersionByTarget,
+        inactiveSourceVersions,
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()
@@ -232,18 +253,8 @@ abstract class BazelMbtImporter(
     withoutDoubleAt.replaceAll("~[^/]+", "")
   }
 
-  private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
-    queryOutput <- BazelQuery.allScalaLibrariesQuery.run(queryEnv)
-    lines = asLines(queryOutput)
-  } yield lines.flatMap(extractScalaVersionFromLabel).headOption
-
-  private def queryScalaVersion(
-      @annotation.nowarn("msg=never used") targets: List[String]
-  ): Future[Option[String]] =
-    Future.successful(parseScalaVersionFromBuildFiles())
-
   private def parseScalaVersionFromBuildFiles(): Option[String] = {
-    val versionPattern = """scala_version\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
+    val versionPattern = """(?i)scala_version\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
     val moduleFile = projectRoot.resolve("MODULE.bazel")
     val workspaceFile = projectRoot.resolve("WORKSPACE")
 
@@ -254,11 +265,6 @@ abstract class BazelMbtImporter(
       } else None
 
     extractFromFile(moduleFile).orElse(extractFromFile(workspaceFile))
-  }
-
-  private def extractScalaVersionFromLabel(label: String): Option[String] = {
-    val versionPattern = """scala[_-]library[_-](\d+\.\d+\.\d+)""".r
-    versionPattern.findFirstMatchIn(label).map(_.group(1))
   }
 
   private def queryOutputBase(): Future[Option[Path]] = {
