@@ -48,6 +48,9 @@ final case class ModuleReport(
     testSourceDirectories: Seq[String],
     externalDependencies: Seq[ExternalDependency],
     projectDependencies: Seq[ProjectDependency],
+    testFixturesSources: Seq[String] = Nil,
+    testFixturesClassDirectories: Seq[String] = Nil,
+    testFixturesProjectDeps: Seq[String] = Nil,
 )
 
 /** Top-level information about the Gradle build. */
@@ -76,6 +79,12 @@ final case class ProjectReport(
         sources = dep.source.orNull,
       )
     }
+
+    val modulesWithTestFixtures = modules.collect {
+      case m
+          if m.testFixturesSources.nonEmpty || m.testFixturesClassDirectories.nonEmpty =>
+        m.name
+    }.toSet
 
     val namespaces = modules.flatMap { m =>
       val mainDepIds = m.externalDependencies
@@ -107,6 +116,9 @@ final case class ProjectReport(
           None
         else {
           val testDeps = m.name :: testDependsOn.toList
+          val fixtureDeps = testDeps
+            .filter(modulesWithTestFixtures)
+            .map(dep => s"$dep:testFixtures")
           Some(
             s"${m.name}:test" -> MbtNamespaceJson(
               sources = m.testSourceDirectories,
@@ -115,7 +127,7 @@ final case class ProjectReport(
               dependencyModules = testDepIds,
               scalaVersion = null,
               javaHome = javaHome,
-              dependsOn = testDeps,
+              dependsOn = (testDeps ++ fixtureDeps).distinct,
               classDirectories = m.testClassDirectory,
               projectPath = m.projectPath,
               configurations = null,
@@ -123,7 +135,26 @@ final case class ProjectReport(
           )
         }
 
-      Seq(Some(mainNamespace), testNamespace).flatten
+      val testFixturesNamespace =
+        Option.when(
+          m.testFixturesSources.nonEmpty || m.testFixturesClassDirectories.nonEmpty
+        )(
+          s"${m.name}:testFixtures" -> MbtNamespaceJson(
+            sources = m.testFixturesSources,
+            scalacOptions = Seq.empty,
+            javacOptions = Seq.empty,
+            dependencyModules = testDepIds,
+            scalaVersion = null,
+            javaHome = javaHome,
+            dependsOn =
+              (m.name +: (mainDependsOn ++ m.testFixturesProjectDeps)).distinct,
+            classDirectories = m.testFixturesClassDirectories,
+            projectPath = m.projectPath,
+            configurations = null,
+          )
+        )
+
+      Seq(Some(mainNamespace), testNamespace, testFixturesNamespace).flatten
     }.toMap
 
     val build = MbtBuildJson(

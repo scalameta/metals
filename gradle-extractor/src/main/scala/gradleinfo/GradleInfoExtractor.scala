@@ -45,6 +45,9 @@ object GradleInfoExtractor {
   private final case class SourceSetDirectories(
       classDirectories: List[String] = Nil,
       testClassDirectory: List[String] = Nil,
+      testFixturesClassDirectories: List[String] = Nil,
+      testFixturesSources: List[String] = Nil,
+      testFixturesProjectDeps: List[String] = Nil,
   )
 
   private object SourceSetDirectories {
@@ -107,12 +110,23 @@ object GradleInfoExtractor {
           |    if (sourceSets != null) {
           |      def main = sourceSets.findByName('main')
           |      def test = sourceSets.findByName('test')
+          |      def testFixtures = sourceSets.findByName('testFixtures')
           |      def outputs = [:]
           |      if (main != null) {
           |        outputs['classDirectories'] = main.output.classesDirs.files.collect { it.absolutePath }
           |      }
           |      if (test != null) {
           |        outputs['testClassDirectory'] = test.output.classesDirs.files.collect { it.absolutePath }
+          |      }
+          |      if (testFixtures != null) {
+          |        outputs['testFixturesClassDirectories'] = testFixtures.output.classesDirs.files.collect { it.absolutePath }
+          |        outputs['testFixturesSources'] = testFixtures.allSource.srcDirs.findAll { it.exists() }.collect { it.absolutePath }
+          |        def tfConfig = project.configurations.findByName('testFixturesImplementation')
+          |        if (tfConfig != null) {
+          |          outputs['testFixturesProjectDeps'] = tfConfig.dependencies
+          |            .findAll { it instanceof org.gradle.api.artifacts.ProjectDependency }
+          |            .collect { it.name }
+          |        }
           |      }
           |      if (!outputs.isEmpty()) {
           |        result[project.path] = outputs
@@ -221,6 +235,29 @@ object GradleInfoExtractor {
         )
         .getOrElse(Nil)
 
+    val testFixturesClassDirectories: Seq[String] =
+      sourceSetsMap
+        .get(projectPath)
+        .map(
+          _.testFixturesClassDirectories
+            .map(d => relativize(java.nio.file.Paths.get(d)))
+        )
+        .getOrElse(Nil)
+
+    val testFixturesSources: Seq[String] =
+      sourceSetsMap
+        .get(projectPath)
+        .map(
+          _.testFixturesSources.map(d => relativize(java.nio.file.Paths.get(d)))
+        )
+        .getOrElse(Nil)
+
+    val testFixturesProjectDeps: Seq[String] =
+      sourceSetsMap
+        .get(projectPath)
+        .map(_.testFixturesProjectDeps)
+        .getOrElse(Nil)
+
     val (externalDeps, projectDeps) = classifyDependencies(m)
 
     ModuleReport(
@@ -238,6 +275,9 @@ object GradleInfoExtractor {
       externalDependencies =
         externalDeps.sortBy(d => (d.group, d.name, d.version, d.scope)),
       projectDependencies = projectDeps.sortBy(d => (d.targetModule, d.scope)),
+      testFixturesSources = testFixturesSources,
+      testFixturesClassDirectories = testFixturesClassDirectories,
+      testFixturesProjectDeps = testFixturesProjectDeps,
     )
   }
   private def classifyDependencies(
