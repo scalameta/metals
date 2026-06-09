@@ -332,6 +332,16 @@ class MetalsGlobal(
         if (isVisited(key)) return cached.getOrDefault(key, tpe)
         isVisited += key
         val result = tpe match {
+          case TypeRef(_, sym, args)
+              if args.isEmpty && sym.typeParams.nonEmpty && sym.isJavaDefined =>
+            // Java raw type (a generic Java class used without type arguments).
+            // Rendering it verbatim yields invalid Scala (`takes type
+            // parameters`), so reconstruct the existential the compiler uses for
+            // the raw type (e.g. `Box` => `Box[_]`, `Bounded` =>
+            // `Bounded[_ <: Number]`). `rawToExistential` substitutes the type
+            // parameters correctly, including inter-parameter bounds. See
+            // https://github.com/scalameta/metals/issues/2554
+            loop(rawToExistential(tpe), name)
           case TypeRef(pre, sym, args) =>
             def shortSymbol = {
               // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
@@ -1289,6 +1299,31 @@ class MetalsGlobal(
       }
     }
   }
+
+  /**
+   * True if `tpe` mentions a Java raw type whose type parameters' bounds refer
+   * to the raw type's own type parameters, anywhere in its structure. This
+   * covers self-referential bounds (`Recursive<T extends Recursive>`) and
+   * sibling references (`Dep<A, B extends A>`). Such raw types have no Scala
+   * form that reliably overrides the Java member -- the existential the compiler
+   * accepts is mode-dependent (bytecode vs source) and often not writable -- so
+   * members using them are not offered as override/implement completions.
+   * Raw types with only external bounds (`Box`, `Bounded<T extends Number>`)
+   * are representable and not matched here.
+   * See https://github.com/scalameta/metals/issues/2554
+   */
+  def containsUnrepresentableRawType(tpe: Type): Boolean =
+    tpe.exists {
+      case TypeRef(_, sym, Nil)
+          if sym.isJavaDefined && sym.typeParams.nonEmpty =>
+        val ownParams = sym.typeParams.toSet
+        sym.typeParams.exists { tparam =>
+          tparam.info.bounds.hi.exists { bound =>
+            bound.typeSymbol == sym || ownParams(bound.typeSymbol)
+          }
+        }
+      case _ => false
+    }
 
   /**
    * Check if a method is inherited from AnyVal, Any, or Object.

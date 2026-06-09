@@ -303,4 +303,56 @@ class ImplementAbstractMembersLspSuite
       )
     } yield ()
   }
+
+  // https://github.com/scalameta/metals/issues/2554
+  // A representable Java raw type can be implemented, so the quick fix is offered.
+  checkEdit(
+    "java-raw-type-representable-offered",
+    s"""|/metals.json
+        |{"a": {"scalaVersion": "$scalaVersion"}}
+        |/a/src/main/java/example/Box.java
+        |package example;
+        |public interface Box<T> {}
+        |/a/src/main/java/example/Reasonable.java
+        |package example;
+        |public interface Reasonable {
+        |  public void box(Box b);
+        |}
+        |/a/src/main/scala/example/Reasonably.scala
+        |package example
+        |class <<Reasonably>> extends Reasonable {}
+        |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    expectedCode = "",
+    expectNoDiagnostics = false,
+    filterAction = _.getTitle() == ImplementAbstractMembers.title,
+    applyCodeAction = false,
+  )
+
+  // An F-bounded Java raw type has no compiling override, so the class can't be
+  // made concrete and the quick fix must NOT be offered (it would leave the
+  // class abstract).
+  checkEdit(
+    "java-raw-type-recursive-not-offered",
+    s"""|/metals.json
+        |{"a": {"scalaVersion": "$scalaVersion"}}
+        |/a/src/main/java/example/Recursive.java
+        |package example;
+        |public interface Recursive<T extends Recursive> {}
+        |/a/src/main/java/example/IllConceived.java
+        |package example;
+        |public interface IllConceived {
+        |  public void impossible(Recursive r);
+        |}
+        |/a/src/main/scala/example/Naivety.scala
+        |package example
+        |class <<Naivety>> extends IllConceived {}
+        |""".stripMargin,
+    expectedActions = "",
+    expectedCode = "",
+    expectNoDiagnostics = false,
+    filterAction = _.getTitle() == ImplementAbstractMembers.title,
+    applyCodeAction = false,
+  )
 }
