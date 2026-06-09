@@ -145,7 +145,7 @@ final class MtagsPathResolver(
   @deprecated("Use resultAsURLs instead of this one", "2.11.5")
   def asURLs: List[URL] = resultAsURLs.toList
 
-  private def computeResult(): ClassPath = AggregateClassPath(
+  private def computeResult(): ClassPath = MetalsAggregateClassPath(
     containers.toIndexedSeq
   )
 }

@@ -48,9 +48,8 @@ class LogicalSourcePath(val dirs: Seq[File], rootPackage: LogicalPackage)
     }
   }
 
-  private def sourcesIn(pkg: LogicalPackage) = {
+  private def sourcesIn(pkg: LogicalPackage): Seq[SourceFileEntry] =
     pkg.sources.map(p => SourceFileEntryImpl(AbstractFile.getFile(p)))
-  }
 
   private def packagesIn(pkg: LogicalPackage, prefix: String) = {
     val pre = if (prefix.isEmpty) prefix else s"$prefix."
