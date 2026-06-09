@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -78,19 +79,18 @@ private[debug] final class DebugProxy(
 
   lazy val listen: Future[ExitStatus] = {
     scribe.info(s"Starting debug proxy for [$sessionName]")
-    listenToServer()
-    listenToClient()
+    // Reading from the server (debug adapter) blocks until the adapter has sent
+    // everything (including the debuggee's final output) and closed the
+    // connection. Reading from the client blocks until the client disconnects.
+    val serverListening = Future(server.onReceived(handleServerMessage))
+    val clientListening = Future(client.listen(handleClientMessage))
+    DebugProxy.teardownOnExit(
+      serverListening,
+      clientListening,
+      drainTimeout = 5.seconds,
+    )(() => cancel())
 
     exitStatus.future
-  }
-
-  private def listenToClient(): Unit = {
-    Future(client.listen(handleClientMessage)).andThen { case _ => cancel() }
-  }
-
-  private def listenToServer(): Unit = {
-    Future(server.onReceived(handleServerMessage))
-      .andThen { case _ => cancel() }
   }
 
   private val initialized = Promise[Unit]()
@@ -363,6 +363,33 @@ private[debug] object DebugProxy {
   sealed trait ExitStatus
   case object Terminated extends ExitStatus
   case object Restarted extends ExitStatus
+
+  /**
+   * Wires up proxy teardown so that no debuggee output is lost when the session
+   * ends (see #2043).
+   *
+   * The client (e.g. VS Code) disconnects as soon as it sees the `terminated`
+   * event, which can happen before the adapter has finished forwarding the
+   * debuggee's final output. So when the client side finishes we must wait for
+   * the server side to drain all remaining output before tearing down, rather
+   * than cancelling immediately. The server side, on the other hand, only
+   * finishes once it has read everything from the adapter, so it is always safe
+   * to cancel as soon as it completes. The `drainTimeout` bounds the wait in
+   * case the server never reaches EOF (e.g. when terminating a process that does
+   * not exit on its own).
+   */
+  def teardownOnExit(
+      serverListening: Future[Unit],
+      clientListening: Future[Unit],
+      drainTimeout: FiniteDuration,
+  )(cancel: () => Unit)(implicit ec: ExecutionContext): Unit = {
+    serverListening.onComplete(_ => cancel())
+    clientListening.onComplete { _ =>
+      serverListening
+        .withTimeout(drainTimeout, Some("draining debuggee output"))
+        .onComplete(_ => cancel())
+    }
+  }
 
   trait DebugMode
   object DebugMode {

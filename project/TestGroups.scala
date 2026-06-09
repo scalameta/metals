@@ -136,6 +136,7 @@ object TestGroups {
     "tests.worksheets.Issue7090LspSuite",
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
+    "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
   )
 
   val numberOfShards = 4
