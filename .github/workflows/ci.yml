@@ -207,4 +207,11 @@ jobs:
           pattern: "*-test-reports-*-${{ github.run_id }}"
           path: aggregated-test-reports
       - run: ls -R aggregated-test-reports
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        with:
+          name: JEST Tests            # Name of the check run which will be created
+          path: aggregated-test-reports/**/TEST-*.xml    # Path to test results
+          reporter: java-junit        # Format of test results
+          max-annotations: 0
 
