@@ -720,8 +720,8 @@ final class BuildTargetClasses(
               batch,
               EmptyCancelToken,
               Duration.ofSeconds(120),
-              shouldPruneSemanticdb = true,
               useFallbackCompiler = true,
+              shouldPruneSemanticdb = true,
             )
             .recover { case e =>
               scribe.error(s"Error parsing semanticdb text documents: $e", e)

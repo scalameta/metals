@@ -2108,12 +2108,22 @@ class Compilers(
     debugItem
   }
 
+  /**
+   * Batch the semanticdb text documents for the given sources.
+   *
+   * @param sources list of sources to process
+   * @param cancelToken cancel token to cancel the operation
+   * @param timeout timeout after which partial results may be returned
+   * @param useFallbackCompiler  use fallback compiler to avoid starting many presentation compilers
+   * @param shouldPruneSemanticdb whether to prune semanticdb, set if only interested in public symbols
+   * @return Future[s.TextDocuments] containing the semanticdb text documents
+   */
   def batchSemanticdbTextDocuments(
       sources: Seq[AbsolutePath],
       cancelToken: CancelToken,
       timeout: Duration,
+      useFallbackCompiler: Boolean,
       shouldPruneSemanticdb: Boolean = false,
-      useFallbackCompiler: Boolean = true,
   ): Future[s.TextDocuments] = {
     def getCompiler(path: AbsolutePath): Option[PresentationCompiler] =
       if (useFallbackCompiler && path.isScalaOrJava)
