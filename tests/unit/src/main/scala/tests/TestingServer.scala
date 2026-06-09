@@ -1668,6 +1668,29 @@ final case class TestingServer(
     }
   }
 
+  /**
+   * Like [[rename]] but returns the raw [[WorkspaceEdit]] so tests can inspect
+   * the `documentChanges` directly, e.g. to assert document versions (#1665).
+   * `query` is the full file content with a single `@@` cursor marker.
+   */
+  def renameToEdit(
+      filename: String,
+      query: String,
+      newName: String,
+  ): Future[WorkspaceEdit] = {
+    for {
+      (_, params) <- offsetParams(filename, query, workspace)
+      prepare <- fullServer.prepareRename(params).asScala
+      renameParams = new RenameParams
+      _ = renameParams.setNewName(newName)
+      _ = renameParams.setPosition(params.getPosition())
+      _ = renameParams.setTextDocument(params.getTextDocument())
+      renames <-
+        if (prepare != null) fullServer.rename(renameParams).asScala
+        else Future.successful(new WorkspaceEdit)
+    } yield renames
+  }
+
   private def renameFile(file: String, renames: WorkspaceEdit) = {
     renames
       .getDocumentChanges()

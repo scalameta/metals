@@ -411,8 +411,14 @@ final class RenameProvider(
       openedEdits: Map[AbsolutePath, List[TextEdit]]
   ): List[LSPEither[TextDocumentEdit, ResourceOperation]] = {
     openedEdits.map { case (file, edits) =>
-      val textId = new VersionedTextDocumentIdentifier()
-      textId.setUri(file.toURI.toString())
+      val textId = buffers.version(file) match {
+        case Some(version) =>
+          new VersionedTextDocumentIdentifier(file.toURI.toString(), version)
+        case None =>
+          val id = new VersionedTextDocumentIdentifier()
+          id.setUri(file.toURI.toString())
+          id
+      }
       val editsAsEither =
         edits.map(e => LSPEither.forLeft[TextEdit, SnippetTextEdit](e)).asJava
       val ed = new TextDocumentEdit(textId, editsAsEither)
