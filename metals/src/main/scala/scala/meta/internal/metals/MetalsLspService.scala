@@ -936,7 +936,11 @@ abstract class MetalsLspService(
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
-    buffers.put(path, params.getTextDocument.getText)
+    buffers.put(
+      path,
+      params.getTextDocument.getText,
+      params.getTextDocument.getVersion(),
+    )
 
     val optVersion =
       Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
@@ -1097,7 +1101,10 @@ abstract class MetalsLspService(
       case None => CompletableFuture.completedFuture(())
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
-        buffers.put(path, change.getText)
+        Option(params.getTextDocument.getVersion()) match {
+          case Some(version) => buffers.put(path, change.getText, version)
+          case None => buffers.put(path, change.getText)
+        }
         diagnostics.didChange(path)
         val futures = List.newBuilder[Future[Unit]]
         futures += compilers.didChange(path)
