@@ -86,6 +86,15 @@ class BazelQuerySuite extends FunSuite {
     )
   }
 
+  test("word-containing-plus-is-quoted") {
+    val targets = List("//foo/bar:target+with+plus")
+    val query = BazelQuery.fullInformationQuery(targets)
+    assertEquals(
+      query.query,
+      """deps(set("//foo/bar:target+with+plus"))""",
+    )
+  }
+
   test("target-with-double-quote-uses-single-quotes") {
     val targets = List("""//pkg:has"quote""")
     val query = BazelQuery.fullInformationQuery(targets)
