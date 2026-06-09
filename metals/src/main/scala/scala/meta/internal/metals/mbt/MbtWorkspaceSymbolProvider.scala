@@ -185,6 +185,17 @@ class MbtWorkspaceSymbolProvider(
       }
     }
   }
+  // `documentsKeys` is effectively `documents.keys.par` but without the
+  // overhead to copy the keys into a parallel collection at query time.  Make
+  // sure to call updateDocumentsKeys() when you add or remove a document.
+  @volatile private var documentsKeys = ParArray.empty[AbsolutePath]
+  private val isIndexRead = new AtomicBoolean(false)
+
+  // Maps SemanticDB package symbol (for example, "scala/collection/") to all
+  // the files that directly belong to that package. This index powers repo-wide
+  // -sourcepath imports for JavaPruneCompilerFileManager. It's important to manually
+  private val documentsByPackage: TrieMap[String, ConcurrentSkipListSet[Path]] =
+    TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
 
   // The source of truth for what files belong to the workspace, and their attached indexed data.
   // DO NOT update this map directly since have a couple derivative collections.
@@ -192,28 +203,12 @@ class MbtWorkspaceSymbolProvider(
   // - onDidChange(file: AbsolutePath): Unit
   // - onDidDelete(file: AbsolutePath): Unit
   // - onDidChangeSymbols(params: OnDidChangeSymbolsParams): Unit
-  private lazy val documents: TrieMap[AbsolutePath, IndexedDocument] =
+  private val documents: TrieMap[AbsolutePath, IndexedDocument] =
     readIndex()
-  def readInitialIndexForTestingPurposes(): Unit = {
-    // Just trigger the lazy val initialization without doing other expensive
-    // work that is not necessary for tests or benchmarks.
-    documents.size
-  }
 
   def allFiles(): List[AbsolutePath] = {
     documents.keys.toList
   }
-
-  // `documentsKeys` is effectively `documents.keys.par` but without the
-  // overhead to copy the keys into a parallel collection at query time.  Make
-  // sure to call updateDocumentsKeys() when you add or remove a document.
-  @volatile private var documentsKeys = ParArray.empty[AbsolutePath]
-
-  // Maps SemanticDB package symbol (for example, "scala/collection/") to all
-  // the files that directly belong to that package. This index powers repo-wide
-  // -sourcepath imports for JavaPruneCompilerFileManager. It's important to manually
-  private val documentsByPackage: TrieMap[String, ConcurrentSkipListSet[Path]] =
-    TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
 
   def onReindex(): IndexingStats = try {
     if (isIndexing.compareAndSet(false, true)) {
@@ -957,7 +952,6 @@ class MbtWorkspaceSymbolProvider(
     newValue
   }
 
-  private val isIndexRead = new AtomicBoolean(false)
   // Reads .metals/index.mbt, which is a serialized Mbt.Index protobuf payload,
   // into memory and converts it into TrieMap[AbsolutePath, IndexedDocument].
   // For a very large repo (>100k Scala/Java files), this file still only takes

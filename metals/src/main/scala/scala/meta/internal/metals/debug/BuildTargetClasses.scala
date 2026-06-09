@@ -720,6 +720,7 @@ final class BuildTargetClasses(
               batch,
               EmptyCancelToken,
               Duration.ofSeconds(120),
+              useFallbackCompiler = true,
               shouldPruneSemanticdb = true,
             )
             .recover { case e =>
