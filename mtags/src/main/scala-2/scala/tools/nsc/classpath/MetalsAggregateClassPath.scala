@@ -1,8 +1,10 @@
 package scala.tools.nsc.classpath
 
 import scala.collection.mutable.ArrayBuffer
+import scala.reflect.internal.FatalError
 import scala.tools.nsc.util.ClassPath
 import scala.tools.nsc.util.ClassRepresentation
+import scala.tools.nsc.util.EfficientClassPath
 
 /**
  * A variant of AggregateClassPath that does not deduplicate source file entries
@@ -19,32 +21,76 @@ final class MetalsAggregateClassPath(_aggregates: Seq[ClassPath])
   ): Seq[SourceFileEntry] =
     aggregates.flatMap(_.sources(inPackage))
 
+  // The same as in AggregateClassPath, except it now uses mergeWithDuplicateSources
   override private[nsc] def list(inPackage: PackageName): ClassPathEntries = {
-    val pkgs = packages(inPackage)
-    val classEntries = classes(inPackage)
-    val sourceEntries = sources(inPackage)
+    val packages: java.util.HashSet[PackageEntry] =
+      new java.util.HashSet[PackageEntry]()
+    val classesAndSourcesBuffer = new ArrayBuffer[ClassRepresentation]()
+    val onPackage: PackageEntry => Unit = packages.add(_)
+    val onClassesAndSources: ClassRepresentation => Unit =
+      classesAndSourcesBuffer += _
 
-    // Build a name → class map for merging class+source pairs.
-    val classMap = classEntries.iterator.map(c => c.name -> c).toMap
-    val mergedClassNames = new java.util.HashSet[String]()
-    val result = new ArrayBuffer[ClassRepresentation]()
-
-    // Add sources first. When a class entry exists for the same name, merge once;
-    // subsequent sources with the same name are kept as standalone SourceFileEntries.
-    for (s <- sourceEntries) {
-      classMap.get(s.name) match {
-        case Some(c) if mergedClassNames.add(s.name) =>
-          result += ClassAndSourceFilesEntry(c.file, s.file)
-        case _ =>
-          result += s
+    aggregates.foreach { cp =>
+      try {
+        cp match {
+          case ecp: EfficientClassPath =>
+            ecp.list(inPackage, onPackage, onClassesAndSources)
+          case _ =>
+            val entries = cp.list(inPackage)
+            entries._1.foreach(entry => packages.add(entry))
+            classesAndSourcesBuffer ++= entries._2
+        }
+      } catch {
+        case ex: java.io.IOException =>
+          val e = FatalError(ex.getMessage)
+          e.initCause(ex)
+          throw e
       }
     }
-    // Add class entries that had no matching source.
-    for (c <- classEntries if !mergedClassNames.contains(c.name)) {
-      result += c
+
+    val distinctPackages: Seq[PackageEntry] =
+      if (packages.isEmpty) Nil
+      else
+        packages.toArray(new Array[PackageEntry](packages.size())).toIndexedSeq
+    val mergedClassesAndSources = mergeWithDuplicateSources(
+      classesAndSourcesBuffer
+    )
+    ClassPathEntries(distinctPackages, mergedClassesAndSources)
+  }
+
+  // Like AggregateClassPath.mergeClassesAndSources
+  // but keeps all source entries with the same name
+  private def mergeWithDuplicateSources(
+      entries: ArrayBuffer[ClassRepresentation]
+  ): Seq[ClassRepresentation] = {
+    var count = 0
+    val indices =
+      new java.util.HashMap[String, Int]((entries.size * 1.25).toInt)
+    val mergedEntries = new ArrayBuffer[ClassRepresentation](entries.size)
+
+    for (entry <- entries) {
+      val name = entry.name
+      if (indices.containsKey(name)) {
+        val index = indices.get(name)
+        val existing = mergedEntries(index)
+
+        if (existing.binary.isEmpty && entry.binary.isDefined)
+          mergedEntries(index) =
+            ClassAndSourceFilesEntry(entry.binary.get, existing.source.get)
+        else if (existing.source.isEmpty && entry.source.isDefined)
+          mergedEntries(index) =
+            ClassAndSourceFilesEntry(existing.binary.get, entry.source.get)
+        else if (entry.source.isDefined)
+          // added in the reimplementation here, to not filter out duplicate sources
+          mergedEntries += entry
+      } else {
+        indices.put(name, count)
+        mergedEntries += entry
+        count += 1
+      }
     }
 
-    ClassPathEntries(pkgs, if (result.isEmpty) Nil else result.toIndexedSeq)
+    if (mergedEntries.isEmpty) Nil else mergedEntries.toIndexedSeq
   }
 }
 
