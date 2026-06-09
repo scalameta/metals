@@ -47,7 +47,7 @@ object V {
 
   val java8Compat = "1.0.2"
 
-  val javaSemanticdb = "0.11.2"
+  val javaSemanticdb = "0.12.3"
 
   val jsoup = "1.22.1"
 
