@@ -198,7 +198,7 @@ case class GradleBuildTool(
 
         s"""|  def project = $projectLookup
             |  if (project == null) {
-            |    throw new GradleException("Could not find Gradle project ${GradleBuildTool.groovyString(gradlePath)}")
+            |    return
             |  }
             |${taskCode(gradlePath)}""".stripMargin
       case None =>
