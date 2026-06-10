@@ -218,6 +218,10 @@ public abstract class PresentationCompiler {
     return CompletableFuture.completedFuture(new byte[0]);
   }
 
+  public boolean supportsBatchSemanticdbTextDocuments() {
+    return false;
+  }
+
   /**
    * Returns the Protobuf byte array representation of a SemanticDB <code>TextDocument</code> for
    * the given source.

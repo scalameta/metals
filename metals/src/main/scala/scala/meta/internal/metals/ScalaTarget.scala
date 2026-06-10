@@ -160,6 +160,8 @@ case class ScalaTarget(
 
   def targetroot: AbsolutePath = scalac.targetroot(scalaVersion)
 
+  def getTargetroot: Option[AbsolutePath] = Some(targetroot)
+
   def scalaPlatform: ScalaPlatform = scalaInfo.getPlatform()
 
   private def jvmBuildTarget: Option[JvmBuildTarget] = Option(

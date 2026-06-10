@@ -1,6 +1,60 @@
 package tests.mbt
 
-class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
+import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuildServer
+
+import tests.BuildInfo
+import tests.TestingServer
+
+class MbtReferenceSuite extends MbtReferenceSpec {
+
+  override def withMbt: Boolean = true
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+    )
+}
+
+class BspReferenceSuite extends MbtReferenceSpec {
+
+  override def withMbt: Boolean = false
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+}
+
+abstract class MbtReferenceSpec extends BaseMbtReferenceSuite("mbt-reference") {
+
+  def withMbt: Boolean
+
+  def baseInit: String = if (withMbt) {
+    """|/.metals/mbt.json
+       |{}
+       |""".stripMargin
+  } else {
+    """|/metals.json
+       |{ "a": {} }
+       |""".stripMargin
+  }
+
+  def twoProjectsInit: String = if (withMbt) {
+    """|/.metals/mbt.json
+       |{}
+       |""".stripMargin
+  } else {
+    """|/metals.json
+       |{
+       |  "a": {},
+       |  "b": {"dependsOn": ["a"]}
+       |}
+       |""".stripMargin
+  }
 
   testLSP("field") {
     cleanWorkspace()
@@ -9,11 +63,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$twoProjectsInit
            |/$a
            |package a;
            |public class Upstream {
@@ -67,11 +117,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$twoProjectsInit
            |/$a
            |package a;
            |public class Upstream {
@@ -97,13 +143,19 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
       _ <- server.assertReferencesSubquery(
         a,
         "hel@@lo",
-        """|a/src/main/scala/a/Upstream.java:3:24: reference
-           |  public static String hello() { return "Hello, World!"; }
-           |                       ^^^^^
-           |b/src/main/scala/b/B.java:5:35: reference
-           |    System.out.println(a.Upstream.hello());
-           |                                  ^^^^^
-           |""".stripMargin,
+        if (withMbt)
+          """|a/src/main/scala/a/Upstream.java:3:24: reference
+             |  public static String hello() { return "Hello, World!"; }
+             |                       ^^^^^
+             |b/src/main/scala/b/B.java:5:35: reference
+             |    System.out.println(a.Upstream.hello());
+             |                                  ^^^^^
+             |""".stripMargin
+        else // we don't include targets outside of the source set with BSP
+          """|a/src/main/scala/a/Upstream.java:3:24: reference
+             |  public static String hello() { return "Hello, World!"; }
+             |                       ^^^^^
+             |""".stripMargin,
       )
       // Asserts we find references that are not qualified
       _ <- server.assertReferencesSubquery(
@@ -127,10 +179,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public class Upstream {
@@ -206,10 +255,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public enum Fruit {
@@ -268,10 +314,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public record Point(int xx, int y) {
@@ -329,10 +372,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public class Upstream {
@@ -390,10 +430,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public abstract class Fruit {
@@ -480,10 +517,7 @@ class MbtReferenceSuite extends BaseMbtReferenceSuite("mbt-reference") {
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a;
            |public class Animal {

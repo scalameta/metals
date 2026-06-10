@@ -691,6 +691,7 @@ case class ScalaPresentationCompiler(
       processBatchParallel(params, timeout)
     }
   }
+  override def supportsBatchSemanticdbTextDocuments(): Boolean = true
 
   /**
    * Process a sequence of files with the given provider, respecting the timeout.
