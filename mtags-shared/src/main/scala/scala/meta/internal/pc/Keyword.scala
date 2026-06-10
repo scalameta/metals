@@ -113,6 +113,7 @@ object Keyword {
     Keyword("package", isPackage = true),
     Keyword("import", isBlock = true, isTemplate = true, isPackage = true),
     Keyword("final", isTemplate = true, isPackage = true),
+    Keyword("into", isTemplate = true, isPackage = true, isScala3 = true),
     Keyword("private", isTemplate = true, isPackage = true),
     Keyword("protected", isTemplate = true, isPackage = true),
     Keyword("abstract class", isTemplate = true, isPackage = true),
