@@ -975,11 +975,13 @@ object Messages {
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      val uses211 = usingNow.exists(
-        ScalaVersions.scalaBinaryVersionFromFullVersion(_) == "2.11"
+      val canUpgradeTo211 = usingNow.exists(version =>
+        ScalaVersions.scalaBinaryVersionFromFullVersion(version) == "2.11" &&
+          SemVer.isLaterVersion(version, BuildInfo.scala211)
       )
       val deprecatedAleternative =
-        if (uses211) s" or alternatively to legacy Scala ${BuildInfo.scala211}"
+        if (canUpgradeTo211)
+          s" or alternatively to legacy Scala ${BuildInfo.scala211}"
         else ""
       val isAre = if (usingNow.size == 1) "is" else "are"
       val descriptionString = description.map(s => s"$s ").getOrElse("")
