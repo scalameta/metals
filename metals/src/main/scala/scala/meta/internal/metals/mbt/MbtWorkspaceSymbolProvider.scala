@@ -945,10 +945,6 @@ class MbtWorkspaceSymbolProvider(
   ): ParArray[AbsolutePath] = {
     val newValue = ParArray.fromSpecific(documentsIndex.keysIterator)
     documentsKeys = newValue
-    // update the document keys is the last step when indexing, as it prepares
-    // the parallel array for the next workspace symbol search, it's the right moment
-    // to notify others that the indexing is done.
-    onIndexingDone()
     newValue
   }
 
