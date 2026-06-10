@@ -630,20 +630,16 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
               case None =>
                 val (_, _, toplevelMembers) =
                   indexJar(path, dialect, reindex = true)
-                if (toplevelMembers.nonEmpty) {
-                  tables.jarSymbols.addToplevelMembersInfo(
-                    path,
-                    toplevelMembers,
-                  )
-                }
+                // Always record the members (even when empty) so the jar is
+                // marked `toplevel_members_indexed`; otherwise jars without
+                // package-object members are re-scanned on every startup. #2583
+                tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
             }
           case None =>
             val (_, overrides, toplevelMembers) =
               indexJar(path, dialect, reindex = true)
             tables.jarSymbols.addTypeHierarchyInfo(path, overrides)
-            if (toplevelMembers.nonEmpty) {
-              tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
-            }
+            tables.jarSymbols.addToplevelMembersInfo(path, toplevelMembers)
         }
       case None =>
         val (toplevels, overrides, toplevelMembers) = indexJar(path, dialect)

@@ -18,6 +18,7 @@ trait MtagsIndexer {
   // should only be called after `index`/`indexRoot`
   def overrides(): MtagsIndexer.AllOverrides = Nil
   def toplevelMembers(): MtagsIndexer.AllToplevelMembers = Nil
+  def qualifiedParents(): MtagsIndexer.AllQualifiedParents = Nil
   def index(): s.TextDocument = {
     indexRoot()
     s.TextDocument(
@@ -187,4 +188,14 @@ trait MtagsIndexer {
 object MtagsIndexer {
   type AllOverrides = List[(String, List[OverriddenSymbol])]
   type AllToplevelMembers = List[ToplevelMember]
+
+  /**
+   * The `extends`/`with` parents of each template, keyed by the template's
+   * symbol, with each parent kept as the dotted path exactly as written in
+   * source (e.g. `free.Types`). Unlike [[AllOverrides]] (which keeps only the
+   * simple name for the inheritance index), this preserves the qualification
+   * needed to resolve a parent unambiguously when copying package-object
+   * members (issue #2583).
+   */
+  type AllQualifiedParents = List[(String, List[String])]
 }
