@@ -87,7 +87,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -148,7 +148,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -210,7 +210,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -269,7 +269,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )

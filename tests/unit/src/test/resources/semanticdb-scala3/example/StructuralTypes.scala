@@ -11,10 +11,10 @@
      type User = {
 //        ^^^^ definition example/StructuralTypes.User#
        def name: String
-//         ^^^^ definition local0
+//         ^^^^ definition example/StructuralTypes.User#name().
 //               ^^^^^^ reference scala/Predef.String#
        def age: Int
-//         ^^^ definition local1
+//         ^^^ definition example/StructuralTypes.User#age().
 //              ^^^ reference scala/Int#
      }
 
@@ -24,23 +24,23 @@
 //                                ^^^^ reference example/StructuralTypes.User#
      user.name
 //   ^^^^ reference example/StructuralTypes.user.
-//        ^^^^ reference scala/reflect/Selectable#selectDynamic().
+//        ^^^^ reference example/StructuralTypes.User#name().
      user.age
 //   ^^^^ reference example/StructuralTypes.user.
-//        ^^^ reference scala/reflect/Selectable#selectDynamic().
+//        ^^^ reference example/StructuralTypes.User#age().
 
      val V: Object {
 //       ^ definition example/StructuralTypes.V.
 //          ^^^^^^ reference java/lang/Object#
        def scalameta: String
-//         ^^^^^^^^^ definition local2
+//         ^^^^^^^^^ definition local0
 //                    ^^^^^^ reference scala/Predef.String#
      } = new:
+//       ^ definition local2
        def scalameta = "4.0"
-//     ^ definition local4
-//         ^^^^^^^^^ definition local3
+//         ^^^^^^^^^ definition local1
      V.scalameta
 //   ^ reference example/StructuralTypes.V.
-//     ^^^^^^^^^ reference scala/reflect/Selectable#selectDynamic().
+//     ^^^^^^^^^ reference local4
    end StructuralTypes
 //     ^^^^^^^^^^^^^^^ reference example/StructuralTypes.
