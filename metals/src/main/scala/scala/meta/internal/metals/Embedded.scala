@@ -301,6 +301,7 @@ object Embedded {
       dep: Dependency,
       scalaVersion: Option[String],
       resolution: Option[ResolutionParams] = None,
+      useMavenLocal: Boolean = true,
   ): Fetch[Task] = {
 
     val mtagsInterfaceOverride = Map(
@@ -349,8 +350,15 @@ object Embedded {
       }
       .getOrElse(resolutionParams)
     val fileCache = FileCache()
+    val repositoriesToUse =
+      if (useMavenLocal) repositories
+      else
+        repositories.filter {
+          case m: MavenRepository => m.root != mavenLocal.root
+          case _ => true
+        }
     Fetch(fileCache)
-      .addRepositories(repositories: _*)
+      .addRepositories(repositoriesToUse: _*)
       .withDependencies(Seq(dep))
       .withResolutionParams(resolutionWithOverride)
       .withMainArtifacts()
@@ -457,9 +465,11 @@ object Embedded {
       classifiers: Seq[String] = Seq.empty,
       resolution: Option[ResolutionParams] = None,
       additionalRepositories: List[Repository] = Nil,
+      useMavenLocal: Boolean = true,
   ): List[Path] = try {
-    val settings = fetchSettings(dep, scalaVersion, resolution)
-      .addClassifiers(classifiers.map(Classifier(_)): _*)
+    val settings =
+      fetchSettings(dep, scalaVersion, resolution, useMavenLocal)
+        .addClassifiers(classifiers.map(Classifier(_)): _*)
     val withPossibleSnapshotRepo =
       // Scala 3.4.x series depends on mtags snapshot versions
       if (scalaVersion.exists(_.startsWith("3.4"))) {
@@ -596,6 +606,7 @@ object Embedded {
           "https://repo.gradle.org/gradle/libs-releases"
         )
       ),
+      useMavenLocal = false,
     )
   }
 
