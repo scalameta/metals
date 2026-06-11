@@ -86,7 +86,7 @@ object KeywordWrapper {
 
   val Scala3SoftKeywords: Set[String] =
     Set("as", "derives", "end", "extension", "infix", "inline", "opaque",
-      "open", "throws", "transparent", "using", "*", "+", "-")
+      "open", "throws", "transparent", "using", "*", "+", "-", "into")
 
   class Scala2 extends KeywordWrapper {
     val keywords: Set[String] = Scala2Keywords
