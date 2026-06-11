@@ -8,6 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.MbtNamespace
+import scala.meta.internal.semver.SemVer
 
 sealed abstract class BazelMbtNamespaceMode(val name: String)
 
@@ -29,6 +30,16 @@ object BazelMbtBuildSupport {
 
   private val workspaceNamespaceName: String = "bazel-workspace"
 
+  /**
+   * Namespace holding sources from inactive `select()` branches (e.g. the
+   * Scala 3 branch of a `select_for_scala_version` target when the default
+   * configuration is Scala 2). Tagged with the Scala version of the branch the
+   * sources came from; when several branch versions are present each gets its
+   * own `<name>-<version>` namespace.
+   */
+  private val unconfiguredSourcesNamespaceName: String =
+    "bazel-unconfigured-sources"
+
   def fromDiscovery(
       granularity: BazelMbtNamespaceMode,
       targetLabels: List[String],
@@ -40,10 +51,24 @@ object BazelMbtBuildSupport {
       runTargets: Set[String],
       classDirectoriesByTarget: Map[String, String],
       dependencyModules: Seq[MbtDependencyModule],
-      scalaVersion: Option[String],
+      scalaVersionByTarget: Map[String, Option[String]],
+      inactiveSourceVersions: Map[String, String],
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
+    // The latest Scala version used anywhere in the project, used as a fallback
+    // for real namespaces whose targets declare no version.
+    val scalaVersion = scalaVersionByTarget.values.flatten.toSeq
+      .maxByOption(SemVer.Version.fromString)
+    // `bazel query` flattens every `select()` branch into `srcs`, so a target
+    // that cross-compiles (e.g. `select_for_scala_version`) reports source
+    // files of Scala versions it is not built with in the default
+    // configuration. `inactiveSourceVersions` (from [[BazelBuildSrcs]]) maps
+    // each such source to the Scala version of the `select()` branch it came
+    // from, so they can be grouped into per-version namespaces and tagged with
+    // their real Scala version (e.g. Scala 3 sources open with a Scala 3
+    // compiler) regardless of which targets happen to be in import scope.
+    val isInactiveSource: String => Boolean = inactiveSourceVersions.contains
     if (targetLabels.isEmpty) {
       if (granularity == BazelMbtNamespaceMode.Workspace) {
         MbtBuild(
@@ -81,8 +106,26 @@ object BazelMbtBuildSupport {
           keys,
         )
       val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(fileLabelToWorkspaceRelativePath)
+        k -> v
+          .filterNot(isInactiveSource)
+          .flatMap(
+            fileLabelToWorkspaceRelativePath
+          )
       }
+      // Inactive sources grouped by the Scala version of the `select()` branch
+      // they belong to; each group becomes its own namespace tagged with that
+      // version.
+      val inactiveFilesByVersion: Map[String, Set[String]] =
+        srcsByTarget.values.flatten.toSet.toList
+          .flatMap { (label: String) =>
+            inactiveSourceVersions
+              .get(label)
+              .flatMap { version =>
+                fileLabelToWorkspaceRelativePath(label).map(version -> _)
+              }
+          }
+          .groupBy(_._1)
+          .map { case (version, pairs) => version -> pairs.map(_._2).toSet }
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
 
       if (granularity == BazelMbtNamespaceMode.BuildFile) {
@@ -124,6 +167,14 @@ object BazelMbtBuildSupport {
           )
         }
         for ((namespace, files) <- byBuildFile) {
+          val targetsForNs = targetLabels.filter(keys(_) == namespace)
+          val nsScalaVersions = targetsForNs
+            .flatMap(scalaVersionByTarget.getOrElse(_, None))
+            .distinct
+          val nsScalaVersion =
+            nsScalaVersions
+              .maxByOption(SemVer.Version.fromString)
+              .orElse(scalaVersion)
           putNamespace(
             namespaces,
             namespace,
@@ -134,12 +185,19 @@ object BazelMbtBuildSupport {
             externalDepsByNs.getOrElse(namespace, Set.empty),
             runTargetsByNs.getOrElse(namespace, Set.empty),
             classDirectoriesByNs.get(namespace),
-            scalaVersion,
+            nsScalaVersion,
           )
         }
       } else {
         val allSrcs = srcFilesByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
+        val wsScalaVersions = targetLabels
+          .flatMap(scalaVersionByTarget.getOrElse(_, None))
+          .distinct
+        val wsScalaVersion =
+          wsScalaVersions
+            .maxByOption(SemVer.Version.fromString)
+            .orElse(scalaVersion)
         putNamespace(
           namespaces,
           workspaceNamespaceName,
@@ -151,7 +209,27 @@ object BazelMbtBuildSupport {
           allExtDeps,
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
           classDirectoriesByNs.get(workspaceNamespaceName),
-          scalaVersion,
+          wsScalaVersion,
+        )
+      }
+      // Keep the plain namespace name in the common single-version case; only
+      // disambiguate with a `-<version>` suffix when several versions coexist.
+      val singleInactiveVersion = inactiveFilesByVersion.size == 1
+      for ((version, files) <- inactiveFilesByVersion.toSeq.sortBy(_._1)) {
+        val namespaceName =
+          if (singleInactiveVersion) unconfiguredSourcesNamespaceName
+          else s"$unconfiguredSourcesNamespaceName-$version"
+        putNamespace(
+          namespaces,
+          namespaceName,
+          files,
+          Nil,
+          Nil,
+          Set.empty,
+          Set.empty,
+          Set.empty,
+          None,
+          Some(version),
         )
       }
       MbtBuild(depModules, namespaces)
