@@ -55,17 +55,25 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()  # This ensures the step runs even if previous steps fail
         with:
-          name: heap-dumps-${{ matrix.os }}-${{ matrix.shard }}
+          name: heap-dumps-${{ matrix.os }}-${{ matrix.shard }}-${{ github.run_id }}
           path: |
             ./**/*.hprof
           retention-days: 5
-
+      - name: Upload Metals diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: metals-reports-${{ matrix.os }}-${{ matrix.shard }}-${{ github.run_id }}
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports-${{ matrix.os }}-${{ matrix.shard }}
-          path: "**/.reports/**/*"
+          name: unit-test-reports-${{ matrix.os }}-${{ matrix.shard }}-${{ github.run_id }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
@@ -167,15 +175,43 @@ jobs:
           METALS_TEST: true
           GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+      - name: Upload Metals diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: metals-reports-${{ matrix.type }}-${{ github.run_id }}
+          path: "**/.reports/**/*"
+          if-no-files-found: ignore
+          retention-days: 7
+          compression-level: 9
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports
-          path: "**/.reports/**/*"
+          name: integration-test-reports-${{ matrix.type }}-${{ github.run_id }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
       - name: "test download dependencies"
         run: sbt downloadDependencies
         if: matrix.type == 'cross'
+  aggregate-test-reports:
+    needs: [unit, integration]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download reports for each test job
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "*-test-reports-*-${{ github.run_id }}"
+          path: aggregated-test-reports
+      - run: ls -R aggregated-test-reports
+      - name: Test Report
+        uses: dorny/test-reporter@v3
+        with:
+          name: JEST Tests            # Name of the check run which will be created
+          path: aggregated-test-reports/**/TEST-*.xml    # Path to test results
+          reporter: java-junit        # Format of test results
+          max-annotations: 0
+
