@@ -598,7 +598,11 @@ class ScalaCliSuite extends BaseScalaCliSuite("3.3.3") {
       buildTarget: String,
   ): Future[TestDebugger] = {
     server.startDebuggingUnresolved(
-      new DebugUnresolvedMainClassParams(main, buildTarget).toJson
+      new DebugUnresolvedMainClassParams(
+        main,
+        buildTarget,
+        noDebug = false,
+      ).toJson
     )
   }
 

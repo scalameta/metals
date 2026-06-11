@@ -137,7 +137,7 @@ class MavenDapMbtLspSuite
       _ <- server.didOpen("src/test/java/a/FooTest2.java")
       _ <- awaitMbtTestClassDiscovery("src/test/java/a/FooTest2.java")
       debugger <- server.startDebuggingUnresolved(
-        new DebugUnresolvedTestClassParams("a.FooTest2").toJson
+        new DebugUnresolvedTestClassParams("a.FooTest2", noDebug = false).toJson
       )
       _ <- debugger.initialize
       _ <- debugger.launch
@@ -185,7 +185,7 @@ class MavenDapMbtLspSuite
       _ <- server.didOpen("src/test/java/a/FooTest.java")
       _ <- awaitMbtTestClassDiscovery("src/test/java/a/FooTest.java")
       debugger <- server.startDebuggingUnresolved(
-        new DebugUnresolvedTestClassParams("a.FooTest").toJson,
+        new DebugUnresolvedTestClassParams("a.FooTest", noDebug = false).toJson,
         navigator,
       )
       _ <- debugger.initialize

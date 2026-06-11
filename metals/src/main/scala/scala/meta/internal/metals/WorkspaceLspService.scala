@@ -1359,7 +1359,10 @@ class WorkspaceLspService(
             val language = languageFromTargets(supportedTargets)
             val testName = testNameFromDebugSession(params)
             recordRunDebugEvent(language, testName)
-            service.startDebugProvider(params).liftToLspError.asJavaObject
+            service
+              .startDebugProvider(params, noDebug = false)
+              .liftToLspError
+              .asJavaObject
           case None =>
             failedRequest(
               s"Could not find folder for build targets: ${targets.mkString(",")}"
@@ -1369,7 +1372,8 @@ class WorkspaceLspService(
         recordRunDebugEvent(languageFromMainClass(params), testName = None)
         DebugProvider
           .getResultFromSearches(
-            folderServices.map(_.mainClassSearch(params))
+            folderServices.map(_.mainClassSearch(params)),
+            params.noDebug,
           )
           .liftToLspError
           .asJavaObject
@@ -1398,7 +1402,8 @@ class WorkspaceLspService(
         recordRunDebugEvent(language, Option(params.testClass))
         DebugProvider
           .getResultFromSearches(
-            folderServices.map(_.testClassSearch(params))
+            folderServices.map(_.testClassSearch(params)),
+            params.noDebug,
           )
           .liftToLspError
           .asJavaObject
@@ -1422,7 +1427,7 @@ class WorkspaceLspService(
         }(
           _.isDefined,
           (service, someTarget) =>
-            service.createDebugSession(someTarget.get.getId()),
+            service.createDebugSession(someTarget.get.getId(), params.noDebug),
           () =>
             failedRequest(
               s"Could not find '${Option(params.buildTarget).getOrElse("")}' build target"

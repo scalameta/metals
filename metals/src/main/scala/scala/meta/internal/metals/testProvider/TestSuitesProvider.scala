@@ -154,6 +154,7 @@ final class TestSuitesProvider(
               Nil.asJava,
               Nil.asJava,
               Nil.asJava,
+              noDebug = false,
             ).toJson
           )
           def lens(name: String, cmd: BaseCommand) = new l.CodeLens(

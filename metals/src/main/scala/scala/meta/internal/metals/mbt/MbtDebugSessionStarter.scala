@@ -43,8 +43,9 @@ class MbtDebugSessionStarter(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       workspace: AbsolutePath,
+      requireCompilation: Boolean,
   ): Future[URI] =
-    launchTestVia(buildTool, target, testSuites, workspace)
+    launchTestVia(buildTool, target, testSuites, workspace, requireCompilation)
 
   def compile(
       target: MbtTarget,
@@ -176,10 +177,18 @@ class MbtDebugSessionStarter(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       workspace: AbsolutePath,
+      requireCompilation: Boolean,
   ): Future[URI] = {
     val toolName = launcher.executableName
     val cancelPromise = Promise[Unit]()
-    compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
+    val compilation = if (requireCompilation) {
+      compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
+        Future.unit
+      }
+    } else {
+      Future.unit
+    }
+    compilation.flatMap { _ =>
       debugConfigCreator.create(
         target.id,
         cancelPromise,
