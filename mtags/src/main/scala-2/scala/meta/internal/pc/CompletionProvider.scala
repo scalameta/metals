@@ -5,6 +5,7 @@ import java.{util => ju}
 
 import scala.annotation.tailrec
 import scala.collection.mutable
+import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.PcQueryContext
@@ -553,12 +554,9 @@ class CompletionProvider(
           )
       }
     }
-    try {
-      val completions = completionsAt(pos) match {
-        case CompletionResult.NoResults =>
-          new DynamicFallbackCompletions(pos).print()
-        case r => r
-      }
+    def matchResults(
+        completions: CompletionResult
+    ): (CompletionListKind, String, List[Member]) = {
       val kind = completions match {
         case _: CompletionResult.ScopeMembers =>
           CompletionListKind.Scope
@@ -568,38 +566,78 @@ class CompletionProvider(
           CompletionListKind.None
       }
       val isTypeMember = kind == CompletionListKind.Type
-      params.checkCanceled()
-
       val query = completions.name.toString
       val queryStartsWithLowercase = query.headOption.forall(_.isLower)
-      val matchingResults = completions.matchingResults { entered => name =>
+      val matching = completions.matchingResults { entered => name =>
         if (isTypeMember) CompletionFuzzy.matchesSubCharacters(entered, name)
         else if (queryStartsWithLowercase)
           CompletionFuzzy.matches(entered, name, forgivingFirstChar = true)
         else CompletionFuzzy.matches(entered, name)
       }
-
-      val latestParentTrees = getLastVisitedParentTrees(pos)
-      val completion = completionPosition(
-        pos,
-        source,
-        params.text(),
-        editRange,
-        completions,
-        latestParentTrees
-      )
-      val items = filterInteresting(
-        matchingResults,
-        kind,
-        query,
-        pos,
-        completion,
-        editRange,
-        latestParentTrees,
-        params.text()
-      )
+      (kind, query, matching)
+    }
+    try {
+      val firstPass = completionsAt(pos) match {
+        case CompletionResult.NoResults =>
+          new DynamicFallbackCompletions(pos).print()
+        case r => r
+      }
       params.checkCanceled()
-      (items, completion, inferredIdentOffsets, editRange, query)
+      val noRestore: () => Unit = () => ()
+      val (completions, kind, query, matchingResults, restoreQualifier) = {
+        val (kind1, query1, matched1) = matchResults(firstPass)
+        val retried =
+          if (matched1.nonEmpty) None
+          else
+            retryWithRecoveredQualifier(pos).flatMap {
+              case (secondPass, restore) =>
+                // The qualifier is still grafted here; restore it on every
+                // path that does not hand `restore` over to the `finally`
+                // below.
+                try {
+                  val (kind2, query2, matched2) = matchResults(secondPass)
+                  if (matched2.isEmpty) {
+                    restore()
+                    None
+                  } else Some((secondPass, kind2, query2, matched2, restore))
+                } catch {
+                  case NonFatal(e) =>
+                    restore()
+                    throw e
+                }
+            }
+        retried.getOrElse((firstPass, kind1, query1, matched1, noRestore))
+      }
+
+      // Keep the recovered qualifier type grafted onto the cached tree until
+      // the whole pipeline below has run, then restore it: `completionPosition`
+      // and `filterInteresting` both re-derive the qualifier via
+      // `typedTreeAt(pos)` and would otherwise see the erroneous type again.
+      try {
+        val latestParentTrees = getLastVisitedParentTrees(pos)
+        val completion = completionPosition(
+          pos,
+          source,
+          params.text(),
+          editRange,
+          completions,
+          latestParentTrees
+        )
+        val items = filterInteresting(
+          matchingResults,
+          kind,
+          query,
+          pos,
+          completion,
+          editRange,
+          latestParentTrees,
+          params.text()
+        )
+        params.checkCanceled()
+        (items, completion, inferredIdentOffsets, editRange, query)
+      } finally {
+        restoreQualifier()
+      }
     } catch {
       case e: CyclicReference
           if e.getMessage.contains("illegal cyclic reference") =>
@@ -611,6 +649,113 @@ class CompletionProvider(
         expected(e)
       case e: StringIndexOutOfBoundsException =>
         expected(e)
+    }
+  }
+
+  /**
+   * Retries member completions on a `Select` whose qualifier lost its type to
+   * typer error recovery, e.g. `stream.pull.peek1@@` in
+   * `stream.pull.peek1.void.<...>.flatMap(...)`, where the trailing chain
+   * fails to typecheck once `_CURSOR_` is inserted even though the qualifier
+   * is fine in isolation. Re-typechecks an untyped copy of the qualifier and
+   * grafts the recovered type onto the cached tree before re-running
+   * `completionsAt`. The graft stays in place because the rest of the
+   * completion pipeline re-derives the qualifier via `typedTreeAt`; the
+   * caller must run the returned callback to restore the original tree.
+   *
+   * See https://github.com/scalameta/metals/issues/2634
+   */
+  private def retryWithRecoveredQualifier(
+      pos: Position
+  ): Option[(CompletionResult, () => Unit)] = {
+    getLastVisitedParentTrees(pos)
+      .collectFirst {
+        case Select(qual, name)
+            if name.containsName(CURSOR) &&
+              qual.tpe != null && qual.tpe.isErroneous =>
+          qual
+      }
+      .flatMap { qual =>
+        try {
+          untypedQualifierAt(pos)
+            .flatMap(retypeQualifier(qual, _))
+            .map(completeWithRetypedQualifier(pos, qual, _))
+        } catch {
+          // The compiler does not guard against ill-typed qualifiers in this
+          // code path (see the TODO in `interactive.Global#typeMembers`), so
+          // re-typechecking one can throw instead of reporting the error.
+          case NonFatal(e) =>
+            logger.warning(
+              s"unexpected error retrying completions with a recovered qualifier: $e"
+            )
+            None
+        }
+      }
+  }
+
+  /**
+   * The qualifier of the `Select` at the cursor, as parsed. The erroneous
+   * qualifier in the typechecked tree keeps its error symbol attached, which
+   * a re-typecheck would short-circuit on, so take an untyped copy from the
+   * parser instead.
+   */
+  private def untypedQualifierAt(pos: Position): Option[Tree] = {
+    val savedParents = lastVisitedParentTrees
+    try {
+      locateUntyped(pos) match {
+        case Select(qual, name) if name.containsName(CURSOR) => Some(qual)
+        case _ => None
+      }
+    } finally {
+      lastVisitedParentTrees = savedParents
+    }
+  }
+
+  private def retypeQualifier(qual: Tree, untypedQual: Tree): Option[Tree] = {
+    // The context stored for this position may come from the typer's failed
+    // silent attempt, where implicit resolution was disabled, while typing
+    // the qualifier may need implicit conversions (e.g. `stream.pull` goes
+    // through `fs2.Stream.InvariantOps`). Temporarily re-enable implicits.
+    val context = doLocateContext(qual.pos)
+    val savedImplicits = context.implicitsEnabled
+    val savedEnrichment = context.enrichmentEnabled
+    val retyped =
+      try {
+        context.implicitsEnabled = true
+        context.enrichmentEnabled = true
+        analyzer.newTyper(context).typedQualifier(untypedQual)
+      } finally {
+        context.implicitsEnabled = savedImplicits
+        context.enrichmentEnabled = savedEnrichment
+      }
+    if (retyped.tpe != null && !retyped.tpe.isErroneous) Some(retyped)
+    else None
+  }
+
+  /**
+   * Grafts `retyped`'s type and symbol onto the cached `qual` tree, re-runs
+   * `completionsAt`, and returns the result together with a callback that
+   * restores `qual` to its original (erroneous) state.
+   */
+  private def completeWithRetypedQualifier(
+      pos: Position,
+      qual: Tree,
+      retyped: Tree
+  ): (CompletionResult, () => Unit) = {
+    val savedType = qual.tpe
+    val savedSymbol = qual.symbol
+    val restore: () => Unit = () => {
+      qual.setSymbol(savedSymbol)
+      qual.setType(savedType)
+    }
+    try {
+      qual.setSymbol(retyped.symbol)
+      qual.setType(retyped.tpe)
+      (completionsAt(pos), restore)
+    } catch {
+      case NonFatal(e) =>
+        restore()
+        throw e
     }
   }
 
