@@ -85,12 +85,29 @@ abstract class BazelMbtImporter(
         runTargets,
         targetsXmlDump.ruleOutputsByTarget,
       )
-      deps = queryDeps(targets.toSet, targets, targetsXmlDump)
+      targetSet = targets.toSet
+      deps = queryDeps(targetSet, targets, targetsXmlDump)
       externalDeps = targetsXmlDump.externalDepsByTarget(targets)
       externalDepModules = matchExternalDepsToModules(
         externalDeps,
         dependencyModules,
         repositoryName,
+      )
+      importTargets =
+        targetSet.filter(targetsXmlDump.jarLabelsByImportTarget.contains)
+      importJarModules = buildImportJarModules(
+        importTargets,
+        targetsXmlDump.jarLabelsByImportTarget,
+        targetsXmlDump.sourcesJarByImportTarget,
+      )
+      importModuleIdsByTarget = buildImportModuleIds(
+        importTargets,
+        targetsXmlDump.jarLabelsByImportTarget,
+      )
+      allDependencyModules = dependencyModules ++ importJarModules
+      allExternalDepModules = mergeDepsModuleMaps(
+        externalDepModules,
+        importModuleIdsByTarget,
       )
       scalaVersionFromDeps <- queryScalaVersionFromDeps()
       effectiveScalaVersion <- scalaVersionFromDeps match {
@@ -104,10 +121,10 @@ abstract class BazelMbtImporter(
         scalacOptions,
         javacOptions,
         deps,
-        externalDepModules,
+        allExternalDepModules,
         runTargets,
         classDirectories,
-        dependencyModules,
+        allDependencyModules,
         effectiveScalaVersion,
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
@@ -230,6 +247,91 @@ abstract class BazelMbtImporter(
     val withoutDoubleAt =
       if (label.startsWith("@@")) label.substring(1) else label
     withoutDoubleAt.replaceAll("~[^/]+", "")
+  }
+
+  private def buildImportJarModules(
+      importTargets: Set[String],
+      jarLabelsByTarget: Map[String, List[String]],
+      sourcesJarByTarget: Map[String, Option[String]],
+  ): Seq[MbtDependencyModule] = {
+    val seen = scala.collection.mutable.Set.empty[String]
+    importTargets.toSeq.sorted.flatMap { target =>
+      val jarLabels = jarLabelsByTarget.getOrElse(target, Nil)
+      // srcjar is a single label — attach it to the first jar only
+      val sourcesUri =
+        if (jarLabels.nonEmpty)
+          sourcesJarByTarget.get(target).flatten.flatMap(resolveJarUri)
+        else None
+      jarLabels.zipWithIndex.flatMap { case (jarLabel, i) =>
+        moduleIdFromJarLabel(jarLabel) match {
+          case None =>
+            scribe.warn(
+              s"bazel-mbt: could not derive module id for jar label $jarLabel"
+            )
+            None
+          case Some(moduleId) if seen.contains(moduleId) => None
+          case Some(moduleId) =>
+            seen += moduleId
+            resolveJarUri(jarLabel).map { jar =>
+              MbtDependencyModule(
+                id = moduleId,
+                jar = jar,
+                sources = if (i == 0) sourcesUri.orNull else null,
+              )
+            }
+        }
+      }
+    }
+  }
+
+  private def buildImportModuleIds(
+      importTargets: Set[String],
+      jarLabelsByTarget: Map[String, List[String]],
+  ): Map[String, List[String]] =
+    importTargets.map { target =>
+      val ids = jarLabelsByTarget
+        .getOrElse(target, Nil)
+        .flatMap(moduleIdFromJarLabel)
+        .distinct
+      target -> ids
+    }.toMap
+
+  private def mergeDepsModuleMaps(
+      maps: Map[String, List[String]]*
+  ): Map[String, List[String]] = {
+    val allKeys = maps.flatMap(_.keySet).toSet
+    allKeys.map { key =>
+      key -> maps.flatMap(_.getOrElse(key, Nil)).distinct.toList
+    }.toMap
+  }
+
+  private def moduleIdFromJarLabel(label: String): Option[String] =
+    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).map {
+      relative =>
+        val lastSlash = relative.lastIndexOf('/')
+        if (lastSlash >= 0) {
+          val pkg = relative.substring(0, lastSlash).replace('/', '.')
+          val fileName = relative.substring(lastSlash + 1)
+          s"$pkg:$fileName:local"
+        } else {
+          s"root:$relative:local"
+        }
+    }
+
+  private def resolveJarUri(label: String): Option[String] = {
+    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).flatMap {
+      relative =>
+        val candidate = projectRoot.resolve(relative)
+        if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
+        else {
+          val bazelBin = projectRoot.resolve(s"bazel-bin/$relative")
+          if (Files.exists(bazelBin.toNIO)) Some(bazelBin.toURI.toString)
+          else {
+            scribe.warn(s"bazel-mbt: could not resolve jar for label $label")
+            None
+          }
+        }
+    }
   }
 
   private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
