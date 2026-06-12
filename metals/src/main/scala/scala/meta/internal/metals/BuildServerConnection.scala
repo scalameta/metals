@@ -37,6 +37,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
 import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -538,6 +539,9 @@ class BuildServerConnection private (
       timeout: Option[Timeout] = None,
       restartByDefault: Boolean = false,
   ): CompletableFuture[T] = {
+    val spanName =
+      "bsp/" + implicitly[ClassTag[T]].runtimeClass.getSimpleName
+    val span = MetalsTracer.startSpan(spanName, "span.kind" -> "CLIENT")
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
         launcherConnection: BuildServerConnection.LauncherConnection
@@ -555,7 +559,12 @@ class BuildServerConnection private (
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>
-        runWithCanceling(launcherConnection)
+        val scope = span.makeCurrent()
+        try {
+          runWithCanceling(launcherConnection)
+        } finally {
+          scope.close()
+        }
       }
       .recoverWith {
         case io: JsonRpcException if io.getCause.isInstanceOf[IOException] =>
@@ -586,13 +595,18 @@ class BuildServerConnection private (
             })
       }
 
-    CancelTokens.future { token =>
+    val result = CancelTokens.future { token =>
       token.onCancel().asScala.onComplete {
         case Success(java.lang.Boolean.TRUE) => localCancelable.cancel()
         case _ =>
       }
       actionFuture
     }
+    result.whenComplete { (_, error) =>
+      if (error != null) MetalsTracer.recordException(span, error)
+      MetalsTracer.endSpan(span)
+    }
+    result
   }
 
 }
@@ -642,6 +656,10 @@ object BuildServerConnection {
             .setLocalService(localClient)
             .setRemoteInterface(classOf[MetalsBuildServer])
             .setExecutorService(ec)
+            .configureGson(new java.util.function.Consumer[GsonBuilder] {
+              override def accept(b: GsonBuilder): Unit =
+                b.registerTypeAdapterFactory(new TraceContextAdapterFactory())
+            })
             .wrapMessages(wrapper(_))
             .create()
         val listening = launcher.startListening()

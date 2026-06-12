@@ -63,6 +63,8 @@ object V {
 
   val modelContextProtocol = "1.0.2"
 
+  val opentelemetry = "1.58.0"
+
   val munit = "1.2.4"
 
   val pprint = "0.7.3"
