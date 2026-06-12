@@ -402,7 +402,11 @@ final class BuildTargetClasses(
 
     val futures = doc.symbols.flatMap { symbolInfo =>
       processTestAnnotations(symbolInfo, testClasses)
-      processTestClassHierarchy(symbolInfo, doc, path, testClasses)
+      // Only Scala files depend on inheritance for test frameworks
+      if (path.isJava)
+        None
+      else
+        processTestClassHierarchy(symbolInfo, doc, path, testClasses)
     }
 
     Future.sequence(futures).map(_ => testClasses.toList)
