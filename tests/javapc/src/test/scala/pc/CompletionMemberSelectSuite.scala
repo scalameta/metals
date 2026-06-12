@@ -253,4 +253,16 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |main(java.lang.String[] args)
        |""".stripMargin,
   )
+  check(
+    "annotation-private",
+    """
+      |
+      |@AnnotationP@@
+      |class Perfect {
+      |
+      |}
+      |""".stripMargin,
+    """|AnnotationPublic - test.annon
+       |""".stripMargin,
+  )
 }
