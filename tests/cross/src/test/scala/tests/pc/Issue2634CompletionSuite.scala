@@ -44,6 +44,19 @@ class Issue2634CompletionSuite extends BaseCompletionSuite {
     items => items.map(_.getLabel()).exists(_.startsWith("peek1"))
   )
 
+  // The user is still mid-word, so the source itself contains an unresolved
+  // name (`pee`) and the qualifier is poisoned by error recovery regardless
+  // of the `_CURSOR_` instrumentation.
+  checkItems(
+    "topull-member-partial-prefix-mid-chain",
+    preamble +
+      """|  def partial[F[_]: MonadThrow, A, B](stream: Stream[F, A])(onEmpty: F[B])(implicit SC: fs2.Compiler[F, F]): F[B] =
+         |    stream.pull.pee@@.void.stream.compile.last.flatMap(_.getOrElse(onEmpty))
+         |}
+         |""".stripMargin,
+    items => items.map(_.getLabel()).exists(_.startsWith("peek1"))
+  )
+
   // Control from the issue's "Additional context": same chain without the
   // trailing .flatMap already worked in 2021 and must keep working.
   checkItems(
