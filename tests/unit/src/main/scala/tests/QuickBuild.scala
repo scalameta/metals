@@ -307,6 +307,9 @@ object QuickBuild {
     ),
     "org.scalameta::munit" -> Config.TestFramework.munit,
     "junit:junit" -> Config.TestFramework.JUnit,
+    "com.github.sbt.junit:jupiter-interface" -> Config.TestFramework(
+      List("com.github.sbt.junit.jupiter.sbt.JupiterFramework")
+    ),
     "com.disneystreaming::weaver-cats" -> Config.TestFramework(
       List("weaver.framework.CatsEffect")
     ),
