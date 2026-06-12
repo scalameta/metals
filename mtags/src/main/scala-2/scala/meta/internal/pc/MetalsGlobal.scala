@@ -349,6 +349,12 @@ class MetalsGlobal(
         if (isVisited(key)) return cached.getOrDefault(key, tpe)
         isVisited += key
         val result = tpe match {
+          case TypeRef(_, sym, args)
+              if args.isEmpty && sym.typeParams.nonEmpty && sym.isJavaDefined =>
+            // Java raw type, render it as the existential the compiler uses for
+            // it (e.g. `Box` => `Box[_]`), otherwise the result is invalid
+            // Scala. See https://github.com/scalameta/metals/issues/2554
+            loop(rawToExistential(tpe), name)
           case TypeRef(pre, sym, args) =>
             def shortSymbol = {
               // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
@@ -1306,6 +1312,27 @@ class MetalsGlobal(
       }
     }
   }
+
+  /**
+   * True if `tpe` mentions a Java raw type whose type parameters' bounds refer
+   * to the raw type's own type parameters, e.g. `Recursive<T extends Recursive>`
+   * or `Dep<A, B extends A>`. Such raw types have no Scala form that reliably
+   * overrides the Java member, so they are not offered as override/implement
+   * completions. For the full analysis see
+   * https://github.com/scalameta/metals/issues/2554
+   */
+  def containsUnrepresentableRawType(tpe: Type): Boolean =
+    tpe.exists {
+      case TypeRef(_, sym, Nil)
+          if sym.isJavaDefined && sym.typeParams.nonEmpty =>
+        val ownParams = sym.typeParams.toSet
+        sym.typeParams.exists { tparam =>
+          tparam.info.bounds.hi.exists { bound =>
+            bound.typeSymbol == sym || ownParams(bound.typeSymbol)
+          }
+        }
+      case _ => false
+    }
 
   /**
    * Check if a method is inherited from AnyVal, Any, or Object.

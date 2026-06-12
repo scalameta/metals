@@ -43,6 +43,17 @@ trait OverrideCompletions { this: MetalsGlobal =>
       )
 
   /**
+   * The result of [[getMembers]]: the override members that can actually be
+   * overridden (already rendered), plus whether any *abstract* member was
+   * dropped because it uses an unrepresentable Java raw type (which makes
+   * "Implement all members" unable to complete the class).
+   */
+  private case class OverrideMembers(
+      members: List[OverrideDefMember],
+      hasUnimplementableAbstract: Boolean
+  )
+
+  /**
    * An `override def` completion to implement methods from the supertype.
    *
    * @param name the name of the method being completed including the `_CURSOR_` suffix.
@@ -70,16 +81,17 @@ trait OverrideCompletions { this: MetalsGlobal =>
       if (start < 0 || typed.tpe == null) {
         Nil
       } else {
-        val overrideMembers = getMembers(
-          typed,
-          range,
-          pos,
-          text,
-          text.startsWith("o", start),
-          true,
-          isCandidate,
-          resolveNames = false
-        )
+        val OverrideMembers(overrideMembers, hasUnimplementableAbstract) =
+          getMembers(
+            typed,
+            range,
+            pos,
+            text,
+            text.startsWith("o", start),
+            true,
+            isCandidate,
+            resolveNames = false
+          )
 
         val overrideDefMembers: List[OverrideDefMember] =
           overrideMembers
@@ -95,7 +107,10 @@ trait OverrideCompletions { this: MetalsGlobal =>
 
         val (allAbstractEdits, allAbstractImports) = toEdits(allAbstractMembers)
 
-        if (allAbstractMembers.length > 1 && overrideDefMembers.length > 1) {
+        if (
+          !hasUnimplementableAbstract &&
+          allAbstractMembers.length > 1 && overrideDefMembers.length > 1
+        ) {
           val necessaryIndent = if (metalsConfig.snippetAutoIndent()) {
             ""
           } else {
@@ -134,7 +149,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
       shouldMoveCursor: Boolean,
       isCandidate: Symbol => Boolean,
       resolveNames: Boolean
-  )(implicit queryInfo: PcQueryContext): List[OverrideDefMember] = {
+  )(implicit queryInfo: PcQueryContext): OverrideMembers = {
 
     // Returns all the symbols of all transitive supertypes in the enclosing scope.
     // For example:
@@ -308,10 +323,20 @@ trait OverrideCompletions { this: MetalsGlobal =>
         )
     }
 
-    typed.tpe.members.iterator.toList
-      .filter(isOverridableMethod)
-      .map(OverrideCandidate.apply)
-      .map(_.toMember)
+    // Classify by symbol before building any candidate, so members with no
+    // representable override (see `containsUnrepresentableRawType`) are never
+    // rendered.
+    val (unimplementable, implementable) =
+      typed.tpe.members.iterator.toList
+        .filter(isOverridableMethod)
+        .partition(sym =>
+          containsUnrepresentableRawType(typed.tpe.memberType(sym))
+        )
+
+    OverrideMembers(
+      implementable.map(OverrideCandidate.apply).map(_.toMember),
+      hasUnimplementableAbstract = unimplementable.exists(_.isAbstract)
+    )
   }
 
   private def toEdits(
@@ -398,12 +423,16 @@ trait OverrideCompletions { this: MetalsGlobal =>
       resolveNames = true
     )
 
-    val allAbstractMembers = overrideMembers
+    // If some abstract member has no representable override, "Implement all
+    // members" can't make the class concrete, so emit no edits.
+    val allAbstractMembers = overrideMembers.members
       .filter(_.sym.isAbstract)
 
     val (allAbstractEdits, allAbstractImports) = toEdits(allAbstractMembers)
 
-    if (allAbstractEdits.length > 0) {
+    if (
+      allAbstractEdits.length > 0 && !overrideMembers.hasUnimplementableAbstract
+    ) {
 
       // infer necessary indent
       //
