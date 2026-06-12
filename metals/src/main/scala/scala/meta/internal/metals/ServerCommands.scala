@@ -178,7 +178,9 @@ object ServerCommands {
 
   /** If uri is null discover all test suites, otherwise discover testcases in file */
   final case class DiscoverTestParams(
-      @Nullable uri: String = null
+      @Nullable uri: String = null,
+      // Force the discovery of all test suites when in MBT mode
+      @Nullable forceAll: Boolean = false,
   )
   val DiscoverTestSuites = new ParametrizedCommand[DiscoverTestParams](
     "discover-tests",

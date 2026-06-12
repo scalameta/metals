@@ -419,6 +419,7 @@ abstract class MetalsLspService(
     languageClient,
     getVisibleName,
     folder,
+    workDoneProgress,
   )
 
   protected lazy val codeLensProvider: CodeLensProvider = {
@@ -1757,6 +1758,9 @@ abstract class MetalsLspService(
 
   def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
     testProvider.discoverTests(uri.map(_.toAbsolutePath))
+
+  def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
+    testProvider.discoverAllTestSuites()
 
   def runScalafix(uri: String): Future[ApplyWorkspaceEditResponse] =
     scalafixProvider
