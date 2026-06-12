@@ -2171,9 +2171,32 @@ class Compilers(
           shouldPruneSemanticdb = shouldPruneSemanticdb,
         ): VirtualFileParams
       }
-      pc.batchSemanticdbTextDocuments(params.asJava, timeout).asScala.map {
-        bytes =>
-          s.TextDocuments.parseFrom(bytes).documents
+      if (pc.supportsBatchSemanticdbTextDocuments()) {
+        pc.batchSemanticdbTextDocuments(params.asJava, timeout)
+          .asScala
+          .map(bytes => s.TextDocuments.parseFrom(bytes).documents)
+      } else {
+        val all = for {
+          param <- params
+          doc = pc.semanticdbTextDocument(param)
+        } yield doc.asScala
+        Future.sequence(all).map { docs =>
+          val targetRoot = buildTargets
+            .jvmTarget(
+              new BuildTargetIdentifier(pc.buildTargetId())
+            )
+            .flatMap(_.getTargetroot)
+            .getOrElse(workspace)
+
+          val parsedDocs = docs.map(d => s.TextDocument.parseFrom(d))
+          parsedDocs
+            .map { d =>
+              if (d.uri.startsWith("file:") || d.uri.startsWith("jar:"))
+                d
+              else
+                d.withUri(targetRoot.resolve(d.uri).toURI.toString())
+            }
+        }
       }
     }
     Future

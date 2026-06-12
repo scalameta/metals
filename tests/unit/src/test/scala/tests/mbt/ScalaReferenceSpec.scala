@@ -1,7 +1,64 @@
 package tests.mbt
 
+import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuildServer
+
+import tests.BuildInfo
+import tests.TestingServer
+
 class MbtScalaReferenceSuite
-    extends BaseMbtReferenceSuite("mbt-scala-reference") {
+    extends BaseMbtReferenceSuite("mbt-scala-reference")
+    with ScalaReferenceSpec {
+
+  override def withMbt: Boolean = true
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+    )
+}
+
+class BspScalaReferenceSuite
+    extends BaseMbtReferenceSuite("scala-reference")
+    with ScalaReferenceSpec {
+
+  override def withMbt: Boolean = false
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault)
+
+}
+
+trait ScalaReferenceSpec { this: BaseMbtReferenceSuite =>
+
+  def withMbt: Boolean
+
+  def baseInit: String = if (withMbt) {
+    """|/.metals/mbt.json
+       |{}
+       |""".stripMargin
+  } else {
+    """|/metals.json
+       |{ "a": {} }
+       |""".stripMargin
+  }
+
+  def twoProjectsInit: String = if (withMbt) {
+    """|/.metals/mbt.json
+       |{}
+       |""".stripMargin
+  } else {
+    """|/metals.json
+       |{
+       |  "a": {},
+       |  "b": {"dependsOn": ["a"]}
+       |}
+       |""".stripMargin
+  }
 
   testLSP("field") {
     cleanWorkspace()
@@ -10,11 +67,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$twoProjectsInit
            |/$a
            |package a
            |object Upstream {
@@ -67,11 +120,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$twoProjectsInit
            |/$a
            |package a
            |object Upstream {
@@ -130,10 +179,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |class Upstream(i: Int) {
@@ -160,22 +206,22 @@ class MbtScalaReferenceSuite
       _ <- server.assertReferencesSubquery(
         a,
         "class Upstr@@eam",
-        """|a/src/main/scala/a/Downstream.scala:4:12: reference
-           |    val a: Upstream = new Upstream(1)
-           |           ^^^^^^^^
-           |a/src/main/scala/a/Downstream.scala:4:27: reference
-           |    val a: Upstream = new Upstream(1)
-           |                          ^^^^^^^^
-           |a/src/main/scala/a/Downstream.scala:5:9: reference
-           |    new Upstream(1, 2)
-           |        ^^^^^^^^
-           |a/src/main/scala/a/Downstream.scala:6:9: reference
-           |    new Upstream.Upstream2().magic()
-           |        ^^^^^^^^
-           |a/src/main/scala/a/Upstream.scala:2:7: reference
-           |class Upstream(i: Int) {
-           |      ^^^^^^^^
-           |""".stripMargin,
+        s"""|a/src/main/scala/a/Downstream.scala:4:12: reference
+            |    val a: Upstream = new Upstream(1)
+            |           ^^^^^^^^
+            |a/src/main/scala/a/Downstream.scala:4:27: reference
+            |    val a: Upstream = new Upstream(1)
+            |                          ^^^^^^^^
+            |a/src/main/scala/a/Downstream.scala:5:9: reference
+            |    new Upstream(1, 2)
+            |        ^^^^^^^^
+            |a/src/main/scala/a/Downstream.scala:6:9: reference
+            |    new Upstream.Upstream2().magic()
+            |        ^^^^^^^^
+            |a/src/main/scala/a/Upstream.scala:2:7: reference
+            |class Upstream(i: Int) {
+            |      ^^^^^^^^
+            |""".stripMargin,
       )
       _ <- server.assertReferencesSubquery(
         a,
@@ -198,10 +244,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |case class Point(xx: Int, y: Int) {
@@ -256,10 +299,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |case class Point(x: Int, y: Int)
@@ -298,10 +338,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |sealed trait Fruit
@@ -354,10 +391,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |class Upstream {
@@ -404,10 +438,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |abstract class Fruit {
@@ -484,14 +515,22 @@ class MbtScalaReferenceSuite
     val a = "a/src/main/scala/a/Animal.scala"
     val b = "a/src/main/scala/a/Mammal.scala"
     val c = "b/src/main/scala/b/Animal.scala"
+    val init = if (withMbt) {
+      """|/.metals/mbt.json
+         |{}
+         |""".stripMargin
+    } else {
+      """|/metals.json
+         |{
+         |  "a": {},
+         |  "b": {"dependsOn": ["a"]}
+         |}
+         |""".stripMargin
+    }
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$init
            |/$a
            |package a
            |trait Animal {
@@ -547,14 +586,22 @@ class MbtScalaReferenceSuite
     cleanWorkspace()
     val a = "a/src/main/scala/a/Utils.scala"
     val b = "b/src/main/scala/b/B.scala"
+    val init = if (withMbt) {
+      """|/.metals/mbt.json
+         |{}
+         |""".stripMargin
+    } else {
+      """|/metals.json
+         |{
+         |  "a": {},
+         |  "b": {"dependsOn": ["a"]}
+         |}
+         |""".stripMargin
+    }
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$init
            |/$a
            |package a
            |object Utils {
@@ -600,10 +647,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |object Extensions {
@@ -643,10 +687,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$a
            |package a
            |object Types {
@@ -680,14 +721,22 @@ class MbtScalaReferenceSuite
     cleanWorkspace()
     val a = "a/src/main/scala/a/Utils.scala"
     val b = "b/src/main/scala/b/B.scala"
+    val init = if (withMbt) {
+      """|/.metals/mbt.json
+         |{}
+         |""".stripMargin
+    } else {
+      """|/metals.json
+         |{
+         |  "a": {},
+         |  "b": {"dependsOn": ["a"]}
+         |}
+         |""".stripMargin
+    }
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {},
-           |  "b": {"dependsOn": ["a"]}
-           |}
+           |$init
            |/$a
            |package a
            |object Utils {
@@ -747,10 +796,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$javaFile
            |package a;
            |public class JavaUtils {
@@ -805,10 +851,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$scalaFile
            |package a
            |object ScalaUtils {
@@ -828,22 +871,42 @@ class MbtScalaReferenceSuite
       _ <- server.didOpenAndFocus(scalaFile)
       // references to Scala method from Java
       _ <- server
-        .assertReferencesSubquery( // TODO: test not working correctly on main-v2,
+        .assertReferencesSubquery(
           scalaFile,
-          "def hel@@lo()",
-          """|a/src/main/scala/a/ScalaUtils.scala:3:7: reference
-             |  def hello(): String = "Hello from Scala"
-             |      ^^^^^
-             |""".stripMargin,
+          "def hel@@lo()", {
+            if (withMbt) // bug with pure mbt implementation
+              """|a/src/main/scala/a/ScalaUtils.scala:3:7: reference
+                 |  def hello(): String = "Hello from Scala"
+                 |      ^^^^^
+                 |""".stripMargin
+            else
+              """|a/src/main/java/a/JavaUser.java:4:35: reference
+                 |    System.out.println(ScalaUtils.hello());
+                 |                                  ^^^^^
+                 |a/src/main/scala/a/ScalaUtils.scala:3:7: reference
+                 |  def hello(): String = "Hello from Scala"
+                 |      ^^^^^
+                 |""".stripMargin
+
+          },
         )
       // references to Scala val from Java
       _ <- server.assertReferencesSubquery(
         scalaFile,
         "val cou@@nt",
-        """|a/src/main/scala/a/ScalaUtils.scala:4:7: reference
-           |  val count: Int = 10
-           |      ^^^^^
-           |""".stripMargin,
+        if (withMbt)
+          """|a/src/main/scala/a/ScalaUtils.scala:4:7: reference
+             |  val count: Int = 10
+             |      ^^^^^
+             |""".stripMargin
+        else
+          """|a/src/main/java/a/JavaUser.java:5:35: reference
+             |    System.out.println(ScalaUtils.count());
+             |                                  ^^^^^
+             |a/src/main/scala/a/ScalaUtils.scala:4:7: reference
+             |  val count: Int = 10
+             |      ^^^^^
+             |""".stripMargin,
       )
     } yield ()
   }
@@ -856,10 +919,7 @@ class MbtScalaReferenceSuite
     for {
       _ <- initialize(
         s"""
-           |/metals.json
-           |{
-           |  "a": {}
-           |}
+           |$baseInit
            |/$scalaFile
            |package a
            |object ScalaUtils {

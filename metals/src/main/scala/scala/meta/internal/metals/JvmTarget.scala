@@ -27,6 +27,8 @@ trait JvmTarget {
 
   def classDirectory: String
 
+  def getTargetroot: Option[AbsolutePath]
+
   /**
    * This method collects jars from classpath defined in scalacOptions.
    *

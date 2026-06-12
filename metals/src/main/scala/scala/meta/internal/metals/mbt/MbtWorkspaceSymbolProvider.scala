@@ -420,7 +420,7 @@ class MbtWorkspaceSymbolProvider(
         file,
         mtags(),
         buffers,
-        dialects.Scala213,
+        dialects.Scala3,
         enableProtoJavaPackage = enableProtoJavaPackage,
       )
     putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
