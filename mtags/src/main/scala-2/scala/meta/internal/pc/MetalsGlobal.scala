@@ -630,8 +630,17 @@ class MetalsGlobal(
                     if (sym.isJava)
                       owner.info.decl(TermName(value).encode) :: Nil
                     else Nil
+                  val declared = owner.info.decl(TypeName(value).encode)
+                  // A type member inherited into a package object from a mixin
+                  // is not a declaration of the package object itself, e.g.
+                  // `doobie/package.Transactor#` is declared in `doobie/Types#`,
+                  // so fall back to inherited members for package objects.
+                  val inherited =
+                    if (declared == NoSymbol && parent.endsWith("/package."))
+                      owner.info.member(TypeName(value).encode) :: Nil
+                    else Nil
                   // Put the type ahead of the Java-induced term for `inverseSemanticdbSymbol`
-                  owner.info.decl(TypeName(value).encode) :: members
+                  declared :: members ::: inherited
                 case Descriptor.Term(value) =>
                   owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Package(value) =>
