@@ -53,9 +53,8 @@ class ImplementAbstractMembers(compilers: Compilers) extends CodeAction {
     compilers
       .implementAbstractMembers(textDocumentPositionParams, token)
       .map { edits =>
-        // No edits means there is nothing implementable (e.g. the only missing
-        // members use unrepresentable Java raw types), so don't offer the action
-        // rather than apply a no-op or partial fix that leaves the class abstract.
+        // No edits means there is nothing implementable, so don't offer the
+        // action. See https://github.com/scalameta/metals/issues/2554
         if (edits.isEmpty()) None
         else {
           val uri = params.getTextDocument().getUri()

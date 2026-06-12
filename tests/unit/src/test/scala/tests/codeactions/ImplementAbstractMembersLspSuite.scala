@@ -305,7 +305,8 @@ class ImplementAbstractMembersLspSuite
   }
 
   // https://github.com/scalameta/metals/issues/2554
-  // A representable Java raw type can be implemented, so the quick fix is offered.
+  // A representable Java raw type can be implemented, so the quick fix is
+  // offered and the applied stub compiles.
   checkEdit(
     "java-raw-type-representable-offered",
     s"""|/metals.json
@@ -324,10 +325,14 @@ class ImplementAbstractMembersLspSuite
         |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
         |""".stripMargin,
-    expectedCode = "",
-    expectNoDiagnostics = false,
+    expectedCode = """|package example
+                      |class Reasonably extends Reasonable {
+                      |
+                      |  override def box(b: Box[_]): Unit = ???
+                      |
+                      |}
+                      |""".stripMargin,
     filterAction = _.getTitle() == ImplementAbstractMembers.title,
-    applyCodeAction = false,
   )
 
   // An F-bounded Java raw type has no compiling override, so the class can't be

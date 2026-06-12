@@ -81,10 +81,6 @@ trait OverrideCompletions { this: MetalsGlobal =>
       if (start < 0 || typed.tpe == null) {
         Nil
       } else {
-        // `getMembers` only renders members that can actually be overridden;
-        // `hasUnimplementableAbstract` is true when some abstract member uses an
-        // unrepresentable Java raw type, in which case "Implement all members"
-        // could never complete the class and is skipped.
         val OverrideMembers(overrideMembers, hasUnimplementableAbstract) =
           getMembers(
             typed,
@@ -327,11 +323,9 @@ trait OverrideCompletions { this: MetalsGlobal =>
         )
     }
 
-    // Classify by symbol before building any candidate, so unrepresentable
-    // members are never rendered. A member using a Java raw type with
-    // self/sibling-referential bounds (`Recursive<T extends Recursive>`,
-    // `Dep<A, B extends A>`) has no Scala stub that reliably overrides it.
-    // See https://github.com/scalameta/metals/issues/2554
+    // Classify by symbol before building any candidate, so members with no
+    // representable override (see `containsUnrepresentableRawType`) are never
+    // rendered.
     val (unimplementable, implementable) =
       typed.tpe.members.iterator.toList
         .filter(isOverridableMethod)
@@ -430,9 +424,7 @@ trait OverrideCompletions { this: MetalsGlobal =>
     )
 
     // If some abstract member has no representable override, "Implement all
-    // members" can't make the class concrete, so emit no edits -- the quick fix
-    // is then not offered, consistent with the completion. See
-    // https://github.com/scalameta/metals/issues/2554
+    // members" can't make the class concrete, so emit no edits.
     val allAbstractMembers = overrideMembers.members
       .filter(_.sym.isAbstract)
 

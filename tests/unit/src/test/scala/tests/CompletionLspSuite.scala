@@ -385,13 +385,8 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
+  // Override completions for Java raw types, see
   // https://github.com/scalameta/metals/issues/2554
-  // A Java raw type (a generic Java class used without type arguments) must be
-  // rendered with wildcard type arguments, otherwise the generated override stub
-  // is bare `Box`, which doesn't compile (`takes type parameters`). Raw types
-  // whose type parameters' bounds reference their own type parameters
-  // (`Recursive<T extends Recursive>`, `Dep<A, B extends A>`) have no Scala form
-  // that reliably overrides, so such members are not offered at all.
   private def rawTypeLayout(naivetyBody: String): String =
     s"""/metals.json
        |{
