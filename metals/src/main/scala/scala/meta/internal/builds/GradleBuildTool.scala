@@ -28,7 +28,7 @@ case class GradleBuildTool(
     userConfig: () => UserConfiguration,
     override val projectRoot: AbsolutePath,
 )(implicit ec: ExecutionContext)
-    extends GradleMbtImporter(projectRoot)
+    extends GradleMbtImporter(projectRoot, userConfig)
     with BuildTool
     with BloopInstallProvider
     with VersionRecommendation
