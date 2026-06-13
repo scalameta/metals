@@ -44,7 +44,6 @@ class GradleMbtLspSuite
             |    id 'scala'
             |}
             |repositories {
-            |    ivyLocal()
             |    mavenCentral()
             |}
             |dependencies {
@@ -216,7 +215,6 @@ class GradleMbtLspSuite
             |    id 'java'
             |}
             |repositories {
-            |    ivyLocal()
             |    mavenCentral()
             |}
             |dependencies {
