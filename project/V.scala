@@ -59,7 +59,7 @@ object V {
 
   val mill = "1.1.6"
 
-  val mdoc = "2.8.2"
+  val mdoc = "2.9.0"
 
   val modelContextProtocol = "1.0.2"
 
