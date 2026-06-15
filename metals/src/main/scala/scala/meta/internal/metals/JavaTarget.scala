@@ -48,6 +48,8 @@ case class JavaTarget(
 
   def targetroot: Option[AbsolutePath] = javac.targetroot
 
+  def getTargetroot: Option[AbsolutePath] = targetroot
+
   /**
    * If the build server supports lazy classpath resolution, we will
    * not get any classpath data eagerly and we should not

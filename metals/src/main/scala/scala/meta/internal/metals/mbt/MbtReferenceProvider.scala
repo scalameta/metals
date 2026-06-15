@@ -17,6 +17,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -29,6 +30,7 @@ import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.mtags.MD5
+import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeRef
@@ -44,15 +46,14 @@ class MbtReferenceProvider(
     mbt: MbtWorkspaceSymbolProvider,
     compilers: Compilers,
     buffers: Buffers,
+    semanticdbs: () => Semanticdbs,
+    buildTargets: BuildTargets,
     time: Time,
     languageClient: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
     metrics: MonitoringClient,
 )(implicit ec: ExecutionContext) {
-  // Use fallback compiler to avoid starting many per-build-target presentation
-  // compilers. The fallback compiler includes all sources and dependencies
-  // from MBT.
-  private val cache = new TextDocumentCache(useFallbackCompiler = true)
+  private val cache = new TextDocumentCache()
 
   // When looking for usages of a method, we don't visit supermethods from these
   // types because it would result in a ton of noisy results. This list should
@@ -67,6 +68,22 @@ class MbtReferenceProvider(
   )
 
   private val groupSize = 100
+
+  private def isMbtMode: Boolean =
+    buildTargets.all.exists { target =>
+      buildTargets.buildServerOf(target.getId).exists(_.isMbt)
+    }
+
+  /**
+   * Groups candidate paths for indexing. In MBT mode, files are batched by a
+   * fixed size. In BSP mode, files are grouped by build target so each batch uses
+   * the correct per-target presentation compiler.
+   */
+  private def groupPathsForIndexing(
+      paths: Iterable[AbsolutePath]
+  ): Iterator[Seq[AbsolutePath]] =
+    if (isMbtMode) paths.iterator.grouped(groupSize)
+    else paths.toSeq.groupBy(buildTargets.inverseSources(_)).values.iterator
 
   /** Returns the length of the common path prefix between two paths. */
   private def commonPrefixLength(a: AbsolutePath, b: AbsolutePath): Int = {
@@ -254,7 +271,7 @@ class MbtReferenceProvider(
       var processedInRound = 0
       val totalInRound = candidates.size
       for {
-        paths <- candidates.iterator.grouped(groupSize)
+        paths <- groupPathsForIndexing(candidates)
         if !timer.hasElapsed(timeout)
         doc <- cache.index(paths).documents
       } {
@@ -452,7 +469,7 @@ class MbtReferenceProvider(
 
     // Process external candidates with progress reporting
     for {
-      candidates <- candidatesList.iterator.grouped(groupSize)
+      candidates <- groupPathsForIndexing(candidatesList)
       if !timer.hasElapsed(timeout)
     } {
       val docTimer = new Timer(time)
@@ -465,6 +482,7 @@ class MbtReferenceProvider(
       taskProgress.update(processedCandidates, totalCandidates)
     }
     if (timer.hasElapsed(timeout)) {
+      scribe.warn("references timed out, returning partial results")
       taskProgress.update(
         processedCandidates,
         totalCandidates,
@@ -516,7 +534,7 @@ class MbtReferenceProvider(
     }
     val isOverridenSymbol = overriddenSymbols.toSet
     (for {
-      paths <- candidates.iterator.grouped(groupSize)
+      paths <- groupPathsForIndexing(candidates)
       if !timer.hasElapsed(timeout)
       doc <- cache.index(paths).documents
       info <- doc.symbols.iterator
@@ -535,8 +553,9 @@ class MbtReferenceProvider(
   // When useFallbackCompiler is true, all files are indexed using the fallback
   // compiler instead of per-build-target compilers. This avoids starting many
   // presentation compilers when MBT is available and provides all sources and
-  // dependencies through the fallback compiler.
-  private class TextDocumentCache(useFallbackCompiler: Boolean) {
+  // dependencies through the fallback compiler. In BSP mode, SemanticDBs are
+  // tried first and per-target presentation compilers are used as a fallback.
+  private class TextDocumentCache {
     private val cache = TrieMap.empty[AbsolutePath, s.TextDocument]
     def indexSingle(path: AbsolutePath): s.TextDocument = {
       index(Seq(path)).documents.headOption.getOrElse {
@@ -546,9 +565,13 @@ class MbtReferenceProvider(
     }
     def index(paths: Seq[AbsolutePath]): s.TextDocuments = {
       val docs = Buffer.empty[s.TextDocument]
-      val toIndex = paths.filter { path =>
+      val pathsWithMd5 = paths.map { path =>
         val input = path.toInputFromBuffers(buffers)
         val md5 = MD5.compute(input.text)
+        path -> md5
+      }.toMap
+
+      val toIndex = pathsWithMd5.filter { case (path, md5) =>
         cache.get(path) match {
           case Some(doc) if doc.md5 == md5 =>
             docs += doc
@@ -560,39 +583,58 @@ class MbtReferenceProvider(
       if (toIndex.isEmpty) {
         s.TextDocuments(documents = docs.toSeq)
       } else {
-        def fetchDocs(maxRetries: Int): Seq[s.TextDocument] = {
-          try {
-            Await
-              .result(
-                compilers.batchSemanticdbTextDocuments(
-                  toIndex,
-                  EmptyCancelToken,
-                  // intentionally smaller than the default PC timeout of 20s
-                  Duration.ofSeconds(15),
-                  useFallbackCompiler = useFallbackCompiler,
-                ),
-                timeout,
-              )
-              .documents
-          } catch {
-            case _: CancellationException if maxRetries > 0 =>
-              fetchDocs(maxRetries - 1)
-            case e @ (_: CancellationException | _: TimeoutException) =>
-              scribe.warn(
-                s"references: indexing ${toIndex.size} documents failed.",
-                e,
-              )
-              throw e
+        val needCompiler = Buffer.empty[AbsolutePath]
+        for ((path, md5) <- toIndex) {
+          semanticdbs().textDocument(path).toOption match {
+            case Some(doc) if doc.md5 == md5 =>
+              // basic semanticdb uses relative uris
+              val docAdjusted = doc.withUri(path.toURI.toString)
+              docs += docAdjusted
+              cache.put(path, docAdjusted)
+            case _ =>
+              needCompiler += path
           }
         }
-        val result = fetchDocs(maxRetries = 3)
-        result.foreach { doc =>
-          doc.uri.toAbsolutePathSafe.foreach { path =>
-            cache.put(path, doc)
+        if (needCompiler.isEmpty) {
+          s.TextDocuments(documents = docs.toSeq)
+        } else {
+          def fetchDocs(maxRetries: Int): Seq[s.TextDocument] = {
+            try {
+              Await
+                .result(
+                  compilers.batchSemanticdbTextDocuments(
+                    needCompiler.toSeq,
+                    EmptyCancelToken,
+                    // intentionally smaller than the default PC timeout of 20s
+                    Duration.ofSeconds(15),
+                    useFallbackCompiler = isMbtMode,
+                  ),
+                  timeout,
+                )
+                .documents
+            } catch {
+              case _: CancellationException if maxRetries > 0 =>
+                fetchDocs(maxRetries - 1)
+              case e @ (_: CancellationException | _: TimeoutException) =>
+                scribe.warn(
+                  s"references: indexing ${needCompiler.size} documents failed.",
+                  e,
+                )
+                throw e
+            }
           }
+          val result = fetchDocs(maxRetries = 3)
+          result.foreach { doc =>
+            doc.uri.toAbsolutePathSafe match {
+              case Some(path) =>
+                cache.put(path, doc)
+              case None =>
+                scribe.warn(s"references: no path found for ${doc.uri}")
+            }
+          }
+          docs ++= result
+          s.TextDocuments(documents = docs.toSeq)
         }
-        docs ++= result
-        s.TextDocuments(documents = docs.toSeq)
       }
     }
   }

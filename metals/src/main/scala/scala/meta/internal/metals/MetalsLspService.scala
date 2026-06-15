@@ -585,6 +585,8 @@ abstract class MetalsLspService(
     mbtSymbolSearch,
     compilers,
     buffers,
+    semanticdbs,
+    buildTargets,
     time,
     languageClient,
     workDoneProgress,
