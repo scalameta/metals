@@ -28,6 +28,7 @@ import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.pc.DefinitionResultImpl
 import scala.meta.internal.pc.EmptySymbolSearch
+import scala.meta.internal.pc.JavaDocumentHighlightProvider
 import scala.meta.internal.pc.JavaReferencesProvider
 import scala.meta.internal.pc.JavaRenameProvider
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
@@ -202,7 +203,9 @@ case class JavaPresentationCompiler(
   override def documentHighlight(
       params: OffsetParams
   ): CompletableFuture[util.List[DocumentHighlight]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    request(params, util.Collections.emptyList[DocumentHighlight]()) { pc =>
+      new JavaDocumentHighlightProvider(pc, params).documentHighlight().asJava
+    }
 
   override def references(
       params: ReferencesRequest
