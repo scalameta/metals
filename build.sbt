@@ -661,7 +661,7 @@ lazy val metals = project
       "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
       "org.slf4j" % "slf4j-api" % "1.7.36",
-      "org.scalameta" %% "metaconfig-core" % "0.18.2",
+      "org.scalameta" %% "metaconfig-core" % "0.18.6",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -1185,7 +1185,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.2",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.6",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion
