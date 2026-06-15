@@ -49,7 +49,7 @@ object V {
 
   val javaSemanticdb = "0.12.3"
 
-  val jsoup = "1.22.1"
+  val jsoup = "1.22.2"
 
   val kindProjector = "0.13.4"
 
