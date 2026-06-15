@@ -93,4 +93,15 @@ class McpTomlConfigSuite extends BaseSuite {
     )
   }
 
+  test("read-port-single-quoted-url") {
+    val input =
+      """[mcp_servers.metals]
+        |url='http://localhost:8080/mcp'""".stripMargin
+
+    assertEquals(
+      McpTomlConfig.readPort(input, "mcp_servers", "metals"),
+      Some(8080),
+    )
+  }
+
 }

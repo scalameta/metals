@@ -238,6 +238,15 @@ class McpConfigSuite extends BaseSuite {
       """[mcp_servers.metals]
         |url = "http://localhost:1234/mcp"""".stripMargin,
     )
+
+    assertEquals(
+      McpConfig.readPort(projectPath, projectName, Codex),
+      Some(port),
+    )
+
+    McpConfig.deleteConfig(projectPath, projectName, Codex)
+
+    assert(!configFile.exists)
   }
 
   test("opencode-generate-config-file") {

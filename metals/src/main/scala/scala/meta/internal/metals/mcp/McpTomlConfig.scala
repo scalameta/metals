@@ -65,8 +65,14 @@ object McpTomlConfig {
     }
   }
 
-  private def stripQuotes(value: String): String =
-    value.stripPrefix("\"").stripSuffix("\"")
+  private def stripQuotes(value: String): String = {
+    val trimmed = value.trim
+    if (trimmed.startsWith("\"") && trimmed.endsWith("\""))
+      trimmed.stripPrefix("\"").stripSuffix("\"")
+    else if (trimmed.startsWith("'") && trimmed.endsWith("'"))
+      trimmed.stripPrefix("'").stripSuffix("'")
+    else trimmed
+  }
 
   private def sectionBounds(
       lines: List[String],
