@@ -49,7 +49,7 @@ object V {
 
   val javaSemanticdb = "0.12.3"
 
-  val jsoup = "1.22.1"
+  val jsoup = "1.22.2"
 
   val kindProjector = "0.13.4"
 
@@ -59,11 +59,11 @@ object V {
 
   val mill = "1.1.6"
 
-  val mdoc = "2.8.2"
+  val mdoc = "2.9.0"
 
-  val modelContextProtocol = "1.0.2"
+  val modelContextProtocol = "1.1.3"
 
-  val munit = "1.2.4"
+  val munit = "1.3.3"
 
   val pprint = "0.7.3"
 

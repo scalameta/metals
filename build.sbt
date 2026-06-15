@@ -294,7 +294,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.1",
-      "com.google.protobuf" % "protobuf-java" % "4.35.0",
+      "com.google.protobuf" % "protobuf-java" % "4.35.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -425,7 +425,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.18.2",
+      "org.scalameta" %% "metaconfig-core" % "0.18.6",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -870,7 +870,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.2",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.6",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion
