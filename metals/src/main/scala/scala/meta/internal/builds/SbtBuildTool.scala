@@ -50,6 +50,7 @@ case class SbtBuildTool(
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
+      "-Dbloop.export-meta-build=true",
       "bloopInstall",
     )
     val allArgs = composeArgs(bloopInstallArgs, projectRoot, tempDir)
