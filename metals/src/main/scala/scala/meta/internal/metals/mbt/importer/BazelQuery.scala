@@ -116,30 +116,37 @@ object BazelQuery {
    */
   def queryGenSrcOutputsByTarget(
       srcsByTarget: Map[String, List[String]],
-      queryEnv: Env
-  )(implicit ec: ExecutionContext): Future[(Map[String, List[String]], Set[String])] = {
+      queryEnv: Env,
+  )(implicit
+      ec: ExecutionContext
+  ): Future[(Map[String, List[String]], Set[String])] = {
     val allSrcLabels =
       srcsByTarget.values.flatten.filter(_.startsWith("//")).toSet
     if (allSrcLabels.isEmpty) {
       Future.successful((Map.empty[String, List[String]], Set.empty[String]))
     } else {
       // check if the labels correspond to source files, or rules
-      BazelQuery(s"set(${allSrcLabels.mkString(" ")})", Xml).run(queryEnv)
+      BazelQuery(s"set(${allSrcLabels.mkString(" ")})", Xml)
+        .run(queryEnv)
         .flatMap { xml =>
           val targetsXmlDump = new BazelTargetsXmlDump(xml)
           val srcFiles = targetsXmlDump.sourceFileLabels
           val ruleLabels = allSrcLabels.filterNot(srcFiles)
           if (ruleLabels.isEmpty) {
-            Future.successful((Map.empty[String, List[String]], Set.empty[String]))
+            Future.successful(
+              (Map.empty[String, List[String]], Set.empty[String])
+            )
           } else {
-            runBazelCqueryOutputsByLabel(ruleLabels, queryEnv).map { outputsByGenLabel =>
-              val genSrcOutputsByTarget = srcsByTarget.flatMap { case (target, srcs) =>
-                val genPaths = srcs
-                  .filter(ruleLabels)
-                  .flatMap(outputsByGenLabel.getOrElse(_, Nil))
-                Option.when(genPaths.nonEmpty)(target -> genPaths)
-              }
-              (genSrcOutputsByTarget, ruleLabels)
+            runBazelCqueryOutputsByLabel(ruleLabels, queryEnv).map {
+              outputsByGenLabel =>
+                val genSrcOutputsByTarget = srcsByTarget.flatMap {
+                  case (target, srcs) =>
+                    val genPaths = srcs
+                      .filter(ruleLabels)
+                      .flatMap(outputsByGenLabel.getOrElse(_, Nil))
+                    Option.when(genPaths.nonEmpty)(target -> genPaths)
+                }
+                (genSrcOutputsByTarget, ruleLabels)
             }
           }
         }
@@ -156,7 +163,7 @@ object BazelQuery {
    */
   def runBazelCqueryOutputsByLabel(
       labels: Set[String],
-      queryEnv: Env
+      queryEnv: Env,
   )(implicit ec: ExecutionContext): Future[Map[String, List[String]]] = {
     // Emit one tab-separated line per target: "//pkg:name\tpath1\tpath2..."
     val starlarkExpr =
@@ -165,29 +172,34 @@ object BazelQuery {
       s"set(${labels.mkString(" ")})",
       Starlark,
       extraArgs = List(s"--starlark:expr=$starlarkExpr"),
-      queryType = CQuery
-    ).run(queryEnv).map { output =>
-      val result = output.linesIterator
-        .map(_.trim)
-        .filter(_.nonEmpty)
-        .flatMap { line =>
-          line.split("\t") match {
-            case Array(rawLabel, paths @ _*) =>
-              val label =
-                if (rawLabel.startsWith("@@//")) rawLabel.substring(2) else rawLabel
-              val normalized = paths.flatMap(normalizeBazelOutputPath).toList
-              Some(label -> normalized)
-            case _ =>
-              scribe.warn(s"bazel-mbt: unexpected cquery starlark line: $line")
-              None
+      queryType = CQuery,
+    ).run(queryEnv)
+      .map { output =>
+        val result = output.linesIterator
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .flatMap { line =>
+            line.split("\t") match {
+              case Array(rawLabel, paths @ _*) =>
+                val label =
+                  if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
+                  else rawLabel
+                val normalized = paths.flatMap(normalizeBazelOutputPath).toList
+                Some(label -> normalized)
+              case _ =>
+                scribe.warn(
+                  s"bazel-mbt: unexpected cquery starlark line: $line"
+                )
+                None
+            }
           }
-        }
-        .toMap
-      result
-    }.recover { case e =>
-      scribe.warn(s"bazel-mbt: cquery starlark query failed", e)
-      Map.empty
-    }
+          .toMap
+        result
+      }
+      .recover { case e =>
+        scribe.warn(s"bazel-mbt: cquery starlark query failed", e)
+        Map.empty
+      }
   }
 
   /** Converts `bazel-out/<config>/bin/<rest>` to `bazel-bin/<rest>`. */
@@ -199,13 +211,11 @@ object BazelQuery {
   }
 }
 
-  
-
 case class BazelQuery(
     query: String,
     outputMode: BazelQuery.OutputMode,
     extraArgs: List[String] = Nil,
-    queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query
+    queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query,
 ) {
   import BazelQuery._
 
