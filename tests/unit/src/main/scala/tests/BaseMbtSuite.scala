@@ -12,5 +12,9 @@ trait BaseMbtSuite {
         """"(classDirectories|testClassDirectories)":\s*\[\s*"[^"]+"\s*\]""",
         """"$1": ["<$1-path>"]""",
       )
+      .replaceAll(
+        """"(javaHome)":\s*"[^"]+"""",
+        """"$1": "<$1-path>"""",
+      )
   }
 }
