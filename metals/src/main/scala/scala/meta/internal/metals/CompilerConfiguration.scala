@@ -177,15 +177,10 @@ class CompilerConfiguration(
         srcFiles,
         overrideSourcePathMode = {
           if (shouldUseFullSourcepathForFallback) {
-            // Default to PRUNED for Scala 3, where MBT is not yet supported
-            if (
-              ScalaVersions.isScala3Version(
-                scalaVersion
-              ) || !userConfig().workspaceSymbolProvider.isMBT
-            ) {
-              Some(SourcePathMode.PRUNED)
-            } else {
+            if (userConfig().workspaceSymbolProvider.isMBT) {
               Some(SourcePathMode.MBT)
+            } else {
+              Some(SourcePathMode.PRUNED)
             }
           } else None
         },
