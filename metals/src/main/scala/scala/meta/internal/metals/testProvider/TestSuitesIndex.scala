@@ -117,7 +117,7 @@ private[testProvider] final class TestSuitesIndex {
     fileToMetadata
       .get(path)
       .exists { metadata =>
-        metadata.hasTestCasesGranularity && md5 != metadata.md5
+        !metadata.hasTestCasesGranularity || md5 != metadata.md5
       }
 
   def getMetadata(path: AbsolutePath): Option[TestFileMetadata] =
