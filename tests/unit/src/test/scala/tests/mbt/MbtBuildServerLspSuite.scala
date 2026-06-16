@@ -615,7 +615,6 @@ class MbtBuildServerLspSuite
     } yield ()
   }
 
-
   test("mbt-uncheckedSources-compiles-with-gitignore-sources") {
     cleanWorkspace()
     val mbtJson =
