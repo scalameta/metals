@@ -3,6 +3,8 @@ package gradleinfo
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.logging.Level
+import java.util.logging.Logger
 
 import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
@@ -11,6 +13,7 @@ import org.gradle.tooling.GradleConnector
 import org.gradle.tooling.ModelBuilder
 import org.gradle.tooling.ProjectConnection
 import org.gradle.tooling.model.build.BuildEnvironment
+import org.gradle.tooling.model.gradle.GradleBuild
 import org.gradle.tooling.model.idea.IdeaContentRoot
 import org.gradle.tooling.model.idea.IdeaDependency
 import org.gradle.tooling.model.idea.IdeaModule
@@ -42,6 +45,8 @@ final case class ExtractorConfig(
 
 /** Pulls structural information out of a Gradle build via the Tooling API. */
 object GradleInfoExtractor {
+  private val logger = Logger.getLogger(getClass.getName)
+
   private final case class SourceSetDirectories(
       classDirectories: List[String] = Nil,
       testClassDirectory: List[String] = Nil,
@@ -58,45 +63,138 @@ object GradleInfoExtractor {
     val absRoot = config.projectDir.toFile.getCanonicalFile()
     require(absRoot.isDirectory, s"Not a directory: $absRoot")
 
-    val connector = GradleConnector.newConnector().forProjectDirectory(absRoot)
-    config.gradleVersion.foreach(connector.useGradleVersion)
-    config.gradleInstallation.foreach(connector.useInstallation)
-    config.gradleUserHome.foreach(connector.useGradleUserHomeDir)
-
-    val connection: ProjectConnection = connector.connect()
+    val connection = buildConnector(absRoot, config).connect()
     try {
       val env = fetchModel(connection, classOf[BuildEnvironment], config)
+      val (idea, modules) = fetchIdeaModules(connection, config, config)
 
-      val sourceSetsOutputFile =
-        Files.createTempFile("metals-sourcesets", ".json")
-      val initScriptFile = writeSourceSetsInitScript(sourceSetsOutputFile)
-      val (idea, sourceSetsMap) =
-        try {
-          val ideaModel = fetchModel(
-            connection,
-            classOf[IdeaProject],
-            config,
-            extraArgs = List("--init-script", initScriptFile.toString),
-          )
-          val map = readSourceSetsMap(sourceSetsOutputFile)
-          (ideaModel, map)
-        } finally {
-          Files.deleteIfExists(initScriptFile)
-          Files.deleteIfExists(sourceSetsOutputFile)
-        }
-
-      val modules: Seq[ModuleReport] =
-        idea.getModules.asScala.toSeq
-          .map(extractModule(_, config, sourceSetsMap))
+      val gradleBuild = fetchModel(connection, classOf[GradleBuild], config)
+      val editableModules = gradleBuild.getEditableBuilds.asScala.toSeq
+        .flatMap(extractEditableBuildModules(_, absRoot.toPath, config))
+      val allModules =
+        normalizeCompositeProjectDependencies(modules ++ editableModules)
 
       ProjectReport(
         rootName = idea.getName,
         rootDir = absRoot.getAbsolutePath,
         gradleVersion = env.getGradle.getGradleVersion,
         javaHome = env.getJava.getJavaHome.toPath().toUri().toString(),
-        modules = modules.sortBy(_.projectPath),
+        modules = allModules.sortBy(_.projectPath),
       )
     } finally connection.close()
+  }
+
+  private val UnresolvedDependencyPrefix = "unresolved dependency - "
+
+  private def normalizeCompositeProjectDependencies(
+      modules: Seq[ModuleReport]
+  ): Seq[ModuleReport] = {
+    val moduleNames = modules.map(_.name).toSet
+    modules.map { module =>
+      val (compositeProjectDeps, externalDeps) =
+        module.externalDependencies.partitionMap { dependency =>
+          compositeProjectDependency(dependency, moduleNames).toLeft(dependency)
+        }
+      module.copy(
+        externalDependencies =
+          externalDeps.sortBy(d => (d.group, d.name, d.version, d.scope)),
+        projectDependencies =
+          (module.projectDependencies ++ compositeProjectDeps).distinct
+            .sortBy(d => (d.targetModule, d.scope)),
+      )
+    }
+  }
+
+  private def compositeProjectDependency(
+      dependency: ExternalDependency,
+      moduleNames: Set[String],
+  ): Option[ProjectDependency] =
+    Option
+      .when(dependency.gav.startsWith(UnresolvedDependencyPrefix)) {
+        dependency.gav
+          .stripPrefix(UnresolvedDependencyPrefix)
+          .split("\\s+")
+          .dropRight(1)
+          .reverse
+      }
+      .flatMap(_.find(moduleNames))
+      .map(ProjectDependency(_, dependency.scope))
+
+  private def extractEditableBuildModules(
+      editableBuild: GradleBuild,
+      mainProjectDir: Path,
+      config: ExtractorConfig,
+  ): Seq[ModuleReport] =
+    Option(editableBuild.getRootProject)
+      .flatMap(project => Option(project.getProjectDirectory))
+      .map(_.toPath.toAbsolutePath.normalize.toFile.getCanonicalFile())
+      .filter(_.isDirectory)
+      .fold(Seq.empty[ModuleReport]) { editableBuildDir =>
+        val editableConfig = config.copy(projectDir = editableBuildDir.toPath)
+        val connection = buildConnector(editableBuildDir, config).connect()
+        try {
+          val mainConfig = config.copy(projectDir = mainProjectDir)
+          val includedBuildName =
+            Option(editableBuild.getRootProject)
+              .flatMap(p => Option(p.getName))
+              .getOrElse("")
+          val (_, modules) = fetchIdeaModules(
+            connection,
+            fetchConfig = editableConfig,
+            relativeToConfig = mainConfig,
+            extraArgs = List("--dependency-verification", "off"),
+          )
+          modules.map(m =>
+            m.copy(projectPath =
+              prefixProjectPath(m.projectPath, includedBuildName)
+            )
+          )
+        } catch {
+          case NonFatal(e) =>
+            logger.log(
+              Level.WARNING,
+              s"Failed to extract modules from editable build $editableBuildDir",
+              e,
+            )
+            Nil
+        } finally connection.close()
+      }
+
+  private def buildConnector(
+      dir: java.io.File,
+      config: ExtractorConfig,
+  ): GradleConnector = {
+    val connector = GradleConnector.newConnector().forProjectDirectory(dir)
+    config.gradleVersion.foreach(connector.useGradleVersion)
+    config.gradleInstallation.foreach(connector.useInstallation)
+    config.gradleUserHome.foreach(connector.useGradleUserHomeDir)
+    connector
+  }
+
+  private def fetchIdeaModules(
+      connection: ProjectConnection,
+      fetchConfig: ExtractorConfig,
+      relativeToConfig: ExtractorConfig,
+      extraArgs: List[String] = Nil,
+  ): (IdeaProject, Seq[ModuleReport]) = {
+    val sourceSetsOutputFile =
+      Files.createTempFile("metals-sourcesets", ".json")
+    val initScriptFile = writeSourceSetsInitScript(sourceSetsOutputFile)
+    try {
+      val idea = fetchModel(
+        connection,
+        classOf[IdeaProject],
+        fetchConfig,
+        extraArgs = List("--init-script", initScriptFile.toString) ::: extraArgs,
+      )
+      val sourceSetsMap = readSourceSetsMap(sourceSetsOutputFile)
+      val modules = idea.getModules.asScala.toSeq
+        .map(extractModule(_, relativeToConfig, sourceSetsMap))
+      (idea, modules)
+    } finally {
+      Files.deleteIfExists(initScriptFile)
+      Files.deleteIfExists(sourceSetsOutputFile)
+    }
   }
 
   private def writeSourceSetsInitScript(outputFile: Path): Path = {
@@ -280,6 +378,17 @@ object GradleInfoExtractor {
       testFixturesProjectDeps = testFixturesProjectDeps,
     )
   }
+
+  /**
+   * Rewrite a Gradle project path to be relative to the composite build root.
+   * For included-build modules we prefix the path with the included build's name
+   * so that Gradle can resolve the task from the composite root, e.g.
+   * `":"` → `"plugin-lib:"` and `":server"` → `"plugin-lib:server"`.
+   */
+  private def prefixProjectPath(path: String, buildName: String): String =
+    if (path == ":" || path.isEmpty) s"$buildName:"
+    else s"$buildName:${path.stripPrefix(":")}"
+
   private def classifyDependencies(
       m: IdeaModule
   ): (Seq[ExternalDependency], Seq[ProjectDependency]) = {
