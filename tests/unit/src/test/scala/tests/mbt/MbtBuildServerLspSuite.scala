@@ -1,6 +1,10 @@
 package tests.mbt
 
+import java.io.FileOutputStream
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._

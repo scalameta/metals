@@ -13,6 +13,11 @@ import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.util.control.NonFatal
 
+import java.nio.file.StandardCopyOption
+
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 object GitVCS {
@@ -116,6 +121,58 @@ object GitVCS {
             }
           },
         )
+      }
+    }
+    result.result()
+  }
+
+  /**
+   * Opens the given srcjar archives and lists source files inside them,
+   * extracting each file to the workspace dependencies cache so the resulting
+   * paths are real on-disk paths. Intended for `.srcjar` entries in
+   * `genSources` in `mbt.json`.
+   */
+  def lsFilesFromSrcJars(
+      srcJars: Seq[AbsolutePath],
+      workspace: AbsolutePath,
+      isRelevantPath: GitBlob => Boolean = blob =>
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+  ): ParArray[GitBlob] = {
+    val result = ParArray.newBuilder[GitBlob]
+    srcJars.foreach { srcJar =>
+      try {
+        // Use the full relative path from workspace as the extraction directory key to avoid
+        // collisions between srcjars with the same filename in different directories.
+        val relPath = workspace.toNIO.relativize(srcJar.toNIO)
+        val extractDir = workspace
+          .resolve(Directories.dependencies)
+          .resolveZipPath(relPath)
+        FileIO.withJarFileSystem(srcJar, create = false) { root =>
+          root.listRecursive.foreach { path =>
+            val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
+            if (path.isFile && isRelevantPath(blob)) {
+              try {
+                val diskPath = extractDir.resolveZipPath(path.toNIO)
+                Files.createDirectories(diskPath.toNIO.getParent)
+                Files.copy(
+                  path.toNIO,
+                  diskPath.toNIO,
+                  StandardCopyOption.REPLACE_EXISTING,
+                )
+                val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
+                result += new GitBlob(
+                  diskPath.toString,
+                  oid.getBytes(StandardCharsets.UTF_8),
+                )
+              } catch {
+                case NonFatal(_) =>
+              }
+            }
+          }
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.warn(s"mbt-v2: failed to read srcjar $srcJar", e)
       }
     }
     result.result()

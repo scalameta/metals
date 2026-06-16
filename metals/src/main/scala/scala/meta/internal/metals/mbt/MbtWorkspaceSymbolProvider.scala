@@ -237,8 +237,14 @@ class MbtWorkspaceSymbolProvider(
     val timer = new Timer(time)
     // Step 1: list all files in HEAD and include OIDs.
     val gitFiles = GitVCS.lsFilesStage(workspace)
-    val genDirs = mbtBuild().getGenSources.asScala.toSeq.map(workspace.resolve)
-    val files = gitFiles ++ GitVCS.lsFilesFromDirs(genDirs)
+    val genSources = mbtBuild().getGenSources.asScala.toSeq
+    val (genSrcJarStrs, genDirStrs) =
+      genSources.partition(_.endsWith(".srcjar"))
+    val genDirs = genDirStrs.map(workspace.resolve)
+    val srcJars =
+      genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+    val files = gitFiles ++ GitVCS.lsFilesFromDirs(genDirs) ++ GitVCS
+      .lsFilesFromSrcJars(srcJars, workspace)
 
     if (files.isEmpty) {
       // A more detailed error message is logged if GitVCS.lsFilesStage fails.
