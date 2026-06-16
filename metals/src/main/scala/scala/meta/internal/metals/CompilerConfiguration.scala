@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
 import java.{util => ju}
@@ -89,6 +90,18 @@ class CompilerConfiguration(
     def isScala2 = !ScalaVersions.isScala3Version(
       scalaVersion
     )
+    def collectGenSources(): Seq[Path] = {
+      val genDirs =
+        mbtBuild().getGenSources.asScala.toSeq.map(workspace.resolve)
+      if (genDirs.isEmpty) return Nil
+      GitVCS
+        .lsFilesFromDirs(genDirs)
+        .seq
+        .map(b => Paths.get(b.path))
+        .filter(Files.exists(_))
+        .toIndexedSeq
+    }
+
     if (
       !shouldUseFullSourcepathForFallback ||
       // uses symbols from MBT for Scala 2
@@ -96,7 +109,7 @@ class CompilerConfiguration(
     ) () => ju.Collections.emptyList()
     else
       () => {
-        def defaultSourcepath(): ju.List[Path] = {
+        def defaultSourcepath(): Seq[Path] = {
           val blobs = GitVCS.lsFilesStage(
             workspace,
             blob =>
@@ -107,16 +120,15 @@ class CompilerConfiguration(
             .map(b => workspace.resolve(b.path).toNIO)
             .filter(Files.exists(_))
             .toSeq
-            .asJava
         }
-        semanticdbFileManager match {
+        val regularSources = semanticdbFileManager match {
           case mbt: MbtWorkspaceSymbolProvider =>
             val all = mbt.allFiles()
-            if (all.nonEmpty) all.map(_.toNIO).asJava else defaultSourcepath()
+            if (all.nonEmpty) all.map(_.toNIO) else defaultSourcepath()
           case _ =>
             defaultSourcepath()
         }
-
+        (regularSources ++ collectGenSources()).asJava
       }
   }
   def shouldRunRefchecks: Boolean =
