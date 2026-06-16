@@ -136,6 +136,7 @@ object Configs {
           .fromConfigOrFeatureFlag(
             Option(props.getProperty("metals.source-path")),
             NoopFeatureFlagProvider,
+            default = SourcePathMode.PRUNED,
           )
           .toOption
           .getOrElse(SourcePathMode.PRUNED),
@@ -907,6 +908,7 @@ object Configs {
         case Some("full") => Right(SourcePathMode.FULL)
         case Some("disabled") => Right(SourcePathMode.DISABLED)
         case Some("pruned") => Right(SourcePathMode.PRUNED)
+        case Some("mbt") => Right(SourcePathMode.MBT)
         case Some(invalid) =>
           Left(
             s"invalid config value '$invalid' for source path. Valid values are \"full\", \"disabled\", and \"pruned\""
@@ -914,7 +916,7 @@ object Configs {
         case None =>
           val isPrunedEnabled = featureFlags
             .readBoolean(FeatureFlag.SCALA_SOURCEPATH_PRUNED)
-            .orElse(true)
+            .orElse(false)
           if (isPrunedEnabled) {
             scribe.debug(
               s"Overriding source path mode via Feature Flag to: PRUNED"
