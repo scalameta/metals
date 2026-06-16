@@ -2,8 +2,8 @@ package tests.mcp
 
 import scala.meta.internal.metals.mcp.McpTomlConfig
 
-import tests.BaseSuite
 import munit.TestOptions
+import tests.BaseSuite
 
 class McpTomlConfigSuite extends BaseSuite {
   def checkUpsert(
