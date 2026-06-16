@@ -35,6 +35,8 @@ object BazelQuery {
   object OutputMode {
     case object Label extends OutputMode("label")
     case object Xml extends OutputMode("xml")
+
+    // valid only for "bazel cquery"
     case object Starlark extends OutputMode("starlark")
   }
   sealed abstract class QueryType(name: String) {
