@@ -45,6 +45,7 @@ case class UserConfiguration(
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
+    useBracelessSyntaxForNewFiles: Boolean = false,
     enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
@@ -114,6 +115,7 @@ case class UserConfiguration(
         )
       ),
       Some(("enableIndentOnPaste", enableIndentOnPaste)),
+      Some(("useBracelessSyntaxForNewFiles", useBracelessSyntaxForNewFiles)),
       Some(
         (
           "enableSemanticHighlighting",
@@ -465,6 +467,22 @@ object UserConfiguration {
         "Indent snippets when pasted.",
         """|When this option is enabled, when a snippet is pasted into a Scala file, Metals will
            |try to adjust the indentation to that of the current cursor.
+           |""".stripMargin,
+        isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "use-braceless-syntax-for-new-files",
+        "false",
+        "true",
+        "Use braceless syntax for newly generated Scala 3 files",
+        """|When this option is enabled, templates for newly created Scala 3 files (the
+           |"New Scala File" command, including the "Package Object" kind) avoid curly
+           |braces. Empty class/trait/object/package-object stubs are generated without a
+           |body (for example `class Foo` rather than `class Foo {}`), since an empty
+           |significant-indentation body is not valid Scala 3; the cursor is placed after
+           |the name. It only affects file creation; code actions such as "Implement all
+           |members" are not influenced by this setting, and it has no effect on Scala 2
+           |sources.
            |""".stripMargin,
         isBoolean = true,
       ),
@@ -844,6 +862,8 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
+    val useBracelessSyntaxForNewFiles =
+      getBooleanKey("use-braceless-syntax-for-new-files").getOrElse(false)
     val enableSemanticHighlighting =
       getBooleanKey("enable-semantic-highlighting").getOrElse(true)
     val excludedPackages =
@@ -931,6 +951,7 @@ object UserConfiguration {
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
+          useBracelessSyntaxForNewFiles,
           enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,

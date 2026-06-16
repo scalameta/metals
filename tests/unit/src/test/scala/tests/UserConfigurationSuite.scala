@@ -286,6 +286,7 @@ class UserConfigurationSuite extends BaseSuite {
     assertNoDiff(
       json,
       s"""|{
+          |  "useBracelessSyntaxForNewFiles": false,
           |  "enableIndentOnPaste": true,
           |  "millScript": "mill",
           |  "javaFormat": {
@@ -389,6 +390,7 @@ class UserConfigurationSuite extends BaseSuite {
           |inlay-hints.closing-labels.enable            boolean                        false           Should display closing label hints for methods/classes/objects next to their closing braces
           |enable-semantic-highlighting                 boolean                        true            Use semantic tokens highlight
           |enable-indent-on-paste                       boolean                        false           Indent snippets when pasted.
+          |use-braceless-syntax-for-new-files           boolean                        false           Use braceless syntax for newly generated Scala 3 files
           |fallback-scala-version                       string                         $scala3Padded Default fallback Scala version
           |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
           |java-format.eclipse-config-path              string                         ""              Eclipse Java formatter config path

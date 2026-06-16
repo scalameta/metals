@@ -3,6 +3,7 @@ package tests
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 
+import scala.concurrent.Future
 import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
@@ -351,6 +352,119 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     scalaVersion = Some(V.scala3),
   )
 
+  // Braceless empty stubs are bodyless so the generated file compiles:
+  // `class Foo:` with an empty indented body is a parse error.
+  checkScala("braceless-class-scala3")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  checkScala("braceless-trait-scala3")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Trait),
+    fileName = Right("Bar"),
+    expectedFilePath = "a/src/main/scala/foo/Bar.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |trait Bar
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  checkScala("braceless-object-scala3")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Object),
+    fileName = Right("Bar"),
+    expectedFilePath = "a/src/main/scala/foo/Bar.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |object Bar
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  // Case classes have no body, so the setting must leave them untouched.
+  checkScala("braceless-case-class-unaffected-scala3")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(CaseClass),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = """|package foo
+                         |
+                         |final case class Foo()
+                         |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  // The feature is opt-in: a Scala 3 file with the setting off keeps braces.
+  checkScala("scala3-class-default-braces")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+  )
+
+  // Enum keeps the colon form: a bodyless `enum` doesn't compile (it needs cases),
+  // and the braceful enum template is likewise an incomplete `case` stub, so the
+  // braceless variant mirrors it rather than introducing a new regression.
+  checkScala("braceless-enum-scala3")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(Enum),
+    fileName = Right("Color"),
+    expectedFilePath = "a/src/main/scala/foo/Color.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |enum Color:
+                          |${indent}case
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  checkScala("braceless-package-object-scala3")(
+    directory = Some("a/src/main/scala/foo"),
+    fileType = Right(PackageObject),
+    fileName = Right(""),
+    expectedFilePath = "a/src/main/scala/foo/package.scala",
+    expectedContent = s"""|package object foo
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    bracelessNewFiles = true,
+  )
+
+  // The setting only affects Scala 3 sources; Scala 2 keeps braces.
+  checkScala("braceless-setting-ignored-on-scala2")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    bracelessNewFiles = true,
+  )
+
   checkScala("empty-file-with-package")(
     directory = Some("a/src/main/scala/foo"),
     fileType = Right(ScalaFile),
@@ -628,6 +742,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedException: List[Class[_]] = Nil,
       scalaVersion: Option[String] = None,
       expectedSnippet: Option[String] = None,
+      bracelessNewFiles: Boolean = false,
   )(implicit loc: Location): Unit = check(testName)(
     directory,
     fileType,
@@ -639,6 +754,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     expectedException,
     scalaVersion,
     expectedSnippet,
+    bracelessNewFiles,
   )
 
   /**
@@ -656,6 +772,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedException: List[Class[_]],
       scalaVersion: Option[String],
       expectedSnippet: Option[String] = None,
+      bracelessNewFiles: Boolean = false,
   )(implicit loc: Location): Unit =
     test(testName) {
       val localScalaVersion = scalaVersion.getOrElse(V.scala213)
@@ -737,6 +854,15 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
           """.stripMargin
         )
         _ <- server.didFocus("focusedDoc.txt")
+        _ <-
+          if (bracelessNewFiles)
+            server.didChangeConfiguration(
+              """|{
+                 |  "use-braceless-syntax-for-new-files": true
+                 |}
+                 |""".stripMargin
+            )
+          else Future.unit
         _ <- server.executeCommand(command, args: _*)
         _ = {
           assertNoDiff(
