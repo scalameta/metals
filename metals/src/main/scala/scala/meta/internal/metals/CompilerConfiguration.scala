@@ -105,7 +105,7 @@ class CompilerConfiguration(
           .filter(Files.exists(_))
       val srcJarFiles =
         GitVCS
-          .lsFilesFromSrcJars(srcJars, workspace)
+          .lsFilesFromSrcJars(srcJars, workspace, write = false)
           .seq
           .map(b => Paths.get(b.path))
           .filter(Files.exists(_))

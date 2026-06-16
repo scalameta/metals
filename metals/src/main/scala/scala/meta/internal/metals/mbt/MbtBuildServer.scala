@@ -261,6 +261,7 @@ final class MbtBuildServer(
   ): CompletableFuture[SourcesResult] = {
     val requestedTargets = params.getTargets.asScala.toSet
     val targets = importedBuildTargets.filter(t => requestedTargets(t.id))
+    extractUncheckedSrcJars(targets)
     val globbedSources = globbedSourceFiles(targets)
     CompletableFuture.completedFuture(
       new SourcesResult(
@@ -274,6 +275,20 @@ final class MbtBuildServer(
           .asJava
       )
     )
+  }
+
+  /**
+   * Extracts any `.srcjar` uncheckedSources into `.metals/readonly/dependencies/`
+   * so that their extraction directories exist when `indexWorkspaceSources` runs.
+   */
+  private def extractUncheckedSrcJars(targets: Seq[MbtTarget]): Unit = {
+    val srcJars = targets
+      .flatMap(_.uncheckedSources)
+      .filter(_.endsWith(".srcjar"))
+      .map(workspace.resolve)
+      .filter(p => p.exists && p.isFile)
+    if (srcJars.nonEmpty)
+      GitVCS.lsFilesFromSrcJars(srcJars, workspace)
   }
   override def buildTargetInverseSources(
       params: InverseSourcesParams
