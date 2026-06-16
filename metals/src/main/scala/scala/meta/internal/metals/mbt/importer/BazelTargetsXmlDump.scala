@@ -82,6 +82,14 @@ class BazelTargetsXmlDump(xmlDump: String) {
     targetLabels.toMap
   }
 
+  lazy val sourceFileLabels: Set[String] = {
+    (for {
+      sf <- root \\ "source-file"
+      name = (sf \ "@name").text
+      if name.nonEmpty
+    } yield name).toSet
+  }
+
   def externalDepsByTarget(targets: List[String]): Map[String, List[String]] = {
     reachableLabels(targets).map { case (target, deps) =>
       target -> deps.filter(isExternalDep)
