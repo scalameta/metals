@@ -381,7 +381,8 @@ class BazelMbtLspSuite
             |      "dependsOn": [],
             |      "classDirectories": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
     } yield ()
