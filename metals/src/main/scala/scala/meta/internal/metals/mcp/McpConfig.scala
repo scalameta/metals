@@ -31,8 +31,20 @@ object McpConfig {
     val serverName = client.projectName(projectName)
 
     // Read existing config if it exists
-    val config = if (configFile.exists) configFile.readText else "{ }"
-    val newConfig = createConfig(config, port, serverName, client)
+    val config = if (configFile.exists) configFile.readText else ""
+    val newConfig = client.configFormat match {
+      case ClientConfigFormat.Json =>
+        val configInput = if (config.trim.isEmpty) "{ }" else config
+        createConfig(configInput, port, serverName, client)
+
+      case ClientConfigFormat.Toml =>
+        McpTomlConfig.upsertServer(
+          config,
+          client.serverField,
+          serverName,
+          mcpUrl(port),
+        )
+    }
     configFile.writeText(newConfig)
     client.extraExtensions
       .collect { case (id, ext) if activeClientExtensionIds(id) => ext }
@@ -75,19 +87,35 @@ object McpConfig {
         projectPath.resolve(s"${client.settingsPath}$name")
       }
       .filter(_.exists)
+
     configFiles.foreach { configFile =>
       val configContent = configFile.readText
-      val updatedConfig = removeMetalsEntry(configContent, projectName, client)
 
-      updatedConfig match {
-        case Failure(exception) =>
-          scribe.error(s"Error removing metals entry: $exception")
-        case Success(value) =>
-          if (isConfigEmpty(value, client)) {
-            configFile.delete()
-          } else {
-            configFile.writeText(gson.toJson(value))
+      client.configFormat match {
+        case ClientConfigFormat.Json =>
+          val updatedConfig =
+            removeMetalsEntry(configContent, projectName, client)
+
+          updatedConfig match {
+            case Failure(exception) =>
+              scribe.error(s"Error removing metals entry: $exception")
+            case Success(value) =>
+              if (isConfigEmpty(value, client)) {
+                configFile.delete()
+              } else {
+                configFile.writeText(gson.toJson(value))
+              }
           }
+
+        case ClientConfigFormat.Toml =>
+          val updatedConfig = McpTomlConfig.removeServer(
+            configContent,
+            client.serverField,
+            client.projectName(projectName),
+          )
+
+          if (updatedConfig.trim.isEmpty) configFile.delete()
+          else configFile.writeText(updatedConfig)
       }
     }
   }
@@ -103,7 +131,7 @@ object McpConfig {
       port: Int,
   ): Unit = {
     val (configFile, _) = resolveConfigFile(projectPath, client)
-    if (configFile.exists) {
+    if (configFile.exists && client.configFormat == ClientConfigFormat.Json) {
       val configContent = configFile.readText
       rewriteOldEndpoint(configContent, projectName, client, port) match {
         case Some(newContent) =>
@@ -203,7 +231,7 @@ object McpConfig {
     val serverConfig = new JsonObject()
     serverConfig.addProperty(
       "url",
-      s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}",
+      mcpUrl(port),
     )
     editor.additionalProperties.foreach { case (key, value) =>
       value match {
@@ -232,23 +260,43 @@ object McpConfig {
       projectName: String,
       editor: Client = CursorEditor,
   ): Option[Int] = {
-    for {
-      config <- Try(
-        JsonParser.parseString(configInput).getAsJsonObject()
-      ).toOption
-      mcpServers <- config.getObjectOption(editor.serverField)
-      serverConfig <- mcpServers.getObjectOption(
-        editor.serverEntry.getOrElse(s"$projectName-metals")
-      )
-      url <- serverConfig.getStringOption("url")
-      // Handle both new /mcp and old /sse endpoints
-      normalizedUrl = url
-        .stripSuffix(MetalsMcpServer.mcpEndpoint)
-        .stripSuffix(oldEndpoint)
-      port <- Try(normalizedUrl.split(":").last.toInt).toOption
-    } yield port
+    editor.configFormat match {
+      case ClientConfigFormat.Json =>
+        for {
+          config <- Try(
+            JsonParser.parseString(configInput).getAsJsonObject()
+          ).toOption
+          mcpServers <- config.getObjectOption(editor.serverField)
+          serverConfig <- mcpServers.getObjectOption(
+            editor.projectName(projectName)
+          )
+          url <- serverConfig.getStringOption("url")
+          // Handle both new /mcp and old /sse endpoints
+          normalizedUrl = url
+            .stripSuffix(MetalsMcpServer.mcpEndpoint)
+            .stripSuffix(oldEndpoint)
+          port <- Try(normalizedUrl.split(":").last.toInt).toOption
+        } yield port
+
+      case ClientConfigFormat.Toml =>
+        McpTomlConfig.readPort(
+          input = configInput,
+          tableName = editor.serverField,
+          serverName = editor.projectName(projectName),
+        )
+    }
   }
 
+  private def mcpUrl(port: Int): String =
+    s"http://localhost:$port${MetalsMcpServer.mcpEndpoint}"
+
+}
+
+sealed trait ClientConfigFormat
+
+object ClientConfigFormat {
+  case object Json extends ClientConfigFormat
+  case object Toml extends ClientConfigFormat
 }
 
 case class Client(
@@ -261,6 +309,7 @@ case class Client(
     shouldCleanUpServerEntry: Boolean = false,
     extraExtensions: Map[String, Client] = Map.empty,
     rootProperties: List[(String, String)] = Nil,
+    configFormat: ClientConfigFormat = ClientConfigFormat.Json,
 ) {
   def projectName(project: String): String =
     serverEntry.getOrElse(s"$project-metals")
@@ -317,6 +366,17 @@ object Claude
       fileNames = List(".mcp.json"),
     )
 
+object Codex
+    extends Client(
+      names = List("codex", "Codex", "codex-cli"),
+      serverField = "mcp_servers",
+      additionalProperties = Nil,
+      serverEntry = Some("metals"),
+      settingsPath = ".codex/",
+      fileNames = List("config.toml"),
+      configFormat = ClientConfigFormat.Toml,
+    )
+
 object OpenCode
     extends Client(
       names = List("opencode", "OpenCode"),
@@ -341,5 +401,5 @@ object NoClient
 
 object Client {
   val allClients: List[Client] =
-    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude, OpenCode)
+    List(VSCodeEditor, KiloCodeEditor, CursorEditor, Claude, Codex, OpenCode)
 }
