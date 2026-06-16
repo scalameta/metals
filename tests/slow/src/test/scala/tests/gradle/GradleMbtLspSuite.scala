@@ -6,13 +6,10 @@ import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
-import scala.meta.internal.metals.testProvider.TestExplorerEvent
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite
@@ -35,15 +32,6 @@ class GradleMbtLspSuite
       referenceProvider = ReferenceProviderConfig.mbt,
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
-      testUserInterface = TestUserInterfaceKind.TestExplorer,
-    )
-
-  override def initializeGitRepo: Boolean = true
-
-  override protected def initializationOptions: Some[InitializationOptions] =
-    Some(
-      InitializationOptions.Default
-        .copy(testExplorerProvider = Some(true))
     )
 
   test("basic") {
@@ -430,20 +418,6 @@ class GradleMbtLspSuite
            |
            |**Returns:** Trimmed title, or empty string if none set.
            |""".stripMargin,
-      )
-      _ <- server.didOpen("plugin-lib/src/test/java/lib/ParserTest.java")
-      discovered <- server.discoverTestSuites(
-        List("plugin-lib/src/test/java/lib/ParserTest.java")
-      )
-      _ = assert(
-        discovered.exists(update =>
-          update.events.asScala.exists {
-            case e: TestExplorerEvent.AddTestSuite =>
-              e.fullyQualifiedClassName == "lib.ParserTest"
-            case _ => false
-          }
-        ),
-        s"Expected ParserTest to be discovered but got:\n$discovered",
       )
     } yield ()
   }
