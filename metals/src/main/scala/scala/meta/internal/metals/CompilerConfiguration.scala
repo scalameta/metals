@@ -90,10 +90,10 @@ class CompilerConfiguration(
     def isScala2 = !ScalaVersions.isScala3Version(
       scalaVersion
     )
-    def collectGenSources(): Seq[Path] = {
-      val genSources = mbtBuild().getGenSources.asScala.toSeq
+    def collectUncheckedSources(): Seq[Path] = {
+      val uncheckedSources = mbtBuild().getUncheckedSources.asScala.toSeq
       val (genSrcJarStrs, genDirStrs) =
-        genSources.partition(_.endsWith(".srcjar"))
+        uncheckedSources.partition(_.endsWith(".srcjar"))
       val genDirs = genDirStrs.map(workspace.resolve)
       val srcJars =
         genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
@@ -138,7 +138,7 @@ class CompilerConfiguration(
           case _ =>
             defaultSourcepath()
         }
-        (regularSources ++ collectGenSources()).asJava
+        (regularSources ++ collectUncheckedSources()).asJava
       }
   }
   def shouldRunRefchecks: Boolean =
