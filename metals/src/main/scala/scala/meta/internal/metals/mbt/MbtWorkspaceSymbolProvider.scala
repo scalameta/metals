@@ -244,7 +244,7 @@ class MbtWorkspaceSymbolProvider(
     val srcJars =
       genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
     val files = gitFiles ++ GitVCS.lsFilesFromDirs(genDirs) ++ GitVCS
-      .lsFilesFromSrcJars(srcJars, workspace, write = false)
+      .lsFilesFromSrcJars(srcJars, workspace)
 
     if (files.isEmpty) {
       // A more detailed error message is logged if GitVCS.lsFilesStage fails.

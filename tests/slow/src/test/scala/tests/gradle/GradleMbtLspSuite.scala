@@ -152,7 +152,8 @@ class GradleMbtLspSuite
             |      ],
             |      "projectPath": ":"
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}
             |""".stripMargin,
       )
@@ -276,7 +277,8 @@ class GradleMbtLspSuite
             |      "classDirectories": ["<classDirectories-path>"],
             |      "projectPath": ":"
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}
             |""".stripMargin,
       )

@@ -129,17 +129,10 @@ object GitVCS {
    * Opens the given srcjar archives and lists source files inside them so the
    * resulting paths are real on-disk paths. Intended for `.srcjar` entries in
    * `uncheckedSources` in `mbt.json`.
-   *
-   * @param write if true, extract each entry to the workspace dependencies
-   *              cache (overwriting any existing file). If false, only return
-   *              entries that have already been extracted — useful for
-   *              re-indexing without clobbering files written by a previous
-   *              extraction step.
    */
   def lsFilesFromSrcJars(
       srcJars: Seq[AbsolutePath],
       workspace: AbsolutePath,
-      write: Boolean = true,
       isRelevantPath: GitBlob => Boolean = blob =>
         MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
   ): ParArray[GitBlob] = {
@@ -156,21 +149,17 @@ object GitVCS {
             if (path.isFile && isRelevantPath(blob)) {
               try {
                 val diskPath = extractDir.resolveZipPath(path.toNIO)
-                if (write) {
-                  Files.createDirectories(diskPath.toNIO.getParent)
-                  Files.copy(
-                    path.toNIO,
-                    diskPath.toNIO,
-                    StandardCopyOption.REPLACE_EXISTING,
-                  )
-                }
-                if (diskPath.exists) {
-                  val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
-                  result += new GitBlob(
-                    diskPath.toString,
-                    oid.getBytes(StandardCharsets.UTF_8),
-                  )
-                }
+                Files.createDirectories(diskPath.toNIO.getParent)
+                Files.copy(
+                  path.toNIO,
+                  diskPath.toNIO,
+                  StandardCopyOption.REPLACE_EXISTING,
+                )
+                val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
+                result += new GitBlob(
+                  diskPath.toString,
+                  oid.getBytes(StandardCharsets.UTF_8),
+                )
               } catch {
                 case NonFatal(_) =>
               }
