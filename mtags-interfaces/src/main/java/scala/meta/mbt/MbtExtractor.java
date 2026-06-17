@@ -17,6 +17,7 @@ public interface MbtExtractor {
    *
    * @param projectDir The root directory of the project.
    * @param outputFile The file to write the project report to.
+   * @param jdkHome The Java distribution which may be used to run the build tool.
    */
-  abstract void extract(Path projectDir, Path outputFile);
+  abstract void extract(Path projectDir, Path outputFile, Path jdkHome);
 }
