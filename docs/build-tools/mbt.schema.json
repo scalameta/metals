@@ -132,8 +132,30 @@
               ]
             },
             "uniqueItems": true
+          },
+          "uncheckedSources": {
+            "type": "array",
+            "description": "Paths to generated source directories or .srcjar archives compiled along with \"sources\" of this namespace. Unlike \"sources\", those can come from `target` or otherwise git-ignored directories.",
+            "items": {
+              "type": "string",
+              "examples": [
+                "bazel-out/k8-fastbuild/bin/src/proto/foo_java_proto.srcjar",
+                "bazel-out/k8-fastbuild/bin/src/gen/generated_sources"
+              ]
+            }
           }
         }
+      }
+    },
+    "uncheckedSources": {
+      "type": "array",
+      "description": "Paths to generated source directories or .srcjar archives, compiled alongside all git-ls-found workspace sources.",
+      "items": {
+        "type": "string",
+        "examples": [
+          "bazel-out/k8-fastbuild/bin/src/proto/foo_java_proto.srcjar",
+          "bazel-out/k8-fastbuild/bin/src/gen/generated_sources"
+        ]
       }
     }
   }
