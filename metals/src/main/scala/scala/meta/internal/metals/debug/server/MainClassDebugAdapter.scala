@@ -39,7 +39,8 @@ class MainClassDebugAdapter(
       userJavaHome = userJavaHome,
       className = mainClass.getClassName,
       args = mainClass.getArguments().asScala.toList,
-      jvmOptions = mainClass.getJvmOptions.asScala.toList,
+      jvmOptions =
+        project.jvmOptionsWith(mainClass.getJvmOptions.asScala.toList),
       envVariables = envVariables,
       logger = new Logger(listener),
     )
