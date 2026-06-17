@@ -165,19 +165,21 @@ object BazelMavenJsonImporter {
       projectDir: AbsolutePath
   ): String = {
     val namePattern = """name\s*=\s*"([^"]+)"""".r
+    // Match a `maven_install` / `maven.install` invocation, but NOT the
+    // `pinned_maven_install` / `unpinned_maven_install` helpers (rules_jvm_external
+    // boilerplate that reference the already-defined `@maven` repo and take no
+    // `name`). Latching onto those and grabbing the next unrelated `name = "..."`
+    // is how this used to mis-detect e.g. `scalapb` as the maven repo.
+    val mavenInstallPattern = """(?<![A-Za-z0-9_])maven[._]install""".r
     val configFiles = possibleConfigFiles(projectDir)
 
     def extractFromContent(content: String): Option[String] = {
-      val indexOfMavenInstall = content.indexOf("maven_install") match {
-        case -1 => content.indexOf("maven.install")
-        case index => index
-      }
-      if (indexOfMavenInstall == -1) None
-      else
+      mavenInstallPattern.findFirstMatchIn(content).flatMap { m =>
         namePattern
-          .findAllMatchIn(content.substring(indexOfMavenInstall))
+          .findAllMatchIn(content.substring(m.start))
           .map(_.group(1))
           .headOption
+      }
     }
 
     val loadedFile = TrieMap.empty[AbsolutePath, String]
