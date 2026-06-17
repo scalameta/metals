@@ -19,6 +19,7 @@ import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
@@ -57,6 +58,7 @@ final class TestSuitesProvider(
     client: MetalsLanguageClient,
     folderName: String,
     folderUri: AbsolutePath,
+    workDoneProgress: WorkDoneProgress,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CodeLens {
@@ -234,27 +236,31 @@ final class TestSuitesProvider(
    *
    * @return Future that completes when discovery is done, containing the updated test suites
    */
-  def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] = {
-    val targetIds = buildTargets.allBuildTargetIds.toList
-      .filter { id =>
-        buildTargets
-          .scalaTarget(id)
-          .forall(_.scalaInfo.getPlatform == ScalaPlatform.JVM)
-      }
-      .flatMap(buildTargets.info)
-      .filterNot(_.isSbtBuild)
-      .map(_.getId)
+  def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
+    workDoneProgress.trackProgressFuture(
+      "Discovering test suites",
+      { progress =>
+        val targetIds = buildTargets.allBuildTargetIds.toList
+          .filter { id =>
+            buildTargets
+              .scalaTarget(id)
+              .forall(_.scalaInfo.getPlatform == ScalaPlatform.JVM)
+          }
+          .flatMap(buildTargets.info)
+          .filterNot(_.isSbtBuild)
+          .map(_.getId)
 
-    // First confirm all candidate test classes
-    buildTargetClasses
-      .confirmMbtTestClassCandidatesForTargets(targetIds)
-      .flatMap { _ =>
-        // Then refresh the test suites
-        refreshTestSuites(()).flatMap { _ =>
-          discoverTests(None)
-        }
-      }
-  }
+        // First confirm all candidate test classes
+        buildTargetClasses
+          .confirmMbtTestClassCandidatesForTargets(targetIds)
+          .flatMap { _ =>
+            // Then refresh the test suites
+            refreshTestSuites(()).flatMap { _ =>
+              discoverTests(None)
+            }
+          }
+      },
+    )
 
   /**
    * For test suites located in a given path,
