@@ -183,6 +183,58 @@ class MbtBuildServerLspSuite
     }
   }
 
+  test("mbt-indirect-test-discovery") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addDependency("org.scalameta", "munit", "0.7.29")
+      .addNamespace("test", List("src/**"))
+      .build()
+    val baseTraitFile = "src/BaseSuite.scala"
+    val testFile = "src/IndirectTest.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/$baseTraitFile
+            |package example
+            |
+            |trait BaseSuite extends munit.FunSuite
+            |/$testFile
+            |package example
+            |
+            |class IndirectTest extends BaseSuite {
+            |  test("ok") {}
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen(baseTraitFile)
+      _ <- server.didOpen(testFile)
+      testSuites <- server.discoverTestSuites(List(testFile))
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assertNoDiff(
+        testEvents.mkString("\n"),
+        s"""|AddTestSuite(example.IndirectTest,IndirectTest,example/IndirectTest#,Location [
+            |  uri = "${workspace.toURI}src/IndirectTest.scala"
+            |  range = Range [
+            |    start = Position [
+            |      line = 2
+            |      character = 6
+            |    ]
+            |    end = Position [
+            |      line = 2
+            |      character = 18
+            |    ]
+            |  ]
+            |],true)
+            |""".stripMargin,
+      )
+    }
+  }
+
   test("mbt-junit-test-discovery") {
     cleanWorkspace()
     val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
