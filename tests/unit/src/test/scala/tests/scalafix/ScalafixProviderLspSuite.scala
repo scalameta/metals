@@ -83,8 +83,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
       contents = server.bufferContents("a/src/main/scala/Main.scala")
       _ = assertNoDiff(
         contents,
-        """|// remove this import
-           |
+        """|
            |class A
            |object Main{
            |  def debug { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
@@ -112,8 +111,7 @@ class ScalafixProviderLspSuite extends BaseLspSuite("scalafix-provider") {
       // make sure that the newly added rule works
       _ = assertNoDiff(
         contentsAfterConfigChange,
-        """|// remove this import
-           |
+        """|
            |class A
            |object Main{
            |  def debug: Unit = { println("debug") } // ProcedureSyntax rule is not defined, should not be changed
