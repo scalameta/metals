@@ -912,6 +912,7 @@ case class DebugUnresolvedMainClassParams(
 final case class ScalaTestSuitesDebugRequest(
     @Nullable target: b.BuildTargetIdentifier,
     requestData: ScalaTestSuites,
+    noDebug: Boolean = false,
 )
 
 final case class ScalaTestSuites(

@@ -437,6 +437,10 @@ final class MbtBuildServer(
           case _ =>
             Left("buildTarget/test: expected test class names list")
         }
+      case MbtBuildServer.RunTestDataKind =>
+        MbtBuildServer
+          .decodeTestSuites(params.getData)
+          .toRight("buildTarget/test: cannot decode RunTestDataKind data")
       case _ =>
         Left(
           s"buildTarget/test: unsupported data kind: ${params.getDataKind}"
@@ -693,6 +697,9 @@ final class MbtBuildServer(
 object MbtBuildServer {
   val name = "MBT"
 
+  /** Custom data kind used in [[DebugSessionParams]] to signal a non-debug test run. */
+  val RunTestDataKind = "mbt-scala-test-suites-run"
+
   def details: BspConnectionDetails =
     new BspConnectionDetails(
       name,
@@ -704,6 +711,22 @@ object MbtBuildServer {
 
   def isMbtServer(name: String): Boolean =
     name == MbtBuildServer.name
+
+  def decodeTestSuites(data: Any): Option[ScalaTestSuites] =
+    data match {
+      case json: com.google.gson.JsonElement =>
+        // TestSuitesProvider (test explorer) sends ScalaTestSuites
+        json.as[ScalaTestSuites].toOption.orElse(
+          // RunTestCodeLens (code lenses) sends a plain list of class names
+          json.as[java.util.List[String]].toOption.map { tests =>
+            val suites = tests.asScala
+              .map(new ScalaTestSuiteSelection(_, List.empty.asJava))
+              .asJava
+            new ScalaTestSuites(suites, List.empty.asJava, List.empty.asJava)
+          }
+        )
+      case _ => None
+    }
 
   def newServer(
       workspace: AbsolutePath,

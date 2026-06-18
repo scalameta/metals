@@ -11,10 +11,13 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.StacktraceAnalyzer
 
 import ch.epfl.scala.bsp4j.RunResult
 import ch.epfl.scala.bsp4j.StatusCode
+import ch.epfl.scala.debugadapter.TestResultEvent
+import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ExitedEventArguments
 import org.eclipse.lsp4j.debug.OutputEventArguments
@@ -132,6 +135,14 @@ class DebugRunner(
         .map(DebugProtocol.stacktraceOutputResponse(notification, _))
 
     }
+  }
+
+  def testResult(summary: TestSuiteSummary): Unit = {
+    val notification = new DebugNotificationMessage()
+    notification.setMethod("testResult")
+    notification.setParams(TestResultEvent(summary).toJson)
+    notification.setId(lastId.incrementAndGet())
+    client.consume(notification)
   }
 
   private def output(message: String, category: String)(
