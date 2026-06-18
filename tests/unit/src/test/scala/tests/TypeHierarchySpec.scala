@@ -640,4 +640,63 @@ trait TypeHierarchySpec { this: BaseLspSuite =>
       )
     } yield ()
   }
+
+  test("java-interface-subtypes") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|$baseInit
+            |/a/src/main/java/a/Animal.java
+            |package a;
+            |
+            |public interface Animal {
+            |  void speak();
+            |}
+            |/a/src/main/java/a/Dog.java
+            |package a;
+            |
+            |public class Dog implements Animal {
+            |  public void speak() {
+            |    System.out.println("Woof!");
+            |  }
+            |}
+            |/a/src/main/java/a/Cat.java
+            |package a;
+            |
+            |public class Cat implements Animal {
+            |  public void speak() {
+            |    System.out.println("Meow!");
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Animal.java")
+      item <- server.prepareTypeHierarchy(
+        "a/src/main/java/a/Animal.java",
+        "public interface Ani@@mal",
+      )
+      _ = assert(
+        item.isDefined,
+        "Expected to find type hierarchy item for Animal interface",
+      )
+      subtypes <- server.typeHierarchySubtypes(item.get)
+      _ = assertNoDiff(
+        formatItems(subtypes),
+        """|Cat
+           |  uri: a/src/main/java/a/Cat.java
+           |  detail: a
+           |  kind: Class
+           |  range: 2:13-2:16
+           |  selectionRange: 2:13-2:16
+           |
+           |Dog
+           |  uri: a/src/main/java/a/Dog.java
+           |  detail: a
+           |  kind: Class
+           |  range: 2:13-2:16
+           |  selectionRange: 2:13-2:16
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
