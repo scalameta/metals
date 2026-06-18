@@ -702,6 +702,7 @@ abstract class MetalsLspService(
       clientConfig.icons(),
       () => compilers,
       trees,
+      buffers,
       buildTargets,
       mbtReferenceProvider,
       workDoneProgress,

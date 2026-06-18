@@ -570,7 +570,7 @@ final case class TestingServer(
       calls: List[C],
       getItem: C => CallHierarchyItem,
       getFromRanges: C => List[l.Range],
-  ): (List[C], CallHierarchyItem) = {
+  )(implicit loc: munit.Location): (List[C], CallHierarchyItem) = {
     val pattern = """(<|>)(\?)(<|>)""".r
     val itemExpected = expected.map { case (filename, code) =>
       filename -> pattern.replaceAllIn(code, "")

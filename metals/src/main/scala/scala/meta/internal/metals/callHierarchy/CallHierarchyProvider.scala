@@ -4,10 +4,12 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Defn
-import scala.meta.internal.metals._
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals._
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
+import scala.meta.internal.parsing.EnclosingMethod
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
@@ -20,7 +22,6 @@ import org.eclipse.lsp4j.CallHierarchyItem
 import org.eclipse.lsp4j.CallHierarchyOutgoingCall
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
-import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -28,15 +29,16 @@ import org.eclipse.{lsp4j => l}
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
-    definition: DefinitionProvider,
+    definitionProvider: DefinitionProvider,
     icons: Icons,
     compilers: () => Compilers,
     trees: Trees,
+    buffers: Buffers,
     buildTargets: BuildTargets,
     mbtReferenceProvider: MbtReferenceProvider,
     workDoneProgress: WorkDoneProgress,
-){
-
+) {
+  private val javaTrees = new JavaTrees(buffers)
   private val callHierarchyItemBuilder =
     new CallHierarchyItemBuilder(workspace, icons, compilers, buildTargets)
 
@@ -52,18 +54,39 @@ final case class CallHierarchyProvider(
           occurrence: SymbolOccurrence,
           source: AbsolutePath,
       ): Option[Future[CallHierarchyItem]] = {
-        val isMethod = occurrence.symbol.endsWith(").")
-        if (occurrence.role.isDefinition && isMethod) {
-          Some(
+        val isMethodOrType =
+          occurrence.symbol.endsWith(").") || occurrence.symbol.endsWith("#")
+        if (isMethodOrType) {
+          def build(range: l.Range): Future[CallHierarchyItem] = {
             callHierarchyItemBuilder.build(
               source,
               occurrence.symbol,
-              occurrence.range.get.toLsp,
-              Array(occurrence.symbol),
+              range,
+              Array.empty,
               token,
               l.SymbolKind.Method,
             )
-          )
+          }
+          if (occurrence.role.isDefinition) {
+            Some(build(occurrence.range.get.toLsp))
+          } else {
+            occurrence.range.map { range =>
+              val textDocumentParams = new l.TextDocumentPositionParams(
+                new l.TextDocumentIdentifier(source.toURI.toString),
+                range.toLsp.getStart,
+              )
+              definitionProvider
+                .definition(source, textDocumentParams, token)
+                .flatMap { defResult =>
+                  defResult.locations.asScala.headOption match {
+                    case Some(defLocation) =>
+                      build(defLocation.getRange)
+                    case None =>
+                      build(range.toLsp)
+                  }
+                }
+            }
+          }
         } else None
       }
 
@@ -97,7 +120,7 @@ final case class CallHierarchyProvider(
       "Resolving incoming calls",
       { taskProgress =>
         val uri = new TextDocumentIdentifier(params.getItem.getUri)
-        val source = uri.getUri.toAbsolutePath
+        val info = getInfo(params.getItem().getData())
         val allReferences = mbtReferenceProvider.references(
           new ReferenceParams(
             uri,
@@ -105,38 +128,45 @@ final case class CallHierarchyProvider(
             new ReferenceContext(false),
           )
         )
-        val allCallHierarchyItems = allReferences.flatMap { refs =>
+        val allCallHierarchyItems = allReferences.flatMap { allReferences =>
           val allDefns = for {
-            path <- refs
-            location <- path.locations
-            call <- containingCall(location)
-          } yield { (path.symbol, call, location) }
+            reference <- allReferences
+            location <- reference.locations
+            call <- containingCall(
+              location.getRange(),
+              location.getUri().toAbsolutePath,
+            )
+          } yield { (reference.symbol, call, location) }
           val deduplicated = allDefns.groupBy { case (_, call, _) =>
             call
           }
-          val all = deduplicated.toList.map {
-            case (defn, calls) => {
+          val all = deduplicated.toList.flatMap {
+            case (enclosingMethod, calls) => {
               val ranges = calls.map { case (_, _, location) =>
                 location.getRange
-              }
-              val symbol = mbtReferenceProvider
-                .enclosingOccurrences(defn.name.pos.toLsp.getStart(), source)
-                .map(_.symbol)
-                .head // TODO, not head
-
-              callHierarchyItemBuilder
-                .build(
-                  source,
-                  symbol,
-                  defn.name.pos.toLsp,
-                  Array(symbol),
-                  token,
-                  l.SymbolKind.Method,
+              }.distinct
+              mbtReferenceProvider
+                .enclosingOccurrences(
+                  enclosingMethod.nameRange.getStart(),
+                  enclosingMethod.source,
                 )
-                .map { item =>
-                  new CallHierarchyIncomingCall(item, ranges.asJava)
+                .map(_.symbol)
+                .filterNot(info.visited.contains)
+                .headOption
+                .map { symbol =>
+                  callHierarchyItemBuilder
+                    .build(
+                      enclosingMethod.source,
+                      symbol,
+                      enclosingMethod.nameRange,
+                      info.visited :+ symbol,
+                      token,
+                      l.SymbolKind.Method,
+                    )
+                    .map { item =>
+                      new CallHierarchyIncomingCall(item, ranges.asJava)
+                    }
                 }
-
             }
           }
           Future.sequence(all)
@@ -146,13 +176,25 @@ final case class CallHierarchyProvider(
     )
 
   def containingCall(
-      location: Location
-  ): Option[Defn.Def] = {
-    if (location.getUri().isScala) {
-      val source = location.getUri.toAbsolutePath
-      trees.findLastEnclosingAt[Defn.Def](source, location.getRange.getStart)
-    } else
-      None // Else find pos enclosing to the location, we can generalize method to return just name position
+      range: l.Range,
+      source: AbsolutePath,
+  ): Option[EnclosingMethod] = {
+    if (source.isScalaFilename) {
+      trees
+        .findLastEnclosingAt[Defn.Def](source, range.getStart)
+        .map(defn =>
+          EnclosingMethod(defn.name.pos.toLsp, defn.pos.toLsp, source)
+        )
+    } else if (source.isJavaFilename) {
+      javaTrees.findEnclosingJavaMethod(source, range.getStart)
+    } else None
+  }
+
+  private def assertPositive(location: l.Location): Boolean = {
+    location.getRange.getStart.getLine >= 0 &&
+    location.getRange.getStart.getCharacter >= 0 &&
+    location.getRange.getEnd.getLine >= 0 &&
+    location.getRange.getEnd.getCharacter >= 0
   }
 
   /**
@@ -169,52 +211,72 @@ final case class CallHierarchyProvider(
         val source = params.getItem.getUri.toAbsolutePath
         val info = getInfo(params.getItem.getData)
 
-        trees
-          .findLastEnclosingAt[Defn.Def](
+        val outgoingCallFutures = for {
+          enclosingMethod <- containingCall(
+            params.getItem.getSelectionRange(),
             source,
-            params.getItem.getSelectionRange.getStart,
-          )
-          .map { root =>
-            val methodReferences =
-              mbtReferenceProvider.methodReferencesInRange(
-                source,
-                root.pos.toLsp,
+          ).toList
+          methodReferences =
+            mbtReferenceProvider.methodReferencesInRange(
+              source,
+              enclosingMethod.bodyRange,
+            )
+          groupedBySymbol =
+            methodReferences.groupBy { case (occ, _) => occ.symbol }
+          (symbol, occurrencesWithDefs) <- groupedBySymbol.toList
+          if !info.visited.contains(symbol)
+          localDef = occurrencesWithDefs
+            .flatMap { case (_, defs) => defs.headOption }
+            .headOption
+            // default record classes constructors have that at -1 -1
+            .filter(assertPositive(_))
+          firstRangeOccurrence <- occurrencesWithDefs
+            .flatMap(_._1.range)
+            .headOption
+          methodDefLocation = localDef match {
+            case Some(defLocation) => Future.successful(Some(defLocation))
+            case None =>
+              val textDocumentParams = new l.TextDocumentPositionParams(
+                new l.TextDocumentIdentifier(source.toURI.toString),
+                firstRangeOccurrence.toLsp.getStart,
               )
-            pprint.log(methodReferences)
-
-            val groupedBySymbol =
-              methodReferences.groupBy { case (occ, _) => occ.symbol }
-
-            val outgoingCallFutures = for {
-              (symbol, occurrencesWithDefs) <- groupedBySymbol.toList
-              localDef = occurrencesWithDefs.flatMap(_._2).headOption
-              defLocation <- localDef
-                .orElse {
-                  val locations = definition.fromSymbol(symbol, Some(source))
-                  if (locations.isEmpty) None else Some(locations.get(0))
-                }
-              defPath = defLocation.getUri.toAbsolutePath
-            } yield {
-              val callRanges = occurrencesWithDefs.flatMap { case (occ, _) =>
-                occ.range.map(_.toLsp)
-              }.toList
+              definitionProvider
+                .definition(source, textDocumentParams, EmptyCancelToken)
+                .map(_.locations.asScala.collectFirst {
+                  case loc if assertPositive(loc) => loc
+                })
+          }
+        } yield {
+          val callRanges = occurrencesWithDefs.flatMap { case (occ, _) =>
+            occ.range.map(_.toLsp)
+          }.toList
+          methodDefLocation.map { methodDefLocation =>
+            methodDefLocation.map { defLocation =>
+              val symbolKind =
+                if (symbol.contains("<init>")) l.SymbolKind.Constructor
+                else l.SymbolKind.Method
               callHierarchyItemBuilder
                 .build(
-                  defPath,
+                  defLocation.getUri().toAbsolutePath,
                   symbol,
                   defLocation.getRange,
                   info.visited :+ symbol,
                   token,
-                  l.SymbolKind.Method,
+                  symbolKind,
                 )
                 .map { item =>
                   new CallHierarchyOutgoingCall(item, callRanges.asJava)
                 }
             }
-
-            Future.sequence(outgoingCallFutures)
           }
-          .getOrElse(Future.successful(Nil))
+        }
+
+        Future
+          .sequence(outgoingCallFutures)
+          .map(_.flatten)
+          .flatMap { futures =>
+            Future.sequence(futures)
+          }
       },
     )
 }

@@ -18,7 +18,6 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
@@ -254,6 +253,7 @@ final class MbtProtobufReferenceProvider(
       taskProgress: TaskProgress,
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
       token: Option[JEither[String, Integer]],
+      includeDefinition: Boolean,
   ): List[ReferencesResult] = {
     val protoSymbols = enclosingOccurrences.map(_.symbol)
     val protoJavaResult = {
@@ -458,7 +458,7 @@ final class MbtProtobufReferenceProvider(
         }
         if !isProtoDoc || protobufTokenAt(range)
           .contains(Symbol(matchSymbol).displayName)
-        if occ.role.isReference || occ.symbol == matchSymbol
+        if occ.role.isReference || (includeDefinition && occ.symbol == matchSymbol)
       } {
         val location = range.toLocation(doc.uri)
         token match {

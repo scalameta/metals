@@ -303,12 +303,14 @@ class MbtReferenceProvider(
 
     (result.toList, primarySymbol)
   }
-  
-  def enclosingOccurrences(queryRange: l.Position, path: AbsolutePath): Seq[s.SymbolOccurrence] = {
+
+  def enclosingOccurrences(
+      queryRange: l.Position,
+      path: AbsolutePath,
+  ): Seq[s.SymbolOccurrence] = {
     val requestDoc = cache.indexSingle(path)
     this.enclosingOccurrences(requestDoc, queryRange)
   }
-
 
   /**
    * Find all method reference occurrences within a given range.
@@ -324,17 +326,17 @@ class MbtReferenceProvider(
       .filter(occ => occ.role.isDefinition && occ.symbol.endsWith(")."))
       .flatMap(occ => occ.range.map(r => occ.symbol -> r.toLocation(doc.uri)))
       .toMap
-
-    doc.occurrences.filter { occ =>
-      occ.symbol.isGlobal &&
-      occ.symbol.endsWith(").") &&
-      occ.role.isReference &&
-      occ.range.exists(range => enclosingRange.encloses(range.toLsp))
-    }.map { occ =>
-      (occ, definitions.get(occ.symbol))
-    }
+    doc.occurrences
+      .filter { occ =>
+        occ.symbol.isGlobal &&
+        occ.symbol.endsWith(").") &&
+        occ.role.isReference &&
+        occ.range.exists(range => enclosingRange.encloses(range.toLsp))
+      }
+      .map { occ =>
+        (occ, definitions.get(occ.symbol))
+      }
   }
-
 
   def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
@@ -365,7 +367,7 @@ class MbtReferenceProvider(
                 requestDoc,
                 enclosingOccurrences,
                 taskProgress,
-                params.getContext().isIncludeDeclaration()
+                params.getContext().isIncludeDeclaration(),
               )
             },
         )
@@ -452,6 +454,7 @@ class MbtReferenceProvider(
         taskProgress,
         cache.index,
         token,
+        includeDefinition,
       )
     }
 
