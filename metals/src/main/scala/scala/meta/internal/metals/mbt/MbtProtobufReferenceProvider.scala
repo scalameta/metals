@@ -248,14 +248,13 @@ final class MbtProtobufReferenceProvider(
   def references(
       path: AbsolutePath,
       timer: Timer,
-      params: ReferenceParams,
       requestDoc: s.TextDocument,
       enclosingOccurrences: Seq[s.SymbolOccurrence],
       toQuerySymbols: Seq[String],
       taskProgress: TaskProgress,
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
+      token: Option[JEither[String, Integer]],
   ): List[ReferencesResult] = {
-    val token = params.getPartialResultToken()
     val protoSymbols = enclosingOccurrences.map(_.symbol)
     val protoJavaResult = {
       val result =
@@ -416,12 +415,13 @@ final class MbtProtobufReferenceProvider(
 
       def addLocation(symbol: String, location: l.Location): Unit = {
         referenceResults.get(symbol).foreach { locations =>
-          if (token == null) {
-            locations += location
-          } else {
-            languageClient.notifyProgress(
-              new l.ProgressParams(token, JEither.forRight(location))
-            )
+          token match {
+            case Some(token) =>
+              languageClient.notifyProgress(
+                new l.ProgressParams(token, JEither.forRight(location))
+              )
+            case None =>
+              locations += location
           }
         }
       }
@@ -461,12 +461,13 @@ final class MbtProtobufReferenceProvider(
         if occ.role.isReference || occ.symbol == matchSymbol
       } {
         val location = range.toLocation(doc.uri)
-        if (token == null) {
-          referenceResults.get(matchSymbol).foreach(_ += location)
-        } else {
-          languageClient.notifyProgress(
-            new l.ProgressParams(token, JEither.forRight(location))
-          )
+        token match {
+          case Some(token) =>
+            languageClient.notifyProgress(
+              new l.ProgressParams(token, JEither.forRight(location))
+            )
+          case None =>
+            referenceResults.get(matchSymbol).foreach(_ += location)
         }
       }
 
