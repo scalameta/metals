@@ -75,7 +75,7 @@ object V {
 
   val scalafix = "0.14.6"
 
-  val scalafmt = "3.10.7"
+  val scalafmt = "3.11.1"
 
   val scalameta = "4.15.2"
 
