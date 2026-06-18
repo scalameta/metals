@@ -41,7 +41,7 @@ final class TypeHierarchyProvider(
             for {
               occ <- rso.occurrence
               if doc.symbols.find(_.symbol == occ.symbol).exists { info =>
-                info.isClass || info.isTrait || info.isObject || info.isType
+                info.isClass || info.isTrait || info.isObject || info.isType || info.isInterface
               }
               range <- occ.range
             } yield {
