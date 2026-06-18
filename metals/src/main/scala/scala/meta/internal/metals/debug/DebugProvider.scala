@@ -47,7 +47,6 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.debug.DiscoveryFailures._
-import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.debug.server.AttachRemoteDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
@@ -57,6 +56,7 @@ import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
@@ -185,7 +185,13 @@ class DebugProvider(
       val awaitClient = () => Future(proxyServer.accept())
 
       DebugRunner
-        .open(sessionName, awaitClient, stacktraceAnalyzer, runFuture, cancelPromise)
+        .open(
+          sessionName,
+          awaitClient,
+          stacktraceAnalyzer,
+          runFuture,
+          cancelPromise,
+        )
         .flatMap { runner =>
           currentRunner.set(runner)
           runner.listen.map { code =>
@@ -263,7 +269,8 @@ class DebugProvider(
           testSuites.foreach { suite =>
             val entry: dap.testing.SingleTestSummary =
               if (passed)
-                dap.testing.SingleTestResult.Passed(suite.getClassName, duration)
+                dap.testing.SingleTestResult
+                  .Passed(suite.getClassName, duration)
               else
                 dap.testing.SingleTestResult.Failed(
                   suite.getClassName,
@@ -704,11 +711,12 @@ class DebugProvider(
 
     def makeDebugSession() = {
       val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
-      val suiteOnly = request.requestData.suites.asScala.forall(_.tests.isEmpty)
+      request.requestData.suites.asScala.forall(_.tests.isEmpty)
       val debugSession =
         if (isMbt && request.noDebug) {
           val testSuites = request.requestData.copy(jvmOptions = jvmOpts.asJava)
-          val params = new b.DebugSessionParams(singletonList(buildTarget.getId))
+          val params =
+            new b.DebugSessionParams(singletonList(buildTarget.getId))
           params.setDataKind(MbtBuildServer.RunTestDataKind)
           params.setData(testSuites.toJson)
           params
