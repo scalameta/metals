@@ -721,4 +721,47 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+  // https://github.com/scalameta/metals/issues/8426
+  test("java-annotation-private") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/A.java
+          |package a;
+          |
+          |// @@
+          |public class A {
+          |  String name = "";
+          |}
+          |/a/src/main/java/test/annon/AnnotationPrivate.java
+          |package test.annon;
+          |
+          |import java.lang.annotation.ElementType;
+          |import java.lang.annotation.Target;
+          |
+          |@Target(ElementType.TYPE)
+          |@interface AnnotationPrivate {}
+          |/a/src/main/java/test/annon/AnnotationPublic.java
+          |package test.annon;
+          |
+          |import java.lang.annotation.ElementType;
+          |import java.lang.annotation.Target;
+          |
+          |@Target(ElementType.TYPE)
+          |public @interface AnnotationPublic {}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/A.java")
+      _ <- assertCompletion(
+        "@AnnotationP@@",
+        """|AnnotationPublic - test.annon
+           |""".stripMargin,
+        filename = Some("a/src/main/java/a/A.java"),
+      )
+    } yield ()
+  }
 }

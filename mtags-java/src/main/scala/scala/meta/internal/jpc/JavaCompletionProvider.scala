@@ -23,6 +23,7 @@ import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.MemberSelectTree
 import com.sun.source.tree.MethodTree
+import com.sun.source.tree.Scope
 import com.sun.source.tree.Tree.Kind._
 import com.sun.source.util.JavacTask
 import com.sun.source.util.TreePath
@@ -210,13 +211,44 @@ class JavaCompletionProvider(
       identifier,
       inScope,
       (elem, item) => {
-        if (!inScope.contains(elem)) {
+        if (!inScope.contains(elem) && isAccessible(task, trees, scope, elem)) {
           items += item
         }
       }
     )
 
     items.result()
+  }
+
+  private def isAccessible(
+      task: JavacTask,
+      trees: Trees,
+      scope: Scope,
+      fqn: String
+  ): Boolean = {
+    Option(task.getElements.getTypeElement(fqn)) match {
+      case Some(typeElement) => trees.isAccessible(scope, typeElement)
+      case None =>
+        fqn.lastIndexOf('.') match {
+          case -1 => false
+          case lastDot =>
+            Option(
+              task.getElements.getTypeElement(fqn.substring(0, lastDot))
+            ) match {
+              case None => false
+              case Some(parentClass) =>
+                parentClass.getEnclosedElements.asScala
+                  .find(_.getSimpleName.toString == fqn.substring(lastDot + 1))
+                  .exists(member =>
+                    trees.isAccessible(
+                      scope,
+                      member,
+                      task.getTypes.getDeclaredType(parentClass)
+                    )
+                  )
+            }
+        }
+    }
   }
 
   private def autoImportItems(
