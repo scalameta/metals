@@ -16,6 +16,8 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 class MavenBuildToolSuite extends BaseSuite {
 
@@ -95,6 +97,42 @@ class MavenBuildToolSuite extends BaseSuite {
       List(
         "mvn", "-q", "exec:exec", "-Dexec.executable=java",
         "-Dexec.args=-Dproperty=Foo -classpath %classpath a.Main Bar",
+      ),
+    )
+  }
+
+  test("maven-mbt-test-command-filters-single-method") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt"))
+    val modulePom = workspace.resolve("app/pom.xml")
+    modulePom.parent.createDirectories()
+    modulePom.writeText("<project></project>")
+    val testSuites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection(
+          "com.example.MySuite",
+          List("testFoo").asJava,
+        )
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+
+    assertEquals(
+      mavenBuildTool(workspace).mbtTestCommand(
+        workspace,
+        mbtTarget(
+          "com.example:app:1.0.0",
+          "app/target/test-classes",
+          projectDir = Some(workspace.resolve("app")),
+        ),
+        testSuites,
+      ),
+      List(
+        "mvn",
+        "-f",
+        modulePom.toString,
+        "test",
+        "-Dtest=com.example.MySuite#testFoo",
       ),
     )
   }
