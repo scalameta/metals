@@ -704,6 +704,7 @@ class DebugProvider(
 
     def makeDebugSession() = {
       val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+      val suiteOnly = request.requestData.suites.asScala.forall(_.tests.isEmpty)
       val debugSession =
         if (isMbt && request.noDebug) {
           val testSuites = request.requestData.copy(jvmOptions = jvmOpts.asJava)
