@@ -72,7 +72,7 @@ object PositionSyntax {
     def lineTextAndCaret: String = {
       new StringBuilder()
         .append("\n")
-        .append(pos.lineContent)
+        .append(pos.lineContent.stripLineEnd)
         .append("\n")
         .append(pos.lineCaret)
         .toString()
@@ -87,7 +87,7 @@ object PositionSyntax {
         val endColumn =
           if (i == pos.endLine) pos.endColumn
           else Int.MaxValue
-        sb.append("\n> ")
+        sb.append("> ")
           .append(
             lineContent(
               i,

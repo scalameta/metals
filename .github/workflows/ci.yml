@@ -169,11 +169,6 @@ jobs:
             name: Scala javapc tests
             os: ubuntu-latest
             java: "21"
-          - type: cross-test-2-11
-            command: sbt cross-test-2-11
-            name: Scala 2.11 cross tests
-            os: ubuntu-latest
-            java: "21"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs

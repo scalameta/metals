@@ -267,7 +267,6 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |  expected : Bool
             |align.stripMargin = does-not-exis
             |^
-            |
             |> version=3.11.1
             |> runner.dialect = scala213
             |> align.stripMargin = does-not-exist

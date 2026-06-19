@@ -320,8 +320,8 @@ class ExtractRenameMember(
         member.maybeEndMarker
           .map(endMarker => "\n" + endMarker.toString())
           .getOrElse("")
-      member.commentsAbove.map(_.text).getOrElse("") +
-        member.member.toString + endMarker
+      val memberStr = member.member.toString.stripLeading()
+      memberStr + endMarker
     }
 
     val definitionsParts = maybeCompanionEndableMember match {
