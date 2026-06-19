@@ -1464,26 +1464,6 @@ class InlayHintsSuite extends BaseInlayHintsSuite {
            |      .headOption
            |  })
            |}
-           |""".stripMargin,
-      "2.11.12" ->
-        """|package `by-name-block-named`
-           |object Main{
-           |  def Future[A](arg: => A): A = arg
-           |
-           |  Future/*[Int<<scala/Int#>>]*/(/*arg = *//*=> */1 + 2)
-           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
-           |    /*arg = */1 + 2
-           |  }
-           |  Future/*[Int<<scala/Int#>>]*/ {/*=> */
-           |    val x/*: Int<<scala/Int#>>*/ = 1
-           |    val y/*: Int<<scala/Int#>>*/ = 2
-           |    x + y
-           |  }
-           |  Some/*[Any<<scala/Any#>>]*/(/*x = */Option/*[Int<<scala/Int#>>]*/(/*x = */2).getOrElse/*[Any<<scala/Any#>>]*/ {/*=> */
-           |    /*default = */List/*[Int<<scala/Int#>>]*/(/*xs = */1,2)
-           |      .headOption
-           |  })
-           |}
            |""".stripMargin
     )
   )
