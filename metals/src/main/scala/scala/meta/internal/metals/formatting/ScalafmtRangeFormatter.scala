@@ -90,7 +90,7 @@ class ScalafmtRangeFormatter(
 
     // Expand the selection to the start and end of the lines so that it fixes
     // indentation even if you're only selecting a word inside the line.
-    var startOffset = original.lineToOffset(params.range.getStart.getLine())
+    var startOffset = original.toOffset(params.range.getStart.getLine(), 0)
     val requestIsAtStartOfLine = params.range.getStart.getCharacter() == 0
     if (requestIsAtStartOfLine) {
       // Include the leading newline so that we insert the correct
@@ -98,7 +98,7 @@ class ScalafmtRangeFormatter(
       // indent, then we want to fix the indentation.
       startOffset = Math.max(0, startOffset - 1)
     }
-    val endOffset = original.lineToOffset(params.range.getEnd.getLine() + 1)
+    val endOffset = original.toOffset(params.range.getEnd.getLine() + 1, 0)
     val originalStart = original.toOffsetPosition(startOffset)
     val originalEnd = original.toOffsetPosition(endOffset)
     for {

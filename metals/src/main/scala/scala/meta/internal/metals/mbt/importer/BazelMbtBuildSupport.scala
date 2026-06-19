@@ -133,7 +133,7 @@ object BazelMbtBuildSupport {
             dependsByNs.getOrElse(namespace, Set.empty),
             externalDepsByNs.getOrElse(namespace, Set.empty),
             runTargetsByNs.getOrElse(namespace, Set.empty),
-            classDirectoriesByNs.get(namespace),
+            classDirectoriesByNs.getOrElse(namespace, Nil),
             scalaVersion,
           )
         }
@@ -150,7 +150,7 @@ object BazelMbtBuildSupport {
           Set.empty,
           allExtDeps,
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
-          classDirectoriesByNs.get(workspaceNamespaceName),
+          classDirectoriesByNs.getOrElse(workspaceNamespaceName, Nil),
           scalaVersion,
         )
       }
@@ -272,16 +272,15 @@ object BazelMbtBuildSupport {
       runTargetsByNs: Map[String, Set[String]],
       classDirectoriesByTarget: Map[String, String],
       keys: Map[String, String],
-  ): Map[String, String] =
+  ): Map[String, List[String]] =
     keys.values.toSet.flatMap { (namespace: String) =>
       val preferredTargets = runTargetsByNs.getOrElse(namespace, Set.empty)
       val fallbackTargets =
         targetLabels.filter(target => keys(target) == namespace)
       val candidates = preferredTargets.toSeq.sorted ++ fallbackTargets
-      candidates
-        .flatMap(classDirectoriesByTarget.get)
-        .headOption
-        .map(dir => namespace -> dir)
+      val dirs =
+        candidates.flatMap(classDirectoriesByTarget.get).distinct.toList
+      if (dirs.isEmpty) None else Some(namespace -> dirs)
     }.toMap
 
   private def putNamespace(
@@ -293,7 +292,7 @@ object BazelMbtBuildSupport {
       dependsOn: Set[String],
       dependencyModuleIds: Set[String],
       runTargets: Set[String],
-      classDirectory: Option[String],
+      classDirectories: List[String],
       scalaVersion: Option[String],
   ): Unit = {
     val sortedRunTargets =
@@ -308,7 +307,7 @@ object BazelMbtBuildSupport {
         scalaVersion = scalaVersion.orNull,
         javaHome = null,
         dependsOn = dependsOn.toSeq.sorted.asJava,
-        classDirectories = classDirectory.toList.asJava,
+        classDirectories = classDirectories.asJava,
         configurations = sortedRunTargets,
       ),
     )
@@ -329,7 +328,7 @@ object BazelMbtBuildSupport {
       Set.empty,
       dependencyModuleIds,
       Set.empty,
-      None,
+      Nil,
       scalaVersion,
     )
     m

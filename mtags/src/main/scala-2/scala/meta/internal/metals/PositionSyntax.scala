@@ -101,7 +101,7 @@ object PositionSyntax {
               i,
               startColumn = startColumn,
               endColumn = endColumn
-            ).text
+            ).text.stripSuffix("\n")
           )
         i += 1
       }
@@ -140,7 +140,7 @@ object PositionSyntax {
       pos match {
         case Position.None => ""
         case range: Position.Range =>
-          lineContent(range.startLine).text
+          lineContent(range.startLine).text.stripSuffix("\n")
       }
   }
 
