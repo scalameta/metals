@@ -212,9 +212,6 @@ commands ++= Seq(
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
   },
-  Command.single("cross-test-only-2-11") { (s, testName) =>
-    crossTestDynOnly(s, V.scala211, " " + testName)
-  },
 )
 
 // -Xlint is unusable because of
@@ -779,9 +776,7 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
-      "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
-      "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
@@ -997,7 +992,6 @@ lazy val mtest = project
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
-//      "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
