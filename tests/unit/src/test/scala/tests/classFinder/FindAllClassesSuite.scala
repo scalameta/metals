@@ -62,7 +62,7 @@ class FindAllClassesSuite extends BaseClassFinderSuite {
     scalaVersion = V.scala3,
   )
 
-  for (scalaVer <- List(V.scala3, V.scala213, V.scala212, V.scala211)) {
+  for (scalaVer <- List(V.scala3, V.scala213, V.scala212)) {
     check(
       s"inner-classes (Scala ${scalaVer})",
       """|package a
