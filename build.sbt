@@ -730,8 +730,8 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % V.modelContextProtocol,
-      "io.modelcontextprotocol.sdk" % "mcp-json-jackson2" % V.modelContextProtocol,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.22.0",
+      // "io.modelcontextprotocol.sdk" % "mcp-json-jackson3" % V.modelContextProtocol,
+      // "com.fasterxml.jackson.core" % "jackson-databind" % "2.22.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
       // For Twirl
       "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
