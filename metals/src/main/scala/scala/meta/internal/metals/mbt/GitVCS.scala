@@ -126,15 +126,39 @@ object GitVCS {
   }
 
   /**
+   * Ensures each srcjar's contents are extracted to disk, skipping jars whose
+   * `extractDir/.jar.meta` already matches the current modification time and path.
+   */
+  def extractSrcJars(
+      srcJars: Seq[AbsolutePath],
+      workspace: AbsolutePath,
+      isRelevantPath: GitBlob => Boolean = blob =>
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+  ): Unit =
+    lsFilesFromSrcJars(srcJars, workspace, isRelevantPath, collectBlobs = false)
+
+  /**
    * Opens the given srcjar archives and lists source files inside them so the
    * resulting paths are real on-disk paths. Intended for `.srcjar` entries in
    * `uncheckedSources` in `mbt.json`.
+   *
+   * Extraction is skipped when `extractDir/.jar.meta` matches the srcjar's
+   * current modification time and path, in which case already-extracted files
+   * are listed directly from disk.
    */
   def lsFilesFromSrcJars(
       srcJars: Seq[AbsolutePath],
       workspace: AbsolutePath,
       isRelevantPath: GitBlob => Boolean = blob =>
         MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+  ): ParArray[GitBlob] =
+    lsFilesFromSrcJars(srcJars, workspace, isRelevantPath, collectBlobs = true)
+
+  private def lsFilesFromSrcJars(
+      srcJars: Seq[AbsolutePath],
+      workspace: AbsolutePath,
+      isRelevantPath: GitBlob => Boolean,
+      collectBlobs: Boolean,
   ): ParArray[GitBlob] = {
     val result = ParArray.newBuilder[GitBlob]
     srcJars.foreach { srcJar =>
@@ -143,28 +167,50 @@ object GitVCS {
         val extractDir = workspace
           .resolve(Directories.dependencies)
           .resolveZipPath(relPath)
-        FileIO.withJarFileSystem(srcJar, create = false) { root =>
-          root.listRecursive.foreach { path =>
-            val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
-            if (path.isFile && isRelevantPath(blob)) {
-              try {
-                val diskPath = extractDir.resolveZipPath(path.toNIO)
-                Files.createDirectories(diskPath.toNIO.getParent)
-                Files.copy(
-                  path.toNIO,
-                  diskPath.toNIO,
-                  StandardCopyOption.REPLACE_EXISTING,
-                )
-                val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
-                result += new GitBlob(
-                  diskPath.toString,
-                  oid.getBytes(StandardCharsets.UTF_8),
-                )
-              } catch {
-                case NonFatal(_) =>
+        val jarMetaFile = extractDir.resolve(".jar.meta")
+        val currentMeta =
+          s"${Files.getLastModifiedTime(srcJar.toNIO).toMillis}\n${srcJar.toNIO}"
+        val cachedMeta =
+          if (jarMetaFile.exists)
+            Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
+          else None
+        if (cachedMeta.contains(currentMeta) && extractDir.exists) {
+          if (collectBlobs)
+            lsFilesFromDirs(Seq(extractDir), isRelevantPath).foreach(
+              result += _
+            )
+        } else {
+          extractDir.deleteRecursively()
+          if (!extractDir.exists) extractDir.createDirectories()
+          FileIO.withJarFileSystem(srcJar, create = false) { root =>
+            root.listRecursive.foreach { path =>
+              val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
+              if (path.isFile && isRelevantPath(blob)) {
+                try {
+                  val diskPath = extractDir.resolveZipPath(path.toNIO)
+                  Files.createDirectories(diskPath.toNIO.getParent)
+                  Files.copy(
+                    path.toNIO,
+                    diskPath.toNIO,
+                    StandardCopyOption.REPLACE_EXISTING,
+                  )
+                  if (collectBlobs) {
+                    val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
+                    result += new GitBlob(
+                      diskPath.toString,
+                      oid.getBytes(StandardCharsets.UTF_8),
+                    )
+                  }
+                } catch {
+                  case NonFatal(_) =>
+                }
               }
             }
           }
+          Files.write(
+            jarMetaFile.toNIO,
+            currentMeta.getBytes(StandardCharsets.UTF_8),
+          )
         }
       } catch {
         case NonFatal(e) =>
