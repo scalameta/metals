@@ -71,7 +71,13 @@ abstract class BazelMbtImporter(
         .run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
-      (genSrcOutputsByTarget, genSrcLabels) <- queryGenSrcOutputsByTarget(srcs)
+      (genSrcOutputsByTarget, genSrcLabels) <-
+        if (userConfig().importGeneratedSourcesMbtBazel)
+          queryGenSrcOutputsByTarget(srcs)
+        else
+          Future.successful(
+            (Map.empty[String, List[String]], Set.empty[String])
+          )
       filteredSrcs = srcs.map { case (t, labels) =>
         t -> labels.filterNot(genSrcLabels)
       }
@@ -348,7 +354,7 @@ abstract class BazelMbtImporter(
                 val label =
                   if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
                   else rawLabel
-                Some(label -> paths.flatMap(normalizeBazelOutputPath).toList)
+                Some(label -> paths.toList)
               case _ =>
                 scribe.warn(
                   s"bazel-mbt: unexpected cquery starlark line: $line"
@@ -358,14 +364,6 @@ abstract class BazelMbtImporter(
           }
           .toMap
       }
-  }
-
-  /** Converts `bazel-out/<config>/bin/<rest>` to `bazel-bin/<rest>`. */
-  private def normalizeBazelOutputPath(path: String): Option[String] = {
-    val binMarker = "/bin/"
-    val idx = path.indexOf(binMarker)
-    if (idx < 0) None
-    else Some("bazel-bin/" + path.substring(idx + binMarker.length))
   }
 
   private def queryOutputBase(): Future[Option[Path]] = {

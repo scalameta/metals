@@ -123,6 +123,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
+    importGeneratedSourcesMbtBazel: Boolean = false,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -365,6 +366,12 @@ case class UserConfiguration(
           )
         ),
         optStringField("mcpClient", mcpClient),
+        Some(
+          (
+            "importGeneratedSourcesMbtBazel",
+            importGeneratedSourcesMbtBazel,
+          )
+        ),
         Some(
           (
             "defaultBspToBuildTool",
@@ -923,6 +930,16 @@ object UserConfiguration {
            |and it will still generate the one matching your editor if it's also supported.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "import-generated-sources-MBT-bazel",
+        "false",
+        "true",
+        "Import Generated Sources In Bazel MBT Builds",
+        """|If enabled, Metals will query Bazel for the output files of generated source
+           |rules during MBT import and include them as unchecked sources.
+           |""".stripMargin,
+        isBoolean = true,
+      ),
     )
 
   def listOptions: String =
@@ -1453,6 +1470,9 @@ object UserConfiguration {
 
     val mcpClient = getStringKey("mcp-client")
 
+    val importGeneratedSourcesMbtBazel =
+      getBooleanKey("import-generated-sources-MBT-bazel").getOrElse(false)
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -1517,6 +1537,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
+          importGeneratedSourcesMbtBazel,
         )
       )
     } else {
