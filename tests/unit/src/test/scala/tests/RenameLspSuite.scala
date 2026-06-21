@@ -481,6 +481,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(
@@ -501,6 +503,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(

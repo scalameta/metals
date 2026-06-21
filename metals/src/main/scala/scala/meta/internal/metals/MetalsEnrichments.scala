@@ -92,6 +92,32 @@ object MetalsEnrichments
     with AsScalaExtensions
     with MtagsEnrichments {
 
+  protected def inString(
+      text: String,
+      startLine: Int,
+      startCharacter: Int,
+      endLine: Int,
+      endCharacter: Int,
+  ): Option[String] = {
+    var i = 0
+    var max = 0
+    def isNewline = text.charAt(i) == '\n'
+    while (max < startLine) {
+      if (isNewline) max += 1
+      i += 1
+    }
+    val start = i + startCharacter
+    while (max < endLine) {
+      if (isNewline) max += 1
+      i += 1
+    }
+    val end = i + endCharacter
+    if (start < text.size && end <= text.size)
+      Some(text.substring(start, end))
+    else
+      None
+  }
+
   implicit class XtensionScanner(scanner: LegacyScanner) {
 
     import scala.meta.internal.tokenizers.LegacyToken._
@@ -980,23 +1006,13 @@ object MetalsEnrichments
 
   implicit class XtensionPositionRange(range: s.Range) {
     def inString(text: String): Option[String] = {
-      var i = 0
-      var max = 0
-      def isNewline = text.charAt(i) == '\n'
-      while (max < range.startLine) {
-        if (isNewline) max += 1
-        i += 1
-      }
-      val start = i + range.startCharacter
-      while (max < range.endLine) {
-        if (isNewline) max += 1
-        i += 1
-      }
-      val end = i + range.endCharacter
-      if (start < text.size && end <= text.size)
-        Some(text.substring(start, end))
-      else
-        None
+      MetalsEnrichments.inString(
+        text,
+        range.startLine,
+        range.startCharacter,
+        range.endLine,
+        range.endCharacter,
+      )
     }
 
     def toMeta(input: Input): Option[Position] =
@@ -1117,6 +1133,18 @@ object MetalsEnrichments
   implicit class XtensionLspRangeBsp(range: l.Range) {
     def toBsp: b.Range =
       new b.Range(range.getStart.toBsp, range.getEnd.toBsp)
+
+    def inString(text: String): Option[String] = {
+      val start = range.getStart()
+      val end = range.getEnd()
+      MetalsEnrichments.inString(
+        text,
+        start.getLine(),
+        start.getCharacter(),
+        end.getLine(),
+        end.getCharacter(),
+      )
+    }
   }
 
   implicit class XtensionScalaAction(scalaAction: b.ScalaAction) {

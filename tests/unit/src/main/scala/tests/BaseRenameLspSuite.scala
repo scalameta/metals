@@ -11,7 +11,8 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
   protected def compilerPlugins: List[String] = Nil
-
+  protected def defaultMbtJson: String = "{}"
+  protected def useMbt: Boolean = false
   def same(
       name: String,
       input: String,
@@ -87,9 +88,15 @@ abstract class BaseRenameLspSuite(name: String) extends BaseLspSuite(name) {
       val fullInput = input.replaceAll(allMarkersRegex, "")
       for {
         _ <- initialize(
-          s"""/metals.json
-             |${metalsJson.getOrElse(defaultMetalsJson(scalaVersion))}
-             |$fullInput""".stripMargin
+          if (useMbt) {
+            s"""|/.metals/mbt.json
+                |${metalsJson.getOrElse(defaultMbtJson)}
+                |$fullInput""".stripMargin
+          } else {
+            s"""/metals.json
+               |${metalsJson.getOrElse(defaultMetalsJson(scalaVersion))}
+               |$fullInput""".stripMargin
+          }
         )
         _ <- Future.sequence {
           openedFiles.map { file => server.didOpen(file) }

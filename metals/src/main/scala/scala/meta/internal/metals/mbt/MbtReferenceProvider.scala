@@ -16,6 +16,7 @@ import scala.concurrent.duration.FiniteDuration
 
 import scala.meta.infra.Event
 import scala.meta.infra.MonitoringClient
+import scala.meta.internal.metals.AdjustRange
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
@@ -23,6 +24,7 @@ import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
+import scala.meta.internal.metals.Synthetics
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
@@ -33,6 +35,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.internal.{semanticdb => s}
@@ -312,6 +315,12 @@ class MbtReferenceProvider(
     this.enclosingOccurrences(requestDoc, queryRange)
   }
 
+  def textDocument(
+      path: AbsolutePath
+  ): s.TextDocument = {
+    cache.indexSingle(path)
+  }
+
   /**
    * Find all method reference occurrences within a given range.
    * Used for outgoing calls to find all methods called within a method body.
@@ -338,24 +347,31 @@ class MbtReferenceProvider(
       }
   }
 
-  def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
+  def references(
+      params: ReferenceParams,
+      findRealRange: AdjustRange = noAdjustRange,
+      includeSynthetics: Synthetic => Boolean = _ => true,
+      withDefinitionfallback: Option[String] = None,
+  ): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
     val queryRange = params.getPosition()
     val requestDoc = cache.indexSingle(path)
-    val enclosingOccurrences = this.enclosingOccurrences(requestDoc, queryRange)
+    val semanticdbOccurrences =
+      this.enclosingOccurrences(requestDoc, queryRange).map(_.symbol)
+    val enclosingSymbols =
+      if (semanticdbOccurrences.isEmpty) withDefinitionfallback.toSeq
+      else semanticdbOccurrences
     scribe.info(
-      s"references: found ${enclosingOccurrences.length} occurrences"
+      s"references: found ${enclosingSymbols.length} occurrences"
     )
-
     // If all symbols are local, use compilers.references directly
-    val allLocal = enclosingOccurrences.forall(_.symbol.isLocal)
-
+    val allLocal = enclosingSymbols.forall(_.isLocal)
     val results =
       if (allLocal && requestDoc.language.isScala) {
         scribe.debug("references: all local, using compilers.references")
         compilers
-          .references(params, EmptyCancelToken, noAdjustRange)
+          .references(params, EmptyCancelToken, findRealRange)
       } else {
         workDoneProgress.trackProgressFuture(
           "Finding references",
@@ -365,9 +381,11 @@ class MbtReferenceProvider(
                 timer,
                 params,
                 requestDoc,
-                enclosingOccurrences,
+                enclosingSymbols,
                 taskProgress,
                 params.getContext().isIncludeDeclaration(),
+                findRealRange,
+                includeSynthetics,
               )
             },
         )
@@ -391,9 +409,11 @@ class MbtReferenceProvider(
       timer: Timer,
       params: ReferenceParams,
       requestDoc: s.TextDocument,
-      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      enclosingSymbols: Seq[String],
       taskProgress: TaskProgress,
       includeDefinition: Boolean,
+      findRealRange: AdjustRange,
+      includeSynthetics: Synthetic => Boolean,
   ): List[ReferencesResult] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val token = Option(params.getPartialResultToken())
@@ -402,9 +422,11 @@ class MbtReferenceProvider(
       path,
       token,
       requestDoc,
-      enclosingOccurrences,
+      enclosingSymbols,
       taskProgress,
       includeDefinition,
+      findRealRange,
+      includeSynthetics,
     )
   }
 
@@ -413,22 +435,25 @@ class MbtReferenceProvider(
       path: AbsolutePath,
       token: Option[JEither[String, Integer]],
       requestDoc: s.TextDocument,
-      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      enclosingSymbols: Seq[String],
       taskProgress: TaskProgress,
       includeDefinition: Boolean,
+      findRealRange: AdjustRange,
+      includeSynthetics: Synthetic => Boolean,
   ): List[ReferencesResult] = {
-
-    val superMethods = for {
-      enclosing <- enclosingOccurrences
-      info <- requestDoc.symbols.find(_.symbol == enclosing.symbol).iterator
-      if info.kind.isMethod
-      canBeOverridden = info.displayName != "<init>" && !info.isFinal
-      selfSymbol =
-        if (canBeOverridden)
-          // Search for overrides of this method
-          Iterator.single(info.symbol)
-        else Iterator.empty
-      overridden <- selfSymbol ++ info.overriddenSymbols.iterator
+    val superMembers = for {
+      enclosing <- enclosingSymbols
+      info <- requestDoc.symbols.find(_.symbol == enclosing).iterator
+      isMethod = info.kind.isMethod
+      isTypeMember =
+        info.kind.isType && Symbol(info.symbol).owner.isType && !Symbol(
+          info.symbol
+        ).isToplevel
+      if isMethod || isTypeMember
+      canBeOverridden =
+        !isMethod || (info.displayName != "<init>" && !info.isFinal)
+      sym <- Option.when(canBeOverridden)(info.symbol).iterator
+      overridden <- sym +: info.overriddenSymbols
       if !ignoredSuperSymbols(overridden)
     } yield overridden
     val implementationMethods =
@@ -437,19 +462,19 @@ class MbtReferenceProvider(
         // Use maximum half of the timeout for finding implementations
         timeout.div(2),
         cache,
-        superMethods,
+        superMembers,
         path,
-      ) ++ superMethods).distinct
+      ) ++ superMembers).distinct
     val toQuerySymbols =
       if (implementationMethods.nonEmpty) implementationMethods
-      else enclosingOccurrences.map(_.symbol)
+      else enclosingSymbols
 
     if (path.isProtoFilename) {
       return protobufReferences.references(
         path,
         timer,
         requestDoc,
-        enclosingOccurrences,
+        enclosingSymbols,
         toQuerySymbols,
         taskProgress,
         cache.index,
@@ -458,8 +483,6 @@ class MbtReferenceProvider(
       )
     }
 
-    // Expand symbols to include alternatives like companion objects/classes,
-    // apply/copy params, constructor params, etc.
     val scalaMatchingOccurrence = (for {
       symbol <- toQuerySymbols.iterator
       docAlternatives = SymbolAlternatives.referenceAlternatives(
@@ -468,25 +491,40 @@ class MbtReferenceProvider(
       )
       alternative <- docAlternatives + symbol
     } yield alternative -> symbol).toMap
-
     val javaMatchingOccurrence = (for {
       symbol <- toQuerySymbols.iterator
       expanded = SymbolAlternatives.expand(Symbol(symbol))
       alternative <- expanded
     } yield alternative -> symbol).toMap
-
     val enclosingGlobalOccurrences =
       toQuerySymbols.filter(sym => sym.isGlobal)
     val candidatesList =
       if (enclosingGlobalOccurrences.nonEmpty) {
-        sortedCandidates(
+        val candidates = sortedCandidates(
           MbtPossibleReferencesParams(references = toQuerySymbols),
           path,
         )
+        // Fallback mode with no build targets
+        if (buildTargets.all.isEmpty) candidates
+        else {
+          val allowedBuildTargets =
+            buildTargets
+              .inverseSources(path)
+              .toList
+              .flatMap(
+                buildTargets.allInverseDependencies
+              )
+              .toSet
+
+          candidates.filter { candidate =>
+            buildTargets
+              .inverseSources(candidate)
+              .exists(allowedBuildTargets.contains)
+          }
+        }
       } else {
         Nil
       }
-
     val totalCandidates = candidatesList.size
     scribe.info(
       s"references: found $totalCandidates external document candidates in $timer"
@@ -495,6 +533,30 @@ class MbtReferenceProvider(
       .map(occ => occ -> Buffer.empty[l.Location])
       .toMap
     var processedCandidates = 0
+
+    def addLocation(
+        matchSymbol: String,
+        symbol: String,
+        range: s.Range,
+        doc: s.TextDocument,
+    ): Unit = {
+      val adjustedRange =
+        findRealRange(range, doc.text, symbol)
+      for {
+        realRange <- adjustedRange
+        x <- referenceResults.get(matchSymbol)
+      } {
+        val location = realRange.toLocation(doc.uri)
+        token match {
+          case Some(token) =>
+            languageClient.notifyProgress(
+              new l.ProgressParams(token, JEither.forRight(location))
+            )
+          case None =>
+            x += location
+        }
+      }
+    }
 
     def processDoc(doc: s.TextDocument): Unit = {
       for {
@@ -507,18 +569,26 @@ class MbtReferenceProvider(
         // Exclude definition occurrences for alternate symbols. For example, when
         // doing find-refs on a class symbol, we want usages of the class
         // constructor but not definitions of those constructors.
-        if occ.role.isReference || (occ.symbol == matchSymbol && includeDefinition)
-        x <- referenceResults.get(matchSymbol)
+        if !occ.role.isDefinition || includeDefinition
       } {
-        val location = range.toLocation(doc.uri)
-        token match {
-          case Some(token) =>
-            languageClient.notifyProgress(
-              new l.ProgressParams(token, JEither.forRight(location))
-            )
-          case None =>
-            x += location
-        }
+        addLocation(matchSymbol, occ.symbol, range, doc)
+      }
+
+      for {
+        synthetic <- doc.synthetics
+        if includeSynthetics(synthetic)
+        range <- synthetic.range.toList
+        matchSymbol <- {
+          val matchingOccurrence =
+            if (doc.language.isScala) scalaMatchingOccurrence
+            else javaMatchingOccurrence
+          matchingOccurrence.iterator.collectFirst {
+            case (sym, orig) if Synthetics.existsSymbol(synthetic)(_ == sym) =>
+              orig
+          }
+        }.toList
+      } {
+        addLocation(matchSymbol, matchSymbol, range, doc)
       }
     }
 

@@ -134,6 +134,19 @@ object SymbolAlternatives {
         )
       }
       symbol.value +: constructors
+    } else if (symbol.isConstructor) {
+      symbol match {
+        case GlobalSymbol(owner, Descriptor.Method("<init>", _)) =>
+          Seq(symbol.value, owner.value) ++ 0
+            .until(maxConstructors)
+            .map { i =>
+              Symbols.Global(
+                owner.value,
+                Descriptor.Method("<init>", if (i == 0) "()" else s"(+$i)"),
+              )
+            }
+            .distinct
+      }
     } else {
       // For members of Scala objects, Java sees them as members of a class.
       // Scala uses `.` for object (term) members, Java uses `#` for class (type) members.

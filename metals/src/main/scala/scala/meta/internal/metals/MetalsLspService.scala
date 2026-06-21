@@ -719,9 +719,7 @@ abstract class MetalsLspService(
     )
 
   protected val renameProvider: RenameProvider = new RenameProvider(
-    referencesProvider,
-    implementationProvider,
-    symbolHierarchyOps,
+    mbtReferenceProvider,
     definitionProvider,
     folder,
     languageClient,

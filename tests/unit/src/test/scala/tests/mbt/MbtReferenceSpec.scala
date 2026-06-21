@@ -220,15 +220,36 @@ abstract class MbtReferenceSpec extends BaseMbtReferenceSuite("mbt-reference") {
            |a/src/main/scala/a/Upstream.java:2:14: reference
            |public class Upstream {
            |             ^^^^^^^^
+           |a/src/main/scala/a/Upstream.java:3:10: reference
+           |  public Upstream(int i) { }
+           |         ^^^^^^^^
+           |a/src/main/scala/a/Upstream.java:4:10: reference
+           |  public Upstream(int i, int j) { }
+           |         ^^^^^^^^
            |""".stripMargin,
       )
       // references on a constructor show exact usages of that overload
       _ <- server.assertReferencesSubquery(
         a,
         "public Up@@stream(int i, int j)",
-        """|a/src/main/scala/a/Downstream.java:5:9: reference
+        """|a/src/main/scala/a/Downstream.java:4:5: reference
+           |    Upstream a = new Upstream(1);
+           |    ^^^^^^^^
+           |a/src/main/scala/a/Downstream.java:4:22: reference
+           |    Upstream a = new Upstream(1);
+           |                     ^^^^^^^^
+           |a/src/main/scala/a/Downstream.java:5:9: reference
            |    new Upstream(1, 2);
            |        ^^^^^^^^
+           |a/src/main/scala/a/Downstream.java:6:9: reference
+           |    new Upstream.Upstream2().magic();
+           |        ^^^^^^^^
+           |a/src/main/scala/a/Upstream.java:2:14: reference
+           |public class Upstream {
+           |             ^^^^^^^^
+           |a/src/main/scala/a/Upstream.java:3:10: reference
+           |  public Upstream(int i) { }
+           |         ^^^^^^^^
            |a/src/main/scala/a/Upstream.java:4:10: reference
            |  public Upstream(int i, int j) { }
            |         ^^^^^^^^
@@ -561,13 +582,19 @@ abstract class MbtReferenceSpec extends BaseMbtReferenceSuite("mbt-reference") {
       _ <- server.assertReferencesSubquery(
         b,
         "class Do@@g",
-        """|a/src/main/scala/a/Mammal.java:4:23: reference
-           |  public static class Dog extends Mammal { @Override public String color() { return "brown" } }
-           |                      ^^^
-           |b/src/main/scala/b/Zoo.java:3:45: reference
-           |public class DogZoo implements Zoo<a.Mammal.Dog> {}
-           |                                            ^^^
-           |""".stripMargin,
+        if (withMbt)
+          """|a/src/main/scala/a/Mammal.java:4:23: reference
+             |  public static class Dog extends Mammal { @Override public String color() { return "brown" } }
+             |                      ^^^
+             |b/src/main/scala/b/Zoo.java:3:45: reference
+             |public class DogZoo implements Zoo<a.Mammal.Dog> {}
+             |                                            ^^^
+             |""".stripMargin
+        else
+          """|a/src/main/scala/a/Mammal.java:4:23: reference
+             |  public static class Dog extends Mammal { @Override public String color() { return "brown" } }
+             |                      ^^^
+             |""".stripMargin,
       )
     } yield ()
   }
