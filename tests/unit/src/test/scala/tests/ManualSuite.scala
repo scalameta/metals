@@ -7,6 +7,7 @@ import java.nio.file.Paths
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.sys.process.Process
+import scala.util.Try
 
 import scala.meta.internal.metals.Configs._
 import scala.meta.internal.metals.UserConfiguration
@@ -15,9 +16,13 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import com.google.gson.Gson
 
-// Uncomment to run this test manually locally
-@munit.IgnoreSuite
 class ManualSuite extends BaseManualSuite {
+  private case class QuerySpec(
+      file: String,
+      query: String,
+      minLocations: Int,
+  )
+
   private val DefaultBspName = "Stripe Bazel"
   private val DefaultSyncTarget =
     "//src/test/java/com/stripe/log/loggingvalidation/server/rpcserver/ops/" +
@@ -60,13 +65,20 @@ class ManualSuite extends BaseManualSuite {
     sys.props.getOrElse("metals.manual.bsp.syncTarget", DefaultSyncTarget)
   private val sourcePath =
     sys.props.getOrElse("metals.manual.source", DefaultSourcePath)
+  private val extraOpenFiles =
+    indexedProperties("metals.manual.openFile")
   private val definitionQueries =
     (1 to 5)
       .flatMap(index => sys.props.get(s"metals.manual.definitionQuery.$index"))
       .toList match {
-      case Nil => DefaultDefinitionQueries
+      case Nil if sourcePath == DefaultSourcePath => DefaultDefinitionQueries
+      case Nil => Nil
       case queries => queries
     }
+  private val referenceQueries =
+    querySpecs("metals.manual.referenceQuery", sourcePath)
+  private val implementationQueries =
+    querySpecs("metals.manual.implementationQuery", sourcePath)
   private val bspLanguages =
     sys.props
       .getOrElse("metals.manual.bsp.languages", "java,scala")
@@ -84,6 +96,9 @@ class ManualSuite extends BaseManualSuite {
     }
 
   override def preferredBuildServer: Option[String] = Some(bspName)
+
+  override def munitIgnore: Boolean =
+    !sys.props.get("metals.manual.enabled").contains("true")
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
@@ -195,6 +210,8 @@ class ManualSuite extends BaseManualSuite {
     val path = sourcePath
     for {
       _ <- server.didOpenAndFocus(path)
+      _ <- Future.traverse(extraOpenFiles)(server.didOpenAndFocus)
+      _ <- server.didFocus(path)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
       _ <- Future.traverse(definitionQueries) { query =>
         for {
@@ -203,6 +220,43 @@ class ManualSuite extends BaseManualSuite {
           _ = assertNoDiff(client.workspaceDiagnostics, "")
         } yield ()
       }
+      _ <- Future.traverse(referenceQueries) { spec =>
+        for {
+          locations <- server.referencesSubquery(spec.file, spec.query)
+          _ = assert(
+            locations.size >= spec.minLocations,
+            s"Expected at least ${spec.minLocations} references for " +
+              s"`${spec.query}` in `${spec.file}`, got ${locations.size}",
+          )
+          _ = assertNoDiff(client.workspaceDiagnostics, "")
+        } yield ()
+      }
+      _ <- Future.traverse(implementationQueries) { spec =>
+        for {
+          locations <- server.implementationsSubquery(spec.file, spec.query)
+          _ = assert(
+            locations.size >= spec.minLocations,
+            s"Expected at least ${spec.minLocations} implementations for " +
+              s"`${spec.query}` in `${spec.file}`, got ${locations.size}",
+          )
+          _ = assertNoDiff(client.workspaceDiagnostics, "")
+        } yield ()
+      }
     } yield ()
   }
+
+  private def indexedProperties(prefix: String): List[String] =
+    (1 to 10).flatMap(index => sys.props.get(s"$prefix.$index")).toList
+
+  private def querySpecs(prefix: String, defaultFile: String): List[QuerySpec] =
+    (1 to 10).flatMap { index =>
+      sys.props.get(s"$prefix.$index").map { query =>
+        val file = sys.props.getOrElse(s"$prefix.$index.file", defaultFile)
+        val minLocations = sys.props
+          .get(s"$prefix.$index.min")
+          .flatMap(value => Try(value.toInt).toOption)
+          .getOrElse(1)
+        QuerySpec(file, query, minLocations)
+      }
+    }.toList
 }
