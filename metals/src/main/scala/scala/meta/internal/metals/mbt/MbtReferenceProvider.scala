@@ -620,7 +620,8 @@ class MbtReferenceProvider(
                   s"references: indexing ${needCompiler.size} documents failed.",
                   e,
                 )
-                throw e
+                scribe.debug(s"indexed: ${needCompiler.mkString(", ")}}", e)
+                Seq.empty[s.TextDocument]
             }
           }
           val result = fetchDocs(maxRetries = 3)
