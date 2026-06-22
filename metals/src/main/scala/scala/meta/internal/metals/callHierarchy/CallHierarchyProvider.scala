@@ -50,7 +50,7 @@ final case class CallHierarchyProvider(
   ): Future[List[CallHierarchyItem]] = workDoneProgress.trackFuture(
     "Preparing call hierarchy", {
 
-      def resolvedSymbolOccurence2CallHierarchyItem(
+      def resolvedSymbolOccurrence2CallHierarchyItem(
           occurrence: SymbolOccurrence,
           source: AbsolutePath,
       ): Option[Future[CallHierarchyItem]] = {
@@ -94,7 +94,7 @@ final case class CallHierarchyProvider(
       val allResults = mbtReferenceProvider
         .enclosingOccurrences(params.getPosition, source)
         .flatMap { occurrence =>
-          resolvedSymbolOccurence2CallHierarchyItem(occurrence, source)
+          resolvedSymbolOccurrence2CallHierarchyItem(occurrence, source)
         }
       Future.sequence(allResults.toList)
     },
@@ -190,7 +190,7 @@ final case class CallHierarchyProvider(
     } else None
   }
 
-  private def assertPositive(location: l.Location): Boolean = {
+  private def isValidLocation(location: l.Location): Boolean = {
     location.getRange.getStart.getLine >= 0 &&
     location.getRange.getStart.getCharacter >= 0 &&
     location.getRange.getEnd.getLine >= 0 &&
@@ -229,7 +229,7 @@ final case class CallHierarchyProvider(
             .flatMap { case (_, defs) => defs.headOption }
             .headOption
             // default record classes constructors have that at -1 -1
-            .filter(assertPositive(_))
+            .filter(isValidLocation(_))
           firstRangeOccurrence <- occurrencesWithDefs
             .flatMap(_._1.range)
             .headOption
@@ -243,7 +243,7 @@ final case class CallHierarchyProvider(
               definitionProvider
                 .definition(source, textDocumentParams, EmptyCancelToken)
                 .map(_.locations.asScala.collectFirst {
-                  case loc if assertPositive(loc) => loc
+                  case loc if isValidLocation(loc) => loc
                 })
           }
         } yield {

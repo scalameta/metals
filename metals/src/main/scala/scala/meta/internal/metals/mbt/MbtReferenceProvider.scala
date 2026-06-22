@@ -404,7 +404,7 @@ class MbtReferenceProvider(
       requestDoc,
       enclosingOccurrences,
       taskProgress,
-      includeDefinition: Boolean,
+      includeDefinition,
     )
   }
 
