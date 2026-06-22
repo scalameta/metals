@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import scala.concurrent.Future
+import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 import scala.sys.process.Process
 import scala.util.Try
@@ -21,6 +22,11 @@ class ManualSuite extends BaseManualSuite {
       file: String,
       query: String,
       minLocations: Int,
+  )
+  private case class DefinitionSpec(
+      file: String,
+      query: String,
+      generatedOnly: Boolean,
   )
 
   private val DefaultBspName = "Stripe Bazel"
@@ -49,56 +55,68 @@ class ManualSuite extends BaseManualSuite {
       "stripe-bsp-server",
     )
   private val workspacePath: String =
-    sys.props
-      .get("metals.manual.workspace")
-      .orElse(sys.props.get("metals.manual.zoolander"))
+    prop("metals.manual.workspace")
+      .orElse(prop("metals.manual.zoolander"))
       .getOrElse(Paths.get("/pay", "src", "zoolander").toString())
   private val bspName =
-    sys.props.getOrElse("metals.manual.bsp.name", DefaultBspName)
+    prop("metals.manual.bsp.name").getOrElse(DefaultBspName)
   private val configuredBspLauncher =
-    sys.props.get("metals.manual.bsp.launcher")
+    prop("metals.manual.bsp.launcher")
   private val bspLauncher =
     configuredBspLauncher
       .map(path => Paths.get(path))
       .getOrElse(defaultBspLauncher)
   private val syncTarget =
-    sys.props.getOrElse("metals.manual.bsp.syncTarget", DefaultSyncTarget)
+    prop("metals.manual.bsp.syncTarget").getOrElse(DefaultSyncTarget)
   private val sourcePath =
-    sys.props.getOrElse("metals.manual.source", DefaultSourcePath)
+    prop("metals.manual.source").getOrElse(DefaultSourcePath)
   private val extraOpenFiles =
     indexedProperties("metals.manual.openFile")
   private val definitionQueries =
     (1 to 5)
-      .flatMap(index => sys.props.get(s"metals.manual.definitionQuery.$index"))
+      .flatMap(index => prop(s"metals.manual.definitionQuery.$index"))
       .toList match {
       case Nil if sourcePath == DefaultSourcePath => DefaultDefinitionQueries
-      case Nil => Nil
-      case queries => queries
+      case Nil                                    => Nil
+      case queries                                => queries
+    }
+  private val definitionSpecs =
+    definitionQueries.zipWithIndex.map { case (query, offset) =>
+      val index = offset + 1
+      DefinitionSpec(
+        prop(s"metals.manual.definitionQuery.$index.file").getOrElse(sourcePath),
+        query,
+        !prop(s"metals.manual.definitionQuery.$index.generatedOnly")
+          .contains("false"),
+      )
     }
   private val referenceQueries =
     querySpecs("metals.manual.referenceQuery", sourcePath)
   private val implementationQueries =
     querySpecs("metals.manual.implementationQuery", sourcePath)
   private val bspLanguages =
-    sys.props
-      .getOrElse("metals.manual.bsp.languages", "java,scala")
+    prop("metals.manual.bsp.languages")
+      .getOrElse("java,scala")
       .split(",")
       .map(_.trim)
       .filter(_.nonEmpty)
       .toList
   private val writeBspConnection =
-    !sys.props.get("metals.manual.bsp.writeConnection").contains("false")
+    !prop("metals.manual.bsp.writeConnection").contains("false")
   private val runStripeBspSetup =
-    sys.props.get("metals.manual.stripe-bsp.codegen") match {
+    prop("metals.manual.stripe-bsp.codegen") match {
       case Some("false") => false
-      case Some("true") => true
-      case _ => configuredBspLauncher.isEmpty && writeBspConnection
+      case Some("true")  => true
+      case _             => configuredBspLauncher.isEmpty && writeBspConnection
     }
 
   override def preferredBuildServer: Option[String] = Some(bspName)
 
   override def munitIgnore: Boolean =
-    !sys.props.get("metals.manual.enabled").contains("true")
+    !prop("metals.manual.enabled").contains("true")
+
+  override def munitTimeout: Duration =
+    prop("metals.manual.timeout").map(Duration(_)).getOrElse(super.munitTimeout)
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
@@ -179,23 +197,25 @@ class ManualSuite extends BaseManualSuite {
     assertEquals(exitCode, 0)
   }
 
-  private def openGeneratedDefinition(
+  private def openDefinition(
       server: TestingServer,
       filename: String,
       query: String,
+      generatedOnly: Boolean,
   ): Future[Unit] =
     for {
       locations <- server.definitionSubstringQuery(filename, query)
       uri = locations
         .map(_.getUri)
         .find(uri =>
-          uri.contains("bazel-out") ||
+          !generatedOnly ||
+            uri.contains("bazel-out") ||
             uri.contains("generated") ||
             !uri.startsWith(server.workspace.toURI.toString)
         )
         .getOrElse(
           fail(
-            s"Expected a generated definition for `$query`, got " +
+            s"Expected a definition for `$query`, got " +
               locations.map(_.getUri).mkString(", ")
           )
         )
@@ -213,9 +233,9 @@ class ManualSuite extends BaseManualSuite {
       _ <- Future.traverse(extraOpenFiles)(server.didOpenAndFocus)
       _ <- server.didFocus(path)
       _ = assertNoDiff(client.workspaceDiagnostics, "")
-      _ <- Future.traverse(definitionQueries) { query =>
+      _ <- Future.traverse(definitionSpecs) { spec =>
         for {
-          _ <- openGeneratedDefinition(server, path, query)
+          _ <- openDefinition(server, spec.file, spec.query, spec.generatedOnly)
           _ <- server.didFocus(path)
           _ = assertNoDiff(client.workspaceDiagnostics, "")
         } yield ()
@@ -246,17 +266,21 @@ class ManualSuite extends BaseManualSuite {
   }
 
   private def indexedProperties(prefix: String): List[String] =
-    (1 to 10).flatMap(index => sys.props.get(s"$prefix.$index")).toList
+    (1 to 10).flatMap(index => prop(s"$prefix.$index")).toList
 
   private def querySpecs(prefix: String, defaultFile: String): List[QuerySpec] =
     (1 to 10).flatMap { index =>
-      sys.props.get(s"$prefix.$index").map { query =>
-        val file = sys.props.getOrElse(s"$prefix.$index.file", defaultFile)
-        val minLocations = sys.props
-          .get(s"$prefix.$index.min")
+      prop(s"$prefix.$index").map { query =>
+        val file = prop(s"$prefix.$index.file").getOrElse(defaultFile)
+        val minLocations = prop(s"$prefix.$index.min")
           .flatMap(value => Try(value.toInt).toOption)
           .getOrElse(1)
         QuerySpec(file, query, minLocations)
       }
     }.toList
+
+  private def prop(name: String): Option[String] =
+    sys.props
+      .get(name)
+      .orElse(sys.env.get(name.replaceAll("[^A-Za-z0-9]", "_").toUpperCase))
 }
