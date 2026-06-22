@@ -37,7 +37,7 @@ object V {
 
   val debugAdapter = "4.2.8"
 
-  val genyVersion = "1.0.0"
+  val genyVersion = "1.1.1"
 
   val gitter8Version = "0.18.0"
 
