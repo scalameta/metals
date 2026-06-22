@@ -13,6 +13,8 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
 
   protected def libraryDependencies: List[String] = Nil
 
+  def withMbt: Boolean
+
   trait CallGetter[C] {
     def getCalls(item: CallHierarchyItem): Future[List[C]]
     def getItem(call: C): CallHierarchyItem
@@ -101,22 +103,27 @@ abstract class BaseCallHierarchySuite(name: String) extends BaseLspSuite(name) {
     }
 
     val actualScalaVersion = scalaVersion.getOrElse(BuildInfo.scalaVersion)
-
-    // if item is already specified we did already create the workspace
-    // note(@tgodzik) Might need some further refactor
+    val baseInit =
+      if (withMbt)
+        s"""|/.metals/mbt.json
+            |{}
+            |""".stripMargin
+      else
+        s"""|/metals.json
+            |{"a":
+            |  {
+            |    "scalaVersion" : "$actualScalaVersion",
+            |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
+            |  }
+            |}
+            |""".stripMargin
     val init = if (item.isEmpty) {
       cleanWorkspace()
       for {
         _ <- initialize(
-          s"""/metals.json
-             |{"a":
-             |  {
-             |    "scalaVersion" : "$actualScalaVersion",
-             |    "libraryDependencies": ${toJsonArray(libraryDependencies)}
-             |  }
-             |}
-             |${input
-              .replaceAll(toEscape(), "")}""".stripMargin
+          s"""|${baseInit}
+              |${input
+               .replaceAll(toEscape(), "")}""".stripMargin
         )
         _ <- Future.sequence(
           files.map(file => server.didOpen(s"${file._1}"))

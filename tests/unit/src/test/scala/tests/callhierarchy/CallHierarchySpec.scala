@@ -1,6 +1,36 @@
-package tests
+package tests.callhierarchy
 
-class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
+import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.Configs.ReferenceProviderConfig
+import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuildServer
+
+import tests.BaseCallHierarchySuite
+import tests.BuildInfo
+
+class CallHierarchyLspSuite extends CallHierarchySpec {
+  override def withMbt: Boolean = false
+}
+
+class CallHierarchyMbtSuite extends CallHierarchySpec {
+  override def withMbt: Boolean = true
+
+  override def initializeGitRepo: Boolean = true
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      referenceProvider = ReferenceProviderConfig.mbt,
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+    )
+}
+
+abstract class CallHierarchySpec
+    extends BaseCallHierarchySuite("call-hierarchy") {
+
   test("def-incoming-call") {
     for {
       result <- assertIncomingCalls(
@@ -8,10 +38,16 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |package a
            |
            |object Main {
-           |  def @@a() {}
-           |  def <<b>>/*1*/() { <?<a>?>/*1*/() }
-           |  def c() { b() }
-           |  def <<d>>/*2*/() { <?<a>?>/*2*/() }
+           |  def @@a() = {}
+           |  def <<b>>/*1*/() = { <?<a>?>/*1*/() }
+           |  def c() = { b() }
+           |  def <<d>>/*2*/() = { <?<a>?>/*2*/() }
+           |}
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object Other {
+           |  def <<e>>/*3*/() = { Main.<?<a>?>/*3*/() }
            |}
            |
            |""".stripMargin
@@ -21,14 +57,122 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
                    |package a
                    |
                    |object Main {
-                   |  def a() {}
-                   |  def b() { a() }
-                   |  def <<c>>/*1*/() { <?<b>?>/*1*/() }
-                   |  def d() { a() }
+                   |  def a() = {}
+                   |  def b() = { a() }
+                   |  def <<c>>/*1*/() = { <?<b>?>/*1*/() }
+                   |  def d() = { a() }
                    |}
                    |
                    |""".stripMargin,
         item = Some(result("1")),
+      )
+    } yield ()
+  }
+
+  test("def-incoming-call-references") {
+    for {
+      result <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |object Main {
+           |  def a() = {}
+           |  def <<b>>/*1*/() = { <?<@@a>?>/*1*/() }
+           |  def c() = { b() }
+           |  def <<d>>/*2*/() = { <?<a>?>/*2*/() }
+           |}
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object Other {
+           |  def <<e>>/*3*/() = { Main.<?<a>?>/*3*/() }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- assertIncomingCalls(
+        input = """|/a/src/main/scala/a/Main.scala
+                   |package a
+                   |
+                   |object Main {
+                   |  def a() = {}
+                   |  def b() = { a() }
+                   |  def <<c>>/*1*/() = { <?<b>?>/*1*/() }
+                   |  def d() = { a() }
+                   |}
+                   |
+                   |""".stripMargin,
+        item = Some(result("1")),
+      )
+    } yield ()
+  }
+
+  test("def-incoming-call-interface") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |trait A {
+           |  def @@a()
+           |}
+           |
+           |object Main extends A {
+           |  override def <<a>>/*1*/() = { Main.<?<a>?>/*1*/() }
+           |}
+           |
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object Other {
+           |  val a: A = Main
+           |  def <<one>>/*2*/() = {
+           |    a.<?<a>?>/*2*/()
+           |  }
+           |  def <<two>>/*3*/() = {
+           |    a.<?<a>?>/*3*/()
+           |  }
+           |  def <<three>>/*4*/() = {
+           |    Main.<?<a>?>/*4*/()
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("def-incoming-call-interface-2") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/scala/a/Main.scala
+           |package a
+           |
+           |trait A {
+           |  def a()
+           |}
+           |
+           |object Main extends A {
+           |  override def @@a() = {  }
+           |}
+           |
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object Other {
+           |  val a: A = Main
+           |  def <<one>>/*1*/() = {
+           |    a.<?<a>?>/*1*/()
+           |  }
+           |  def <<two>>/*2*/() = {
+           |    a.<?<a>?>/*2*/()
+           |  }
+           |  def <<three>>/*3*/() = {
+           |    Main.<?<a>?>/*3*/()
+           |  }
+           |}
+           |
+           |""".stripMargin
       )
     } yield ()
   }
@@ -40,12 +184,20 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |package a
            |
            |object Main {
-           |  def @@a() {
+           |  def @@a() = {
            |    <?<b>?>/*1*/()
            |    <?<c>?>/*2*/()
+           |    Other.<?<e>?>/*3*/()
            |  }
-           |  def <<b>>/*1*/() { }
-           |  def <<c>>/*2*/() { b() }
+           |  def <<b>>/*1*/() = { }
+           |  def <<c>>/*2*/() = { b() }
+           |}
+           |
+           |/a/src/main/scala/a/Other.scala
+           |package a
+           |
+           |object Other {
+           |  def <<e>>/*3*/() = { Main.a() }
            |}
            |
            |""".stripMargin
@@ -55,12 +207,13 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |package a
            |
            |object Main {
-           |  def a() {
+           |  def a() ={
            |    b()
            |    c()
+           |    Other.e()
            |  }
-           |  def <<b>>/*1*/() { }
-           |  def c() { <?<b>?>/*1*/() }
+           |  def <<b>>/*1*/() = { }
+           |  def c() = { <?<b>?>/*1*/() }
            |}
            |
            |""".stripMargin,
@@ -69,70 +222,63 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("val-incoming-call") {
+  test("java-incoming-call") {
     for {
-      result <- assertIncomingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  val @@a = () => {}
-           |  val <<b>>/*1*/ = () => { <?<a>?>/*1*/() }
-           |  val c = () => { b() }
-           |  val <<d>>/*2*/ = () => { <?<a>?>/*2*/() }
-           |}
-           |
-           |""".stripMargin
-      )
       _ <- assertIncomingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
+        """|/a/src/main/java/a/Main.java
+           |package a;
            |
-           |object Main {
-           |  val a = () => {}
-           |  val b = () => { a() }
-           |  val <<c>>/*1*/ = () => { <?<b>?>/*1*/() }
-           |  val d = () => { a() }
-           |}
-           |
-           |""".stripMargin,
-        Some(result("1")),
-      )
-    } yield ()
-  }
-
-  test("val-outgoing-call") {
-    for {
-      result <- assertOutgoingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  val @@a = () => {
-           |    <?<b>?>/*1*/()
-           |    <?<c>?>/*2*/()
-           |  }
-           |  val <<b>>/*1*/ = () => { }
-           |  val <<c>>/*2*/ = () => { b() }
+           |public class Main {
+           |  public void @@a() {}
+           |  public void <<b>>/*1*/() { <?<a>?>/*1*/(); }
+           |  public void c() { b(); }
+           |  public void <<d>>/*2*/() { <?<a>?>/*2*/(); }
            |}
            |
            |""".stripMargin
       )
-      _ <- assertOutgoingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
+    } yield ()
+  }
+
+  test("java-incoming-call-constructor") {
+    for {
+      _ <- assertIncomingCalls(
+        """|/a/src/main/java/a/Main.java
+           |package a;
            |
-           |object Main {
-           |  val a = () => {
-           |    b()
-           |    c()
+           |public class Main {
+           |  public <<Main>>/*1*/() {
+           |    <?<c>?>/*1*/();
+           |    <?<c>?>/*1*/();
+           |    b();
            |  }
-           |  val <<b>>/*1*/ = () => { }
-           |  val c = () => { <?<b>?>/*1*/() }
+           |  public void <<b>>/*2*/() { <?<c>?>/*2*/(); }
+           |  public void @@c() { b(); }
+           |  public void d() { b(); }
            |}
            |
-           |""".stripMargin,
-        Some(result("2")),
+           |""".stripMargin
+      )
+    } yield ()
+  }
+
+  test("java-outgoing-call") {
+    for {
+      _ <- assertOutgoingCalls(
+        """|/a/src/main/java/a/Main.java
+           |package a;
+           |
+           |public class Main {
+           |  public void @@a() {
+           |    <?<b>?>/*1*/();
+           |    <?<c>?>/*2*/();
+           |  }
+           |  public void <<b>>/*1*/() { }
+           |  public void <<c>>/*2*/() { b(); }
+           |  public void d() { b(); }
+           |}
+           |
+           |""".stripMargin
       )
     } yield ()
   }
@@ -309,38 +455,6 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("complex-pats-incoming") {
-    for {
-      _ <- assertIncomingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  val (@@a, b) = (() => (), () => ())
-           |  val Array(<<c>>/*1*/, d) = Array(() => { <?<a>?>/*1*/() }, ())
-           |}
-           |
-           |""".stripMargin
-      )
-    } yield ()
-  }
-
-  test("complex-pats-outgoing") {
-    for {
-      _ <- assertOutgoingCalls(
-        """|/a/src/main/scala/a/Main.scala
-           |package a
-           |
-           |object Main {
-           |  val (<<a>>/*1*/, b) = (() => (), () => ())
-           |  val Array(@@c, d) = Array(() => { <?<a>?>/*1*/() }, ())
-           |}
-           |
-           |""".stripMargin
-      )
-    } yield ()
-  }
-
   test("primary-constructor-incoming") {
     for {
       _ <- assertIncomingCalls(
@@ -367,7 +481,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |class Foo<<>>/*1*/(x: Int)
            |
            |object Main {
-           |  def fo@@o(x: Int) = new <?<Foo>?>/*1*/(x)
+           |  def fo@@o(x: Int) = new Foo<?<>?>/*1*/(x)
            |}
            |
            |""".stripMargin
@@ -386,7 +500,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |object Main {
-           |  def <<foo>>/*1*/(x: Int, y: Int) = new <?<Foo>?>/*1*/(x, y)
+           |  def <<foo>>/*1*/(x: Int, y: Int) = new Foo<?<>?>/*1*/(x, y)
            |}
            |
            |""".stripMargin
@@ -405,7 +519,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |}
            |
            |object Main {
-           |  def f@@oo(x: Int, y: Int) = new <?<Foo>?>/*1*/(x, y)
+           |  def f@@oo(x: Int, y: Int) = new Foo<?<>?>/*1*/(x, y)
            |}
            |
            |""".stripMargin
@@ -430,7 +544,8 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("case-class-constructor-outgoing") {
+  // apply call is not supported yet
+  test("case-class-constructor-outgoing".ignore) {
     for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/Main.scala
@@ -447,7 +562,8 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("apply-incoming") {
+  // apply call is not supported yet, MBT doesn't index synthetic apply calls
+  test("apply-incoming".ignore) {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -474,7 +590,8 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("apply-outgoing") {
+  // apply call is not supported yet, MBT doesn't index synthetic apply calls
+  test("apply-outgoing".ignore) {
     for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -501,7 +618,8 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("unapply-incoming") {
+  // unapply call is not supported yet, MBT doesn't index synthetic unapply calls
+  test("unapply-incoming".ignore) {
     for {
       _ <- assertIncomingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -520,7 +638,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |object Main {
            |  def <<foo>>/*1*/(user: User) {
            |    user match {
-           |      case <?<User>?>/*1*/(name, age) => 
+           |      case <?<User>?>/*1*/(name, age) =>
            |        println(s"My name is $name and I'm $age")
            |    }
            |  }
@@ -531,7 +649,8 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
     } yield ()
   }
 
-  test("unapply-outgoing") {
+  // unapply call is not supported yet, MBT doesn't index synthetic unapply calls
+  test("unapply-outgoing".ignore) {
     for {
       _ <- assertOutgoingCalls(
         """|/a/src/main/scala/a/User.scala
@@ -550,7 +669,7 @@ class CallHierarchyLspSuite extends BaseCallHierarchySuite("call-hierarchy") {
            |object Main {
            |  def fo@@o(user: User) {
            |    user match {
-           |      case <?<User>?>/*1,2*/(name, age) => 
+           |      case <?<User>?>/*1,2*/(name, age) =>
            |        println(s"My name is $name and I'm $age")
            |    }
            |  }

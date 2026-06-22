@@ -304,6 +304,40 @@ class MbtReferenceProvider(
     (result.toList, primarySymbol)
   }
 
+  def enclosingOccurrences(
+      queryRange: l.Position,
+      path: AbsolutePath,
+  ): Seq[s.SymbolOccurrence] = {
+    val requestDoc = cache.indexSingle(path)
+    this.enclosingOccurrences(requestDoc, queryRange)
+  }
+
+  /**
+   * Find all method reference occurrences within a given range.
+   * Used for outgoing calls to find all methods called within a method body.
+   * Returns tuples of (referenceOccurrence, Option[definitionLocation]).
+   */
+  def methodReferencesInRange(
+      path: AbsolutePath,
+      enclosingRange: l.Range,
+  ): Seq[(s.SymbolOccurrence, Option[l.Location])] = {
+    val doc = cache.indexSingle(path)
+    val definitions = doc.occurrences
+      .filter(occ => occ.role.isDefinition && occ.symbol.endsWith(")."))
+      .flatMap(occ => occ.range.map(r => occ.symbol -> r.toLocation(doc.uri)))
+      .toMap
+    doc.occurrences
+      .filter { occ =>
+        occ.symbol.isGlobal &&
+        occ.symbol.endsWith(").") &&
+        occ.role.isReference &&
+        occ.range.exists(range => enclosingRange.encloses(range.toLsp))
+      }
+      .map { occ =>
+        (occ, definitions.get(occ.symbol))
+      }
+  }
+
   def references(params: ReferenceParams): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
@@ -333,6 +367,7 @@ class MbtReferenceProvider(
                 requestDoc,
                 enclosingOccurrences,
                 taskProgress,
+                params.getContext().isIncludeDeclaration(),
               )
             },
         )
@@ -358,9 +393,30 @@ class MbtReferenceProvider(
       requestDoc: s.TextDocument,
       enclosingOccurrences: Seq[s.SymbolOccurrence],
       taskProgress: TaskProgress,
+      includeDefinition: Boolean,
   ): List[ReferencesResult] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    val token = params.getPartialResultToken()
+    val token = Option(params.getPartialResultToken())
+    doReferences(
+      timer,
+      path,
+      token,
+      requestDoc,
+      enclosingOccurrences,
+      taskProgress,
+      includeDefinition,
+    )
+  }
+
+  private def doReferences(
+      timer: Timer,
+      path: AbsolutePath,
+      token: Option[JEither[String, Integer]],
+      requestDoc: s.TextDocument,
+      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      taskProgress: TaskProgress,
+      includeDefinition: Boolean,
+  ): List[ReferencesResult] = {
 
     val superMethods = for {
       enclosing <- enclosingOccurrences
@@ -392,12 +448,13 @@ class MbtReferenceProvider(
       return protobufReferences.references(
         path,
         timer,
-        params,
         requestDoc,
         enclosingOccurrences,
         toQuerySymbols,
         taskProgress,
         cache.index,
+        token,
+        includeDefinition,
       )
     }
 
@@ -450,16 +507,17 @@ class MbtReferenceProvider(
         // Exclude definition occurrences for alternate symbols. For example, when
         // doing find-refs on a class symbol, we want usages of the class
         // constructor but not definitions of those constructors.
-        if occ.role.isReference || occ.symbol == matchSymbol
+        if occ.role.isReference || (occ.symbol == matchSymbol && includeDefinition)
         x <- referenceResults.get(matchSymbol)
       } {
         val location = range.toLocation(doc.uri)
-        if (token == null) {
-          x += location
-        } else {
-          languageClient.notifyProgress(
-            new l.ProgressParams(token, JEither.forRight(location))
-          )
+        token match {
+          case Some(token) =>
+            languageClient.notifyProgress(
+              new l.ProgressParams(token, JEither.forRight(location))
+            )
+          case None =>
+            x += location
         }
       }
     }

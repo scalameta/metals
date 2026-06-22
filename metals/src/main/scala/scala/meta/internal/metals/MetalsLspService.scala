@@ -698,14 +698,14 @@ abstract class MetalsLspService(
   protected val callHierarchyProvider: CallHierarchyProvider =
     new CallHierarchyProvider(
       folder,
-      semanticdbs,
       definitionProvider,
-      referencesProvider,
       clientConfig.icons(),
       () => compilers,
       trees,
+      buffers,
       buildTargets,
-      supermethods,
+      mbtReferenceProvider,
+      workDoneProgress,
     )
 
   protected val typeHierarchyProvider: TypeHierarchyProvider =
