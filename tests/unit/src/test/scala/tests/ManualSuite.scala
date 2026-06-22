@@ -109,6 +109,26 @@ class ManualSuite extends BaseManualSuite {
       case Some("true")  => true
       case _             => configuredBspLauncher.isEmpty && writeBspConnection
     }
+  private val awaitEditorNotifications =
+    !prop("metals.manual.awaitEditorNotifications").contains("false")
+  private val afterOpenDelay =
+    prop("metals.manual.afterOpenDelay").map(Duration(_)).getOrElse(Duration.Zero)
+  private val afterDefinitionOpenDelay =
+    prop("metals.manual.afterDefinitionOpenDelay")
+      .map(Duration(_))
+      .getOrElse(Duration.Zero)
+  private val cleanDiagnosticsTimeout =
+    prop("metals.manual.cleanDiagnosticsTimeout")
+      .map(Duration(_))
+      .getOrElse(Duration.Zero)
+  private val javaSymbolLoader =
+    prop("metals.manual.javaSymbolLoader") match {
+      case Some("javac-sourcepath")         => JavaSymbolLoaderConfig.javacSourcepath
+      case Some("turbine-classpath") | None =>
+        JavaSymbolLoaderConfig.turbineClasspath
+      case Some(other) =>
+        sys.error(s"Invalid metals.manual.javaSymbolLoader: $other")
+    }
 
   override def preferredBuildServer: Option[String] = Some(bspName)
 
@@ -118,12 +138,20 @@ class ManualSuite extends BaseManualSuite {
   override def munitTimeout: Duration =
     prop("metals.manual.timeout").map(Duration(_)).getOrElse(super.munitTimeout)
 
+  override def awaitInitialized: Boolean =
+    !prop("metals.manual.awaitInitialized").contains("false")
+
+  override def buildServerConnectionTimeout: Duration =
+    prop("metals.manual.buildServerConnectionTimeout")
+      .map(Duration(_))
+      .getOrElse(super.buildServerConnectionTimeout)
+
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
       preferredBuildServer = preferredBuildServer,
       fallbackClasspath = FallbackClasspathConfig.mbt,
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      javaSymbolLoader = JavaSymbolLoaderConfig.turbineClasspath,
+      javaSymbolLoader = javaSymbolLoader,
       presentationCompilerDiagnostics = true,
       definitionIndexStrategy = DefinitionIndexStrategy.classpath,
       fallbackSourcepath = FallbackSourcepathConfig.allSources,
@@ -149,6 +177,9 @@ class ManualSuite extends BaseManualSuite {
         s"Missing BSP launcher at $bspLauncher. $installCommand",
       )
     }
+    manualLog(
+      s"workspace=${workspace.toNIO} bspName=$bspName writeBspConnection=$writeBspConnection runStripeBspSetup=$runStripeBspSetup"
+    )
 
     val bspDir = workspace.resolve(".bsp").toNIO
     val workspacePath = workspace.toNIO.toString
@@ -172,6 +203,7 @@ class ManualSuite extends BaseManualSuite {
         new Gson().toJson(details),
         StandardCharsets.UTF_8,
       )
+      manualLog(s"wrote .bsp/stripe-bsp.json for $syncTarget")
     }
 
     if (runStripeBspSetup) {
@@ -182,6 +214,7 @@ class ManualSuite extends BaseManualSuite {
 
   private def runStripeBsp(workspace: AbsolutePath, action: String): Unit = {
     val workspacePath = workspace.toNIO.toString
+    manualLog(s"stripe-bsp $action start for $syncTarget")
     val exitCode =
       Process(
         List(
@@ -195,6 +228,7 @@ class ManualSuite extends BaseManualSuite {
         workspace.toFile,
       ).!
     assertEquals(exitCode, 0)
+    manualLog(s"stripe-bsp $action done")
   }
 
   private def openDefinition(
@@ -204,7 +238,9 @@ class ManualSuite extends BaseManualSuite {
       generatedOnly: Boolean,
   ): Future[Unit] =
     for {
-      locations <- server.definitionSubstringQuery(filename, query)
+      locations <- logged(s"definition $filename $query")(
+        server.definitionSubstringQuery(filename, query)
+      )
       uri = locations
         .map(_.getUri)
         .find(uri =>
@@ -219,7 +255,9 @@ class ManualSuite extends BaseManualSuite {
               locations.map(_.getUri).mkString(", ")
           )
         )
-      _ <- server.didOpenAndFocus(uri)
+      _ = manualLog(s"definition selected $uri")
+      _ <- openAndFocus(server, uri, "definition")
+      _ <- sleep(afterDefinitionOpenDelay)
     } yield ()
 
   inDirectory(
@@ -229,37 +267,46 @@ class ManualSuite extends BaseManualSuite {
   ).test("bsp-generated-source-diagnostics") { case (server, client) =>
     val path = sourcePath
     for {
-      _ <- server.didOpenAndFocus(path)
-      _ <- Future.traverse(extraOpenFiles)(server.didOpenAndFocus)
-      _ <- server.didFocus(path)
-      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- openAndFocus(server, path, "source")
+      _ <- Future.traverse(extraOpenFiles) { file =>
+        openAndFocus(server, file, "extra file")
+      }
+      _ <- sleep(afterOpenDelay)
+      _ <- logged(s"focus source $path")(server.didFocus(path))
+      _ <- assertCleanDiagnostics(client, "before navigation")
       _ <- Future.traverse(definitionSpecs) { spec =>
         for {
           _ <- openDefinition(server, spec.file, spec.query, spec.generatedOnly)
-          _ <- server.didFocus(path)
-          _ = assertNoDiff(client.workspaceDiagnostics, "")
+          _ <- logged(s"return focus $path")(server.didFocus(path))
+          _ <- assertCleanDiagnostics(client, s"after definition ${spec.query}")
         } yield ()
       }
       _ <- Future.traverse(referenceQueries) { spec =>
         for {
-          locations <- server.referencesSubquery(spec.file, spec.query)
+          locations <- logged(s"references ${spec.file} ${spec.query}")(
+            server.referencesSubquery(spec.file, spec.query)
+          )
           _ = assert(
             locations.size >= spec.minLocations,
             s"Expected at least ${spec.minLocations} references for " +
               s"`${spec.query}` in `${spec.file}`, got ${locations.size}",
           )
-          _ = assertNoDiff(client.workspaceDiagnostics, "")
+          _ = manualLog(s"references found ${locations.size}")
+          _ <- assertCleanDiagnostics(client, s"after references ${spec.query}")
         } yield ()
       }
       _ <- Future.traverse(implementationQueries) { spec =>
         for {
-          locations <- server.implementationsSubquery(spec.file, spec.query)
+          locations <- logged(s"implementations ${spec.file} ${spec.query}")(
+            server.implementationsSubquery(spec.file, spec.query)
+          )
           _ = assert(
             locations.size >= spec.minLocations,
             s"Expected at least ${spec.minLocations} implementations for " +
               s"`${spec.query}` in `${spec.file}`, got ${locations.size}",
           )
-          _ = assertNoDiff(client.workspaceDiagnostics, "")
+          _ = manualLog(s"implementations found ${locations.size}")
+          _ <- assertCleanDiagnostics(client, s"after implementations ${spec.query}")
         } yield ()
       }
     } yield ()
@@ -267,6 +314,47 @@ class ManualSuite extends BaseManualSuite {
 
   private def indexedProperties(prefix: String): List[String] =
     (1 to 10).flatMap(index => prop(s"$prefix.$index")).toList
+
+  private def openAndFocus(
+      server: TestingServer,
+      path: String,
+      label: String,
+  ): Future[Unit] =
+    if (awaitEditorNotifications) {
+      logged(s"open $label $path")(server.didOpenAndFocus(path))
+    } else {
+      manualLog(s"send: open $label $path")
+      server.didOpen(path)
+      server.didFocus(path)
+      manualLog(s"sent: open $label $path")
+      Future.unit
+    }
+
+  private def sleep(duration: Duration): Future[Unit] =
+    if (duration.length <= 0) Future.unit
+    else logged(s"sleep $duration")(Future(Thread.sleep(duration.toMillis)))
+
+  private def assertCleanDiagnostics(
+      client: TestingClient,
+      label: String,
+  ): Future[Unit] = Future {
+    manualLog(s"assert diagnostics $label")
+    if (cleanDiagnosticsTimeout.length <= 0) {
+      assertNoDiff(client.workspaceDiagnostics, "")
+    } else {
+      val deadline = System.nanoTime() + cleanDiagnosticsTimeout.toNanos
+      var diagnostics = client.workspaceDiagnostics
+      while (diagnostics.nonEmpty && System.nanoTime() < deadline) {
+        Thread.sleep(1000)
+        diagnostics = client.workspaceDiagnostics
+      }
+      if (diagnostics.isEmpty) {
+        manualLog(s"diagnostics clean $label")
+      } else {
+        assertNoDiff(diagnostics, "")
+      }
+    }
+  }
 
   private def querySpecs(prefix: String, defaultFile: String): List[QuerySpec] =
     (1 to 10).flatMap { index =>
