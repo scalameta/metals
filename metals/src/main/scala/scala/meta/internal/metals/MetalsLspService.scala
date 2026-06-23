@@ -787,8 +787,6 @@ abstract class MetalsLspService(
       .traverse(paths.distinct) { path =>
         if (path.isScalaFilename && buffers.contains(path)) {
           Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
-        } else if (path.isJavaFilename && buffers.contains(path)) {
-          Future(javaTrees.didChange(path))
         } else {
           Future.successful(())
         }
