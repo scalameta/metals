@@ -114,8 +114,7 @@ class GenerateDefaultConstructor(
           (pos.getLine() == position.getLine() &&
             pos.getCharacter() > position.getCharacter())
       )
-      .sortBy(pos => (pos.getLine(), pos.getCharacter()))
-      .headOption
+      .minByOption(pos => (pos.getLine(), pos.getCharacter()))
   }
 
   private def constructorModifier(cls: JavaClassInfo): String = {

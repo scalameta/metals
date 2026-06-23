@@ -299,15 +299,16 @@ class JavaTrees(buffers: Buffers) {
         startPos: Long,
         endPos: Long,
     ): Option[l.Range] = {
-      for {
-        startOffset <- openingBraceOffset(startPos, endPos).map(_ + 1L)
-        endOffset <- closingBraceOffset(startPos, endPos)
-      } yield Positions.toLspRange(
-        lineMap,
-        startOffset,
-        endOffset,
-        cached.text,
-      )
+      if (endPos < 0) None
+      else
+        openingBraceOffset(startPos, endPos).map { openBrace =>
+          Positions.toLspRange(
+            lineMap,
+            openBrace + 1L,
+            endPos - 1L,
+            cached.text,
+          )
+        }
     }
 
     private def openingBraceOffset(
@@ -324,25 +325,6 @@ class JavaTrees(buffers: Buffers) {
             result = Some(offset.toLong)
           }
           offset += 1
-        }
-        result
-      }
-    }
-
-    private def closingBraceOffset(
-        startPos: Long,
-        endPos: Long,
-    ): Option[Long] = {
-      if (startPos < 0 || endPos < 0) None
-      else {
-        var offset = Math.min(endPos.toInt - 1, cached.text.length() - 1)
-        val start = startPos.toInt
-        var result: Option[Long] = None
-        while (offset >= start && result.isEmpty) {
-          if (cached.text.charAt(offset) == '}') {
-            result = Some(offset.toLong)
-          }
-          offset -= 1
         }
         result
       }
