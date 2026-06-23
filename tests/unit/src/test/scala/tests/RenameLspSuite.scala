@@ -503,6 +503,44 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
     newName = "Renamed",
   )
 
+  // Renames started from the *declaration* of a public Java symbol (the scenario
+  // in https://github.com/scalameta/metals/issues/8495), cross-file.
+  renamed(
+    "java-public-field-from-definition",
+    """|/a/src/main/java/a/Upstream.java
+       |package a;
+       |public class Upstream {
+       |  public static String <<gree@@ting>> = "Hello";
+       |}
+       |/a/src/main/java/a/Downstream.java
+       |package a;
+       |public class Downstream {
+       |  public static void main(String[] args) {
+       |    System.out.println(Upstream.<<greeting>>);
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "salutation",
+  )
+
+  renamed(
+    "java-public-class-from-definition",
+    """|/a/src/main/java/a/Upstream.java
+       |package a;
+       |public class <<Upstr@@eam>> {
+       |  public static String greeting = "Hello";
+       |}
+       |/a/src/main/java/a/Downstream.java
+       |package a;
+       |public class Downstream {
+       |  public static void main(String[] args) {
+       |    System.out.println(<<Upstream>>.greeting);
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "Greeter",
+  )
+
   renamed(
     "compile-error",
     """|/a/src/main/scala/a/Main.scala

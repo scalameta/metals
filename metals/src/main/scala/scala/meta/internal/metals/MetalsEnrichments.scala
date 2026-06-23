@@ -982,18 +982,20 @@ object MetalsEnrichments
     def inString(text: String): Option[String] = {
       var i = 0
       var max = 0
-      def isNewline = text.charAt(i) == '\n'
-      while (max < range.startLine) {
+      // Guard against `text` being empty or shorter than the range expects
+      // (e.g. a stale on-disk SemanticDB document that carries no text).
+      def isNewline = i < text.length && text.charAt(i) == '\n'
+      while (max < range.startLine && i < text.length) {
         if (isNewline) max += 1
         i += 1
       }
       val start = i + range.startCharacter
-      while (max < range.endLine) {
+      while (max < range.endLine && i < text.length) {
         if (isNewline) max += 1
         i += 1
       }
       val end = i + range.endCharacter
-      if (start < text.size && end <= text.size)
+      if (max == range.endLine && start < text.size && end <= text.size)
         Some(text.substring(start, end))
       else
         None

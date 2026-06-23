@@ -20,8 +20,10 @@ import scala.meta.io.AbsolutePath
 /**
  * Produces SemanticDBs on-demand by using the presentation compiler.
  *
- * Only used to provide navigation inside external library sources, not used to compile
- * workspace sources.
+ * Normally only used to provide navigation inside external library sources, not
+ * to compile workspace sources. The exception is MBT mode, where the build
+ * server does not emit on-disk SemanticDB for workspace sources, so we compute
+ * it interactively here as well.
  *
  * Uses persistent storage to keep track of what external source file is associated
  * with what build target (to determine classpath and compiler options).
@@ -36,6 +38,7 @@ final class InteractiveSemanticdbs(
     buffers: Buffers,
     scalaCliServers: => ScalaCliServers,
     featureFlags: FeatureFlagProvider,
+    isMbt: () => Boolean = () => false,
 ) extends Cancelable
     with Semanticdbs {
 
@@ -87,6 +90,7 @@ final class InteractiveSemanticdbs(
           doesNotBelongToBuildTarget && buffers.contains(
             source
           ) || // standalone files that are opened
+          isMbt() || // MBT build server does not emit on-disk SemanticDB
           scalaCliServers.loadedExactly(source) || // scala-cli single files
           sourceText.exists(
             _.startsWith(Shebang.shebang)

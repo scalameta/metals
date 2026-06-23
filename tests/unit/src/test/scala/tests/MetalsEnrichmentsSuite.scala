@@ -6,10 +6,22 @@ import java.nio.file.NoSuchFileException
 import java.util.zip.ZipOutputStream
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
 class MetalsEnrichmentsSuite extends BaseSuite {
+
+  test("in-string-empty-text") {
+    // A stale on-disk SemanticDB may carry no text; `inString` must not throw.
+    val range = s.Range(2, 4, 2, 9)
+    assertEquals(range.inString(""), None)
+    assertEquals(range.inString("too\nshort"), None)
+    assertEquals(
+      s.Range(1, 4, 1, 9).inString("first\nhello world"),
+      Some("o wor"),
+    )
+  }
 
   test("create-directories") {
     val tmpDir = Files.createTempDirectory("metals-enrichment")

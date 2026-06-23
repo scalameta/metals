@@ -19,9 +19,13 @@ import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.metals.ReferenceProvider
+import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.mbt.MbtReferenceProvider
+import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.internal.search.SymbolHierarchyOps
@@ -57,6 +61,7 @@ import org.eclipse.lsp4j.{Range => LSPRange}
 
 final class RenameProvider(
     referenceProvider: ReferenceProvider,
+    mbtReferenceProvider: MbtReferenceProvider,
     implementationProvider: ImplementationProvider,
     symbolHierarchyOps: SymbolHierarchyOps,
     definitionProvider: DefinitionProvider,
@@ -66,10 +71,27 @@ final class RenameProvider(
     compilations: Compilations,
     compilers: Compilers,
     clientConfig: ClientConfiguration,
+    userConfig: () => UserConfiguration,
     trees: Trees,
 )(implicit executionContext: ExecutionContext, reportContext: ReportContext) {
 
   private val awaitingSave = new ConcurrentLinkedQueue[() => Future[Unit]]
+
+  /**
+   * Find references for rename. In MBT mode the standard [[ReferenceProvider]]
+   * cannot discover cross-file references for workspace sources (the build
+   * server emits no on-disk SemanticDB and per-target presentation compilers
+   * don't see sibling sources), so we delegate to the MBT reference provider,
+   * mirroring how the `textDocument/references` request is dispatched.
+   */
+  private def findReferences(
+      params: ReferenceParams,
+      findRealRange: AdjustRange = noAdjustRange,
+      includeSynthetics: Synthetic => Boolean = _ => true,
+  ): Future[List[ReferencesResult]] =
+    if (userConfig().referenceProvider.isMbt)
+      mbtReferenceProvider.references(params)
+    else referenceProvider.references(params, findRealRange, includeSynthetics)
 
   def prepareRename(
       params: TextDocumentPositionParams,
@@ -174,13 +196,29 @@ final class RenameProvider(
                     textDocument: TextDocument,
                     occ: SymbolOccurrence,
                 ): Boolean = {
-                  def realName = occ.symbol.desc.name.value
+                  val desc = occ.symbol.desc
+                  // A Java constructor occurrence sits on the class name, so its
+                  // "real name" for the purpose of this check is the class name,
+                  // not `<init>`.
+                  def realName =
+                    if (desc.isMethod && desc.name.value == "<init>")
+                      occ.symbol.owner.desc.name.value
+                    else desc.name.value
+                  // The SemanticDB document may carry no text (e.g. a stale
+                  // on-disk document, or one produced in MBT mode); fall back to
+                  // the current source so the check still runs instead of
+                  // silently treating the symbol as already renamed.
+                  val text =
+                    if (textDocument.text.nonEmpty) textDocument.text
+                    else source.toInputFromBuffers(buffers).text
                   def foundName =
                     occ.range
-                      .flatMap(rng => rng.inString(textDocument.text))
+                      .flatMap(rng => rng.inString(text))
                       .map(_.stripBackticks.stripSuffix(","))
                   val notRenamed =
-                    occ.symbol.isLocal || foundName.contains(realName)
+                    occ.symbol.isLocal || text.isEmpty || foundName.contains(
+                      realName
+                    )
                   if (!notRenamed)
                     scribe.debug(s"Expected $realName, but found $foundName")
                   notRenamed
@@ -219,19 +257,18 @@ final class RenameProvider(
                     }
                     isJava = definitionPath.isJava
                     currentReferences =
-                      referenceProvider
-                        .references(
-                          /**
-                           * isJava - in Java we can include declarations safely and we
-                           * also need to include contructors.
-                           */
-                          toReferenceParams(
-                            txtParams,
-                            includeDeclaration = isJava,
-                          ),
-                          findRealRange = AdjustRange(findRealRange(newName)),
-                          includeSynthetic,
-                        )
+                      findReferences(
+                        /**
+                         * isJava - in Java we can include declarations safely and we
+                         * also need to include contructors.
+                         */
+                        toReferenceParams(
+                          txtParams,
+                          includeDeclaration = isJava,
+                        ),
+                        findRealRange = AdjustRange(findRealRange(newName)),
+                        includeSynthetic,
+                      )
                         .map { refs =>
                           scribe.debug(s"Found ${refs.size} basic references")
                           refs.flatMap(_.locations)
@@ -457,11 +494,10 @@ final class RenameProvider(
       // no companion objects in Java files
       if loc.getUri().isScalaFilename
     } yield {
-      referenceProvider
-        .references(
-          toReferenceParams(loc, includeDeclaration = false),
-          findRealRange = AdjustRange(findRealRange(newName)),
-        )
+      findReferences(
+        toReferenceParams(loc, includeDeclaration = false),
+        findRealRange = AdjustRange(findRealRange(newName)),
+      )
         .map(_.flatMap(_.locations :+ loc))
     }
     Future.sequence(results).map(_.flatten.toSeq)
@@ -512,12 +548,11 @@ final class RenameProvider(
             implLoc <- implLocs
             locParams = toReferenceParams(implLoc, includeDeclaration = true)
           } yield {
-            referenceProvider
-              .references(
-                locParams,
-                findRealRange = AdjustRange(findRealRange(newName)),
-                includeSynthetic,
-              )
+            findReferences(
+              locParams,
+              findRealRange = AdjustRange(findRealRange(newName)),
+              includeSynthetic,
+            )
               .map(_.flatMap(_.locations))
           }
           Future.sequence(result)
