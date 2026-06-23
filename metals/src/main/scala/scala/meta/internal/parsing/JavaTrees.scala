@@ -10,6 +10,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.jpc.Positions
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
@@ -157,27 +158,6 @@ class JavaTrees(buffers: Buffers) {
 
     def result: Option[EnclosingMethod] = _result
 
-    private def positionContains(
-        startPos: Long,
-        endPos: Long,
-    ): Boolean = {
-      if (startPos < 0 || endPos < 0) false
-      else {
-        val startLine = lineMap.getLineNumber(startPos).toInt - 1
-        val endLine = lineMap.getLineNumber(endPos).toInt - 1
-        val startCol = lineMap.getColumnNumber(startPos).toInt - 1
-        val endCol = lineMap.getColumnNumber(endPos).toInt - 1
-
-        val targetLine = targetPos.getLine()
-        val targetCol = targetPos.getCharacter()
-
-        if (targetLine < startLine || targetLine > endLine) false
-        else if (targetLine == startLine && targetCol < startCol) false
-        else if (targetLine == endLine && targetCol > endCol) false
-        else true
-      }
-    }
-
     override def visitMethod(
         node: MethodTree,
         p: Unit,
@@ -185,7 +165,7 @@ class JavaTrees(buffers: Buffers) {
       val startPos = sourcePositions.getStartPosition(cu, node)
       val endPos = sourcePositions.getEndPosition(cu, node)
 
-      if (positionContains(startPos, endPos)) {
+      if (positionContains(lineMap, targetPos, startPos, endPos)) {
         val methodName = node.getName().toString()
         val displayName =
           if (methodName == "<init>") {
@@ -220,16 +200,8 @@ class JavaTrees(buffers: Buffers) {
             nameEndPos,
             displayName,
           )
-        val bodyRange = new l.Range(
-          new l.Position(
-            lineMap.getLineNumber(startPos).toInt - 1,
-            lineMap.getColumnNumber(startPos).toInt - 1,
-          ),
-          new l.Position(
-            lineMap.getLineNumber(endPos).toInt - 1,
-            lineMap.getColumnNumber(endPos).toInt - 1,
-          ),
-        )
+        val bodyRange =
+          Positions.toLspRange(lineMap, startPos, endPos, cached.text)
         nameRange.foreach { range =>
           _result = Some(EnclosingMethod(range, bodyRange, source))
         }
@@ -268,7 +240,11 @@ class JavaTrees(buffers: Buffers) {
                 endPos,
                 name,
               )
-              bodyRange <- bodyRange(startPos, endPos)
+              nameEndOffset = lineMap.getPosition(
+                nameRange.getEnd().getLine() + 1L,
+                nameRange.getEnd().getCharacter() + 1L,
+              )
+              bodyRange <- bodyRange(nameEndOffset, endPos)
             } {
               val members =
                 node
@@ -326,9 +302,11 @@ class JavaTrees(buffers: Buffers) {
       for {
         startOffset <- openingBraceOffset(startPos, endPos).map(_ + 1L)
         endOffset <- closingBraceOffset(startPos, endPos)
-      } yield new l.Range(
-        toPosition(lineMap, startOffset.toInt),
-        toPosition(lineMap, endOffset.toInt),
+      } yield Positions.toLspRange(
+        lineMap,
+        startOffset,
+        endOffset,
+        cached.text,
       )
     }
 
@@ -376,13 +354,7 @@ class JavaTrees(buffers: Buffers) {
       val startPos = sourcePositions.getStartPosition(cu, tree)
       val endPos = sourcePositions.getEndPosition(cu, tree)
       if (startPos < 0 || endPos < 0) None
-      else
-        Some(
-          new l.Range(
-            toPosition(lineMap, startPos.toInt),
-            toPosition(lineMap, endPos.toInt),
-          )
-        )
+      else Some(Positions.toLspRange(lineMap, startPos, endPos, cached.text))
     }
   }
 
@@ -409,16 +381,6 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
-  private def toPosition(
-      lineMap: LineMap,
-      offset: Int,
-  ): l.Position = {
-    new l.Position(
-      lineMap.getLineNumber(offset).toInt - 1,
-      lineMap.getColumnNumber(offset).toInt - 1,
-    )
-  }
-
   private def findNameRange(
       lineMap: LineMap,
       text: String,
@@ -432,15 +394,21 @@ class JavaTrees(buffers: Buffers) {
       val searchEnd = Math.min(endPos.toInt, text.length())
       var result: Option[l.Range] = None
       while (offset < searchEnd && result.isEmpty) {
+        val endOffset = offset + name.length()
+        val isWordBoundary =
+          endOffset >= text.length() ||
+            !Character.isJavaIdentifierPart(text.charAt(endOffset))
         if (
           Character.isJavaIdentifierStart(text.charAt(offset)) &&
-          text.startsWith(name, offset)
+          text.startsWith(name, offset) &&
+          isWordBoundary
         ) {
-          val endOffset = offset + name.length()
           result = Some(
-            new l.Range(
-              toPosition(lineMap, offset),
-              toPosition(lineMap, endOffset),
+            Positions.toLspRange(
+              lineMap,
+              offset.toLong,
+              endOffset.toLong,
+              text,
             )
           )
         }
