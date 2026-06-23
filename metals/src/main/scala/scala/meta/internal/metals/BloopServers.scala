@@ -5,12 +5,13 @@ import java.io.File
 import java.io.IOException
 import java.io.OutputStream
 import java.lang.management.ManagementFactory
-import java.net.ConnectException
 import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
@@ -86,12 +87,108 @@ final class BloopServers(
     result
   }
 
+  /**
+   * Stop a Bloop server that reported itself as running but never answered, so
+   * the next connection attempt can cold-start a fresh one.
+   *
+   * No-op unless this connection reused a pre-existing server: a server we just
+   * started that fails to come up is a startup problem, not a wedge, and exiting
+   * it would only loop. `BloopRifle.exit` sends a synchronous `ng-stop` over the
+   * same (possibly stuck) socket, so we run it off the calling thread and bound
+   * it with a timeout. The next `connect` only cold-starts a fresh server if the
+   * old one is actually gone (`BloopRifle.check` is socket-based), so we wait for
+   * it to stop and, if it can't be stopped, fail with an actionable message
+   * rather than silently reconnecting to the same wedged process.
+   */
+  private def recoverFromWedgedServer(
+      connectedToPreexistingServer: AtomicBoolean
+  ): Future[Unit] =
+    if (connectedToPreexistingServer.get()) {
+      val config = bloopConfig(userConfig = None, projectRoot = None)
+      scribe.warn(
+        "Bloop server was reported as running but didn't respond; " +
+          "stopping it so a fresh one can be started."
+      )
+      // `ng-stop` is a synchronous call over the same (possibly stuck) socket,
+      // so run it on a dedicated daemon thread: a truly hung server then leaks
+      // only this isolated thread instead of occupying an execution-context one
+      // after recovery has moved on.
+      val exit = new Thread("bloop-exit-on-recovery") {
+        override def run(): Unit =
+          try {
+            BloopRifle.exit(config, bloopWorkingDir.toNIO, bloopLogger)
+            ()
+          } catch {
+            case NonFatal(e) =>
+              scribe.warn("Couldn't cleanly stop the Bloop server.", e)
+          }
+      }
+      exit.setDaemon(true)
+      exit.start()
+      // Wait — without blocking a thread — for the server to actually go down.
+      // `check` is socket-based, so the retry only cold-starts a fresh server
+      // once the old one is really gone; otherwise fail with actionable guidance.
+      awaitBloopStopped(config, System.currentTimeMillis() + 10000).map {
+        case true => ()
+        case false =>
+          // Show the actionable guidance directly: the reconnect path doesn't go
+          // through `ConnectionProvider`, so this is the only message there. Throw
+          // a marker so the initial-connect path doesn't also stack its generic
+          // "failed to connect" message on top of this one.
+          languageClient.showMessage(Messages.UnresponsiveBloopServer.params())
+          throw new AlreadyReportedConnectException(
+            Messages.UnresponsiveBloopServer.message
+          )
+      }
+    } else Future.unit
+
+  /**
+   * Poll `BloopRifle.check` until Bloop is down or `deadline` (epoch ms) passes,
+   * scheduling the delays on `sh` rather than blocking a thread.
+   */
+  private def awaitBloopStopped(
+      config: BloopRifleConfig,
+      deadline: Long,
+  ): Future[Boolean] = {
+    val stopped = Promise[Boolean]()
+    def poll(): Unit =
+      try {
+        if (!BloopRifle.check(config, bloopLogger)) stopped.trySuccess(true)
+        else if (System.currentTimeMillis() >= deadline)
+          stopped.trySuccess(false)
+        else {
+          sh.schedule(
+            new Runnable { def run(): Unit = poll() },
+            100,
+            TimeUnit.MILLISECONDS,
+          )
+          ()
+        }
+      } catch {
+        case NonFatal(e) =>
+          // A scheduled poll runs on `sh`, where a thrown exception would be
+          // swallowed and leave `stopped` pending forever, so complete it here.
+          scribe.warn(
+            "Error while checking whether the Bloop server stopped.",
+            e,
+          )
+          stopped.trySuccess(false)
+          ()
+      }
+    poll()
+    stopped.future
+  }
+
   def newServer(
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
       userConfiguration: () => UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
   ): Future[BuildServerConnection] = {
+    // Set by `connect` to whether it reused an already-running Bloop server;
+    // read by `recoverFromWedgedServer` to decide whether to force a restart.
+    // Local to this connection so concurrent folder connects don't race on it.
+    val connectedToPreexistingServer = new AtomicBoolean(false)
     BuildServerConnection
       .fromSockets(
         projectRoot,
@@ -102,6 +199,7 @@ final class BloopServers(
           connect(
             projectRoot,
             userConfiguration(),
+            connectedToPreexistingServer,
           ),
         tables.dismissedNotifications.ReconnectBsp,
         tables.dismissedNotifications.RequestTimeout,
@@ -110,6 +208,8 @@ final class BloopServers(
         name,
         bspStatusOpt,
         workDoneProgress = workDoneProgress,
+        recoverConnection =
+          () => recoverFromWedgedServer(connectedToPreexistingServer),
       )
       .recover { case NonFatal(e) =>
         Try(
@@ -375,40 +475,46 @@ final class BloopServers(
     }
   }
 
+  private def startNewServer(
+      config: BloopRifleConfig,
+      userConfiguration: UserConfiguration,
+  ): Future[Unit] = {
+    scribe.info("No running Bloop server found, starting one.")
+    val ext = if (Properties.isWin) ".exe" else ""
+    val javaCommand = metalsJavaHome match {
+      case Some(metalsJavaHome) =>
+        Paths.get(metalsJavaHome).resolve(s"bin/java$ext").toString
+      case None => "java"
+    }
+    val version =
+      userConfiguration.bloopVersion.getOrElse(defaultBloopVersion)
+    checkOldBloopRunning().flatMap { _ =>
+      BloopRifle.startServer(
+        config,
+        sh,
+        bloopLogger,
+        version,
+        javaCommand,
+      )
+    }
+  }
+
   private def connect(
       projectRoot: AbsolutePath,
       userConfiguration: UserConfiguration,
+      connectedToPreexistingServer: AtomicBoolean,
   ): Future[SocketConnection] = {
     val config = bloopConfig(Some(userConfiguration), Some(projectRoot))
 
-    val maybeStartBloop = {
-
-      val running = BloopRifle.check(config, bloopLogger)
-
-      if (running) {
+    val maybeStartBloop =
+      if (BloopRifle.check(config, bloopLogger)) {
         scribe.info("Found a Bloop server running")
+        connectedToPreexistingServer.set(true)
         Future.unit
       } else {
-        scribe.info("No running Bloop server found, starting one.")
-        val ext = if (Properties.isWin) ".exe" else ""
-        val javaCommand = metalsJavaHome match {
-          case Some(metalsJavaHome) =>
-            Paths.get(metalsJavaHome).resolve(s"bin/java$ext").toString
-          case None => "java"
-        }
-        val version =
-          userConfiguration.bloopVersion.getOrElse(defaultBloopVersion)
-        checkOldBloopRunning().flatMap { _ =>
-          BloopRifle.startServer(
-            config,
-            sh,
-            bloopLogger,
-            version,
-            javaCommand,
-          )
-        }
+        connectedToPreexistingServer.set(false)
+        startNewServer(config, userConfiguration)
       }
-    }
 
     def openConnection(
         conn: BspConnection,
@@ -421,7 +527,12 @@ final class BloopServers(
         val maybeSocket =
           try Right(conn.openSocket(period, timeout))
           catch {
-            case e: ConnectException => Left(e)
+            // Any failure while waiting for the BSP socket means the connection
+            // didn't materialize. bloop-rifle throws a plain RuntimeException
+            // via `sys.error` when the socket never opens, so treat every
+            // failure like a connect failure and normalize it to the
+            // `IOException` thrown below, which the recovery path acts on.
+            case NonFatal(e) => Left(e)
           }
         maybeSocket match {
           case Right(socket) => socket
