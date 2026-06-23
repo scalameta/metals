@@ -27,12 +27,9 @@ final class CodeActionProvider(
     clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
 
-  private val sharedCodeActions: List[CodeAction] = List(
-    new ImportMissingSymbolQuickFix(compilers, buildTargets)
-  )
-
-  private val scalaCodeActions: List[CodeAction] = List(
+  private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
+    new ImportMissingSymbolQuickFix(compilers, buildTargets),
     new SourceAddMissingImports(compilers, buildTargets, diagnostics),
     new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
@@ -58,42 +55,14 @@ final class CodeActionProvider(
     new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new FilterMapToCollectCodeAction(trees, compilers),
+    new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
     new ConvertCommentCodeAction(buffers, trees),
     new RemoveInvalidImportQuickFix(trees, buildTargets),
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
+    new GenerateDefaultConstructor(javaTrees, buffers),
   )
-
-  private val javaCodeActions: List[CodeAction] = List(
-    new GenerateDefaultConstructor(javaTrees, buffers)
-  )
-
-  private val buildFileCodeActions: List[CodeAction] = List(
-    new MillifyDependencyCodeAction(buffers)
-  )
-
-  locally {
-    def misconfigured(
-        actions: List[CodeAction],
-        predicate: CodeAction => Boolean,
-    ): List[String] =
-      actions.filterNot(predicate).map(_.getClass.getSimpleName)
-
-    val badJava = misconfigured(javaCodeActions, _.isJava)
-    require(
-      badJava.isEmpty,
-      s"java code actions must override isJava=true: ${badJava.mkString(", ")}",
-    )
-    val badScala = misconfigured(scalaCodeActions, _.isScala)
-    require(
-      badScala.isEmpty,
-      s"scala code actions must have isScala=true: ${badScala.mkString(", ")}",
-    )
-  }
-
-  private val allActions: List[CodeAction] =
-    sharedCodeActions ++ scalaCodeActions ++ javaCodeActions ++ buildFileCodeActions
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
     val path = params.getTextDocument.getUri.toAbsolutePath

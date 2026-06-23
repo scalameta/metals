@@ -36,9 +36,7 @@ class JavaTrees(buffers: Buffers) {
   private val trees = TrieMap.empty[AbsolutePath, CachedJavaTree]
 
   def didChange(source: AbsolutePath): Unit = {
-    if (source.isJavaFilename && buffers.contains(source)) {
-      text(source).flatMap(parse(source, _)).foreach(trees(source) = _)
-    }
+    if (source.isJavaFilename) cached(source)
   }
 
   def didClose(source: AbsolutePath): Unit = {
