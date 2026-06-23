@@ -58,7 +58,6 @@ final class CodeActionProvider(
     new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new FilterMapToCollectCodeAction(trees, compilers),
-    new MillifyDependencyCodeAction(buffers),
     new MillifyScalaCliDependencyCodeAction(buffers),
     new ConvertCommentCodeAction(buffers, trees),
     new RemoveInvalidImportQuickFix(trees, buildTargets),
@@ -70,8 +69,31 @@ final class CodeActionProvider(
     new GenerateDefaultConstructor(javaTrees, buffers)
   )
 
+  private val buildFileCodeActions: List[CodeAction] = List(
+    new MillifyDependencyCodeAction(buffers)
+  )
+
+  locally {
+    def misconfigured(
+        actions: List[CodeAction],
+        predicate: CodeAction => Boolean,
+    ): List[String] =
+      actions.filterNot(predicate).map(_.getClass.getSimpleName)
+
+    val badJava = misconfigured(javaCodeActions, _.isJava)
+    require(
+      badJava.isEmpty,
+      s"java code actions must override isJava=true: ${badJava.mkString(", ")}",
+    )
+    val badScala = misconfigured(scalaCodeActions, _.isScala)
+    require(
+      badScala.isEmpty,
+      s"scala code actions must have isScala=true: ${badScala.mkString(", ")}",
+    )
+  }
+
   private val allActions: List[CodeAction] =
-    sharedCodeActions ++ scalaCodeActions ++ javaCodeActions
+    sharedCodeActions ++ scalaCodeActions ++ javaCodeActions ++ buildFileCodeActions
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
