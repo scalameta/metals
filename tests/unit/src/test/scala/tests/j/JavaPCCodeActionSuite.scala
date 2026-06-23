@@ -309,6 +309,262 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
     } yield ()
   }
 
+  testLSP("generate-default-constructor-cursor-on-name") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |public class Example {
+            |  private String name;
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      codeActions <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |public class Exa<<>>mple {
+            |  private String name;
+            |}
+            |""".stripMargin,
+        s"""|${GenerateDefaultConstructor.title("Example")}
+            |""".stripMargin,
+        Nil,
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |public class Example {
+           |  private String name;
+           |
+           |  public Example() {
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  testLSP("generate-default-constructor-nested-class") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |public class Example {
+            |  private String name;
+            |
+            |  public static class Inner {
+            |    int x;
+            |  }
+            |
+            |  public String name() {
+            |    return name;
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      codeActions <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |public class <<Example>> {
+            |  private String name;
+            |
+            |  public static class Inner {
+            |    int x;
+            |  }
+            |
+            |  public String name() {
+            |    return name;
+            |  }
+            |}
+            |""".stripMargin,
+        s"""|${GenerateDefaultConstructor.title("Example")}
+            |""".stripMargin,
+        Nil,
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |public class Example {
+           |  private String name;
+           |
+           |  public Example() {
+           |  }
+           |
+           |  public static class Inner {
+           |    int x;
+           |  }
+           |
+           |  public String name() {
+           |    return name;
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  testLSP("generate-default-constructor-generic") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |public class Example<T> {
+            |  private T value;
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      codeActions <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |public class <<Example>><T> {
+            |  private T value;
+            |}
+            |""".stripMargin,
+        s"""|${GenerateDefaultConstructor.title("Example")}
+            |""".stripMargin,
+        Nil,
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |public class Example<T> {
+           |  private T value;
+           |
+           |  public Example() {
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  testLSP("generate-default-constructor-empty-body") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |public class Example {}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      codeActions <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |public class <<Example>> {}
+            |""".stripMargin,
+        s"""|${GenerateDefaultConstructor.title("Example")}
+            |""".stripMargin,
+        Nil,
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |public class Example {
+           |  public Example() {
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  testLSP("generate-default-constructor-with-annotation") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |@SuppressWarnings({"unused"})
+            |public class Example {
+            |  private String name;
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      codeActions <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |@SuppressWarnings({"unused"})
+            |public class <<Example>> {
+            |  private String name;
+            |}
+            |""".stripMargin,
+        s"""|${GenerateDefaultConstructor.title("Example")}
+            |""".stripMargin,
+        Nil,
+      )
+      _ <- client.applyCodeAction(0, codeActions, server)
+      _ = assertNoDiff(
+        server.bufferContents(path),
+        """|package a;
+           |
+           |@SuppressWarnings({"unused"})
+           |public class Example {
+           |  private String name;
+           |
+           |  public Example() {
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   testLSP("external-dep") {
     cleanWorkspace()
     val path = "a/src/main/java/a/b/Example.java"

@@ -100,7 +100,12 @@ class GenerateDefaultConstructor(
     val (end, endOffset) =
       if (canExpand) (expandedEnd, expandedEndOffset)
       else (start, startOffset)
-    InsertPoint(new l.Range(start, end), startOffset, endOffset)
+    InsertPoint(
+      new l.Range(start, end),
+      startOffset,
+      endOffset,
+      isInsertion = !canExpand,
+    )
   }
 
   private def nextMemberStart(
@@ -146,7 +151,8 @@ class GenerateDefaultConstructor(
       if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
       else "\n\n"
     val suffix =
-      if (endOffset < text.length && text.charAt(endOffset) == '}')
+      if (insert.isInsertion) ""
+      else if (endOffset < text.length && text.charAt(endOffset) == '}')
         s"\n$endIndent"
       else s"\n\n$endIndent"
 
@@ -169,5 +175,6 @@ object GenerateDefaultConstructor {
       range: l.Range,
       startOffset: Int,
       endOffset: Int,
+      isInsertion: Boolean,
   )
 }
