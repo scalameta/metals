@@ -65,7 +65,7 @@ object V {
 
   val modelContextProtocol = "2.0.0"
 
-  val pprint = "0.7.3"
+  val pprint = "0.9.6"
 
   val sbtBloop = bloop
 
