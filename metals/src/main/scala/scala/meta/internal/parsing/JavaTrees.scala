@@ -2,9 +2,11 @@ package scala.meta.internal.parsing
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.util.Locale
 import javax.lang.model.element.Modifier
 import javax.tools.DiagnosticCollector
 import javax.tools.JavaFileObject
+import javax.tools.{Diagnostic => JavaDiagnostic}
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -29,6 +31,7 @@ import com.sun.tools.javac.parser.ParserFactory
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.{lsp4j => l}
 
 class JavaTrees(buffers: Buffers) {
@@ -64,30 +67,43 @@ class JavaTrees(buffers: Buffers) {
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
 
-  private def cached(source: AbsolutePath): Option[CachedJavaTree] = {
-    text(source).flatMap { text =>
-      val textHash = text.hashCode()
-      trees.get(source) match {
-        case Some(cached) if cached.textHash == textHash =>
-          Some(cached)
-        case _ =>
-          parse(source, text).map { parsed =>
-            if (buffers.contains(source)) {
-              trees(source) = parsed
-            }
-            parsed
-          }
+  private def cached(source: AbsolutePath): Option[CachedJavaTree] =
+    trees
+      .get(source)
+      .orElse {
+        text(source).flatMap { text =>
+          // Fallback to parse without caching result.
+          parse(source, text).map(_.tree)
+        }
       }
-    }
-  }
 
   def get(source: AbsolutePath): Option[CompilationUnitTree] =
     cached(source).map(_.tree)
 
+  def didChange(source: AbsolutePath): List[l.Diagnostic] = {
+    text(source) match {
+      case Some(text) =>
+        parse(source, text) match {
+          case Some(parsed) if parsed.diagnostics.isEmpty =>
+            trees(source) = parsed.tree
+            Nil
+          case Some(parsed) =>
+            trees.remove(source)
+            parsed.diagnostics
+          case None =>
+            trees.remove(source)
+            Nil
+        }
+      case None =>
+        trees.remove(source)
+        Nil
+    }
+  }
+
   private def parse(
       source: AbsolutePath,
       text: String,
-  ): Option[CachedJavaTree] = {
+  ): Option[ParsedJavaTree] = {
     try {
       val input = Input.VirtualFile(source.toURI.toString, text)
       val context = new Context()
@@ -128,11 +144,16 @@ class JavaTrees(buffers: Buffers) {
         val javacTrees =
           com.sun.tools.javac.api.JavacTrees.instance(context)
         Some(
-          CachedJavaTree(
-            textHash = text.hashCode(),
-            tree = cu,
-            sourcePositions = javacTrees.getSourcePositions(),
-            text = text,
+          ParsedJavaTree(
+            tree = CachedJavaTree(
+              tree = cu,
+              sourcePositions = javacTrees.getSourcePositions(),
+              text = text,
+            ),
+            diagnostics =
+              diagnostics.getDiagnostics().asScala.toList.map { diagnostic =>
+                toLspDiagnostic(diagnostic)
+              },
           )
         )
       } finally {
@@ -141,6 +162,40 @@ class JavaTrees(buffers: Buffers) {
     } catch {
       case NonFatal(_) => None
     }
+  }
+
+  private def toLspDiagnostic(
+      diagnostic: JavaDiagnostic[_ <: JavaFileObject]
+  ): l.Diagnostic = {
+    val position =
+      if (
+        diagnostic.getPosition() == JavaDiagnostic.NOPOS ||
+        diagnostic.getLineNumber() < 1 ||
+        diagnostic.getColumnNumber() < 1
+      ) {
+        new l.Position(0, 0)
+      } else {
+        new l.Position(
+          diagnostic.getLineNumber().toInt - 1,
+          diagnostic.getColumnNumber().toInt - 1,
+        )
+      }
+
+    val severity = diagnostic.getKind() match {
+      case JavaDiagnostic.Kind.ERROR => DiagnosticSeverity.Error
+      case JavaDiagnostic.Kind.WARNING |
+          JavaDiagnostic.Kind.MANDATORY_WARNING =>
+        DiagnosticSeverity.Warning
+      case JavaDiagnostic.Kind.NOTE => DiagnosticSeverity.Information
+      case JavaDiagnostic.Kind.OTHER => DiagnosticSeverity.Hint
+    }
+
+    new l.Diagnostic(
+      new l.Range(position, position),
+      diagnostic.getMessage(Locale.ENGLISH),
+      severity,
+      "javac",
+    )
   }
 
   private class EnclosingMethodFinder(
@@ -241,7 +296,7 @@ class JavaTrees(buffers: Buffers) {
                 nameRange.getEnd().getLine() + 1L,
                 nameRange.getEnd().getCharacter() + 1L,
               )
-              bodyRange <- bodyRange(nameEndOffset, endPos)
+              body <- bodyRange(nameEndOffset, endPos)
             } {
               val members =
                 node
@@ -253,7 +308,9 @@ class JavaTrees(buffers: Buffers) {
                       treeRange(method).map(range =>
                         JavaMemberInfo(
                           kind = JavaMemberKind.Constructor,
-                          range = range,
+                          range = range.range,
+                          startOffset = range.startOffset,
+                          endOffset = range.endOffset,
                           parametersCount = Some(method.getParameters().size()),
                         )
                       )
@@ -261,7 +318,9 @@ class JavaTrees(buffers: Buffers) {
                       treeRange(method).map(range =>
                         JavaMemberInfo(
                           kind = JavaMemberKind.Method,
-                          range = range,
+                          range = range.range,
+                          startOffset = range.startOffset,
+                          endOffset = range.endOffset,
                           parametersCount = Some(method.getParameters().size()),
                         )
                       )
@@ -269,7 +328,9 @@ class JavaTrees(buffers: Buffers) {
                       treeRange(field).map(range =>
                         JavaMemberInfo(
                           kind = JavaMemberKind.Field,
-                          range = range,
+                          range = range.range,
+                          startOffset = range.startOffset,
+                          endOffset = range.endOffset,
                           parametersCount = None,
                         )
                       )
@@ -280,7 +341,9 @@ class JavaTrees(buffers: Buffers) {
                 JavaClassInfo(
                   name = name,
                   nameRange = nameRange,
-                  bodyRange = bodyRange,
+                  bodyRange = body.range,
+                  bodyStartOffset = body.startOffset,
+                  bodyEndOffset = body.endOffset,
                   modifiers = node.getModifiers().getFlags().asScala.toSet,
                   members = members,
                 )
@@ -295,15 +358,19 @@ class JavaTrees(buffers: Buffers) {
     private def bodyRange(
         startPos: Long,
         endPos: Long,
-    ): Option[l.Range] = {
+    ): Option[JavaRange] = {
       if (endPos < 0) None
       else
         openingBraceOffset(startPos, endPos).map { openBrace =>
-          Positions.toLspRange(
-            lineMap,
-            openBrace + 1L,
-            endPos - 1L,
-            cached.text,
+          JavaRange(
+            Positions.toLspRange(
+              lineMap,
+              openBrace + 1L,
+              endPos - 1L,
+              cached.text,
+            ),
+            startOffset = (openBrace + 1L).toInt,
+            endOffset = (endPos - 1L).toInt,
           )
         }
     }
@@ -329,11 +396,18 @@ class JavaTrees(buffers: Buffers) {
 
     private def treeRange(
         tree: Tree
-    ): Option[l.Range] = {
+    ): Option[JavaRange] = {
       val startPos = sourcePositions.getStartPosition(cu, tree)
       val endPos = sourcePositions.getEndPosition(cu, tree)
       if (startPos < 0 || endPos < 0) None
-      else Some(Positions.toLspRange(lineMap, startPos, endPos, cached.text))
+      else
+        Some(
+          JavaRange(
+            Positions.toLspRange(lineMap, startPos, endPos, cached.text),
+            startOffset = startPos.toInt,
+            endOffset = endPos.toInt,
+          )
+        )
     }
   }
 
@@ -397,11 +471,21 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
+  private case class ParsedJavaTree(
+      tree: CachedJavaTree,
+      diagnostics: List[l.Diagnostic],
+  )
+
   private case class CachedJavaTree(
-      textHash: Int,
       tree: CompilationUnitTree,
       sourcePositions: SourcePositions,
       text: String,
+  )
+
+  private case class JavaRange(
+      range: l.Range,
+      startOffset: Int,
+      endOffset: Int,
   )
 
 }
@@ -416,6 +500,8 @@ case class JavaClassInfo(
     name: String,
     nameRange: l.Range,
     bodyRange: l.Range,
+    bodyStartOffset: Int,
+    bodyEndOffset: Int,
     modifiers: Set[Modifier],
     members: List[JavaMemberInfo],
 )
@@ -423,6 +509,8 @@ case class JavaClassInfo(
 case class JavaMemberInfo(
     kind: JavaMemberKind,
     range: l.Range,
+    startOffset: Int,
+    endOffset: Int,
     parametersCount: Option[Int],
 )
 

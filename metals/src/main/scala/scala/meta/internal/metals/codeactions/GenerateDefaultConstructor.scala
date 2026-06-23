@@ -5,10 +5,10 @@ import javax.lang.model.element.Modifier
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.GenerateDefaultConstructor.InsertPoint
+import scala.meta.internal.metals.codeactions.GenerateDefaultConstructor.PositionWithOffset
 import scala.meta.internal.parsing.JavaClassInfo
 import scala.meta.internal.parsing.JavaMemberInfo
 import scala.meta.internal.parsing.JavaMemberKind
@@ -71,10 +71,6 @@ class GenerateDefaultConstructor(
       cls: JavaClassInfo,
       text: String,
   ): InsertPoint = {
-    val input = Input.String(text)
-    def offsetOf(pos: l.Position): Int =
-      input.toOffset(pos.getLine(), pos.getCharacter())
-
     val firstMethodIndex = cls.members.indexWhere(member =>
       member.kind == JavaMemberKind.Method ||
         member.kind == JavaMemberKind.Constructor
@@ -84,43 +80,40 @@ class GenerateDefaultConstructor(
       else cls.members
     val lastFieldEnd = membersBeforeMethods.collect {
       case member if member.kind == JavaMemberKind.Field =>
-        member.range.getEnd()
+        PositionWithOffset(member.range.getEnd(), member.endOffset)
     }.lastOption
 
-    val start = lastFieldEnd.getOrElse(cls.bodyRange.getStart())
-    val startOffset = offsetOf(start)
+    val start = lastFieldEnd.getOrElse(
+      PositionWithOffset(cls.bodyRange.getStart(), cls.bodyStartOffset)
+    )
 
     val expandedEnd =
-      nextMemberStart(cls.members, start).getOrElse(cls.bodyRange.getEnd())
-    val expandedEndOffset = offsetOf(expandedEnd)
+      nextMemberStart(cls.members, start.offset).getOrElse(
+        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyEndOffset)
+      )
     val canExpand =
-      expandedEndOffset <= text.length &&
-        text.substring(startOffset, expandedEndOffset).forall(_.isWhitespace)
+      expandedEnd.offset <= text.length &&
+        text.substring(start.offset, expandedEnd.offset).forall(_.isWhitespace)
 
-    val (end, endOffset) =
-      if (canExpand) (expandedEnd, expandedEndOffset)
-      else (start, startOffset)
+    val end =
+      if (canExpand) expandedEnd
+      else start
     InsertPoint(
-      new l.Range(start, end),
-      startOffset,
-      endOffset,
+      new l.Range(start.position, end.position),
+      start.offset,
+      end.offset,
       isInsertion = !canExpand,
     )
   }
 
   private def nextMemberStart(
       members: List[JavaMemberInfo],
-      position: l.Position,
-  ): Option[l.Position] = {
+      offset: Int,
+  ): Option[PositionWithOffset] =
     members
-      .map(_.range.getStart())
-      .filter(pos =>
-        pos.getLine() > position.getLine() ||
-          (pos.getLine() == position.getLine() &&
-            pos.getCharacter() > position.getCharacter())
-      )
-      .minByOption(pos => (pos.getLine(), pos.getCharacter()))
-  }
+      .filter(_.startOffset > offset)
+      .minByOption(_.startOffset)
+      .map(m => PositionWithOffset(m.range.getStart(), m.startOffset))
 
   private def constructorModifier(cls: JavaClassInfo): String = {
     if (cls.modifiers.contains(Modifier.ABSTRACT)) "protected "
@@ -177,4 +170,6 @@ object GenerateDefaultConstructor {
       endOffset: Int,
       isInsertion: Boolean,
   )
+
+  private case class PositionWithOffset(position: l.Position, offset: Int)
 }
