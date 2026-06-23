@@ -81,6 +81,9 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
+  def get(source: AbsolutePath): Option[CompilationUnitTree] =
+    cached(source).map(_.tree)
+
   private def parse(
       source: AbsolutePath,
       text: String,
