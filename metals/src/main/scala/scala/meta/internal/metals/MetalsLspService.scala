@@ -67,6 +67,7 @@ import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentLinksProvider
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
@@ -283,6 +284,7 @@ abstract class MetalsLspService(
   )
 
   protected val trees = new Trees(buffers, scalaVersionSelector)
+  protected val javaTrees = new JavaTrees(buffers)
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
@@ -702,7 +704,7 @@ abstract class MetalsLspService(
       clientConfig.icons(),
       () => compilers,
       trees,
-      buffers,
+      javaTrees,
       buildTargets,
       mbtReferenceProvider,
       workDoneProgress,
@@ -740,6 +742,7 @@ abstract class MetalsLspService(
     buildTargets,
     scalafixProvider,
     trees,
+    javaTrees,
     diagnostics,
     languageClient,
     clientConfig,
@@ -784,6 +787,8 @@ abstract class MetalsLspService(
       .traverse(paths.distinct) { path =>
         if (path.isScalaFilename && buffers.contains(path)) {
           Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
+        } else if (path.isJavaFilename && buffers.contains(path)) {
+          Future(javaTrees.didChange(path))
         } else {
           Future.successful(())
         }
@@ -1107,6 +1112,7 @@ abstract class MetalsLspService(
     buffers.remove(path)
     compilers.didClose(path)
     trees.didClose(path)
+    javaTrees.didClose(path)
     diagnostics.onClose(path)
     interactiveSemanticdbs.onClose(path)
   }

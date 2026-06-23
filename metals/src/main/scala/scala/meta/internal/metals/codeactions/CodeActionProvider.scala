@@ -7,6 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -20,17 +21,18 @@ final class CodeActionProvider(
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
     trees: Trees,
+    javaTrees: JavaTrees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
 
-  private val extractMemberAction =
-    new ExtractRenameMember(trees, languageClient, buffers)
+  private val sharedCodeActions: List[CodeAction] = List(
+    new ImportMissingSymbolQuickFix(compilers, buildTargets)
+  )
 
-  private val allActions: List[CodeAction] = List(
+  private val scalaCodeActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
-    new ImportMissingSymbolQuickFix(compilers, buildTargets),
     new SourceAddMissingImports(compilers, buildTargets, diagnostics),
     new CreateNewSymbol(compilers, languageClient),
     new ActionableDiagnostic(),
@@ -43,7 +45,7 @@ final class CodeActionProvider(
     ),
     new StringActions(trees),
     new RemoveInfixRefactor(trees),
-    extractMemberAction,
+    new ExtractRenameMember(trees, languageClient, buffers),
     new SourceOrganizeImports(scalafixProvider, buildTargets, diagnostics),
     new OrganizeImportsQuickFix(scalafixProvider, buildTargets, diagnostics),
     new InsertInferredType(trees, compilers, languageClient),
@@ -63,6 +65,13 @@ final class CodeActionProvider(
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
   )
+
+  private val javaCodeActions: List[CodeAction] = List(
+    new GenerateDefaultConstructor(javaTrees, buffers)
+  )
+
+  private val allActions: List[CodeAction] =
+    sharedCodeActions ++ scalaCodeActions ++ javaCodeActions
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
