@@ -190,7 +190,7 @@ case class BazelBuildTool(
       "--ui_event_filters=-info,-stderr,-warning",
       "--noshow_progress",
       "--test_output=all",
-      bazelTestTarget(target, testSuites),
+      bazelRunTarget(target),
     ) ::: testFilterArgs ::: jvmFlagsArgs
   }
 
@@ -202,28 +202,6 @@ case class BazelBuildTool(
 
   private def bazelRunTarget(target: MbtTarget): String =
     target.configurations.headOption.getOrElse(target.name)
-
-  /**
-   * Picks the Bazel test target whose label matches the requested test class.
-   * When `java_test_suite` (or similar macro) generates one `java_test` per
-   * source file, all targets share the same MBT namespace and end up in
-   * `target.configurations`.
-   */
-  private def bazelTestTarget(
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-  ): String = {
-    val configurations = target.configurations
-    val simpleClassNames =
-      MbtDebugLauncher
-        .listOrNil(testSuites.getSuites)
-        .flatMap(suite => Option(suite.getClassName))
-        .map(_.split('.').last)
-    val matched = simpleClassNames.flatMap { simpleName =>
-      configurations.find(_.endsWith(s":$simpleName"))
-    }.headOption
-    matched.getOrElse(bazelRunTarget(target))
-  }
 
 }
 
