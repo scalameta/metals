@@ -58,11 +58,16 @@ class SymbolIndexBucket(
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
           addSourceFile(source, Some(dir), isJava = false)
+        case source if source.isJava && isDirectChild(dir, source) =>
+          addSourceFile(source, Some(dir), isJava = true)
         case _ =>
           None
       }
     } else List.empty
   }
+
+  private def isDirectChild(dir: AbsolutePath, source: AbsolutePath): Boolean =
+    source.toRelative(dir).toNIO.getNameCount == 1
 
   def addDependencyModule(
       module: DependencyModule

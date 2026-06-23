@@ -39,4 +39,57 @@ class DefinitionDirectorySuite extends BaseSuite {
     index.addSourceDirectory(root, dialects.Scala213)
     assertDefinition("com/foo/Foo.")
   }
+  test("javaClassHashSymbol") {
+    val index = OnDemandSymbolIndex.empty()
+    def assertDefinition(sym: String): Unit = {
+      val definition = index.definition(Symbol(sym))
+      if (definition.isEmpty) throw new NoSuchElementException(sym)
+    }
+    val root = FileLayout.fromString(
+      """
+        |/com/foo/Foo.java
+        |package com.foo;
+        |public final class Foo {}
+        |""".stripMargin
+    )
+    index.addSourceDirectory(root, dialects.Scala213)
+    assertDefinition("com/foo/Foo#")
+  }
+  test("nestedJava") {
+    val index = OnDemandSymbolIndex.empty()
+    def assertDefinition(sym: String): Unit = {
+      val definition = index.definition(Symbol(sym))
+      if (definition.isEmpty) throw new NoSuchElementException(sym)
+    }
+    val root = FileLayout.fromString(
+      """
+        |/com/foo/EchoService.java
+        |package com.foo;
+        |public final class EchoService {
+        |  public static final class EchoRequest {}
+        |}
+        |""".stripMargin
+    )
+    index.addSourceDirectory(root, dialects.Scala213)
+    assertDefinition("com/foo/EchoService#EchoRequest#")
+  }
+  test("flatJava") {
+    val index = OnDemandSymbolIndex.empty()
+    def assertDefinition(sym: String): Unit = {
+      val definition = index.definition(Symbol(sym))
+      if (definition.isEmpty) throw new NoSuchElementException(sym)
+    }
+    val root = FileLayout.fromString(
+      """
+        |/FlagsConfig.java
+        |package com.foo;
+        |public interface FlagsConfig {
+        |  public boolean isEnabled();
+        |}
+        |""".stripMargin
+    )
+    index.addSourceDirectory(root, dialects.Scala213)
+    assertDefinition("com/foo/FlagsConfig#")
+    assertDefinition("com/foo/FlagsConfig#isEnabled().")
+  }
 }
