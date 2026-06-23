@@ -176,6 +176,7 @@ case class MavenBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] =
     mbtTestExecCommand(
       mbtMavenBaseCommand(workspace),
@@ -188,8 +189,11 @@ case class MavenBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] = {
-    mbtTestDebugCommandWithPort(workspace, target, testSuites)(5005)
+    mbtTestDebugCommandWithPort(workspace, target, testSuites, sourceFiles)(
+      5005
+    )
   }
 
   override def supportsForkedTestDebug: Boolean = true
@@ -198,6 +202,7 @@ case class MavenBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): Int => List[String] = { port =>
     // Use Surefire's forked JVM with a pre-assigned debug port.
     // This allows proper source mapping since tests run in a separate JVM.

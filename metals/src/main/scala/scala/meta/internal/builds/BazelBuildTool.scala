@@ -1,6 +1,8 @@
 package scala.meta.internal.builds
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -11,6 +13,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
+import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
@@ -130,16 +133,24 @@ case class BazelBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] =
-    mbtTestExecCommand(target, testSuites, debugAgentFlag = None)
+    mbtTestExecCommand(
+      resolveTestRunTargets(workspace, target, sourceFiles),
+      target,
+      testSuites,
+      debugAgentFlag = None,
+    )
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] =
     mbtTestExecCommand(
+      resolveTestRunTargets(workspace, target, sourceFiles),
       target,
       testSuites,
       debugAgentFlag = Some(debugAgentFlag),
@@ -151,20 +162,63 @@ case class BazelBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
-  ): Int => List[String] = { port =>
-    mbtTestExecCommand(
-      target,
-      testSuites,
-      debugAgentFlag = None,
-    ) ::: List(
-      "--nocache_test_results",
-      "--test_output=streamed",
-      "--test_strategy=exclusive",
-      s"--test_arg=--wrapper_script_flag=--debug=$port",
-    )
+      sourceFiles: Seq[AbsolutePath],
+  ): Int => List[String] = {
+    val resolvedRunTargets =
+      resolveTestRunTargets(workspace, target, sourceFiles)
+    (port: Int) =>
+      mbtTestExecCommand(
+        resolvedRunTargets,
+        target,
+        testSuites,
+        debugAgentFlag = None,
+      ) ::: List(
+        "--nocache_test_results",
+        "--test_output=streamed",
+        "--test_strategy=exclusive",
+        s"--test_arg=--wrapper_script_flag=--debug=$port",
+      )
   }
 
+  private def resolveTestRunTargets(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      sourceFiles: Seq[AbsolutePath],
+  ): List[String] =
+    target.configurations.toList match {
+      case Nil => List(target.name)
+      case single :: Nil => List(single)
+      case multiple =>
+        val filenames = sourceFiles.map(_.filename).distinct
+        if (filenames.isEmpty) List(multiple.head)
+        else {
+          val setExpr =
+            s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
+          val queryStr = filenames
+            .map(filename => s"attr(srcs, $filename, $setExpr)")
+            .mkString(" union ")
+          val env =
+            BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
+          val result =
+            try
+              Await.result(
+                BazelQuery(queryStr, BazelQuery.OutputMode.Label).run(env)(ec),
+                10.seconds,
+              )
+            catch {
+              case _: java.util.concurrent.TimeoutException =>
+                scribe.warn(
+                  s"bazel-mbt: timed out resolving test targets for ${target.name}, falling back to ${multiple.head}"
+                )
+                ""
+            }
+          val resolved = result.linesIterator.filter(_.nonEmpty).toList
+          if (resolved.nonEmpty) resolved else List(multiple.head)
+        }
+    }
+
   private def mbtTestExecCommand(
+      runTargets: List[String],
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: Option[String],
@@ -185,13 +239,9 @@ case class BazelBuildTool(
     val jvmFlagsArgs =
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
-      "bazel",
-      "test",
-      "--ui_event_filters=-info,-stderr,-warning",
-      "--noshow_progress",
-      "--test_output=all",
-      bazelRunTarget(target),
-    ) ::: testFilterArgs ::: jvmFlagsArgs
+      "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
+      "--noshow_progress", "--test_output=all",
+    ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
   private def bazelBuildTargets(target: MbtTarget): List[String] =

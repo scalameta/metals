@@ -28,6 +28,10 @@ class MbtDebugSessionStarter(
     buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
+    classToSourceFile: (
+        String,
+        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
+    ) => Option[AbsolutePath] = (_, _) => None,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -100,6 +104,14 @@ class MbtDebugSessionStarter(
 
   }
 
+  private def resolveSourceFiles(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Seq[AbsolutePath] =
+    MbtDebugLauncher
+      .listOrNil(testSuites.getSuites)
+      .flatMap(s => classToSourceFile(s.getClassName, target.id))
+
   def test(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
@@ -107,7 +119,9 @@ class MbtDebugSessionStarter(
       out: String => Unit,
       err: String => Unit,
   ): Future[Int] = {
-    val command = buildTool.mbtTestCommand(workspace, target, testSuites)
+    val sourceFiles = resolveSourceFiles(target, testSuites)
+    val command =
+      buildTool.mbtTestCommand(workspace, target, testSuites, sourceFiles)
     val toolName = buildTool.executableName
     scribe.info(
       s"MBT test session via $toolName: ${redactedCommand(command)}"
@@ -179,6 +193,7 @@ class MbtDebugSessionStarter(
   ): Future[URI] = {
     val toolName = launcher.executableName
     val cancelPromise = Promise[Unit]()
+    val sourceFiles = resolveSourceFiles(target, testSuites)
     compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
       debugConfigCreator.create(
         target.id,
@@ -203,6 +218,7 @@ class MbtDebugSessionStarter(
                     workspace,
                     target,
                     testSuites,
+                    sourceFiles,
                   )
                 scribe.info(
                   s"MBT test debug session via $toolName (forked): ${redactedCommand(commandWithPort(0))}"
@@ -221,6 +237,7 @@ class MbtDebugSessionStarter(
                   target,
                   testSuites,
                   debugAgentFlag,
+                  sourceFiles,
                 )
                 scribe.info(
                   s"MBT test debug session via $toolName: ${redactedCommand(command)}"

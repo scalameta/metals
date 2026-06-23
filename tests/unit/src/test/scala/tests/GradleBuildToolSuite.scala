@@ -157,6 +157,7 @@ class GradleBuildToolSuite extends BaseSuite {
           workspace,
           mbtTarget("app", gradleProjectPath = ":app"),
           testSuites,
+          Nil,
         )
 
     assertEquals(
@@ -188,6 +189,7 @@ class GradleBuildToolSuite extends BaseSuite {
           mbtTarget("app"),
           testSuites,
           "debug-agent",
+          Nil,
         )
 
     assertEquals(command.take(2), List("gradle", "--console=plain"))

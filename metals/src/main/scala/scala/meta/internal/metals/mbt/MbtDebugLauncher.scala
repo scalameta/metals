@@ -34,6 +34,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String]
 
   def mbtTestDebugCommand(
@@ -41,6 +42,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String]
 
   /**
@@ -57,12 +59,14 @@ trait MbtDebugLauncher { self: BuildTool =>
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): Int => List[String] = { _ =>
     mbtTestDebugCommand(
       workspace,
       target,
       testSuites,
       MbtDebugLauncher.DebugAgentFlag,
+      sourceFiles,
     )
   }
 }

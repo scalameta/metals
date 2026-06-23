@@ -254,6 +254,7 @@ case class GradleBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] =
     gradleTestCommand(target, testSuites, debugAgentFlag = None)
 
@@ -262,6 +263,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
+      sourceFiles: Seq[AbsolutePath],
   ): List[String] =
     gradleTestCommand(target, testSuites, Some(debugAgentFlag))
 
@@ -271,6 +273,7 @@ case class GradleBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
   ): Int => List[String] = { port =>
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"

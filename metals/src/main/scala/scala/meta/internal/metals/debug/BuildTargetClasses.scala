@@ -125,6 +125,12 @@ final class BuildTargetClasses(
         .map(_.fullyQualifiedName)
     )
 
+  def sourceFileForMbtTestClass(
+      className: String,
+      targetId: b.BuildTargetIdentifier,
+  ): Option[AbsolutePath] =
+    index.get(targetId).flatMap(_.confirmedMbtTestClassFile.get(className))
+
   def resolveCandidateTestClass(
       name: String,
       target: Option[String],
@@ -884,6 +890,10 @@ final class BuildTargetClasses(
         // Extract and store confirmed test classes
         for ((symbol, testInfo) <- testClasses) {
           classes.testClasses.put(symbol, testInfo)
+          classes.confirmedMbtTestClassFile.put(
+            testInfo.fullyQualifiedName,
+            docPath,
+          )
         }
       }
     }
@@ -1112,6 +1122,14 @@ object BuildTargetClasses {
   final class Classes {
     val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
     val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
+
+    /**
+     * Maps fully-qualified test class name to its source file, populated when
+     * candidates are confirmed via semanticdb. Persists after confirmation so
+     * that source-file lookups remain valid.
+     */
+    val confirmedMbtTestClassFile =
+      new TrieMap[FullyQualifiedClassName, AbsolutePath]()
 
     /**
      * Candidate main classes discovered from the MBT index without semanticdb.
