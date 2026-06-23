@@ -734,7 +734,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
      * Returns an offset for this input
      */
     def toOffset(line: Int, column: Int): Int =
-      Position.Range(input, line, 0, line, 0).start + column
+      input.lineToOffset(line) + column
 
     /**
      * Returns an offset position for this input
