@@ -91,8 +91,8 @@ object Trace {
           setupPrintWriter(tail)
         case Nil =>
           scribe.info(
-            s"tracing is disabled for protocol $protocolName, to enable tracing of incoming " +
-              s"and outgoing JSON messages create an empty file at ${tracePaths.mkString(" or ")}"
+            s"Tracing is disabled for protocol $protocolName. To enable tracing of incoming " +
+              s"and outgoing JSON messages, create an empty file at ${tracePaths.mkString(" or ")}"
           )
           None
       }
