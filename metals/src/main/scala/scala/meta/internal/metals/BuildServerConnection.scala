@@ -298,8 +298,12 @@ class BuildServerConnection private (
   def startDebugSession(
       params: DebugSessionParams,
       cancelPromise: Promise[Unit],
+      noDebug: Boolean,
   ): Future[URI] = {
-    val completableFuture = register(server => server.debugSessionStart(params))
+    val completableFuture =
+      if (isMbt)
+        register(server => server.debugSessionStart(params, noDebug))
+      else register(server => server.debugSessionStart(params))
     cancelPromise.future.foreach(_ => completableFuture.cancel(true))
     completableFuture.asScala.map(address => URI.create(address.getUri))
   }

@@ -21,7 +21,8 @@ class BreakpointScalaCliDapSuite
     navigator =>
       server.startDebuggingUnresolved(
         DebugUnresolvedMainClassParams(
-          "a.src.main.scala.a.script"
+          "a.src.main.scala.a.script",
+          noDebug = false,
         ).toJson,
         navigator,
       ),
@@ -42,7 +43,8 @@ class BreakpointScalaCliDapSuite
     navigator =>
       server.startDebuggingUnresolved(
         DebugUnresolvedMainClassParams(
-          "script"
+          "script",
+          noDebug = false,
         ).toJson,
         navigator,
       ),

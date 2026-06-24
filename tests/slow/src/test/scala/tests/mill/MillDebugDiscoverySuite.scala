@@ -128,6 +128,7 @@ class MillDebugDiscoverySuite
             Nil.asJava,
             Nil.asJava,
             Nil.asJava,
+            noDebug = false,
           ),
         )
         _ <- debugger.initialize
@@ -170,6 +171,7 @@ class MillDebugDiscoverySuite
           Nil.asJava,
           Nil.asJava,
           Nil.asJava,
+          noDebug = false,
         ),
       )
       _ <- debugger.initialize
@@ -215,7 +217,8 @@ class MillDebugDiscoverySuite
         server
           .startDebuggingUnresolved(
             new DebugUnresolvedTestClassParams(
-              "a.Foo"
+              "a.Foo",
+              noDebug = false,
             ).toJson
           )
       _ <- debugger.initialize

@@ -383,6 +383,7 @@ class MillServerSuite
             Nil.asJava,
             Nil.asJava,
             Nil.asJava,
+            noDebug = false,
           ),
         )
       )

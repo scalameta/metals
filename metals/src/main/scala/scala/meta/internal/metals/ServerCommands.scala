@@ -907,11 +907,13 @@ case class DebugUnresolvedMainClassParams(
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null,
+    noDebug: Boolean,
 )
 
 final case class ScalaTestSuitesDebugRequest(
     @Nullable target: b.BuildTargetIdentifier,
     requestData: ScalaTestSuites,
+    noDebug: Boolean,
 )
 
 final case class ScalaTestSuites(
@@ -919,6 +921,7 @@ final case class ScalaTestSuites(
     jvmOptions: java.util.List[String],
     flags: java.util.List[String],
     environmentVariables: java.util.List[String],
+    noDebug: Boolean,
 )
 
 final case class ScalaTestSuiteSelection(
@@ -932,12 +935,14 @@ case class DebugUnresolvedTestClassParams(
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null,
+    noDebug: Boolean,
 )
 
 case class DebugUnresolvedAttachRemoteParams(
     hostName: String,
     port: Int,
     @Nullable buildTarget: String = null,
+    noDebug: Boolean = false,
 ) {
   def buildTargetOpt: Option[String] = Option(buildTarget)
 }
@@ -952,6 +957,7 @@ case class DebugDiscoveryParams(
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null,
     @Nullable position: Position = null,
+    noDebug: Boolean = false,
 )
 
 case class RunScalafixRulesParams(
