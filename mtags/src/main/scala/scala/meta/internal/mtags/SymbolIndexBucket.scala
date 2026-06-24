@@ -127,9 +127,28 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
+  ): Option[IndexingResult] =
+    addSourceFile(
+      source,
+      sourceDirectory,
+      isJava,
+      indexTrivialJavaToplevels = false
+    )
+
+  def addSourceFile(
+      source: AbsolutePath,
+      sourceDirectory: Option[AbsolutePath],
+      isJava: Boolean,
+      indexTrivialJavaToplevels: Boolean
   ): Option[IndexingResult] = try {
     val IndexingResult(path, topLevels, overrides, toplevelMembers) =
-      indexSource(source, dialect, sourceDirectory, isJava)
+      indexSource(
+        source,
+        dialect,
+        sourceDirectory,
+        isJava,
+        indexTrivialJavaToplevels
+      )
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
@@ -149,7 +168,8 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       dialect: Dialect,
       sourceDirectory: Option[AbsolutePath],
-      isJava: Boolean
+      isJava: Boolean,
+      indexTrivialJavaToplevels: Boolean
   ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val (doc, overrides, toplevelMembers) =
@@ -162,7 +182,10 @@ class SymbolIndexBucket(
       if (source.isScalaScript) sourceTopLevels.toList
       else if (isJava) {
         sourceTopLevels.toList.headOption
-          .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
+          .filter(sym =>
+            indexTrivialJavaToplevels ||
+              !isTrivialToplevelSymbol(uri, sym, "java")
+          )
           .toList
       } else {
         sourceTopLevels
