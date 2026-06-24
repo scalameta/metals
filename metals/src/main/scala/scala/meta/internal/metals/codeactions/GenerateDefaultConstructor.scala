@@ -22,7 +22,7 @@ class GenerateDefaultConstructor(
     buffers: Buffers,
 ) extends CodeAction {
 
-  override def kind: String = l.CodeActionKind.RefactorRewrite
+  override def kind: String = l.CodeActionKind.QuickFix
 
   override def contribute(
       params: l.CodeActionParams,

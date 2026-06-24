@@ -245,6 +245,32 @@ class GenerateDefaultConstructorLspSuite
   )
 
   check(
+    "inner-class-cursor",
+    """|package a;
+       |
+       |public class Outer {
+       |  public class <<Example>> {
+       |    private String name;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${GenerateDefaultConstructor.title("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Outer {
+       |  public class Example {
+       |    private String name;
+       |
+       |    public Example() {
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Outer.java",
+  )
+
+  check(
     "with-annotation",
     """|package a;
        |
