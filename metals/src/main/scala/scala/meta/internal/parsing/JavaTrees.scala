@@ -82,45 +82,6 @@ class JavaTrees(buffers: Buffers) {
       }
     } yield result
 
-  /**
-   * Returns the insertion point right after the leading fields of `cls`.
-   *
-   * This is the default location for inserting generated members (default
-   * constructor, getters, setters, ...).
-   */
-  def insertPointAfterFields(
-      cls: JavaClassInfo,
-      text: String,
-  ): InsertPoint = {
-    val start = cls.members
-      .takeWhile(_.kind == JavaMemberKind.Field)
-      .lastOption
-      .map(m => PositionWithOffset(m.range.getEnd(), m.range.endOffset))
-      .getOrElse(
-        PositionWithOffset(cls.bodyRange.getStart(), cls.bodyRange.startOffset)
-      )
-
-    val expandedEnd = cls.members
-      .filter(_.range.startOffset > start.offset)
-      .minByOption(_.range.startOffset)
-      .map(m => PositionWithOffset(m.range.getStart(), m.range.startOffset))
-      .getOrElse(
-        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyRange.endOffset)
-      )
-
-    val canExpand =
-      expandedEnd.offset <= text.length &&
-        text.substring(start.offset, expandedEnd.offset).forall(_.isWhitespace)
-
-    val end = if (canExpand) expandedEnd else start
-    InsertPoint(
-      new l.Range(start.position, end.position),
-      start.offset,
-      end.offset,
-      isInsertion = !canExpand,
-    )
-  }
-
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
 
@@ -353,14 +314,23 @@ class JavaTrees(buffers: Buffers) {
                         )
                       )
                     case field: VariableTree =>
-                      treeRange(field).map(range =>
+                      treeRange(field).map { range =>
+                        val fieldName = field.getName().toString()
                         JavaMemberInfo(
                           kind = JavaMemberKind.Field,
                           range = range,
                           parametersCount = None,
-                          name = Some(field.getName().toString()),
+                          name = Some(fieldName),
+                          field = Some(
+                            JavaVariableInfo(
+                              fieldName,
+                              field.getType().toString(),
+                              range,
+                              field.getModifiers().getFlags().asScala.toSet,
+                            )
+                          ),
                         )
-                      )
+                      }
                   }
                   .flatten
                   .toList
@@ -484,14 +454,58 @@ case class EnclosingMethod(
     source: AbsolutePath,
 )
 
+object JavaTrees {
+
+  /**
+   * Returns the insertion point right after the leading fields of `cls`.
+   *
+   * This is the default location for inserting generated members (default
+   * constructor, getters, setters, ...). When the gap between the fields and
+   * the following member is only whitespace the returned point spans that gap
+   * so the caller can replace it; otherwise it is a plain insertion point.
+   */
+  def insertPointAfterFields(
+      cls: JavaClassInfo,
+      text: String,
+  ): InsertPoint = {
+    val start = cls.members
+      .takeWhile(_.kind == JavaMemberKind.Field)
+      .lastOption
+      .map(m => PositionWithOffset(m.range.getEnd(), m.range.endOffset))
+      .getOrElse(
+        PositionWithOffset(cls.bodyRange.getStart(), cls.bodyRange.startOffset)
+      )
+
+    val expandedEnd = cls.members
+      .filter(_.range.startOffset > start.offset)
+      .minByOption(_.range.startOffset)
+      .map(m => PositionWithOffset(m.range.getStart(), m.range.startOffset))
+      .getOrElse(
+        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyRange.endOffset)
+      )
+
+    val canExpand =
+      expandedEnd.offset <= text.length &&
+        text.substring(start.offset, expandedEnd.offset).forall(_.isWhitespace)
+
+    val end = if (canExpand) expandedEnd else start
+    InsertPoint(
+      new l.Range(start.position, end.position),
+      start.offset,
+      end.offset,
+      isInsertion = !canExpand,
+    )
+  }
+
+  private case class PositionWithOffset(position: l.Position, offset: Int)
+}
+
 case class InsertPoint(
     range: l.Range,
     startOffset: Int,
     endOffset: Int,
     isInsertion: Boolean,
 )
-
-private case class PositionWithOffset(position: l.Position, offset: Int)
 
 case class JavaVariableInfo(
     name: String,
@@ -516,6 +530,7 @@ case class JavaMemberInfo(
     range: JavaRange,
     parametersCount: Option[Int],
     name: Option[String],
+    field: Option[JavaVariableInfo] = None,
 )
 
 sealed trait JavaMemberKind

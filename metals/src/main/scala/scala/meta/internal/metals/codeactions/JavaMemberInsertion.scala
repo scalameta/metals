@@ -17,6 +17,17 @@ object JavaMemberInsertion {
       text: String,
       insert: InsertPoint,
       memberLines: Seq[String],
+  ): String = renderAll(text, insert, Seq(memberLines))
+
+  /**
+   * Renders several members at the insertion point, separated by a blank line.
+   *
+   * @param members one entry per member, each a list of that member's lines.
+   */
+  def renderAll(
+      text: String,
+      insert: InsertPoint,
+      members: Seq[Seq[String]],
   ): String = {
     val startOffset = insert.startOffset
     val endOffset = insert.endOffset
@@ -32,10 +43,17 @@ object JavaMemberInsertion {
       else "\n\n"
     val suffix =
       if (insert.isInsertion) ""
-      else if (endOffset < text.length && text.charAt(endOffset) == '}')
+      else if (
+        endOffset >= 0 && endOffset < text.length &&
+        text.charAt(endOffset) == '}'
+      )
         s"\n$endIndent"
       else s"\n\n$endIndent"
-    val body = memberLines.map(line => memberIndent + line).mkString("\n")
+    val body = members
+      .map(memberLines =>
+        memberLines.map(line => memberIndent + line).mkString("\n")
+      )
+      .mkString("\n\n")
     s"$prefix$body$suffix"
   }
 

@@ -34,7 +34,7 @@ class GenerateDefaultConstructor(
       if params.getRange().overlapsWith(cls.nameRange) &&
         !hasDefaultConstructor(cls)
     } yield {
-      val insert = javaTrees.insertPointAfterFields(cls, text)
+      val insert = JavaTrees.insertPointAfterFields(cls, text)
       val edit = new l.TextEdit(
         insert.range,
         constructorText(text, cls.name, constructorModifier(cls), insert),

@@ -17,6 +17,15 @@ class GenerateGettersSettersLspSuite
         |${GenerateGettersSetters.titleSetter(fieldName)}
         |""".stripMargin
 
+  private def allTitles(className: String): String =
+    s"""|${GenerateGettersSetters.titleAllGetters(className)}
+        |${GenerateGettersSetters.titleAllSetters(className)}
+        |${GenerateGettersSetters.titleAllGettersAndSetters(className)}
+        |""".stripMargin
+
+  private val onlyAll: org.eclipse.lsp4j.CodeAction => Boolean =
+    _.getTitle().startsWith("Generate all")
+
   check(
     "getter-basic",
     """|package a;
@@ -375,6 +384,133 @@ class GenerateGettersSettersLspSuite
     filterAction = action =>
       action.getTitle() == GenerateGettersSetters.titleGetter("name") ||
         action.getTitle() == GenerateGettersSetters.titleSetter("name"),
+  )
+
+  check(
+    "all-getters",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |  private int age;
+       |}
+       |""".stripMargin,
+    allTitles("Example"),
+    """|package a;
+       |
+       |public class Example {
+       |  private String name;
+       |  private int age;
+       |
+       |  public String getName() {
+       |    return name;
+       |  }
+       |
+       |  public int getAge() {
+       |    return age;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 0,
+    filterAction = onlyAll,
+    fileName = "Example.java",
+  )
+
+  check(
+    "all-setters",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |  private int age;
+       |}
+       |""".stripMargin,
+    allTitles("Example"),
+    """|package a;
+       |
+       |public class Example {
+       |  private String name;
+       |  private int age;
+       |
+       |  public void setName(String name) {
+       |    this.name = name;
+       |  }
+       |
+       |  public void setAge(int age) {
+       |    this.age = age;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    filterAction = onlyAll,
+    fileName = "Example.java",
+  )
+
+  check(
+    "all-getters-and-setters",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |}
+       |""".stripMargin,
+    allTitles("Example"),
+    """|package a;
+       |
+       |public class Example {
+       |  private String name;
+       |
+       |  public String getName() {
+       |    return name;
+       |  }
+       |
+       |  public void setName(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 2,
+    filterAction = onlyAll,
+    fileName = "Example.java",
+  )
+
+  // `all getters` skips fields that already have a getter; `final` fields get
+  // no setter.
+  check(
+    "all-getters-skips-existing-and-final",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private final String name = "";
+       |  private int age;
+       |
+       |  public int getAge() {
+       |    return age;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${GenerateGettersSetters.titleAllGetters("Example")}
+        |${GenerateGettersSetters.titleAllSetters("Example")}
+        |${GenerateGettersSetters.titleAllGettersAndSetters("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private final String name = "";
+       |  private int age;
+       |
+       |  public String getName() {
+       |    return name;
+       |  }
+       |
+       |  public int getAge() {
+       |    return age;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 0,
+    filterAction = onlyAll,
+    fileName = "Example.java",
   )
 
   checkNoAction(

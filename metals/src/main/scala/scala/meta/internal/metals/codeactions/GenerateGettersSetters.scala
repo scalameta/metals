@@ -10,6 +10,7 @@ import scala.meta.internal.parsing.JavaClassInfo
 import scala.meta.internal.parsing.JavaMemberKind
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.JavaVariableInfo
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -26,62 +27,142 @@ class GenerateGettersSetters(
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
-    val position = params.getRange().getStart()
-    val actions = for {
+    val range = params.getRange()
+    val position = range.getStart()
+
+    val fieldActions = for {
       text <- buffers.get(path).toSeq
       variable <- javaTrees.findEnclosingJavaVariable(path, position).toSeq
-      if params.getRange().overlapsWith(variable.range.range)
+      if range.overlapsWith(variable.range.range)
       cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
       if isField(cls, variable)
-    } yield {
-      val insert = javaTrees.insertPointAfterFields(cls, text)
-      val existingMethods = cls.members
-        .filter(_.kind == JavaMemberKind.Method)
-        .flatMap(_.name)
-        .toSet
+    } yield fieldLevelActions(path, text, cls, variable)
 
-      def actionFor(
-          title: String,
-          newText: String,
-      ): l.CodeAction =
-        CodeActionBuilder.build(
-          title = title,
-          kind = kind,
-          changes = Seq(path -> Seq(new l.TextEdit(insert.range, newText))),
-        )
+    val classActions = for {
+      text <- buffers.get(path).toSeq
+      cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
+      if range.overlapsWith(cls.nameRange)
+    } yield classLevelActions(path, text, cls)
 
-      val getter =
-        if (
-          existingMethods.contains(GenerateGettersSetters.getterName(variable))
-        )
-          None
-        else
-          Some(
-            actionFor(
-              GenerateGettersSetters.titleGetter(variable.name),
-              GenerateGettersSetters.getterText(text, insert, variable),
-            )
-          )
-
-      val setter =
-        if (
-          variable.isFinal ||
-          existingMethods.contains(GenerateGettersSetters.setterName(variable))
-        )
-          None
-        else
-          Some(
-            actionFor(
-              GenerateGettersSetters.titleSetter(variable.name),
-              GenerateGettersSetters
-                .setterText(text, insert, cls.name, variable),
-            )
-          )
-
-      (getter ++ setter).toSeq
-    }
-    actions.flatten
+    fieldActions.flatten ++ classActions.flatten
   }
+
+  /** Getter/setter for the single field under the cursor. */
+  private def fieldLevelActions(
+      path: AbsolutePath,
+      text: String,
+      cls: JavaClassInfo,
+      variable: JavaVariableInfo,
+  ): Seq[l.CodeAction] = {
+    import GenerateGettersSetters._
+    val insert = JavaTrees.insertPointAfterFields(cls, text)
+    val unit = JavaMemberInsertion.indentUnit(text)
+    val existing = existingMethodNames(cls)
+
+    val getter =
+      if (existing.contains(getterName(variable))) None
+      else
+        Some(
+          action(
+            path,
+            titleGetter(variable.name),
+            insert,
+            JavaMemberInsertion.renderAll(
+              text,
+              insert,
+              Seq(getterLines(unit, variable)),
+            ),
+          )
+        )
+
+    val setter =
+      if (variable.isFinal || existing.contains(setterName(variable))) None
+      else
+        Some(
+          action(
+            path,
+            titleSetter(variable.name),
+            insert,
+            JavaMemberInsertion.renderAll(
+              text,
+              insert,
+              Seq(setterLines(unit, cls.name, variable)),
+            ),
+          )
+        )
+
+    (getter ++ setter).toSeq
+  }
+
+  /** "Generate all ..." actions offered when the cursor is on the class name. */
+  private def classLevelActions(
+      path: AbsolutePath,
+      text: String,
+      cls: JavaClassInfo,
+  ): Seq[l.CodeAction] = {
+    import GenerateGettersSetters._
+    val fields = cls.members.flatMap(_.field)
+    val existing = existingMethodNames(cls)
+    val unit = JavaMemberInsertion.indentUnit(text)
+    val insert = JavaTrees.insertPointAfterFields(cls, text)
+
+    val needGetters = fields.filter(f => !existing.contains(getterName(f)))
+    val needSetters =
+      fields.filter(f => !f.isFinal && !existing.contains(setterName(f)))
+
+    def allAction(
+        title: String,
+        members: Seq[Seq[String]],
+    ): Option[l.CodeAction] =
+      if (members.isEmpty) None
+      else
+        Some(
+          action(
+            path,
+            title,
+            insert,
+            JavaMemberInsertion.renderAll(text, insert, members),
+          )
+        )
+
+    val getters =
+      allAction(
+        titleAllGetters(cls.name),
+        needGetters.map(getterLines(unit, _)),
+      )
+    val setters =
+      allAction(
+        titleAllSetters(cls.name),
+        needSetters.map(setterLines(unit, cls.name, _)),
+      )
+    // Getter then setter, grouped per field.
+    val both = allAction(
+      titleAllGettersAndSetters(cls.name),
+      fields.flatMap { f =>
+        val g =
+          if (existing.contains(getterName(f))) Nil
+          else Seq(getterLines(unit, f))
+        val s =
+          if (f.isFinal || existing.contains(setterName(f))) Nil
+          else Seq(setterLines(unit, cls.name, f))
+        g ++ s
+      },
+    )
+
+    (getters ++ setters ++ both).toSeq
+  }
+
+  private def action(
+      path: AbsolutePath,
+      title: String,
+      insert: InsertPoint,
+      newText: String,
+  ): l.CodeAction =
+    CodeActionBuilder.build(
+      title = title,
+      kind = kind,
+      changes = Seq(path -> Seq(new l.TextEdit(insert.range, newText))),
+    )
 
   private def isField(
       cls: JavaClassInfo,
@@ -110,6 +191,9 @@ object GenerateGettersSetters {
   def titleAllGettersAndSetters(className: String): String =
     s"Generate all getters and setters for $className"
 
+  def existingMethodNames(cls: JavaClassInfo): Set[String] =
+    cls.members.filter(_.kind == JavaMemberKind.Method).flatMap(_.name).toSet
+
   /**
    * The getter name for a field. Only the primitive `boolean` uses the `is`
    * prefix.
@@ -125,39 +209,23 @@ object GenerateGettersSetters {
   private def modifier(variable: JavaVariableInfo): String =
     if (variable.isStatic) "public static " else "public "
 
-  def getterText(
-      text: String,
-      insert: InsertPoint,
-      variable: JavaVariableInfo,
-  ): String = {
-    val unit = JavaMemberInsertion.indentUnit(text)
-    JavaMemberInsertion.render(
-      text,
-      insert,
-      Seq(
-        s"${modifier(variable)}${variable.typ} ${getterName(variable)}() {",
-        s"${unit}return ${variable.name};",
-        "}",
-      ),
+  def getterLines(unit: String, variable: JavaVariableInfo): Seq[String] =
+    Seq(
+      s"${modifier(variable)}${variable.typ} ${getterName(variable)}() {",
+      s"${unit}return ${variable.name};",
+      "}",
     )
-  }
 
-  def setterText(
-      text: String,
-      insert: InsertPoint,
+  def setterLines(
+      unit: String,
       className: String,
       variable: JavaVariableInfo,
-  ): String = {
-    val unit = JavaMemberInsertion.indentUnit(text)
+  ): Seq[String] = {
     val target = if (variable.isStatic) className else "this"
-    JavaMemberInsertion.render(
-      text,
-      insert,
-      Seq(
-        s"${modifier(variable)}void ${setterName(variable)}(${variable.typ} ${variable.name}) {",
-        s"$unit$target.${variable.name} = ${variable.name};",
-        "}",
-      ),
+    Seq(
+      s"${modifier(variable)}void ${setterName(variable)}(${variable.typ} ${variable.name}) {",
+      s"$unit$target.${variable.name} = ${variable.name};",
+      "}",
     )
   }
 }
