@@ -5,6 +5,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
@@ -255,8 +256,10 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
-    gradleTestCommand(target, testSuites, debugAgentFlag = None)
+  ): Future[List[String]] =
+    Future.successful(
+      gradleTestCommand(target, testSuites, debugAgentFlag = None)
+    )
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -264,8 +267,10 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
-    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+  ): Future[List[String]] =
+    Future.successful(
+      gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+    )
 
   override def supportsForkedTestDebug: Boolean = true
 
@@ -274,10 +279,12 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): Int => List[String] = { port =>
+  ): Int => Future[List[String]] = { port =>
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
-    gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+    Future.successful(
+      gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+    )
   }
 
   private def gradleTestCommand(

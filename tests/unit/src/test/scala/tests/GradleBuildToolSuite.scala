@@ -3,7 +3,9 @@ package tests
 import java.nio.file.Files
 import java.nio.file.Paths
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.GradleBuildTool
@@ -152,13 +154,16 @@ class GradleBuildToolSuite extends BaseSuite {
     )
 
     val command =
-      gradleBuildTool(workspace)
-        .mbtTestCommand(
-          workspace,
-          mbtTarget("app", gradleProjectPath = ":app"),
-          testSuites,
-          Nil,
-        )
+      Await.result(
+        gradleBuildTool(workspace)
+          .mbtTestCommand(
+            workspace,
+            mbtTarget("app", gradleProjectPath = ":app"),
+            testSuites,
+            Nil,
+          ),
+        Duration.Inf,
+      )
 
     assertEquals(
       command,
@@ -183,14 +188,17 @@ class GradleBuildToolSuite extends BaseSuite {
     )
 
     val command =
-      gradleBuildTool(workspace)
-        .mbtTestDebugCommand(
-          workspace,
-          mbtTarget("app"),
-          testSuites,
-          "debug-agent",
-          Nil,
-        )
+      Await.result(
+        gradleBuildTool(workspace)
+          .mbtTestDebugCommand(
+            workspace,
+            mbtTarget("app"),
+            testSuites,
+            "debug-agent",
+            Nil,
+          ),
+        Duration.Inf,
+      )
 
     assertEquals(command.take(2), List("gradle", "--console=plain"))
     assert(command.contains("--init-script"))

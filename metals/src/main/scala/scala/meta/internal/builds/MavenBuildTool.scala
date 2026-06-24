@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
@@ -177,11 +178,13 @@ case class MavenBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
-    mbtTestExecCommand(
-      mbtMavenBaseCommand(workspace),
-      target,
-      testSuites,
+  ): Future[List[String]] =
+    Future.successful(
+      mbtTestExecCommand(
+        mbtMavenBaseCommand(workspace),
+        target,
+        testSuites,
+      )
     )
 
   override def mbtTestDebugCommand(
@@ -190,11 +193,10 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] = {
+  ): Future[List[String]] =
     mbtTestDebugCommandWithPort(workspace, target, testSuites, sourceFiles)(
       5005
     )
-  }
 
   override def supportsForkedTestDebug: Boolean = true
 
@@ -203,16 +205,18 @@ case class MavenBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): Int => List[String] = { port =>
+  ): Int => Future[List[String]] = { port =>
     // Use Surefire's forked JVM with a pre-assigned debug port.
     // This allows proper source mapping since tests run in a separate JVM.
     val debugAgentFlag =
       s"\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port\""
-    mbtTestExecCommand(
-      mbtMavenBaseCommand(workspace),
-      target,
-      testSuites,
-      forkedDebugAgentFlag = Some(debugAgentFlag),
+    Future.successful(
+      mbtTestExecCommand(
+        mbtMavenBaseCommand(workspace),
+        target,
+        testSuites,
+        forkedDebugAgentFlag = Some(debugAgentFlag),
+      )
     )
   }
 

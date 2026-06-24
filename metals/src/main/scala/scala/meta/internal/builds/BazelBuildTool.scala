@@ -1,8 +1,7 @@
 package scala.meta.internal.builds
 
-import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.Future
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -38,6 +37,8 @@ case class BazelBuildTool(
     with BuildServerProvider
     with VersionRecommendation
     with MbtDebugLauncher {
+
+  private implicit val executionContext: ExecutionContext = ec
 
   override def digest(workspace: AbsolutePath): Option[String] = {
     BazelDigest.current(projectRoot)
@@ -134,13 +135,10 @@ case class BazelBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
-    mbtTestExecCommand(
-      resolveTestRunTargets(workspace, target, sourceFiles),
-      target,
-      testSuites,
-      debugAgentFlag = None,
-    )
+  ): Future[List[String]] =
+    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
+      mbtTestExecCommand(runTargets, target, testSuites, debugAgentFlag = None)
+    }
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -148,13 +146,15 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
-    mbtTestExecCommand(
-      resolveTestRunTargets(workspace, target, sourceFiles),
-      target,
-      testSuites,
-      debugAgentFlag = Some(debugAgentFlag),
-    )
+  ): Future[List[String]] =
+    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
+      mbtTestExecCommand(
+        runTargets,
+        target,
+        testSuites,
+        debugAgentFlag = Some(debugAgentFlag),
+      )
+    }
 
   override def supportsForkedTestDebug: Boolean = true
 
@@ -163,34 +163,36 @@ case class BazelBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): Int => List[String] = {
+  ): Int => Future[List[String]] = {
     val resolvedRunTargets =
       resolveTestRunTargets(workspace, target, sourceFiles)
     (port: Int) =>
-      mbtTestExecCommand(
-        resolvedRunTargets,
-        target,
-        testSuites,
-        debugAgentFlag = None,
-      ) ::: List(
-        "--nocache_test_results",
-        "--test_output=streamed",
-        "--test_strategy=exclusive",
-        s"--test_arg=--wrapper_script_flag=--debug=$port",
-      )
+      resolvedRunTargets.map { runTargets =>
+        mbtTestExecCommand(
+          runTargets,
+          target,
+          testSuites,
+          debugAgentFlag = None,
+        ) ::: List(
+          "--nocache_test_results",
+          "--test_output=streamed",
+          "--test_strategy=exclusive",
+          s"--test_arg=--wrapper_script_flag=--debug=$port",
+        )
+      }
   }
 
   private def resolveTestRunTargets(
       workspace: AbsolutePath,
       target: MbtTarget,
       sourceFiles: Seq[AbsolutePath],
-  ): List[String] =
+  ): Future[List[String]] =
     target.configurations.toList match {
-      case Nil => List(target.name)
-      case single :: Nil => List(single)
+      case Nil => Future.successful(List(target.name))
+      case single :: Nil => Future.successful(List(single))
       case multiple =>
         val filenames = sourceFiles.map(_.filename).distinct
-        if (filenames.isEmpty) List(multiple.head)
+        if (filenames.isEmpty) Future.successful(List(multiple.head))
         else {
           val setExpr =
             s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
@@ -199,21 +201,18 @@ case class BazelBuildTool(
             .mkString(" union ")
           val env =
             BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
-          val result =
-            try
-              Await.result(
-                BazelQuery(queryStr, BazelQuery.OutputMode.Label).run(env)(ec),
-                10.seconds,
+          BazelQuery(queryStr, BazelQuery.OutputMode.Label)
+            .run(env)(ec)
+            .recover { case e =>
+              scribe.warn(
+                s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
               )
-            catch {
-              case _: java.util.concurrent.TimeoutException =>
-                scribe.warn(
-                  s"bazel-mbt: timed out resolving test targets for ${target.name}, falling back to ${multiple.head}"
-                )
-                ""
+              ""
             }
-          val resolved = result.linesIterator.filter(_.nonEmpty).toList
-          if (resolved.nonEmpty) resolved else List(multiple.head)
+            .map { result =>
+              val resolved = result.linesIterator.filter(_.nonEmpty).toList
+              if (resolved.nonEmpty) resolved else List(multiple.head)
+            }
         }
     }
 
