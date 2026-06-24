@@ -402,7 +402,8 @@ class UserConfigurationSuite extends BaseSuite {
           |enable-best-effort                           boolean                        false           Use best effort compilation for Scala 3.
           |default-shell                                string                         ""              Full path to the shell executable to be used as the default
           |start-mcp-server                             boolean                        false           Start MCP server
-          |mcp-client                                   string                         ""              MCP Client Name""".stripMargin
+          |mcp-client                                   string                         ""              MCP Client Name
+          |symbols-view-show-all                        boolean                        false           Show all symbols in the symbols view""".stripMargin
     assertNoDiff(obtained, expected)
   }
 
