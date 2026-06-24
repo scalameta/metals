@@ -771,7 +771,7 @@ object MbtBuildServer {
 
     BuildServerConnection.fromSockets(
       workspace,
-      workspace.resolve(".metals").resolve("bsp.trace"),
+      workspace,
       buildClient,
       languageClient,
       connect,
