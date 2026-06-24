@@ -132,14 +132,14 @@ class GenerateDefaultConstructor(
     val startOffset = insert.startOffset
     val endOffset = insert.endOffset
     val endIndent = indentAt(text, endOffset)
-    val memberIndent =
-      if (endIndent.nonEmpty) endIndent
-      else {
-        val lineStart = text.lastIndexOf('\n', startOffset - 1) + 1
-        val indent =
-          text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
-        if (indent.nonEmpty) indent else "  "
-      }
+    val memberIndent = {
+      val lineStart = text.lastIndexOf('\n', startOffset - 1) + 1
+      val startLineIndent =
+        text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
+      if (startLineIndent.nonEmpty) startLineIndent
+      else if (endIndent.nonEmpty) endIndent
+      else "  "
+    }
     val prefix =
       if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
       else "\n\n"

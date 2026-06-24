@@ -24,10 +24,10 @@ import com.sun.source.tree.LineMap
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
-import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePathScanner
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
+import com.sun.tools.javac.tree.{JCTree => JavacJCTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
@@ -36,7 +36,7 @@ import org.eclipse.{lsp4j => l}
 
 class JavaTrees(buffers: Buffers) {
 
-  private val trees = TrieMap.empty[AbsolutePath, CachedJavaTree]
+  private val trees = TrieMap.empty[AbsolutePath, CompilationUnitTree]
 
   def didClose(source: AbsolutePath): Unit = {
     trees.remove(source)
@@ -45,40 +45,38 @@ class JavaTrees(buffers: Buffers) {
   def findEnclosingJavaClass(
       source: AbsolutePath,
       pos: l.Position,
-  ): Option[JavaClassInfo] = {
-    cached(source).flatMap { cached =>
-      val visitor = new EnclosingClassFinder(cached, pos)
-      visitor.scan(cached.tree, ())
-      visitor.result
-    }
-  }
+  ): Option[JavaClassInfo] =
+    for {
+      text <- text(source)
+      tree <- get(source)
+      result <- {
+        val visitor = new EnclosingClassFinder(tree, text, pos)
+        visitor.scan(tree, ())
+        visitor.result
+      }
+    } yield result
 
   def findEnclosingJavaMethod(
       source: AbsolutePath,
       pos: l.Position,
-  ): Option[EnclosingMethod] = {
-    cached(source).flatMap { cached =>
-      val visitor = new EnclosingMethodFinder(cached, pos, source)
-      visitor.scan(cached.tree, ())
-      visitor.result
-    }
-  }
+  ): Option[EnclosingMethod] =
+    for {
+      text <- text(source)
+      tree <- get(source)
+      result <- {
+        val visitor = new EnclosingMethodFinder(tree, text, pos, source)
+        visitor.scan(tree, ())
+        visitor.result
+      }
+    } yield result
 
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
 
-  private def cached(source: AbsolutePath): Option[CachedJavaTree] =
-    trees
-      .get(source)
-      .orElse {
-        text(source).flatMap { text =>
-          // Fallback to parse without caching result.
-          parse(source, text).map(_.tree)
-        }
-      }
-
   def get(source: AbsolutePath): Option[CompilationUnitTree] =
-    cached(source).map(_.tree)
+    trees.get(source).orElse {
+      text(source).flatMap(text => parse(source, text).map(_.tree))
+    }
 
   def didChange(source: AbsolutePath): List[l.Diagnostic] = {
     text(source) match {
@@ -103,7 +101,7 @@ class JavaTrees(buffers: Buffers) {
   private def parse(
       source: AbsolutePath,
       text: String,
-  ): Option[ParsedJavaTree] = {
+  ): Option[ParsedJavaCompilationUnit] = {
     try {
       val input = Input.VirtualFile(source.toURI.toString, text)
       val context = new Context()
@@ -139,17 +137,10 @@ class JavaTrees(buffers: Buffers) {
           true,
         )
         val cu = parser.parseCompilationUnit()
-        cu.asInstanceOf[com.sun.tools.javac.tree.JCTree.JCCompilationUnit]
-          .sourcefile = javaSource
-        val javacTrees =
-          com.sun.tools.javac.api.JavacTrees.instance(context)
+        cu.asInstanceOf[JavacJCTree.JCCompilationUnit].sourcefile = javaSource
         Some(
-          ParsedJavaTree(
-            tree = CachedJavaTree(
-              tree = cu,
-              sourcePositions = javacTrees.getSourcePositions(),
-              text = text,
-            ),
+          ParsedJavaCompilationUnit(
+            tree = cu,
             diagnostics =
               diagnostics.getDiagnostics().asScala.toList.map { diagnostic =>
                 toLspDiagnostic(diagnostic)
@@ -199,25 +190,31 @@ class JavaTrees(buffers: Buffers) {
   }
 
   private class EnclosingMethodFinder(
-      cached: CachedJavaTree,
+      cu: CompilationUnitTree,
+      text: String,
       targetPos: l.Position,
       source: AbsolutePath,
   ) extends TreePathScanner[Unit, Unit] {
-    private val cu = cached.tree
-    private val sourcePositions = cached.sourcePositions
     private val lineMap = cu.getLineMap()
+    private val endPosTable =
+      cu.asInstanceOf[JavacJCTree.JCCompilationUnit].endPositions
     private var _result: Option[EnclosingMethod] = None
 
     def result: Option[EnclosingMethod] = _result
+
+    private def startPosOf(tree: Tree): Long =
+      tree.asInstanceOf[JavacJCTree].getStartPosition().toLong
+    private def endPosOf(tree: Tree): Long =
+      tree.asInstanceOf[JavacJCTree].getEndPosition(endPosTable).toLong
 
     override def visitMethod(
         node: MethodTree,
         p: Unit,
     ): Unit = {
-      val startPos = sourcePositions.getStartPosition(cu, node)
-      val endPos = sourcePositions.getEndPosition(cu, node)
+      val nodeStart = startPosOf(node)
+      val nodeEnd = endPosOf(node)
 
-      if (positionContains(lineMap, targetPos, startPos, endPos)) {
+      if (positionContains(lineMap, targetPos, nodeStart, nodeEnd)) {
         val methodName = node.getName().toString()
         val displayName =
           if (methodName == "<init>") {
@@ -231,29 +228,24 @@ class JavaTrees(buffers: Buffers) {
 
         val returnType = node.getReturnType()
         val nameStartPos =
-          if (returnType != null)
-            sourcePositions.getEndPosition(cu, returnType)
-          else
-            sourcePositions.getStartPosition(cu, node)
+          if (returnType != null) endPosOf(returnType)
+          else nodeStart
         val params = node.getParameters()
         val nameEndPos =
-          if (!params.isEmpty())
-            sourcePositions.getStartPosition(cu, params.get(0))
-          else if (node.getBody() != null)
-            sourcePositions.getStartPosition(cu, node.getBody())
-          else
-            sourcePositions.getEndPosition(cu, node)
+          if (!params.isEmpty()) startPosOf(params.get(0))
+          else if (node.getBody() != null) startPosOf(node.getBody())
+          else nodeEnd
 
         val nameRange =
           findNameRange(
             lineMap,
-            cached.text,
+            text,
             nameStartPos,
             nameEndPos,
             displayName,
           )
         val bodyRange =
-          Positions.toLspRange(lineMap, startPos, endPos, cached.text)
+          Positions.toLspRange(lineMap, nodeStart, nodeEnd, text)
         nameRange.foreach { range =>
           _result = Some(EnclosingMethod(range, bodyRange, source))
         }
@@ -264,39 +256,45 @@ class JavaTrees(buffers: Buffers) {
   }
 
   private class EnclosingClassFinder(
-      cached: CachedJavaTree,
+      cu: CompilationUnitTree,
+      text: String,
       targetPos: l.Position,
   ) extends TreePathScanner[Unit, Unit] {
-    private val cu = cached.tree
-    private val sourcePositions = cached.sourcePositions
     private val lineMap = cu.getLineMap()
+    private val endPosTable =
+      cu.asInstanceOf[JavacJCTree.JCCompilationUnit].endPositions
     private var _result: Option[JavaClassInfo] = None
 
     def result: Option[JavaClassInfo] = _result
+
+    private def startPosOf(tree: Tree): Long =
+      tree.asInstanceOf[JavacJCTree].getStartPosition().toLong
+    private def endPosOf(tree: Tree): Long =
+      tree.asInstanceOf[JavacJCTree].getEndPosition(endPosTable).toLong
 
     override def visitClass(
         node: ClassTree,
         p: Unit,
     ): Unit = {
-      val startPos = sourcePositions.getStartPosition(cu, node)
-      val endPos = sourcePositions.getEndPosition(cu, node)
-      if (positionContains(lineMap, targetPos, startPos, endPos)) {
+      val nodeStart = startPosOf(node)
+      val nodeEnd = endPosOf(node)
+      if (positionContains(lineMap, targetPos, nodeStart, nodeEnd)) {
         if (node.getKind() == Tree.Kind.CLASS) {
           val name = node.getSimpleName().toString()
           if (name.nonEmpty) {
             for {
               nameRange <- findNameRange(
                 lineMap,
-                cached.text,
-                startPos,
-                endPos,
+                text,
+                nodeStart,
+                nodeEnd,
                 name,
               )
               nameEndOffset = lineMap.getPosition(
                 nameRange.getEnd().getLine() + 1L,
                 nameRange.getEnd().getCharacter() + 1L,
               )
-              body <- bodyRange(nameEndOffset, endPos)
+              body <- bodyRange(nameEndOffset, nodeEnd)
             } {
               val members =
                 node
@@ -367,7 +365,7 @@ class JavaTrees(buffers: Buffers) {
               lineMap,
               openBrace + 1L,
               endPos - 1L,
-              cached.text,
+              text,
             ),
             startOffset = (openBrace + 1L).toInt,
             endOffset = (endPos - 1L).toInt,
@@ -382,10 +380,10 @@ class JavaTrees(buffers: Buffers) {
       if (startPos < 0 || endPos < 0) None
       else {
         var offset = startPos.toInt
-        val searchEnd = Math.min(endPos.toInt, cached.text.length())
+        val searchEnd = Math.min(endPos.toInt, text.length())
         var result: Option[Long] = None
         while (offset < searchEnd && result.isEmpty) {
-          if (cached.text.charAt(offset) == '{') {
+          if (text.charAt(offset) == '{') {
             result = Some(offset.toLong)
           }
           offset += 1
@@ -397,15 +395,15 @@ class JavaTrees(buffers: Buffers) {
     private def treeRange(
         tree: Tree
     ): Option[JavaRange] = {
-      val startPos = sourcePositions.getStartPosition(cu, tree)
-      val endPos = sourcePositions.getEndPosition(cu, tree)
-      if (startPos < 0 || endPos < 0) None
+      val treeStart = startPosOf(tree)
+      val treeEnd = endPosOf(tree)
+      if (treeStart < 0 || treeEnd < 0) None
       else
         Some(
           JavaRange(
-            Positions.toLspRange(lineMap, startPos, endPos, cached.text),
-            startOffset = startPos.toInt,
-            endOffset = endPos.toInt,
+            Positions.toLspRange(lineMap, treeStart, treeEnd, text),
+            startOffset = treeStart.toInt,
+            endOffset = treeEnd.toInt,
           )
         )
     }
@@ -471,15 +469,9 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
-  private case class ParsedJavaTree(
-      tree: CachedJavaTree,
-      diagnostics: List[l.Diagnostic],
-  )
-
-  private case class CachedJavaTree(
+  private case class ParsedJavaCompilationUnit(
       tree: CompilationUnitTree,
-      sourcePositions: SourcePositions,
-      text: String,
+      diagnostics: List[l.Diagnostic],
   )
 
   private case class JavaRange(
