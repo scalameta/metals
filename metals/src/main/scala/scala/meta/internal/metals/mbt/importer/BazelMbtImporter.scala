@@ -72,7 +72,7 @@ abstract class BazelMbtImporter(
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
       (genSrcOutputsByTarget, genSrcLabels) <-
-        if (userConfig().importGeneratedSourcesMbtBazel)
+        if (userConfig().importGeneratedSourcesMbt)
           queryGenSrcOutputsByTarget(srcs)
         else
           Future.successful(

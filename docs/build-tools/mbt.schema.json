@@ -149,12 +149,12 @@
     },
     "uncheckedSources": {
       "type": "array",
-      "description": "Paths to generated source directories or .srcjar archives, compiled alongside all git-ls-found workspace sources.",
+      "description": "Paths to generated source directories or .srcjar archives, compiled alongside all git-ls-found workspace sources for files not scoped via namespaces.",
       "items": {
         "type": "string",
         "examples": [
-          "bazel-out/k8-fastbuild/bin/src/proto/foo_java_proto.srcjar",
-          "bazel-out/k8-fastbuild/bin/src/gen/generated_sources"
+          "bazel-out/k8-fastbuild/bin/src/other/bar_java_proto.srcjar",
+          "bazel-out/k8-fastbuild/bin/src/other/other_generated_sources"
         ]
       }
     }

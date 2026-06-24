@@ -523,7 +523,7 @@ class UserConfigurationSuite extends BaseSuite {
   },
   "enableBestEffort": false,
   "startMcpServer": false,
-  "importGeneratedSourcesMbtBazel": false
+  "importGeneratedSourcesMbt": false
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
@@ -602,7 +602,7 @@ class UserConfigurationSuite extends BaseSuite {
           |default-shell                                string                         ""              Full path to the shell executable to be used as the default
           |start-mcp-server                             boolean                        false           Start MCP server
           |mcp-client                                   string                         ""              MCP Client Name
-          |import-generated-sources-MBT-bazel           boolean                        false           Import Generated Sources In Bazel MBT Builds""".stripMargin
+          |import-generated-sources-mbt                 boolean                        false           Import Generated Sources In MBT Builds""".stripMargin
     assertNoDiff(obtained, expected)
   }
 

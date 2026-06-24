@@ -288,7 +288,7 @@ final class MbtBuildServer(
       .map(workspace.resolve)
       .filter(p => p.exists && p.isFile)
     if (srcJars.nonEmpty)
-      GitVCS.extractSrcJars(srcJars, workspace)
+      GitVCS.lsFilesFromSrcJars(srcJars, workspace, extractOnly = true)
   }
   override def buildTargetInverseSources(
       params: InverseSourcesParams

@@ -126,18 +126,6 @@ object GitVCS {
   }
 
   /**
-   * Ensures each srcjar's contents are extracted to disk, skipping jars whose
-   * `extractDir/.jar.meta` already matches the current modification time and path.
-   */
-  def extractSrcJars(
-      srcJars: Seq[AbsolutePath],
-      workspace: AbsolutePath,
-      isRelevantPath: GitBlob => Boolean = blob =>
-        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
-  ): Unit =
-    lsFilesFromSrcJars(srcJars, workspace, isRelevantPath, collectBlobs = false)
-
-  /**
    * Opens the given srcjar archives and lists source files inside them so the
    * resulting paths are real on-disk paths. Intended for `.srcjar` entries in
    * `uncheckedSources` in `mbt.json`.
@@ -145,20 +133,17 @@ object GitVCS {
    * Extraction is skipped when `extractDir/.jar.meta` matches the srcjar's
    * current modification time and path, in which case already-extracted files
    * are listed directly from disk.
+   *
+   * `extractOnly` skips the reading and listing of the files, and returns
+   * an empty ParArray, only ensuring the files are extracted from the `.srcjars`.
    */
+
   def lsFilesFromSrcJars(
       srcJars: Seq[AbsolutePath],
       workspace: AbsolutePath,
       isRelevantPath: GitBlob => Boolean = blob =>
         MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
-  ): ParArray[GitBlob] =
-    lsFilesFromSrcJars(srcJars, workspace, isRelevantPath, collectBlobs = true)
-
-  private def lsFilesFromSrcJars(
-      srcJars: Seq[AbsolutePath],
-      workspace: AbsolutePath,
-      isRelevantPath: GitBlob => Boolean,
-      collectBlobs: Boolean,
+      extractOnly: Boolean = false,
   ): ParArray[GitBlob] = {
     val result = ParArray.newBuilder[GitBlob]
     srcJars.foreach { srcJar =>
@@ -175,7 +160,7 @@ object GitVCS {
             Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
           else None
         if (cachedMeta.contains(currentMeta) && extractDir.exists) {
-          if (collectBlobs)
+          if (!extractOnly)
             lsFilesFromDirs(Seq(extractDir), isRelevantPath).foreach(
               result += _
             )
@@ -194,7 +179,7 @@ object GitVCS {
                     diskPath.toNIO,
                     StandardCopyOption.REPLACE_EXISTING,
                   )
-                  if (collectBlobs) {
+                  if (!extractOnly) {
                     val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
                     result += new GitBlob(
                       diskPath.toString,
