@@ -16,6 +16,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -33,6 +34,7 @@ class NewFileProvider(
     selector: ScalaVersionSelector,
     icons: Icons,
     isReadClipboardProvider: Boolean,
+    userConfig: () => UserConfiguration,
     onCreate: AbsolutePath => Future[Unit],
 )(implicit
     ec: ExecutionContext
@@ -241,11 +243,13 @@ class NewFileProvider(
     val path = directory.resolve(fileName)
     // name can be "foo/Name" or "Foo.scala"; use path filename without ext for template
     val className = Identifier.backtickWrap(path.filename.stripSuffix(ext))
+    val useBraceless = useBracelessSyntax(path)
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
-      case Enum => enumTemplate(className)
+      case Enum => enumTemplate(className, useBraceless)
       case JavaRecord => javaRecordTemplate(className)
-      case _ => classTemplate(kind.syntax.getOrElse(""), className)
+      case _ =>
+        classTemplate(kind.syntax.getOrElse(""), className, useBraceless)
     }
     val editText = template.map { s =>
       packageProvider
@@ -277,10 +281,19 @@ class NewFileProvider(
     createFileAndWriteText(
       path,
       packageProvider
-        .packageStatement(path)
+        .packageStatement(path, braceless = useBracelessSyntax(path))
         .getOrElse(NewFileTemplate.empty),
     )
   }
+
+  /**
+   * Whether generated code for `path` should use Scala 3's optional-braces
+   * (significant-indentation) syntax instead of curly braces.
+   */
+  private def useBracelessSyntax(path: AbsolutePath): Boolean =
+    path.isScala &&
+      userConfig().useBracelessSyntaxForNewFiles &&
+      ScalaVersions.isScala3Version(selector.scalaVersionForPath(path))
 
   private def createEmptyFile(
       directory: AbsolutePath,
@@ -326,20 +339,39 @@ class NewFileProvider(
     )
   }
 
-  private def classTemplate(kind: String, name: String): NewFileTemplate = {
+  private def classTemplate(
+      kind: String,
+      name: String,
+      braceless: Boolean,
+  ): NewFileTemplate = {
     val indent = "  "
-    NewFileTemplate(s"""|$kind $name {
-                        |$indent@@
-                        |}
-                        |""".stripMargin)
+    // A bodyless declaration is the braceless equivalent of an empty class/trait/
+    // object: `class Foo:` with an empty indented region is a parse error, whereas
+    // `class Foo` compiles. The cursor lands after the name, ready for a body.
+    if (braceless)
+      NewFileTemplate(s"""|$kind $name@@
+                          |""".stripMargin)
+    else
+      NewFileTemplate(s"""|$kind $name {
+                          |$indent@@
+                          |}
+                          |""".stripMargin)
   }
 
-  private def enumTemplate(name: String): NewFileTemplate = {
+  private def enumTemplate(
+      name: String,
+      braceless: Boolean,
+  ): NewFileTemplate = {
     val indent = "  "
-    NewFileTemplate(s"""|enum $name {
-                        |${indent}case@@
-                        |}
-                        |""".stripMargin)
+    if (braceless)
+      NewFileTemplate(s"""|enum $name:
+                          |${indent}case@@
+                          |""".stripMargin)
+    else
+      NewFileTemplate(s"""|enum $name {
+                          |${indent}case@@
+                          |}
+                          |""".stripMargin)
   }
 
   private def javaRecordTemplate(name: String): NewFileTemplate = {

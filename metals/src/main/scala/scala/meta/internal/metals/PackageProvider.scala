@@ -51,6 +51,7 @@ class PackageProvider(
   def packageStatement(
       path: AbsolutePath,
       fileContent: String = "",
+      braceless: Boolean = false,
   ): Option[NewFileTemplate] = {
 
     def packageObjectStatement(
@@ -63,12 +64,20 @@ class PackageProvider(
       packageParts.lastOption.map { packageObjectName =>
         val indent = "  "
         val backtickedName = wrap(packageObjectName)
-        NewFileTemplate(
-          s"""|${packageDeclaration}package object $backtickedName {
-              |${indent}@@
-              |}
-              |""".stripMargin
-        )
+        // A bodyless `package object foo` compiles, whereas `package object foo:`
+        // with an empty indented region is a parse error.
+        if (braceless)
+          NewFileTemplate(
+            s"""|${packageDeclaration}package object $backtickedName@@
+                |""".stripMargin
+          )
+        else
+          NewFileTemplate(
+            s"""|${packageDeclaration}package object $backtickedName {
+                |${indent}@@
+                |}
+                |""".stripMargin
+          )
       }
     }
 

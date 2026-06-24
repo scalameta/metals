@@ -477,6 +477,7 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons(),
     clientConfig.isReadClipboardProvider(),
+    () => userConfig,
     onCreate = path => {
       onCreate(path)
       onChange(List(path))
