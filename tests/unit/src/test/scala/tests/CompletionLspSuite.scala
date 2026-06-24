@@ -385,6 +385,210 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
+  // Override completions for Java raw types, see
+  // https://github.com/scalameta/metals/issues/2554
+  private def rawTypeLayout(naivetyBody: String): String =
+    s"""/metals.json
+       |{
+       |  "a": { "scalaVersion": "${V.scala213}" }
+       |}
+       |/a/src/main/java/example/Recursive.java
+       |package example;
+       |public interface Recursive<T extends Recursive> {}
+       |/a/src/main/java/example/Dep.java
+       |package example;
+       |public interface Dep<A, B extends A> {}
+       |/a/src/main/java/example/Bounded.java
+       |package example;
+       |public interface Bounded<T extends Number> {}
+       |/a/src/main/java/example/Box.java
+       |package example;
+       |public interface Box<T> {}
+       |/a/src/main/java/example/Pair.java
+       |package example;
+       |public interface Pair<A, B> {}
+       |/a/src/main/java/example/B.java
+       |package example;
+       |public interface B<U> {}
+       |/a/src/main/java/example/ExternGeneric.java
+       |package example;
+       |public interface ExternGeneric<T extends B> {}
+       |/a/src/main/java/example/IllConceived.java
+       |package example;
+       |public interface IllConceived {
+       |  public void impossible(Recursive iDontEven);
+       |  public void dep(Dep d);
+       |  public Recursive makeRec();
+       |  public void bounded(Bounded usesRaw);
+       |  public void box(Box b);
+       |  public void pair(Pair p);
+       |  public void extern(ExternGeneric e);
+       |  public Box makeBox();
+       |}
+       |/a/src/main/scala/example/Naivety.scala
+       |package example
+       |class Naivety extends IllConceived {
+       |$naivetyBody
+       |}
+       |""".stripMargin
+
+  private val naivetyFile = "a/src/main/scala/example/Naivety.scala"
+
+  // A Java interface whose raw types are all representable (bounds reference only
+  // external types, never the raw type's own parameters).
+  private def reasonableLayout(body: String): String =
+    s"""/metals.json
+       |{
+       |  "a": { "scalaVersion": "${V.scala213}" }
+       |}
+       |/a/src/main/java/example/Bounded.java
+       |package example;
+       |public interface Bounded<T extends Number> {}
+       |/a/src/main/java/example/Box.java
+       |package example;
+       |public interface Box<T> {}
+       |/a/src/main/java/example/Pair.java
+       |package example;
+       |public interface Pair<A, B> {}
+       |/a/src/main/java/example/Reasonable.java
+       |package example;
+       |public interface Reasonable {
+       |  public void bounded(Bounded usesRaw);
+       |  public void box(Box b);
+       |  public void pair(Pair p);
+       |  public Box makeBox();
+       |}
+       |/a/src/main/scala/example/Reasonably.scala
+       |package example
+       |class Reasonably extends Reasonable {
+       |$body
+       |}
+       |""".stripMargin
+
+  private val reasonablyFile = "a/src/main/scala/example/Reasonably.scala"
+
+  test("java-raw-type-override") {
+    cleanWorkspace()
+    def assertStub(query: String, member: String, stub: String) =
+      assertCompletionEdit(
+        query,
+        s"""|package example
+            |class Naivety extends IllConceived {
+            |  $stub
+            |}
+            |""".stripMargin,
+        filenameOpt = Some(naivetyFile),
+        filter = _.contains(member),
+      )
+    def assertNotOffered(query: String, member: String) =
+      assertCompletion(
+        query,
+        "",
+        filter = _.contains(member),
+        filename = Some(naivetyFile),
+      )
+    for {
+      _ <- initialize(rawTypeLayout("  // @@"))
+      _ <- server.didOpen(naivetyFile)
+      // self-referential (F-bounded) raw type: no override offered
+      _ <- assertNotOffered("def impossible@@", "impossible")
+      // sibling-referential bound (`B extends A`): also no override offered
+      _ <- assertNotOffered("def dep@@", "dep")
+      // unrepresentable raw type in *return* position is likewise not offered
+      _ <- assertNotOffered("def makeRec@@", "makeRec")
+      // representable raw types still get correct, compiling stubs:
+      _ <- assertStub(
+        "def bounded@@",
+        "bounded",
+        "def bounded(usesRaw: Bounded[_ <: Number]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def box@@",
+        "box",
+        "def box(b: Box[_]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def pair@@",
+        "pair",
+        "def pair(p: Pair[_, _]): Unit = ${0:???}",
+      )
+      // an external generic bound is a closed existential, so it is representable
+      // and offered (not over-suppressed)
+      _ <- assertStub(
+        "def extern@@",
+        "extern",
+        "def extern(e: ExternGeneric[_ <: B[_]]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def makeBox@@",
+        "makeBox",
+        "def makeBox(): Box[_] = ${0:???}",
+      )
+    } yield ()
+  }
+
+  test("java-raw-type-implement-all-suppressed") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(rawTypeLayout("  // @@"))
+      _ <- server.didOpen(naivetyFile)
+      // `impossible`/`dep` have no compiling override, so "Implement all
+      // members" is not offered -- it could never complete the class.
+      _ <- assertCompletion(
+        "def@@",
+        "",
+        filter = _.contains("Implement"),
+        filename = Some(naivetyFile),
+      )
+    } yield ()
+  }
+
+  test("java-raw-type-implement-all") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(reasonableLayout("  // @@"))
+      _ <- server.didOpen(reasonablyFile)
+      // every member is representable, so "Implement all members" works and
+      // renders each raw type with wildcards. (Members after the first are
+      // flush-left because the harness applies the edit without auto-indentation.)
+      _ <- assertCompletionEdit(
+        "def@@",
+        """|package example
+           |class Reasonably extends Reasonable {
+           |  def bounded(usesRaw: Bounded[_ <: Number]): Unit = ${0:???}
+           |
+           |def box(b: Box[_]): Unit = ${0:???}
+           |
+           |def pair(p: Pair[_, _]): Unit = ${0:???}
+           |
+           |def makeBox(): Box[_] = ${0:???}
+           |
+           |}
+           |""".stripMargin,
+        filenameOpt = Some(reasonablyFile),
+        filter = _.contains("Implement"),
+      )
+    } yield ()
+  }
+
+  // The bug is semantic, so also verify the generated stubs actually compile and
+  // override the Java members (not just that the edit text matches).
+  test("java-raw-type-overrides-compile") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        reasonableLayout(
+          """|  def bounded(usesRaw: Bounded[_ <: Number]): Unit = ???
+             |  def box(b: Box[_]): Unit = ???
+             |  def pair(p: Pair[_, _]): Unit = ???
+             |  def makeBox(): Box[_] = ???""".stripMargin
+        )
+      )
+      _ <- server.didOpen(reasonablyFile)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("scope") {
     cleanWorkspace()
     for {
