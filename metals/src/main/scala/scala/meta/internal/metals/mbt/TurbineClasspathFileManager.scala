@@ -84,9 +84,12 @@ class TurbineClasspathFileManager(
         val objects = new ju.ArrayList[JavaFileObject]()
         val isAddedBinaryName = new ju.HashSet[String]()
         val cp = workspaceClasspath()
-        listPackageClasspath(projectClasspath, packageNames, isAddedBinaryName) {
-          obj =>
-            objects.add(obj)
+        listPackageClasspath(
+          projectClasspath,
+          packageNames,
+          isAddedBinaryName,
+        ) { obj =>
+          objects.add(obj)
         }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>
@@ -109,8 +112,9 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        listPackageClasspath(cp.classpath, packageNames, isAddedBinaryName) { obj =>
-          objects.add(obj)
+        listPackageClasspath(cp.classpath, packageNames, isAddedBinaryName) {
+          obj =>
+            objects.add(obj)
         }
         objects
       case StandardLocation.SOURCE_PATH =>

@@ -91,7 +91,7 @@ class DefinitionDirectorySuite extends BaseSuite {
     index.addSourceFile(
       root.resolve("com/foo/EchoService.java"),
       Some(root),
-      dialects.Scala213
+      dialects.Scala213,
     )
     assertDefinition("com/foo/EchoService#")
     assertDefinition("com/foo/EchoService#EchoRequest#")
@@ -133,7 +133,7 @@ class DefinitionDirectorySuite extends BaseSuite {
     index.addSourceFile(
       root.resolve("FlagsConfig.java"),
       Some(root),
-      dialects.Scala213
+      dialects.Scala213,
     )
     assertDefinition("com/foo/FlagsConfig#")
     assertDefinition("com/foo/FlagsConfig#isEnabled().")
