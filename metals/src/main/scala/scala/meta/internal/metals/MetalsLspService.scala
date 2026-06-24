@@ -1012,7 +1012,10 @@ abstract class MetalsLspService(
       } else {
         for {
           reportedDiagnostics <- compilers.didFocus(path)
-          _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+          _ = diagnostics.publishDiagnosticsNotAdjusted(
+            path,
+            reportedDiagnostics,
+          )
           result <-
             if (recentlyOpenedFiles.isRecentlyActive(path)) {
               Future.successful(DidFocusResult.RecentlyActive)
