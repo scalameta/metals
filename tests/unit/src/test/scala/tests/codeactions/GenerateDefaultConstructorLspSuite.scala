@@ -297,6 +297,32 @@ class GenerateDefaultConstructorLspSuite
   )
 
   check(
+    "tab-indented-inner-class",
+    s"""|package a;
+        |
+        |public class Outer {
+        |\tpublic class <<Example>> {
+        |\t\tprivate String name;
+        |\t}
+        |}
+        |""".stripMargin,
+    s"""|${GenerateDefaultConstructor.title("Example")}
+        |""".stripMargin,
+    s"""|package a;
+        |
+        |public class Outer {
+        |\tpublic class Example {
+        |\t\tprivate String name;
+        |
+        |\t\tpublic Example() {
+        |\t\t}
+        |\t}
+        |}
+        |""".stripMargin,
+    fileName = "Outer.java",
+  )
+
+  check(
     "inner-class-cursor",
     """|package a;
        |
