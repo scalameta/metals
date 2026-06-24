@@ -5,12 +5,10 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.parsing.InsertPoint
-import scala.meta.internal.parsing.JavaClassInfo
-import scala.meta.internal.parsing.JavaMemberKind
+import scala.meta.internal.parsing.JavaClass
+import scala.meta.internal.parsing.JavaMethod
 import scala.meta.internal.parsing.JavaTrees
-import scala.meta.internal.parsing.JavaVariableInfo
-import scala.meta.io.AbsolutePath
+import scala.meta.internal.parsing.JavaVariable
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
@@ -19,8 +17,11 @@ class GenerateGettersSetters(
     javaTrees: JavaTrees,
     buffers: Buffers,
 ) extends CodeAction {
+  import GenerateGettersSetters._
 
   override def kind: String = l.CodeActionKind.QuickFix
+  override def isScala: Boolean = false
+  override def isJava: Boolean = true
 
   override def contribute(
       params: l.CodeActionParams,
@@ -30,153 +31,78 @@ class GenerateGettersSetters(
     val range = params.getRange()
     val position = range.getStart()
 
-    val fieldActions = for {
-      text <- buffers.get(path).toSeq
-      variable <- javaTrees.findEnclosingJavaVariable(path, position).toSeq
-      if range.overlapsWith(variable.range.range)
-      cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
-      if isField(cls, variable)
-    } yield fieldLevelActions(path, text, cls, variable)
-
-    val classActions = for {
+    val actions = for {
       text <- buffers.get(path).toSeq
       cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
-      if range.overlapsWith(cls.nameRange)
-    } yield classLevelActions(path, text, cls)
+    } yield {
+      val insert = JavaTrees.insertPointAfterFields(cls, text)
+      val unit = JavaMemberInsertion.indentUnit(text)
+      val existing = existingMethodNames(cls)
 
-    fieldActions.flatten ++ classActions.flatten
-  }
-
-  /** Getter/setter for the single field under the cursor. */
-  private def fieldLevelActions(
-      path: AbsolutePath,
-      text: String,
-      cls: JavaClassInfo,
-      variable: JavaVariableInfo,
-  ): Seq[l.CodeAction] = {
-    import GenerateGettersSetters._
-    val insert = JavaTrees.insertPointAfterFields(cls, text)
-    val unit = JavaMemberInsertion.indentUnit(text)
-    val existing = existingMethodNames(cls)
-
-    val getter =
-      if (existing.contains(getterName(variable))) None
-      else
-        Some(
-          action(
-            path,
-            titleGetter(variable.name),
-            insert,
-            JavaMemberInsertion.renderAll(
-              text,
-              insert,
-              Seq(getterLines(unit, variable)),
-            ),
-          )
-        )
-
-    val setter =
-      if (variable.isFinal || existing.contains(setterName(variable))) None
-      else
-        Some(
-          action(
-            path,
-            titleSetter(variable.name),
-            insert,
-            JavaMemberInsertion.renderAll(
-              text,
-              insert,
-              Seq(setterLines(unit, cls.name, variable)),
-            ),
-          )
-        )
-
-    (getter ++ setter).toSeq
-  }
-
-  /** "Generate all ..." actions offered when the cursor is on the class name. */
-  private def classLevelActions(
-      path: AbsolutePath,
-      text: String,
-      cls: JavaClassInfo,
-  ): Seq[l.CodeAction] = {
-    import GenerateGettersSetters._
-    val fields = cls.members.flatMap(_.field)
-    val existing = existingMethodNames(cls)
-    val unit = JavaMemberInsertion.indentUnit(text)
-    val insert = JavaTrees.insertPointAfterFields(cls, text)
-
-    val needGetters = fields.filter(f => !existing.contains(getterName(f)))
-    val needSetters =
-      fields.filter(f => !f.isFinal && !existing.contains(setterName(f)))
-
-    def allAction(
-        title: String,
-        members: Seq[Seq[String]],
-    ): Option[l.CodeAction] =
-      if (members.isEmpty) None
-      else
-        Some(
-          action(
-            path,
-            title,
-            insert,
+      def build(
+          title: String,
+          members: Seq[Seq[String]],
+      ): Option[l.CodeAction] =
+        Option.when(members.nonEmpty) {
+          val edit = new l.TextEdit(
+            insert.range,
             JavaMemberInsertion.renderAll(text, insert, members),
           )
-        )
+          CodeActionBuilder.build(title, kind, changes = Seq(path -> Seq(edit)))
+        }
 
-    val getters =
-      allAction(
-        titleAllGetters(cls.name),
-        needGetters.map(getterLines(unit, _)),
-      )
-    val setters =
-      allAction(
-        titleAllSetters(cls.name),
-        needSetters.map(setterLines(unit, cls.name, _)),
-      )
-    // Getter then setter, grouped per field.
-    val both = allAction(
-      titleAllGettersAndSetters(cls.name),
-      fields.flatMap { f =>
-        val g =
-          if (existing.contains(getterName(f))) Nil
-          else Seq(getterLines(unit, f))
-        val s =
-          if (f.isFinal || existing.contains(setterName(f))) Nil
-          else Seq(setterLines(unit, cls.name, f))
-        g ++ s
-      },
-    )
-
-    (getters ++ setters ++ both).toSeq
+      // cursor on the class name: getters/setters for all fields.
+      if (range.overlapsWith(cls.nameRange.range)) {
+        val fields = cls.members.collect { case field: JavaVariable => field }
+        List(
+          build(
+            titleAllGetters(cls.name),
+            fields.flatMap(getter(existing, unit, _)),
+          ),
+          build(
+            titleAllSetters(cls.name),
+            fields.flatMap(setter(existing, unit, cls.name, _)),
+          ),
+          build(
+            titleAllGettersAndSetters(cls.name),
+            fields.flatMap(field =>
+              getter(existing, unit, field).toList ++
+                setter(existing, unit, cls.name, field).toList
+            ),
+          ),
+        ).flatten
+      } else {
+        // cursor on a field: getter/setter for that field.
+        javaTrees
+          .findEnclosingJavaVariable(path, position)
+          .filter(field =>
+            range
+              .overlapsWith(field.nameRange.range) && isClassField(cls, field)
+          )
+          .map { field =>
+            List(
+              build(
+                titleGetter(field.name),
+                getter(existing, unit, field).toList,
+              ),
+              build(
+                titleSetter(field.name),
+                setter(existing, unit, cls.name, field).toList,
+              ),
+            ).flatten
+          }
+          .getOrElse(Nil)
+      }
+    }
+    actions.flatten
   }
 
-  private def action(
-      path: AbsolutePath,
-      title: String,
-      insert: InsertPoint,
-      newText: String,
-  ): l.CodeAction =
-    CodeActionBuilder.build(
-      title = title,
-      kind = kind,
-      changes = Seq(path -> Seq(new l.TextEdit(insert.range, newText))),
-    )
-
-  private def isField(
-      cls: JavaClassInfo,
-      variable: JavaVariableInfo,
-  ): Boolean =
-    cls.members.exists(member =>
-      member.kind == JavaMemberKind.Field &&
-        member.range.startOffset == variable.range.startOffset
-    )
-
-  override def isScala: Boolean = false
-
-  override def isJava: Boolean = true
-
+  private def isClassField(cls: JavaClass, field: JavaVariable): Boolean =
+    cls.members.exists {
+      case other: JavaVariable =>
+        other.range.startOffset == field.range.startOffset
+      case _ => false
+    }
 }
 
 object GenerateGettersSetters {
@@ -191,41 +117,45 @@ object GenerateGettersSetters {
   def titleAllGettersAndSetters(className: String): String =
     s"Generate all getters and setters for $className"
 
-  def existingMethodNames(cls: JavaClassInfo): Set[String] =
-    cls.members.filter(_.kind == JavaMemberKind.Method).flatMap(_.name).toSet
+  private def existingMethodNames(cls: JavaClass): Set[String] =
+    cls.members.collect {
+      case method: JavaMethod if !method.isConstructor => method.name
+    }.toSet
 
-  /**
-   * The getter name for a field. Only the primitive `boolean` uses the `is`
-   * prefix.
-   */
-  def getterName(variable: JavaVariableInfo): String = {
-    val prefix = if (variable.typ == "boolean") "is" else "get"
-    prefix + variable.name.capitalize
-  }
+  private def getter(
+      existing: Set[String],
+      unit: String,
+      field: JavaVariable,
+  ): Option[Seq[String]] =
+    Option.when(!existing.contains(getterName(field))) {
+      Seq(
+        s"${modifier(field)}${field.typ} ${getterName(field)}() {",
+        s"${unit}return ${field.name};",
+        "}",
+      )
+    }
 
-  def setterName(variable: JavaVariableInfo): String =
-    "set" + variable.name.capitalize
-
-  private def modifier(variable: JavaVariableInfo): String =
-    if (variable.isStatic) "public static " else "public "
-
-  def getterLines(unit: String, variable: JavaVariableInfo): Seq[String] =
-    Seq(
-      s"${modifier(variable)}${variable.typ} ${getterName(variable)}() {",
-      s"${unit}return ${variable.name};",
-      "}",
-    )
-
-  def setterLines(
+  private def setter(
+      existing: Set[String],
       unit: String,
       className: String,
-      variable: JavaVariableInfo,
-  ): Seq[String] = {
-    val target = if (variable.isStatic) className else "this"
-    Seq(
-      s"${modifier(variable)}void ${setterName(variable)}(${variable.typ} ${variable.name}) {",
-      s"$unit$target.${variable.name} = ${variable.name};",
-      "}",
-    )
-  }
+      field: JavaVariable,
+  ): Option[Seq[String]] =
+    Option.when(!field.isFinal && !existing.contains(setterName(field))) {
+      val target = if (field.isStatic) className else "this"
+      Seq(
+        s"${modifier(field)}void ${setterName(field)}(${field.typ} ${field.name}) {",
+        s"$unit$target.${field.name} = ${field.name};",
+        "}",
+      )
+    }
+
+  private def getterName(field: JavaVariable): String =
+    (if (field.typ == "boolean") "is" else "get") + field.name.capitalize
+
+  private def setterName(field: JavaVariable): String =
+    "set" + field.name.capitalize
+
+  private def modifier(field: JavaVariable): String =
+    if (field.isStatic) "public static " else "public "
 }

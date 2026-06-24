@@ -1,15 +1,13 @@
 package scala.meta.internal.metals.codeactions
 
-import javax.lang.model.element.Modifier
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.InsertPoint
-import scala.meta.internal.parsing.JavaClassInfo
-import scala.meta.internal.parsing.JavaMemberKind
+import scala.meta.internal.parsing.JavaClass
+import scala.meta.internal.parsing.JavaMethod
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.pc.CancelToken
 
@@ -31,7 +29,7 @@ class GenerateDefaultConstructor(
     for {
       text <- buffers.get(path).toSeq
       cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
-      if params.getRange().overlapsWith(cls.nameRange) &&
+      if params.getRange().overlapsWith(cls.nameRange.range) &&
         !hasDefaultConstructor(cls)
     } yield {
       val insert = JavaTrees.insertPointAfterFields(cls, text)
@@ -51,17 +49,17 @@ class GenerateDefaultConstructor(
 
   override def isJava: Boolean = true
 
-  private def hasDefaultConstructor(cls: JavaClassInfo): Boolean =
-    cls.members.exists(member =>
-      member.kind == JavaMemberKind.Constructor &&
-        member.parametersCount.contains(0)
-    )
+  private def hasDefaultConstructor(cls: JavaClass): Boolean =
+    cls.members.exists {
+      case m: JavaMethod => m.isConstructor && m.parameters.isEmpty
+      case _ => false
+    }
 
-  private def constructorModifier(cls: JavaClassInfo): String = {
-    if (cls.modifiers.contains(Modifier.ABSTRACT)) "protected "
-    else if (cls.modifiers.contains(Modifier.PUBLIC)) "public "
-    else if (cls.modifiers.contains(Modifier.PROTECTED)) "protected "
-    else if (cls.modifiers.contains(Modifier.PRIVATE)) "private "
+  private def constructorModifier(cls: JavaClass): String = {
+    if (cls.isAbstract) "protected "
+    else if (cls.isPublic) "public "
+    else if (cls.isProtected) "protected "
+    else if (cls.isPrivate) "private "
     else ""
   }
 

@@ -8,7 +8,6 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
-import scala.meta.internal.parsing.EnclosingMethod
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -26,6 +25,12 @@ import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.{lsp4j => l}
+
+case class EnclosingMethod(
+    nameRange: l.Range,
+    bodyRange: l.Range,
+    source: AbsolutePath,
+)
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,
@@ -185,7 +190,11 @@ final case class CallHierarchyProvider(
           EnclosingMethod(defn.name.pos.toLsp, defn.pos.toLsp, source)
         )
     } else if (source.isJavaFilename) {
-      javaTrees.findEnclosingJavaMethod(source, range.getStart)
+      javaTrees
+        .findEnclosingJavaMethod(source, range.getStart)
+        .map(method =>
+          EnclosingMethod(method.nameRange.range, method.range.range, source)
+        )
     } else None
   }
 

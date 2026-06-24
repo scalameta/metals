@@ -12,8 +12,6 @@ class GenerateDefaultConstructorLspSuite
     if (isSource) s"a/src/main/java/a/$fileName"
     else s"a/$fileName"
 
-  // Getter/setter actions also fire when the cursor is on the class name, so
-  // restrict these assertions to the default-constructor action.
   private val onlyConstructor: org.eclipse.lsp4j.CodeAction => Boolean =
     _.getTitle().startsWith("Generate default constructor")
 
