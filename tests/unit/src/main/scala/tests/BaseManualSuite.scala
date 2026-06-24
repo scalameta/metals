@@ -14,6 +14,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.Testing
 import scala.meta.internal.metals.Time
@@ -43,6 +44,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
   def clientName: String = "Visual Studio Code"
   def awaitInitialized: Boolean = true
   def buildServerConnectionTimeout: Duration = Duration("2min")
+  def mtagsResolver: MtagsResolver = new TestMtagsResolver(checkCoursier = true)
 
   def defaultUserConfig: UserConfiguration = UserConfiguration.default.copy(
     preferredBuildServer = preferredBuildServer,
@@ -130,7 +132,7 @@ abstract class BaseManualSuite extends munit.FunSuite {
           time = Time.system,
           initializationOptions = TestingServer.TestDefault
             .copy(isVirtualDocumentSupported = Some(true)),
-          mtagsResolver = new TestMtagsResolver(checkCoursier = true),
+          mtagsResolver = mtagsResolver,
           clientName = clientName,
           onStartCompilation = () => (),
         )(ex)

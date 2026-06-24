@@ -11,6 +11,7 @@ import scala.sys.process.Process
 import scala.util.Try
 
 import scala.meta.internal.metals.Configs._
+import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
@@ -145,6 +146,9 @@ class ManualSuite extends BaseManualSuite {
     prop("metals.manual.buildServerConnectionTimeout")
       .map(Duration(_))
       .getOrElse(super.buildServerConnectionTimeout)
+
+  override def mtagsResolver: MtagsResolver =
+    new TestMtagsResolver(checkCoursier = false)
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
