@@ -98,11 +98,14 @@ trait CompletionsAssertions {
       project: Char = 'a',
       filter: String => Boolean = _ => true,
       index: Int = 0,
+      filenameOpt: Option[String],
   )(
       fn: CompletionItem => Unit
   ): Future[Unit] = {
     import scala.jdk.CollectionConverters._
-    val filename = s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    val filename = filenameOpt.getOrElse(
+      s"$project/src/main/scala/$project/${project.toUpper}.scala"
+    )
     val text = server
       .textContentsOnDisk(filename)
       .replace("// @@", query.replace("@@", ""))
@@ -125,22 +128,35 @@ trait CompletionsAssertions {
       query: String,
       expectedLabel: String,
       expectedDoc: Option[String] = None,
+      expectedInsertText: Option[String] = None,
       project: Char = 'a',
       filter: String => Boolean = _ => true,
       index: Int = 0,
+      filename: Option[String] = None,
   )(implicit loc: Location): Future[Unit] = {
-    withCompletionItemResolve(query, project, filter, index) { resolved =>
-      assertNoDiff(resolved.getLabel(), expectedLabel)
-      expectedDoc.foreach { doc =>
-        val obtainedDoc =
-          if (resolved.getDocumentation() == null) ""
-          else if (resolved.getDocumentation().isRight()) {
-            resolved.getDocumentation().getRight().getValue()
-          } else {
-            resolved.getDocumentation().getLeft()
-          }
-        assertNoDiff(obtainedDoc, doc)
-      }
+    withCompletionItemResolve(query, project, filter, index, filename) {
+      resolved =>
+        assertNoDiff(resolved.getLabel(), expectedLabel)
+        expectedDoc.foreach { doc =>
+          val obtainedDoc =
+            if (resolved.getDocumentation() == null) ""
+            else if (resolved.getDocumentation().isRight()) {
+              resolved.getDocumentation().getRight().getValue()
+            } else {
+              resolved.getDocumentation().getLeft()
+            }
+          assertNoDiff(obtainedDoc, doc)
+        }
+        expectedInsertText.foreach { insertText =>
+          val obtainedInsertText =
+            if (resolved.getTextEdit == null) ""
+            else if (resolved.getTextEdit.isRight()) {
+              resolved.getTextEdit.getRight().getNewText()
+            } else {
+              resolved.getTextEdit.getLeft().getNewText()
+            }
+          assertNoDiff(obtainedInsertText, insertText)
+        }
     }
   }
 
