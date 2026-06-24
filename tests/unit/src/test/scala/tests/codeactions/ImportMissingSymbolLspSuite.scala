@@ -631,4 +631,30 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
     dependencies = List("org.mongodb.scala::mongo-scala-driver:4.1.0"),
   )
+
+  // Type alias inherited into `package object doobie` via the `Aliases` mixin,
+  // see https://github.com/scalameta/metals/issues/2583
+  check(
+    "package-object-mixin-alias",
+    """|package a
+       |
+       |object A {
+       |  def xa: <<Transactor>>[List] = ???
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Transactor", "doobie")}
+        |${ImportMissingSymbol.title("Transactor", "doobie.util.transactor")}
+        |${CreateNewSymbol.title("Transactor")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import doobie.Transactor
+       |
+       |object A {
+       |  def xa: Transactor[List] = ???
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+    dependencies = List("org.tpolecat::doobie-core:0.13.4"),
+  )
 }

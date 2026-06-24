@@ -93,22 +93,37 @@ final class AutoImportsProvider(
             sym,
             sym.info
           ) && !sym.owner.isEmptyPackageClass =>
-        val pkg = sym.owner.fullName
+        // A symbol inherited into a package object from a mixin is declared in
+        // the mixin trait but importable only through the enclosing package
+        // (issue #2583); in that case import it through the package class
+        // rather than its declared owner, reusing the normal synthesis path.
+        val throughPackageObject =
+          visitor.visitedThroughPackageObject.get(sym)
+        val importOwner = throughPackageObject.getOrElse(sym.owner)
+        val pkg = importOwner.fullName
+        val importOwnerOverride =
+          throughPackageObject
+            .map(pkgClass => Map(sym -> pkgClass))
+            .getOrElse(Map.empty[Symbol, Symbol])
         val edits = importPosition match {
           // if we are in import section just specify full name
           case None if isInImportTree =>
-            val nameEdit = new l.TextEdit(namePos, sym.fullNameSyntax)
-            List(nameEdit)
+            val fullName =
+              if (throughPackageObject.isDefined)
+                s"$pkg.${Identifier(sym.name)}"
+              else sym.fullNameSyntax
+            List(new l.TextEdit(namePos, fullName))
           case None =>
             // No import position means we can't insert an import without clashing with
             // existing symbols in scope, so we just do nothing
             Nil
           case Some(value) =>
             val (short, edits) = ShortenedNames.synthesize(
-              TypeRef(ThisType(sym.owner), sym, Nil),
+              TypeRef(ThisType(importOwner), sym, Nil),
               pos,
               context,
-              value
+              value,
+              importOwnerOverride
             )
             val nameEdit = new l.TextEdit(namePos, short)
 

@@ -162,11 +162,24 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
       visitMember: Symbol => Boolean
   ) extends SymbolSearchVisitor {
 
-    def visit(top: SymbolSearchCandidate): Int = {
+    /**
+     * Symbols found through a package object that only inherits them from a
+     * mixin, e.g. `doobie/package.Transactor#` declared in `doobie/Types#`,
+     * mapped to the class of the enclosing package (`doobie`). Such symbols
+     * are importable only through the package, not through their owner, which
+     * auto-imports needs to know about.
+     */
+    val visitedThroughPackageObject: mutable.Map[Symbol, Symbol] =
+      mutable.Map.empty
+
+    def visit(top: SymbolSearchCandidate): Int =
+      visitResolved(loadSymbolFromClassfile(top, context))
+
+    private def visitResolved(syms: List[Symbol]): Int = {
 
       var added = 0
       for {
-        sym <- loadSymbolFromClassfile(top, context)
+        sym <- syms
         if context.lookupSymbol(sym.name, _ => true).symbol != sym
       } {
         if (visitMember(sym)) {
@@ -184,7 +197,24 @@ trait WorkspaceSymbolSearch { compiler: MetalsGlobal =>
         kind: l.SymbolKind,
         range: l.Range
     ): Int = {
-      visit(SymbolSearchCandidate.Workspace(symbol, path))
+      import scala.meta.internal.semanticdb.Scala._
+      val resolved = loadSymbolFromClassfile(
+        SymbolSearchCandidate.Workspace(symbol, path),
+        context
+      )
+      val (_, ownerString) = DescriptorParser(symbol)
+      if (ownerString.endsWith("/package.")) {
+        packageSymbolFromString(ownerString.owner).foreach { pkg =>
+          val pkgClass = pkg.moduleClass
+          // record all resolved symbols, not only newly visited ones, since
+          // the same symbol may have been collected by another search already
+          resolved.foreach { sym =>
+            if (!sym.owner.hasPackageFlag && !sym.owner.isPackageObjectClass)
+              visitedThroughPackageObject(sym) = pkgClass
+          }
+        }
+      }
+      visitResolved(resolved)
     }
 
     def shouldVisitPackage(pkg: String): Boolean =
