@@ -7,6 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -20,13 +21,11 @@ final class CodeActionProvider(
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
     trees: Trees,
+    javaTrees: JavaTrees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
-
-  private val extractMemberAction =
-    new ExtractRenameMember(trees, languageClient, buffers)
 
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
@@ -43,7 +42,7 @@ final class CodeActionProvider(
     ),
     new StringActions(trees),
     new RemoveInfixRefactor(trees),
-    extractMemberAction,
+    new ExtractRenameMember(trees, languageClient, buffers),
     new SourceOrganizeImports(scalafixProvider, buildTargets, diagnostics),
     new OrganizeImportsQuickFix(scalafixProvider, buildTargets, diagnostics),
     new InsertInferredType(trees, compilers, languageClient),
@@ -62,6 +61,7 @@ final class CodeActionProvider(
     new RemoveInvalidImportQuickFix(trees, buildTargets),
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
+    new GenerateDefaultConstructor(javaTrees, buffers),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {

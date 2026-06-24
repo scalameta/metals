@@ -33,12 +33,11 @@ final case class CallHierarchyProvider(
     icons: Icons,
     compilers: () => Compilers,
     trees: Trees,
-    buffers: Buffers,
+    javaTrees: JavaTrees,
     buildTargets: BuildTargets,
     mbtReferenceProvider: MbtReferenceProvider,
     workDoneProgress: WorkDoneProgress,
 ) {
-  private val javaTrees = new JavaTrees(buffers)
   private val callHierarchyItemBuilder =
     new CallHierarchyItemBuilder(workspace, icons, compilers, buildTargets)
 
