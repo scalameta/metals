@@ -559,6 +559,83 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
     } yield ()
   }
 
+  check(
+    "override-references",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |trait Animal {
+       |  def <<speak>>(): Unit
+       |}
+       |
+       |class Dog extends Animal {
+       |  override def <<sp@@eak>>(): Unit = println("Bark")
+       |}
+       |
+       |object Main {
+       |  def test(a: Animal, d: Dog): Unit = {
+       |    a.<<speak>>()
+       |    d.<<speak>>()
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "find-references-includes-implementations",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |trait Processor {
+       |  def <<pr@@ocess>>(input: String): String
+       |}
+       |
+       |class StringProcessor extends Processor {
+       |  override def <<process>>(input: String): String = input.toUpperCase
+       |}
+       |
+       |class NumberProcessor extends Processor {
+       |  override def <<process>>(input: String): String = input.filter(_.isDigit)
+       |}
+       |
+       |object Main {
+       |  def use(p: Processor): String = p.<<process>>("test")
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "diamond-inheritance-references",
+    """|/a/src/main/scala/a/Main.scala
+       |package a
+       |
+       |trait A {
+       |  def <<fo@@o>>(): Unit
+       |}
+       |
+       |trait B extends A {
+       |  override def <<foo>>(): Unit = println("B")
+       |}
+       |
+       |trait C extends A {
+       |  override def <<foo>>(): Unit = println("C")
+       |}
+       |
+       |class D extends B with C {
+       |  override def <<foo>>(): Unit = println("D")
+       |}
+       |
+       |object Main {
+       |  def test(a: A, b: B, c: C, d: D): Unit = {
+       |    a.<<foo>>()
+       |    b.<<foo>>()
+       |    c.<<foo>>()
+       |    d.<<foo>>()
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
   override def assertCheck(
       filename: String,
       edit: String,
