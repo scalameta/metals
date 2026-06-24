@@ -94,25 +94,26 @@ final class BloopServers(
       progress: TaskProgress,
   ): Future[BuildServerConnection] = {
     progress.message = "connecting to bloop"
-    BuildServerConnection
-      .fromSockets(
-        projectRoot,
-        bspTraceRoot,
-        client,
-        languageClient,
-        () =>
-          connect(
-            projectRoot,
-            userConfiguration(),
-          ),
-        tables.dismissedNotifications.RequestTimeout,
-        tables.dismissedNotifications.ReconnectBsp,
-        serverConfig,
-        userConfiguration(),
-        name,
-        bspStatusOpt,
-        workDoneProgress = workDoneProgress,
-      )
+    val outer = this
+    val connectionFactory = new BuildServerConnectionFactory(
+      projectRoot,
+      bspTraceRoot,
+      client,
+      languageClient,
+      tables.dismissedNotifications.RequestTimeout,
+      tables.dismissedNotifications.ReconnectBsp,
+      serverConfig,
+      userConfiguration(),
+      name,
+      bspStatusOpt,
+      workDoneProgress = workDoneProgress,
+    ) {
+      override def connect(): Future[SocketConnection] =
+        outer.connect(projectRoot, userConfiguration())
+
+    }
+    connectionFactory
+      .fromSockets()
       .recover { case NonFatal(e) =>
         Try(
           // Bloop output
