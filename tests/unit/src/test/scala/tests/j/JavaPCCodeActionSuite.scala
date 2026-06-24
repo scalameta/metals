@@ -3,6 +3,7 @@ package tests.j
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
 class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
+
   testLSP("external-dep") {
     cleanWorkspace()
     val path = "a/src/main/java/a/b/Example.java"

@@ -2,16 +2,15 @@ package scala.meta.internal.parsing
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
-import java.util.Locale
 import javax.lang.model.element.Modifier
 import javax.tools.DiagnosticCollector
 import javax.tools.JavaFileObject
-import javax.tools.{Diagnostic => JavaDiagnostic}
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
+import scala.meta.internal.jpc.JavaDiagnostics
 import scala.meta.internal.jpc.Positions
 import scala.meta.internal.jpc.SourceJavaFileObject
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -31,7 +30,6 @@ import com.sun.tools.javac.tree.{JCTree => JavacJCTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
-import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.{lsp4j => l}
 
 class JavaTrees(buffers: Buffers) {
@@ -138,12 +136,13 @@ class JavaTrees(buffers: Buffers) {
         )
         val cu = parser.parseCompilationUnit()
         cu.asInstanceOf[JavacJCTree.JCCompilationUnit].sourcefile = javaSource
+        val lineMap = cu.getLineMap()
         Some(
           ParsedJavaCompilationUnit(
             tree = cu,
             diagnostics =
               diagnostics.getDiagnostics().asScala.toList.map { diagnostic =>
-                toLspDiagnostic(diagnostic)
+                JavaDiagnostics.toLspDiagnostic(lineMap, text, diagnostic)
               },
           )
         )
@@ -155,40 +154,6 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
-  private def toLspDiagnostic(
-      diagnostic: JavaDiagnostic[_ <: JavaFileObject]
-  ): l.Diagnostic = {
-    val position =
-      if (
-        diagnostic.getPosition() == JavaDiagnostic.NOPOS ||
-        diagnostic.getLineNumber() < 1 ||
-        diagnostic.getColumnNumber() < 1
-      ) {
-        new l.Position(0, 0)
-      } else {
-        new l.Position(
-          diagnostic.getLineNumber().toInt - 1,
-          diagnostic.getColumnNumber().toInt - 1,
-        )
-      }
-
-    val severity = diagnostic.getKind() match {
-      case JavaDiagnostic.Kind.ERROR => DiagnosticSeverity.Error
-      case JavaDiagnostic.Kind.WARNING |
-          JavaDiagnostic.Kind.MANDATORY_WARNING =>
-        DiagnosticSeverity.Warning
-      case JavaDiagnostic.Kind.NOTE => DiagnosticSeverity.Information
-      case JavaDiagnostic.Kind.OTHER => DiagnosticSeverity.Hint
-    }
-
-    new l.Diagnostic(
-      new l.Range(position, position),
-      diagnostic.getMessage(Locale.ENGLISH),
-      severity,
-      "javac",
-    )
-  }
-
   private class EnclosingMethodFinder(
       cu: CompilationUnitTree,
       text: String,
@@ -196,59 +161,45 @@ class JavaTrees(buffers: Buffers) {
       source: AbsolutePath,
   ) extends TreePathScanner[Unit, Unit] {
     private val lineMap = cu.getLineMap()
-    private val endPosTable =
-      cu.asInstanceOf[JavacJCTree.JCCompilationUnit].endPositions
+    private val pos = new TreePositions(cu)
+    private val targetOffset = lspPositionToOffset(lineMap, targetPos)
     private var _result: Option[EnclosingMethod] = None
 
     def result: Option[EnclosingMethod] = _result
-
-    private def startPosOf(tree: Tree): Long =
-      tree.asInstanceOf[JavacJCTree].getStartPosition().toLong
-    private def endPosOf(tree: Tree): Long =
-      tree.asInstanceOf[JavacJCTree].getEndPosition(endPosTable).toLong
 
     override def visitMethod(
         node: MethodTree,
         p: Unit,
     ): Unit = {
-      val nodeStart = startPosOf(node)
-      val nodeEnd = endPosOf(node)
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
 
-      if (positionContains(lineMap, targetPos, nodeStart, nodeEnd)) {
+      if (positionContains(targetOffset, nodeStart, nodeEnd)) {
         val methodName = node.getName().toString()
         val displayName =
-          if (methodName == "<init>") {
-            val parent = Option(getCurrentPath().getParentPath().getLeaf())
-            parent match {
-              case Some(parent: ClassTree) =>
-                parent.getSimpleName().toString()
+          if (methodName == "<init>")
+            getCurrentPath().getParentPath().getLeaf() match {
+              case parent: ClassTree => parent.getSimpleName().toString()
               case _ => methodName
             }
-          } else methodName
+          else methodName
 
         val returnType = node.getReturnType()
         val nameStartPos =
-          if (returnType != null) endPosOf(returnType)
+          if (returnType != null) pos.endPos(returnType)
           else nodeStart
         val params = node.getParameters()
         val nameEndPos =
-          if (!params.isEmpty()) startPosOf(params.get(0))
-          else if (node.getBody() != null) startPosOf(node.getBody())
+          if (!params.isEmpty()) pos.startPos(params.get(0))
+          else if (node.getBody() != null) pos.startPos(node.getBody())
           else nodeEnd
 
-        val nameRange =
-          findNameRange(
-            lineMap,
-            text,
-            nameStartPos,
-            nameEndPos,
-            displayName,
-          )
         val bodyRange =
           Positions.toLspRange(lineMap, nodeStart, nodeEnd, text)
-        nameRange.foreach { range =>
-          _result = Some(EnclosingMethod(range, bodyRange, source))
-        }
+        findNameRange(lineMap, text, nameStartPos, nameEndPos, displayName)
+          .foreach { javaRange =>
+            _result = Some(EnclosingMethod(javaRange.range, bodyRange, source))
+          }
         super.visitMethod(node, p)
       }
 
@@ -261,24 +212,19 @@ class JavaTrees(buffers: Buffers) {
       targetPos: l.Position,
   ) extends TreePathScanner[Unit, Unit] {
     private val lineMap = cu.getLineMap()
-    private val endPosTable =
-      cu.asInstanceOf[JavacJCTree.JCCompilationUnit].endPositions
+    private val pos = new TreePositions(cu)
+    private val targetOffset = lspPositionToOffset(lineMap, targetPos)
     private var _result: Option[JavaClassInfo] = None
 
     def result: Option[JavaClassInfo] = _result
-
-    private def startPosOf(tree: Tree): Long =
-      tree.asInstanceOf[JavacJCTree].getStartPosition().toLong
-    private def endPosOf(tree: Tree): Long =
-      tree.asInstanceOf[JavacJCTree].getEndPosition(endPosTable).toLong
 
     override def visitClass(
         node: ClassTree,
         p: Unit,
     ): Unit = {
-      val nodeStart = startPosOf(node)
-      val nodeEnd = endPosOf(node)
-      if (positionContains(lineMap, targetPos, nodeStart, nodeEnd)) {
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
+      if (positionContains(targetOffset, nodeStart, nodeEnd)) {
         if (node.getKind() == Tree.Kind.CLASS) {
           val name = node.getSimpleName().toString()
           if (name.nonEmpty) {
@@ -290,35 +236,22 @@ class JavaTrees(buffers: Buffers) {
                 nodeEnd,
                 name,
               )
-              nameEndOffset = lineMap.getPosition(
-                nameRange.getEnd().getLine() + 1L,
-                nameRange.getEnd().getCharacter() + 1L,
-              )
-              body <- bodyRange(nameEndOffset, nodeEnd)
+              body <- bodyRange(nameRange.endOffset, nodeEnd)
             } {
               val members =
                 node
                   .getMembers()
                   .asScala
                   .collect {
-                    case method: MethodTree
-                        if method.getName().toString() == "<init>" =>
-                      treeRange(method).map(range =>
-                        JavaMemberInfo(
-                          kind = JavaMemberKind.Constructor,
-                          range = range.range,
-                          startOffset = range.startOffset,
-                          endOffset = range.endOffset,
-                          parametersCount = Some(method.getParameters().size()),
-                        )
-                      )
                     case method: MethodTree =>
+                      val kind =
+                        if (method.getName().toString() == "<init>")
+                          JavaMemberKind.Constructor
+                        else JavaMemberKind.Method
                       treeRange(method).map(range =>
                         JavaMemberInfo(
-                          kind = JavaMemberKind.Method,
-                          range = range.range,
-                          startOffset = range.startOffset,
-                          endOffset = range.endOffset,
+                          kind = kind,
+                          range = range,
                           parametersCount = Some(method.getParameters().size()),
                         )
                       )
@@ -326,9 +259,7 @@ class JavaTrees(buffers: Buffers) {
                       treeRange(field).map(range =>
                         JavaMemberInfo(
                           kind = JavaMemberKind.Field,
-                          range = range.range,
-                          startOffset = range.startOffset,
-                          endOffset = range.endOffset,
+                          range = range,
                           parametersCount = None,
                         )
                       )
@@ -338,10 +269,8 @@ class JavaTrees(buffers: Buffers) {
               _result = Some(
                 JavaClassInfo(
                   name = name,
-                  nameRange = nameRange,
-                  bodyRange = body.range,
-                  bodyStartOffset = body.startOffset,
-                  bodyEndOffset = body.endOffset,
+                  nameRange = nameRange.range,
+                  bodyRange = body,
                   modifiers = node.getModifiers().getFlags().asScala.toSet,
                   members = members,
                 )
@@ -354,118 +283,100 @@ class JavaTrees(buffers: Buffers) {
     }
 
     private def bodyRange(
-        startPos: Long,
-        endPos: Long,
+        startPos: Int,
+        endPos: Int,
     ): Option[JavaRange] = {
-      if (endPos < 0) None
-      else
-        openingBraceOffset(startPos, endPos).map { openBrace =>
-          JavaRange(
-            Positions.toLspRange(
-              lineMap,
-              openBrace + 1L,
-              endPos - 1L,
-              text,
-            ),
-            startOffset = (openBrace + 1L).toInt,
-            endOffset = (endPos - 1L).toInt,
-          )
-        }
-    }
-
-    private def openingBraceOffset(
-        startPos: Long,
-        endPos: Long,
-    ): Option[Long] = {
       if (startPos < 0 || endPos < 0) None
       else {
-        var offset = startPos.toInt
-        val searchEnd = Math.min(endPos.toInt, text.length())
-        var result: Option[Long] = None
-        while (offset < searchEnd && result.isEmpty) {
-          if (text.charAt(offset) == '{') {
-            result = Some(offset.toLong)
-          }
+        var offset = startPos
+        val searchEnd = Math.min(endPos, text.length())
+        var openBrace: Option[Int] = None
+        while (offset < searchEnd && openBrace.isEmpty) {
+          if (text.charAt(offset) == '{') openBrace = Some(offset)
           offset += 1
         }
-        result
+        openBrace.map { brace =>
+          JavaRange(
+            Positions.toLspRange(lineMap, brace + 1, endPos - 1, text),
+            startOffset = brace + 1,
+            endOffset = endPos - 1,
+          )
+        }
       }
     }
 
     private def treeRange(
         tree: Tree
     ): Option[JavaRange] = {
-      val treeStart = startPosOf(tree)
-      val treeEnd = endPosOf(tree)
+      val treeStart = pos.startPos(tree)
+      val treeEnd = pos.endPos(tree)
       if (treeStart < 0 || treeEnd < 0) None
       else
         Some(
           JavaRange(
             Positions.toLspRange(lineMap, treeStart, treeEnd, text),
-            startOffset = treeStart.toInt,
-            endOffset = treeEnd.toInt,
+            startOffset = treeStart,
+            endOffset = treeEnd,
           )
         )
     }
   }
 
-  private def positionContains(
-      lineMap: LineMap,
-      targetPos: l.Position,
-      startPos: Long,
-      endPos: Long,
-  ): Boolean = {
-    if (startPos < 0 || endPos < 0) false
-    else {
-      val startLine = lineMap.getLineNumber(startPos).toInt - 1
-      val endLine = lineMap.getLineNumber(endPos).toInt - 1
-      val startCol = lineMap.getColumnNumber(startPos).toInt - 1
-      val endCol = lineMap.getColumnNumber(endPos).toInt - 1
-
-      val targetLine = targetPos.getLine()
-      val targetCol = targetPos.getCharacter()
-
-      if (targetLine < startLine || targetLine > endLine) false
-      else if (targetLine == startLine && targetCol < startCol) false
-      else if (targetLine == endLine && targetCol > endCol) false
-      else true
-    }
+  private class TreePositions(cu: CompilationUnitTree) {
+    private val endPosTable =
+      cu.asInstanceOf[JavacJCTree.JCCompilationUnit].endPositions
+    def startPos(tree: Tree): Int =
+      tree.asInstanceOf[JavacJCTree].getStartPosition()
+    def endPos(tree: Tree): Int =
+      tree.asInstanceOf[JavacJCTree].getEndPosition(endPosTable)
   }
+
+  private def positionContains(
+      targetOffset: Int,
+      startPos: Int,
+      endPos: Int,
+  ): Boolean =
+    startPos >= 0 && endPos >= 0 &&
+      startPos <= targetOffset && targetOffset <= endPos
+
+  private def lspPositionToOffset(
+      lineMap: LineMap,
+      pos: l.Position,
+  ): Int =
+    lineMap.getPosition(pos.getLine() + 1L, pos.getCharacter() + 1L).toInt
 
   private def findNameRange(
       lineMap: LineMap,
       text: String,
-      startPos: Long,
-      endPos: Long,
+      startPos: Int,
+      endPos: Int,
       name: String,
-  ): Option[l.Range] = {
+  ): Option[JavaRange] = {
     if (startPos < 0 || endPos < 0) None
     else {
-      var offset = startPos.toInt
-      val searchEnd = Math.min(endPos.toInt, text.length())
-      var result: Option[l.Range] = None
-      while (offset < searchEnd && result.isEmpty) {
-        val endOffset = offset + name.length()
-        val isWordBoundary =
-          endOffset >= text.length() ||
-            !Character.isJavaIdentifierPart(text.charAt(endOffset))
-        if (
+      val searchEnd = Math.min(endPos, text.length())
+      (startPos until searchEnd)
+        .find { offset =>
+          val endOffset = offset + name.length()
+          // Char at `offset` is a valid identifier start.
           Character.isJavaIdentifierStart(text.charAt(offset)) &&
+          // Substring at `offset` matches the target name exactly.
           text.startsWith(name, offset) &&
-          isWordBoundary
-        ) {
-          result = Some(
-            Positions.toLspRange(
-              lineMap,
-              offset.toLong,
-              endOffset.toLong,
-              text,
-            )
+          // Left boundary: previous char does not continue an identifier.
+          (offset == 0 ||
+            !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
+          // Right boundary: next char is end-of-text or does not continue an identifier.
+          (endOffset >= text.length() ||
+            !Character.isJavaIdentifierPart(text.charAt(endOffset)))
+        }
+        .map { offset =>
+          val endOffset = offset + name.length()
+          JavaRange(
+            Positions.toLspRange(lineMap, offset, endOffset, text),
+            startOffset = offset,
+            endOffset = endOffset,
           )
         }
-        offset += 1
-      }
-      result
     }
   }
 
@@ -474,12 +385,15 @@ class JavaTrees(buffers: Buffers) {
       diagnostics: List[l.Diagnostic],
   )
 
-  private case class JavaRange(
-      range: l.Range,
-      startOffset: Int,
-      endOffset: Int,
-  )
+}
 
+case class JavaRange(
+    range: l.Range,
+    startOffset: Int,
+    endOffset: Int,
+) {
+  def getStart(): l.Position = range.getStart()
+  def getEnd(): l.Position = range.getEnd()
 }
 
 case class EnclosingMethod(
@@ -491,18 +405,14 @@ case class EnclosingMethod(
 case class JavaClassInfo(
     name: String,
     nameRange: l.Range,
-    bodyRange: l.Range,
-    bodyStartOffset: Int,
-    bodyEndOffset: Int,
+    bodyRange: JavaRange,
     modifiers: Set[Modifier],
     members: List[JavaMemberInfo],
 )
 
 case class JavaMemberInfo(
     kind: JavaMemberKind,
-    range: l.Range,
-    startOffset: Int,
-    endOffset: Int,
+    range: JavaRange,
     parametersCount: Option[Int],
 )
 

@@ -10,7 +10,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.codeactions.GenerateDefaultConstructor.InsertPoint
 import scala.meta.internal.metals.codeactions.GenerateDefaultConstructor.PositionWithOffset
 import scala.meta.internal.parsing.JavaClassInfo
-import scala.meta.internal.parsing.JavaMemberInfo
 import scala.meta.internal.parsing.JavaMemberKind
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.pc.CancelToken
@@ -30,30 +29,22 @@ class GenerateDefaultConstructor(
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
     val position = params.getRange().getStart()
-
-    buffers.get(path) match {
-      case None => Nil
-      case Some(text) =>
-        javaTrees.findEnclosingJavaClass(path, position).toSeq.collect {
-          case cls
-              if params.getRange().overlapsWith(cls.nameRange) &&
-                !hasDefaultConstructor(cls) =>
-            val insert = constructorInsertPoint(cls, text)
-            val edit = new l.TextEdit(
-              insert.range,
-              constructorText(
-                text,
-                cls.name,
-                constructorModifier(cls),
-                insert,
-              ),
-            )
-            CodeActionBuilder.build(
-              title = GenerateDefaultConstructor.title(cls.name),
-              kind = kind,
-              changes = Seq(path -> Seq(edit)),
-            )
-        }
+    for {
+      text <- buffers.get(path).toSeq
+      cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
+      if params.getRange().overlapsWith(cls.nameRange) &&
+        !hasDefaultConstructor(cls)
+    } yield {
+      val insert = constructorInsertPoint(cls, text)
+      val edit = new l.TextEdit(
+        insert.range,
+        constructorText(text, cls.name, constructorModifier(cls), insert),
+      )
+      CodeActionBuilder.build(
+        title = GenerateDefaultConstructor.title(cls.name),
+        kind = kind,
+        changes = Seq(path -> Seq(edit)),
+      )
     }
   }
 
@@ -71,33 +62,27 @@ class GenerateDefaultConstructor(
       cls: JavaClassInfo,
       text: String,
   ): InsertPoint = {
-    val firstMethodIndex = cls.members.indexWhere(member =>
-      member.kind == JavaMemberKind.Method ||
-        member.kind == JavaMemberKind.Constructor
-    )
-    val membersBeforeMethods =
-      if (firstMethodIndex >= 0) cls.members.take(firstMethodIndex)
-      else cls.members
-    val lastFieldEnd = membersBeforeMethods.collect {
-      case member if member.kind == JavaMemberKind.Field =>
-        PositionWithOffset(member.range.getEnd(), member.endOffset)
-    }.lastOption
-
-    val start = lastFieldEnd.getOrElse(
-      PositionWithOffset(cls.bodyRange.getStart(), cls.bodyStartOffset)
-    )
-
-    val expandedEnd =
-      nextMemberStart(cls.members, start.offset).getOrElse(
-        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyEndOffset)
+    val start = cls.members
+      .takeWhile(_.kind == JavaMemberKind.Field)
+      .lastOption
+      .map(m => PositionWithOffset(m.range.getEnd(), m.range.endOffset))
+      .getOrElse(
+        PositionWithOffset(cls.bodyRange.getStart(), cls.bodyRange.startOffset)
       )
+
+    val expandedEnd = cls.members
+      .filter(_.range.startOffset > start.offset)
+      .minByOption(_.range.startOffset)
+      .map(m => PositionWithOffset(m.range.getStart(), m.range.startOffset))
+      .getOrElse(
+        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyRange.endOffset)
+      )
+
     val canExpand =
       expandedEnd.offset <= text.length &&
         text.substring(start.offset, expandedEnd.offset).forall(_.isWhitespace)
 
-    val end =
-      if (canExpand) expandedEnd
-      else start
+    val end = if (canExpand) expandedEnd else start
     InsertPoint(
       new l.Range(start.position, end.position),
       start.offset,
@@ -105,15 +90,6 @@ class GenerateDefaultConstructor(
       isInsertion = !canExpand,
     )
   }
-
-  private def nextMemberStart(
-      members: List[JavaMemberInfo],
-      offset: Int,
-  ): Option[PositionWithOffset] =
-    members
-      .filter(_.startOffset > offset)
-      .minByOption(_.startOffset)
-      .map(m => PositionWithOffset(m.range.getStart(), m.startOffset))
 
   private def constructorModifier(cls: JavaClassInfo): String = {
     if (cls.modifiers.contains(Modifier.ABSTRACT)) "protected "
@@ -133,12 +109,10 @@ class GenerateDefaultConstructor(
     val endOffset = insert.endOffset
     val endIndent = indentAt(text, endOffset)
     val memberIndent = {
-      val lineStart = text.lastIndexOf('\n', startOffset - 1) + 1
-      val startLineIndent =
-        text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
+      val startLineIndent = lineIndent(text, startOffset)
       if (startLineIndent.nonEmpty) startLineIndent
       else if (endIndent.nonEmpty) endIndent
-      else "  "
+      else detectIndentUnit(text)
     }
     val prefix =
       if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
@@ -157,6 +131,21 @@ class GenerateDefaultConstructor(
     val lineStart = text.lastIndexOf('\n', clamped - 1) + 1
     val candidate = text.substring(lineStart, clamped)
     if (candidate.forall(_.isWhitespace)) candidate else ""
+  }
+
+  private def lineIndent(text: String, offset: Int): String = {
+    val lineStart = text.lastIndexOf('\n', offset - 1) + 1
+    text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
+  }
+
+  private def detectIndentUnit(text: String): String = {
+    val firstIndent = text.linesIterator
+      .map(_.takeWhile(c => c == ' ' || c == '\t'))
+      .find(_.nonEmpty)
+    firstIndent match {
+      case Some(ws) if ws.startsWith("\t") => "\t"
+      case _ => "  "
+    }
   }
 }
 

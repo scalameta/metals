@@ -245,6 +245,58 @@ class GenerateDefaultConstructorLspSuite
   )
 
   check(
+    "empty-body-spaces",
+    """|package a;
+       |
+       |class Helper {
+       |  private int x;
+       |}
+       |
+       |public class <<Example>> {}
+       |""".stripMargin,
+    s"""|${GenerateDefaultConstructor.title("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |class Helper {
+       |  private int x;
+       |}
+       |
+       |public class Example {
+       |  public Example() {
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+  )
+
+  check(
+    "empty-body-tabs",
+    s"""|package a;
+        |
+        |class Helper {
+        |\tprivate int x;
+        |}
+        |
+        |public class <<Example>> {}
+        |""".stripMargin,
+    s"""|${GenerateDefaultConstructor.title("Example")}
+        |""".stripMargin,
+    s"""|package a;
+        |
+        |class Helper {
+        |\tprivate int x;
+        |}
+        |
+        |public class Example {
+        |\tpublic Example() {
+        |\t}
+        |}
+        |""".stripMargin,
+    fileName = "Example.java",
+  )
+
+  check(
     "inner-class-cursor",
     """|package a;
        |
