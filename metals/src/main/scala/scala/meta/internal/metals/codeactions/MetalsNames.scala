@@ -1,12 +1,15 @@
 package scala.meta.internal.metals.codeactions
 
 import scala.annotation.tailrec
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 import scala.meta._
 import scala.meta.internal.mtags.MtagsEnrichments._
 
 case class MetalsNames(tree: Tree, prefix: String) {
+
+  private val seenNames = mutable.Set.empty[String]
 
   private lazy val allNames = {
     val top = lastEnclosingStatsTree(tree)
@@ -49,5 +52,13 @@ case class MetalsNames(tree: Tree, prefix: String) {
     currentIndex += 1
     if (allNames(name)) createNewName()
     else name
+  }
+
+  def recordNameEncountered(name: String): Unit = {
+    seenNames += name
+  }
+
+  def isNameEncountered(name: String): Boolean = {
+    seenNames(name)
   }
 }
