@@ -22,6 +22,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildServerConnectionFactory
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.Compilations
@@ -188,12 +189,11 @@ class ScalaCli(
 
     val nextSt = ConnectionState.Connecting(path)
     if (state.compareAndSet(ConnectionState.Empty, nextSt)) {
-      val futureConn = BuildServerConnection.fromSockets(
+      val connectionFactory = new BuildServerConnectionFactory(
         connDir,
         connDir,
         buildClient(),
         languageClient,
-        () => ScalaCli.socketConn(command, connDir),
         tables.dismissedNotifications.RequestTimeout,
         tables.dismissedNotifications.ReconnectScalaCli,
         config(),
@@ -201,9 +201,12 @@ class ScalaCli(
         "Scala CLI",
         supportsWrappedSources = Some(true),
         workDoneProgress = workDoneProgress,
-      )
+      ) {
+        override def connect(): Future[SocketConnection] =
+          ScalaCli.socketConn(command, connDir)
+      }
 
-      val f = futureConn.flatMap { conn =>
+      val f = connectionFactory.fromSockets().flatMap { conn =>
         state.set(ConnectionState.Connected(path, conn, ImportedBuild.empty))
         scribe.info(s"Connected to Scala CLI server v${conn.version}")
         importBuild()
