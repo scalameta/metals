@@ -393,7 +393,7 @@ https://scalameta.org/scalafmt/docs/configuration.html.
 
 Fold ranges such as large multi-line expressions, import groups and comments.
 
-![Code folding](https://camo.githubusercontent.com/3fdd7ae28907ac61c0a1ac5fdc07d085245957aa/68747470733a2f2f692e696d6775722e636f6d2f667149554a54472e676966)
+![Code folding](https://user-images.githubusercontent.com/1408093/55667805-881a2e80-5861-11e9-8668-091c18b1aa64.gif)
 
 ## Document highlight
 
