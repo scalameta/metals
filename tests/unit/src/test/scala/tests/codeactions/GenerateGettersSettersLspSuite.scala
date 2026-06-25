@@ -2,12 +2,12 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateGettersSetters
 
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class GenerateGettersSettersLspSuite
     extends BaseCodeActionLspSuite(
       "generate-getters-setters",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       useMbtLayout = true,
     ) {
 

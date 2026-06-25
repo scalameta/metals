@@ -31,20 +31,26 @@ object JavaMemberInsertion {
   ): String = {
     val startOffset = insert.startOffset
     val endOffset = insert.endOffset
+    val afterOpeningBrace =
+      startOffset > 0 && text.charAt(startOffset - 1) == '{'
+    val beforeClosingBrace =
+      endOffset >= 0 && endOffset < text.length && text.charAt(endOffset) == '}'
     val endIndent = indentAt(text, endOffset)
     val memberIndent = {
       val startLineIndent = lineIndent(text, startOffset)
-      if (startLineIndent.nonEmpty) startLineIndent
+      if (beforeClosingBrace || (afterOpeningBrace && insert.isInsertion))
+        endIndent + indentUnit(text)
+      else if (startLineIndent.nonEmpty) startLineIndent
       else if (endIndent.nonEmpty) endIndent
       else indentUnit(text)
     }
+    val startsLine = linePrefix(text, startOffset).isEmpty
     val prefix =
-      if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
+      if (beforeClosingBrace && startsLine) ""
+      else if (afterOpeningBrace || beforeClosingBrace) "\n"
       else "\n\n"
-    val atClosingBrace =
-      endOffset >= 0 && endOffset < text.length && text.charAt(endOffset) == '}'
     val suffix =
-      if (atClosingBrace) s"\n$endIndent"
+      if (beforeClosingBrace) s"\n$endIndent"
       else if (insert.isInsertion) ""
       else s"\n\n$endIndent"
     val body = members
@@ -68,13 +74,16 @@ object JavaMemberInsertion {
 
   private def indentAt(text: String, offset: Int): String = {
     val clamped = offset.min(text.length).max(0)
-    val lineStart = text.lastIndexOf('\n', clamped - 1) + 1
-    val candidate = text.substring(lineStart, clamped)
-    if (candidate.forall(_.isWhitespace)) candidate else ""
+    val candidate = linePrefix(text, clamped)
+    if (candidate.forall(_.isWhitespace)) candidate
+    else lineIndent(text, offset)
   }
 
-  private def lineIndent(text: String, offset: Int): String = {
+  def lineIndent(text: String, offset: Int): String = {
     val lineStart = text.lastIndexOf('\n', offset - 1) + 1
     text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
   }
+
+  private def linePrefix(text: String, offset: Int): String =
+    text.substring(text.lastIndexOf('\n', offset - 1) + 1, offset)
 }

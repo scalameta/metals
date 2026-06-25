@@ -64,6 +64,7 @@ final class CodeActionProvider(
     new GenerateConstructors(javaTrees, buffers),
     new GenerateGettersSetters(javaTrees, buffers),
     new GenerateEqualsHashCodeToString(javaTrees, buffers),
+    new AddMissingReturnStatement(javaTrees, buffers),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {

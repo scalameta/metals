@@ -24,12 +24,12 @@ import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseDapSuite
 import tests.BazelBuildLayout
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class BazelDapMbtLspSuite
     extends BaseDapSuite(
       "bazel-mbt-dap",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       BazelBuildLayout,
     ) {
 

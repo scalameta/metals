@@ -270,12 +270,17 @@ class JavaTrees(buffers: Buffers) {
           )
         methodNameRange(pos, lineMap, text, node, displayName).foreach {
           nameRange =>
+            val body =
+              bodyRange(lineMap, text, nameRange.endOffset, nodeEnd).getOrElse(
+                fullRange
+              )
             _result = Some(
               JavaMethod(
                 tree = node,
                 name = displayName,
                 range = fullRange,
                 nameRange = nameRange,
+                bodyRange = body,
                 returnType =
                   if (isConstructor) "" else methodReturnType(node),
                 parameters = javaParameters(node, fullRange),
@@ -333,7 +338,7 @@ class JavaTrees(buffers: Buffers) {
                 nodeEnd,
                 name,
               )
-              body <- bodyRange(nameRange.endOffset, nodeEnd)
+              body <- bodyRange(lineMap, text, nameRange.endOffset, nodeEnd)
             } {
               val members =
                 node
@@ -345,18 +350,28 @@ class JavaTrees(buffers: Buffers) {
                       val isConstructor = methodName == "<init>"
                       val displayName = if (isConstructor) name else methodName
                       treeRange(method).map { range =>
-                        JavaMethod(
-                          tree = method,
-                          name = displayName,
-                          range = range,
-                          nameRange = methodNameRange(
+                        val nameRange =
+                          methodNameRange(
                             pos,
                             lineMap,
                             text,
                             method,
                             displayName,
+                          ).getOrElse(range)
+                        val body =
+                          bodyRange(
+                            lineMap,
+                            text,
+                            nameRange.endOffset,
+                            range.endOffset,
                           )
-                            .getOrElse(range),
+                            .getOrElse(range)
+                        JavaMethod(
+                          tree = method,
+                          name = displayName,
+                          range = range,
+                          nameRange = nameRange,
+                          bodyRange = body,
                           returnType =
                             if (isConstructor) "" else methodReturnType(method),
                           parameters = javaParameters(method, range),
@@ -388,29 +403,6 @@ class JavaTrees(buffers: Buffers) {
           }
         }
         super.visitClass(node, p)
-      }
-    }
-
-    private def bodyRange(
-        startPos: Int,
-        endPos: Int,
-    ): Option[JavaRange] = {
-      if (startPos < 0 || endPos < 0) None
-      else {
-        var offset = startPos
-        val searchEnd = Math.min(endPos, text.length())
-        var openBrace: Option[Int] = None
-        while (offset < searchEnd && openBrace.isEmpty) {
-          if (text.charAt(offset) == '{') openBrace = Some(offset)
-          offset += 1
-        }
-        openBrace.map { brace =>
-          JavaRange(
-            Positions.toLspRange(lineMap, brace + 1, endPos - 1, text),
-            startOffset = brace + 1,
-            endOffset = endPos - 1,
-          )
-        }
       }
     }
   }
@@ -460,6 +452,31 @@ class JavaTrees(buffers: Buffers) {
       else if (node.getBody() != null) pos.startPos(node.getBody())
       else nodeEnd
     findNameRange(lineMap, text, nameStartPos, nameEndPos, name)
+  }
+
+  private def bodyRange(
+      lineMap: LineMap,
+      text: String,
+      startPos: Int,
+      endPos: Int,
+  ): Option[JavaRange] = {
+    if (startPos < 0 || endPos < 0) None
+    else {
+      var offset = startPos
+      val searchEnd = Math.min(endPos, text.length())
+      var openBrace: Option[Int] = None
+      while (offset < searchEnd && openBrace.isEmpty) {
+        if (text.charAt(offset) == '{') openBrace = Some(offset)
+        offset += 1
+      }
+      openBrace.map { brace =>
+        JavaRange(
+          Positions.toLspRange(lineMap, brace + 1, endPos - 1, text),
+          startOffset = brace + 1,
+          endOffset = endPos - 1,
+        )
+      }
+    }
   }
 
   private def findNameRange(
@@ -554,10 +571,56 @@ object JavaTrees {
     )
   }
 
+  def insertPointAtBodyEnd(
+      bodyRange: JavaRange,
+      text: String,
+  ): InsertPoint = {
+    val end = PositionWithOffset(bodyRange.getEnd(), bodyRange.endOffset)
+    val bodyText = text.substring(bodyRange.startOffset, bodyRange.endOffset)
+
+    if (bodyText.forall(_.isWhitespace)) {
+      InsertPoint(
+        bodyRange.range,
+        bodyRange.startOffset,
+        bodyRange.endOffset,
+        isInsertion = false,
+      )
+    } else {
+      val closeLinePrefix = linePrefix(text, bodyRange.endOffset)
+      val start =
+        if (closeLinePrefix.forall(_.isWhitespace))
+          PositionWithOffset(
+            new l.Position(end.position.getLine(), 0),
+            end.offset - closeLinePrefix.length,
+          )
+        else {
+          val trailingWhitespace =
+            closeLinePrefix.reverse.takeWhile(_.isWhitespace)
+          PositionWithOffset(
+            new l.Position(
+              end.position.getLine(),
+              end.position.getCharacter() - trailingWhitespace.length,
+            ),
+            end.offset - trailingWhitespace.length,
+          )
+        }
+
+      InsertPoint(
+        new l.Range(start.position, end.position),
+        start.offset,
+        end.offset,
+        isInsertion = start.offset == end.offset,
+      )
+    }
+  }
+
   private def isValidLspRange(start: l.Position, end: l.Position): Boolean =
     end.getLine() > start.getLine() ||
       (end.getLine() == start.getLine() && end.getCharacter() >= start
         .getCharacter())
+
+  private def linePrefix(text: String, offset: Int): String =
+    text.substring(text.lastIndexOf('\n', offset - 1) + 1, offset)
 
   private case class PositionWithOffset(position: l.Position, offset: Int)
 }
@@ -618,6 +681,7 @@ case class JavaMethod(
     name: String,
     range: JavaRange,
     nameRange: JavaRange,
+    bodyRange: JavaRange,
     returnType: String,
     parameters: List[JavaParameter] = Nil,
     isConstructor: Boolean = false,
