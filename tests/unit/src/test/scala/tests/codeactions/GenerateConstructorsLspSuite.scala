@@ -620,6 +620,26 @@ class GenerateConstructorsLspSuite
       _.getTitle() == GenerateConstructors.titleFromFields("Example"),
   )
 
+  check(
+    "default-skips-blank-final",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private final String name;
+       |}
+       |""".stripMargin,
+    "",
+    """|package a;
+       |
+       |public class Example {
+       |  private final String name;
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleDefault("Example"),
+  )
+
   checkNoAction(
     "from-fields-empty-class",
     """|package a;
@@ -663,6 +683,25 @@ class GenerateConstructorsLspSuite
   )
 
   checkNoAction(
+    "existing-from-fields-erased-generic",
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |public class <<Example>> {
+       |  private List<String> names;
+       |
+       |  public Example(List names) {
+       |    this.names = names;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  checkNoAction(
     "existing-copy",
     """|package a;
        |
@@ -671,6 +710,22 @@ class GenerateConstructorsLspSuite
        |
        |  public Example(Example other) {
        |    this.name = other.name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Example"),
+  )
+
+  checkNoAction(
+    "existing-copy-erased-generic",
+    """|package a;
+       |
+       |public class <<Example>><T> {
+       |  private T value;
+       |
+       |  public Example(Example<?> other) {
+       |    this.value = null;
        |  }
        |}
        |""".stripMargin,

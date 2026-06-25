@@ -330,7 +330,7 @@ class JavaTrees(buffers: Buffers) {
               )
               body <- bodyRange(nameRange.endOffset, nodeEnd)
             } {
-              val members: List[JavaMember] =
+              val members =
                 node
                   .getMembers()
                   .asScala
@@ -560,7 +560,7 @@ object JavaTrees {
       new l.Range(start.position, end.position),
       start.offset,
       end.offset,
-      isInsertion = !canExpand,
+      isInsertion = !canExpand && cls.members.nonEmpty,
     )
   }
 

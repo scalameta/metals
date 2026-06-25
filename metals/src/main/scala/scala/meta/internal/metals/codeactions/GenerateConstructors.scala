@@ -76,7 +76,7 @@ class GenerateConstructors(
       cls: JavaClass,
       insert: InsertPoint,
   ): Option[l.CodeAction] =
-    Option.when(!hasDefaultConstructor(cls)) {
+    Option.when(!hasDefaultConstructor(cls) && !hasBlankFinalField(cls)) {
       build(
         path,
         text,
@@ -163,13 +163,22 @@ object GenerateConstructors {
       case _ => false
     }
 
+  private def hasBlankFinalField(cls: JavaClass): Boolean =
+    cls.members.exists {
+      case field: JavaVariable => field.isFinal && !field.hasInitializer
+      case _ => false
+    }
+
   private def hasFieldsConstructor(
       cls: JavaClass,
       fields: List[JavaVariable],
   ): Boolean =
     cls.members.exists {
       case method: JavaMethod if method.isConstructor =>
-        method.parameters.map(_.typ) == fields.map(_.typ)
+        equivalentConstructorSignature(
+          method.parameters.map(_.typ),
+          fields.map(_.typ),
+        )
       case _ => false
     }
 
@@ -178,9 +187,7 @@ object GenerateConstructors {
       case method: JavaMethod if method.isConstructor =>
         method.parameters match {
           case parameter :: Nil =>
-            parameter.typ == cls.name || parameter.typ == copyConstructorType(
-              cls
-            )
+            erasedType(parameter.typ) == erasedType(copyConstructorType(cls))
           case _ => false
         }
       case _ => false
@@ -190,6 +197,16 @@ object GenerateConstructors {
     if (cls.typeParameters.isEmpty) cls.name
     else
       cls.typeParameters.mkString(s"${cls.name}<", ", ", ">")
+  }
+
+  private def equivalentConstructorSignature(
+      existingTypes: List[String],
+      generatedTypes: List[String],
+  ): Boolean =
+    existingTypes.map(erasedType) == generatedTypes.map(erasedType)
+
+  private def erasedType(typ: String): String = {
+    typ.takeWhile(_ != '<').trim
   }
 
   private def constructorModifier(cls: JavaClass): String = {
