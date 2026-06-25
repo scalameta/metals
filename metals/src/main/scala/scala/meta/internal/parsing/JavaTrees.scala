@@ -43,7 +43,7 @@ class JavaTrees(buffers: Buffers) {
   def findEnclosingJavaClass(
       source: AbsolutePath,
       pos: l.Position,
-  ): Option[JavaClassInfo] =
+  ): Option[JavaClass] =
     for {
       text <- text(source)
       tree <- get(source)
@@ -57,12 +57,26 @@ class JavaTrees(buffers: Buffers) {
   def findEnclosingJavaMethod(
       source: AbsolutePath,
       pos: l.Position,
-  ): Option[EnclosingMethod] =
+  ): Option[JavaMethod] =
     for {
       text <- text(source)
       tree <- get(source)
       result <- {
-        val visitor = new EnclosingMethodFinder(tree, text, pos, source)
+        val visitor = new EnclosingMethodFinder(tree, text, pos)
+        visitor.scan(tree, ())
+        visitor.result
+      }
+    } yield result
+
+  def findEnclosingJavaVariable(
+      source: AbsolutePath,
+      pos: l.Position,
+  ): Option[JavaVariable] =
+    for {
+      text <- text(source)
+      tree <- get(source)
+      result <- {
+        val visitor = new EnclosingVariableFinder(tree, text, pos)
         visitor.scan(tree, ())
         visitor.result
       }
@@ -154,18 +168,75 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
+  private abstract class EnclosingFinder[T](
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends TreePathScanner[Unit, Unit] {
+    protected val lineMap: LineMap = cu.getLineMap()
+    protected val pos = new TreePositions(cu)
+    protected val targetOffset: Int = lspPositionToOffset(lineMap, targetPos)
+    protected var _result: Option[T] = None
+
+    def result: Option[T] = _result
+
+    protected def treeRange(tree: Tree): Option[JavaRange] = {
+      val treeStart = pos.startPos(tree)
+      val treeEnd = pos.endPos(tree)
+      if (treeStart < 0 || treeEnd < 0) None
+      else
+        Some(
+          JavaRange(
+            Positions.toLspRange(lineMap, treeStart, treeEnd, text),
+            startOffset = treeStart,
+            endOffset = treeEnd,
+          )
+        )
+    }
+
+    protected def javaParameters(
+        node: MethodTree,
+        fallback: JavaRange,
+    ): List[JavaParameter] =
+      node
+        .getParameters()
+        .asScala
+        .map { parameter =>
+          JavaParameter(
+            tree = parameter,
+            name = parameter.getName().toString(),
+            range = treeRange(parameter).getOrElse(fallback),
+            typ = parameter.getType().toString(),
+          )
+        }
+        .toList
+
+    protected def javaVariable(node: VariableTree): Option[JavaVariable] = {
+      val variableName = node.getName().toString()
+      treeRange(node).map { range =>
+        JavaVariable(
+          tree = node,
+          name = variableName,
+          range = range,
+          nameRange = findNameRange(
+            lineMap,
+            text,
+            range.startOffset,
+            range.endOffset,
+            variableName,
+          ).getOrElse(range),
+          typ = node.getType().toString(),
+          modifiers = node.getModifiers().getFlags().asScala.toSet,
+        )
+      }
+    }
+  }
+
   private class EnclosingMethodFinder(
       cu: CompilationUnitTree,
       text: String,
       targetPos: l.Position,
-      source: AbsolutePath,
-  ) extends TreePathScanner[Unit, Unit] {
-    private val lineMap = cu.getLineMap()
-    private val pos = new TreePositions(cu)
-    private val targetOffset = lspPositionToOffset(lineMap, targetPos)
-    private var _result: Option[EnclosingMethod] = None
-
-    def result: Option[EnclosingMethod] = _result
+  ) extends EnclosingFinder[JavaMethod](cu, text, targetPos) {
 
     override def visitMethod(
         node: MethodTree,
@@ -176,33 +247,59 @@ class JavaTrees(buffers: Buffers) {
 
       if (positionContains(targetOffset, nodeStart, nodeEnd)) {
         val methodName = node.getName().toString()
+        val isConstructor = methodName == "<init>"
         val displayName =
-          if (methodName == "<init>")
+          if (isConstructor)
             getCurrentPath().getParentPath().getLeaf() match {
               case parent: ClassTree => parent.getSimpleName().toString()
               case _ => methodName
             }
           else methodName
 
-        val returnType = node.getReturnType()
-        val nameStartPos =
-          if (returnType != null) pos.endPos(returnType)
-          else nodeStart
-        val params = node.getParameters()
-        val nameEndPos =
-          if (!params.isEmpty()) pos.startPos(params.get(0))
-          else if (node.getBody() != null) pos.startPos(node.getBody())
-          else nodeEnd
-
-        val bodyRange =
-          Positions.toLspRange(lineMap, nodeStart, nodeEnd, text)
-        findNameRange(lineMap, text, nameStartPos, nameEndPos, displayName)
-          .foreach { javaRange =>
-            _result = Some(EnclosingMethod(javaRange.range, bodyRange, source))
-          }
+        val fullRange =
+          JavaRange(
+            Positions.toLspRange(lineMap, nodeStart, nodeEnd, text),
+            startOffset = nodeStart,
+            endOffset = nodeEnd,
+          )
+        methodNameRange(pos, lineMap, text, node, displayName).foreach {
+          nameRange =>
+            _result = Some(
+              JavaMethod(
+                tree = node,
+                name = displayName,
+                range = fullRange,
+                nameRange = nameRange,
+                returnType =
+                  if (isConstructor) "" else methodReturnType(node),
+                parameters = javaParameters(node, fullRange),
+                isConstructor = isConstructor,
+              )
+            )
+        }
         super.visitMethod(node, p)
       }
 
+    }
+  }
+
+  private class EnclosingVariableFinder(
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends EnclosingFinder[JavaVariable](cu, text, targetPos) {
+
+    override def visitVariable(
+        node: VariableTree,
+        p: Unit,
+    ): Unit = {
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
+
+      if (positionContains(targetOffset, nodeStart, nodeEnd)) {
+        _result = javaVariable(node)
+      }
+      super.visitVariable(node, p)
     }
   }
 
@@ -210,13 +307,7 @@ class JavaTrees(buffers: Buffers) {
       cu: CompilationUnitTree,
       text: String,
       targetPos: l.Position,
-  ) extends TreePathScanner[Unit, Unit] {
-    private val lineMap = cu.getLineMap()
-    private val pos = new TreePositions(cu)
-    private val targetOffset = lspPositionToOffset(lineMap, targetPos)
-    private var _result: Option[JavaClassInfo] = None
-
-    def result: Option[JavaClassInfo] = _result
+  ) extends EnclosingFinder[JavaClass](cu, text, targetPos) {
 
     override def visitClass(
         node: ClassTree,
@@ -242,37 +333,49 @@ class JavaTrees(buffers: Buffers) {
                 node
                   .getMembers()
                   .asScala
-                  .collect {
+                  .collect[Option[JavaMember]] {
                     case method: MethodTree =>
-                      val kind =
-                        if (method.getName().toString() == "<init>")
-                          JavaMemberKind.Constructor
-                        else JavaMemberKind.Method
-                      treeRange(method).map(range =>
-                        JavaMemberInfo(
-                          kind = kind,
+                      val methodName = method.getName().toString()
+                      val isConstructor = methodName == "<init>"
+                      val displayName = if (isConstructor) name else methodName
+                      treeRange(method).map { range =>
+                        JavaMethod(
+                          tree = method,
+                          name = displayName,
                           range = range,
-                          parametersCount = Some(method.getParameters().size()),
+                          nameRange = methodNameRange(
+                            pos,
+                            lineMap,
+                            text,
+                            method,
+                            displayName,
+                          )
+                            .getOrElse(range),
+                          returnType =
+                            if (isConstructor) "" else methodReturnType(method),
+                          parameters = javaParameters(method, range),
+                          isConstructor = isConstructor,
                         )
-                      )
+                      }
                     case field: VariableTree =>
-                      treeRange(field).map(range =>
-                        JavaMemberInfo(
-                          kind = JavaMemberKind.Field,
-                          range = range,
-                          parametersCount = None,
-                        )
-                      )
+                      javaVariable(field)
                   }
                   .flatten
                   .toList
               _result = Some(
-                JavaClassInfo(
+                JavaClass(
+                  tree = node,
                   name = name,
-                  nameRange = nameRange.range,
+                  range = treeRange(node).getOrElse(nameRange),
+                  nameRange = nameRange,
                   bodyRange = body,
                   modifiers = node.getModifiers().getFlags().asScala.toSet,
                   members = members,
+                  typeParameters = node
+                    .getTypeParameters()
+                    .asScala
+                    .map(_.getName().toString())
+                    .toList,
                 )
               )
             }
@@ -304,22 +407,6 @@ class JavaTrees(buffers: Buffers) {
         }
       }
     }
-
-    private def treeRange(
-        tree: Tree
-    ): Option[JavaRange] = {
-      val treeStart = pos.startPos(tree)
-      val treeEnd = pos.endPos(tree)
-      if (treeStart < 0 || treeEnd < 0) None
-      else
-        Some(
-          JavaRange(
-            Positions.toLspRange(lineMap, treeStart, treeEnd, text),
-            startOffset = treeStart,
-            endOffset = treeEnd,
-          )
-        )
-    }
   }
 
   private class TreePositions(cu: CompilationUnitTree) {
@@ -344,6 +431,30 @@ class JavaTrees(buffers: Buffers) {
       pos: l.Position,
   ): Int =
     lineMap.getPosition(pos.getLine() + 1L, pos.getCharacter() + 1L).toInt
+
+  private def methodReturnType(node: MethodTree): String =
+    Option(node.getReturnType()).map(_.toString()).getOrElse("void")
+
+  /** The range of a method's name identifier within its declaration. */
+  private def methodNameRange(
+      pos: TreePositions,
+      lineMap: LineMap,
+      text: String,
+      node: MethodTree,
+      name: String,
+  ): Option[JavaRange] = {
+    val nodeStart = pos.startPos(node)
+    val nodeEnd = pos.endPos(node)
+    val returnType = node.getReturnType()
+    val nameStartPos =
+      if (returnType != null) pos.endPos(returnType) else nodeStart
+    val params = node.getParameters()
+    val nameEndPos =
+      if (!params.isEmpty()) pos.startPos(params.get(0))
+      else if (node.getBody() != null) pos.startPos(node.getBody())
+      else nodeEnd
+    findNameRange(lineMap, text, nameStartPos, nameEndPos, name)
+  }
 
   private def findNameRange(
       lineMap: LineMap,
@@ -387,6 +498,71 @@ class JavaTrees(buffers: Buffers) {
 
 }
 
+object JavaTrees {
+
+  /**
+   * Returns the insertion point right after the leading fields of `cls`.
+   *
+   * This is the default location for inserting generated members (default
+   * constructor, getters, setters, ...).
+   */
+  def insertPointAfterFields(
+      cls: JavaClass,
+      text: String,
+  ): InsertPoint = {
+    val start = cls.members
+      .takeWhile {
+        case _: JavaVariable => true
+        case _ => false
+      }
+      .lastOption
+      .map(m => PositionWithOffset(m.range.getEnd(), m.range.endOffset))
+      .getOrElse(
+        PositionWithOffset(cls.bodyRange.getStart(), cls.bodyRange.startOffset)
+      )
+
+    val nextMember = cls.members
+      .filter(_.range.startOffset > start.offset)
+      .minByOption(_.range.startOffset)
+    val expandedEnd = nextMember
+      .map(member =>
+        PositionWithOffset(member.range.getStart(), member.range.startOffset)
+      )
+      .getOrElse(start)
+
+    val canExpand =
+      nextMember.nonEmpty &&
+        expandedEnd.offset > start.offset &&
+        expandedEnd.offset <= text.length &&
+        text
+          .substring(start.offset, expandedEnd.offset)
+          .forall(_.isWhitespace) &&
+        isValidLspRange(start.position, expandedEnd.position)
+
+    val end = if (canExpand) expandedEnd else start
+    InsertPoint(
+      new l.Range(start.position, end.position),
+      start.offset,
+      end.offset,
+      isInsertion = !canExpand,
+    )
+  }
+
+  private def isValidLspRange(start: l.Position, end: l.Position): Boolean =
+    end.getLine() > start.getLine() ||
+      (end.getLine() == start.getLine() && end.getCharacter() >= start
+        .getCharacter())
+
+  private case class PositionWithOffset(position: l.Position, offset: Int)
+}
+
+case class InsertPoint(
+    range: l.Range,
+    startOffset: Int,
+    endOffset: Int,
+    isInsertion: Boolean,
+)
+
 case class JavaRange(
     range: l.Range,
     startOffset: Int,
@@ -396,29 +572,59 @@ case class JavaRange(
   def getEnd(): l.Position = range.getEnd()
 }
 
-case class EnclosingMethod(
-    nameRange: l.Range,
-    bodyRange: l.Range,
-    source: AbsolutePath,
-)
+sealed trait JavaMember {
+  def tree: Tree
+  def name: String
+  def range: JavaRange
+}
 
-case class JavaClassInfo(
+trait HasModifiers {
+  def modifiers: Set[Modifier]
+  def isStatic: Boolean = modifiers.contains(Modifier.STATIC)
+  def isFinal: Boolean = modifiers.contains(Modifier.FINAL)
+  def isAbstract: Boolean = modifiers.contains(Modifier.ABSTRACT)
+  def isPublic: Boolean = modifiers.contains(Modifier.PUBLIC)
+  def isProtected: Boolean = modifiers.contains(Modifier.PROTECTED)
+  def isPrivate: Boolean = modifiers.contains(Modifier.PRIVATE)
+}
+
+case class JavaParameter(
+    tree: VariableTree,
     name: String,
-    nameRange: l.Range,
+    range: JavaRange,
+    typ: String,
+) extends JavaMember
+
+case class JavaClass(
+    tree: ClassTree,
+    name: String,
+    range: JavaRange,
+    nameRange: JavaRange,
     bodyRange: JavaRange,
     modifiers: Set[Modifier],
-    members: List[JavaMemberInfo],
-)
+    members: List[JavaMember],
+    typeParameters: List[String],
+) extends JavaMember
+    with HasModifiers
 
-case class JavaMemberInfo(
-    kind: JavaMemberKind,
+case class JavaMethod(
+    tree: MethodTree,
+    name: String,
     range: JavaRange,
-    parametersCount: Option[Int],
-)
+    nameRange: JavaRange,
+    returnType: String,
+    parameters: List[JavaParameter] = Nil,
+    isConstructor: Boolean = false,
+) extends JavaMember
 
-sealed trait JavaMemberKind
-object JavaMemberKind {
-  case object Field extends JavaMemberKind
-  case object Method extends JavaMemberKind
-  case object Constructor extends JavaMemberKind
+case class JavaVariable(
+    tree: VariableTree,
+    name: String,
+    range: JavaRange,
+    nameRange: JavaRange,
+    typ: String,
+    modifiers: Set[Modifier],
+) extends JavaMember
+    with HasModifiers {
+  def hasInitializer: Boolean = tree.getInitializer() != null
 }

@@ -8,7 +8,6 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
-import scala.meta.internal.parsing.EnclosingMethod
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.SymbolOccurrence
@@ -140,14 +139,14 @@ final case class CallHierarchyProvider(
             call
           }
           val all = deduplicated.toList.flatMap {
-            case (enclosingMethod, calls) => {
+            case ((nameRange, _, enclosingSource), calls) => {
               val ranges = calls.map { case (_, _, location) =>
                 location.getRange
               }.distinct
               mbtReferenceProvider
                 .enclosingOccurrences(
-                  enclosingMethod.nameRange.getStart(),
-                  enclosingMethod.source,
+                  nameRange.getStart(),
+                  enclosingSource,
                 )
                 .map(_.symbol)
                 .filterNot(info.visited.contains)
@@ -155,9 +154,9 @@ final case class CallHierarchyProvider(
                 .map { symbol =>
                   callHierarchyItemBuilder
                     .build(
-                      enclosingMethod.source,
+                      enclosingSource,
                       symbol,
-                      enclosingMethod.nameRange,
+                      nameRange,
                       info.visited :+ symbol,
                       token,
                       l.SymbolKind.Method,
@@ -177,15 +176,15 @@ final case class CallHierarchyProvider(
   def containingCall(
       range: l.Range,
       source: AbsolutePath,
-  ): Option[EnclosingMethod] = {
+  ): Option[(l.Range, l.Range, AbsolutePath)] = {
     if (source.isScalaFilename) {
       trees
         .findLastEnclosingAt[Defn.Def](source, range.getStart)
-        .map(defn =>
-          EnclosingMethod(defn.name.pos.toLsp, defn.pos.toLsp, source)
-        )
+        .map(defn => (defn.name.pos.toLsp, defn.pos.toLsp, source))
     } else if (source.isJavaFilename) {
-      javaTrees.findEnclosingJavaMethod(source, range.getStart)
+      javaTrees
+        .findEnclosingJavaMethod(source, range.getStart)
+        .map(method => (method.nameRange.range, method.range.range, source))
     } else None
   }
 
@@ -215,10 +214,11 @@ final case class CallHierarchyProvider(
             params.getItem.getSelectionRange(),
             source,
           ).toList
+          (_, bodyRange, _) = enclosingMethod
           methodReferences =
             mbtReferenceProvider.methodReferencesInRange(
               source,
-              enclosingMethod.bodyRange,
+              bodyRange,
             )
           groupedBySymbol =
             methodReferences.groupBy { case (occ, _) => occ.symbol }
