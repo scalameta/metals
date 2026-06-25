@@ -1,9 +1,9 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.GenerateDefaultConstructor
+import scala.meta.internal.metals.codeactions.GenerateConstructors
 
-class GenerateDefaultConstructorLspSuite
-    extends BaseCodeActionLspSuite("generate-default-constructor") {
+class GenerateConstructorsLspSuite
+    extends BaseCodeActionLspSuite("generate-constructors") {
 
   override protected def toPath(
       fileName: String,
@@ -23,7 +23,7 @@ class GenerateDefaultConstructorLspSuite
        |  private String name;
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -48,7 +48,7 @@ class GenerateDefaultConstructorLspSuite
        |}
        |""".stripMargin,
     fileName = "Example.java",
-    filterAction = _.getTitle() == GenerateDefaultConstructor.title("Example"),
+    filterAction = _.getTitle() == GenerateConstructors.titleDefault("Example"),
   )
 
   check(
@@ -60,7 +60,7 @@ class GenerateDefaultConstructorLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -85,7 +85,7 @@ class GenerateDefaultConstructorLspSuite
        |""".stripMargin,
     fileName = "MyInterface.java",
     filterAction =
-      _.getTitle() == GenerateDefaultConstructor.title("MyInterface"),
+      _.getTitle() == GenerateConstructors.titleDefault("MyInterface"),
   )
 
   checkNoAction(
@@ -97,7 +97,7 @@ class GenerateDefaultConstructorLspSuite
        |}
        |""".stripMargin,
     fileName = "MyEnum.java",
-    filterAction = _.getTitle() == GenerateDefaultConstructor.title("MyEnum"),
+    filterAction = _.getTitle() == GenerateConstructors.titleDefault("MyEnum"),
   )
 
   check(
@@ -107,7 +107,7 @@ class GenerateDefaultConstructorLspSuite
        |public abstract class <<Base>> {
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Base")}
+    s"""|${GenerateConstructors.titleDefault("Base")}
         |""".stripMargin,
     """|package a;
        |
@@ -132,7 +132,7 @@ class GenerateDefaultConstructorLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -159,7 +159,7 @@ class GenerateDefaultConstructorLspSuite
        |  private String name;
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -190,7 +190,7 @@ class GenerateDefaultConstructorLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -221,7 +221,7 @@ class GenerateDefaultConstructorLspSuite
        |  private T value;
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -242,7 +242,7 @@ class GenerateDefaultConstructorLspSuite
        |
        |public class <<Example>> {}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -265,7 +265,7 @@ class GenerateDefaultConstructorLspSuite
        |
        |public class <<Example>> {}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -292,7 +292,7 @@ class GenerateDefaultConstructorLspSuite
         |
         |public class <<Example>> {}
         |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     s"""|package a;
         |
@@ -319,7 +319,7 @@ class GenerateDefaultConstructorLspSuite
         |\t}
         |}
         |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     s"""|package a;
         |
@@ -346,7 +346,7 @@ class GenerateDefaultConstructorLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -372,7 +372,7 @@ class GenerateDefaultConstructorLspSuite
        |  private String name;
        |}
        |""".stripMargin,
-    s"""|${GenerateDefaultConstructor.title("Example")}
+    s"""|${GenerateConstructors.titleDefault("Example")}
         |""".stripMargin,
     """|package a;
        |
@@ -386,6 +386,296 @@ class GenerateDefaultConstructorLspSuite
        |""".stripMargin,
     fileName = "Example.java",
     filterAction = onlyConstructor,
+  )
+
+  check(
+    "from-fields",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |  private int age;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleFromFields("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private String name;
+       |  private int age;
+       |
+       |  public Example(String name, int age) {
+       |    this.name = name;
+       |    this.age = age;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  check(
+    "copy",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |  private int age;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleCopy("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private String name;
+       |  private int age;
+       |
+       |  public Example(Example other) {
+       |    this.name = other.name;
+       |    this.age = other.age;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Example"),
+  )
+
+  check(
+    "copy-generic",
+    """|package a;
+       |
+       |public class <<Example>><T> {
+       |  private T value;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleCopy("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example<T> {
+       |  private T value;
+       |
+       |  public Example(Example<T> other) {
+       |    this.value = other.value;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Example"),
+  )
+
+  check(
+    "abstract-from-fields",
+    """|package a;
+       |
+       |public abstract class <<Base>> {
+       |  private String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleFromFields("Base")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public abstract class Base {
+       |  private String name;
+       |
+       |  protected Base(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Base.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleFromFields("Base"),
+  )
+
+  check(
+    "abstract-copy",
+    """|package a;
+       |
+       |public abstract class <<Base>> {
+       |  private String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleCopy("Base")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public abstract class Base {
+       |  private String name;
+       |
+       |  protected Base(Base other) {
+       |    this.name = other.name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Base.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Base"),
+  )
+
+  check(
+    "from-fields-skips-static",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private static String prefix;
+       |  private String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleFromFields("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private static String prefix;
+       |  private String name;
+       |
+       |  public Example(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  check(
+    "from-fields-skips-final-with-initializer",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private final int age = 10;
+       |  private String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleFromFields("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private final int age = 10;
+       |  private String name;
+       |
+       |  public Example(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  check(
+    "copy-skips-final-with-initializer",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private final int age = 10;
+       |  private String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleCopy("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private final int age = 10;
+       |  private String name;
+       |
+       |  public Example(Example other) {
+       |    this.name = other.name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Example"),
+  )
+
+  check(
+    "from-fields-includes-final-without-initializer",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private final String name;
+       |}
+       |""".stripMargin,
+    s"""|${GenerateConstructors.titleFromFields("Example")}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  private final String name;
+       |
+       |  public Example(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  checkNoAction(
+    "from-fields-empty-class",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  checkNoAction(
+    "from-fields-only-static",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private static String name;
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  checkNoAction(
+    "existing-from-fields",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |
+       |  public Example(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction =
+      _.getTitle() == GenerateConstructors.titleFromFields("Example"),
+  )
+
+  checkNoAction(
+    "existing-copy",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private String name;
+       |
+       |  public Example(Example other) {
+       |    this.name = other.name;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = _.getTitle() == GenerateConstructors.titleCopy("Example"),
   )
 
 }

@@ -389,6 +389,11 @@ class JavaTrees(buffers: Buffers) {
                   bodyRange = body,
                   modifiers = node.getModifiers().getFlags().asScala.toSet,
                   members = members,
+                  typeParameters = node
+                    .getTypeParameters()
+                    .asScala
+                    .map(_.getName().toString())
+                    .toList,
                 )
               )
             }
@@ -614,8 +619,10 @@ case class JavaClass(
     bodyRange: JavaRange,
     modifiers: Set[Modifier],
     members: List[JavaMember],
+    typeParameters: List[String],
 ) extends JavaMember
     with HasModifiers
+
 case class JavaMethod(
     tree: MethodTree,
     name: String,
@@ -634,4 +641,6 @@ case class JavaVariable(
     typ: String,
     modifiers: Set[Modifier],
 ) extends JavaMember
-    with HasModifiers
+    with HasModifiers {
+  def hasInitializer: Boolean = tree.getInitializer() != null
+}

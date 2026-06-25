@@ -42,7 +42,13 @@ object JavaMemberInsertion {
       if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
       else "\n\n"
     val suffix =
-      if (insert.isInsertion) ""
+      if (
+        insert.isInsertion &&
+        endOffset >= 0 && endOffset < text.length &&
+        text.charAt(endOffset) == '}'
+      )
+        s"\n$endIndent"
+      else if (insert.isInsertion) ""
       else if (
         endOffset >= 0 && endOffset < text.length &&
         text.charAt(endOffset) == '}'

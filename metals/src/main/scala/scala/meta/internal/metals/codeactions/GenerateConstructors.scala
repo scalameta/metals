@@ -9,14 +9,17 @@ import scala.meta.internal.parsing.InsertPoint
 import scala.meta.internal.parsing.JavaClass
 import scala.meta.internal.parsing.JavaMethod
 import scala.meta.internal.parsing.JavaTrees
+import scala.meta.internal.parsing.JavaVariable
+import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.{lsp4j => l}
 
-class GenerateDefaultConstructor(
+class GenerateConstructors(
     javaTrees: JavaTrees,
     buffers: Buffers,
 ) extends CodeAction {
+  import GenerateConstructors._
 
   override def kind: String = l.CodeActionKind.QuickFix
 
@@ -25,35 +28,169 @@ class GenerateDefaultConstructor(
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = Future {
     val path = params.getTextDocument().getUri().toAbsolutePath
-    val position = params.getRange().getStart()
-    for {
+    val range = params.getRange()
+    val position = range.getStart()
+    val actions = for {
       text <- buffers.get(path).toSeq
       cls <- javaTrees.findEnclosingJavaClass(path, position).toSeq
-      if params.getRange().overlapsWith(cls.nameRange.range) &&
-        !hasDefaultConstructor(cls)
+      if range.overlapsWith(cls.nameRange.range)
     } yield {
       val insert = JavaTrees.insertPointAfterFields(cls, text)
-      val edit = new l.TextEdit(
-        insert.range,
-        constructorText(text, cls.name, constructorModifier(cls), insert),
-      )
-      CodeActionBuilder.build(
-        title = GenerateDefaultConstructor.title(cls.name),
-        kind = kind,
-        changes = Seq(path -> Seq(edit)),
-      )
+      val unit = JavaMemberInsertion.indentUnit(text)
+      val fields = constructorFields(cls)
+
+      List(
+        defaultConstructor(path, text, cls, insert),
+        fieldsConstructor(path, text, cls, fields, unit, insert),
+        copyConstructor(path, text, cls, fields, unit, insert),
+      ).flatten
     }
+    actions.flatten
   }
 
   override def isScala: Boolean = false
 
   override def isJava: Boolean = true
 
+  private def build(
+      path: AbsolutePath,
+      text: String,
+      insert: InsertPoint,
+      title: String,
+      memberLines: Seq[String],
+  ): l.CodeAction = {
+    val edit = new l.TextEdit(
+      insert.range,
+      JavaMemberInsertion.render(text, insert, memberLines),
+    )
+    CodeActionBuilder.build(
+      title = title,
+      kind = kind,
+      changes = Seq(path -> Seq(edit)),
+    )
+  }
+
+  private def defaultConstructor(
+      path: AbsolutePath,
+      text: String,
+      cls: JavaClass,
+      insert: InsertPoint,
+  ): Option[l.CodeAction] =
+    Option.when(!hasDefaultConstructor(cls)) {
+      build(
+        path,
+        text,
+        insert,
+        titleDefault(cls.name),
+        Seq(
+          s"${constructorModifier(cls)}${cls.name}() {",
+          "}",
+        ),
+      )
+    }
+
+  private def fieldsConstructor(
+      path: AbsolutePath,
+      text: String,
+      cls: JavaClass,
+      fields: List[JavaVariable],
+      unit: String,
+      insert: InsertPoint,
+  ): Option[l.CodeAction] =
+    Option.when(fields.nonEmpty && !hasFieldsConstructor(cls, fields)) {
+      val params =
+        fields.map(field => s"${field.typ} ${field.name}").mkString(", ")
+      build(
+        path,
+        text,
+        insert,
+        titleFromFields(cls.name),
+        Seq(s"${constructorModifier(cls)}${cls.name}($params) {") ++
+          fields.map(field => s"$unit${fieldAssignment(field)}") ++
+          Seq("}"),
+      )
+    }
+
+  private def copyConstructor(
+      path: AbsolutePath,
+      text: String,
+      cls: JavaClass,
+      fields: List[JavaVariable],
+      unit: String,
+      insert: InsertPoint,
+  ): Option[l.CodeAction] =
+    Option.when(fields.nonEmpty && !hasCopyConstructor(cls)) {
+      build(
+        path,
+        text,
+        insert,
+        titleCopy(cls.name),
+        Seq(
+          s"${constructorModifier(cls)}${cls.name}(${copyConstructorType(cls)} other) {"
+        ) ++
+          fields.map(field => s"$unit${fieldAssignment(field, "other.")}") ++
+          Seq("}"),
+      )
+    }
+
+  private def fieldAssignment(
+      field: JavaVariable,
+      sourcePrefix: String = "",
+  ): String =
+    s"this.${field.name} = $sourcePrefix${field.name};"
+}
+
+object GenerateConstructors {
+  def titleDefault(className: String): String =
+    s"Generate default constructor for $className"
+  def titleFromFields(className: String): String =
+    s"Generate constructor from fields for $className"
+  def titleCopy(className: String): String =
+    s"Generate copy constructor for $className"
+
+  private def constructorFields(cls: JavaClass): List[JavaVariable] =
+    cls.members.collect {
+      case field: JavaVariable if isConstructorField(field) => field
+    }
+
+  private def isConstructorField(field: JavaVariable): Boolean =
+    !field.isStatic &&
+      !(field.isFinal && field.hasInitializer)
+
   private def hasDefaultConstructor(cls: JavaClass): Boolean =
     cls.members.exists {
       case m: JavaMethod => m.isConstructor && m.parameters.isEmpty
       case _ => false
     }
+
+  private def hasFieldsConstructor(
+      cls: JavaClass,
+      fields: List[JavaVariable],
+  ): Boolean =
+    cls.members.exists {
+      case method: JavaMethod if method.isConstructor =>
+        method.parameters.map(_.typ) == fields.map(_.typ)
+      case _ => false
+    }
+
+  private def hasCopyConstructor(cls: JavaClass): Boolean =
+    cls.members.exists {
+      case method: JavaMethod if method.isConstructor =>
+        method.parameters match {
+          case parameter :: Nil =>
+            parameter.typ == cls.name || parameter.typ == copyConstructorType(
+              cls
+            )
+          case _ => false
+        }
+      case _ => false
+    }
+
+  private def copyConstructorType(cls: JavaClass): String = {
+    if (cls.typeParameters.isEmpty) cls.name
+    else
+      cls.typeParameters.mkString(s"${cls.name}<", ", ", ">")
+  }
 
   private def constructorModifier(cls: JavaClass): String = {
     if (cls.isAbstract) "protected "
@@ -62,24 +199,4 @@ class GenerateDefaultConstructor(
     else if (cls.isPrivate) "private "
     else ""
   }
-
-  private def constructorText(
-      text: String,
-      className: String,
-      modifier: String,
-      insert: InsertPoint,
-  ): String =
-    JavaMemberInsertion.render(
-      text,
-      insert,
-      Seq(
-        s"$modifier$className() {",
-        "}",
-      ),
-    )
-}
-
-object GenerateDefaultConstructor {
-  def title(className: String): String =
-    s"Generate default constructor for $className"
 }

@@ -61,7 +61,7 @@ final class CodeActionProvider(
     new RemoveInvalidImportQuickFix(trees, buildTargets),
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
-    new GenerateDefaultConstructor(javaTrees, buffers),
+    new GenerateConstructors(javaTrees, buffers),
     new GenerateGettersSetters(javaTrees, buffers),
   )
 
