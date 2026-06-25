@@ -24,11 +24,13 @@ import scala.meta.pc.OffsetParams
 import scala.meta.pc.RangeParams
 
 import com.sun.source.tree.ArrayAccessTree
+import com.sun.source.tree.AssignmentTree
 import com.sun.source.tree.BinaryTree
 import com.sun.source.tree.BlockTree
 import com.sun.source.tree.BreakTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.CompoundAssignmentTree
 import com.sun.source.tree.ConditionalExpressionTree
 import com.sun.source.tree.ContinueTree
 import com.sun.source.tree.ExpressionStatementTree
@@ -343,6 +345,13 @@ final class JavaExtractMethodProvider(
     val classTree = selection.classPath.getLeaf().asInstanceOf[ClassTree]
     val typePrinter = new TypePrinter(ctx)
     val freeVariables = collectFreeVariables(ctx, methodElement)
+    val mutatedFreeVars = collectMutatedFreeVariables(ctx, methodElement)
+    if (mutatedFreeVars.nonEmpty) {
+      val varNames = mutatedFreeVars.toList.sorted.mkString(", ")
+      throw new DisplayableException(
+        s"Cannot extract selection that modifies captured variable(s): $varNames"
+      )
+    }
     val usedNames = classTree
       .getMembers()
       .asScala
@@ -547,6 +556,51 @@ final class JavaExtractMethodProvider(
     }
     scanner.scan(ctx.cu, ())
     params.values.toList
+  }
+
+  private def collectMutatedFreeVariables(
+      ctx: Context,
+      methodElement: ExecutableElement
+  ): Set[String] = {
+    val mutated = mutable.Set.empty[String]
+    val scanner = new TreePathScanner[Unit, Unit] {
+      override def visitAssignment(node: AssignmentTree, p: Unit): Unit = {
+        checkMutatedTarget(node.getVariable())
+        super.visitAssignment(node, p)
+      }
+
+      override def visitCompoundAssignment(
+          node: CompoundAssignmentTree,
+          p: Unit
+      ): Unit = {
+        checkMutatedTarget(node.getVariable())
+        super.visitCompoundAssignment(node, p)
+      }
+
+      override def visitUnary(node: UnaryTree, p: Unit): Unit = {
+        node.getKind() match {
+          case Tree.Kind.PREFIX_INCREMENT | Tree.Kind.PREFIX_DECREMENT |
+              Tree.Kind.POSTFIX_INCREMENT | Tree.Kind.POSTFIX_DECREMENT =>
+            checkMutatedTarget(node.getExpression())
+          case _ =>
+        }
+        super.visitUnary(node, p)
+      }
+
+      private def checkMutatedTarget(target: ExpressionTree): Unit = {
+        val targetPath = new TreePath(getCurrentPath(), target)
+        val (start, end) = (ctx.startOf(target), ctx.endOf(target))
+        if (ctx.rangeStart <= start && end <= ctx.rangeEnd) {
+          ctx.elementAt(targetPath).foreach {
+            case v: VariableElement if isFreeVariable(v, ctx, methodElement) =>
+              mutated += v.getSimpleName().toString()
+            case _ =>
+          }
+        }
+      }
+    }
+    scanner.scan(ctx.cu, ())
+    mutated.toSet
   }
 
   private def isFreeVariable(

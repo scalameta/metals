@@ -202,6 +202,45 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
     "No return type can be inferred, multiple variables are used after the selection.",
   )
 
+  checkError(
+    "mutated-captured-variable-assignment",
+    """|class A {
+       |  @@void foo() {
+       |    int x = 0;
+       |    <<x = 5;>>
+       |    System.out.println(x);
+       |  }
+       |}
+       |""".stripMargin,
+    "Cannot extract selection that modifies captured variable(s): x",
+  )
+
+  checkError(
+    "mutated-captured-variable-increment",
+    """|class A {
+       |  @@void foo() {
+       |    int x = 0;
+       |    <<x++;>>
+       |    System.out.println(x);
+       |  }
+       |}
+       |""".stripMargin,
+    "Cannot extract selection that modifies captured variable(s): x",
+  )
+
+  checkError(
+    "mutated-captured-variable-compound",
+    """|class A {
+       |  @@void foo() {
+       |    int x = 0;
+       |    <<x += 5;>>
+       |    System.out.println(x);
+       |  }
+       |}
+       |""".stripMargin,
+    "Cannot extract selection that modifies captured variable(s): x",
+  )
+
   checkEdit(
     "multiple-void",
     """|
@@ -274,10 +313,10 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
     "whitespace-in-selection",
     """|class A {
        |  @@void foo() {
-       |    <<
+       |    <</**/
        |    int a = 1;
        |    int b = a + 2;
-       |    >>
+       |    >>/**/
        |    System.out.println(b);
        |  }
        |}
@@ -290,9 +329,9 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
        |  }
        |
        |  void foo() {
-       |    
+       |    /**/
        |    int b = newMethod();
-       |    
+       |    /**/
        |    System.out.println(b);
        |  }
        |}

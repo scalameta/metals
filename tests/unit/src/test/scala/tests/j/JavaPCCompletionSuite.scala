@@ -59,7 +59,6 @@ class JavaPCCompletionSuite extends BaseJavaPCSuite("java-pc-completion") {
            |
            |import a.ExampleGreetingBean;
            |
-           |
            |public class FooQux {
            |  public void foo() {
            |    System.out.println(ExampleGreetingBean);

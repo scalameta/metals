@@ -97,7 +97,6 @@ class JavaExtractMethodLspSuite
        |
        |import java.util.UUID;
        |
-       |
        |public class Example {
        |  private UUID newMethod() {
        |    return java.util.UUID.randomUUID();

@@ -184,7 +184,7 @@ final case class CallHierarchyProvider(
     } else if (source.isJavaFilename) {
       javaTrees
         .findEnclosingJavaMethod(source, range.getStart)
-        .map(method => (method.nameRange, method.bodyRange, source))
+        .map(method => (method.nameRange.range, method.range.range, source))
     } else None
   }
 

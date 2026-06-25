@@ -74,12 +74,12 @@ class JavaExtractMethodCodeAction(
         method <- javaTrees
           .findEnclosingJavaMethod(path, range.getStart())
           .toSeq
-        if range.overlapsWith(method.bodyRange)
+        if range.overlapsWith(method.range.range)
       } yield {
         val data = ExtractMethodData(
           params.getTextDocument(),
           range,
-          method.declarationStart,
+          method.range.getStart(),
         )
         CodeActionBuilder.build(
           title = JavaExtractMethodCodeAction.title(method.name),
