@@ -37,7 +37,7 @@ class GenerateGettersSetters(
     } yield {
       val insert = JavaTrees.insertPointAfterFields(cls, text)
       val unit = JavaMemberInsertion.indentUnit(text)
-      val existing = existingMethodNames(cls)
+      val existing = existingMethods(cls)
 
       def build(
           title: String,
@@ -117,17 +117,17 @@ object GenerateGettersSetters {
   def titleAllGettersAndSetters(className: String): String =
     s"Generate all getters and setters for $className"
 
-  private def existingMethodNames(cls: JavaClass): Set[String] =
+  private def existingMethods(cls: JavaClass): List[JavaMethod] =
     cls.members.collect {
-      case method: JavaMethod if !method.isConstructor => method.name
-    }.toSet
+      case method: JavaMethod if !method.isConstructor => method
+    }
 
   private def getter(
-      existing: Set[String],
+      existing: List[JavaMethod],
       unit: String,
       field: JavaVariable,
   ): Option[Seq[String]] =
-    Option.when(!existing.contains(getterName(field))) {
+    Option.when(!hasGetter(existing, field)) {
       Seq(
         s"${modifier(field)}${field.typ} ${getterName(field)}() {",
         s"${unit}return ${field.name};",
@@ -136,12 +136,12 @@ object GenerateGettersSetters {
     }
 
   private def setter(
-      existing: Set[String],
+      existing: List[JavaMethod],
       unit: String,
       className: String,
       field: JavaVariable,
   ): Option[Seq[String]] =
-    Option.when(!field.isFinal && !existing.contains(setterName(field))) {
+    Option.when(!field.isFinal && !hasSetter(existing, field)) {
       val target = if (field.isStatic) className else "this"
       Seq(
         s"${modifier(field)}void ${setterName(field)}(${field.typ} ${field.name}) {",
@@ -150,12 +150,43 @@ object GenerateGettersSetters {
       )
     }
 
+  private def hasGetter(
+      existing: List[JavaMethod],
+      field: JavaVariable,
+  ): Boolean =
+    existing.exists(method =>
+      method.name == getterName(field) &&
+        method.parameters.isEmpty &&
+        method.returnType == field.typ
+    )
+
+  private def hasSetter(
+      existing: List[JavaMethod],
+      field: JavaVariable,
+  ): Boolean =
+    existing.exists(method =>
+      method.name == setterName(field) &&
+        method.returnType == "void" &&
+        method.parameters.map(_.typ) == List(field.typ)
+    )
+
   private def getterName(field: JavaVariable): String =
-    (if (field.typ == "boolean") "is" else "get") + field.name.capitalize
+    if (field.typ == "boolean" && startsWithIsProperty(field.name)) field.name
+    else (if (field.typ == "boolean") "is" else "get") + field.name.capitalize
 
   private def setterName(field: JavaVariable): String =
-    "set" + field.name.capitalize
+    "set" + propertyName(field).capitalize
 
   private def modifier(field: JavaVariable): String =
     if (field.isStatic) "public static " else "public "
+
+  private def propertyName(field: JavaVariable): String =
+    if (field.typ == "boolean" && startsWithIsProperty(field.name))
+      field.name.stripPrefix("is")
+    else field.name
+
+  private def startsWithIsProperty(name: String): Boolean =
+    name.length > 2 &&
+      name.startsWith("is") &&
+      name.charAt(2).isUpper
 }

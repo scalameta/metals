@@ -95,6 +95,52 @@ class GenerateGettersSettersLspSuite
     fileName = "Example.java",
   )
 
+  check(
+    "boolean-is-prefixed-getter",
+    """|package a;
+       |
+       |public class Example {
+       |  private boolean <<isActive>>;
+       |}
+       |""".stripMargin,
+    getterAndSetter("isActive"),
+    """|package a;
+       |
+       |public class Example {
+       |  private boolean isActive;
+       |
+       |  public boolean isActive() {
+       |    return isActive;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 0,
+    fileName = "Example.java",
+  )
+
+  check(
+    "boolean-is-prefixed-setter",
+    """|package a;
+       |
+       |public class Example {
+       |  private boolean <<isActive>>;
+       |}
+       |""".stripMargin,
+    getterAndSetter("isActive"),
+    """|package a;
+       |
+       |public class Example {
+       |  private boolean isActive;
+       |
+       |  public void setActive(boolean isActive) {
+       |    this.isActive = isActive;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    fileName = "Example.java",
+  )
+
   // Object types (incl. the `Boolean` wrapper) use `get`, not `is`.
   check(
     "boolean-wrapper-getter",
@@ -116,6 +162,66 @@ class GenerateGettersSettersLspSuite
        |}
        |""".stripMargin,
     selectedActionIndex = 0,
+    fileName = "Example.java",
+  )
+
+  check(
+    "overloaded-getter-name",
+    """|package a;
+       |
+       |public class Example {
+       |  private String <<value>>;
+       |
+       |  public String getValue(String fallback) {
+       |    return fallback;
+       |  }
+       |}
+       |""".stripMargin,
+    getterAndSetter("value"),
+    """|package a;
+       |
+       |public class Example {
+       |  private String value;
+       |
+       |  public String getValue() {
+       |    return value;
+       |  }
+       |
+       |  public String getValue(String fallback) {
+       |    return fallback;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 0,
+    fileName = "Example.java",
+  )
+
+  check(
+    "overloaded-setter-name",
+    """|package a;
+       |
+       |public class Example {
+       |  private String <<value>>;
+       |
+       |  public void setValue(int value) {
+       |  }
+       |}
+       |""".stripMargin,
+    getterAndSetter("value"),
+    """|package a;
+       |
+       |public class Example {
+       |  private String value;
+       |
+       |  public void setValue(String value) {
+       |    this.value = value;
+       |  }
+       |
+       |  public void setValue(int value) {
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
     fileName = "Example.java",
   )
 
