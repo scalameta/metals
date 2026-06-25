@@ -59,37 +59,9 @@ class BazelMbtLspSuite
         |    //...
         |
         |""".stripMargin
-    val rulesAndSources =
-      s"""|/core/BUILD
-          |load("@rules_scala//scala:scala.bzl", "scala_library")
-          |
-          |scala_library(
-          |    name = "hello_lib",
-          |    srcs = ["Hello.scala", "Bar.scala"],
-          |    visibility = ["//visibility:public"],
-          |    scalacopts = ["-deprecation"],
-          |    deps = ["@maven//:org_typelevel_cats_core_2_13"],
-          |)
-          |
-          |/core/Hello.scala
-          |package core
-          |
-          |import cats.syntax.all._
-          |
-          |class Hello {
-          |  def hello: String = "Hello"
-          |  def catOption: Option[Int] = 1.some
-          |
-          |}
-          |
-          |/core/Bar.scala
-          |package core
-          |
-          |class Bar {
-          |  def bar: String = "bar"
-          |  def hi = new Hello().hello
-          |}
-          |
+    val rulesAndSources1 = rulesAndSources("maven")
+    val rulesAndSources2 =
+      s"""|
           |/app/BUILD
           |load("@rules_scala//scala:scala.bzl", "scala_binary")
           |
@@ -118,12 +90,53 @@ class BazelMbtLspSuite
           | def decode: String = "decode"
           |}
           |""".stripMargin
-    projectView + rulesAndSources
+    projectView + rulesAndSources1 + rulesAndSources2
   }
 
   private val mavenDeps: List[String] = List(
     s"org.typelevel:cats-core_2.13:$catsVersion"
   )
+
+  private val singleCoreMbtJson: String =
+    """|{
+       |  "dependencyModules": [
+       |    {
+       |      "id": "org.scala-lang:scala-library:2.13.16",
+       |      "jar": "<jar-path>",
+       |      "sources": "<sources-path>"
+       |    },
+       |    {
+       |      "id": "org.typelevel:cats-core_2.13:2.13.0",
+       |      "jar": "<jar-path>",
+       |      "sources": "<sources-path>"
+       |    },
+       |    {
+       |      "id": "org.typelevel:cats-kernel_2.13:2.13.0",
+       |      "jar": "<jar-path>",
+       |      "sources": "<sources-path>"
+       |    }
+       |  ],
+       |  "namespaces": {
+       |    "//core": {
+       |      "sources": [
+       |        "core/Bar.scala",
+       |        "core/Hello.scala"
+       |      ],
+       |      "scalacOptions": [
+       |        "-deprecation"
+       |      ],
+       |      "javacOptions": [],
+       |      "dependencyModules": [
+       |        "org.scala-lang:scala-library:2.13.16",
+       |        "org.typelevel:cats-core_2.13:2.13.0",
+       |        "org.typelevel:cats-kernel_2.13:2.13.0"
+       |      ],
+       |      "scalaVersion": "2.13.16",
+       |      "dependsOn": [],
+       |      "classDirectories": []
+       |    }
+       |  }
+       |}""".stripMargin
 
   private val javaMavenDeps: List[String] = List(
     s"org.jsoup:jsoup:$jsoupVersion"
@@ -213,14 +226,60 @@ class BazelMbtLspSuite
        |}
        |""".stripMargin
 
-  private def pinMaven(workspace: AbsolutePath): Unit = {
+  private def pinMaven(workspace: AbsolutePath): Unit =
+    pinHub("maven")(workspace)
+
+  private def pinHub(hubName: String)(workspace: AbsolutePath): Unit = {
     workspace.resolve("maven_install.json").touch()
     ShellRunner.runSync(
-      List("bazel", "run", "@maven//:pin"),
+      List("bazel", "run", s"@$hubName//:pin"),
       workspace,
       redirectErrorOutput = false,
       timeout = 1.minute,
     )
+  }
+
+  private def rulesAndSources(hubName: String) =
+    s"""|/core/BUILD
+        |load("@rules_scala//scala:scala.bzl", "scala_library")
+        |
+        |scala_library(
+        |    name = "hello_lib",
+        |    srcs = ["Hello.scala", "Bar.scala"],
+        |    visibility = ["//visibility:public"],
+        |    scalacopts = ["-deprecation"],
+        |    deps = ["@$hubName//:org_typelevel_cats_core_2_13"],
+        |)
+        |
+        |/core/Hello.scala
+        |package core
+        |
+        |import cats.syntax.all._
+        |
+        |class Hello {
+        |  def hello: String = "Hello"
+        |  def catOption: Option[Int] = 1.some
+        |
+        |}
+        |
+        |/core/Bar.scala
+        |package core
+        |
+        |class Bar {
+        |  def bar: String = "bar"
+        |  def hi = new Hello().hello
+        |}
+        |""".stripMargin
+
+  private def customHubWorkspaceLayout(hubName: String): String = {
+    val projectView =
+      """|/.bazelproject
+         |targets:
+         |    //core/...
+         |
+         |""".stripMargin
+
+    projectView + rulesAndSources(hubName)
   }
 
   test("bazel-import-mbt-server-hover") {
@@ -407,48 +466,7 @@ class BazelMbtLspSuite
       )
       _ <- server.headServer.connectionProvider.buildServerPromise.future
       mbtFile = workspace.resolve(".metals/mbt.json").readText
-      _ = assertNoDiff(
-        escapeMbtFile(mbtFile),
-        s"""|{
-            |  "dependencyModules": [
-            |    {
-            |      "id": "org.scala-lang:scala-library:2.13.16",
-            |      "jar": "<jar-path>",
-            |      "sources": "<sources-path>"
-            |    },
-            |    {
-            |      "id": "org.typelevel:cats-core_2.13:2.13.0",
-            |      "jar": "<jar-path>",
-            |      "sources": "<sources-path>"
-            |    },
-            |    {
-            |      "id": "org.typelevel:cats-kernel_2.13:2.13.0",
-            |      "jar": "<jar-path>",
-            |      "sources": "<sources-path>"
-            |    }
-            |  ],
-            |  "namespaces": {
-            |    "//core": {
-            |      "sources": [
-            |        "core/Bar.scala",
-            |        "core/Hello.scala"
-            |      ],
-            |      "scalacOptions": [
-            |        "-deprecation"
-            |      ],
-            |      "javacOptions": [],
-            |      "dependencyModules": [
-            |        "org.scala-lang:scala-library:2.13.16",
-            |        "org.typelevel:cats-core_2.13:2.13.0",
-            |        "org.typelevel:cats-kernel_2.13:2.13.0"
-            |      ],
-            |      "scalaVersion": "2.13.16",
-            |      "dependsOn": [],
-            |      "classDirectories": []
-            |    }
-            |  }
-            |}""".stripMargin,
-      )
+      _ = assertNoDiff(escapeMbtFile(mbtFile), singleCoreMbtJson)
       _ <- server.didOpen("core/Hello.scala")
       _ <- server.assertHover(
         "core/Hello.scala",
@@ -655,6 +673,29 @@ class BazelMbtLspSuite
             |  }
             |}""".stripMargin,
       )
+    } yield ()
+  }
+
+  test("bazel-import-mbt-custom-maven-hub") {
+    val hub = "custom_maven"
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          customHubWorkspaceLayout(hub),
+          V.scala213,
+          bazelVersion,
+          mavenDeps,
+          Some(hub),
+        ),
+        runAdditionalCommands = pinHub(hub),
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      // Identical to the default-`maven` single-target result: the hub name
+      // does not appear in the imported model.
+      _ = assertNoDiff(escapeMbtFile(mbtFile), singleCoreMbtJson)
     } yield ()
   }
 

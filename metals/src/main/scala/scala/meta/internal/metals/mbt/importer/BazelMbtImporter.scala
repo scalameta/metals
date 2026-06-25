@@ -16,7 +16,6 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
-import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
@@ -52,12 +51,19 @@ abstract class BazelMbtImporter(
     for {
       outputBase <- queryOutputBase()
       bazelBin <- queryBazelBin()
-      repositoryName = BazelMavenJsonImporter
-        .extractRepositoryNameFromBazelConfig(projectRoot)
-      _ = scribe.info(s"bazel-mbt: found repository name: $repositoryName")
+      mavenHubs = BazelMavenJsonImporter
+        .discoverMavenHubs(
+          BazelMavenJsonImporter.externalDirs(
+            projectRoot,
+            outputBase.map(AbsolutePath.apply),
+          )
+        )
+      _ = scribe.info(
+        s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
+      )
       mavenImportStart = System.nanoTime()
       dependencyModules = BazelMavenJsonImporter
-        .importMaven(projectRoot, outputBase, repositoryName)
+        .importMaven(projectRoot, outputBase, mavenHubs)
       _ = scribe.debug(
         s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
       )
@@ -87,10 +93,10 @@ abstract class BazelMbtImporter(
       )
       deps = queryDeps(targets.toSet, targets, targetsXmlDump)
       externalDeps = targetsXmlDump.externalDepsByTarget(targets)
-      externalDepModules = matchExternalDepsToModules(
+      externalDepModules = BazelMavenJsonImporter.matchExternalDeps(
         externalDeps,
         dependencyModules,
-        repositoryName,
+        mavenHubs,
       )
       scalaVersionFromDeps <- queryScalaVersionFromDeps()
       effectiveScalaVersion <- scalaVersionFromDeps match {
@@ -191,45 +197,6 @@ abstract class BazelMbtImporter(
     orderedTargets.map { target =>
       target -> targetsXml.depsByTarget.getOrElse(target, Nil).filter(targetSet)
     }.toMap
-  }
-
-  private def matchExternalDepsToModules(
-      externalDeps: Map[String, List[String]],
-      dependencyModules: Seq[MbtDependencyModule],
-      repositoryName: String,
-  ): Map[String, List[String]] = {
-    val modulesByBazelLabel = dependencyModules.flatMap { module =>
-      bazelLabelFromModuleId(module.id, repositoryName).map(_ -> module.id)
-    }.toMap
-
-    externalDeps.map { case (target, deps) =>
-      val matchedModuleIds = for {
-        dep <- deps
-        normalizedDep = normalizeBazelLabel(dep)
-        moduleId <- modulesByBazelLabel.get(normalizedDep)
-      } yield moduleId
-      target -> matchedModuleIds
-    }
-  }
-
-  private def bazelLabelFromModuleId(
-      moduleId: String,
-      repositoryName: String,
-  ): Option[String] = {
-    val parts = moduleId.split(":")
-    if (parts.length >= 2) {
-      val groupId = parts(0)
-      val artifactId = parts(1)
-      val sanitizedGroup = groupId.replace('.', '_').replace('-', '_')
-      val sanitizedArtifact = artifactId.replace('.', '_').replace('-', '_')
-      Some(s"@$repositoryName//:${sanitizedGroup}_$sanitizedArtifact")
-    } else None
-  }
-
-  private def normalizeBazelLabel(label: String): String = {
-    val withoutDoubleAt =
-      if (label.startsWith("@@")) label.substring(1) else label
-    withoutDoubleAt.replaceAll("~[^/]+", "")
   }
 
   private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
