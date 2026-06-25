@@ -41,13 +41,18 @@ object JavaMemberInsertion {
     s"${around.prefix}$body${around.suffix}"
   }
 
-  /** The indentation unit (tab or spaces) used in the file. */
+  /**
+   * The indentation unit used in the file: a single tab for tab-indented
+   * files, otherwise the leading space width inferred from the first indented
+   * line (falling back to two spaces when nothing is indented).
+   */
   def indentUnit(text: String): String =
     text.linesIterator
       .map(_.takeWhile(c => c == ' ' || c == '\t'))
       .find(_.nonEmpty) match {
       case Some(ws) if ws.startsWith("\t") => "\t"
-      case _ => "  "
+      case Some(ws) => ws
+      case None => "  "
     }
 
   /** Leading whitespace of the line containing `offset`. */
