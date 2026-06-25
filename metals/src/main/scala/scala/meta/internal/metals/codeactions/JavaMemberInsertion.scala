@@ -41,19 +41,11 @@ object JavaMemberInsertion {
     val prefix =
       if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
       else "\n\n"
+    val atClosingBrace =
+      endOffset >= 0 && endOffset < text.length && text.charAt(endOffset) == '}'
     val suffix =
-      if (
-        insert.isInsertion &&
-        endOffset >= 0 && endOffset < text.length &&
-        text.charAt(endOffset) == '}'
-      )
-        s"\n$endIndent"
+      if (atClosingBrace) s"\n$endIndent"
       else if (insert.isInsertion) ""
-      else if (
-        endOffset >= 0 && endOffset < text.length &&
-        text.charAt(endOffset) == '}'
-      )
-        s"\n$endIndent"
       else s"\n\n$endIndent"
     val body = members
       .map(memberLines =>
