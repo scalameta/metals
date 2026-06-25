@@ -53,7 +53,7 @@ object V {
 
   val lsp4jV = "1.0.0"
 
-  val mavenBloop = "2.0.4"
+  val mavenBloop = "2.0.5"
 
   val mill = "1.1.7"
 
