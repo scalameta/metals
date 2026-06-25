@@ -169,18 +169,28 @@ object GenerateEqualsHashCodeToString {
     else cls.typeParameters.map(_ => "?").mkString(s"${cls.name}<", ", ", ">")
 
   private def equalsExpression(field: JavaVariable): String =
-    if (isArray(field))
+    if (isNestedArray(field))
+      s"java.util.Arrays.deepEquals(this.${field.name}, that.${field.name})"
+    else if (isArray(field))
       s"java.util.Arrays.equals(this.${field.name}, that.${field.name})"
     else s"java.util.Objects.equals(this.${field.name}, that.${field.name})"
 
   private def hashCodeExpression(field: JavaVariable): String =
-    if (isArray(field)) s"java.util.Arrays.hashCode(${field.name})"
+    if (isNestedArray(field)) s"java.util.Arrays.deepHashCode(${field.name})"
+    else if (isArray(field)) s"java.util.Arrays.hashCode(${field.name})"
     else field.name
 
   private def toStringExpression(field: JavaVariable): String =
-    if (isArray(field)) s"java.util.Arrays.toString(${field.name})"
+    if (isNestedArray(field)) s"java.util.Arrays.deepToString(${field.name})"
+    else if (isArray(field)) s"java.util.Arrays.toString(${field.name})"
     else field.name
 
   private def isArray(field: JavaVariable): Boolean =
-    field.typ.endsWith("[]")
+    arrayDimensions(field) > 0
+
+  private def isNestedArray(field: JavaVariable): Boolean =
+    arrayDimensions(field) > 1
+
+  private def arrayDimensions(field: JavaVariable): Int =
+    field.typ.sliding(2).count(_ == "[]")
 }

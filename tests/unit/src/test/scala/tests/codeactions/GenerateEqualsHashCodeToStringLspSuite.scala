@@ -200,6 +200,52 @@ class GenerateEqualsHashCodeToStringLspSuite
   )
 
   check(
+    "nested-arrays",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  private int[][] matrix;
+       |  private String[][] labels;
+       |}
+       |""".stripMargin,
+    title("Example"),
+    """|package a;
+       |
+       |public class Example {
+       |  private int[][] matrix;
+       |  private String[][] labels;
+       |
+       |  @Override
+       |  public boolean equals(Object obj) {
+       |    if (this == obj) {
+       |      return true;
+       |    }
+       |    if (obj == null || getClass() != obj.getClass()) {
+       |      return false;
+       |    }
+       |    Example that = (Example) obj;
+       |    return java.util.Arrays.deepEquals(this.matrix, that.matrix) && java.util.Arrays.deepEquals(this.labels, that.labels);
+       |  }
+       |
+       |  @Override
+       |  public int hashCode() {
+       |    return java.util.Objects.hash(java.util.Arrays.deepHashCode(matrix), java.util.Arrays.deepHashCode(labels));
+       |  }
+       |
+       |  @Override
+       |  public String toString() {
+       |    return "Example{" +
+       |      "matrix=" + java.util.Arrays.deepToString(matrix) +
+       |      ", labels=" + java.util.Arrays.deepToString(labels) +
+       |      "}";
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyGenerate,
+  )
+
+  check(
     "inner-class",
     """|package a;
        |

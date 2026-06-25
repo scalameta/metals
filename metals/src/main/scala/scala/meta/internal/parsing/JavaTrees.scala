@@ -539,16 +539,18 @@ object JavaTrees {
         PositionWithOffset(cls.bodyRange.getStart(), cls.bodyRange.startOffset)
       )
 
-    val expandedEnd = cls.members
+    val nextMember = cls.members
       .filter(_.range.startOffset > start.offset)
       .minByOption(_.range.startOffset)
-      .map(m => PositionWithOffset(m.range.getStart(), m.range.startOffset))
-      .getOrElse(
-        PositionWithOffset(cls.bodyRange.getEnd(), cls.bodyRange.endOffset)
+    val expandedEnd = nextMember
+      .map(member =>
+        PositionWithOffset(member.range.getStart(), member.range.startOffset)
       )
+      .getOrElse(start)
 
     val canExpand =
-      expandedEnd.offset > start.offset &&
+      nextMember.nonEmpty &&
+        expandedEnd.offset > start.offset &&
         expandedEnd.offset <= text.length &&
         text
           .substring(start.offset, expandedEnd.offset)
@@ -560,7 +562,7 @@ object JavaTrees {
       new l.Range(start.position, end.position),
       start.offset,
       end.offset,
-      isInsertion = !canExpand && cls.members.nonEmpty,
+      isInsertion = !canExpand,
     )
   }
 
