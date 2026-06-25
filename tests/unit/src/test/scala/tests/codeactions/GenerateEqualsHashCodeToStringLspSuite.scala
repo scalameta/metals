@@ -2,8 +2,14 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateEqualsHashCodeToString
 
+import tests.BazelMbtTestInitializer
+
 class GenerateEqualsHashCodeToStringLspSuite
-    extends BaseCodeActionLspSuite("generate-equals-hashcode-tostring") {
+    extends BaseCodeActionLspSuite(
+      "generate-equals-hashcode-tostring",
+      BazelMbtTestInitializer,
+      useMbtLayout = true,
+    ) {
 
   override protected def toPath(
       fileName: String,

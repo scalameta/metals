@@ -2,8 +2,14 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateGettersSetters
 
+import tests.BazelMbtTestInitializer
+
 class GenerateGettersSettersLspSuite
-    extends BaseCodeActionLspSuite("generate-getters-setters") {
+    extends BaseCodeActionLspSuite(
+      "generate-getters-setters",
+      BazelMbtTestInitializer,
+      useMbtLayout = true,
+    ) {
 
   override protected def toPath(
       fileName: String,

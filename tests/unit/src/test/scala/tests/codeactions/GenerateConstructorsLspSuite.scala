@@ -2,8 +2,14 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateConstructors
 
+import tests.BazelMbtTestInitializer
+
 class GenerateConstructorsLspSuite
-    extends BaseCodeActionLspSuite("generate-constructors") {
+    extends BaseCodeActionLspSuite(
+      "generate-constructors",
+      BazelMbtTestInitializer,
+      useMbtLayout = true,
+    ) {
 
   override protected def toPath(
       fileName: String,

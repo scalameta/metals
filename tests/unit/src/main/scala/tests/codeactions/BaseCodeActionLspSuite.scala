@@ -9,11 +9,16 @@ import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeAction
 import tests.BaseLspSuite
+import tests.BuildServerInitializer
 import tests.FileLayout
+import tests.MbtJsonBuilder
+import tests.QuickBuildInitializer
 
 abstract class BaseCodeActionLspSuite(
-    suiteName: String
-) extends BaseLspSuite(suiteName) {
+    suiteName: String,
+    initializer: BuildServerInitializer = QuickBuildInitializer,
+    useMbtLayout: Boolean = false,
+) extends BaseLspSuite(suiteName, initializer) {
 
   protected val scalaVersion: String = V.scala213
 
@@ -102,11 +107,20 @@ abstract class BaseCodeActionLspSuite(
     val path = toPath(fileName, createInSrcDir)
 
     val layout = overrideLayout.getOrElse {
-      s"""/metals.json
-         |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion", "libraryDependencies": ${toJsonArray(dependencies)} }}
-         |$scalafixConf
-         |/$path
-         |$input""".stripMargin
+      if (useMbtLayout) {
+        val mbtJson = new MbtJsonBuilder(scalaVersion)
+          .addNamespace("a", List("a/src/main/java/**", "a/src/main/scala/**"))
+          .build()
+        s"""/.metals/mbt.json
+           |$mbtJson
+           |/$path
+           |$input""".stripMargin
+      } else
+        s"""/metals.json
+           |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion", "libraryDependencies": ${toJsonArray(dependencies)} }}
+           |$scalafixConf
+           |/$path
+           |$input""".stripMargin
     }
 
     checkEdit(

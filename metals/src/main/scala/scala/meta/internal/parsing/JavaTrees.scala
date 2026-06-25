@@ -210,6 +210,26 @@ class JavaTrees(buffers: Buffers) {
           )
         }
         .toList
+
+    protected def javaVariable(node: VariableTree): Option[JavaVariable] = {
+      val variableName = node.getName().toString()
+      treeRange(node).map { range =>
+        JavaVariable(
+          tree = node,
+          name = variableName,
+          range = range,
+          nameRange = findNameRange(
+            lineMap,
+            text,
+            range.startOffset,
+            range.endOffset,
+            variableName,
+          ).getOrElse(range),
+          typ = node.getType().toString(),
+          modifiers = node.getModifiers().getFlags().asScala.toSet,
+        )
+      }
+    }
   }
 
   private class EnclosingMethodFinder(
@@ -277,28 +297,7 @@ class JavaTrees(buffers: Buffers) {
       val nodeEnd = pos.endPos(node)
 
       if (positionContains(targetOffset, nodeStart, nodeEnd)) {
-        val variableName = node.getName().toString()
-        val variableType = node.getType().toString()
-        val modifiers = node.getModifiers().getFlags().asScala.toSet
-        val range = treeRange(node)
-        range.foreach { range =>
-          _result = Some(
-            JavaVariable(
-              tree = node,
-              name = variableName,
-              range = range,
-              nameRange = findNameRange(
-                lineMap,
-                text,
-                nodeStart,
-                nodeEnd,
-                variableName,
-              ).getOrElse(range),
-              typ = variableType,
-              modifiers = modifiers,
-            )
-          )
-        }
+        _result = javaVariable(node)
       }
       super.visitVariable(node, p)
     }
@@ -359,24 +358,7 @@ class JavaTrees(buffers: Buffers) {
                         )
                       }
                     case field: VariableTree =>
-                      val fieldName = field.getName().toString()
-                      treeRange(field).map { range =>
-                        JavaVariable(
-                          tree = field,
-                          name = fieldName,
-                          range = range,
-                          nameRange = findNameRange(
-                            lineMap,
-                            text,
-                            range.startOffset,
-                            range.endOffset,
-                            fieldName,
-                          ).getOrElse(range),
-                          typ = field.getType().toString(),
-                          modifiers =
-                            field.getModifiers().getFlags().asScala.toSet,
-                        )
-                      }
+                      javaVariable(field)
                   }
                   .flatten
                   .toList
