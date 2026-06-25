@@ -27,6 +27,9 @@ import org.eclipse.{lsp4j => l}
  *
  * The cursor is expected to be on the class declaration that triggers the
  * `compiler.err.does.not.override.abstract` diagnostic.
+ *
+ * Referenced types are rendered with simple names where it is safe, and the
+ * required imports are added as a separate text edit (see [[JavaTypeShortener]]).
  */
 class JavaImplementAbstractMembersProvider(
     compiler: JavaMetalsCompiler,
@@ -43,7 +46,7 @@ class JavaImplementAbstractMembersProvider(
     val trees = Trees.instance(task)
     val text = params.text()
 
-    enclosingClass(trees, cu).flatMap { classPath =>
+    enclosingClass(trees, cu).toList.flatMap { classPath =>
       trees.getElement(classPath) match {
         case typeElement: TypeElement
             if !typeElement.getModifiers.contains(Modifier.ABSTRACT) &&
@@ -51,20 +54,24 @@ class JavaImplementAbstractMembersProvider(
               typeElement.getKind() != ElementKind.ANNOTATION_TYPE =>
           val abstractMethods =
             unimplementedAbstractMethods(task, typeElement)
-          if (abstractMethods.isEmpty) None
-          else
-            Some(
-              edit(
-                trees,
-                cu,
-                classPath.getLeaf().asInstanceOf[ClassTree],
-                text,
-                abstractMethods
-              )
+          if (abstractMethods.isEmpty) Nil
+          else {
+            val shortener = newShortener(cu)
+            val bodyEdit = bodyEditFor(
+              trees,
+              cu,
+              classPath.getLeaf().asInstanceOf[ClassTree],
+              text,
+              abstractMethods,
+              shortener
             )
-        case _ => None
+            // The body edit must be computed before reading the imports, since
+            // rendering the stubs is what registers the needed imports.
+            importsEdit(text, shortener.newImports).toList :+ bodyEdit
+          }
+        case _ => Nil
       }
-    }.toList
+    }
   }
 
   private def enclosingClass(
@@ -112,12 +119,40 @@ class JavaImplementAbstractMembersProvider(
         .map(JavaLabels.typeLabel)
         .mkString("(", ",", ")")
 
-  private def edit(
+  private def newShortener(cu: CompilationUnitTree): JavaTypeShortener = {
+    val currentPackage =
+      Option(cu.getPackageName()).map(_.toString()).getOrElse("")
+    val imports = cu.getImports().asScala.toList.filterNot(_.isStatic())
+    val existingImports = imports.collect {
+      case imp if !imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        val fqn = imp.getQualifiedIdentifier().toString()
+        fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
+    }.toMap
+    val onDemandPackages = imports.collect {
+      case imp if imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        val qualified = imp.getQualifiedIdentifier().toString()
+        qualified.substring(0, qualified.lastIndexOf('.'))
+    }.toSet
+    val declaredTypeNames = cu
+      .getTypeDecls()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
+    new JavaTypeShortener(
+      currentPackage,
+      existingImports,
+      onDemandPackages,
+      declaredTypeNames
+    )
+  }
+
+  private def bodyEditFor(
       trees: Trees,
       cu: CompilationUnitTree,
       classTree: ClassTree,
       text: String,
-      methods: List[(ExecutableElement, ExecutableType)]
+      methods: List[(ExecutableElement, ExecutableType)],
+      shortener: JavaTypeShortener
   ): l.TextEdit = {
     val lineMap = cu.getLineMap()
     val sourcePositions = trees.getSourcePositions()
@@ -141,7 +176,7 @@ class JavaImplementAbstractMembersProvider(
     val blocks =
       methods
         .map { case (method, execType) =>
-          methodStub(method, execType, memberIndent, bodyIndent)
+          methodStub(method, execType, memberIndent, bodyIndent, shortener)
         }
         .mkString("\n\n")
 
@@ -158,9 +193,10 @@ class JavaImplementAbstractMembersProvider(
       method: ExecutableElement,
       execType: ExecutableType,
       memberIndent: String,
-      bodyIndent: String
+      bodyIndent: String,
+      shortener: JavaTypeShortener
   ): String = {
-    val signature = methodSignature(method, execType)
+    val signature = methodSignature(method, execType, shortener)
     s"""$memberIndent@Override
        |$memberIndent$signature {
        |$bodyIndent$placeholderBody
@@ -169,42 +205,51 @@ class JavaImplementAbstractMembersProvider(
 
   private def methodSignature(
       method: ExecutableElement,
-      execType: ExecutableType
+      execType: ExecutableType,
+      shortener: JavaTypeShortener
   ): String = {
     val modifier =
       if (method.getModifiers().contains(Modifier.PUBLIC)) "public "
       else if (method.getModifiers().contains(Modifier.PROTECTED)) "protected "
       else ""
-    val typeParams = typeParameters(method)
-    val returnType = JavaLabels.typeLabel(execType.getReturnType())
+    val typeParams = typeParameters(method, shortener)
+    val returnType = shortener.shorten(execType.getReturnType())
     val name = method.getSimpleName().toString()
-    val params = parameters(method, execType)
+    val params = parameters(method, execType, shortener)
     s"$modifier$typeParams$returnType $name($params)"
   }
 
-  private def typeParameters(method: ExecutableElement): String = {
+  private def typeParameters(
+      method: ExecutableElement,
+      shortener: JavaTypeShortener
+  ): String = {
     val typeParams = method.getTypeParameters().asScala.toList
     if (typeParams.isEmpty) ""
     else {
-      val rendered = typeParams.map(renderTypeParameter).mkString(", ")
+      val rendered =
+        typeParams.map(tp => renderTypeParameter(tp, shortener)).mkString(", ")
       s"<$rendered> "
     }
   }
 
-  private def renderTypeParameter(tp: TypeParameterElement): String = {
+  private def renderTypeParameter(
+      tp: TypeParameterElement,
+      shortener: JavaTypeShortener
+  ): String = {
     val bounds = tp
       .getBounds()
       .asScala
       .toList
-      .filterNot(b => JavaLabels.typeLabel(b) == "java.lang.Object")
+      .filterNot(bound => JavaLabels.typeLabel(bound) == "java.lang.Object")
     if (bounds.isEmpty) tp.getSimpleName().toString()
     else
-      s"${tp.getSimpleName()} extends ${bounds.map(JavaLabels.typeLabel).mkString(" & ")}"
+      s"${tp.getSimpleName()} extends ${bounds.map(shortener.shorten).mkString(" & ")}"
   }
 
   private def parameters(
       method: ExecutableElement,
-      execType: ExecutableType
+      execType: ExecutableType,
+      shortener: JavaTypeShortener
   ): String = {
     val paramTypes = execType.getParameterTypes().asScala.toList
     val paramNames = method.getParameters().asScala.toList
@@ -218,12 +263,54 @@ class JavaImplementAbstractMembersProvider(
         if (isVarArgs && isLast) {
           paramType match {
             case array: ArrayType =>
-              s"${JavaLabels.typeLabel(array.getComponentType())}... $name"
-            case _ => s"${JavaLabels.typeLabel(paramType)} $name"
+              s"${shortener.shorten(array.getComponentType())}... $name"
+            case _ => s"${shortener.shorten(paramType)} $name"
           }
-        } else s"${JavaLabels.typeLabel(paramType)} $name"
+        } else s"${shortener.shorten(paramType)} $name"
       }
       .mkString(", ")
+  }
+
+  /**
+   * Builds a single text edit that adds all the given imports, placed after the
+   * last existing import, or after the package declaration, or at the top of
+   * the file.
+   */
+  private def importsEdit(
+      text: String,
+      imports: List[String]
+  ): Option[l.TextEdit] = {
+    if (imports.isEmpty) None
+    else {
+      val block = imports.map(fqn => s"import $fqn;").mkString("\n")
+      val lines = text.linesIterator.zipWithIndex.toList
+      val lastImport =
+        lines.filter { case (line, _) =>
+          line.trim().startsWith("import ")
+        }.lastOption
+      lastImport match {
+        case Some((line, idx)) =>
+          Some(insertAt(idx, line.length(), s"\n$block"))
+        case None =>
+          lines.find { case (line, _) =>
+            line.trim().startsWith("package ")
+          } match {
+            case Some((line, idx)) =>
+              Some(insertAt(idx, line.length(), s"\n\n$block"))
+            case None =>
+              Some(insertAt(0, 0, s"$block\n\n"))
+          }
+      }
+    }
+  }
+
+  private def insertAt(
+      line: Int,
+      character: Int,
+      newText: String
+  ): l.TextEdit = {
+    val position = new l.Position(line, character)
+    new l.TextEdit(new l.Range(position, position), newText)
   }
 
   private def lineIndent(text: String, offset: Int): String = {

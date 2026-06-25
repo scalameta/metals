@@ -40,7 +40,7 @@ class JavaImplementAbstractMembersLspSuite
        |
        |public class Main implements Greeter {
        |  @Override
-       |  public java.lang.String greet(java.lang.String name) {
+       |  public String greet(String name) {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |}
@@ -75,12 +75,12 @@ class JavaImplementAbstractMembersLspSuite
        |
        |public class Main extends Base {
        |  @Override
-       |  int count(java.lang.String s) {
+       |  int count(String s) {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |
        |  @Override
-       |  java.lang.String value() {
+       |  String value() {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |}
@@ -113,12 +113,12 @@ class JavaImplementAbstractMembersLspSuite
        |
        |public class Main implements Box<String> {
        |  @Override
-       |  public void store(java.lang.String value) {
+       |  public void store(String value) {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |
        |  @Override
-       |  public java.lang.String unwrap() {
+       |  public String unwrap() {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |}
@@ -152,7 +152,7 @@ class JavaImplementAbstractMembersLspSuite
        |  private final String prefix = "Hello";
        |
        |  @Override
-       |  public java.lang.String greet(java.lang.String name) {
+       |  public String greet(String name) {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |}
@@ -183,7 +183,151 @@ class JavaImplementAbstractMembersLspSuite
        |
        |public class Main implements Formatter {
        |  @Override
-       |  public java.lang.String format(java.lang.String pattern, java.lang.Object... args) {
+       |  public String format(String pattern, Object... args) {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
+  )
+
+  check(
+    "adds-import",
+    """|package a;
+       |
+       |interface Source {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class <<Main>> implements Source {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |interface Source {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class Main implements Source {
+       |  @Override
+       |  public List<String> values() {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
+  )
+
+  check(
+    "existing-and-new-import",
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |interface Repo {
+       |  List<String> all();
+       |  java.util.Map<String, Integer> index();
+       |}
+       |
+       |public class <<Main>> implements Repo {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.List;
+       |import java.util.Map;
+       |
+       |interface Repo {
+       |  List<String> all();
+       |  java.util.Map<String, Integer> index();
+       |}
+       |
+       |public class Main implements Repo {
+       |  @Override
+       |  public List<String> all() {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |
+       |  @Override
+       |  public Map<String, Integer> index() {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
+  )
+
+  // A nested member type is shortened by importing its outermost enclosing
+  // type and qualifying the rest with simple names.
+  check(
+    "nested-type",
+    """|package a;
+       |
+       |interface Source {
+       |  java.util.Map.Entry<String, String> entry();
+       |}
+       |
+       |public class <<Main>> implements Source {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.Map;
+       |
+       |interface Source {
+       |  java.util.Map.Entry<String, String> entry();
+       |}
+       |
+       |public class Main implements Source {
+       |  @Override
+       |  public Map.Entry<String, String> entry() {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
+  )
+
+  // The file declares a type named `List`, so the inherited `java.util.List`
+  // must stay fully qualified to avoid a clash.
+  check(
+    "clash-keeps-fqn",
+    """|package a;
+       |
+       |interface List {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class <<Main>> implements List {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |interface List {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class Main implements List {
+       |  @Override
+       |  public java.util.List<String> values() {
        |    throw new UnsupportedOperationException("Not yet implemented");
        |  }
        |}
