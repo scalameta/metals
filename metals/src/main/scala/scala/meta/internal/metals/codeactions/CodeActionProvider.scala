@@ -63,6 +63,7 @@ final class CodeActionProvider(
     new ConvertToNamedLambdaParameters(trees, compilers),
     new GenerateConstructors(javaTrees, buffers),
     new GenerateGettersSetters(javaTrees, buffers),
+    new GenerateEqualsHashCodeToString(javaTrees, buffers),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {
