@@ -478,7 +478,11 @@ class JavaCompletionProvider(
   }
 
   private def completionItem(element: Element): CompletionItem = {
-    val simpleName = element.getSimpleName.toString
+    val simpleName = element.getKind match {
+      case ElementKind.CONSTRUCTOR =>
+        element.getEnclosingElement.getSimpleName.toString
+      case _ => element.getSimpleName.toString
+    }
 
     val (label, insertText) = element match {
       case e: ExecutableElement

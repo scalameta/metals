@@ -764,4 +764,34 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  // https://github.com/scalameta/metals/pull/8594
+  test("java-constructor-completion") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package a;
+          |
+          |public class Test {
+          |  public void f(){
+          |    Test t = // @@
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "new Tes@@",
+        expectedLabel = "Test()",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Test()"),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
 }
