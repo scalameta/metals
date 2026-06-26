@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -21,6 +22,7 @@ import org.eclipse.{lsp4j => l}
 
 class InlineValueCodeAction(
     trees: Trees,
+    javaTrees: JavaTrees,
     compilers: Compilers,
     languageClient: MetalsLanguageClient,
 ) extends CodeAction {
@@ -32,11 +34,20 @@ class InlineValueCodeAction(
 
   override def kind: String = l.CodeActionKind.RefactorInline
 
+  override def isJava: Boolean = true
+
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
-  ): Future[Seq[l.CodeAction]] = Future {
-    val pathStr = params.getTextDocument.getUri
-    val path = pathStr.toAbsolutePath
+  ): Future[Seq[l.CodeAction]] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    if (path.isJavaFilename) javaContribute(path, params, token)
+    else Future(scalaContribute(path, params))
+  }
+
+  private def scalaContribute(
+      path: AbsolutePath,
+      params: l.CodeActionParams,
+  ): Seq[l.CodeAction] = {
     val range = params.getRange()
     val action =
       for {
@@ -60,6 +71,58 @@ class InlineValueCodeAction(
         )
       }
     action.toSeq
+  }
+
+  /**
+   * Java inlining is backed by the presentation compiler. A cheap syntactic
+   * check (via [[JavaTrees]]) first confirms the cursor is on something that
+   * can be inlined inside the file, so the compiler is only consulted when it
+   * can actually perform the inline.
+   */
+  private def javaContribute(
+      path: AbsolutePath,
+      params: l.CodeActionParams,
+      token: CancelToken,
+  )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
+    val position = params.getRange().getStart()
+    Future.unit
+      .flatMap { _ =>
+        if (!isInlinableJavaValue(path, position)) Future.successful(Nil)
+        else {
+          val positionParams =
+            new l.TextDocumentPositionParams(params.getTextDocument(), position)
+          compilers.inlineEdits(positionParams, token).map { edits =>
+            if (edits.isEmpty()) Nil
+            else
+              Seq(
+                CodeActionBuilder.build(
+                  title = InlineValueCodeAction.genericTitle,
+                  kind = this.kind,
+                  changes = Seq(path -> edits.asScala.toSeq),
+                )
+              )
+          }
+        }
+      }
+      .recover { case _ => Nil }
+  }
+
+  /**
+   * Whether the cursor is on a value that is safe to inline within the file: a
+   * local value inside any block (method body, initializer, lambda, ...), or a
+   * `private` field of the enclosing class.
+   */
+  private def isInlinableJavaValue(
+      path: AbsolutePath,
+      position: l.Position,
+  ): Boolean = {
+    // Local values live inside a block; a private field is the only top-level
+    // member safe to inline within the file (only locals can be private, so a
+    // private variable at the cursor is necessarily a field).
+    def insideBlock = javaTrees.isInsideBlock(path, position)
+    def onPrivateField =
+      javaTrees.findEnclosingJavaVariable(path, position).exists(_.isPrivate)
+    insideBlock || onPrivateField
   }
 
   private def isLocal(definition: Tree): Boolean =
@@ -139,4 +202,6 @@ object InlineValueCodeAction {
     val optDots = if (name.length > 10) "..." else ""
     s"Inline `${name.take(10)}$optDots`"
   }
+
+  val genericTitle: String = "Inline value"
 }

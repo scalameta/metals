@@ -17,6 +17,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
+import com.sun.source.tree.BlockTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.LineMap
@@ -81,6 +82,22 @@ class JavaTrees(buffers: Buffers) {
         visitor.result
       }
     } yield result
+
+  /**
+   * Whether `pos` is inside any block: a method/constructor body, a static or
+   * instance initializer, or a lambda/nested block. Local variables can be
+   * declared in any of these, so this is the cheap test for "could be a local
+   * value to inline".
+   */
+  def isInsideBlock(source: AbsolutePath, pos: l.Position): Boolean =
+    (for {
+      text <- text(source)
+      tree <- get(source)
+    } yield {
+      val finder = new BlockFinder(tree, text, pos)
+      finder.scan(tree, ())
+      finder.result.isDefined
+    }).getOrElse(false)
 
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
@@ -235,6 +252,20 @@ class JavaTrees(buffers: Buffers) {
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
+    }
+  }
+
+  /** Finds whether the cursor is inside any block (see [[isInsideBlock]]). */
+  private class BlockFinder(
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends EnclosingFinder[Unit](cu, text, targetPos) {
+
+    override def visitBlock(node: BlockTree, p: Unit): Unit = {
+      if (positionContains(targetOffset, pos.startPos(node), pos.endPos(node)))
+        _result = Some(())
+      super.visitBlock(node, p)
     }
   }
 
