@@ -503,6 +503,8 @@ abstract class MetalsLspService(
         buffers,
         scalaCli,
         featureFlags,
+        isMbt =
+          () => bspSession.exists(s => MbtBuildServer.isMbtServer(s.main.name)),
       )
     )
   }
@@ -720,6 +722,7 @@ abstract class MetalsLspService(
 
   protected val renameProvider: RenameProvider = new RenameProvider(
     referencesProvider,
+    mbtReferenceProvider,
     implementationProvider,
     symbolHierarchyOps,
     definitionProvider,
@@ -729,6 +732,7 @@ abstract class MetalsLspService(
     compilations,
     compilers,
     clientConfig,
+    () => userConfig,
     trees,
   )
 
