@@ -118,10 +118,17 @@ final class RunTestCodeLens(
         buildTargetClasses.confirmMbtMainClassCandidates(path, buildTargetId)
       val confirmTestCandidates =
         buildTargetClasses.confirmMbtTestClassCandidates(path, buildTargetId)
+      val confirmBazelTestClasses =
+        buildTargetClasses.confirmBazelTestClasses(
+          textDocument,
+          path,
+          buildTargetId,
+        )
 
       for {
         _ <- confirmMainCandidates
         _ <- confirmTestCandidates
+        _ <- confirmBazelTestClasses
         _ <- requestJvmEnvironment(buildTargetId, isJVM)
       } yield {
         val classes = buildTargetClasses.classesOf(buildTargetId)
