@@ -2,6 +2,7 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.Defn
 import scala.meta.Pat
@@ -38,10 +39,14 @@ class InlineValueCodeAction(
 
   override def contribute(params: l.CodeActionParams, token: CancelToken)(
       implicit ec: ExecutionContext
-  ): Future[Seq[l.CodeAction]] = {
+  ): Future[Seq[l.CodeAction]] = Future {
+    // `contribute` runs on every cursor movement, so it must stay cheap: it
+    // only decides *whether* to offer the action (syntactically). The actual
+    // edits are computed by the presentation compiler in `handleCommand`, when
+    // the user invokes it.
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (path.isJavaFilename) javaContribute(path, params, token)
-    else Future(scalaContribute(path, params))
+    if (path.isJavaFilename) javaContribute(path, params)
+    else scalaContribute(path, params)
   }
 
   private def scalaContribute(
@@ -56,56 +61,39 @@ class InlineValueCodeAction(
         /* Either the value definition is local, which can be always inlined since it's scoped to the file
            or action was executed on a value reference so inlining just the reference will not break anything. */
         if (isLocal(defn) || !isDefn)
-      } yield {
-        val command =
-          ServerCommands.InlineValue.toLsp(
-            new l.TextDocumentPositionParams(
-              params.getTextDocument(),
-              params.getRange().getStart(),
-            )
-          )
-        CodeActionBuilder.build(
-          title = InlineValueCodeAction.title(termName.value),
-          kind = this.kind,
-          command = Some(command),
-        )
-      }
+      } yield inlineCommand(params, InlineValueCodeAction.title(termName.value))
     action.toSeq
   }
 
   /**
-   * Java inlining is backed by the presentation compiler. A cheap syntactic
-   * check (via [[JavaTrees]]) first confirms the cursor is on something that
-   * can be inlined inside the file, so the compiler is only consulted when it
-   * can actually perform the inline.
+   * A cheap syntactic check (via [[JavaTrees]]): is the cursor on a value that
+   * could be inlined within the file? The presentation compiler does the real
+   * work (and the precise feasibility check) lazily in `handleCommand`.
    */
   private def javaContribute(
       path: AbsolutePath,
       params: l.CodeActionParams,
-      token: CancelToken,
-  )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
-    val position = params.getRange().getStart()
-    Future.unit
-      .flatMap { _ =>
-        if (!isInlinableJavaValue(path, position)) Future.successful(Nil)
-        else {
-          val positionParams =
-            new l.TextDocumentPositionParams(params.getTextDocument(), position)
-          compilers.inlineEdits(positionParams, token).map { edits =>
-            if (edits.isEmpty()) Nil
-            else
-              Seq(
-                CodeActionBuilder.build(
-                  title = InlineValueCodeAction.genericTitle,
-                  kind = this.kind,
-                  changes = Seq(path -> edits.asScala.toSeq),
-                )
-              )
-          }
-        }
-      }
-      .recover { case _ => Nil }
-  }
+  ): Seq[l.CodeAction] =
+    if (isInlinableJavaValue(path, params.getRange().getStart()))
+      Seq(inlineCommand(params, InlineValueCodeAction.genericTitle))
+    else Nil
+
+  private def inlineCommand(
+      params: l.CodeActionParams,
+      title: String,
+  ): l.CodeAction =
+    CodeActionBuilder.build(
+      title = title,
+      kind = this.kind,
+      command = Some(
+        ServerCommands.InlineValue.toLsp(
+          new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            params.getRange().getStart(),
+          )
+        )
+      ),
+    )
 
   /**
    * Whether the cursor is on a value that is safe to inline within the file: a
@@ -179,16 +167,28 @@ class InlineValueCodeAction(
       params: l.TextDocumentPositionParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Unit] =
-    for {
-      edits <- compilers.inlineEdits(params, token)
-      _ = languageClient.applyEdit(
-        new l.ApplyWorkspaceEditParams(
-          new l.WorkspaceEdit(
-            Map(params.getTextDocument().getUri -> edits).asJava
+    compilers
+      .inlineEdits(params, token)
+      .map { edits =>
+        if (!edits.isEmpty()) {
+          languageClient.applyEdit(
+            new l.ApplyWorkspaceEditParams(
+              new l.WorkspaceEdit(
+                Map(params.getTextDocument().getUri -> edits).asJava
+              )
+            )
           )
-        )
-      )
-    } yield ()
+        }
+        ()
+      }
+      .recover {
+        // The presentation compiler reports an impossible inline (e.g. a
+        // reassigned value) as a failure; surface it instead of inlining.
+        case NonFatal(error) =>
+          languageClient.showMessage(
+            new l.MessageParams(l.MessageType.Warning, error.getMessage)
+          )
+      }
 
   private def getTermNameForPos(
       path: AbsolutePath,

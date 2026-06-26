@@ -124,7 +124,7 @@ class JavaInlineValueCodeActionSuite
        |""".stripMargin,
   )
 
-  checkNoAction(
+  checkNotInlined(
     "reassigned-field",
     """|public class Example {
        |  private static long <<preAllocSize>> = 65536 * 1024;
@@ -134,7 +134,7 @@ class JavaInlineValueCodeActionSuite
        |""".stripMargin,
   )
 
-  checkNoAction(
+  checkNotInlined(
     "reassigned-local-variable",
     """|public class Example {
        |  int run() {
@@ -177,29 +177,19 @@ class JavaInlineValueCodeActionSuite
       } yield ()
     }
 
-  /** Asserts that no inline-value action is offered at the marked position. */
-  def checkNoAction(
+  /**
+   * The cheap check offers the action, but invoking it inlines nothing because
+   * the presentation compiler rejects it (e.g. a reassigned value), leaving the
+   * source unchanged.
+   */
+  def checkNotInlined(
       name: TestOptions,
       input: String,
   )(implicit loc: Location): Unit =
-    testLSP(name) {
-      cleanWorkspace()
-      val path = "a/src/main/java/a/Example.java"
-      val fileContent = input.replace("<<", "").replace(">>", "")
-      val layout =
-        s"""|/metals.json
-            |{"a": {}}
-            |/$path
-            |$fileContent""".stripMargin
-      for {
-        _ <- initialize(layout)
-        _ <- server.didOpen(path)
-        _ <- server.assertCodeAction(
-          path,
-          input,
-          "",
-          List(l.CodeActionKind.RefactorInline),
-        )
-      } yield ()
-    }
+    check(
+      name,
+      input,
+      InlineValueCodeAction.genericTitle,
+      input.replace("<<", "").replace(">>", ""),
+    )
 }
