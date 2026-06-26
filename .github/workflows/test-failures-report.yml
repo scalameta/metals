@@ -1,0 +1,34 @@
+name: 'Test Failures Report'
+on:
+  workflow_run:
+    workflows: ['CI']
+    types:
+      - completed
+permissions:
+  statuses: write
+  checks: write
+  contents: write
+  pull-requests: write
+  actions: write
+jobs:
+  aggregate-test-reports:
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Download reports for each test job
+        uses: dawidd6/action-download-artifact@v21
+        with:
+          workflow: ci.yml
+          workflow_conclusion: completed
+          merge_multiple: 'true'
+      - name: Test Report
+        uses: dorny/test-reporter@29672c52a8220c09bd9f79b5b6cf6315f1763996
+        with:
+          name: Aggregated failure reports
+          path: "**/target/test-reports/*.xml"
+          reporter: java-junit
+          list-suites: failed
+          list-tests: failed
+          list-files: failed
+          use-actions-summary: 'true'
