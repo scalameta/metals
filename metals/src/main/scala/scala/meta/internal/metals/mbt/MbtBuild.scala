@@ -1,9 +1,7 @@
 package scala.meta.internal.metals.mbt
 
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.{util => ju}
 import javax.annotation.Nullable
 
@@ -15,6 +13,7 @@ import ch.epfl.scala.bsp4j
 case class MbtBuild(
     @Nullable dependencyModules: ju.List[MbtDependencyModule],
     @Nullable namespaces: ju.Map[String, MbtNamespace],
+    @Nullable watchedFiles: ju.List[String],
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
@@ -23,9 +22,13 @@ case class MbtBuild(
   def getNamespaces: ju.Map[String, MbtNamespace] =
     Option(this.namespaces).getOrElse(ju.Collections.emptyMap())
 
+  def getWatchedFiles: ju.List[String] =
+    Option(this.watchedFiles).getOrElse(ju.Collections.emptyList())
+
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
-      Option(this.namespaces).forall(_.isEmpty)
+      Option(this.namespaces).forall(_.isEmpty) &&
+      Option(this.watchedFiles).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
@@ -74,7 +77,9 @@ case class MbtBuild(
               None
             }
           }
-        val globPatterns = namespace.getSources.asScala.toSeq.filter(isGlob)
+        val (globPatterns, exactSources) =
+          namespace.getSources.asScala.toSeq
+            .partition(MbtGlobMatcher.isPatternGlob)
         val nsModules = for {
           moduleId <- namespace.getDependencyModuleIds.asScala.toSeq
           module <- modulesById.get(moduleId).orElse {
@@ -88,17 +93,8 @@ case class MbtBuild(
           name = name,
           id =
             new bsp4j.BuildTargetIdentifier(MbtBuild.namespaceTargetId(name)),
-          sources = namespace.getSources.asScala.toSeq
-            .filterNot(isGlob),
-          globMatchers = globPatterns.map(pattern =>
-            MbtGlobMatcher(
-              pattern = pattern,
-              prefix = globPrefix(pattern),
-              matcher = FileSystems.getDefault.getPathMatcher(
-                "glob:" + globPatternForMatcher(pattern)
-              ),
-            )
-          ),
+          sources = exactSources,
+          globMatchers = globPatterns.map(MbtGlobMatcher.fromPattern),
           scalacOptions = namespace.getScalacOptions.asScala.toSeq,
           javacOptions = namespace.getJavacOptions.asScala.toSeq,
           dependencyModules = nsModules,
@@ -113,32 +109,6 @@ case class MbtBuild(
         )
       }
     }
-
-  private def isGlob(pattern: String): Boolean = {
-    val n = normalizeSlashes(pattern)
-    n.exists(c => c == '*' || c == '?' || c == '[' || c == '{')
-  }
-
-  private def normalizeSlashes(s: String): String =
-    s.trim.replace('\\', '/')
-
-  /** Leading `./` is stripped so matchers align with workspace-relative paths. */
-  private def globPatternForMatcher(pattern: String): String = {
-    val n = normalizeSlashes(pattern)
-    if (n.startsWith("./")) n.substring(2) else n
-  }
-
-  private def globPrefix(pattern: String): Option[Path] = {
-    val literalSegments = globPatternForMatcher(pattern)
-      .split('/')
-      .toSeq
-      .filter(_.nonEmpty)
-      .takeWhile(segment => !isGlob(segment))
-    literalSegments match {
-      case head +: tail => Some(Paths.get(head, tail: _*))
-      case _ => None
-    }
-  }
 }
 
 object MbtBuild {
@@ -156,6 +126,7 @@ object MbtBuild {
     MbtBuild(
       ju.Collections.emptyList(),
       new ju.LinkedHashMap[String, MbtNamespace](),
+      ju.Collections.emptyList(),
     )
 
   def fromWorkspace(workspace: AbsolutePath): MbtBuild =
@@ -208,7 +179,10 @@ object MbtBuild {
       mergedNamespaces.put(key, ns)
     }
 
-    MbtBuild(mergedModules, mergedNamespaces)
+    val mergedWatched =
+      (a.getWatchedFiles.asScala ++ b.getWatchedFiles.asScala).distinct.asJava
+
+    MbtBuild(mergedModules, mergedNamespaces, mergedWatched)
   }
 
 }

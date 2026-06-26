@@ -460,7 +460,7 @@ class ProjectMetalsLspService(
         Some(languageClient),
         Some(tables),
       )
-      if (paths.exists(path => mbtImporters.exists(_.isBuildRelated(path))))
+      if (paths.exists(path => mbtImporters.exists(_.isWatchedFile(path))))
         connectionProvider.runMbtReimport(mbtImporters)
       else
         Future.unit
