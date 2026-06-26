@@ -49,24 +49,21 @@ class AddMissingOverrideAnnotation(
       text: String,
   ): l.CodeAction = {
     val methodStart = method.range.getStart()
-    val position = new l.Position(methodStart.getLine(), 0)
-    val edit = new l.TextEdit(
-      new l.Range(position, position),
-      s"${indentAt(text, method.range.startOffset)}@Override\n",
-    )
+    val linePrefix =
+      JavaMemberInsertion.linePrefix(text, method.range.startOffset)
+    // Insert on its own indented line when the declaration already starts a
+    // line, otherwise inline before the declaration.
+    val (position, newText) =
+      if (linePrefix.forall(_.isWhitespace))
+        (new l.Position(methodStart.getLine(), 0), s"$linePrefix@Override\n")
+      else (methodStart, "@Override ")
+    val edit = new l.TextEdit(new l.Range(position, position), newText)
     CodeActionBuilder.build(
       title,
       kind,
       diagnostics = List(diagnostic),
       changes = Seq(path -> Seq(edit)),
     )
-  }
-
-  private def indentAt(text: String, offset: Int): String = {
-    val lineStart = text.lastIndexOf('\n', Math.max(0, offset - 1)) + 1
-    text
-      .slice(lineStart, Math.min(offset, text.length))
-      .takeWhile(ch => ch == ' ' || ch == '\t')
   }
 }
 

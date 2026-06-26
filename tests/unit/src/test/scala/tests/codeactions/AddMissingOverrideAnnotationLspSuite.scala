@@ -3,12 +3,12 @@ package tests.codeactions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.AddMissingOverrideAnnotation
 
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class AddMissingOverrideAnnotationLspSuite
     extends BaseCodeActionLspSuite(
       "add-missing-override-annotation",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       useMbtLayout = true,
     ) {
 
@@ -183,6 +183,21 @@ class AddMissingOverrideAnnotationLspSuite
        |  @Override
        |  public void put(String item) {}
        |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyAddOverride,
+  )
+
+  check(
+    "compact-class",
+    """|package a;
+       |
+       |public class Example { public String <<toString>>() { return ""; } }
+       |""".stripMargin,
+    title,
+    """|package a;
+       |
+       |public class Example { @Override public String toString() { return ""; } }
        |""".stripMargin,
     fileName = "Example.java",
     filterAction = onlyAddOverride,

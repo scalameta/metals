@@ -14,6 +14,7 @@ import com.sun.source.util.Trees
 import org.eclipse.{lsp4j => l}
 
 private class MissingOverrideDiagnosticProvider(
+    compiler: JavaMetalsCompiler,
     compile: JavaSourceCompile,
     text: String
 ) {
@@ -112,36 +113,22 @@ private class MissingOverrideDiagnosticProvider(
   }
 
   private def methodNameRange(method: MethodTree): Option[l.Range] = {
-    val name = method.getName().toString()
-    val start =
-      Option(method.getReturnType())
-        .map(sourcePositions.getEndPosition(compile.cu, _))
-        .getOrElse(sourcePositions.getStartPosition(compile.cu, method))
-    val end =
-      method
-        .getParameters()
-        .asScala
-        .headOption
-        .orElse(Option(method.getBody()))
-        .map(sourcePositions.getStartPosition(compile.cu, _))
-        .getOrElse(sourcePositions.getEndPosition(compile.cu, method))
-
+    val start = sourcePositions.getStartPosition(compile.cu, method)
+    val end = sourcePositions.getEndPosition(compile.cu, method)
     if (start < 0 || end < 0) None
-    else
-      (start.toInt until Math.min(end.toInt, text.length()))
-        .find(nameStartsAt(name, _))
-        .map(offset =>
-          Positions.toLspRange(lineMap, offset, offset + name.length(), text)
-        )
+    else {
+      val (nameStart, nameEnd) = compiler.findIndentifierStartAndEnd(
+        text,
+        method.getName().toString(),
+        start.toInt,
+        end.toInt,
+        method,
+        compile.cu,
+        sourcePositions
+      )
+      Some(Positions.toLspRange(lineMap, nameStart, nameEnd, text))
+    }
   }
-
-  /** Whether `name` occurs at `offset` as a whole identifier, not a substring. */
-  private def nameStartsAt(name: String, offset: Int): Boolean =
-    text.startsWith(name, offset) &&
-      (offset == 0 ||
-        !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
-      (offset + name.length() >= text.length() ||
-        !Character.isJavaIdentifierPart(text.charAt(offset + name.length())))
 }
 
 object MissingOverrideDiagnosticProvider {

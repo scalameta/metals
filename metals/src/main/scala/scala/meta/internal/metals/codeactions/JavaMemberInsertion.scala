@@ -62,7 +62,7 @@ object JavaMemberInsertion {
   }
 
   /** Text between the start of the line containing `offset` and `offset`. */
-  private def linePrefix(text: String, offset: Int): String =
+  def linePrefix(text: String, offset: Int): String =
     text.substring(text.lastIndexOf('\n', offset - 1) + 1, offset)
 
   /**

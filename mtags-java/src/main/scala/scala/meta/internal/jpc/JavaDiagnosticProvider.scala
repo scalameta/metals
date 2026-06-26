@@ -34,6 +34,7 @@ class JavaDiagnosticProvider(
 
     javacDiagnostics.toList ++
       new MissingOverrideDiagnosticProvider(
+        compiler,
         compile,
         params.text()
       ).diagnostics()
