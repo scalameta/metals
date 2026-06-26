@@ -589,6 +589,118 @@ class BazelMbtLspSuite
     } yield ()
   }
 
+  private def scalaImportBazelWorkspaceLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/third_party/BUILD
+       |load("@rules_scala//scala:scala_import.bzl", "scala_import")
+       |
+       |scala_import(
+       |    name = "mylib",
+       |    jars = ["mylib.jar"],
+       |    srcjar = "mylib-sources.jar",
+       |    visibility = ["//visibility:public"],
+       |)
+       |
+       |java_import(
+       |    name = "myother",
+       |    jars = ["myother.jar"],
+       |    visibility = ["//visibility:public"],
+       |)
+       |
+       |/third_party/mylib.jar
+       |
+       |/third_party/mylib-sources.jar
+       |
+       |/third_party/myother.jar
+       |
+       |/app/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_library")
+       |
+       |scala_library(
+       |    name = "app",
+       |    srcs = ["App.scala"],
+       |    deps = ["//third_party:mylib", "//third_party:myother"],
+       |)
+       |
+       |/app/App.scala
+       |package app
+       |
+       |class App
+       |""".stripMargin
+
+  test("bazel-import-mbt-scala-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          scalaImportBazelWorkspaceLayout,
+          V.scala213,
+          bazelVersion,
+        ),
+        runAdditionalCommands = { workspace =>
+          def writeEmptyJar(path: AbsolutePath): Unit = {
+            val jos = new java.util.jar.JarOutputStream(
+              new java.io.FileOutputStream(path.toString),
+              new java.util.jar.Manifest(),
+            )
+            jos.close()
+          }
+          writeEmptyJar(workspace.resolve("third_party/mylib.jar"))
+          writeEmptyJar(workspace.resolve("third_party/mylib-sources.jar"))
+          writeEmptyJar(workspace.resolve("third_party/myother.jar"))
+        },
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [
+            |    {
+            |      "id": "third_party:mylib.jar:local",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "third_party:myother.jar:local",
+            |      "jar": "<jar-path>"
+            |    }
+            |  ],
+            |  "namespaces": {
+            |    "//third_party": {
+            |      "sources": [],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "third_party:mylib.jar:local",
+            |        "third_party:myother.jar:local"
+            |      ],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": [],
+            |      "classDirectories": []
+            |    },
+            |    "//app": {
+            |      "sources": [
+            |        "app/App.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": [
+            |        "//third_party"
+            |      ],
+            |      "classDirectories": []
+            |    }
+            |  }
+            |}""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("bazel-import-mbt-workspace-namespace-choice") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()

@@ -95,7 +95,7 @@ object BazelQuery {
   private val ruleKinds: List[String] =
     List(
       "scala_library", "java_library", "scala_binary", "java_binary",
-      "scala_test", "java_test",
+      "scala_test", "java_test", "scala_import", "java_import",
     )
 
 }
