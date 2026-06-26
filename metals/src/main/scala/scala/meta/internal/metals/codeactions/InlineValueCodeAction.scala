@@ -2,7 +2,6 @@ package scala.meta.internal.metals.codeactions
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.util.control.NonFatal
 
 import scala.meta.Defn
 import scala.meta.Pat
@@ -181,14 +180,16 @@ class InlineValueCodeAction(
         }
         ()
       }
-      .recover {
+      .recover(
         // The presentation compiler reports an impossible inline (e.g. a
-        // reassigned value) as a failure; surface it instead of inlining.
-        case NonFatal(error) =>
+        // reassigned value) as a DisplayableException; show it instead of
+        // inlining. Other failures propagate as usual.
+        getOptDisplayableMessage.andThen { message =>
           languageClient.showMessage(
-            new l.MessageParams(l.MessageType.Warning, error.getMessage)
+            new l.MessageParams(l.MessageType.Warning, message)
           )
-      }
+        }
+      )
 
   private def getTermNameForPos(
       path: AbsolutePath,
