@@ -1,12 +1,7 @@
 package scala.meta.internal.jpc
 
-import javax.lang.model.`type`.ArrayType
 import javax.lang.model.`type`.DeclaredType
-import javax.lang.model.`type`.IntersectionType
 import javax.lang.model.`type`.TypeMirror
-import javax.lang.model.`type`.TypeVariable
-import javax.lang.model.`type`.UnionType
-import javax.lang.model.`type`.WildcardType
 import javax.lang.model.element.Element
 import javax.lang.model.element.NestingKind
 import javax.lang.model.element.TypeElement
@@ -18,6 +13,11 @@ import scala.jdk.CollectionConverters._
 /**
  * Renders Java types using simple names where it is safe to do so, collecting
  * the imports that need to be added for the shortened names to resolve.
+ *
+ * Extends [[JavaTypeVisitor]] (which renders fully qualified names) and only
+ * overrides how declared types are rendered; the recursion over arrays,
+ * wildcards, intersections, type arguments, etc. is inherited and routes back
+ * through [[shorten]], so nested types are shortened too.
  *
  * Nested member types are rendered by importing the outermost enclosing
  * top-level type and qualifying the rest with simple names (for example
@@ -33,7 +33,7 @@ class JavaTypeShortener(
     existingImports: Map[String, String],
     onDemandPackages: Set[String],
     declaredTypeNames: Set[String]
-) {
+) extends JavaTypeVisitor {
   // simpleName -> fully qualified name that the simple name currently resolves to
   private val claimed = mutable.Map.empty[String, String] ++ existingImports
   private val collected = mutable.LinkedHashSet.empty[String]
@@ -41,31 +41,21 @@ class JavaTypeShortener(
   /** The imports that need to be added, sorted. */
   def newImports: List[String] = collected.toList.sorted
 
-  def shorten(tpe: TypeMirror): String =
-    tpe match {
-      case array: ArrayType => s"${shorten(array.getComponentType())}[]"
-      case declared: DeclaredType => shortenDeclared(declared)
-      case wildcard: WildcardType => shortenWildcard(wildcard)
-      case typeVar: TypeVariable =>
-        typeVar.asElement().getSimpleName().toString()
-      case intersection: IntersectionType =>
-        intersection.getBounds().asScala.map(shorten).mkString(" & ")
-      case union: UnionType =>
-        union.getAlternatives().asScala.map(shorten).mkString(" | ")
-      case other => other.toString()
-    }
+  def shorten(tpe: TypeMirror): String = visit(tpe)
 
-  private def shortenDeclared(declared: DeclaredType): String = {
-    val base = declared.asElement() match {
-      case element: TypeElement => shortenName(element)
-      case _ => declared.toString()
+  override def visitDeclared(t: DeclaredType, p: Void): String =
+    t.asElement() match {
+      case element: TypeElement =>
+        val typeArguments = t.getTypeArguments()
+        val args =
+          if (typeArguments.isEmpty) ""
+          else
+            typeArguments.asScala
+              .map(arg => visit(arg))
+              .mkString("<", ", ", ">")
+        s"${shortenName(element)}$args"
+      case _ => super.visitDeclared(t, p)
     }
-    val typeArgs = declared.getTypeArguments().asScala
-    val args =
-      if (typeArgs.isEmpty) ""
-      else typeArgs.map(shorten).mkString("<", ", ", ">")
-    s"$base$args"
-  }
 
   private def shortenName(element: TypeElement): String =
     if (element.getNestingKind() == NestingKind.TOP_LEVEL)
@@ -134,13 +124,5 @@ class JavaTypeShortener(
       case Nil => ""
       case names => names.mkString(".", ".", "")
     }
-  }
-
-  private def shortenWildcard(wildcard: WildcardType): String = {
-    val superBound = wildcard.getSuperBound()
-    val extendsBound = wildcard.getExtendsBound()
-    if (superBound != null) s"? super ${shorten(superBound)}"
-    else if (extendsBound != null) s"? extends ${shorten(extendsBound)}"
-    else "?"
   }
 }
