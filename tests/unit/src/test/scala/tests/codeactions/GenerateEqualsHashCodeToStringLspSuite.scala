@@ -2,12 +2,12 @@ package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateEqualsHashCodeToString
 
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class GenerateEqualsHashCodeToStringLspSuite
     extends BaseCodeActionLspSuite(
       "generate-equals-hashcode-tostring",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       useMbtLayout = true,
     ) {
 

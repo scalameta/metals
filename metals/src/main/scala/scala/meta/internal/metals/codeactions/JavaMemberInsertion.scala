@@ -3,8 +3,13 @@ package scala.meta.internal.metals.codeactions
 import scala.meta.internal.parsing.InsertPoint
 
 /**
- * Renders the text of a generated Java member at a given [[InsertPoint]],
+ * Renders the text of generated Java members at a given [[InsertPoint]],
  * taking care of the surrounding blank lines and the member indentation.
+ *
+ * The bulk of the logic lives in [[Surroundings]], which inspects the few
+ * characters around the insertion point and derives, once, everything the
+ * renderer needs: the indentation to apply to each member line and the blank
+ * lines to add before and after the generated code.
  */
 object JavaMemberInsertion {
 
@@ -29,52 +34,92 @@ object JavaMemberInsertion {
       insert: InsertPoint,
       members: Seq[Seq[String]],
   ): String = {
-    val startOffset = insert.startOffset
-    val endOffset = insert.endOffset
-    val endIndent = indentAt(text, endOffset)
-    val memberIndent = {
+    val around = new Surroundings(text, insert)
+    val body = members
+      .map(member => member.map(around.memberIndent + _).mkString("\n"))
+      .mkString("\n\n")
+    s"${around.prefix}$body${around.suffix}"
+  }
+
+  /**
+   * The indentation unit used in the file: a single tab for tab-indented
+   * files, otherwise the leading space width inferred from the first indented
+   * line (falling back to two spaces when nothing is indented).
+   */
+  def indentUnit(text: String): String =
+    text.linesIterator
+      .map(_.takeWhile(c => c == ' ' || c == '\t'))
+      .find(_.nonEmpty) match {
+      case Some(ws) if ws.startsWith("\t") => "\t"
+      case Some(ws) => ws
+      case None => "  "
+    }
+
+  /** Leading whitespace of the line containing `offset`. */
+  def lineIndent(text: String, offset: Int): String = {
+    val lineStart = text.lastIndexOf('\n', offset - 1) + 1
+    text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
+  }
+
+  /** Text between the start of the line containing `offset` and `offset`. */
+  private def linePrefix(text: String, offset: Int): String =
+    text.substring(text.lastIndexOf('\n', offset - 1) + 1, offset)
+
+  /**
+   * Indentation at `offset`: the prefix on its line when that prefix is all
+   * whitespace (e.g. just before a `}` on its own line), otherwise the
+   * leading indentation of the line.
+   */
+  private def indentAt(text: String, offset: Int): String = {
+    val candidate = linePrefix(text, offset.min(text.length).max(0))
+    if (candidate.forall(_.isWhitespace)) candidate
+    else lineIndent(text, offset)
+  }
+
+  /**
+   * The handful of facts about the characters around the insertion point that
+   * drive how the member is rendered.
+   */
+  private final class Surroundings(text: String, insert: InsertPoint) {
+    private val startOffset = insert.startOffset
+    private val endOffset = insert.endOffset
+
+    /** Inserting right after an opening `{`. */
+    private val afterOpeningBrace =
+      startOffset > 0 && text.charAt(startOffset - 1) == '{'
+
+    /** Inserting right before a closing `}`. */
+    private val beforeClosingBrace =
+      endOffset >= 0 && endOffset < text.length && text.charAt(endOffset) == '}'
+
+    /** Nothing but the start offset itself begins its line. */
+    private val startsLine = linePrefix(text, startOffset).isEmpty
+
+    /** Indentation of the closing brace / end-of-insertion line. */
+    private val endIndent = indentAt(text, endOffset)
+
+    /** Indentation prepended to every generated member line. */
+    val memberIndent: String = {
       val startLineIndent = lineIndent(text, startOffset)
-      if (startLineIndent.nonEmpty) startLineIndent
+      // One level deeper than the enclosing braces when we sit between them.
+      if (beforeClosingBrace || (afterOpeningBrace && insert.isInsertion))
+        endIndent + indentUnit(text)
+      // Otherwise align with whichever neighbouring line we can see.
+      else if (startLineIndent.nonEmpty) startLineIndent
       else if (endIndent.nonEmpty) endIndent
       else indentUnit(text)
     }
-    val prefix =
-      if (startOffset > 0 && text.charAt(startOffset - 1) == '{') "\n"
+
+    /** Blank lines emitted before the first member. */
+    val prefix: String =
+      if (beforeClosingBrace && startsLine) ""
+      else if (afterOpeningBrace || beforeClosingBrace) "\n"
       else "\n\n"
-    val atClosingBrace =
-      endOffset >= 0 && endOffset < text.length && text.charAt(endOffset) == '}'
-    val suffix =
-      if (atClosingBrace) s"\n$endIndent"
+
+    /** Blank lines (and trailing indentation) emitted after the last member. */
+    val suffix: String =
+      if (beforeClosingBrace) s"\n$endIndent"
       else if (insert.isInsertion) ""
       else s"\n\n$endIndent"
-    val body = members
-      .map(memberLines =>
-        memberLines.map(line => memberIndent + line).mkString("\n")
-      )
-      .mkString("\n\n")
-    s"$prefix$body$suffix"
-  }
-
-  /** The indentation unit (tab or spaces) used in the file. */
-  def indentUnit(text: String): String = {
-    val firstIndent = text.linesIterator
-      .map(_.takeWhile(c => c == ' ' || c == '\t'))
-      .find(_.nonEmpty)
-    firstIndent match {
-      case Some(ws) if ws.startsWith("\t") => "\t"
-      case _ => "  "
-    }
-  }
-
-  private def indentAt(text: String, offset: Int): String = {
-    val clamped = offset.min(text.length).max(0)
-    val lineStart = text.lastIndexOf('\n', clamped - 1) + 1
-    val candidate = text.substring(lineStart, clamped)
-    if (candidate.forall(_.isWhitespace)) candidate else ""
-  }
-
-  private def lineIndent(text: String, offset: Int): String = {
-    val lineStart = text.lastIndexOf('\n', offset - 1) + 1
-    text.substring(lineStart).takeWhile(c => c != '\n' && c.isWhitespace)
   }
 }

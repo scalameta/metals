@@ -4,12 +4,12 @@ import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class ImportMissingSymbolJavaLspSuite
     extends BaseCodeActionLspSuite(
       "import-missing-symbol-java",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       useMbtLayout = true,
     ) {
 
