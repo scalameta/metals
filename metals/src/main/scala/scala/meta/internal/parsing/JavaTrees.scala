@@ -225,7 +225,13 @@ class JavaTrees(buffers: Buffers) {
             range.endOffset,
             variableName,
           ).getOrElse(range),
-          typ = node.getType().toString(),
+          typ = Option(node.getType()) match {
+            case Some(t) => t.toString()
+            case None =>
+              // This can happen if a variable is declared with inferred type.
+              // This is going to change in Java 27, see https://bugs.openjdk.org/browse/JDK-8268850
+              "var"
+          },
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
