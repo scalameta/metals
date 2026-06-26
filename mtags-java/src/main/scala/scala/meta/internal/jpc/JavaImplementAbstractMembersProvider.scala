@@ -67,7 +67,9 @@ class JavaImplementAbstractMembersProvider(
             )
             // The body edit must be computed before reading the imports, since
             // rendering the stubs is what registers the needed imports.
-            importsEdit(text, shortener.newImports).toList :+ bodyEdit
+            JavaAutoImportEditor
+              .imports(text, shortener.newImports)
+              .toList :+ bodyEdit
           }
         case _ => Nil
       }
@@ -269,48 +271,6 @@ class JavaImplementAbstractMembersProvider(
         } else s"${shortener.shorten(paramType)} $name"
       }
       .mkString(", ")
-  }
-
-  /**
-   * Builds a single text edit that adds all the given imports, placed after the
-   * last existing import, or after the package declaration, or at the top of
-   * the file.
-   */
-  private def importsEdit(
-      text: String,
-      imports: List[String]
-  ): Option[l.TextEdit] = {
-    if (imports.isEmpty) None
-    else {
-      val block = imports.map(fqn => s"import $fqn;").mkString("\n")
-      val lines = text.linesIterator.zipWithIndex.toList
-      val lastImport =
-        lines.filter { case (line, _) =>
-          line.trim().startsWith("import ")
-        }.lastOption
-      lastImport match {
-        case Some((line, idx)) =>
-          Some(insertAt(idx, line.length(), s"\n$block"))
-        case None =>
-          lines.find { case (line, _) =>
-            line.trim().startsWith("package ")
-          } match {
-            case Some((line, idx)) =>
-              Some(insertAt(idx, line.length(), s"\n\n$block"))
-            case None =>
-              Some(insertAt(0, 0, s"$block\n\n"))
-          }
-      }
-    }
-  }
-
-  private def insertAt(
-      line: Int,
-      character: Int,
-      newText: String
-  ): l.TextEdit = {
-    val position = new l.Position(line, character)
-    new l.TextEdit(new l.Range(position, position), newText)
   }
 
   private def lineIndent(text: String, offset: Int): String = {

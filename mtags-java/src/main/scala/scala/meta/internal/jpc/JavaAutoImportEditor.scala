@@ -77,3 +77,50 @@ class JavaAutoImportEditor(text: String, fqn: String) {
   }
 
 }
+
+object JavaAutoImportEditor {
+
+  /**
+   * A single edit that inserts the given imports as a block, placed after the
+   * last existing import, or after the package declaration, or at the top of
+   * the file. Returns `None` when there are no imports to add.
+   */
+  def imports(text: String, fqns: List[String]): Option[l.TextEdit] = {
+    if (fqns.isEmpty) None
+    else {
+      val block = fqns.map(fqn => s"import $fqn;").mkString("\n")
+      ImportLine.fromText(text).lastOption match {
+        case Some(lastImport) =>
+          Some(
+            insertAt(
+              lastImport.lineNumber,
+              lastImport.line.length(),
+              s"\n$block"
+            )
+          )
+        case None =>
+          packageLine(text) match {
+            case Some((lineNumber, length)) =>
+              Some(insertAt(lineNumber, length, s"\n\n$block"))
+            case None =>
+              Some(insertAt(0, 0, s"$block\n\n"))
+          }
+      }
+    }
+  }
+
+  private def packageLine(text: String): Option[(Int, Int)] =
+    text.linesIterator.zipWithIndex.collectFirst {
+      case (line, lineNumber) if line.startsWith("package ") =>
+        (lineNumber, line.length())
+    }
+
+  private def insertAt(
+      line: Int,
+      character: Int,
+      newText: String
+  ): l.TextEdit = {
+    val position = new l.Position(line, character)
+    new l.TextEdit(new l.Range(position, position), newText)
+  }
+}
