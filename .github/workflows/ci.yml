@@ -210,7 +210,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-reports
-          path: "**/.reports/**/*"
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
