@@ -7,15 +7,17 @@ on:
 permissions:
   statuses: write
   checks: write
-  contents: write
+  contents: read
   pull-requests: write
-  actions: write
+  actions: read
 jobs:
   aggregate-test-reports:
     if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       - name: Download reports for each test job
         uses: dawidd6/action-download-artifact@v21
         with:
