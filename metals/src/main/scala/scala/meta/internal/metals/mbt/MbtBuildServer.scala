@@ -437,10 +437,6 @@ final class MbtBuildServer(
           case _ =>
             Left("buildTarget/test: expected test class names list")
         }
-      case MbtBuildServer.RunTestDataKind =>
-        MbtBuildServer
-          .decodeTestSuites(params.getData)
-          .toRight("buildTarget/test: cannot decode RunTestDataKind data")
       case _ =>
         Left(
           s"buildTarget/test: unsupported data kind: ${params.getDataKind}"
@@ -696,9 +692,6 @@ final class MbtBuildServer(
 
 object MbtBuildServer {
   val name = "MBT"
-
-  /** Custom data kind used in [[DebugSessionParams]] to signal a non-debug test run. */
-  val RunTestDataKind = "mbt-scala-test-suites-run"
 
   def details: BspConnectionDetails =
     new BspConnectionDetails(

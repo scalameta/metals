@@ -5,6 +5,7 @@ import javax.annotation.Nullable
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
@@ -349,7 +350,7 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val StartDebugAdapter = new ParametrizedCommand[b.DebugSessionParams](
+  val StartDebugAdapter = new ParametrizedCommand[DebugAdapterStartParams](
     "debug-adapter-start",
     "Start debug adapter",
     "Start a new debugger session with fully specified DebugSessionParams",
@@ -907,6 +908,13 @@ case class DebugUnresolvedMainClassParams(
     @Nullable jvmOptions: java.util.List[String] = null,
     @Nullable env: java.util.Map[String, String] = null,
     @Nullable envFile: String = null,
+)
+
+final case class DebugAdapterStartParams(
+    @Nullable targets: java.util.List[b.BuildTargetIdentifier],
+    @Nullable dataKind: String,
+    @Nullable data: JsonElement,
+    noDebug: Boolean = false,
 )
 
 final case class ScalaTestSuitesDebugRequest(

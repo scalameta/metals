@@ -22,7 +22,6 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.DebugDiscovery
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
-import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.semanticdb.MethodSignature
 import scala.meta.internal.semanticdb.Scope
@@ -333,25 +332,20 @@ final class RunTestCodeLens(
       className: String,
       isJVM: Boolean,
   ): List[l.Command] = {
-    val isMbt = buildTargets.buildServerOf(target).exists(_.isMbt)
-    val data = singletonList(className).toJson
-    val runParams = sessionParams(
-      target,
-      if (isMbt) MbtBuildServer.RunTestDataKind
-      else b.TestParamsDataKind.SCALA_TEST_SUITES,
-      data,
-    )
-    val debugParams =
-      sessionParams(target, b.TestParamsDataKind.SCALA_TEST_SUITES, data)
+    val params = {
+      val dataKind = b.TestParamsDataKind.SCALA_TEST_SUITES
+      val data = singletonList(className).toJson
+      sessionParams(target, dataKind, data)
+    }
 
     if (isJVM)
       List(
-        command("test", StartRunSession, runParams),
-        command("debug test", StartDebugSession, debugParams),
+        command("test", StartRunSession, params),
+        command("debug test", StartDebugSession, params),
       )
     else
       List(
-        command("test", StartRunSession, runParams)
+        command("test", StartRunSession, params)
       )
   }
 

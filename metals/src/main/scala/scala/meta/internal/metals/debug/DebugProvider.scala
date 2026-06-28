@@ -123,7 +123,8 @@ class DebugProvider(
   }
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val cancelPromise = Promise[Unit]()
     for {
@@ -140,7 +141,7 @@ class DebugProvider(
         .forall(
           _.scalaInfo.getPlatform == b.ScalaPlatform.JVM
         )
-      isMbtTestRun = parameters.getDataKind == MbtBuildServer.RunTestDataKind
+      isMbtTestRun = noDebug && MbtBuildServer.isMbtServer(buildServer.name)
       debugServer <-
         if (isMbtTestRun)
           runMbtTestLocally(
@@ -182,6 +183,7 @@ class DebugProvider(
       val port = proxyServer.getLocalPort
       proxyServer.setSoTimeout(10 * 1000)
       val uri = URI.create(s"tcp://$host:$port")
+
       val awaitClient = () => Future(proxyServer.accept())
 
       DebugRunner
@@ -576,10 +578,12 @@ class DebugProvider(
   }
 
   def asSession(
-      debugParams: DebugSessionParams
+      debugParams: DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
+    if (noDebug) scribe.info("Starting debug session without debugging")
     for {
-      server <- start(debugParams)
+      server <- start(debugParams, noDebug)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)
@@ -705,22 +709,10 @@ class DebugProvider(
       buildTarget: b.BuildTarget,
       request: ScalaTestSuitesDebugRequest,
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
-    val isMbt = buildTargets
-      .buildServerOf(buildTarget.getId)
-      .exists(_.isMbt)
-
     def makeDebugSession() = {
       val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
-      request.requestData.suites.asScala.forall(_.tests.isEmpty)
       val debugSession =
-        if (isMbt && request.noDebug) {
-          val testSuites = request.requestData.copy(jvmOptions = jvmOpts.asJava)
-          val params =
-            new b.DebugSessionParams(singletonList(buildTarget.getId))
-          params.setDataKind(MbtBuildServer.RunTestDataKind)
-          params.setData(testSuites.toJson)
-          params
-        } else if (supportsTestSelection(request.target)) {
+        if (supportsTestSelection(request.target)) {
           val testSuites =
             request.requestData.copy(
               suites = request.requestData.suites.map { suite =>
@@ -793,23 +785,6 @@ class DebugProvider(
                   s"${suite.className}(${suite.tests.asScala.mkString(", ")})"
                 )
                 .mkString(";")
-            }
-          case MbtBuildServer.RunTestDataKind =>
-            MbtBuildServer.decodeTestSuites(json) match {
-              case Some(suites) =>
-                Success(
-                  suites.getSuites.asScala
-                    .map(s =>
-                      s"${s.getClassName}(${s.getTests.asScala.mkString(", ")})"
-                    )
-                    .mkString(";")
-                )
-              case None =>
-                Failure(
-                  new IllegalStateException(
-                    "Cannot decode RunTestDataKind data"
-                  )
-                )
             }
         }
       case data =>
@@ -1028,7 +1003,9 @@ object DebugProvider {
     protected def search(): Future[Try[A]]
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
     def createDapSession(args: A): Future[DebugSession] =
-      dapSessionParams(args).flatMap(debugProvider.asSession(_))
+      dapSessionParams(args).flatMap(
+        debugProvider.asSession(_, noDebug = false)
+      )
     def searchResult: Future[(Try[A], ClassSearch[A])] = {
       search().onComplete {
         case Success(resolved) => searchPromise.trySuccess(resolved)
