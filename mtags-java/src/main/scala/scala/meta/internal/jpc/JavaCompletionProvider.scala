@@ -210,6 +210,7 @@ class JavaCompletionProvider(
     autoImportItems(
       identifier,
       inScope,
+      path,
       (elem, item) => {
         if (!inScope.contains(elem) && isAccessible(task, trees, scope, elem)) {
           items += item
@@ -254,6 +255,7 @@ class JavaCompletionProvider(
   private def autoImportItems(
       query: String,
       inScope: Set[String],
+      path: TreePath,
       onMatch: (String, CompletionItem) => Unit
   ): Unit = {
     val simpleNamesInScope = inScope.map(_.split('.').last)
@@ -292,7 +294,7 @@ class JavaCompletionProvider(
         item.setKind(CompletionItemKind.Class)
         // TODO?: move auto-import computation to completionItem/resolve so we
         // don't compute this eagerly for all items here.
-        if (!isSimpleNameInScope) {
+        if (!isSimpleNameInScope && !isSamePackage(path, fqn)) {
           val additionalEdit =
             new JavaAutoImportEditor(params.text(), fqn).textEdit()
           item.setAdditionalTextEdits(List(additionalEdit).asJava)
@@ -300,6 +302,20 @@ class JavaCompletionProvider(
         onMatch(fqn, item)
         item
     }
+  }
+
+  private def isSamePackage(
+      path: TreePath,
+      fqn: String
+  ): Boolean = {
+    val pathPackageName = Option(path.getCompilationUnit)
+      .flatMap(cu => Option(cu.getPackageName))
+      .fold("")(_.toString)
+    val packageName = fqn.lastIndexOf('.') match {
+      case -1 => ""
+      case idx => fqn.substring(0, idx)
+    }
+    packageName.equals(pathPackageName)
   }
 
   private def textEdit(
