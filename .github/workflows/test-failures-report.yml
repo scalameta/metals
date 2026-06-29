@@ -5,6 +5,7 @@ on:
     types:
       - completed
 permissions:
+  checks: write
   contents: read
   actions: read
 jobs:
@@ -20,7 +21,7 @@ jobs:
         with:
           workflow: ci.yml
           workflow_conclusion: completed
-          merge_multiple: 'true'
+          merge_multiple: true
       - name: Test Report
         uses: dorny/test-reporter@29672c52a8220c09bd9f79b5b6cf6315f1763996
         with:
@@ -30,4 +31,4 @@ jobs:
           list-suites: failed
           list-tests: failed
           list-files: failed
-          use-actions-summary: 'true'
+          use-actions-summary: false
