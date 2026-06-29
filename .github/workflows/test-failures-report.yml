@@ -5,10 +5,7 @@ on:
     types:
       - completed
 permissions:
-  statuses: write
-  checks: write
   contents: read
-  pull-requests: write
   actions: read
 jobs:
   aggregate-test-reports:
