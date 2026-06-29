@@ -3,6 +3,7 @@ package scala.meta.internal.metals.debug.server
 import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -24,7 +25,7 @@ import ch.epfl.scala.debugadapter.DebuggeeListener
  * be captured immediately by Maven.
  */
 class ForkedTestDebugAdapter(
-    commandWithPort: Int => List[String],
+    commandWithPort: Int => Future[List[String]],
     workspace: AbsolutePath,
     env: Map[String, String],
     project: DebugeeProject,
@@ -37,50 +38,62 @@ class ForkedTestDebugAdapter(
 
   def run(listener: DebuggeeListener): CancelableFuture[Unit] = {
     val port = ForkedTestDebugAdapter.findFreePort()
-    val command = commandWithPort(port)
+    val commandFuture = commandWithPort(port)
     val logger = new Logger(listener)
     val cancelled = new AtomicBoolean(false)
+    val processRef = new AtomicReference[Option[SystemProcess]](None)
 
-    scribe.debug(
-      s"Starting forked test debug session on port $port: ${command.mkString(" ")} (cwd=$workspace)"
-    )
+    val completeFuture: Future[Unit] = commandFuture.flatMap { command =>
+      scribe.debug(
+        s"Starting forked test debug session on port $port: ${command.mkString(" ")} (cwd=$workspace)"
+      )
 
-    val process = SystemProcess.run(
-      cmd = command,
-      cwd = workspace,
-      redirectErrorOutput = false,
-      env = env,
-      processOut = Some(logger.logOutput),
-      processErr = Some(logger.logError),
-    )
+      val process = SystemProcess.run(
+        cmd = command,
+        cwd = workspace,
+        redirectErrorOutput = false,
+        env = env,
+        processOut = Some(logger.logOutput),
+        processErr = Some(logger.logError),
+      )
+      processRef.set(Some(process))
+      // If cancel() was called before the process started, cancel it now
+      if (cancelled.get()) process.cancel
 
-    // Poll for the port to become available
-    Future {
-      val address = new InetSocketAddress("127.0.0.1", port)
-      if (
-        ForkedTestDebugAdapter.waitForJdwp(port, cancelled, maxWaitMs = 120000)
-      ) {
-        // Add a small delay to ensure the debug agent is fully initialized
-        Thread.sleep(500)
-        if (!cancelled.get()) {
-          scribe.debug(s"Forked test JVM is now listening on port $port")
-          listener.onListening(address)
+      // Poll for the port to become available
+      Future {
+        val address = new InetSocketAddress("127.0.0.1", port)
+        if (
+          ForkedTestDebugAdapter.waitForJdwp(
+            port,
+            cancelled,
+            maxWaitMs = 120000,
+          )
+        ) {
+          // Add a small delay to ensure the debug agent is fully initialized
+          Thread.sleep(500)
+          if (!cancelled.get()) {
+            scribe.debug(s"Forked test JVM is now listening on port $port")
+            listener.onListening(address)
+          }
+        } else if (!cancelled.get()) {
+          scribe.error(s"Timeout waiting for forked test JVM on port $port")
         }
-      } else if (!cancelled.get()) {
-        scribe.error(s"Timeout waiting for forked test JVM on port $port")
       }
-    }
 
-    new CancelableFuture[Unit] {
-      def future = process.complete.map { code =>
+      process.complete.map { code =>
         if (code != 0)
           throw new Exception(
             s"forked test process exited with code $code: ${command.mkString(" ")}"
           )
       }
+    }
+
+    new CancelableFuture[Unit] {
+      def future = completeFuture
       def cancel(): Unit = {
         cancelled.set(true)
-        process.cancel
+        processRef.get().foreach(_.cancel)
       }
     }
   }

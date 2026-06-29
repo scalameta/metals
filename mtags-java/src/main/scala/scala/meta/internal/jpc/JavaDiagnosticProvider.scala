@@ -25,12 +25,19 @@ class JavaDiagnosticProvider(
     compile.task.analyze()
     params.checkCanceled()
 
-    for {
+    val javacDiagnostics = for {
       d <- compile.listener.diagnostics.iterator
       // The compiler may report noisy diagnostics from transitive dependencies
       // TODO: we can't rely on the URI here, getName() with originaluri- is better.
       if d.getSource() != null && d.getSource().toUri() == params.uri()
     } yield JavaDiagnostics.toLspDiagnostic(lineMap, params.text(), d)
-  }.toList
+
+    javacDiagnostics.toList ++
+      new MissingOverrideDiagnosticProvider(
+        compiler,
+        compile,
+        params.text()
+      ).diagnostics()
+  }
 
 }

@@ -67,7 +67,7 @@ object BazelQuery {
         }
     }
 
-  private def quoteTarget(target: String): Option[String] =
+  def quoteTarget(target: String): Option[String] =
     if (needsQuoting(target)) {
       val hasDouble = target.contains('"')
       val hasSingle = target.contains('\'')

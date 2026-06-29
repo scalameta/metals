@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt
 
+import scala.concurrent.Future
 import scala.jdk.CollectionConverters.ListHasAsScala
 
 import scala.meta.internal.builds.BuildTool
@@ -34,14 +35,16 @@ trait MbtDebugLauncher { self: BuildTool =>
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
-  ): List[String]
+      sourceFiles: Seq[AbsolutePath],
+  ): Future[List[String]]
 
   def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
-  ): List[String]
+      sourceFiles: Seq[AbsolutePath],
+  ): Future[List[String]]
 
   /**
    * Returns true if this launcher supports forked test debugging with a pre-assigned port.
@@ -57,12 +60,14 @@ trait MbtDebugLauncher { self: BuildTool =>
       workspace: AbsolutePath,
       target: MbtTarget,
       testSuites: ScalaTestSuites,
-  ): Int => List[String] = { _ =>
+      sourceFiles: Seq[AbsolutePath],
+  ): Int => Future[List[String]] = { _ =>
     mbtTestDebugCommand(
       workspace,
       target,
       testSuites,
       MbtDebugLauncher.DebugAgentFlag,
+      sourceFiles,
     )
   }
 }

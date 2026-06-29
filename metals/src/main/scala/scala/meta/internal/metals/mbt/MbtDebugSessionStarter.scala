@@ -28,6 +28,10 @@ class MbtDebugSessionStarter(
     buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
+    classToSourceFile: (
+        String,
+        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
+    ) => Option[AbsolutePath] = (_, _) => None,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -100,6 +104,14 @@ class MbtDebugSessionStarter(
 
   }
 
+  private def resolveSourceFiles(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Seq[AbsolutePath] =
+    MbtDebugLauncher
+      .listOrNil(testSuites.getSuites)
+      .flatMap(s => classToSourceFile(s.getClassName, target.id))
+
   def test(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
@@ -107,28 +119,32 @@ class MbtDebugSessionStarter(
       out: String => Unit,
       err: String => Unit,
   ): Future[Int] = {
-    val command = buildTool.mbtTestCommand(workspace, target, testSuites)
+    val sourceFiles = resolveSourceFiles(target, testSuites)
+    val command =
+      buildTool.mbtTestCommand(workspace, target, testSuites, sourceFiles)
     val toolName = buildTool.executableName
-    scribe.info(
-      s"MBT test session via $toolName: ${redactedCommand(command)}"
-    )
     val artifactId = {
       val parts = target.name.split(':')
       if (parts.length >= 2) parts(1) else target.name
     }
-    workDoneProgress.trackFuture(
-      s"Testing $artifactId",
-      SystemProcess
-        .run(
-          command,
-          workspace,
-          redirectErrorOutput = false,
-          env = javaHomeEnv(target),
-          processOut = Some(out),
-          processErr = Some(err),
-        )
-        .complete,
-    )
+    command.flatMap { command =>
+      scribe.info(
+        s"MBT test session via $toolName: ${redactedCommand(command)}"
+      )
+      workDoneProgress.trackFuture(
+        s"Testing $artifactId",
+        SystemProcess
+          .run(
+            command,
+            workspace,
+            redirectErrorOutput = false,
+            env = javaHomeEnv(target),
+            processOut = Some(out),
+            processErr = Some(err),
+          )
+          .complete,
+      )
+    }
   }
 
   private def launchVia(
@@ -154,7 +170,7 @@ class MbtDebugSessionStarter(
             s"MBT debug session via $toolName: ${redactedCommand(command)}"
           )
           val debuggee = new BuildToolDebugAdapter(
-            command,
+            Future.successful(command),
             workspace,
             env = javaHomeEnv(target),
             patched,
@@ -179,6 +195,7 @@ class MbtDebugSessionStarter(
   ): Future[URI] = {
     val toolName = launcher.executableName
     val cancelPromise = Promise[Unit]()
+    val sourceFiles = resolveSourceFiles(target, testSuites)
     compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
       debugConfigCreator.create(
         target.id,
@@ -203,10 +220,13 @@ class MbtDebugSessionStarter(
                     workspace,
                     target,
                     testSuites,
+                    sourceFiles,
                   )
-                scribe.info(
-                  s"MBT test debug session via $toolName (forked): ${redactedCommand(commandWithPort(0))}"
-                )
+                commandWithPort(0).foreach { command =>
+                  scribe.info(
+                    s"MBT test debug session via $toolName (forked): ${redactedCommand(command)}"
+                  )
+                }
                 new ForkedTestDebugAdapter(
                   commandWithPort,
                   workspace,
@@ -216,17 +236,20 @@ class MbtDebugSessionStarter(
                 )
               } else {
                 val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
-                val command = launcher.mbtTestDebugCommand(
+                val commandFuture = launcher.mbtTestDebugCommand(
                   workspace,
                   target,
                   testSuites,
                   debugAgentFlag,
+                  sourceFiles,
                 )
-                scribe.info(
-                  s"MBT test debug session via $toolName: ${redactedCommand(command)}"
-                )
+                commandFuture.foreach { command =>
+                  scribe.info(
+                    s"MBT test debug session via $toolName: ${redactedCommand(command)}"
+                  )
+                }
                 new BuildToolDebugAdapter(
-                  command,
+                  commandFuture,
                   workspace,
                   env = javaHomeEnv(target),
                   patched,

@@ -17,7 +17,7 @@ import scala.meta.io.AbsolutePath
 import tests.BaseLspSuite
 import tests.BaseMbtSuite
 import tests.BazelBuildLayout
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 import tests.TestHovers
 
 /**
@@ -25,7 +25,7 @@ import tests.TestHovers
  * → [[MbtBuildServer]] → Scala hover.
  */
 class BazelMbtLspSuite
-    extends BaseLspSuite("bazel-mbt", BazelMbtTestInitializer)
+    extends BaseLspSuite("bazel-mbt", MbtTestInitializer)
     with TestHovers
     with BaseMbtSuite {
 
