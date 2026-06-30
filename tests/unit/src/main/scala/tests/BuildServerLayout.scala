@@ -127,20 +127,36 @@ object BazelBuildLayout extends BuildToolLayout {
       sourceLayout: String,
       scalaVersion: String,
       bazelVersion: String,
-  ): String = apply(sourceLayout, scalaVersion, bazelVersion, Nil)
+  ): String = apply(sourceLayout, scalaVersion, bazelVersion, Nil, None)
 
   def apply(
       sourceLayout: String,
       scalaVersion: String,
       bazelVersion: String,
       mavenDeps: List[String],
+      mavenHubName: Option[String] = None,
+  ): String =
+    bazelLayout(
+      sourceLayout,
+      scalaVersion,
+      bazelVersion,
+      mavenDeps,
+      mavenHubName,
+    )
+
+  private def bazelLayout(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+      mavenDeps: List[String],
+      mavenHubName: Option[String],
   ): String =
     s"""|/.metals/txt.txt
         |initialize the project for metals
         |/.bazelversion
         |$bazelVersion
         |/MODULE.bazel
-        |${moduleFileLayout(scalaVersion, mavenDeps)}
+        |${moduleFileLayout(scalaVersion, mavenDeps, mavenHubName)}
         |/BUILD
         |
         |/WORKSPACE
@@ -151,7 +167,10 @@ object BazelBuildLayout extends BuildToolLayout {
   def moduleFileLayout(
       scalaVersion: String,
       mavenDeps: List[String] = Nil,
+      mavenHubName: Option[String] = None,
   ): String = {
+    val hubName = mavenHubName.getOrElse("maven")
+    val nameLine = mavenHubName.fold("")(n => s"""    name = "$n",\n""")
     val mavenSection =
       if (mavenDeps.isEmpty) ""
       else {
@@ -161,13 +180,13 @@ object BazelBuildLayout extends BuildToolLayout {
             |
             |maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
             |maven.install(
-            |    artifacts = [
+            |$nameLine    artifacts = [
             |        $artifacts
             |    ],
             |    fetch_sources = True,
             |    lock_file = "//:maven_install.json",
             |)
-            |use_repo(maven, "maven")
+            |use_repo(maven, "$hubName")
             |""".stripMargin
       }
     s"""|bazel_dep(name = "rules_scala", version = "7.2.4")
