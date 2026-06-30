@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 
-class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
+class RenameLspSuite extends BaseRenameLspSuite("rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -481,6 +481,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(
@@ -501,6 +503,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(

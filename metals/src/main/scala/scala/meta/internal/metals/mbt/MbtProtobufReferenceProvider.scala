@@ -248,14 +248,13 @@ final class MbtProtobufReferenceProvider(
       path: AbsolutePath,
       timer: Timer,
       requestDoc: s.TextDocument,
-      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      protoSymbols: Seq[String],
       toQuerySymbols: Seq[String],
       taskProgress: TaskProgress,
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
       token: Option[JEither[String, Integer]],
       includeDefinition: Boolean,
   ): List[ReferencesResult] = {
-    val protoSymbols = enclosingOccurrences.map(_.symbol)
     val protoJavaResult = {
       val result =
         ProtoJavaSymbolMapper.protoToJavaSymbols(path, protoSymbols, buffers)
