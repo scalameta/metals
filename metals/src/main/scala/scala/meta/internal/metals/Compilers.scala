@@ -32,6 +32,7 @@ import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.decompile.DecompileBytecode
+import scala.meta.internal.metals.mbt.MbtAnnotationProcessingOptions
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
@@ -166,6 +167,14 @@ class Compilers(
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
 
+  private val annotationProcessorBatchStarted =
+    java.util.Collections.newSetFromMap(
+      new java.util.concurrent.ConcurrentHashMap[
+        BuildTargetIdentifier,
+        java.lang.Boolean,
+      ]()
+    )
+
   private val cache = jcache.asScala
 
   private val idleCompilerTimeoutMs = 30000L
@@ -287,6 +296,7 @@ class Compilers(
     worksheetsCache.clear()
     worksheetsDigests.clear()
     outlineFilesProvider.clear()
+    annotationProcessorBatchStarted.clear()
   }
 
   def restartAll(): Unit = {
@@ -1566,6 +1576,7 @@ class Compilers(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
     buildTargets.jvmTarget(targetId).map { javaTarget =>
+      triggerAnnotationProcessorBatchCompilation(targetId)
       jcache
         .computeIfAbsent(
           PresentationCompilerKey.JavaBuildTarget(targetId),
@@ -1579,6 +1590,84 @@ class Compilers(
         )
         .await
     }
+  }
+
+  /**
+   * If this build target has Java annotation processors, batch-compile all Java
+   * sources with those processors and write class files to the dedicated ap-cp
+   * directory.  Once done, restart the Scala presentation compiler for the target
+   * so it picks up the AP-generated symbols.
+   *
+   * Guaranteed to run at most once per build target per Metals session.
+   */
+  private def triggerAnnotationProcessorBatchCompilation(
+      targetId: BuildTargetIdentifier
+  ): Unit = {
+    if (!annotationProcessorBatchStarted.add(targetId)) return
+
+    val javaTargetOpt = buildTargets.javaTarget(targetId)
+    val processorOpts =
+      javaTargetOpt.map(_.javac.processorOptions).getOrElse(Nil)
+
+    val effectiveProcessorOpts =
+      if (processorOpts.nonEmpty) processorOpts
+      else
+        mbtBuild().mbtTargets
+          .find(_.id == targetId)
+          .map(MbtAnnotationProcessingOptions.fromTarget)
+          .filter(_.isEnabled)
+          .map { opts =>
+            List(
+              "-processorpath",
+              opts.processorPath
+                .map(_.toString)
+                .mkString(java.io.File.pathSeparator),
+              "-processor",
+              opts.processors.mkString(","),
+            )
+          }
+          .getOrElse(Nil)
+
+    if (effectiveProcessorOpts.isEmpty) return
+
+    val javaFiles = buildTargets
+      .buildTargetSources(targetId)
+      .filter(_.isJavaFilename)
+      .map(_.toNIO)
+      .toSeq
+    if (javaFiles.isEmpty) return
+
+    val classpath = javaTargetOpt
+      .flatMap(_.classpath)
+      .getOrElse(Nil)
+      .map(_.toAbsolutePath.toNIO)
+      .filter(java.nio.file.Files.exists(_))
+
+    val outputDir = compilerConfiguration.annotationProcessorOutputDir(targetId)
+
+    val batchCompiler =
+      new JavaAnnotationProcessorBatchCompiler(
+        classpath,
+        effectiveProcessorOpts,
+        outputDir,
+      )
+
+    Future {
+      scribe.info(
+        s"[JavaAnnotationProcessorBatchCompiler] compiling ${javaFiles.size} Java files for ${targetId.getUri()}"
+      )
+      val success = batchCompiler.compile(javaFiles)
+      if (success) {
+        scribe.info(
+          s"[JavaAnnotationProcessorBatchCompiler] done, restarting Scala PC for ${targetId.getUri()}"
+        )
+        restartPresentationCompilers(targetId)
+      } else {
+        scribe.warn(
+          s"[JavaAnnotationProcessorBatchCompiler] compilation had errors for ${targetId.getUri()}, Scala PC may not see all AP-generated symbols"
+        )
+      }
+    }(ec)
   }
 
   private def protoCompiler: PresentationCompiler = {
@@ -1643,6 +1732,7 @@ class Compilers(
       val scalaVersion = scalaTarget.scalaVersion
       mtagsResolver.resolve(scalaVersion) match {
         case Some(mtags) =>
+          triggerAnnotationProcessorBatchCompilation(targetId)
           def default() =
             workDoneProgress.trackBlocking(
               s"${config.icons().sync}Loading presentation compiler"

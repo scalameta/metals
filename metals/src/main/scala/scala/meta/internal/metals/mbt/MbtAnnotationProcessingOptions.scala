@@ -23,6 +23,22 @@ object MbtAnnotationProcessingOptions {
   val empty: MbtAnnotationProcessingOptions =
     MbtAnnotationProcessingOptions(Nil, Nil, Nil, disabled = true)
 
+  def fromTarget(target: MbtTarget): MbtAnnotationProcessingOptions = {
+    val parsed = parseJavacOptions(target.javacOptions)
+    val processorModules = target.dependencyModules
+      .filterNot(_.getAnnotationProcessors.isEmpty)
+    val moduleProcessorPaths = processorModules.flatMap(_.jarPath)
+    val moduleProcessors =
+      processorModules.flatMap(_.getAnnotationProcessors.asScala)
+
+    MbtAnnotationProcessingOptions(
+      processorPath = (parsed.processorPath ++ moduleProcessorPaths).distinct,
+      processors = (parsed.processors ++ moduleProcessors).distinct,
+      javacOptions = target.javacOptions,
+      disabled = parsed.disabled,
+    )
+  }
+
   def fromBuild(build: MbtBuild): MbtAnnotationProcessingOptions = {
     val javacOptions =
       build.mbtTargets.flatMap(_.javacOptions).distinct

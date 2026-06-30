@@ -1,7 +1,10 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.ZipFile
+import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.util.Try
@@ -525,10 +528,13 @@ object BazelMavenJsonImporter {
                 }
               }
 
+            val processors = readAnnotationProcessors(jar)
             MbtDependencyModule(
               id = id,
               jar = jar,
               sources = sourcesPath.orNull,
+              annotationProcessors =
+                if (processors.isEmpty) null else processors,
             )
           }
         }
@@ -685,10 +691,13 @@ object BazelMavenJsonImporter {
               projectDir,
             )
 
+            val processors = readAnnotationProcessors(jar)
             MbtDependencyModule(
               id = id,
               jar = jar,
               sources = sourcesPath.orNull,
+              annotationProcessors =
+                if (processors.isEmpty) null else processors,
             )
           }
         }
@@ -824,7 +833,7 @@ object BazelMavenJsonImporter {
       jarName: String,
   ): Option[AbsolutePath] = {
     Try {
-      val entries = extDir.list
+      val entries = extDir.list.toSeq
 
       // Look for directory matching Bazel 7.x pattern: rules_jvm_external~{version}~maven~{artifactDir}
       val bazel7Dir = entries.find { entry =>
@@ -1014,6 +1023,36 @@ object BazelMavenJsonImporter {
       }
       .map(_.toURI.toString)
   }
+
+  /**
+   * Read annotation processor class names from a JAR's service file.
+   */
+  private def readAnnotationProcessors(jarUri: String): ju.List[String] =
+    Try {
+      val path = java.nio.file.Paths.get(MbtDependencyModule.parseUri(jarUri))
+      val zipFile = new ZipFile(path.toFile)
+      try {
+        val entry = zipFile.getEntry(
+          "META-INF/services/javax.annotation.processing.Processor"
+        )
+        if (entry == null) ju.Collections.emptyList[String]()
+        else {
+          val lines = new String(
+            zipFile.getInputStream(entry).readAllBytes(),
+            StandardCharsets.UTF_8,
+          ).linesIterator
+            .map(_.trim)
+            .filter(line => line.nonEmpty && !line.startsWith("#"))
+            .toList
+          if (lines.isEmpty) ju.Collections.emptyList[String]()
+          else {
+            val result = new ju.ArrayList[String](lines.size)
+            lines.foreach(result.add)
+            result
+          }
+        }
+      } finally zipFile.close()
+    }.getOrElse(ju.Collections.emptyList[String]())
 
   /**
    * Convert artifact coordinates to Bzlmod sources directory name formats.

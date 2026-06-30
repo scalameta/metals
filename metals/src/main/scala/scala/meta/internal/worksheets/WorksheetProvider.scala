@@ -368,12 +368,12 @@ class WorksheetProvider(
       thread: Thread,
       result: CompletableFuture[Option[EvaluatedWorksheetSnapshot]],
   ): Cancelable = {
-    // Last resort, if everything else fails we use `Thread.stop()`.
+    // Last resort: re-interrupt the thread (Thread.stop() was removed in Java 20+).
     val stopThread = new Runnable {
       def run(): Unit = {
         if (thread.isAlive()) {
-          scribe.warn(s"thread stop: ${thread.getName()}")
-          thread.stop()
+          scribe.warn(s"thread stop (re-interrupt): ${thread.getName()}")
+          thread.interrupt()
         }
       }
     }

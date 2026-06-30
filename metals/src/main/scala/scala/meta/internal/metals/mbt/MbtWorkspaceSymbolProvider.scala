@@ -12,6 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 import java.{util => ju}
 import javax.tools.JavaFileManager
+import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager
 
 import scala.collection.concurrent.TrieMap
@@ -111,11 +112,15 @@ class MbtWorkspaceSymbolProvider(
     protobufLspConfig: () => ProtobufLspConfig = () =>
       ProtobufLspConfig.default,
     metalsOutDir: Option[Path] = None,
+    onAnnotationProcessorStubsReady: () => Unit = () => (),
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
 ) extends SemanticdbFileManager
     with JavaFileManagerFactory {
+
+  private val annotationProcessorStubsDir: Path =
+    workspace.resolve(Directories.outDir).resolve("ap-stubs").toNIO
 
   private def logInfoInProdDebugInTests(message: => String): Unit = {
     if (scala.meta.internal.metals.MetalsServerConfig.isTesting)
@@ -155,6 +160,8 @@ class MbtWorkspaceSymbolProvider(
       onIndexingDone = onIndexingDone,
       onNewProjectClasspath = classpath =>
         protobufWorkspace.onNewProjectClasspath(classpath),
+      annotationProcessorStubsDir = Some(annotationProcessorStubsDir),
+      onAnnotationProcessorStubsReady = onAnnotationProcessorStubsReady,
     )
 
   // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
@@ -483,7 +490,25 @@ class MbtWorkspaceSymbolProvider(
         },
       )
     } else if (javaSymbolLoader().isTurbineClasspath) {
-      turbineCompiler.createFileManager(standardFileManager, classpath)
+      turbineCompiler.createFileManager(
+        standardFileManager,
+        classpath,
+        workspaceSourcepath = (packageName: String) => {
+          val pkgSymbol = packageName.replace('.', '/') + '/'
+          documentsByPackage.get(pkgSymbol) match {
+            case None => ju.Collections.emptyList()
+            case Some(paths) =>
+              val result = ArrayBuffer.empty[JavaFileObject]
+              for {
+                path <- paths.asScala
+                doc <- documents.get(AbsolutePath(path))
+                if doc.language.isJava
+                cu <- toInput(doc.file).map(doc.toSemanticdbCompilationUnit)
+              } result += cu
+              result.asJava
+          }
+        },
+      )
     } else {
       throw new IllegalArgumentException(
         s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"

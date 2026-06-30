@@ -49,10 +49,16 @@ class JavaCompletionProvider(
       if (params.offset() < params.text().length())
         params.text().charAt(params.offset()).isWhitespace
       else false
+    val isMemberSelectCompletion = {
+      val identStart = inferIdentStart(params.offset(), params.text())
+      identStart > 0 && params.text().charAt(identStart - 1) == '.'
+    }
     val textWithSemicolon =
       if (nextIsWhitespace)
         params.text().substring(0, params.offset()) +
-          ";" +
+          (if (isMemberSelectCompletion)
+             if (extractIdentifier.isEmpty) "_placeholder();" else "();"
+           else ";") +
           params.text().substring(params.offset())
       else params.text()
     val compile =

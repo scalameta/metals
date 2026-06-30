@@ -421,7 +421,9 @@ object MetalsEnrichments
       filename == "BUILD" ||
       filename == "BUILD.bazel" ||
       filename.endsWith(".bzl") ||
-      filename.endsWith(".bazelproject")
+      filename.endsWith(".bazelproject") ||
+      (filename.endsWith(".json") && filename.contains("maven") && filename
+        .contains("install"))
     }
     def isInBspDirectory(workspace: AbsolutePath): Boolean =
       path.toNIO.startsWith(workspace.resolve(Directories.bsp).toNIO)
@@ -1205,6 +1207,37 @@ object MetalsEnrichments
         .dropWhile(f => f != "--target" && f != "-target" && f != "--release")
         .drop(1)
         .headOption
+
+    /**
+     * Extracts annotation-processor-relevant javac options from the item.
+     * Includes: -processorpath, -processor, -A<key>=<value>, and --add-opens.
+     * Excludes -proc:none so processors are not silently disabled
+     * in the presentation compiler.
+     */
+    def processorOptions: List[String] = {
+      val twoArgFlags = Set("-processorpath", "-processor")
+      val opts = item.getOptions.asScala.toList
+
+      @scala.annotation.tailrec
+      def loop(remaining: List[String], acc: List[String]): List[String] =
+        remaining match {
+          case Nil => acc.reverse
+          case flag :: value :: rest if twoArgFlags.contains(flag) =>
+            loop(rest, value :: flag :: acc)
+          case opt :: rest if opt.startsWith("--add-opens") =>
+            if (opt.contains("=")) loop(rest, opt :: acc)
+            else
+              rest match {
+                case value :: rest2 => loop(rest2, value :: opt :: acc)
+                case Nil => acc.reverse
+              }
+          case opt :: rest if opt.startsWith("-A") =>
+            loop(rest, opt :: acc)
+          case _ :: rest => loop(rest, acc)
+        }
+
+      loop(opts, Nil)
+    }
   }
 
   implicit class XtensionScalacOptions(item: b.ScalacOptionsItem) {

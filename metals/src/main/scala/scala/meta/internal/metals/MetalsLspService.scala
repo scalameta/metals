@@ -348,6 +348,10 @@ abstract class MetalsLspService(
     ),
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
+    onAnnotationProcessorStubsReady = () =>
+      mbtBuild.mbtTargets.foreach(t =>
+        compilers.restartPresentationCompilers(t.id)
+      ),
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2

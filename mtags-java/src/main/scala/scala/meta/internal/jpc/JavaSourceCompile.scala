@@ -25,7 +25,9 @@ case class JavaSourceCompile(
   private var updateMessage: String => Unit = _ => ()
   task.addTaskListener(new TaskListener {
     override def started(task: TaskEvent): Unit = {
-      updateMessage(task.getSourceFile.getName.split('/').last)
+      val sourceFile = task.getSourceFile
+      if (sourceFile != null)
+        updateMessage(sourceFile.getName.split('/').last)
     }
   })
 

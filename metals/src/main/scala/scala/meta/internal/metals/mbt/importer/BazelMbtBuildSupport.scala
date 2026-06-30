@@ -54,6 +54,19 @@ object BazelMbtBuildSupport {
     } else {
       val keys = targetLabels.map(t => t -> namespaceKey(granularity, t)).toMap
       val targetSet = targetLabels.toSet
+      val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
+        k -> v.flatMap(fileLabelToWorkspaceRelativePath)
+      }
+      val namespacePkgs: Option[Set[String]] = granularity match {
+        case BazelMbtNamespaceMode.BuildFile =>
+          Some(
+            targetLabels
+              .filter(t => srcFilesByTarget.getOrElse(t, Nil).nonEmpty)
+              .map(keys)
+              .toSet
+          )
+        case _ => None
+      }
       val dependsByNs =
         computeDependsOn(
           granularity,
@@ -61,6 +74,7 @@ object BazelMbtBuildSupport {
           directDepRules,
           keys,
           targetSet,
+          namespacePkgs,
         )
       val externalDepsByNs =
         computeExternalDeps(
@@ -69,9 +83,6 @@ object BazelMbtBuildSupport {
           externalDepsByTarget,
           keys,
         )
-      val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(fileLabelToWorkspaceRelativePath)
-      }
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
 
       if (granularity == BazelMbtNamespaceMode.BuildFile) {
@@ -186,6 +197,7 @@ object BazelMbtBuildSupport {
       directDepRules: Map[String, List[String]],
       keys: Map[String, String],
       targetSet: Set[String],
+      namespacePkgs: Option[Set[String]] = None,
   ): Map[String, Set[String]] = {
     if (granularity == BazelMbtNamespaceMode.Workspace) {
       Map.empty
@@ -198,7 +210,7 @@ object BazelMbtBuildSupport {
       } {
         val fromK = keys(t)
         val toK = keys(d)
-        if (fromK != toK) {
+        if (fromK != toK && namespacePkgs.forall(_.contains(toK))) {
           outgoing.getOrElseUpdate(fromK, mutable.Set.empty) += toK
         }
       }

@@ -7,6 +7,7 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentSkipListMap
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
+import javax.tools.StandardLocation
 
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
@@ -84,6 +85,10 @@ class JavaPruneCompiler(
       extraOptions: List[String] = Nil
   ): List[String] = {
     val finalClasspath = classpath :+ headerCompiler
+    val hasAnnotationProcessors =
+      extraOptions.contains("-processorpath") || extraOptions.contains(
+        "-processor"
+      )
     val options = List.newBuilder[String]
     options ++= List(
       "-Xprefer:source",
@@ -94,9 +99,11 @@ class JavaPruneCompiler(
       "-XDdiags.showEndPos=true",
       // Critical! This enables our custom prune file manager
       "-sourcepath",
-      "",
-      "-proc:none"
+      ""
     )
+    if (!hasAnnotationProcessors) {
+      options += "-proc:none"
+    }
     val processedExtraOptions = processExtraOptions(extraOptions, files)
     val sourceVersion = processedExtraOptions.zipWithIndex
       .findLast { case (option, _) => "-source" == option }
@@ -305,7 +312,43 @@ class JavaPruneCompiler(
     }
     val store = new JavaCompileTaskListener()
     val options = compileOptions(files, classpath, extraOptions)
-    cache.getTask(options, files.map(_.source)) {
+    val hasAnnotationProcessors =
+      extraOptions.contains("-processorpath") || extraOptions.contains(
+        "-processor"
+      )
+    val additionalSources: List[JavaFileObject] =
+      if (hasAnnotationProcessors) {
+        val primaryUris = files.map(_.source.toUri()).toSet
+        val seen = new mutable.LinkedHashMap[String, JavaFileObject]()
+        params.foreach { p =>
+          val packageName = extractPackageName(p.text())
+          if (packageName.nonEmpty) {
+            try {
+              fileManager
+                .list(
+                  StandardLocation.SOURCE_PATH,
+                  packageName,
+                  java.util.EnumSet.of(JavaFileObject.Kind.SOURCE),
+                  false
+                )
+                .asScala
+                .filterNot(f => primaryUris.contains(f.toUri()))
+                .foreach { f =>
+                  val key = f.toUri().toString()
+                  if (!seen.contains(key)) seen(key) = f
+                }
+            } catch {
+              case scala.util.control.NonFatal(e) =>
+                logger.warn(
+                  s"[JavaPruneCompiler] failed to list sourcepath for package '$packageName': ${e.getMessage}"
+                )
+            }
+          }
+        }
+        seen.values.toList
+      } else Nil
+    val allSources = files.map(_.source) ++ additionalSources
+    cache.getTask(options, allSources) {
       val context = hotContext()
       val task =
         try
@@ -315,7 +358,7 @@ class JavaPruneCompiler(
             store,
             options.asJava,
             null,
-            files.map(_.source).asJava,
+            allSources.asJava,
             context
           )
         catch {
@@ -370,6 +413,19 @@ class JavaPruneCompiler(
       }
     }
   }
+
+  // Extract the package name from Java source text (e.g. "example" from "package example;")
+  private def extractPackageName(sourceText: String): String =
+    sourceText.linesIterator
+      .map(_.trim)
+      .filterNot(line =>
+        line.startsWith("//") || line.startsWith("*") || line.startsWith("/*")
+      )
+      .find(_.startsWith("package "))
+      .map(
+        _.stripPrefix("package ").takeWhile(c => c != ';' && !c.isWhitespace)
+      )
+      .getOrElse("")
 
   private def processExtraOptions(
       extraOptions: List[String],

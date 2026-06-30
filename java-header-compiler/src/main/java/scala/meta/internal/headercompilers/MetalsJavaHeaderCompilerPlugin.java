@@ -243,7 +243,7 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
       boolean isParameter = (varDecl.mods.flags & Flags.PARAMETER) != 0;
       boolean isEnumConstant = (varDecl.mods.flags & Flags.ENUM) != 0;
       boolean isFieldContext = classLevel > 0 && executableLevel == 0;
-      if (isFieldContext && !isParameter && !isEnumConstant) {
+      if (isFieldContext && !isParameter && !isEnumConstant && varDecl.init != null) {
         TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
         varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
       }

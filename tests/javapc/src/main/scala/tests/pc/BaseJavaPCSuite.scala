@@ -63,7 +63,12 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
       .withLogger(LoggerFactory.getLogger("java.metals"))
       // TODO: we need a real instance of the embedded client here.
       .withEmbeddedClient(new TestingEmbeddedClient(tmp))
-      .newInstance("", myclasspath.asJava, Nil.asJava, () => Nil.asJava)
+      .newInstance(
+        "",
+        myclasspath.asJava,
+        extraOptions.asJava,
+        () => Nil.asJava,
+      )
       .asInstanceOf[JavaPresentationCompiler]
   }
 
@@ -79,4 +84,7 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
 
   protected def extraDependencies: Seq[Dependency] =
     Seq.empty
+
+  protected def extraOptions: List[String] =
+    Nil
 }
