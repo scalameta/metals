@@ -129,6 +129,7 @@ trait CompletionsAssertions {
       expectedLabel: String,
       expectedDoc: Option[String] = None,
       expectedInsertText: Option[String] = None,
+      additionalInsertTexts: List[String] = List.empty,
       project: Char = 'a',
       filter: String => Boolean = _ => true,
       index: Int = 0,
@@ -157,6 +158,18 @@ trait CompletionsAssertions {
             }
           assertNoDiff(obtainedInsertText, insertText)
         }
+        val obtainedInsertTexts: List[String] =
+          Option(resolved.getAdditionalTextEdits)
+            .map { javaList =>
+              javaList
+                .stream()
+                .map(_.getNewText)
+                .toArray
+                .toList
+                .asInstanceOf[List[String]]
+            }
+            .getOrElse(List.empty)
+        assertEquals(obtainedInsertTexts, additionalInsertTexts)
     }
   }
 
