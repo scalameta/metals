@@ -30,7 +30,6 @@ class ImportMissingSymbolLspSuite
         |""".stripMargin,
     """|package a
        |
-       |import scala.concurrent.Future
        |
        |object A {
        |  val f = Future.successful(2)
