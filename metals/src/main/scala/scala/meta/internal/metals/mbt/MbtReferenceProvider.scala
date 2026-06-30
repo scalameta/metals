@@ -351,7 +351,7 @@ class MbtReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
-      withDefinitionfallback: Option[String] = None,
+      withDefinitionFallback: Option[String] = None,
   ): Future[List[ReferencesResult]] = {
     val timer = new Timer(time)
     val path = params.getTextDocument.getUri.toAbsolutePath
@@ -360,7 +360,7 @@ class MbtReferenceProvider(
     val semanticdbOccurrences =
       this.enclosingOccurrences(requestDoc, queryRange).map(_.symbol)
     val enclosingSymbols =
-      if (semanticdbOccurrences.isEmpty) withDefinitionfallback.toSeq
+      if (semanticdbOccurrences.isEmpty) withDefinitionFallback.toSeq
       else semanticdbOccurrences
     scribe.info(
       s"references: found ${enclosingSymbols.length} occurrences"

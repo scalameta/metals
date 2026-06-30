@@ -119,6 +119,17 @@ class SymbolAlternatives(symbol: String, name: String) {
 
 object SymbolAlternatives {
 
+  def generateConstructors(
+      maxConstructors: Int,
+      symbol: Symbol,
+  ): IndexedSeq[String] =
+    0.until(maxConstructors).map { i =>
+      Symbols.Global(
+        symbol.value,
+        Descriptor.Method("<init>", if (i == 0) "()" else s"(+$i)"),
+      )
+    }
+
   /**
    * Expands a symbol to include alternatives for Java matching.
    * This includes:
@@ -126,26 +137,15 @@ object SymbolAlternatives {
    * - For object member symbols: class member equivalents (Java sees Scala objects as classes)
    */
   def expand(symbol: Symbol, maxConstructors: Int = 10): Seq[String] = {
-    if (symbol.isType) {
-      val constructors = 0.until(maxConstructors).map { i =>
-        Symbols.Global(
-          symbol.value,
-          Descriptor.Method("<init>", if (i == 0) "()" else s"(+$i)"),
-        )
-      }
+    val all = if (symbol.isType) {
+      val constructors = generateConstructors(maxConstructors, symbol)
       symbol.value +: constructors
     } else if (symbol.isConstructor) {
       symbol match {
         case GlobalSymbol(owner, Descriptor.Method("<init>", _)) =>
-          Seq(symbol.value, owner.value) ++ 0
-            .until(maxConstructors)
-            .map { i =>
-              Symbols.Global(
-                owner.value,
-                Descriptor.Method("<init>", if (i == 0) "()" else s"(+$i)"),
-              )
-            }
-            .distinct
+          Seq(symbol.value, owner.value) ++
+            generateConstructors(maxConstructors, symbol.owner)
+        case _ => Seq(symbol.value)
       }
     } else {
       // For members of Scala objects, Java sees them as members of a class.
@@ -153,6 +153,7 @@ object SymbolAlternatives {
       val javaAlternative = objectMemberToClassMember(symbol)
       javaAlternative.toList :+ symbol.value
     }
+    all.distinct
   }
 
   /**

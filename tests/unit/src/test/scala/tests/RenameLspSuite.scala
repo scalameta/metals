@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 
-class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
+class RenameLspSuite extends BaseRenameLspSuite("rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)

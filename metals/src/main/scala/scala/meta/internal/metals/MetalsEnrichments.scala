@@ -92,7 +92,7 @@ object MetalsEnrichments
     with AsScalaExtensions
     with MtagsEnrichments {
 
-  protected def inString(
+  private def inString(
       text: String,
       startLine: Int,
       startCharacter: Int,

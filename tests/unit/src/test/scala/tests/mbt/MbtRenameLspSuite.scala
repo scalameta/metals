@@ -11,7 +11,7 @@ import tests.BaseRenameLspSuite
 import tests.BuildInfo
 import tests.TestingServer
 
-class MbtRenameLspSuite extends BaseRenameLspSuite(s"rename") {
+class MbtRenameLspSuite extends BaseRenameLspSuite("mbt-rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)

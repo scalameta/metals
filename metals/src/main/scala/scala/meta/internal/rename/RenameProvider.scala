@@ -489,7 +489,7 @@ final class RenameProvider(
         .references(
           toReferenceParams(loc, includeDeclaration = true),
           findRealRange = AdjustRange(findRealRange(newName)),
-          withDefinitionfallback = Some(sym),
+          withDefinitionFallback = Some(sym),
         )
         .map(_.flatMap(_.locations :+ loc))
     }
