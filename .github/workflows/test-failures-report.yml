@@ -15,12 +15,13 @@ jobs:
     steps:
       - uses: actions/checkout@v6
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
       - name: Download reports for each test job
         uses: dawidd6/action-download-artifact@v21
         with:
-          workflow: ci.yml
-          workflow_conclusion: completed
+          run_id: ${{ github.event.workflow_run.id }}
+          name: test-reports
           merge_multiple: true
       - name: Test Report
         uses: dorny/test-reporter@29672c52a8220c09bd9f79b5b6cf6315f1763996
