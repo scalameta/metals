@@ -7,7 +7,6 @@ import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.Modifier
 import javax.lang.model.element.TypeElement
-import javax.lang.model.element.TypeParameterElement
 
 import scala.jdk.CollectionConverters._
 
@@ -56,11 +55,12 @@ class JavaImplementAbstractMembersProvider(
             unimplementedAbstractMethods(task, typeElement)
           if (abstractMethods.isEmpty) Nil
           else {
-            val shortener = newShortener(cu)
+            val classTree = classPath.getLeaf().asInstanceOf[ClassTree]
+            val shortener = newShortener(cu, classTree)
             val bodyEdit = bodyEditFor(
               trees,
               cu,
-              classPath.getLeaf().asInstanceOf[ClassTree],
+              classTree,
               text,
               abstractMethods,
               shortener
@@ -103,10 +103,16 @@ class JavaImplementAbstractMembersProvider(
         if member.getKind() == ElementKind.METHOD &&
           member.getModifiers().contains(Modifier.ABSTRACT)
         method = member.asInstanceOf[ExecutableElement]
-        execType = types
-          .asMemberOf(declaredType, method)
-          .asInstanceOf[ExecutableType]
+        (method, execType) <- (
+          method,
+          types.asMemberOf(declaredType, method)
+        ) match {
+          case (method: ExecutableElement, tpe: ExecutableType) =>
+            Some((method, tpe))
+          case _ => None
+        }
       } yield (method, execType)
+
     methods.sortBy { case (method, execType) => sortKey(method, execType) }
   }
 
@@ -121,7 +127,10 @@ class JavaImplementAbstractMembersProvider(
         .map(JavaLabels.typeLabel)
         .mkString("(", ",", ")")
 
-  private def newShortener(cu: CompilationUnitTree): JavaTypeShortener = {
+  private def newShortener(
+      cu: CompilationUnitTree,
+      targetClass: ClassTree
+  ): JavaTypeShortener = {
     val currentPackage =
       Option(cu.getPackageName()).map(_.toString()).getOrElse("")
     val imports = cu.getImports().asScala.toList.filterNot(_.isStatic())
@@ -130,23 +139,27 @@ class JavaImplementAbstractMembersProvider(
         val fqn = imp.getQualifiedIdentifier().toString()
         fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
     }.toMap
-    val onDemandPackages = imports.collect {
-      case imp if imp.getQualifiedIdentifier().toString().endsWith(".*") =>
-        val qualified = imp.getQualifiedIdentifier().toString()
-        qualified.substring(0, qualified.lastIndexOf('.'))
-    }.toSet
-    val declaredTypeNames = cu
+    val topLevelTypeNames = cu
       .getTypeDecls()
       .asScala
       .collect { case cls: ClassTree => cls.getSimpleName().toString() }
       .toSet
+    val memberTypeNames = collectMemberTypeNames(targetClass)
+    val declaredTypeNames = topLevelTypeNames ++ memberTypeNames
     new JavaTypeShortener(
       currentPackage,
       existingImports,
-      onDemandPackages,
       declaredTypeNames
     )
   }
+
+  /** Collects simple names of member types declared inside the given class. */
+  private def collectMemberTypeNames(classTree: ClassTree): Set[String] =
+    classTree
+      .getMembers()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
 
   private def bodyEditFor(
       trees: Trees,
@@ -229,23 +242,9 @@ class JavaImplementAbstractMembersProvider(
     if (typeParams.isEmpty) ""
     else {
       val rendered =
-        typeParams.map(tp => renderTypeParameter(tp, shortener)).mkString(", ")
+        typeParams.map(shortener.renderTypeParameter).mkString(", ")
       s"<$rendered> "
     }
-  }
-
-  private def renderTypeParameter(
-      tp: TypeParameterElement,
-      shortener: JavaTypeShortener
-  ): String = {
-    val bounds = tp
-      .getBounds()
-      .asScala
-      .toList
-      .filterNot(bound => JavaLabels.typeLabel(bound) == "java.lang.Object")
-    if (bounds.isEmpty) tp.getSimpleName().toString()
-    else
-      s"${tp.getSimpleName()} extends ${bounds.map(shortener.shorten).mkString(" & ")}"
   }
 
   private def parameters(

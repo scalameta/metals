@@ -31,7 +31,6 @@ import scala.jdk.CollectionConverters._
 class JavaTypeShortener(
     currentPackage: String,
     existingImports: Map[String, String],
-    onDemandPackages: Set[String],
     declaredTypeNames: Set[String]
 ) extends JavaTypeVisitor {
   // simpleName -> fully qualified name that the simple name currently resolves to
@@ -89,7 +88,7 @@ class JavaTypeShortener(
           if (declaredTypeNames.contains(simpleName)) fqn
           else {
             claimed(simpleName) = fqn
-            if (!onDemandPackages.contains(pkg)) collected += fqn
+            collected += fqn
             simpleName
           }
       }

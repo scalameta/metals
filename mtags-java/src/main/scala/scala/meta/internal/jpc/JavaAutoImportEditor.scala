@@ -109,9 +109,12 @@ object JavaAutoImportEditor {
     }
   }
 
+  private val PackageDeclaration = """^\s*package\s+.*""".r
+
   private def packageLine(text: String): Option[(Int, Int)] =
     text.linesIterator.zipWithIndex.collectFirst {
-      case (line, lineNumber) if line.startsWith("package ") =>
+      case (line, lineNumber)
+          if PackageDeclaration.pattern.matcher(line).matches() =>
         (lineNumber, line.length())
     }
 

@@ -14,6 +14,7 @@ import javax.lang.model.`type`.TypeVisitor
 import javax.lang.model.`type`.UnionType
 import javax.lang.model.`type`.UnknownTypeException
 import javax.lang.model.`type`.WildcardType
+import javax.lang.model.element.TypeParameterElement
 
 import scala.jdk.CollectionConverters._
 
@@ -72,4 +73,13 @@ class JavaTypeVisitor extends TypeVisitor[String, Void] {
 
   override def visitIntersection(t: IntersectionType, p: Void): String =
     t.getBounds.asScala.map(visit).mkString(" & ")
+
+  def renderTypeParameter(tp: TypeParameterElement): String = {
+    val bounds = tp
+      .getBounds()
+      .asScala
+      .filterNot(b => JavaLabels.typeLabel(b) == "java.lang.Object")
+    if (bounds.isEmpty) tp.getSimpleName().toString()
+    else s"${tp.getSimpleName()} extends ${bounds.map(visit).mkString(" & ")}"
+  }
 }

@@ -346,6 +346,7 @@ class JavaImplementAbstractMembersLspSuite
        |}
        |
        |public class <<Main>> implements Greeter {
+       |  @Override
        |  public String greet(String name) {
        |    return name;
        |  }
@@ -353,5 +354,91 @@ class JavaImplementAbstractMembersLspSuite
        |""".stripMargin,
     fileName = "Main.java",
     filterAction = onlyImplementAll,
+  )
+
+  check(
+    "method-type-params-with-bounds",
+    """|   package a;
+       |
+       |import java.io.Serializable;
+       |
+       |interface Processor {
+       |  <T extends Number> T findMax(T a, T b);
+       |  <K, V extends java.util.List<K> > V transform(K key);
+       |  <E extends Serializable & Cloneable> E process(E input);
+       |}
+       |
+       |public class <<Main>> implements Processor {
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|   package a;
+       |
+       |import java.io.Serializable;
+       |import java.util.List;
+       |
+       |interface Processor {
+       |  <T extends Number> T findMax(T a, T b);
+       |  <K, V extends java.util.List<K> > V transform(K key);
+       |  <E extends Serializable & Cloneable> E process(E input);
+       |}
+       |
+       |public class Main implements Processor {
+       |  @Override
+       |  public <T extends Number> T findMax(T a, T b) {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |
+       |  @Override
+       |  public <E extends Serializable & Cloneable> E process(E input) {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |
+       |  @Override
+       |  public <K, V extends List<K>> V transform(K key) {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
+  )
+
+  // A member type inside the target class named `List` should prevent
+  // shortening `java.util.List` to avoid a collision with the nested class.
+  check(
+    "member-type-clash-keeps-fqn",
+    """|package a;
+       |
+       |interface Source {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class <<Main>> implements Source {
+       |  class List {}
+       |}
+       |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |interface Source {
+       |  java.util.List<String> values();
+       |}
+       |
+       |public class Main implements Source {
+       |  class List {}
+       |
+       |  @Override
+       |  public java.util.List<String> values() {
+       |    throw new UnsupportedOperationException("Not yet implemented");
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Main.java",
+    filterAction = onlyImplementAll,
+    retryAction = 3,
   )
 }
