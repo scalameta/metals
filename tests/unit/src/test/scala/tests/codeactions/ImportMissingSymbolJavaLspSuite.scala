@@ -43,7 +43,6 @@ class ImportMissingSymbolJavaLspSuite
        |
        |import java.time.Instant;
        |
-       |
        |public class Example {
        |  public static Object now = Instant.now();
        |}
@@ -65,7 +64,6 @@ class ImportMissingSymbolJavaLspSuite
     """|package a;
        |
        |import java.util.ArrayList;
-       |
        |
        |public class Example {
        |  private ArrayList<String> items;
@@ -117,7 +115,6 @@ class ImportMissingSymbolJavaLspSuite
     """|package a;
        |
        |import java.util.ArrayList;
-       |
        |
        |public class Example {
        |  public Object create() {
@@ -171,9 +168,7 @@ class ImportMissingSymbolJavaLspSuite
         |""".stripMargin,
     """|package a;
        |import java.time.Instant;
-       |
        |import java.util.ArrayList;
-       |
        |
        |public class Example {
        |  public static Object now = Instant.now();
@@ -199,7 +194,6 @@ class ImportMissingSymbolJavaLspSuite
        |
        |import java.io.IOException;
        |
-       |
        |public class Example {
        |  public void readFile() throws IOException {
        |  }
@@ -222,7 +216,6 @@ class ImportMissingSymbolJavaLspSuite
        |
        |import java.io.Serializable;
        |
-       |
        |public class Example implements Serializable {
        |}
        |""".stripMargin,
@@ -243,7 +236,6 @@ class ImportMissingSymbolJavaLspSuite
     """|package a;
        |
        |import java.lang.annotation.Documented;
-       |
        |
        |@Documented
        |public class Example {
@@ -288,7 +280,6 @@ class ImportMissingSymbolJavaLspSuite
     """|package a;
        |
        |import java.util.ArrayList;
-       |
        |
        |public class Example {
        |  public void run() {

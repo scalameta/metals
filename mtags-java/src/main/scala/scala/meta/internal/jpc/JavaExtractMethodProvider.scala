@@ -139,7 +139,7 @@ final class JavaExtractMethodProvider(
   private def findSelection(ctx: Context): Option[Selection] = {
     val finder = new SelectionFinder(ctx)
     finder.scan(ctx.cu, ())
-    finder.found.collect { case selection =>
+    finder.found.map { selection =>
       hasInvalid(selection).foreach { message =>
         throw new DisplayableException(message)
       }
@@ -148,7 +148,7 @@ final class JavaExtractMethodProvider(
   }
 
   /**
-   * IT might be tto tricky to get it right with return statements.
+   * It might be too tricky to get it right with return statements.
    */
   private def hasInvalid(selection: Selection): Option[String] = {
     var hasInvalid: Option[String] = None
@@ -217,9 +217,6 @@ final class JavaExtractMethodProvider(
       }
     }
 
-    override def visitMemberSelect(node: MemberSelectTree, p: Unit): Unit = {
-      super.visitMemberSelect(node, p)
-    }
     override def visitExpressionStatement(
         node: ExpressionStatementTree,
         p: Unit
@@ -230,7 +227,10 @@ final class JavaExtractMethodProvider(
       super.visitExpressionStatement(node, p)
     }
 
-    override def visitBlock(node: BlockTree, p: Unit): Unit = {
+    private def checkBlockStatements(
+        node: BlockTree,
+        minimumStatements: Int
+    ): Unit =
       if (result.isEmpty) {
         val selected = node
           .getStatements()
@@ -240,7 +240,7 @@ final class JavaExtractMethodProvider(
             ctx.encloses(s, e)
           }
           .toList
-        if (selected.size > 1) {
+        if (selected.size >= minimumStatements) {
           for {
             method <- methodPath
             cls <- classPath
@@ -249,25 +249,11 @@ final class JavaExtractMethodProvider(
           )
         }
       }
+
+    override def visitBlock(node: BlockTree, p: Unit): Unit = {
+      checkBlockStatements(node, minimumStatements = 2)
       super.visitBlock(node, p)
-      if (result.isEmpty) {
-        val selected = node
-          .getStatements()
-          .asScala
-          .filter { stmt =>
-            val (s, e) = (ctx.startOf(stmt), ctx.endOf(stmt))
-            ctx.encloses(s, e) && !stmt.isInstanceOf[ExpressionStatementTree]
-          }
-          .toList
-        if (selected.nonEmpty) {
-          for {
-            method <- methodPath
-            cls <- classPath
-          } result = Some(
-            Selection(method, cls, selected, None, asStatement = false)
-          )
-        }
-      }
+      checkBlockStatements(node, minimumStatements = 1)
     }
 
     override def scan(tree: Tree, p: Unit): Unit = {
@@ -331,9 +317,9 @@ final class JavaExtractMethodProvider(
     val methodElement = ctx.elementAt(selection.methodPath).collect {
       case e: ExecutableElement => e
     }
-    if (methodElement.isEmpty) Nil
-    else generateEdits(selection, ctx, insertOffset, methodElement.get)
-
+    methodElement
+      .map(generateEdits(selection, ctx, insertOffset, _))
+      .getOrElse(Nil)
   }
 
   private def generateEdits(
@@ -344,8 +330,11 @@ final class JavaExtractMethodProvider(
   ): List[l.TextEdit] = {
     val classTree = selection.classPath.getLeaf().asInstanceOf[ClassTree]
     val typePrinter = new TypePrinter(ctx)
-    val freeVariables = collectFreeVariables(ctx, methodElement)
-    val mutatedFreeVars = collectMutatedFreeVariables(ctx, methodElement)
+    val enclosedVariables = collectEnclosedVariables(ctx)
+    val freeVariables =
+      collectFreeVariables(ctx, methodElement, enclosedVariables)
+    val mutatedFreeVars =
+      collectMutatedFreeVariables(ctx, methodElement, enclosedVariables)
     if (mutatedFreeVars.nonEmpty) {
       val varNames = mutatedFreeVars.toList.sorted.mkString(", ")
       throw new DisplayableException(
@@ -378,12 +367,10 @@ final class JavaExtractMethodProvider(
           val tpe =
             ctx.typeAt(path).getOrElse(ctx.types.getNoType(TypeKind.VOID))
           val isVoid = tpe.getKind == TypeKind.VOID
-          val call =
-            if (selection.asStatement || isVoid) s"$methodName($argsText)"
-            else s"$methodName($argsText)"
+          val call = s"$methodName($argsText)"
           val exprText = ctx.text.slice(extractStart, extractEnd).trim
           val body =
-            if (isVoid) s"$bodyIndent$exprText"
+            if (isVoid) s"$bodyIndent$exprText;"
             else {
               val stripped =
                 if (selection.asStatement) exprText.stripSuffix(";")
@@ -393,7 +380,12 @@ final class JavaExtractMethodProvider(
           (tpe, call, body)
         case None =>
           val method = selection.methodPath.getLeaf().asInstanceOf[MethodTree]
-          inferStatementReturn(selection, ctx, method) match {
+          inferStatementReturn(
+            selection,
+            ctx,
+            method,
+            enclosedVariables
+          ) match {
             case Some((tpe, outputName)) =>
               val call =
                 if (tpe.getKind == TypeKind.VOID) s"$methodName($argsText);"
@@ -501,24 +493,9 @@ final class JavaExtractMethodProvider(
   private def inferStatementReturn(
       selection: Selection,
       ctx: Context,
-      method: MethodTree
+      method: MethodTree,
+      declaredVariables: Set[VariableElement]
   ): Option[(TypeMirror, String)] = {
-    val declared = mutable.Map.empty[String, VariableElement]
-    val declScanner = new TreePathScanner[Unit, Unit] {
-      override def visitVariable(node: VariableTree, p: Unit): Unit = {
-        val (start, end) = (ctx.startOf(node), ctx.endOf(node))
-        if (ctx.encloses(start, end)) {
-          ctx.elementAt(getCurrentPath()).foreach {
-            case v: VariableElement if isLocalLike(v) =>
-              declared(v.getSimpleName().toString()) = v
-            case _ =>
-          }
-        }
-        super.visitVariable(node, p)
-      }
-    }
-    declScanner.scan(ctx.cu, ())
-
     val selectionEnd = ctx.endOf(selection.statements.last)
     val usedAfter = mutable.Set.empty[String]
     Option(method.getBody()).foreach { block =>
@@ -529,16 +506,22 @@ final class JavaExtractMethodProvider(
       }
     }
 
-    declared.keys.filter(usedAfter.contains).toList match {
+    declaredVariables
+      .filter(variable =>
+        usedAfter.contains(variable.getSimpleName().toString())
+      )
+      .toList match {
       case Nil => Some((ctx.types.getNoType(TypeKind.VOID), ""))
-      case name :: Nil => declared.get(name).map(v => (v.asType(), name))
+      case declared :: Nil =>
+        Some((declared.asType(), declared.getSimpleName().toString()))
       case _ => None
     }
   }
 
   private def collectFreeVariables(
       ctx: Context,
-      methodElement: ExecutableElement
+      methodElement: ExecutableElement,
+      enclosedVariables: Set[VariableElement]
   ): List[VariableElement] = {
     val params = mutable.LinkedHashMap.empty[String, VariableElement]
     val scanner = new TreePathScanner[Unit, Unit] {
@@ -546,7 +529,8 @@ final class JavaExtractMethodProvider(
         val (start, end) = (ctx.startOf(node), ctx.endOf(node))
         if (ctx.rangeStart <= start && end <= ctx.rangeEnd) {
           ctx.elementAt(getCurrentPath()).foreach {
-            case v: VariableElement if isFreeVariable(v, ctx, methodElement) =>
+            case v: VariableElement
+                if isFreeVariable(v, methodElement, enclosedVariables) =>
               params.getOrElseUpdate(v.getSimpleName().toString(), v)
             case _ =>
           }
@@ -558,9 +542,31 @@ final class JavaExtractMethodProvider(
     params.values.toList
   }
 
+  private def collectEnclosedVariables(
+      ctx: Context
+  ): Set[VariableElement] = {
+    val enclosed = mutable.Set.empty[VariableElement]
+    val scanner = new TreePathScanner[Unit, Unit] {
+      override def visitVariable(node: VariableTree, p: Unit): Unit = {
+        val (start, end) = (ctx.startOf(node), ctx.endOf(node))
+        if (ctx.rangeStart <= start && end <= ctx.rangeEnd) {
+          ctx.elementAt(getCurrentPath()).foreach {
+            case v: VariableElement =>
+              enclosed += v
+            case _ =>
+          }
+        }
+        super.visitVariable(node, p)
+      }
+    }
+    scanner.scan(ctx.cu, ())
+    enclosed.toSet
+  }
+
   private def collectMutatedFreeVariables(
       ctx: Context,
-      methodElement: ExecutableElement
+      methodElement: ExecutableElement,
+      enclosedVariables: Set[VariableElement]
   ): Set[String] = {
     val mutated = mutable.Set.empty[String]
     val scanner = new TreePathScanner[Unit, Unit] {
@@ -592,7 +598,8 @@ final class JavaExtractMethodProvider(
         val (start, end) = (ctx.startOf(target), ctx.endOf(target))
         if (ctx.rangeStart <= start && end <= ctx.rangeEnd) {
           ctx.elementAt(targetPath).foreach {
-            case v: VariableElement if isFreeVariable(v, ctx, methodElement) =>
+            case v: VariableElement
+                if isFreeVariable(v, methodElement, enclosedVariables) =>
               mutated += v.getSimpleName().toString()
             case _ =>
           }
@@ -603,35 +610,18 @@ final class JavaExtractMethodProvider(
     mutated.toSet
   }
 
+  /*
+   * A variable is free if it is not local, not a parameter, and not enclosed by the method.
+   */
   private def isFreeVariable(
       variable: VariableElement,
-      ctx: Context,
-      methodElement: ExecutableElement
+      methodElement: ExecutableElement,
+      enclosedVariables: Set[VariableElement]
   ): Boolean =
     if (!isLocalLike(variable) && variable.getKind != ElementKind.PARAMETER)
       false
     else if (!isEnclosedBy(variable, methodElement)) false
-    else
-      declarationTree(variable, ctx).forall { tree =>
-        !ctx.encloses(ctx.startOf(tree), ctx.endOf(tree))
-      }
-
-  private def declarationTree(
-      variable: VariableElement,
-      ctx: Context
-  ): Option[Tree] = {
-    object finder extends TreePathScanner[Unit, Unit] {
-      var found: Option[Tree] = None
-      override def visitVariable(node: VariableTree, p: Unit): Unit = {
-        ctx.elementAt(getCurrentPath()).foreach { elem =>
-          if (elem == variable) found = Some(node)
-        }
-        super.visitVariable(node, p)
-      }
-    }
-    finder.scan(ctx.cu, ())
-    finder.found
-  }
+    else !enclosedVariables.contains(variable)
 
   private def identifierNames(tree: Tree): Set[String] = {
     val names = mutable.Set.empty[String]

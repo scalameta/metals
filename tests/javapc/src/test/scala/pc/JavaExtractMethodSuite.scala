@@ -424,4 +424,24 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
        |}
        |""".stripMargin,
   )
+
+  checkEdit(
+    "single-void-expr-statement",
+    """|class A {
+       |  @@void foo() {
+       |    <<System.out.println("hello");>>
+       |  }
+       |}
+       |""".stripMargin,
+    """|class A {
+       |  private void newMethod() {
+       |    System.out.println("hello");
+       |  }
+       |
+       |  void foo() {
+       |    newMethod();
+       |  }
+       |}
+       |""".stripMargin,
+  )
 }
