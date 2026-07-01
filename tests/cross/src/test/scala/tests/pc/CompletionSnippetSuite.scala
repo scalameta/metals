@@ -47,7 +47,7 @@ class CompletionSnippetSuite extends BaseCompletionSuite {
       |  List(1).hea@@
       |}
       |""".stripMargin,
-    """|head
+    """|foo
        |headOption
        |""".stripMargin
   )
