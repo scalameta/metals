@@ -40,7 +40,7 @@ object BazelMbtBuildSupport {
       runTargets: Set[String],
       classDirectoriesByTarget: Map[String, String],
       dependencyModules: Seq[MbtDependencyModule],
-      scalaVersion: Option[String],
+      scalaVersionByNamespace: Map[String, Option[String]],
       genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
@@ -49,7 +49,11 @@ object BazelMbtBuildSupport {
       if (granularity == BazelMbtNamespaceMode.Workspace) {
         MbtBuild(
           depModules,
-          singleNamespace(workspaceNamespaceName, Set.empty, scalaVersion),
+          singleNamespace(
+            workspaceNamespaceName,
+            Set.empty,
+            scalaVersionByNamespace.getOrElse(workspaceNamespaceName, None),
+          ),
           uncheckedSources = ju.Collections.emptyList(),
         )
       } else {
@@ -148,7 +152,7 @@ object BazelMbtBuildSupport {
             externalDepsByNs.getOrElse(namespace, Set.empty),
             runTargetsByNs.getOrElse(namespace, Set.empty),
             classDirectoriesByNs.get(namespace),
-            scalaVersion,
+            scalaVersionByNamespace.getOrElse(namespace, None),
             genSrcOutputsByNamespaces
               .getOrElse(namespace, mutable.Buffer.empty)
               .toSeq,
@@ -169,7 +173,7 @@ object BazelMbtBuildSupport {
           allExtDeps,
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
           classDirectoriesByNs.get(workspaceNamespaceName),
-          scalaVersion,
+          scalaVersionByNamespace.getOrElse(workspaceNamespaceName, None),
           allGenSrcOutputs,
         )
       }
