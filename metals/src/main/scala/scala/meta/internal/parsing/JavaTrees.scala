@@ -17,9 +17,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
-import com.sun.source.tree.BlockTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
@@ -55,6 +55,20 @@ class JavaTrees(buffers: Buffers) {
       }
     } yield result
 
+  def findEnclosingIdentifier(
+      source: AbsolutePath,
+      pos: l.Position,
+  ): Option[IdentifierTree] =
+    for {
+      text <- text(source)
+      tree <- get(source)
+      result <- {
+        val visitor = new EnclosingIdentifierFinder(tree, text, pos)
+        visitor.scan(tree, ())
+        visitor.result
+      }
+    } yield result
+
   def findEnclosingJavaMethod(
       source: AbsolutePath,
       pos: l.Position,
@@ -82,22 +96,6 @@ class JavaTrees(buffers: Buffers) {
         visitor.result
       }
     } yield result
-
-  /**
-   * Whether `pos` is inside any block: a method/constructor body, a static or
-   * instance initializer, or a lambda/nested block. Local variables can be
-   * declared in any of these, so this is the cheap test for "could be a local
-   * value to inline".
-   */
-  def isInsideBlock(source: AbsolutePath, pos: l.Position): Boolean =
-    (for {
-      text <- text(source)
-      tree <- get(source)
-    } yield {
-      val finder = new BlockFinder(tree, text, pos)
-      finder.scan(tree, ())
-      finder.result.isDefined
-    }).getOrElse(false)
 
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
@@ -255,20 +253,6 @@ class JavaTrees(buffers: Buffers) {
     }
   }
 
-  /** Finds whether the cursor is inside any block (see [[isInsideBlock]]). */
-  private class BlockFinder(
-      cu: CompilationUnitTree,
-      text: String,
-      targetPos: l.Position,
-  ) extends EnclosingFinder[Unit](cu, text, targetPos) {
-
-    override def visitBlock(node: BlockTree, p: Unit): Unit = {
-      if (positionContains(targetOffset, pos.startPos(node), pos.endPos(node)))
-        _result = Some(())
-      super.visitBlock(node, p)
-    }
-  }
-
   private class EnclosingMethodFinder(
       cu: CompilationUnitTree,
       text: String,
@@ -337,11 +321,36 @@ class JavaTrees(buffers: Buffers) {
     ): Unit = {
       val nodeStart = pos.startPos(node)
       val nodeEnd = pos.endPos(node)
-
       if (positionContains(targetOffset, nodeStart, nodeEnd)) {
-        _result = javaVariable(node)
+        val name = node.getName().toString()
+        val actualNodeStart =
+          findNameOffset(text, nodeStart, nodeEnd, name)
+            .getOrElse(nodeStart)
+        val actualNodeEnd = actualNodeStart + name.length()
+        if (positionContains(targetOffset, actualNodeStart, actualNodeEnd)) {
+          _result = javaVariable(node)
+        }
       }
       super.visitVariable(node, p)
+    }
+  }
+
+  private class EnclosingIdentifierFinder(
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends EnclosingFinder[IdentifierTree](cu, text, targetPos) {
+
+    override def visitIdentifier(
+        node: IdentifierTree,
+        p: Unit,
+    ): Unit = {
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
+      if (positionContains(targetOffset, nodeStart, nodeEnd)) {
+        _result = Some(node)
+      }
+      super.visitIdentifier(node, p)
     }
   }
 
@@ -517,6 +526,22 @@ class JavaTrees(buffers: Buffers) {
       endPos: Int,
       name: String,
   ): Option[JavaRange] = {
+    findNameOffset(text, startPos, endPos, name).map { offset =>
+      val endOffset = offset + name.length()
+      JavaRange(
+        Positions.toLspRange(lineMap, offset, endOffset, text),
+        startOffset = offset,
+        endOffset = endOffset,
+      )
+    }
+  }
+
+  private def findNameOffset(
+      text: String,
+      startPos: Int,
+      endPos: Int,
+      name: String,
+  ): Option[Int] = {
     if (startPos < 0 || endPos < 0) None
     else {
       val searchEnd = Math.min(endPos, text.length())
@@ -533,14 +558,6 @@ class JavaTrees(buffers: Buffers) {
           // Right boundary: next char is end-of-text or does not continue an identifier.
           (endOffset >= text.length() ||
             !Character.isJavaIdentifierPart(text.charAt(endOffset)))
-        }
-        .map { offset =>
-          val endOffset = offset + name.length()
-          JavaRange(
-            Positions.toLspRange(lineMap, offset, endOffset, text),
-            startOffset = offset,
-            endOffset = endOffset,
-          )
         }
     }
   }
