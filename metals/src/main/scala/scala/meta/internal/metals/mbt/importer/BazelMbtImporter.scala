@@ -92,11 +92,13 @@ abstract class BazelMbtImporter(
         dependencyModules,
         repositoryName,
       )
-      scalaVersionFromDeps <- queryScalaVersionFromDeps()
-      effectiveScalaVersion <- scalaVersionFromDeps match {
-        case Some(value) => Future.successful(Some(value))
-        case None => queryScalaVersion(targets)
-      }
+      scalaVersionByNamespace <- resolveScalaVersionByNamespace(
+        namespaceMode,
+        targets,
+        targetsXmlDump,
+        externalDeps,
+        outputBase,
+      )
       build = BazelMbtBuildSupport.fromDiscovery(
         namespaceMode,
         targets,
@@ -108,7 +110,7 @@ abstract class BazelMbtImporter(
         runTargets,
         classDirectories,
         dependencyModules,
-        effectiveScalaVersion,
+        scalaVersionByNamespace,
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()
@@ -232,15 +234,74 @@ abstract class BazelMbtImporter(
     withoutDoubleAt.replaceAll("~[^/]+", "")
   }
 
-  private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
-    queryOutput <- BazelQuery.allScalaLibrariesQuery.run(queryEnv)
-    lines = asLines(queryOutput)
-  } yield lines.flatMap(extractScalaVersionFromLabel).headOption
+  private def resolveScalaVersionByNamespace(
+      namespaceMode: BazelMbtNamespaceMode,
+      targets: List[String],
+      targetsXmlDump: BazelTargetsXmlDump,
+      externalDeps: Map[String, List[String]],
+      outputBase: Option[Path],
+  ): Future[Map[String, Option[String]]] = {
+    val scalaVersionAttributes = targetsXmlDump.getStrings("scala_version")
+    val namespaceToTargets = targets.groupBy(
+      BazelMbtBuildSupport.namespaceKey(namespaceMode, _)
+    )
+    val versionsByNamespace =
+      namespaceToTargets.map { case (ns, nsTargets) =>
+        val explicitVersions =
+          nsTargets.flatMap(t => scalaVersionAttributes.getOrElse(t, Nil))
+        val version = pickMaxScalaVersion(
+          if (explicitVersions.nonEmpty) explicitVersions
+          else
+            nsTargets
+              .flatMap(t => externalDeps.getOrElse(t, Nil))
+              .flatMap(extractScalaVersionFromLabel)
+        )
+        ns -> version
+      }
+    val namespacesNeedingFallback =
+      versionsByNamespace.collect { case (ns, None) => ns }
+    val globalFallback =
+      if (namespacesNeedingFallback.isEmpty) Future.successful(None)
+      else
+        parseScalaVersionFromRulesScalaConfig(outputBase)
+          .orElse(parseScalaVersionFromBuildFiles())
+          .map(v => Future.successful(Some(v)))
+          .getOrElse(queryScalaVersionFromDeps())
 
-  private def queryScalaVersion(
-      @annotation.nowarn("msg=never used") targets: List[String]
-  ): Future[Option[String]] =
-    Future.successful(parseScalaVersionFromBuildFiles())
+    globalFallback.map { fallbackVersion =>
+      versionsByNamespace.map { case (ns, v) =>
+        ns -> v.orElse(fallbackVersion)
+      }
+    }
+  }
+
+  private def parseScalaVersionFromRulesScalaConfig(
+      outputBase: Option[Path]
+  ): Option[String] = {
+    val versionPattern = """SCALA_VERSION\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
+    outputBase.flatMap { base =>
+      val externalDir = base.resolve("external").toFile
+      val entries = externalDir.listFiles()
+      val configDir = Option(entries).flatMap(
+        _.find(f => f.isDirectory && f.getName.contains("rules_scala_config"))
+          .map(_.toPath)
+      )
+      configDir.flatMap { dir =>
+        val configFile = dir.resolve("config.bzl")
+        if (Files.exists(configFile)) {
+          val content = new String(Files.readAllBytes(configFile))
+          versionPattern.findFirstMatchIn(content).map(_.group(1))
+        } else None
+      }
+    }
+  }
+
+  private def queryScalaVersionFromDeps(): Future[Option[String]] =
+    BazelQuery.allScalaLibrariesQuery.run(queryEnv).map { queryOutput =>
+      pickMaxScalaVersion(
+        asLines(queryOutput).flatMap(extractScalaVersionFromLabel)
+      )
+    }
 
   private def parseScalaVersionFromBuildFiles(): Option[String] = {
     val versionPattern = """scala_version\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
@@ -256,8 +317,19 @@ abstract class BazelMbtImporter(
     extractFromFile(moduleFile).orElse(extractFromFile(workspaceFile))
   }
 
+  private def pickMaxScalaVersion(versions: List[String]): Option[String] =
+    versions.maxByOption { v =>
+      val p = v.split('.')
+      (
+        p.lift(0).flatMap(_.toIntOption).getOrElse(0),
+        p.lift(1).flatMap(_.toIntOption).getOrElse(0),
+        p.lift(2).flatMap(_.toIntOption).getOrElse(0),
+      )
+    }
+
   private def extractScalaVersionFromLabel(label: String): Option[String] = {
-    val versionPattern = """scala[_-]library[_-](\d+\.\d+\.\d+)""".r
+    val versionPattern =
+      """scala(?:3-library_3|[_-]library)[_-](\d+\.\d+\.\d+)""".r
     versionPattern.findFirstMatchIn(label).map(_.group(1))
   }
 

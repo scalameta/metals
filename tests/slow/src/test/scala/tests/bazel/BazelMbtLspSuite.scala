@@ -51,6 +51,56 @@ class BazelMbtLspSuite
   private val catsVersion = "2.13.0"
   private val jsoupVersion = "1.21.1"
 
+  private def mixedScalaVersionsLayout: String =
+    s"""|/.bazelproject
+        |targets:
+        |    //...
+        |
+        |/MODULE.bazel
+        |bazel_dep(name = "rules_scala", version = "7.2.4")
+        |
+        |scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
+        |scala_config.settings(
+        |    scala_version = "${V.scala213}",
+        |    scala_versions = ["${V.scala213}", "${V.scala3}"],
+        |)
+        |
+        |scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
+        |scala_deps.settings(fetch_sources = True)
+        |scala_deps.scala()
+        |scala_deps.scala(scala_version = "${V.scala3}")
+        |use_repo(scala_deps, "rules_scala_toolchains")
+        |
+        |register_toolchains("@rules_scala_toolchains//...:all")
+        |
+        |/lib2/BUILD
+        |load("@rules_scala//scala:scala.bzl", "scala_library")
+        |
+        |scala_library(
+        |    name = "lib2",
+        |    srcs = ["Lib2.scala"],
+        |)
+        |
+        |/lib2/Lib2.scala
+        |package lib2
+        |
+        |class Lib2
+        |
+        |/lib3/BUILD
+        |load("@rules_scala//scala:scala.bzl", "scala_library")
+        |
+        |scala_library(
+        |    name = "lib3",
+        |    srcs = ["Lib3.scala"],
+        |    scala_version = "${V.scala3}",
+        |)
+        |
+        |/lib3/Lib3.scala
+        |package lib3
+        |
+        |class Lib3
+        |""".stripMargin
+
   /** Same targets as [[BazelLspSuite]], plus a project view so MBT import scopes `bazel query`. */
   private def bazelWorkspaceLayout: String = {
     val projectView =
@@ -651,6 +701,47 @@ class BazelMbtLspSuite
             |      "configurations": [
             |        "//app:hello"
             |      ]
+            |    }
+            |  }
+            |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("bazel-import-mbt-mixed-scala-versions") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(mixedScalaVersionsLayout, V.scala213, bazelVersion)
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [],
+            |  "namespaces": {
+            |    "//lib2": {
+            |      "sources": [
+            |        "lib2/Lib2.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "${V.scala213}",
+            |      "dependsOn": [],
+            |      "classDirectories": []
+            |    },
+            |    "//lib3": {
+            |      "sources": [
+            |        "lib3/Lib3.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "${V.scala3}",
+            |      "dependsOn": [],
+            |      "classDirectories": []
             |    }
             |  }
             |}""".stripMargin,
