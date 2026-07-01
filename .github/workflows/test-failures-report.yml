@@ -13,7 +13,7 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
           persist-credentials: false
@@ -24,7 +24,7 @@ jobs:
           name: test-reports
           merge_multiple: true
       - name: Test Report
-        uses: dorny/test-reporter@29672c52a8220c09bd9f79b5b6cf6315f1763996
+        uses: dorny/test-reporter@9c978c66ab5564af606adee293b728670b2ca93c
         with:
           name: Aggregated failure reports
           path: "**/target/test-reports/*.xml"
