@@ -11,7 +11,7 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.io.AbsolutePath
 
 trait AnnotationTestFinder {
-  def expectedAnnotationSymbol: String
+  def expectedAnnotationSymbols: Set[String]
 
   def findTests(
       doc: TextDocument,
@@ -24,7 +24,7 @@ trait AnnotationTestFinder {
       symbol.kind == SymbolInformation.Kind.METHOD && symbol.annotations
         .exists(_.tpe match {
           case TypeRef(_, annotationSymbol, _) =>
-            annotationSymbol == expectedAnnotationSymbol
+            expectedAnnotationSymbols.contains(annotationSymbol)
           case _ => false
         })
     }
@@ -40,7 +40,8 @@ trait AnnotationTestFinder {
           doc
             .toLocation(uri, symbol.symbol)
             .map { location =>
-              val encodedName = NameTransformer.encode(symbol.displayName)
+              val encodedName =
+                NameTransformer.encode(symbol.displayName) + "()"
               TestCaseEntry(
                 encodedName,
                 symbol.displayName,
