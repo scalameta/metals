@@ -16,6 +16,7 @@ case class MbtNamespace(
     @Nullable classDirectories: ju.List[String] = null,
     @Nullable projectPath: String = null,
     @Nullable configurations: ju.List[String] = null,
+    @Nullable uncheckedSources: ju.List[String] = null,
 ) {
   def getSources: ju.List[String] =
     Option(this.sources).getOrElse(ju.Collections.emptyList())
@@ -33,4 +34,6 @@ case class MbtNamespace(
     Option(this.configurations)
       .map(_.asScala.toSeq)
       .getOrElse(Nil)
+  def getUncheckedSources: ju.List[String] =
+    Option(this.uncheckedSources).getOrElse(ju.Collections.emptyList())
 }

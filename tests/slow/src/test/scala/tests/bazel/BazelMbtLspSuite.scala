@@ -298,7 +298,8 @@ class BazelMbtLspSuite
             |        "//app:hello"
             |      ]
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("core/Hello.scala")
@@ -380,7 +381,8 @@ class BazelMbtLspSuite
             |      "dependsOn": [],
             |      "classDirectories": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
     } yield ()
@@ -446,7 +448,8 @@ class BazelMbtLspSuite
             |      "dependsOn": [],
             |      "classDirectories": []
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("core/Hello.scala")
@@ -558,7 +561,8 @@ class BazelMbtLspSuite
             |        "//app:main"
             |      ]
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
       _ <- server.didOpen("lib/Parser.java")
@@ -652,7 +656,8 @@ class BazelMbtLspSuite
             |        "//app:hello"
             |      ]
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}""".stripMargin,
       )
     } yield ()
