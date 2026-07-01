@@ -22,9 +22,6 @@ import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.Success
 
-import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.bsp.ProtocolExtension
-import scala.meta.internal.bsp.sync.SyncExtension
 import scala.meta.internal.bsp.sync.SyncMode
 import scala.meta.internal.bsp.sync.WorkspaceSyncParams
 import scala.meta.internal.bsp.sync.WorkspaceSyncResult
@@ -44,23 +41,20 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j._
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import org.eclipse.lsp4j.jsonrpc.JsonRpcException
-import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 
 /**
  * An actively running and initialized BSP connection
  */
-class BuildServerConnection private (
+class BuildServerConnection private[metals] (
     setupConnection: () => Future[
       BuildServerConnection.LauncherConnection
     ],
     initialConnection: BuildServerConnection.LauncherConnection,
     languageClient: ConfiguredLanguageClient,
-    reconnectNotification: DismissedNotifications#Notification,
     requestTimeOutNotification: DismissedNotifications#Notification,
+    reconnectNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
     workspace: AbsolutePath,
     supportsWrappedSources: Boolean,
@@ -631,144 +625,6 @@ class BuildServerConnection private (
 
 object BuildServerConnection {
 
-  /**
-   * Establishes a new build server connection with the given input/output streams.
-   *
-   * This method is blocking, doesn't return Future[], because if the `initialize` handshake
-   * doesn't complete within a few seconds then something is wrong. We want to fail fast
-   * when initialization is not successful.
-   *
-   * @param bspTraceRoot we look for  `bspTraceRoot/.metals/.bsp.trace.json` to write down bsp trace
-   */
-  def fromSockets(
-      projectRoot: AbsolutePath,
-      bspTraceRoot: AbsolutePath,
-      localClient: MetalsBuildClient,
-      languageClient: ConfiguredLanguageClient,
-      connect: () => Future[SocketConnection],
-      requestTimeOutNotification: DismissedNotifications#Notification,
-      reconnectNotification: DismissedNotifications#Notification,
-      config: MetalsServerConfig,
-      userConfiguration: UserConfiguration,
-      serverName: String,
-      bspStatusOpt: Option[ConnectionBspStatus] = None,
-      retry: Int = 5,
-      supportsWrappedSources: Option[Boolean] = None,
-      workDoneProgress: WorkDoneProgress,
-  )(implicit
-      ec: ExecutionContextExecutorService
-  ): Future[BuildServerConnection] = {
-
-    def setupServer(): Future[LauncherConnection] = {
-      connect().map { case conn @ SocketConnection(_, output, input, _, _) =>
-        val tracePrinter = Trace.setupTracePrinter("BSP", bspTraceRoot)
-        val requestMonitorOpt =
-          bspStatusOpt.map(new RequestMonitorImpl(_, serverName))
-        val wrapper: MessageConsumer => MessageConsumer =
-          requestMonitorOpt.map(_.wrapper).getOrElse(identity)
-        val launcher =
-          new LargeLauncher.Builder[MetalsBuildServer]()
-            .traceMessages(tracePrinter.orNull)
-            .setOutput(output)
-            .setInput(input)
-            .setLocalService(localClient)
-            .setRemoteInterface(classOf[MetalsBuildServer])
-            .setExecutorService(ec)
-            .wrapMessages(wrapper(_))
-            .create()
-        val listening = launcher.startListening()
-        val server = launcher.getRemoteProxy
-        val stopListening =
-          Cancelable(() => listening.cancel(false))
-        val result =
-          try {
-            BuildServerConnection.initialize(
-              projectRoot,
-              server,
-              serverName,
-              config,
-              userConfiguration,
-            )
-          } catch {
-            case e: TimeoutException =>
-              conn.cancelables.foreach(_.cancel())
-              stopListening.cancel()
-              scribe.error("Timeout waiting for 'build/initialize' response")
-              throw e
-          }
-
-        // For Bloop we use the `workspace/buildTargets`,
-        // since the `buildTarget/compile` request with empty targets results in an error
-        val ping: () => Unit =
-          if (serverName == BloopServers.name || ScalaCli.names(serverName))
-            () => server.workspaceBuildTargets()
-          else
-            () => server.buildTargetCompile(new CompileParams(Nil.asJava))
-
-        val optServerLivenessMonitor =
-          for {
-            bspStatus <- bspStatusOpt
-            requestMonitor <- requestMonitorOpt
-          } yield new ServerLivenessMonitor(
-            requestMonitor,
-            ping,
-            config.metalsToIdleTime,
-            config.pingInterval,
-            bspStatus,
-          )
-
-        LauncherConnection(
-          conn,
-          server,
-          result.getDisplayName(),
-          stopListening,
-          result.getVersion(),
-          result.getCapabilities(),
-          optServerLivenessMonitor,
-          extractSyncModes(result),
-        )
-      }
-    }
-
-    setupServer()
-      .map { connection =>
-        new BuildServerConnection(
-          setupServer,
-          connection,
-          languageClient,
-          requestTimeOutNotification,
-          reconnectNotification,
-          config,
-          projectRoot,
-          supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
-          workDoneProgress,
-        )
-      }
-      .recoverWith { case e: TimeoutException =>
-        if (retry > 0) {
-          scribe.warn(s"Retrying connection to the build server $serverName")
-          fromSockets(
-            projectRoot,
-            bspTraceRoot,
-            localClient,
-            languageClient,
-            connect,
-            requestTimeOutNotification,
-            reconnectNotification,
-            config,
-            userConfiguration,
-            serverName,
-            bspStatusOpt,
-            retry - 1,
-            supportsWrappedSources,
-            workDoneProgress,
-          )
-        } else {
-          Future.failed(e)
-        }
-      }
-  }
-
   final case class BspExtraBuildParams(
       javaSemanticdbVersion: String,
       semanticdbVersion: String,
@@ -780,100 +636,7 @@ object BuildServerConnection {
       enabledRules: Array[String]
   )
 
-  private def extractSyncModes(
-      result: InitializeBuildResult
-  ): Option[List[SyncMode]] = {
-    val gson = new Gson
-    try {
-      (Option(result.getDataKind), Option(result.getData)) match {
-        case (Some("extensions"), Some(data)) =>
-          val listType =
-            new TypeToken[java.util.List[ProtocolExtension]]() {}.getType
-          val tree = gson.toJsonTree(data)
-          val extensions: Option[java.util.List[ProtocolExtension]] = Option(
-            gson.fromJson(tree, listType)
-          )
-          extensions
-            .flatMap(_.asScala.find(_.getKind.toLowerCase == "sync"))
-            .map(ext => gson.toJsonTree(ext.getData))
-            .flatMap(ext => Option(gson.fromJson(ext, classOf[SyncExtension])))
-            .map(_.getModes.asScala.toList)
-        case _ =>
-          None
-      }
-    } catch {
-      case _: Exception =>
-        scribe.warn(
-          "Failed to parse protocol extensions from build/initialize result"
-        )
-        None
-    }
-  }
-
-  /**
-   * Run build/initialize handshake
-   */
-  private def initialize(
-      workspace: AbsolutePath,
-      server: MetalsBuildServer,
-      serverName: String,
-      config: MetalsServerConfig,
-      userConfiguration: UserConfiguration,
-  ): InitializeBuildResult = {
-    val isBazel = serverName == BazelBuildTool.bspName
-    val gson = new Gson
-    val (data, dataKind) =
-      if (isBazel)
-        (
-          gson.toJsonTree(
-            InitializeBuildData(BazelBuildTool.enabledRules(workspace).toArray)
-          ),
-          "bazel-data-kind",
-        )
-      else
-        (
-          gson.toJsonTree(
-            BspExtraBuildParams(
-              BuildInfo.javaSemanticdbVersion,
-              BuildInfo.scalametaVersion,
-              BuildInfo.supportedScalaVersions.asJava,
-              config.enableBestEffort || userConfiguration.enableBestEffort,
-            )
-          ),
-          "bloop-data-kind",
-        )
-
-    val capabilities = new BuildClientCapabilities(
-      List("scala", "java").asJava
-    )
-    capabilities.setJvmCompileClasspathReceiver(true)
-    val initializeResult = server.buildInitialize {
-      val params = new InitializeBuildParams(
-        "Metals",
-        BuildInfo.metalsVersion,
-        BuildInfo.bspVersion,
-        workspace.toURI.toString,
-        capabilities,
-      )
-
-      params.setData(data)
-      params.setDataKind(dataKind)
-      params
-    }
-    // Block on the `build/initialize` request because it should respond instantly by Bloop
-    // and we want to fail fast if the connection is not made
-    val result =
-      if (serverName == BloopServers.name) {
-        initializeResult.get(20, TimeUnit.SECONDS)
-      } else {
-        initializeResult.get(60, TimeUnit.SECONDS)
-      }
-
-    server.onBuildInitialized()
-    result
-  }
-
-  private case class LauncherConnection(
+  private[metals] case class LauncherConnection(
       socketConnection: SocketConnection,
       server: MetalsBuildServer,
       displayName: String,
