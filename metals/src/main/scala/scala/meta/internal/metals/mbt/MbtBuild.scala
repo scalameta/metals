@@ -185,6 +185,25 @@ object MbtBuild {
     s"mbt://namespace/$name"
   }
 
+  // A synthetic version-branch namespace is named `<origin>@<scala version>`,
+  // and the version always comes from a `:scala_version_<x_y_z>` config setting
+  // (see `BazelBuildSrcs`), i.e. exactly three numeric components. Requiring all
+  // three avoids treating a real package that merely ends in `@<major>.<minor>`
+  // (e.g. `//commons-io@2.11`) as a version branch.
+  private val versionBranchSuffix = """@\d+\.\d+\.\d+$""".r
+
+  /**
+   * Whether a build target id names a synthetic `<origin>@<scala version>`
+   * namespace — sources from an inactive cross-version `select()` branch
+   * (the Bazel importer's naming; see `BazelMbtBuildSupport`). Such sources
+   * are NOT compiled in the default configuration, so when a symbol is also
+   * defined by a source of a real namespace, the real one is the better
+   * definition target.
+   */
+  def isVersionBranchNamespaceUri(uri: String): Boolean =
+    uri.startsWith("mbt://namespace/") &&
+      versionBranchSuffix.findFirstIn(uri).nonEmpty
+
   /**
    * Merge two [[MbtBuild]] values produced by different importers.
    *

@@ -11,6 +11,8 @@ import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtCrossVersionDefinition
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
@@ -71,7 +73,13 @@ final class DefinitionProvider(
     protobufLspConfig: () => ProtobufLspConfig,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
-  private val fallback = new FallbackDefinitionProvider(trees, index)
+  private val fallback =
+    new FallbackDefinitionProvider(
+      trees,
+      index,
+      (source, candidates) =>
+        destinationProvider.orderDefinitionsForSource(source, candidates),
+    )
   private val protobufDefinitions = new DefinitionProviderProtobufSupport(
     workspace,
     buffers,
@@ -484,33 +492,127 @@ class DestinationProvider(
       source: Option[AbsolutePath],
   ): Option[SymbolDefinition] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    definition(symbol, targets)
+    definition(symbol, targets, source.flatMap(buildTargets.scalaVersion))
   }
 
   def definition(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String] = None,
   ): Option[SymbolDefinition] = {
-    val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
-    val result =
-      if (allowedBuildTargets.isEmpty)
-        definitions.headOption
-      else {
-        val matched = definitions.find { defn =>
-          sourceBuildTargets(defn.path).exists(id =>
-            allowedBuildTargets.contains(id)
-          )
+    val candidates = index.definitions(Symbol(symbol)).filter(_.path.exists)
+    pickDefinition(candidates, allowedBuildTargets, preferredScalaVersion)(
+      _.path
+    ).orElse(definitionFromMbt(symbol))
+  }
+
+  /**
+   * Choose the best definition of one symbol among `candidates`.
+   *
+   * When the import produced per-Scala-version copies of a source (a Bazel
+   * `select_for_scala_version` cross-build, see [[MbtCrossVersionDefinition]]),
+   * pick the copy whose namespace Scala version matches the requesting source,
+   * with reachability only breaking ties. Otherwise keep the original
+   * behaviour: the index's natural order, filtered to a reachable build target.
+   */
+  private def mbtCandidateInfo(
+      path: AbsolutePath,
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+  ): MbtCrossVersionDefinition.Candidate = {
+    val ids = sourceBuildTargets(path)
+    MbtCrossVersionDefinition.Candidate(
+      path = path.toString,
+      targetUris = ids.map(_.getUri),
+      scalaVersions =
+        ids.flatMap(id => buildTargets.scalaTarget(id).map(_.scalaVersion)),
+      reachable = ids.exists(allowedBuildTargets.contains),
+    )
+  }
+
+  private def pickDefinition[T](
+      candidates: List[T],
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String],
+  )(pathOf: T => AbsolutePath): Option[T] = {
+    val annotated =
+      candidates.map(c => c -> mbtCandidateInfo(pathOf(c), allowedBuildTargets))
+    if (annotated.exists { case (_, info) => info.isVersionBranch }) {
+      annotated
+        .sortBy { case (_, info) => info.rankKey(preferredScalaVersion) }
+        .headOption
+        .map { case (candidate, _) => candidate }
+    } else if (allowedBuildTargets.isEmpty) {
+      candidates.headOption
+    } else {
+      // Fallback to any definition - it's needed for worksheets. They might
+      // have dynamic `import $dep` and these sources jars aren't registered in
+      // buildTargets.
+      candidates
+        .find(candidate =>
+          sourceBuildTargets(pathOf(candidate)).exists(allowedBuildTargets)
+        )
+        .orElse(candidates.headOption)
+    }
+  }
+
+  /**
+   * Order candidate definitions of a single symbol best-first for navigation
+   * from `source`. Used by the guess-based [[FallbackDefinitionProvider]], which
+   * is reached for cross-package Java symbols an MBT presentation compiler can't
+   * resolve. Version-aware when the candidates include Bazel cross-version
+   * copies (so a Scala 3 caller lands on the Scala 3 copy); otherwise the legacy
+   * real-namespace-first order, leaving non-Bazel-MBT resolution unchanged.
+   */
+  def orderDefinitionsForSource(
+      source: AbsolutePath,
+      candidates: List[SymbolDefinition],
+  ): List[SymbolDefinition] = {
+    val allowed = sourceToAllowedBuildTargets(source)
+    val annotated = candidates.map(c => c -> mbtCandidateInfo(c.path, allowed))
+    if (annotated.exists { case (_, info) => info.isVersionBranch })
+      annotated
+        .sortBy { case (_, info) =>
+          info.rankKey(buildTargets.scalaVersion(source))
         }
-        // Fallback to any definition - it's needed for worksheets
-        // They might have dynamic `import $dep` and these sources jars
-        // aren't registered in buildTargets
-        matched.orElse(definitions.headOption)
+        .map { case (candidate, _) => candidate }
+    else rankMbtCandidates(candidates)(_.path)
+  }
+
+  /**
+   * When several workspace files define the same symbol and some belong to a
+   * synthetic `<origin>@<version>` namespace (sources of an inactive Bazel
+   * cross-version `select()` branch — e.g. per-Scala-version copies of the
+   * same Java class), prefer the copies the build actually compiles: sources
+   * of a real namespace first, inactive-branch sources next, files outside
+   * any build target last; ties break by path for determinism. Candidate
+   * lists without inactive-branch members are returned untouched, so
+   * non-Bazel-MBT resolution order is unaffected.
+   */
+  def rankMbtCandidates[T](
+      candidates: List[T]
+  )(pathOf: T => AbsolutePath): List[T] = {
+    def targetIds(candidate: T): List[BuildTargetIdentifier] =
+      sourceBuildTargets(pathOf(candidate))
+    def isVersionBranch(candidate: T): Boolean = {
+      val ids = targetIds(candidate)
+      ids.nonEmpty &&
+      ids.forall(id => MbtBuild.isVersionBranchNamespaceUri(id.getUri))
+    }
+    if (candidates.lengthCompare(1) <= 0 || !candidates.exists(isVersionBranch))
+      candidates
+    else
+      candidates.sortBy { candidate =>
+        val score =
+          if (isVersionBranch(candidate)) 1
+          else if (targetIds(candidate).nonEmpty) 0
+          else 2
+        (score, pathOf(candidate).toString)
       }
-    result.orElse(definitionFromMbt(symbol))
   }
 
   private def definitionFromMbt(symbol: String): Option[SymbolDefinition] = {
-    val mbtDefinitions = mbt.definition(symbol)
+    val mbtDefinitions =
+      rankMbtCandidates(mbt.definition(symbol))(_.getUri.toAbsolutePath)
     scribe.info(
       s"MBT fallback for symbol $symbol: found ${mbtDefinitions.size} definitions"
     )
@@ -556,42 +658,44 @@ class DestinationProvider(
   def fromSymbol(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String] = None,
   ): Option[DefinitionResult] = {
-    definition(symbol, allowedBuildTargets).flatMap { defn =>
-      val destinationPath =
-        if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
-        else defn.path
-      val uri = destinationPath.toURI.toString
+    definition(symbol, allowedBuildTargets, preferredScalaVersion).flatMap {
+      defn =>
+        val destinationPath =
+          if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
+          else defn.path
+        val uri = destinationPath.toURI.toString
 
-      defn.range match {
-        // read only source - no need to adjust positions
-        case Some(range) if defn.path.isJarFileSystem =>
-          Some(
-            DefinitionResult(
-              ju.Collections.singletonList(range.toLocation(uri)),
+        defn.range match {
+          // read only source - no need to adjust positions
+          case Some(range) if defn.path.isJarFileSystem =>
+            Some(
+              DefinitionResult(
+                ju.Collections.singletonList(range.toLocation(uri)),
+                defn.definitionSymbol.value,
+                Some(defn.path),
+                None,
+                defn.querySymbol.value,
+              )
+            )
+          case _ =>
+            val destinationDoc = bestTextDocument(defn)
+            val destinationDistance =
+              buffers.tokenEditDistance(
+                destinationPath,
+                destinationDoc.text,
+                scalaVersionSelector,
+              )
+            DefinitionDestination(
+              destinationDoc,
+              destinationDistance,
               defn.definitionSymbol.value,
-              Some(defn.path),
-              None,
+              Some(destinationPath),
+              uri,
               defn.querySymbol.value,
-            )
-          )
-        case _ =>
-          val destinationDoc = bestTextDocument(defn)
-          val destinationDistance =
-            buffers.tokenEditDistance(
-              destinationPath,
-              destinationDoc.text,
-              scalaVersionSelector,
-            )
-          DefinitionDestination(
-            destinationDoc,
-            destinationDistance,
-            defn.definitionSymbol.value,
-            Some(destinationPath),
-            uri,
-            defn.querySymbol.value,
-          ).toResult
-      }
+            ).toResult
+        }
     }
   }
 
@@ -600,7 +704,7 @@ class DestinationProvider(
       source: Option[AbsolutePath],
   ): Option[DefinitionResult] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    fromSymbol(symbol, targets)
+    fromSymbol(symbol, targets, source.flatMap(buildTargets.scalaVersion))
   }
 
   private def sourceToAllowedBuildTargets(

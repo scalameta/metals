@@ -5,13 +5,16 @@ import javax.annotation.Nullable
 
 import scala.jdk.CollectionConverters._
 
+// Every field defaults to its empty/absent value so a namespace can be built
+// with only the attributes that actually apply (named arguments acting as the
+// builder), instead of threading explicit empty lists through every call site.
 case class MbtNamespace(
-    @Nullable sources: ju.List[String],
-    @Nullable scalacOptions: ju.List[String],
-    @Nullable javacOptions: ju.List[String],
+    @Nullable sources: ju.List[String] = null,
+    @Nullable scalacOptions: ju.List[String] = null,
+    @Nullable javacOptions: ju.List[String] = null,
     @Nullable dependencyModules: ju.List[String] = ju.Collections.emptyList(),
-    @Nullable scalaVersion: String,
-    @Nullable javaHome: String,
+    @Nullable scalaVersion: String = null,
+    @Nullable javaHome: String = null,
     @Nullable dependsOn: ju.List[String] = null,
     @Nullable classDirectories: ju.List[String] = null,
     @Nullable projectPath: String = null,

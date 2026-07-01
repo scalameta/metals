@@ -29,12 +29,34 @@ object BazelQuery {
       javaHome: Option[String],
   )
 
-  sealed abstract class OutputMode(name: String) {
+  sealed abstract class OutputMode(name: String, val extraArgs: List[String]) {
     override def toString(): String = name
   }
   object OutputMode {
-    case object Label extends OutputMode("label")
-    case object Xml extends OutputMode("xml")
+    case object Label extends OutputMode("label", Nil)
+
+    /**
+     * `--output=streamed_jsonproto` prints one `Target` protocol buffer per line
+     * as JSON. With `--proto:flatten_selects=false` it preserves each `srcs`
+     * `select()` (every branch keyed by its `config_setting` label), unlike
+     * `xml`/`label`, which flatten every branch into one list. This lets us see
+     * which source files belong to which `scala_version` `config_setting` branch
+     * without configuring (analyzing) the build. `streamed_jsonproto` (rather
+     * than `jsonproto`) emits newline-delimited JSON, sidestepping the
+     * invalid-JSON-for-multiple-targets bug in `jsonproto`.
+     *
+     * `--proto:output_rule_attrs` trims each `Target` to only the attributes
+     * the importer reads; `ruleClass`/`ruleInput`/`ruleOutput` are top-level
+     * `Rule` fields, not attributes, so they are unaffected by the filter.
+     */
+    case object StreamedJsonProto
+        extends OutputMode(
+          "streamed_jsonproto",
+          List(
+            "--proto:flatten_selects=false",
+            "--proto:output_rule_attrs=srcs,scalacopts,javacopts,scala_version",
+          ),
+        )
   }
   import OutputMode._
 
@@ -83,14 +105,20 @@ object BazelQuery {
         Some(s""""$target"""")
     } else Some(target)
 
+  /**
+   * Queries the transitive closure of `targets` as `streamed_jsonproto` so each
+   * `srcs` `select()` is preserved (mapping e.g. the Scala 3 branch of a
+   * `select_for_scala_version` target to its Scala version) while still
+   * carrying every target's `ruleClass`, `ruleInput`, `ruleOutput`, and the
+   * remaining attributes the importer reads. This single query supersedes the
+   * former pair of an `xml` `deps()` query (which had to flatten `select()`)
+   * and a separate select-aware query over the leaf targets.
+   */
   def fullInformationQuery(targets: List[String]): BazelQuery = {
     val escaped = targets.flatMap(quoteTarget)
     val query = s"deps(set(${escaped.mkString(" ")}))"
-    BazelQuery(query, outputMode = Xml)
+    BazelQuery(query, outputMode = StreamedJsonProto)
   }
-
-  def allScalaLibrariesQuery: BazelQuery =
-    BazelQuery("filter('scala.library', deps(//...))", outputMode = Label)
 
   private val ruleKinds: List[String] =
     List(
@@ -119,8 +147,7 @@ case class BazelQuery(
           "bazel",
           "query",
           s"--output=$outputMode",
-          "--keep_going",
-        ) ++ queryArgs,
+        ) ++ outputMode.extraArgs ++ List("--keep_going") ++ queryArgs,
         projectRoot,
         redirectErrorOutput = false,
         javaHome,
