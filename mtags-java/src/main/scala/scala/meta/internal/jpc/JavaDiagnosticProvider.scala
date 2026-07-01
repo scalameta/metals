@@ -37,6 +37,10 @@ class JavaDiagnosticProvider(
         compiler,
         compile,
         params.text()
+      ).diagnostics() ++
+      new UnusedImportDiagnosticProvider(
+        compile,
+        params.text()
       ).diagnostics()
   }
 

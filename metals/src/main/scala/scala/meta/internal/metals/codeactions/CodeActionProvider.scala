@@ -62,6 +62,7 @@ final class CodeActionProvider(
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
     new AddMissingOverrideAnnotation(javaTrees, buffers),
+    new RemoveUnusedJavaImport(buffers),
     new GenerateConstructors(javaTrees, buffers),
     new GenerateGettersSetters(javaTrees, buffers),
     new GenerateEqualsHashCodeToString(javaTrees, buffers),
