@@ -150,6 +150,10 @@ final class BuildTools(
     _.resolve(DederBuildTool.buildFile).isFile
   )
   def isDeder: Boolean = dederProject.isDefined
+  def bazelNativeProject: Option[AbsolutePath] = searchForBuildTool(
+    BazelBuildTool.workspaceSupportsBsp(_)
+  )
+  def isBazelNative: Boolean = bazelNativeProject.isDefined
 
   def isInBsp(path: AbsolutePath): Boolean =
     path.isFile && path.parent.filename == ".bsp" &&
@@ -188,6 +192,7 @@ final class BuildTools(
       MillBuildTool.bspName,
       BazelBuildTool.bspName,
       DederBuildTool.bspName,
+      BazelNativeBuildTool.bspName,
     ) ++ ScalaCli.names
 
   private def customProjectRoot = userConfig().getCustomProjectRoot(workspace)
@@ -220,6 +225,7 @@ final class BuildTools(
       ScalaCliBuildTool(workspace, workspace, userConfig),
       BazelBuildTool(userConfig, workspace),
       DederBuildTool(userConfig, workspace),
+      BazelNativeBuildTool(userConfig, workspace),
     )
   }
 
@@ -232,6 +238,7 @@ final class BuildTools(
     if (isMaven) buf += "Maven"
     if (isBazel) buf += "Bazel"
     if (isDeder) buf += "Deder"
+    if (isBazelNative) buf += "Bazel Native"
     buf.result()
   }
 
@@ -249,6 +256,7 @@ final class BuildTools(
     scalaCliProject.foreach(buf += ScalaCliBuildTool(workspace, _, userConfig))
     bazelProject.foreach(buf += BazelBuildTool(userConfig, _))
     dederProject.foreach(buf += DederBuildTool(userConfig, _))
+    bazelNativeProject.foreach(buf += BazelNativeBuildTool(userConfig, _))
     buf.addAll(customBsps)
 
     buf.result()
@@ -275,6 +283,12 @@ final class BuildTools(
       Some(BazelBuildTool.name)
     else if (dederProject.exists(DederBuildTool.isDederRelatedPath(_, path)))
       Some(DederBuildTool.name)
+    else if (
+      bazelNativeProject.exists(
+        BazelNativeBuildTool.isBazelNativeRelatedPath(_, path)
+      )
+    )
+      Some(BazelNativeBuildTool.name)
     else if (isInBsp(path)) {
       val name = path.filename.stripSuffix(".json")
       if (knownBsps(name) && !ScalaCli.names(name)) None
@@ -326,5 +340,6 @@ object BuildTools {
     ScalaCliBuildTool.name,
     BazelBuildTool.name,
     DederBuildTool.name,
+    BazelNativeBuildTool.name,
   )
 }

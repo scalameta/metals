@@ -24,6 +24,7 @@ import scala.util.Success
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BazelBuildTool
+import scala.meta.internal.builds.BazelNativeBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -103,6 +104,8 @@ class BuildServerConnection private (
   def isMill: Boolean = name == MillBuildTool.bspName
 
   def isBazel: Boolean = name == BazelBuildTool.bspName
+
+  def isBazelNative: Boolean = name == BazelNativeBuildTool.bspName
 
   def isScalaCLI: Boolean = ScalaCli.names(name)
 
@@ -758,6 +761,7 @@ object BuildServerConnection {
       userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
     val isBazel = serverName == BazelBuildTool.bspName
+    val isBazelNative = serverName == BazelNativeBuildTool.bspName
     val gson = new Gson
     val (data, dataKind) =
       if (isBazel)
@@ -766,6 +770,13 @@ object BuildServerConnection {
             InitializeBuildData(BazelBuildTool.enabledRules(workspace).toArray)
           ),
           "bazel-data-kind",
+        )
+      else if (isBazelNative)
+        (
+          gson.toJsonTree(
+            InitializeBuildData(BazelBuildTool.enabledRules(workspace).toArray)
+          ),
+          "bazel-native-data-kind",
         )
       else
         (

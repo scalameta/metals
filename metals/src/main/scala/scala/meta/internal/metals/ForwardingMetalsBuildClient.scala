@@ -167,6 +167,9 @@ final class ForwardingMetalsBuildClient(
 
   @JsonNotification("build/taskStart")
   def buildTaskStart(params: b.TaskStartParams): Unit = {
+    scribe.debug(
+      s"build/taskStart: dataKind=${params.getDataKind}, message=${params.getMessage}"
+    )
     params.getDataKind match {
       case b.TaskStartDataKind.COMPILE_TASK =>
         if (
@@ -174,9 +177,14 @@ final class ForwardingMetalsBuildClient(
         ) {
           scribe.info(params.getMessage.toLowerCase())
         }
+        val compileTaskOpt = params.asCompileTask
+        scribe.debug(s"build/taskStart: compileTask=$compileTaskOpt")
         for {
-          task <- params.asCompileTask
+          task <- compileTaskOpt
           target = task.getTarget
+          _ = scribe.debug(
+            s"build/taskStart: target=${target.getUri}, infoExists=${buildTargets.info(target).isDefined}"
+          )
           info <- buildTargets.info(target)
         } {
           diagnostics.onStartCompileBuildTarget(target)
@@ -270,10 +278,17 @@ final class ForwardingMetalsBuildClient(
         if uri.isString
       } yield new b.BuildTargetIdentifier(uri.getAsString)
 
+    scribe.debug(
+      s"build/taskProgress: dataKind=${params.getDataKind}, progress=${params.getProgress}/${params.getTotal}"
+    )
     params.getDataKind match {
-      case "bloop-progress" =>
+      case "bloop-progress" | "bazel-progress" =>
+        val targetOpt = buildTargetFromParams
+        scribe.debug(
+          s"build/taskProgress: target=$targetOpt, compilationsHas=${targetOpt.flatMap(compilations.get).isDefined}"
+        )
         for {
-          buildTarget <- buildTargetFromParams
+          buildTarget <- targetOpt
           report <- compilations.get(buildTarget)
         } yield {
           report.updateProgress(params.getProgress, params.getTotal)
