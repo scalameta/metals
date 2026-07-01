@@ -95,21 +95,21 @@ class InlineValueCodeAction(
     )
 
   /**
-   * Whether the cursor is on a value that is safe to inline within the file: a
-   * local value inside any block (method body, initializer, lambda, ...), or a
-   * `private` field of the enclosing class.
+   * Whether the cursor is on an identifier, we can inline the value.
+   * We might remove the definition is it's private or inside a block.
    */
   private def isInlinableJavaValue(
       path: AbsolutePath,
       position: l.Position,
   ): Boolean = {
-    // Local values live inside a block; a private field is the only top-level
-    // member safe to inline within the file (only locals can be private, so a
-    // private variable at the cursor is necessarily a field).
-    def insideBlock = javaTrees.isInsideBlock(path, position)
-    def onPrivateField =
-      javaTrees.findEnclosingJavaVariable(path, position).exists(_.isPrivate)
-    insideBlock || onPrivateField
+    javaTrees
+      .findEnclosingIdentifier(path, position)
+      .orElse {
+        javaTrees.findEnclosingJavaVariable(path, position).filter { v =>
+          v.tree.getInitializer() != null
+        }
+      }
+      .isDefined
   }
 
   private def isLocal(definition: Tree): Boolean =
@@ -180,16 +180,6 @@ class InlineValueCodeAction(
         }
         ()
       }
-      .recover(
-        // The presentation compiler reports an impossible inline (e.g. a
-        // reassigned value) as a DisplayableException; show it instead of
-        // inlining. Other failures propagate as usual.
-        getOptDisplayableMessage.andThen { message =>
-          languageClient.showMessage(
-            new l.MessageParams(l.MessageType.Warning, message)
-          )
-        }
-      )
 
   private def getTermNameForPos(
       path: AbsolutePath,

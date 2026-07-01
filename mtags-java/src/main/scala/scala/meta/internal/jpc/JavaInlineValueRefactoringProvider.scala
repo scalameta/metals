@@ -14,6 +14,7 @@ import scala.meta.internal.pc.Reference
 import scala.meta.pc.OffsetParams
 
 import com.sun.source.tree.ArrayAccessTree
+import com.sun.source.tree.ArrayTypeTree
 import com.sun.source.tree.AssignmentTree
 import com.sun.source.tree.BinaryTree
 import com.sun.source.tree.CompilationUnitTree
@@ -23,6 +24,7 @@ import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.InstanceOfTree
 import com.sun.source.tree.LambdaExpressionTree
 import com.sun.source.tree.MemberSelectTree
+import com.sun.source.tree.NewArrayTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.TypeCastTree
 import com.sun.source.tree.UnaryTree
@@ -144,9 +146,10 @@ final class JavaInlineValueRefactoringProvider(
               if (edits.contains(None)) Left(Errors.didNotFindReference)
               else {
                 val defEnd = endWithSemicolon(rhsEnd)
+                val rhsText = formatInitializer(varTree, init, rhsStart, rhsEnd)
                 val definition = Definition(
                   toRange(defStart, defEnd),
-                  sourceText.substring(rhsStart, rhsEnd),
+                  rhsText,
                   RangeOffset(defStart, defEnd),
                   initializerNeedsBrackets(init),
                   requiresCurlyBraces = false,
@@ -224,11 +227,38 @@ final class JavaInlineValueRefactoringProvider(
       case _ => false
     }
 
+  private def formatInitializer(
+      varTree: VariableTree,
+      init: Tree,
+      rhsStart: Int,
+      rhsEnd: Int
+  ): String = {
+    val rawText = sourceText.substring(rhsStart, rhsEnd)
+    init match {
+      case arr: NewArrayTree
+          if arr.getDimensions().isEmpty && arr.getInitializers() != null =>
+        extractArrayType(varTree.getType()) match {
+          case Some(elementType) => s"new $elementType[]$rawText"
+          case None => rawText
+        }
+      case _ => rawText
+    }
+  }
+
+  private def extractArrayType(typeTree: Tree): Option[String] =
+    typeTree match {
+      case arr: ArrayTypeTree => Some(arr.getType().toString())
+      case _ => None
+    }
+
   private def referenceNeedsBrackets(path: TreePath): Boolean = {
     val node = path.getLeaf()
     Option(path.getParentPath()).map(_.getLeaf()) match {
-      // A left-associative operand keeps its meaning without brackets.
-      case Some(binary: BinaryTree) => binary.getRightOperand() == node
+      case Some(binary: BinaryTree) =>
+        binary.getRightOperand() == node ||
+        (binary.getLeftOperand() == node && hasHigherPrecedenceThanAdditive(
+          binary.getKind()
+        ))
       case Some(select: MemberSelectTree) => select.getExpression() == node
       case Some(access: ArrayAccessTree) => access.getExpression() == node
       case Some(_: UnaryTree) => true
@@ -236,6 +266,11 @@ final class JavaInlineValueRefactoringProvider(
       case _ => false
     }
   }
+
+  private def hasHigherPrecedenceThanAdditive(kind: Tree.Kind): Boolean =
+    kind == Tree.Kind.MULTIPLY ||
+      kind == Tree.Kind.DIVIDE ||
+      kind == Tree.Kind.REMAINDER
 
   /** Collects every tree resolving to `target` (the declaration and usages). */
   private final class OccurrenceScanner(

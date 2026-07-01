@@ -1,6 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.GenerateGettersSetters
+import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 
 import tests.MbtTestInitializer
 
@@ -379,7 +380,8 @@ class GenerateGettersSettersLspSuite
        |  private final String <<name>> = "";
        |}
        |""".stripMargin,
-    s"""|${GenerateGettersSetters.titleGetter("name")}
+    s"""|${InlineValueCodeAction.genericTitle}
+        |${GenerateGettersSetters.titleGetter("name")}
         |""".stripMargin,
     """|package a;
        |
@@ -391,7 +393,7 @@ class GenerateGettersSettersLspSuite
        |  }
        |}
        |""".stripMargin,
-    selectedActionIndex = 0,
+    selectedActionIndex = 1,
     fileName = "Example.java",
   )
 

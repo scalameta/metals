@@ -146,6 +146,60 @@ class JavaInlineValueCodeActionSuite
        |""".stripMargin,
   )
 
+  check(
+    "single-use-keeps-definition",
+    """|public class Example {
+       |  int x = 1;
+       |  int run() {
+       |    return <<x>>;
+       |  }
+       |}""".stripMargin,
+    InlineValueCodeAction.genericTitle,
+    """|public class Example {
+       |  int x = 1;
+       |  int run() {
+       |    return 1;
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "binary-precedence-needs-brackets",
+    """|public class Example {
+       |  int run() {
+       |    int x = 1 + 2;
+       |    return <<x>> * 3;
+       |  }
+       |}
+       |""".stripMargin,
+    InlineValueCodeAction.genericTitle,
+    """|public class Example {
+       |  int run() {
+       |    return (1 + 2) * 3;
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "array-initializer",
+    """|public class Example {
+       |  int run() {
+       |    int[] arr = {1, 2, 3};
+       |    return <<arr>>.length;
+       |  }
+       |}
+       |""".stripMargin,
+    InlineValueCodeAction.genericTitle,
+    """|public class Example {
+       |  int run() {
+       |    return new int[]{1, 2, 3}.length;
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
   def check(
       name: TestOptions,
       input: String,
@@ -192,4 +246,33 @@ class JavaInlineValueCodeActionSuite
       InlineValueCodeAction.genericTitle,
       input.replace("<<", "").replace(">>", ""),
     )
+
+  /**
+   * The cheap check correctly determines that no inline action should be offered
+   * (e.g. a non-private field reference).
+   */
+  def checkNoAction(
+      name: TestOptions,
+      input: String,
+  )(implicit loc: Location): Unit =
+    testLSP(name) {
+      cleanWorkspace()
+      val path = "a/src/main/java/a/Example.java"
+      val fileContent = input.replace("<<", "").replace(">>", "")
+      val layout =
+        s"""|/metals.json
+            |{"a": {}}
+            |/$path
+            |$fileContent""".stripMargin
+      for {
+        _ <- initialize(layout)
+        _ <- server.didOpen(path)
+        _ <- server.assertCodeAction(
+          path,
+          input,
+          "",
+          List(l.CodeActionKind.RefactorInline),
+        )
+      } yield ()
+    }
 }
