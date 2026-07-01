@@ -291,12 +291,16 @@ final class ForwardingMetalsBuildClient(
   }
 
   @JsonNotification("run/printStdout")
-  def runPrintStdout(params: b.PrintParams): Unit =
+  def runPrintStdout(params: b.PrintParams): Unit = {
+    forwarders.get().foreach(_.info(params.getMessage()))
     runPrintOutput(params)
+  }
 
   @JsonNotification("run/printStderr")
-  def runPrintStderr(params: b.PrintParams): Unit =
+  def runPrintStderr(params: b.PrintParams): Unit = {
+    forwarders.get().foreach(_.error(params.getMessage()))
     runPrintOutput(params)
+  }
 
   def runPrintOutput(params: b.PrintParams): Unit = {
     def createTerminal(name: String): String = {

@@ -1372,7 +1372,11 @@ class WorkspaceLspService(
           ServerCommands.GotoLog.title,
         ).asJavaObject
 
-      case ServerCommands.StartDebugAdapter(params) if params.getData != null =>
+      case ServerCommands.StartDebugAdapter(debugAdapterParams)
+          if debugAdapterParams.data != null =>
+        val params = new b.DebugSessionParams(debugAdapterParams.targets)
+        params.setDataKind(debugAdapterParams.dataKind)
+        params.setData(debugAdapterParams.data)
         val targets = params.getTargets().asScala
         folderServices
           .find(s => targets.forall(s.supportsBuildTarget(_).isDefined))
@@ -1387,7 +1391,10 @@ class WorkspaceLspService(
             val language = languageFromTargets(supportedTargets)
             val testName = testNameFromDebugSession(params)
             recordRunDebugEvent(language, testName)
-            service.startDebugProvider(params).liftToLspError.asJavaObject
+            service
+              .startDebugProvider(params, debugAdapterParams.noDebug)
+              .liftToLspError
+              .asJavaObject
           case None =>
             failedRequest(
               s"Could not find folder for build targets: ${targets.mkString(",")}"

@@ -388,6 +388,21 @@ class BuildServerConnection private (
     completableFuture.asScala
   }
 
+  def buildTargetTest(
+      params: TestParams,
+      cancelPromise: Promise[Unit],
+  ): Future[RunResult] = {
+    val completableFuture = register(server =>
+      server
+        .buildTargetTest(params)
+        .thenApply(result => new RunResult(result.getStatusCode()))
+    )
+    cancelPromise.future.foreach { _ =>
+      completableFuture.cancel(true)
+    }
+    completableFuture.asScala
+  }
+
   def buildTargetJvmClasspath(
       params: JvmCompileClasspathParams,
       cancelPromise: Promise[Unit],

@@ -720,6 +720,25 @@ object MbtBuildServer {
   def isMbtServer(name: String): Boolean =
     name == MbtBuildServer.name
 
+  def decodeTestSuites(data: Any): Option[ScalaTestSuites] =
+    data match {
+      case json: com.google.gson.JsonElement =>
+        // TestSuitesProvider (test explorer) sends ScalaTestSuites
+        json
+          .as[ScalaTestSuites]
+          .toOption
+          .orElse(
+            // RunTestCodeLens (code lenses) sends a plain list of class names
+            json.as[java.util.List[String]].toOption.map { tests =>
+              val suites = tests.asScala
+                .map(new ScalaTestSuiteSelection(_, List.empty.asJava))
+                .asJava
+              new ScalaTestSuites(suites, List.empty.asJava, List.empty.asJava)
+            }
+          )
+      case _ => None
+    }
+
   def newServer(
       workspace: AbsolutePath,
       buildClient: MetalsBuildClient,
