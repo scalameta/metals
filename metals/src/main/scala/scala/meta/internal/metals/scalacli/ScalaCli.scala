@@ -19,7 +19,6 @@ import scala.util.Properties
 import scala.util.Success
 import scala.util.control.NonFatal
 
-import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildServerConnection
@@ -207,21 +206,22 @@ class ScalaCli(
       val f = futureConn.flatMap { conn =>
         state.set(ConnectionState.Connected(path, conn, ImportedBuild.empty))
         scribe.info(s"Connected to Scala CLI server v${conn.version}")
-        importBuild().map { _ =>
-          BuildChange.Reconnected
-        }
+        importBuild()
       }
 
       f.transform {
         case Failure(ex) =>
           scribe.error("Error starting Scala CLI", ex)
+          disconnectOldBuildServer()
           Success(())
         case Success(_) =>
           scribe.info(s"Scala CLI started for $path")
           Success(())
       }
     } else {
-      scribe.error(s"Multiply Scala CLI start calls. Failed for: $path")
+      scribe.error(
+        s"Aborting the Scala CLI startup because another startup call is in progress. Workspace folder: $path"
+      )
       Future.unit
     }
   }
