@@ -17,6 +17,7 @@ import ch.epfl.scala.bsp4j.JvmEnvironmentItem
 import ch.epfl.scala.bsp4j.MavenDependencyModule
 import ch.epfl.scala.debugadapter.Library
 import ch.epfl.scala.debugadapter.Module
+import ch.epfl.scala.debugadapter.ModuleEntry
 import ch.epfl.scala.debugadapter.ScalaVersion
 import ch.epfl.scala.debugadapter.SourceDirectory
 import ch.epfl.scala.debugadapter.SourceJar
@@ -161,7 +162,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
 case class DebugeeProject(
     scalaVersion: Option[String],
     name: String,
-    modules: Seq[Module],
+    modules: Seq[ModuleEntry],
     libraries: Seq[Library],
     unmanagedEntries: Seq[UnmanagedEntry],
     runClassPath: List[AbsolutePath],

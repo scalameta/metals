@@ -9,6 +9,7 @@ import ch.epfl.scala.debugadapter.Debuggee
 import ch.epfl.scala.debugadapter.JavaRuntime
 import ch.epfl.scala.debugadapter.Library
 import ch.epfl.scala.debugadapter.Module
+import ch.epfl.scala.debugadapter.ModuleEntry
 import ch.epfl.scala.debugadapter.ScalaVersion
 import ch.epfl.scala.debugadapter.UnmanagedEntry
 
@@ -21,7 +22,9 @@ abstract class MetalsDebuggee(
     project.scalaVersion.getOrElse(BuildInfo.version)
   )
 
-  override def modules: Seq[Module] = project.modules
+  override def modules: Seq[Module] =
+    project.modules.collect { case module: Module => module }
+  override def moduleEntries: Seq[ModuleEntry] = project.modules
   override def libraries: Seq[Library] = project.libraries
   override def unmanagedEntries: Seq[UnmanagedEntry] = project.unmanagedEntries
 

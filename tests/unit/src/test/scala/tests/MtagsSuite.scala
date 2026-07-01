@@ -54,7 +54,9 @@ abstract class MtagsSuite(
                   if fileSymtab.info(occ.symbol).isEmpty &&
                     !occ.symbol.endsWith("/") =>
                 val pos = input.toPosition(occ)
-                pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
+                pos
+                  .formatMessage("error", s"unknown symbol: ${occ.symbol}")
+                  .stripLineEnd
             }
           val unknownSymbols = allUnknownSymbols.filterNot(msg => {
             documentedUnknownSymbols.exists { sym =>

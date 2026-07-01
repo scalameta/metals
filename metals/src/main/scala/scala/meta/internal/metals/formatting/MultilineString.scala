@@ -259,8 +259,7 @@ case class MultilineString(userConfig: () => UserConfiguration)
   }
 
   private def addTripleQuote(pos: Position): List[TextEdit] = {
-    val endPos = new Position(pos.getLine, pos.getCharacter + 1)
-    List(new TextEdit(new Range(pos, endPos), "\"\"\""))
+    List(new TextEdit(new Range(pos, pos), "\"\"\""))
   }
 
   private def formatPipeLine(

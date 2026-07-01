@@ -98,25 +98,19 @@ case class MavenBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
   ): List[String] = {
-    val artifactId = {
-      val parts = target.name.split(':')
-      if (parts.length >= 2) parts(1) else target.name
-    }
-    // For test targets we need test-compile so target/test-classes is populated
-    // before the DAP server's SourceLookUpProvider scans the class directory.
-    // Otherwise breakpoints in test sources can't be bound. For main targets we
-    // keep `install` so downstream modules can resolve the artifact.
-    val phase = if (target.isTestTarget) "test-compile" else "install"
     mbtMavenBaseCommand(workspace) ::: List(
       "-q"
-    ) ::: mavenCliConfigurations(target) ::: List(
-      "-pl",
-      s":$artifactId",
-      "--also-make",
-      phase,
+    ) ::: mavenCliConfigurations(target) ::: reactorModuleArgs(target) ::: List(
+      "install",
       "-DskipTests",
       "-Denforcer.skip=true",
     )
+  }
+
+  private def reactorModuleArgs(target: MbtTarget): List[String] = {
+    val parts = target.name.split(':')
+    val artifactId = if (parts.length >= 2) parts(1) else target.name
+    List("-pl", s":$artifactId", "--also-make")
   }
 
   override def mbtRunCommand(
@@ -168,7 +162,7 @@ case class MavenBuildTool(
   }
 
   private def mavenModuleDirectory(target: MbtTarget): Option[AbsolutePath] =
-    target.projectPath.map(p => AbsolutePath(java.nio.file.Paths.get(p)))
+    target.projectPath.map(p => AbsolutePath(Paths.get(p)))
 
   private def mavenCliConfigurations(target: MbtTarget): List[String] =
     target.configurations.toList
@@ -227,9 +221,11 @@ case class MavenBuildTool(
       forkedDebugAgentFlag: Option[String] = None,
   ): List[String] = {
     val moduleArgs =
-      target.projectPath match {
+      mavenModuleDirectory(target)
+        .map(_.resolve("pom.xml"))
+        .filter(_.isFile) match {
         case Some(pom) =>
-          List("-f", Paths.get(pom).resolve("pom.xml").toString())
+          List("-f", pom.toString())
         case _ => Nil
       }
     val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)

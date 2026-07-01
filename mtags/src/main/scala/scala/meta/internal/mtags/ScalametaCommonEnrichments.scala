@@ -179,15 +179,13 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
       if (range.isNone) {
         None
       } else {
-        Try(
-          m.Position.Range(
-            input,
-            range.getStart.getLine,
-            range.getStart.getCharacter,
-            range.getEnd.getLine,
-            range.getEnd.getCharacter
-          )
-        ).toOption
+        Try {
+          val startOffset =
+            input.toOffset(range.getStart.getLine, range.getStart.getCharacter)
+          val endOffset =
+            input.toOffset(range.getEnd.getLine, range.getEnd.getCharacter)
+          m.Position.Range(input, startOffset, endOffset)
+        }.toOption
       }
   }
 
@@ -200,16 +198,11 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
      * @param input file input the position relates to
      * @return scalameta position with offset if the pos is contained in the file
      */
-    def toMeta(input: Input): Option[Position] = {
-      Try(
-        Position.Range(
-          input,
-          pos.getLine,
-          pos.getCharacter,
-          pos.getLine,
-          pos.getCharacter
-        )
-      ).toOption
+    def toMeta(input: m.Input): Option[m.Position] = {
+      Try {
+        val offset = input.toOffset(pos.getLine, pos.getCharacter)
+        m.Position.Range(input, offset, offset)
+      }.toOption
     }
   }
 
@@ -734,7 +727,7 @@ trait ScalametaCommonEnrichments extends CommonMtagsEnrichments {
      * Returns an offset for this input
      */
     def toOffset(line: Int, column: Int): Int =
-      input.lineToOffset(line) + column
+      input.lineToOffsetAndLength(line)._1 + column
 
     /**
      * Returns an offset position for this input

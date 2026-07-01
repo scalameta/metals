@@ -5,14 +5,6 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 class MessagesSuite extends BaseSuite {
 
-  test("deprecated-single") {
-    assertDiffEqual(
-      Messages.DeprecatedScalaVersion.message(Set("2.11.12")),
-      "You are using legacy Scala version 2.11.12, which might no longer be supported by Metals in the future. " +
-        s"To get the best support possible it's recommended to update to at least Scala version ${V.scala212}.",
-    )
-  }
-
   test("future-single") {
     assertDiffEqual(
       Messages.FutureScalaVersion.message(Set("2.13.50")),
@@ -42,14 +34,14 @@ class MessagesSuite extends BaseSuite {
       Messages.UnsupportedScalaVersion
         .message(Set("2.11.9", "2.12.2", "2.12.1")),
       "You are using Scala versions 2.11.9, 2.12.1, 2.12.2, which are not supported in this version of Metals." +
-        s" Please upgrade to Scala version ${V.scala212} or alternatively to legacy Scala ${V.scala211}.",
+        s" Please upgrade to Scala version ${V.scala212} or alternatively to legacy Scala 2.11.12.",
     )
   }
 
   test("unsupported-legacy-211") {
     assertDiffEqual(
-      Messages.UnsupportedScalaVersion.message(Set(V.scala211)),
-      s"You are using Scala version ${V.scala211}, which is not supported in this version of Metals." +
+      Messages.UnsupportedScalaVersion.message(Set("2.11.12")),
+      s"You are using Scala version 2.11.12, which is not supported in this version of Metals." +
         s" Please upgrade to Scala version ${V.scala212}.",
     )
   }
