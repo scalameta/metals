@@ -1,32 +1,64 @@
 package scala.meta.internal.metals
 
+import java.util.Collections
+
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+
 import scala.meta.internal.metals.MetalsEnrichments._
 
 import ch.epfl.scala.bsp4j
+import com.google.gson.Gson
+import com.google.gson.JsonArray
+import com.google.gson.JsonElement
+import com.google.gson.JsonObject
+import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.{lsp4j => l}
 
 object ScalacDiagnostic {
 
-  object LegacyScalaAction {
-    def unapply(d: l.Diagnostic): Option[l.TextEdit] = d.asTextEdit
-  }
+  val gson: Gson =
+    new MessageJsonHandler(Collections.emptyMap()).getGson
 
-  object Scala3Diagnostic {
-    def unapply(
-        d: l.Diagnostic
-    ): Option[Seq[l.CodeAction]] =
+  sealed trait DiagnosticData
+  object DiagnosticData {
+
+    final case class LegacyTextEdit(textEdit: l.TextEdit) extends DiagnosticData
+
+    final case class BspActions(diagnostic: bsp4j.ScalaDiagnostic)
+        extends DiagnosticData
+
+    final case class PcActions(actions: Seq[l.CodeAction])
+        extends DiagnosticData
+
+    def unapply(d: l.Diagnostic): Option[DiagnosticData] =
       d.getData() match {
-        case list: Seq[_] =>
-          Some(list.collect { case a: l.CodeAction => a })
-        case _ => None
+        case obj: JsonObject if obj.has("actions") =>
+          decode(obj, classOf[bsp4j.ScalaDiagnostic]).map(BspActions(_))
+        case obj: JsonObject =>
+          decode(obj, classOf[l.TextEdit]).map(LegacyTextEdit(_))
+        case arr: JsonArray =>
+          Some(
+            PcActions(
+              arr.asScala.flatMap(decode(_, classOf[l.CodeAction])).toSeq
+            )
+          )
+        case null => None
+        case other =>
+          scribe.warn(
+            s"Unexpected diagnostic data type: ${other.getClass().getName()}, data: $other"
+          )
+          None
       }
-  }
 
-  object ScalaDiagnostic {
-    def unapply(
-        d: l.Diagnostic
-    ): Option[Either[l.TextEdit, bsp4j.ScalaDiagnostic]] =
-      d.asScalaDiagnostic
+    private def decode[A](json: JsonElement, cls: Class[A]): Option[A] =
+      Try(gson.fromJson(json, cls)) match {
+        case Success(value) => Option(value)
+        case Failure(error) =>
+          scribe.error(s"Failed to parse diagnostic data: $json", error)
+          None
+      }
   }
 
   object NotAMember {
