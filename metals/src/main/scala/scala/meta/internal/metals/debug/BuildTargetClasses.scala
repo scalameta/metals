@@ -78,16 +78,18 @@ final class BuildTargetClasses(
     )
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    onChangeAsync(docs, path).ignoreValue
+  }
+
+  def onChangeAsync(docs: TextDocuments, path: AbsolutePath): Future[Unit] = {
     if (
       path.isScalaOrJava && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
       symbolCache.removeSymbolsForPath(path)
-      extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
-        if (testClasses.nonEmpty) {
-          bazelTestClassCache.put(path, testClasses)
-        }
+      extractTestClassesFromDocuments(docs, path).map { testClasses =>
+        cacheBazelTestClasses(path, testClasses)
       }
-    }
+    } else Future.unit
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
@@ -582,6 +584,26 @@ final class BuildTargetClasses(
     }
   }
 
+  private def cacheBazelTestClasses(
+      path: AbsolutePath,
+      testClasses: List[(String, TestSymbolInfo)],
+  ): Unit = {
+    if (testClasses.nonEmpty) {
+      bazelTestClassCache.put(path, testClasses)
+      val targetIds = buildTargets.inverseSourcesAll(path)
+      for {
+        targetId <- targetIds
+        buildTarget <- buildTargets.info(targetId)
+        if buildTarget.getTags.asScala.contains("test")
+      } {
+        val classes = index.getOrElseUpdate(targetId, new Classes)
+        testClasses.foreach { case (symbol, testInfo) =>
+          classes.testClasses.put(symbol, testInfo)
+        }
+      }
+    }
+  }
+
   /**
    * Populates candidate test classes from the MBT index WITHOUT loading semanticdb.
    * The candidates are stored in `candidateTestClasses` and will be confirmed
@@ -834,26 +856,6 @@ final class BuildTargetClasses(
       foreachMbtSemanticdbDocument(Seq(path)) { doc =>
         processMbtTestSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
       }
-    }
-  }
-
-  def confirmBazelTestClasses(
-      doc: TextDocument,
-      path: AbsolutePath,
-      targetId: b.BuildTargetIdentifier,
-  ): Future[Unit] = {
-    if (hasBazelBuildServer && belongsToTestTarget(path)) {
-      extractTestClassesFromDocument(doc, path).map { testClasses =>
-        if (testClasses.nonEmpty) {
-          bazelTestClassCache.put(path, testClasses)
-          val classes = index.getOrElseUpdate(targetId, new Classes)
-          testClasses.foreach { case (symbol, testInfo) =>
-            classes.testClasses.put(symbol, testInfo)
-          }
-        }
-      }
-    } else {
-      Future.unit
     }
   }
 

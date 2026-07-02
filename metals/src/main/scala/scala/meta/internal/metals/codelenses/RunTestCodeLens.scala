@@ -28,6 +28,7 @@ import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
+import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.ValueSignature
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
@@ -118,17 +119,14 @@ final class RunTestCodeLens(
         buildTargetClasses.confirmMbtMainClassCandidates(path, buildTargetId)
       val confirmTestCandidates =
         buildTargetClasses.confirmMbtTestClassCandidates(path, buildTargetId)
-      val confirmBazelTestClasses =
-        buildTargetClasses.confirmBazelTestClasses(
-          textDocument,
-          path,
-          buildTargetId,
-        )
 
       for {
         _ <- confirmMainCandidates
         _ <- confirmTestCandidates
-        _ <- confirmBazelTestClasses
+        _ <- buildTargetClasses.onChangeAsync(
+          TextDocuments(Seq(textDocument)),
+          path,
+        )
         _ <- requestJvmEnvironment(buildTargetId, isJVM)
       } yield {
         val classes = buildTargetClasses.classesOf(buildTargetId)
