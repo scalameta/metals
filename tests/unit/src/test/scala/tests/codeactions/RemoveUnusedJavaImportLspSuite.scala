@@ -357,6 +357,33 @@ class RemoveUnusedJavaImportLspSuite
     filterAction = onlyRemoveUnusedImport,
   )
 
+  check(
+    "member-type-shadows-import",
+    """|package a;
+       |
+       |<<import java.util.List;>>
+       |
+       |public class Example {
+       |  static class List {
+       |  }
+       |
+       |  public List names;
+       |}
+       |""".stripMargin,
+    title,
+    """|package a;
+       |
+       |public class Example {
+       |  static class List {
+       |  }
+       |
+       |  public List names;
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyRemoveUnusedImport,
+  )
+
   checkNoAction(
     "javadoc-only",
     """|package a;
