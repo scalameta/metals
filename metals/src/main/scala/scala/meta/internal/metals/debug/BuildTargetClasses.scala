@@ -79,7 +79,7 @@ final class BuildTargetClasses(
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
     if (
-      path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
+      path.isScalaOrJava && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
       symbolCache.removeSymbolsForPath(path)
       extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
@@ -569,7 +569,7 @@ final class BuildTargetClasses(
           buildTargetIds.asScala.toList.contains(target)
         }
         .map(_._1)
-        .filter(_.isScalaFilename)
+        .filter(_.isScalaOrJava)
         .toList
 
       sourceFiles.foreach { sourcePath =>
@@ -837,6 +837,26 @@ final class BuildTargetClasses(
     }
   }
 
+  def confirmBazelTestClasses(
+      doc: TextDocument,
+      path: AbsolutePath,
+      targetId: b.BuildTargetIdentifier,
+  ): Future[Unit] = {
+    if (hasBazelBuildServer && belongsToTestTarget(path)) {
+      extractTestClassesFromDocument(doc, path).map { testClasses =>
+        if (testClasses.nonEmpty) {
+          bazelTestClassCache.put(path, testClasses)
+          val classes = index.getOrElseUpdate(targetId, new Classes)
+          testClasses.foreach { case (symbol, testInfo) =>
+            classes.testClasses.put(symbol, testInfo)
+          }
+        }
+      }
+    } else {
+      Future.unit
+    }
+  }
+
   /**
    * Confirms candidate test classes for specific targets.
    * This is useful when the user opens the test explorer and wants to discover all tests.
@@ -996,7 +1016,6 @@ final class BuildTargetClasses(
 
   private def mbtMainClass(symbol: String): b.ScalaMainClass =
     new b.ScalaMainClass(symbolToClassName(symbol), Nil.asJava, Nil.asJava)
-
 }
 
 object TestFrameworkDetector {
