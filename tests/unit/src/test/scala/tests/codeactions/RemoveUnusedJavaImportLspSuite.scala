@@ -173,6 +173,26 @@ class RemoveUnusedJavaImportLspSuite
   )
 
   check(
+    "multiline-import",
+    """|package a;
+       |
+       |<<import java.util.
+       |  Map;>>
+       |
+       |public class Example {
+       |}
+       |""".stripMargin,
+    title,
+    """|package a;
+       |
+       |public class Example {
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyRemoveUnusedImport,
+  )
+
+  check(
     "wildcard-import",
     """|package a;
        |

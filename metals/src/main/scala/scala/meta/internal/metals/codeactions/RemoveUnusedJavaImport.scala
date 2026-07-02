@@ -54,18 +54,24 @@ object RemoveUnusedJavaImport {
   ): Option[l.TextEdit] = {
     val lines = text.split("\n", -1)
     val startLine = range.getStart().getLine()
-    if (startLine < 0 || startLine >= lines.length) None
+    val importEndLine = range.getEnd().getLine()
+    if (
+      startLine < 0 ||
+      startLine >= lines.length ||
+      importEndLine < startLine ||
+      importEndLine >= lines.length
+    ) None
     else {
       val endLine =
         if (
-          startLine + 2 < lines.length &&
-          lines(startLine + 1).isEmpty &&
+          importEndLine + 2 < lines.length &&
+          lines(importEndLine + 1).isEmpty &&
           (startLine == 0 || lines(startLine - 1).isEmpty)
-        ) startLine + 2
-        else if (startLine + 1 < lines.length) startLine + 1
-        else startLine
+        ) importEndLine + 2
+        else if (importEndLine + 1 < lines.length) importEndLine + 1
+        else importEndLine
       val endCharacter =
-        if (endLine == startLine) lines(startLine).length()
+        if (endLine == importEndLine) lines(importEndLine).length()
         else 0
       Some(
         new l.TextEdit(
