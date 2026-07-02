@@ -21,10 +21,10 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.RunType._
 import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument
@@ -39,7 +39,7 @@ class DebugDiscovery(
     buildTargets: BuildTargets,
     buildClient: MetalsBuildClient,
     languageClient: MetalsLanguageClient,
-    semanticdbs: () => Semanticdbs,
+    mbtReferenceProvider: MbtReferenceProvider,
     userConfig: () => UserConfiguration,
     workspace: AbsolutePath,
     buildTargetClassesFinder: BuildTargetClassesFinder,
@@ -210,17 +210,8 @@ class DebugDiscovery(
     buildTargetClasses
       .confirmMbtMainClassCandidates(path, buildTarget)
       .flatMap { _ =>
-        val semanticDocOpt =
-          semanticdbs()
-            .textDocument(path)
-            .documentIncludingStale
-
-        semanticDocOpt match {
-          case Some(textDocument) =>
-            findClosestRunnableTarget(textDocument, buildTarget, path, position)
-          case None =>
-            Future.failed(SemanticDbNotFoundException)
-        }
+        val textDocument = mbtReferenceProvider.textDocument(path)
+        findClosestRunnableTarget(textDocument, buildTarget, path, position)
       }
   }
 
@@ -504,30 +495,23 @@ class DebugDiscovery(
     buildTargetClasses
       .confirmMbtTestClassCandidates(path, target)
       .flatMap { _ =>
-        semanticdbs()
-          .textDocument(path)
-          .documentIncludingStale
-          .fold[Future[Seq[BuildTargetClasses.FullyQualifiedClassName]]] {
-            Future.failed(SemanticDbNotFoundException)
-          } { textDocument =>
-            Future {
-              for {
-                symbolInfo <- textDocument.symbols
-                symbol = symbolInfo.symbol
-                testSymbolInfo <- testClasses(target).get(symbol)
-              } yield testSymbolInfo.fullyQualifiedName
-            }
-          }
-          .map { tests =>
-            val params = new b.DebugSessionParams(
-              singletonList(target)
-            )
-            params.setDataKind(
-              b.TestParamsDataKind.SCALA_TEST_SUITES
-            )
-            params.setData(tests.asJava.toJson)
-            params
-          }
+        val textDocument = mbtReferenceProvider.textDocument(path)
+        Future {
+          for {
+            symbolInfo <- textDocument.symbols
+            symbol = symbolInfo.symbol
+            testSymbolInfo <- testClasses(target).get(symbol)
+          } yield testSymbolInfo.fullyQualifiedName
+        }.map { tests =>
+          val params = new b.DebugSessionParams(
+            singletonList(target)
+          )
+          params.setDataKind(
+            b.TestParamsDataKind.SCALA_TEST_SUITES
+          )
+          params.setData(tests.asJava.toJson)
+          params
+        }
       }
 
   private def testTarget(
@@ -565,29 +549,25 @@ class DebugDiscovery(
     for {
       _ <- confirmMainCandidates
       _ <- confirmTestCandidates
-      result <- semanticdbs()
-        .textDocument(path)
-        .documentIncludingStale
-        .fold[Future[b.DebugSessionParams]] {
-          Future.failed(SemanticDbNotFoundException)
-        } { textDocument =>
-          val classes = buildTargetClasses.classesOf(buildTarget)
-          lazy val tests = for {
-            symbolInfo <- textDocument.symbols
-            symbol = symbolInfo.symbol
-            testSymbolInfo <- classes.testClasses.get(symbol)
-          } yield testSymbolInfo.fullyQualifiedName
-          val mainWithFallback = findMainClasses(textDocument, classes)
-          if (mainWithFallback.nonEmpty) {
-            findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
-          } else if (tests.nonEmpty) {
-            val suiteSelections =
-              tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
-            createScalaTestSuites(buildTarget, suiteSelections, params)
-          } else {
-            Future.failed(NoRunOptionException)
-          }
+      result <- {
+        val textDocument = mbtReferenceProvider.textDocument(path)
+        val classes = buildTargetClasses.classesOf(buildTarget)
+        lazy val tests = for {
+          symbolInfo <- textDocument.symbols
+          symbol = symbolInfo.symbol
+          testSymbolInfo <- classes.testClasses.get(symbol)
+        } yield testSymbolInfo.fullyQualifiedName
+        val mainWithFallback = findMainClasses(textDocument, classes)
+        if (mainWithFallback.nonEmpty) {
+          findMainToRun(Map(buildTarget -> mainWithFallback.toList), params)
+        } else if (tests.nonEmpty) {
+          val suiteSelections =
+            tests.map(new b.ScalaTestSuiteSelection(_, Nil.asJava)).toList
+          createScalaTestSuites(buildTarget, suiteSelections, params)
+        } else {
+          Future.failed(NoRunOptionException)
         }
+      }
     } yield result
   }
 
