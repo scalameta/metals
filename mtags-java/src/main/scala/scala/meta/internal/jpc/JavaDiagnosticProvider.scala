@@ -61,10 +61,7 @@ class JavaDiagnosticProvider(
       compile: JavaSourceCompile
   ): List[l.Diagnostic] =
     try {
-      new UnusedImportDiagnosticProvider(
-        compile,
-        params.text()
-      ).diagnostics()
+      new UnusedImportDiagnosticProvider(compile).diagnostics()
     } catch {
       case NonFatal(e) =>
         compiler.logger.warn("Failed to compute unused import diagnostics", e)
