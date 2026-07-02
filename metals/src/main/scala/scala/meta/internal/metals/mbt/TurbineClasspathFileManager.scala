@@ -82,15 +82,7 @@ class TurbineClasspathFileManager(
         val packageNames = packageName.split('.')
         val turbinePackageName = packageNames.mkString("/")
         val objects = new ju.ArrayList[JavaFileObject]()
-        val isAddedBinaryName = new ju.HashSet[String]()
         val cp = workspaceClasspath()
-        listPackageClasspath(
-          projectClasspath,
-          packageNames,
-          isAddedBinaryName,
-        ) { obj =>
-          objects.add(obj)
-        }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>
           case Some(values) =>
@@ -102,7 +94,7 @@ class TurbineClasspathFileManager(
               // or have a pending source on SOURCE_PATH (so javac uses the updated source)
               if (!isDeleted(binaryName)) {
                 val bytes = cp.lowered.bytes().get(binaryName)
-                if (bytes != null && isAddedBinaryName.add(binaryName)) {
+                if (bytes != null) {
                   val obj = new TurbineClassfileObject(
                     binaryName,
                     () => bytes,
@@ -112,9 +104,15 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        listPackageClasspath(cp.classpath, packageNames, isAddedBinaryName) {
-          obj =>
-            objects.add(obj)
+        val isAddedBinaryName = new ju.HashSet[String]()
+        for {
+          cp <- List(
+            // Prioritize the project classpath over the fallback classpath
+            projectClasspath,
+            cp.classpath,
+          )
+        } listPackageClasspath(cp, packageNames, isAddedBinaryName) { obj =>
+          objects.add(obj)
         }
         objects
       case StandardLocation.SOURCE_PATH =>
