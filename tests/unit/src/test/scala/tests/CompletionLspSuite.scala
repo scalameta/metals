@@ -826,4 +826,44 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  test("java-completion-import2") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package
+          |a;
+          |
+          |public class Test {
+          |  // @@
+          |}
+          |/a/src/main/java/b/Foo.java
+          |package b;
+          |
+          |public class Foo {
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "Foo@@",
+        expectedLabel = "Foo - b",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Foo"),
+        additionalStartLines = List(1),
+        additionalInsertTexts = List(
+          """
+
+import b.Foo;
+"""
+        ),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
 }
