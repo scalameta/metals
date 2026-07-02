@@ -1,6 +1,7 @@
 package tests.j
 
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 
 class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
 
@@ -91,7 +92,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |}
             |""".stripMargin,
         "", // No suggestions for non-exact matches
-        Nil,
+        InlineValueCodeAction.genericTitle :: Nil,
       )
     } yield ()
   }

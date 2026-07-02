@@ -35,6 +35,7 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.DefinitionResult
+import scala.meta.pc.DisplayableException
 import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.InlayHintsParams
@@ -291,8 +292,33 @@ case class JavaPresentationCompiler(
     }
   }
 
+  override def codeAction[T](
+      params: OffsetParams,
+      codeActionId: String,
+      codeActionPayload: Optional[T]
+  ): CompletableFuture[util.List[TextEdit]] =
+    codeActionId match {
+      case CodeActionId.InlineValue =>
+        val default: Either[String, util.List[TextEdit]] =
+          Right(util.Collections.emptyList[TextEdit]())
+        request(params, default) { pc =>
+          new JavaInlineValueRefactoringProvider(pc, params)
+            .getInlineTextEdits() match {
+            case Right(edits) => Right(edits.asJava)
+            case Left(error) => Left(error)
+          }
+        }.thenApply {
+          case Right(edits) => edits
+          case Left(error) => throw new DisplayableException(error)
+        }
+      case _ =>
+        CompletableFuture.completedFuture(
+          util.Collections.emptyList[TextEdit]()
+        )
+    }
+
   override def supportedCodeActions(): util.List[String] = {
-    List(CodeActionId.ExtractMethod).asJava
+    util.Collections.singletonList(CodeActionId.InlineValue)
   }
 
   override def didClose(uri: URI): Unit = ()

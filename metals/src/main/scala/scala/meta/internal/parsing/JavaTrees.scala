@@ -19,6 +19,7 @@ import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
@@ -49,6 +50,20 @@ class JavaTrees(buffers: Buffers) {
       tree <- get(source)
       result <- {
         val visitor = new EnclosingClassFinder(tree, text, pos)
+        visitor.scan(tree, ())
+        visitor.result
+      }
+    } yield result
+
+  def findEnclosingIdentifier(
+      source: AbsolutePath,
+      pos: l.Position,
+  ): Option[IdentifierTree] =
+    for {
+      text <- text(source)
+      tree <- get(source)
+      result <- {
+        val visitor = new EnclosingIdentifierFinder(tree, text, pos)
         visitor.scan(tree, ())
         visitor.result
       }
@@ -306,11 +321,36 @@ class JavaTrees(buffers: Buffers) {
     ): Unit = {
       val nodeStart = pos.startPos(node)
       val nodeEnd = pos.endPos(node)
-
       if (positionContains(targetOffset, nodeStart, nodeEnd)) {
-        _result = javaVariable(node)
+        val name = node.getName().toString()
+        val actualNodeStart =
+          findNameOffset(text, nodeStart, nodeEnd, name)
+            .getOrElse(nodeStart)
+        val actualNodeEnd = actualNodeStart + name.length()
+        if (positionContains(targetOffset, actualNodeStart, actualNodeEnd)) {
+          _result = javaVariable(node)
+        }
       }
       super.visitVariable(node, p)
+    }
+  }
+
+  private class EnclosingIdentifierFinder(
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends EnclosingFinder[IdentifierTree](cu, text, targetPos) {
+
+    override def visitIdentifier(
+        node: IdentifierTree,
+        p: Unit,
+    ): Unit = {
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
+      if (positionContains(targetOffset, nodeStart, nodeEnd)) {
+        _result = Some(node)
+      }
+      super.visitIdentifier(node, p)
     }
   }
 
@@ -486,6 +526,22 @@ class JavaTrees(buffers: Buffers) {
       endPos: Int,
       name: String,
   ): Option[JavaRange] = {
+    findNameOffset(text, startPos, endPos, name).map { offset =>
+      val endOffset = offset + name.length()
+      JavaRange(
+        Positions.toLspRange(lineMap, offset, endOffset, text),
+        startOffset = offset,
+        endOffset = endOffset,
+      )
+    }
+  }
+
+  private def findNameOffset(
+      text: String,
+      startPos: Int,
+      endPos: Int,
+      name: String,
+  ): Option[Int] = {
     if (startPos < 0 || endPos < 0) None
     else {
       val searchEnd = Math.min(endPos, text.length())
@@ -502,14 +558,6 @@ class JavaTrees(buffers: Buffers) {
           // Right boundary: next char is end-of-text or does not continue an identifier.
           (endOffset >= text.length() ||
             !Character.isJavaIdentifierPart(text.charAt(endOffset)))
-        }
-        .map { offset =>
-          val endOffset = offset + name.length()
-          JavaRange(
-            Positions.toLspRange(lineMap, offset, endOffset, text),
-            startOffset = offset,
-            endOffset = endOffset,
-          )
         }
     }
   }

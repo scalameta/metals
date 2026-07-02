@@ -51,7 +51,7 @@ final class CodeActionProvider(
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
     new ExtractMethodCodeAction(trees, compilers),
-    new InlineValueCodeAction(trees, compilers, languageClient),
+    new InlineValueCodeAction(trees, javaTrees, compilers, languageClient),
     new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new FilterMapToCollectCodeAction(trees, compilers),
