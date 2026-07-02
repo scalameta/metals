@@ -6,6 +6,7 @@ class CompletionImportsSuite extends BaseJavaCompletionSuite {
   check(
     "package-only",
     """package a;
+      |
       |class A {
       |  public void foo() {
       |    return StandardChar@@

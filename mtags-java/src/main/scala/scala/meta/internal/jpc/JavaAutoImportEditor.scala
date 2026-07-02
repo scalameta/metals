@@ -27,7 +27,7 @@ class JavaAutoImportEditor(text: String, fqn: String) {
         new l.Position(lineNumber, line.length()),
         new l.Position(lineNumber, line.length())
       ),
-      s"\n\nimport $fqn;\n"
+      s"\n\nimport $fqn;"
     )
 
     // Scala supports multiple package lines, while Java only supports one so we

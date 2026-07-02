@@ -33,6 +33,7 @@ import scala.meta.internal.pc.JavaReferencesProvider
 import scala.meta.internal.pc.JavaRenameProvider
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.AutoImportsResult
+import scala.meta.pc.CodeActionId
 import scala.meta.pc.DefinitionResult
 import scala.meta.pc.EmbeddedClient
 import scala.meta.pc.HoverSignature
@@ -259,7 +260,13 @@ case class JavaPresentationCompiler(
       range: RangeParams,
       extractionPos: OffsetParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    request(range, util.Collections.emptyList[TextEdit]()) { pc =>
+      new JavaExtractMethodProvider(
+        pc,
+        range,
+        extractionPos
+      ).extractMethod.asJava
+    }
 
   override def convertToNamedArguments(
       params: OffsetParams,
@@ -285,7 +292,7 @@ case class JavaPresentationCompiler(
   }
 
   override def supportedCodeActions(): util.List[String] = {
-    util.Collections.emptyList()
+    List(CodeActionId.ExtractMethod).asJava
   }
 
   override def didClose(uri: URI): Unit = ()
