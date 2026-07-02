@@ -2,10 +2,9 @@ package scala.meta.internal.parsing
 
 import javax.tools.Diagnostic.NOPOS
 
-import scala.annotation.tailrec
-
 import scala.meta.internal.jpc.JavaMetalsCompiler
 import scala.meta.internal.jpc.SourceJavaFileObject
+import scala.meta.internal.mtags.JavaCommentCollector
 import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.BlockTree
@@ -33,8 +32,6 @@ object JavaFoldingRangeExtractor {
       endPos: Long,
       kind: String,
   ) {
-    def contains(idx: Long): Boolean = startPos <= idx && endPos >= idx
-
     def toFoldingRange(lineMap: LineMap): FoldingRange = {
       val startLine = lineMap.getLineNumber(startPos) - 1
       val startCharacter = lineMap.getColumnNumber(startPos) - 1
@@ -47,6 +44,7 @@ object JavaFoldingRangeExtractor {
       foldingRange
     }
   }
+
   private class FoldScanner(
       compUnit: CompilationUnitTree,
       sourcePositions: SourcePositions,
@@ -141,34 +139,43 @@ object JavaFoldingRangeExtractor {
     JavaMetalsCompiler.parse(source)
   }
 
-  // search for any comments in file that aren't defined within a String
-  private def findComments(
+  // Runs of standalone (line-leading) `//` comments on consecutive lines fold
+  // as a single region, from the first comment to the last.
+  private def lineCommentGroups(
+      comments: List[JavaCommentCollector.JavaComment],
       text: String,
-      exclusions: List[Range],
+      lineMap: LineMap,
   ): List[Range] = {
-    @tailrec
-    def findComments(comments: List[Range], idx: Int): List[Range] = {
-      val startIdx = text.indexOf("/*", idx)
-      if (startIdx == -1)
-        comments
-      else {
-        val (newComments, newIdx) =
-          if (exclusions.exists(range => range.contains(startIdx.longValue)))
-            (comments, startIdx + 2)
-          else {
-            val endIdx = text.indexOf("*/", startIdx + 2)
-            val range = Range(
-              startIdx.longValue,
-              endIdx.longValue + 2,
-              FoldingRangeKind.Comment,
-            )
-            (range :: comments, endIdx + 2)
-          }
-        findComments(newComments, newIdx)
-      }
+    def isLineLeading(
+        comment: JavaCommentCollector.JavaComment
+    ): Boolean = {
+      val lineStart =
+        lineMap.getStartPosition(lineMap.getLineNumber(comment.start.toLong))
+      text.substring(lineStart.toInt, comment.start).forall(_.isWhitespace)
     }
-
-    findComments(Nil, 0)
+    val leading = comments
+      .filter(comment => comment.isLineComment && isLineLeading(comment))
+      .sortBy(_.start)
+    val groups = leading
+      .foldRight(List.empty[List[JavaCommentCollector.JavaComment]]) {
+        (comment, groups) =>
+          groups match {
+            case (group @ (head :: _)) :: rest
+                if lineMap.getLineNumber(head.start.toLong) ==
+                  lineMap.getLineNumber(comment.start.toLong) + 1 =>
+              (comment :: group) :: rest
+            case _ =>
+              List(comment) :: groups
+          }
+      }
+    groups.collect {
+      case group if group.size >= 2 =>
+        Range(
+          group.head.start.toLong,
+          group.last.end.toLong,
+          FoldingRangeKind.Comment,
+        )
+    }
   }
 
   def extract(
@@ -187,8 +194,22 @@ object JavaFoldingRangeExtractor {
         val mergedImports = mergeRanges(
           scanner.imports.map(range => range.toFoldingRange(lineMap))
         ).toList
-        // comments are not returned by the scanner so search separately
-        val comments = findComments(text, scanner.strings)
+        // comments are not returned by the scanner, so collect them from
+        // javac's lexer (which already knows about String literals and `/`).
+        val allComments = JavaCommentCollector.comments(text)
+        val blockCommentRanges = allComments.collect {
+          case comment
+              if !comment.isLineComment && comment.end >= 2 &&
+                comment.end <= text.length &&
+                text.regionMatches(comment.end - 2, "*/", 0, 2) =>
+            Range(
+              comment.start.toLong,
+              comment.end.toLong,
+              FoldingRangeKind.Comment,
+            )
+        }
+        val comments =
+          blockCommentRanges ::: lineCommentGroups(allComments, text, lineMap)
         val allRanges = mergedImports :::
           scanner.regions.map(range => range.toFoldingRange(lineMap)) :::
           scanner.strings.map(range => range.toFoldingRange(lineMap)) :::
