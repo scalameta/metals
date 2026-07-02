@@ -117,7 +117,14 @@ case class JavaPresentationCompiler(
   ): CompletableFuture[T] = {
     lastParams = params
     compiler.withInterruptableCompiler(default, params.token()) { pc =>
-      f(pc.compiler())
+      // Mark the compiler as in use so a concurrent restart/shutdown doesn't
+      // close it (and its shared JavaFileManager) while we're still compiling.
+      pc match {
+        case wrapper: JavaMetalsCompilerWrapper =>
+          wrapper.withInUse(f(wrapper.compiler()))
+        case other =>
+          f(other.compiler())
+      }
     }(params.toQueryContext)
   }
 
