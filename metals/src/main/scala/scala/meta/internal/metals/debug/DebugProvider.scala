@@ -141,7 +141,12 @@ class DebugProvider(
         .forall(
           _.scalaInfo.getPlatform == b.ScalaPlatform.JVM
         )
-      isMbtTestRun = noDebug && MbtBuildServer.isMbtServer(buildServer.name)
+      isTestDataKind =
+        jvmOptionsTranslatedParams.getDataKind == b.TestParamsDataKind.SCALA_TEST_SUITES ||
+          jvmOptionsTranslatedParams.getDataKind == b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+      isMbtTestRun = noDebug && MbtBuildServer.isMbtServer(
+        buildServer.name
+      ) && isTestDataKind
       debugServer <-
         if (isMbtTestRun)
           runMbtTestLocally(
