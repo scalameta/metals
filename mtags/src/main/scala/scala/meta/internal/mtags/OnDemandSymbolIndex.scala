@@ -9,6 +9,7 @@ import scala.util.control.NonFatal
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.io.{ListFiles => _}
+import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.io.AbsolutePath
 
 /**
@@ -142,7 +143,12 @@ final class OnDemandSymbolIndex(
       None, {
         indexedSources += 1
         getOrCreateBucket(dialect)
-          .addSourceFile(source, sourceDirectory, isJava = false)
+          .addSourceFile(
+            source,
+            sourceDirectory,
+            isJava = source.isJava,
+            indexTrivialJavaToplevels = source.isJava
+          )
       }
     )
 

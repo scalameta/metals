@@ -58,11 +58,16 @@ class SymbolIndexBucket(
       dir.listRecursive.toList.flatMap {
         case source if source.isScala =>
           addSourceFile(source, Some(dir), isJava = false)
+        case source if source.isJava && isDirectChild(dir, source) =>
+          addSourceFile(source, Some(dir), isJava = true)
         case _ =>
           None
       }
     } else List.empty
   }
+
+  private def isDirectChild(dir: AbsolutePath, source: AbsolutePath): Boolean =
+    source.toRelative(dir).toNIO.getNameCount == 1
 
   def addDependencyModule(
       module: DependencyModule
@@ -122,9 +127,28 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
+  ): Option[IndexingResult] =
+    addSourceFile(
+      source,
+      sourceDirectory,
+      isJava,
+      indexTrivialJavaToplevels = false
+    )
+
+  def addSourceFile(
+      source: AbsolutePath,
+      sourceDirectory: Option[AbsolutePath],
+      isJava: Boolean,
+      indexTrivialJavaToplevels: Boolean
   ): Option[IndexingResult] = try {
     val IndexingResult(path, topLevels, overrides, toplevelMembers) =
-      indexSource(source, dialect, sourceDirectory, isJava)
+      indexSource(
+        source,
+        dialect,
+        sourceDirectory,
+        isJava,
+        indexTrivialJavaToplevels
+      )
     topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
@@ -144,7 +168,8 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       dialect: Dialect,
       sourceDirectory: Option[AbsolutePath],
-      isJava: Boolean
+      isJava: Boolean,
+      indexTrivialJavaToplevels: Boolean
   ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
     val (doc, overrides, toplevelMembers) =
@@ -157,7 +182,10 @@ class SymbolIndexBucket(
       if (source.isScalaScript) sourceTopLevels.toList
       else if (isJava) {
         sourceTopLevels.toList.headOption
-          .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
+          .filter(sym =>
+            indexTrivialJavaToplevels ||
+              !isTrivialToplevelSymbol(uri, sym, "java")
+          )
           .toList
       } else {
         sourceTopLevels

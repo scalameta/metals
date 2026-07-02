@@ -869,7 +869,7 @@ abstract class MetalsLspService(
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints().filter {
-      case (path, _) => path.isScalaOrJava && !path.isDependencySource(folder)
+      case (path, _) => path.isScalaOrJava && !isDependencySource(path)
     })
     cancel()
   }
@@ -954,7 +954,7 @@ abstract class MetalsLspService(
 
     val parser = parseTrees(path)
 
-    if (path.isDependencySource(folder)) {
+    if (isDependencySource(path)) {
       Future
         .sequence(
           List(parser)
@@ -1005,25 +1005,34 @@ abstract class MetalsLspService(
       compilers.restartJavaCompilers()
     }
 
-    // when focusing on a new file, display updated diagnostics
-    val future = for {
-      // when focusing on a new file, display updated diagnostics
-      reportedDiagnostics <- compilers.didFocus(path)
-      _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
-      result <-
-        // Don't trigger compilation on didFocus events under cascade compilation
-        // because save events already trigger compile in inverse dependencies.
-        if (path.isDependencySource(folder)) {
-          Future.successful(DidFocusResult.NoBuildTarget)
-        } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
-          Future.successful(DidFocusResult.RecentlyActive)
-        } else {
-          maybeCompileOnDidFocus(path, prevBuildTarget)
-        }
-    } yield result
+    val future =
+      if (isDependencySource(path)) {
+        diagnostics.publishDiagnosticsNotAdjusted(path, Nil)
+        Future.successful(DidFocusResult.NoBuildTarget)
+      } else {
+        for {
+          reportedDiagnostics <- compilers.didFocus(path)
+          _ = diagnostics.publishDiagnosticsNotAdjusted(
+            path,
+            reportedDiagnostics,
+          )
+          result <-
+            if (recentlyOpenedFiles.isRecentlyActive(path)) {
+              Future.successful(DidFocusResult.RecentlyActive)
+            } else {
+              maybeCompileOnDidFocus(path, prevBuildTarget)
+            }
+        } yield result
+      }
 
     future.asJava
   }
+
+  private def isDependencySource(path: AbsolutePath): Boolean =
+    path.isDependencySource(folder) ||
+      !path.isWorkspaceSource(folder) ||
+      buildTargets.isDependencySource(path) ||
+      buildTargets.checkIfGeneratedSource(path.toNIO)
 
   def sync(
       uri: String,

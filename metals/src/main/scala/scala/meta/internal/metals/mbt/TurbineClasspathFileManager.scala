@@ -82,7 +82,15 @@ class TurbineClasspathFileManager(
         val packageNames = packageName.split('.')
         val turbinePackageName = packageNames.mkString("/")
         val objects = new ju.ArrayList[JavaFileObject]()
+        val isAddedBinaryName = new ju.HashSet[String]()
         val cp = workspaceClasspath()
+        listPackageClasspath(
+          projectClasspath,
+          packageNames,
+          isAddedBinaryName,
+        ) { obj =>
+          objects.add(obj)
+        }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>
           case Some(values) =>
@@ -94,7 +102,7 @@ class TurbineClasspathFileManager(
               // or have a pending source on SOURCE_PATH (so javac uses the updated source)
               if (!isDeleted(binaryName)) {
                 val bytes = cp.lowered.bytes().get(binaryName)
-                if (bytes != null) {
+                if (bytes != null && isAddedBinaryName.add(binaryName)) {
                   val obj = new TurbineClassfileObject(
                     binaryName,
                     () => bytes,
@@ -104,19 +112,22 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        val isAddedBinaryName = new ju.HashSet[String]()
-        for {
-          cp <- List(
-            // Prioritize the project classpath over the fallback classpath
-            projectClasspath,
-            cp.classpath,
-          )
-        } listPackageClasspath(cp, packageNames, isAddedBinaryName) { obj =>
-          objects.add(obj)
+        listPackageClasspath(cp.classpath, packageNames, isAddedBinaryName) {
+          obj =>
+            objects.add(obj)
         }
         objects
       case StandardLocation.SOURCE_PATH =>
-        listSourcepath(packageName)
+        val objects = new ju.ArrayList[JavaFileObject]()
+        val isAddedFileName = new ju.HashSet[String]()
+        def add(obj: JavaFileObject): Unit = {
+          if (isAddedFileName.add(obj.getName())) {
+            objects.add(obj)
+          }
+        }
+        listSourcepath(packageName).forEach(add)
+        super.list(location, packageName, kinds, recurse).asScala.foreach(add)
+        objects
       case _ =>
         super.list(location, packageName, kinds, recurse)
     }

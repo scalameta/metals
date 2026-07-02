@@ -316,8 +316,9 @@ final class BuildTargets private (
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable).toSeq
     if (orSbtBuildTarget.isEmpty) {
-      tables
-        .flatMap(_.dependencySources.getBuildTarget(source))
+      dependencySourceBuildTargets(source)
+        .flatMap(_.toSeq.maxByOption(buildTargetsOrder))
+        .orElse(tables.flatMap(_.dependencySources.getBuildTarget(source)))
         .orElse(inferBuildTarget(source))
     } else {
       Some(orSbtBuildTarget.maxBy(buildTargetsOrder))
@@ -334,7 +335,9 @@ final class BuildTargets private (
     val orSbtBuildTarget =
       buildTargets.getOrElse(sbtBuildScalaTarget(source).toIterable)
     if (orSbtBuildTarget.isEmpty) {
-      inferBuildTargets(source)
+      dependencySourceBuildTargets(source).map(_.toList).getOrElse {
+        inferBuildTargets(source)
+      }
     } else orSbtBuildTarget.toList
   }
 
@@ -629,6 +632,14 @@ final class BuildTargets private (
       sourceItem: AbsolutePath
   ): Option[Iterable[BuildTargetIdentifier]] =
     data.fromOptions(_.sourceBuildTargets(sourceItem))
+
+  def dependencySourceBuildTargets(
+      source: AbsolutePath
+  ): Option[Iterable[BuildTargetIdentifier]] =
+    data.fromOptions(_.dependencySourceBuildTargets(source))
+
+  def isDependencySource(source: AbsolutePath): Boolean =
+    dependencySourceBuildTargets(source).exists(_.nonEmpty)
 
   def belongsToBuildTarget(nioDir: Path): Boolean =
     sourceItems.filter(_.exists).exists { item =>
