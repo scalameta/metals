@@ -6,12 +6,8 @@ import scala.meta.io.AbsolutePath
  * Represents a candidate file being considered for indexing.
  *
  * @param path The absolute path to the file
- * @param relativePath The path relative to the workspace root
  */
-case class MbtFileCandidate(
-    path: AbsolutePath,
-    relativePath: String,
-)
+case class MbtFileCandidate(path: AbsolutePath)
 
 /**
  * Decision returned by an index filter.
@@ -39,4 +35,16 @@ object MbtIndexFilter {
 
   /** Default filter that includes all files. */
   val IncludeAll: MbtIndexFilter = _ => MbtIndexDecision.Continue
+
+  val allFilters: List[MbtIndexFilter] = List(
+    ProtobufVersionHistoryIndexFilter,
+    ProtobufTemplateAndTestIndexFilter,
+    JavaModuleInfoIndexFilter,
+  )
+
+  def included(
+      filters: List[MbtIndexFilter],
+      candidate: MbtFileCandidate,
+  ): Boolean =
+    filters.forall(_.decide(candidate) == MbtIndexDecision.Continue)
 }

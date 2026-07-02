@@ -105,10 +105,7 @@ class MbtWorkspaceSymbolProvider(
     sleeper: Sleeper = Sleeper.TestingSleeper,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
       TurbineRecompileDelayConfig.fromConfig(None),
-    indexFilters: List[MbtIndexFilter] = List(
-      ProtobufVersionHistoryIndexFilter,
-      ProtobufTemplateAndTestIndexFilter,
-    ),
+    indexFilters: List[MbtIndexFilter] = MbtIndexFilter.allFilters,
     protobufLspConfig: () => ProtobufLspConfig = () =>
       ProtobufLspConfig.default,
     metalsOutDir: Option[Path] = None,
@@ -256,8 +253,8 @@ class MbtWorkspaceSymbolProvider(
     val toIndex = ParArray.fromSpecific(for {
       file <- files
       path = workspace.resolve(file.path)
-      candidate = MbtFileCandidate(path, file.path)
-      if indexFilters.forall(_.decide(candidate) == MbtIndexDecision.Continue)
+      candidate = MbtFileCandidate(path)
+      if MbtIndexFilter.included(indexFilters, candidate)
       isCached = documents.get(path).exists(_.oid == file.oid)
       if !isCached
     } yield path)
@@ -423,17 +420,19 @@ class MbtWorkspaceSymbolProvider(
       file: AbsolutePath,
       updateDocumentKeys: Boolean,
   ): Future[Unit] = try {
-    val enableProtoJavaPackage =
-      file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
-    val mdoc =
-      IndexedDocument.fromFile(
-        file,
-        mtags(),
-        buffers,
-        dialects.Scala3,
-        enableProtoJavaPackage = enableProtoJavaPackage,
-      )
-    putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
+    if (MbtIndexFilter.included(indexFilters, MbtFileCandidate(file))) {
+      val enableProtoJavaPackage =
+        file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
+      val mdoc =
+        IndexedDocument.fromFile(
+          file,
+          mtags(),
+          buffers,
+          dialects.Scala3,
+          enableProtoJavaPackage = enableProtoJavaPackage,
+        )
+      putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
+    } else Future.unit
   } catch {
     case _: NoSuchFileException =>
       onDidDelete(file)
@@ -894,7 +893,7 @@ class MbtWorkspaceSymbolProvider(
     // .metals/out contains JDK sources materialized for --patch-module; they are not workspace sources
     if (metalsOutDir.exists(outDir => file.toNIO.startsWith(outDir))) {
       Future.unit
-    } else {
+    } else if (MbtIndexFilter.included(indexFilters, MbtFileCandidate(file))) {
       val old = documents.put(file, doc)
       if (old == None && updateDocumentKeys) {
         updateDocumentsKeys(documents)
@@ -920,7 +919,7 @@ class MbtWorkspaceSymbolProvider(
       } else {
         Future.unit
       }
-    }
+    } else Future.unit
   }
 
   private def addDocumentToPackages(
