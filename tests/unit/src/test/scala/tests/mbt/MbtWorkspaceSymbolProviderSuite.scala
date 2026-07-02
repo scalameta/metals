@@ -2,7 +2,9 @@ package tests.mbt
 
 import java.nio.file.Files
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration._
 
 import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.mbt.IndexingStats
@@ -149,6 +151,49 @@ object Hello2 {
         |Method main2 com.Hello2.
         |""".stripMargin,
     )
+  }
+
+  test("exclude-module-info-java") {
+    FileLayout.fromString(
+      """
+/com/Hello.java
+package com;
+public class Hello {}
+/module-info.java
+module com.example {
+  requires java.base;
+  exports com;
+}
+""",
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    val stats = provider.onReindex().awaitBackgroundJobs()
+    assertEquals(stats, IndexingStats(totalFiles = 2, updatedFiles = 1))
+    assertEquals(
+      provider.allFiles().map(_.toRelative(workspace()).toString()),
+      List("com/Hello.java"),
+    )
+  }
+
+  test("exclude-module-info-java-on-did-change") {
+    FileLayout.fromString(
+      """
+/module-info.java
+module com.example {
+  requires java.base;
+}
+""",
+      root = workspace(),
+    )
+    val provider = newProvider()
+    Await.result(
+      provider.onDidChange(workspace().resolve("module-info.java")),
+      5.seconds,
+    )
+    assertEquals(provider.allFiles(), Nil)
   }
 
   def manuallyTestWorkspace(

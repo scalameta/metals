@@ -53,6 +53,7 @@ import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtIndexFilter
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -361,10 +362,7 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
-    indexFilters = List(
-      mbt.ProtobufVersionHistoryIndexFilter,
-      mbt.ProtobufTemplateAndTestIndexFilter,
-    ),
+    indexFilters = MbtIndexFilter.allFilters,
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
     mbtBuild = () => mbtBuild,
