@@ -570,40 +570,32 @@ final class JavaExtractMethodProvider(
   ): Set[String] = {
     val mutated = mutable.Set.empty[String]
     val scanner = new TreePathScanner[Unit, Unit] {
-      override def visitAssignment(node: AssignmentTree, p: Unit): Unit = {
-        checkMutatedTarget(node.getVariable())
-        super.visitAssignment(node, p)
-      }
-
-      override def visitCompoundAssignment(
-          node: CompoundAssignmentTree,
-          p: Unit
-      ): Unit = {
-        checkMutatedTarget(node.getVariable())
-        super.visitCompoundAssignment(node, p)
-      }
-
-      override def visitUnary(node: UnaryTree, p: Unit): Unit = {
-        node.getKind() match {
-          case Tree.Kind.PREFIX_INCREMENT | Tree.Kind.PREFIX_DECREMENT |
-              Tree.Kind.POSTFIX_INCREMENT | Tree.Kind.POSTFIX_DECREMENT =>
-            checkMutatedTarget(node.getExpression())
-          case _ =>
-        }
-        super.visitUnary(node, p)
-      }
-
-      private def checkMutatedTarget(target: ExpressionTree): Unit = {
-        val targetPath = new TreePath(getCurrentPath(), target)
-        val (start, end) = (ctx.startOf(target), ctx.endOf(target))
+      override def visitIdentifier(node: IdentifierTree, p: Unit): Unit = {
+        val (start, end) = (ctx.startOf(node), ctx.endOf(node))
         if (ctx.rangeStart <= start && end <= ctx.rangeEnd) {
-          ctx.elementAt(targetPath).foreach {
-            case v: VariableElement
-                if isFreeVariable(v, methodElement, enclosedVariables) =>
-              mutated += v.getSimpleName().toString()
-            case _ =>
+          val parentPath = getCurrentPath().getParentPath()
+          if (parentPath != null && isMutationContext(parentPath.getLeaf())) {
+            ctx.elementAt(getCurrentPath()).foreach {
+              case v: VariableElement
+                  if isFreeVariable(v, methodElement, enclosedVariables) =>
+                mutated += v.getSimpleName().toString()
+              case _ =>
+            }
           }
         }
+        super.visitIdentifier(node, p)
+      }
+
+      private def isMutationContext(parent: Tree): Boolean = parent match {
+        case _: AssignmentTree | _: CompoundAssignmentTree => true
+        case u: UnaryTree =>
+          u.getKind() match {
+            case Tree.Kind.PREFIX_INCREMENT | Tree.Kind.PREFIX_DECREMENT |
+                Tree.Kind.POSTFIX_INCREMENT | Tree.Kind.POSTFIX_DECREMENT =>
+              true
+            case _ => false
+          }
+        case _ => false
       }
     }
     scanner.scan(ctx.cu, ())
