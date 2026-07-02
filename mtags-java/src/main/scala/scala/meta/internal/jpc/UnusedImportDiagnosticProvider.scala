@@ -2,6 +2,7 @@ package scala.meta.internal.jpc
 
 import javax.lang.model.element.Element
 import javax.lang.model.element.QualifiedNameable
+import javax.lang.model.element.TypeElement
 import javax.tools.Diagnostic.Kind.ERROR
 
 import scala.jdk.CollectionConverters._
@@ -9,6 +10,7 @@ import scala.jdk.CollectionConverters._
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.ImportTree
+import com.sun.source.tree.MemberSelectTree
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
@@ -24,6 +26,7 @@ private class UnusedImportDiagnosticProvider(
 
   private val task = compile.task
   private val trees = Trees.instance(task)
+  private val elements = task.getElements()
   private val docTrees = DocTrees.instance(task)
   private val sourcePositions = trees.getSourcePositions()
   private val sourceUri = compile.cu.getSourceFile().toUri()
@@ -39,15 +42,14 @@ private class UnusedImportDiagnosticProvider(
       .map { importTree =>
         val info = UnusedImportDiagnosticProvider.ImportInfo(
           importTree,
-          element(importTree.getQualifiedIdentifier())
+          matchElements(importTree)
         )
-        info.copy(isDuplicate = !seen.add(info.normalized))
+        info.copy(isDuplicate = !seen.add(info.fullName))
       }
 
     if (imports.isEmpty) Nil
     else {
       val usedElements = scala.collection.mutable.Set.empty[Element]
-      val usedNames = scala.collection.mutable.Set.empty[String]
       val javadocNames = scala.collection.mutable.Set.empty[String]
 
       val scanner = new TreePathScanner[Unit, Unit] {
@@ -62,7 +64,6 @@ private class UnusedImportDiagnosticProvider(
             node: IdentifierTree,
             p: Unit
         ): Unit = {
-          usedNames += node.getName().toString()
           addElement(getCurrentPath(), usedElements)
           super.visitIdentifier(node, p)
         }
@@ -85,7 +86,6 @@ private class UnusedImportDiagnosticProvider(
               info.isDuplicate ||
               !info.isUsed(
                 usedElements.toSet,
-                usedNames.toSet,
                 javadocNames.toSet
               ) =>
           val importTree = info.tree
@@ -150,6 +150,29 @@ private class UnusedImportDiagnosticProvider(
       .flatMap(path => Option(trees.getElement(path)))
   }
 
+  /**
+   * The elements whose presence in `usedElements` means an import is used.
+   */
+  private def matchElements(importTree: ImportTree): Set[Element] = {
+    val qualifiedIdentifier = importTree.getQualifiedIdentifier()
+    if (!importTree.isStatic()) element(qualifiedIdentifier).toSet
+    else
+      qualifiedIdentifier match {
+        case select: MemberSelectTree =>
+          val name = select.getIdentifier().toString()
+          element(select.getExpression()) match {
+            case Some(owner: TypeElement) =>
+              elements
+                .getAllMembers(owner)
+                .asScala
+                .filter(_.getSimpleName().toString() == name)
+                .toSet
+            case _ => Set.empty
+          }
+        case _ => Set.empty
+      }
+  }
+
   private def diagnostic(importTree: ImportTree): l.Diagnostic = {
     val range = Positions.toLspRange(trees, compile.cu, importTree)
     val diagnostic = new l.Diagnostic(
@@ -178,8 +201,7 @@ object UnusedImportDiagnosticProvider {
       owner: String,
       name: String,
       fullName: String,
-      normalized: String,
-      element: Option[Element],
+      matchElements: Set[Element],
       isDuplicate: Boolean
   ) {
     def isRedundant(packageName: Option[String]): Boolean =
@@ -188,28 +210,20 @@ object UnusedImportDiagnosticProvider {
 
     def isUsed(
         usedElements: Set[Element],
-        usedNames: Set[String],
         javadocNames: Set[String]
     ): Boolean =
       if (isWildcard) {
         usedElements.exists { element =>
-          val usedOwner =
-            if (isStatic)
-              UnusedImportDiagnosticProvider.enclosingName(element)
-            else UnusedImportDiagnosticProvider.name(element)
-          usedOwner.exists(name =>
-            name == owner || name.startsWith(owner + ".")
-          )
+          UnusedImportDiagnosticProvider.enclosingName(element).contains(owner)
         }
       } else {
-        element.exists(usedElements.contains) ||
-        (isStatic && usedNames.contains(name)) ||
+        matchElements.exists(usedElements.contains) ||
         javadocNames.exists(name => name == this.name || name == fullName)
       }
   }
 
   private object ImportInfo {
-    def apply(tree: ImportTree, element: Option[Element]): ImportInfo = {
+    def apply(tree: ImportTree, matchElements: Set[Element]): ImportInfo = {
       val importText = tree.getQualifiedIdentifier().toString()
       val isWildcard = importText.endsWith(".*")
       val withoutWildcard =
@@ -223,7 +237,6 @@ object UnusedImportDiagnosticProvider {
               withoutWildcard.substring(lastDot + 1)
           else "" -> withoutWildcard
         }
-      val normalized = s"${tree.isStatic()}:$importText"
       ImportInfo(
         tree,
         tree.isStatic(),
@@ -231,8 +244,7 @@ object UnusedImportDiagnosticProvider {
         owner,
         name,
         withoutWildcard,
-        normalized,
-        element,
+        matchElements,
         isDuplicate = false
       )
     }

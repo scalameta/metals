@@ -358,6 +358,30 @@ class RemoveUnusedJavaImportLspSuite
   )
 
   check(
+    "duplicate-static-nested-type-import",
+    """|package a;
+       |
+       |import java.util.Map.Entry;
+       |<<import static java.util.Map.Entry;>>
+       |
+       |public class Example {
+       |  public Entry entry;
+       |}
+       |""".stripMargin,
+    title,
+    """|package a;
+       |
+       |import java.util.Map.Entry;
+       |
+       |public class Example {
+       |  public Entry entry;
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyRemoveUnusedImport,
+  )
+
+  check(
     "member-type-shadows-import",
     """|package a;
        |
