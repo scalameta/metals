@@ -41,4 +41,21 @@ object JavacDiagnostic {
       }
   }
 
+  // Example error:
+  // error: Foo is not abstract and does not override abstract method bar() in Baz
+  object DoesNotOverrideAbstract {
+    private val Code = "compiler.err.does.not.override.abstract"
+    private val Message =
+      """(?s).* is not abstract and does not override abstract method .*""".r
+    def unapply(d: l.Diagnostic): Boolean = {
+      val matchesCode =
+        d.getCode() != null && d.getCode().isLeft() &&
+          d.getCode().getLeft() == Code
+      matchesCode || (d.getMessageAsString.trim() match {
+        case Message() => true
+        case _ => false
+      })
+    }
+  }
+
 }

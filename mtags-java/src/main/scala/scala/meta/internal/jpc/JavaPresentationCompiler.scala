@@ -234,7 +234,11 @@ case class JavaPresentationCompiler(
   override def implementAbstractMembers(
       params: OffsetParams
   ): CompletableFuture[util.List[TextEdit]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    request(params, util.Collections.emptyList[TextEdit]()) { pc =>
+      new JavaImplementAbstractMembersProvider(pc, params)
+        .implementAbstractMembers()
+        .asJava
+    }
 
   override def insertInferredType(
       params: OffsetParams
