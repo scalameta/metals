@@ -1,5 +1,6 @@
 package tests.codeactions
 
+import scala.meta.internal.metals.codeactions.InlineValueCodeAction
 import scala.meta.internal.metals.codeactions.JavaExtractMethodCodeAction
 
 class JavaExtractMethodLspSuite
@@ -91,7 +92,8 @@ class JavaExtractMethodLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${JavaExtractMethodCodeAction.title("foo")}
+    s"""|${InlineValueCodeAction.genericTitle}
+        |${JavaExtractMethodCodeAction.title("foo")}
         |""".stripMargin,
     """|package a;
        |
@@ -108,5 +110,6 @@ class JavaExtractMethodLspSuite
        |}
        |""".stripMargin,
     fileName = "Example.java",
+    selectedActionIndex = 1,
   )
 }

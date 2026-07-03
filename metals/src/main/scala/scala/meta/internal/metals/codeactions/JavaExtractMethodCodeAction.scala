@@ -9,7 +9,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.pc.CancelToken
-import scala.meta.pc.CodeActionId
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.{lsp4j => l}
@@ -30,10 +29,6 @@ class JavaExtractMethodCodeAction(
   override def isScala: Boolean = false
 
   override def isJava: Boolean = true
-
-  override def maybeCodeActionId: Option[String] = Some(
-    CodeActionId.ExtractMethod
-  )
 
   override def resolveCodeAction(codeAction: l.CodeAction, token: CancelToken)(
       implicit ec: ExecutionContext
