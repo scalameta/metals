@@ -922,8 +922,8 @@ object BuildServerConnection {
      * field, so that's what we use here, with that "scala-sc" language.
      */
     def supportsWrappedSources: Boolean =
-      capabilities.getCompileProvider.getLanguageIds.asScala
-        .contains("scala-sc")
+      Option(capabilities.getCompileProvider())
+        .exists(_.getLanguageIds().contains("scala-sc"))
   }
 }
 
