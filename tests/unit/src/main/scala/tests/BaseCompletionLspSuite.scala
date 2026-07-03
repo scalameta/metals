@@ -130,6 +130,7 @@ trait CompletionsAssertions {
       expectedDoc: Option[String] = None,
       expectedInsertText: Option[String] = None,
       additionalInsertTexts: List[String] = List.empty,
+      additionalStartLines: List[Int] = List.empty,
       project: Char = 'a',
       filter: String => Boolean = _ => true,
       index: Int = 0,
@@ -170,6 +171,18 @@ trait CompletionsAssertions {
             }
             .getOrElse(List.empty)
         assertEquals(obtainedInsertTexts, additionalInsertTexts)
+        val obtainedAdditionalLines: List[Int] =
+          Option(resolved.getAdditionalTextEdits)
+            .map { javaList =>
+              javaList
+                .stream()
+                .map(_.getRange.getStart.getLine)
+                .toArray
+                .toList
+                .asInstanceOf[List[Int]]
+            }
+            .getOrElse(List.empty)
+        assertEquals(obtainedAdditionalLines, additionalStartLines)
     }
   }
 

@@ -67,14 +67,25 @@ final class JavaExtractMethodProvider(
 
     val javacTrees = Trees.instance(compile.task)
     val cu = compile.cu
+    val task = compile.task
     val text = cu.getSourceFile().getCharContent(true).toString()
     val originalStart = rangeParams.offset()
     val originalEnd = rangeParams.endOffset()
     val insertOffset = extractionPos.offset()
     if (originalStart >= originalEnd || insertOffset < 0) Nil
     else {
+      val scanner = new JavaTreeScanner(compiler.logger, task, cu)
+      val position =
+        CursorPosition(
+          rangeParams.offset(),
+          rangeParams.offset(),
+          rangeParams.offset()
+        )
+      val node = compiler.compilerTreeNode(scanner, position)
+
       val ctx = Context(
         javacTrees,
+        node,
         compile.task.getTypes(),
         cu,
         text,
@@ -91,6 +102,7 @@ final class JavaExtractMethodProvider(
 
   private case class Context(
       trees: Trees,
+      node: Option[TreePath],
       types: Types,
       cu: CompilationUnitTree,
       text: String,
@@ -722,19 +734,23 @@ final class JavaExtractMethodProvider(
     def importEditsFor(types: Seq[TypeMirror]): List[l.TextEdit] = {
       types.foreach(collectImportCandidates)
       if (importsNeeded.isEmpty) Nil
-      else {
-        val lines = importsNeeded.toList.sorted.map(fqn => s"import $fqn;")
-        val firstFqn = lines.head.stripPrefix("import ").stripSuffix(";")
-        val anchor = new JavaAutoImportEditor(ctx.text, firstFqn).textEdit()
-        if (lines.size == 1) List(anchor)
-        else
-          List(
-            new l.TextEdit(
-              anchor.getRange(),
-              anchor.getNewText() + lines.tail.mkString("\n", "\n", "\n")
-            )
-          )
-      }
+      else
+        {
+          ctx.node.map { path =>
+            val lines = importsNeeded.toList.sorted.map(fqn => s"import $fqn;")
+            val firstFqn = lines.head.stripPrefix("import ").stripSuffix(";")
+            val anchor =
+              new JavaAutoImportEditor(path, ctx.trees, firstFqn).textEdit()
+            if (lines.size == 1) List(anchor)
+            else
+              List(
+                new l.TextEdit(
+                  anchor.getRange(),
+                  anchor.getNewText() + lines.tail.mkString("\n", "\n", "\n")
+                )
+              )
+          }
+        }.getOrElse(Nil)
     }
 
     private def collectImportCandidates(tpe: TypeMirror): Unit =
