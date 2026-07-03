@@ -2006,7 +2006,7 @@ abstract class MetalsLspService(
     buildTargets,
     buildClient,
     languageClient,
-    semanticdbs,
+    mbtReferenceProvider,
     () => userConfig,
     folder,
     buildTargetClassesFinder,
