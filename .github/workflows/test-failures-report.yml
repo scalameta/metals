@@ -1,35 +1,36 @@
-name: 'Test Failures Report'
+name: Test Failures Summary
+run-name: "Test Failures Summary for ${{ github.event.workflow_run.pull_requests[0].number && format('PR #{0}', github.event.workflow_run.pull_requests[0].number) || format('commit {0}', github.event.workflow_run.head_sha) }}"
+
 on:
   workflow_run:
-    workflows: ['CI']
+    workflows: ["CI"]
     types:
       - completed
+
 permissions:
   checks: write
-  contents: read
   actions: read
+
 jobs:
   aggregate-test-reports:
-    if: always()
+    name: Aggregate test reports
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - name: Download artifacts from triggering CI run
+        uses: actions/download-artifact@v8
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-          persist-credentials: false
-      - name: Download reports for each test job
-        uses: dawidd6/action-download-artifact@v21
-        with:
-          run_id: ${{ github.event.workflow_run.id }}
-          name: test-reports
-          merge_multiple: true
-      - name: Test Report
+          path: artifacts
+          merge-multiple: true
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+      - name: Create the aggregated test report
         uses: dorny/test-reporter@9c978c66ab5564af606adee293b728670b2ca93c
         with:
-          name: Aggregated failure reports
-          path: "**/target/test-reports/*.xml"
+          name: Aggregated test report
+          path: "artifacts/**/target/test-reports/*.xml"
           reporter: java-junit
           list-suites: failed
           list-tests: failed
           list-files: failed
           use-actions-summary: false
+          max-annotations: 0
