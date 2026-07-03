@@ -66,6 +66,38 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
     } yield ()
   }
 
+  test("unused-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/UnusedImport.java
+           |package a;
+           |
+           |import java.util.List;
+           |import java.util.Map;
+           |
+           |public class UnusedImport {
+           |  public List<String> names;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/UnusedImport.java")
+      _ <- server.didFocus("a/src/main/java/a/UnusedImport.java")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/UnusedImport.java:4:1: warning: unused import
+           |import java.util.Map;
+           |^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("introduce-type-error") {
     cleanWorkspace()
     for {
