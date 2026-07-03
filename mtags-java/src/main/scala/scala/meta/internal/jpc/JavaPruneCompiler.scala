@@ -15,7 +15,6 @@ import scala.meta.internal.metals.ReportLevel
 import scala.meta.pc
 
 import com.sun.source.util.JavacTask
-import com.sun.tools.javac.api.JavacTaskImpl
 import com.sun.tools.javac.api.JavacTool
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Names
@@ -189,29 +188,7 @@ class JavaPruneCompiler(
       // -sourcepath but are not part of the input digest (options or sources).
       var task = tasks.pollFirstEntry()
       while (task != null) {
-        cleanup(task.getValue)
         task = tasks.pollFirstEntry()
-      }
-    }
-
-    private def cleanup(javaSourceCompile: JavaSourceCompile): Unit = {
-      javaSourceCompile.task match {
-        case impl: JavacTaskImpl =>
-          // JavacTaskImpl.cleanup()
-          val context = impl.getContext()
-          if (context != null) {
-            val compiler =
-              com.sun.tools.javac.main.JavaCompiler.instance(context)
-            if (compiler != null) {
-              compiler.close()
-            }
-          }
-        case other =>
-          if (isDebugEnabled) {
-            logger.debug(
-              s"Warning: Expected JavacTaskImpl, found: ${other.getClass.getName}"
-            )
-          }
       }
     }
 
@@ -240,8 +217,7 @@ class JavaPruneCompiler(
         onUpdate
       }
       while (tasks.size() > 3) {
-        // Only hold a small number of tasks in memory
-        cleanup(tasks.pollFirstEntry().getValue())
+        tasks.pollFirstEntry()
       }
       result
     }
