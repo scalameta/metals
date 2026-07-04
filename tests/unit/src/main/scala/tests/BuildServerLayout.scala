@@ -127,20 +127,36 @@ object BazelBuildLayout extends BuildToolLayout {
       sourceLayout: String,
       scalaVersion: String,
       bazelVersion: String,
-  ): String = apply(sourceLayout, scalaVersion, bazelVersion, Nil)
+  ): String = apply(sourceLayout, scalaVersion, bazelVersion, Nil, None)
 
   def apply(
       sourceLayout: String,
       scalaVersion: String,
       bazelVersion: String,
       mavenDeps: List[String],
+      mavenHubName: Option[String] = None,
+  ): String =
+    bazelLayout(
+      sourceLayout,
+      scalaVersion,
+      bazelVersion,
+      mavenDeps,
+      mavenHubName,
+    )
+
+  private def bazelLayout(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+      mavenDeps: List[String],
+      mavenHubName: Option[String],
   ): String =
     s"""|/.metals/txt.txt
         |initialize the project for metals
         |/.bazelversion
         |$bazelVersion
         |/MODULE.bazel
-        |${moduleFileLayout(scalaVersion, mavenDeps)}
+        |${moduleFileLayout(scalaVersion, mavenDeps, mavenHubName)}
         |/BUILD
         |
         |/WORKSPACE
@@ -151,7 +167,10 @@ object BazelBuildLayout extends BuildToolLayout {
   def moduleFileLayout(
       scalaVersion: String,
       mavenDeps: List[String] = Nil,
+      mavenHubName: Option[String] = None,
   ): String = {
+    val hubName = mavenHubName.getOrElse("maven")
+    val nameLine = mavenHubName.fold("")(n => s"""    name = "$n",\n""")
     val mavenSection =
       if (mavenDeps.isEmpty) ""
       else {
@@ -161,15 +180,76 @@ object BazelBuildLayout extends BuildToolLayout {
             |
             |maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
             |maven.install(
-            |    artifacts = [
+            |$nameLine    artifacts = [
             |        $artifacts
             |    ],
             |    fetch_sources = True,
             |    lock_file = "//:maven_install.json",
             |)
-            |use_repo(maven, "maven")
+            |use_repo(maven, "$hubName")
             |""".stripMargin
       }
+    s"""|${scalaModulePrefix(scalaVersion)}
+        |
+        |$mavenSection""".stripMargin
+  }
+
+  /**
+   * A layout with several independent rules_jvm_external Maven hubs, each with
+   * its own `maven.install` and lock file. Used to exercise hub-based
+   * disambiguation when the same coordinate is pinned to different versions in
+   * different hubs.
+   */
+  def multiHub(
+      sourceLayout: String,
+      scalaVersion: String,
+      bazelVersion: String,
+      mavenHubs: List[(String, List[String])],
+  ): String =
+    s"""|/.metals/txt.txt
+        |initialize the project for metals
+        |/.bazelversion
+        |$bazelVersion
+        |/MODULE.bazel
+        |${multiHubModuleFileLayout(scalaVersion, mavenHubs)}
+        |/BUILD
+        |
+        |/WORKSPACE
+        |# Empty WORKSPACE file for compatibility
+        |$sourceLayout
+        |""".stripMargin
+
+  def multiHubModuleFileLayout(
+      scalaVersion: String,
+      mavenHubs: List[(String, List[String])],
+  ): String = {
+    val installs =
+      mavenHubs
+        .map { case (hubName, deps) =>
+          val artifacts = deps.map(d => s""""$d"""").mkString(",\n        ")
+          s"""|maven.install(
+              |    name = "$hubName",
+              |    artifacts = [
+              |        $artifacts
+              |    ],
+              |    fetch_sources = True,
+              |    lock_file = "//:${hubName}_install.json",
+              |)""".stripMargin
+        }
+        .mkString("\n")
+    val repos =
+      mavenHubs.map { case (name, _) => s""""$name"""" }.mkString(", ")
+    s"""|${scalaModulePrefix(scalaVersion)}
+        |
+        |bazel_dep(name = "rules_jvm_external", version = "6.6")
+        |
+        |maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+        |$installs
+        |use_repo(maven, $repos)
+        |""".stripMargin
+  }
+
+  private def scalaModulePrefix(scalaVersion: String): String =
     s"""|bazel_dep(name = "rules_scala", version = "7.2.4")
         |
         |scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
@@ -180,10 +260,7 @@ object BazelBuildLayout extends BuildToolLayout {
         |scala_deps.scala()
         |use_repo(scala_deps, "rules_scala_toolchains")
         |
-        |register_toolchains("@rules_scala_toolchains//...:all")
-        |
-        |$mavenSection""".stripMargin
-  }
+        |register_toolchains("@rules_scala_toolchains//...:all")""".stripMargin
 
   def workspaceFileLayout(scalaVersion: String): String =
     s"""|# WORKSPACE
