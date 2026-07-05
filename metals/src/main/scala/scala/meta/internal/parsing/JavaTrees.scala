@@ -261,6 +261,8 @@ class JavaTrees(buffers: Buffers) {
               // This is going to change in Java 27, see https://bugs.openjdk.org/browse/JDK-8268850
               "var"
           },
+          typeRange = Option(node.getType()).flatMap(treeRange),
+          initializerRange = Option(node.getInitializer()).flatMap(treeRange),
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
@@ -772,6 +774,8 @@ case class JavaVariable(
     range: JavaRange,
     nameRange: JavaRange,
     typ: String,
+    typeRange: Option[JavaRange],
+    initializerRange: Option[JavaRange],
     modifiers: Set[Modifier],
 ) extends JavaMember
     with HasModifiers {

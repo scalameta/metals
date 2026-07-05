@@ -41,6 +41,28 @@ object JavacDiagnostic {
       }
   }
 
+  // Example errors:
+  // error: incompatible types: java.lang.String cannot be converted to int
+  // error: incompatible types: possible lossy conversion from double to int
+  class IncompatibleTypes(
+      val found: String,
+      val required: String
+  )
+  object IncompatibleTypes {
+    private val CannotBeConverted =
+      """incompatible types: (.+) cannot be converted to (.+)""".r
+    private val PossibleLossyConversion =
+      """incompatible types: possible lossy conversion from (.+) to (.+)""".r
+    def unapply(d: l.Diagnostic): Option[IncompatibleTypes] =
+      d.getMessageAsString.trim() match {
+        case CannotBeConverted(found, required) =>
+          Some(new IncompatibleTypes(found, required))
+        case PossibleLossyConversion(found, required) =>
+          Some(new IncompatibleTypes(found, required))
+        case _ => None
+      }
+  }
+
   // Example error:
   // error: Foo is not abstract and does not override abstract method bar() in Baz
   object DoesNotOverrideAbstract {
