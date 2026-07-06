@@ -303,9 +303,9 @@ val sharedSettings = sharedScalacOptions ++ List(
     scalaVersion.value,
     if2 = List(
       compilerPlugin(
-        "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+        ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
           scalaVersion.value
-        ) cross CrossVersion.full
+        )).cross(CrossVersion.full)
       )
     ),
   ),
@@ -485,9 +485,9 @@ val mtagsSettings = List(
       if2 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-        "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+        ("org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
           scalaVersion.value
-        ) cross CrossVersion.full,
+        )).cross(CrossVersion.full),
       ),
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
@@ -718,9 +718,9 @@ lazy val metals = project
       "com.lihaoyi" %% "requests" % "0.9.3",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
-      "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
+      ("org.scalameta" %% "semanticdb-metap" % V.semanticdb(
         scalaVersion.value
-      ) cross CrossVersion.full,
+      )).cross(CrossVersion.full),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
       "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
@@ -1090,7 +1090,7 @@ lazy val metalsDependencies = project
       ("ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop)
         .exclude("com.lihaoyi", "unroll-annotation_2.13"),
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
-      "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
+      ("org.foundweekends.giter8" %% "giter8" % V.gitter8Version).intransitive(),
     ),
   )
   .disablePlugins(ScalafixPlugin)
@@ -1160,9 +1160,9 @@ lazy val bench = project
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     libraryDependencies ++= List(
-      "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+      ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
         scalaVersion.value
-      ) cross CrossVersion.full
+      )).cross(CrossVersion.full)
     ),
     buildInfoPackage := "bench",
     libraryDependencies ++= List(
