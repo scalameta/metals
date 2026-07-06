@@ -139,7 +139,9 @@ object GenerateEqualsHashCodeToString {
 
   private def instanceFields(cls: JavaClass): List[JavaVariable] =
     cls.members.collect {
-      case field: JavaVariable if !field.isStatic => field
+      case field: JavaVariable
+          if !field.isStatic && JavaTrees.isValid(field.tree) =>
+        field
     }
 
   private def hasEquals(cls: JavaClass): Boolean =

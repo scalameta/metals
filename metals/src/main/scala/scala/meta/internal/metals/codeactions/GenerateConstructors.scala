@@ -155,7 +155,7 @@ object GenerateConstructors {
 
   private def isConstructorField(field: JavaVariable): Boolean =
     !field.isStatic &&
-      !(field.isFinal && field.hasInitializer)
+      !(field.isFinal && field.hasInitializer) && JavaTrees.isValid(field.tree)
 
   private def hasDefaultConstructor(cls: JavaClass): Boolean =
     cls.members.exists {

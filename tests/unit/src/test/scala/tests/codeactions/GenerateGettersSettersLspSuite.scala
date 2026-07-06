@@ -641,4 +641,35 @@ class GenerateGettersSettersLspSuite
         action.getTitle() == GenerateGettersSetters.titleSetter("name"),
   )
 
+  check(
+    "invalid-field",
+    """|package a;
+       |
+       |public class <<Example>> {
+       |  field
+       |  private String name;
+       |}
+       |""".stripMargin,
+    allTitles("Example"),
+    """|package a;
+       |
+       |public class Example {
+       |  field
+       |  private String name;
+       |
+       |  public String getName() {
+       |    return name;
+       |  }
+       |
+       |  public void setName(String name) {
+       |    this.name = name;
+       |  }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 2,
+    filterAction = onlyAll,
+    fileName = "Example.java",
+    expectNoDiagnostics = false,
+  )
+
 }

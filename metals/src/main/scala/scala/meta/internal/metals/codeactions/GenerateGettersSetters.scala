@@ -53,7 +53,10 @@ class GenerateGettersSetters(
 
       // cursor on the class name: getters/setters for all fields.
       if (range.overlapsWith(cls.nameRange.range)) {
-        val fields = cls.members.collect { case field: JavaVariable => field }
+        val fields =
+          cls.members.filter { f => JavaTrees.isValid(f.tree) }.collect {
+            case field: JavaVariable => field
+          }
         List(
           build(
             titleAllGetters(cls.name),
@@ -77,7 +80,10 @@ class GenerateGettersSetters(
           .findEnclosingJavaVariable(path, position)
           .filter(field =>
             range
-              .overlapsWith(field.nameRange.range) && isClassField(cls, field)
+              .overlapsWith(field.nameRange.range) && isClassField(
+              cls,
+              field,
+            ) && JavaTrees.isValid(field.tree)
           )
           .map { field =>
             List(
@@ -103,6 +109,7 @@ class GenerateGettersSetters(
         other.range.startOffset == field.range.startOffset
       case _ => false
     }
+
 }
 
 object GenerateGettersSetters {
