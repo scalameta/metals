@@ -90,15 +90,22 @@ class JavaTrees(buffers: Buffers) {
       }
     } yield result
 
+  /**
+   * Finds the variable declaration enclosing `pos`.
+   *
+   * @param onNameOnly when true, `pos` must be on the variable's name
+   *   identifier; when false, anywhere within the declaration counts.
+   */
   def findEnclosingJavaVariable(
       source: AbsolutePath,
       pos: l.Position,
+      onNameOnly: Boolean = true,
   ): Option[JavaVariable] =
     for {
       text <- text(source)
       tree <- get(source)
       result <- {
-        val visitor = new EnclosingVariableFinder(tree, text, pos)
+        val visitor = new EnclosingVariableFinder(tree, text, pos, onNameOnly)
         visitor.scan(tree, ())
         visitor.result
       }
@@ -327,6 +334,7 @@ class JavaTrees(buffers: Buffers) {
       cu: CompilationUnitTree,
       text: String,
       targetPos: l.Position,
+      onNameOnly: Boolean,
   ) extends EnclosingFinder[JavaVariable](cu, text, targetPos) {
 
     override def visitVariable(
@@ -341,7 +349,10 @@ class JavaTrees(buffers: Buffers) {
           findNameOffset(text, nodeStart, nodeEnd, name)
             .getOrElse(nodeStart)
         val actualNodeEnd = actualNodeStart + name.length()
-        if (positionContains(targetOffset, actualNodeStart, actualNodeEnd)) {
+        if (
+          !onNameOnly ||
+          positionContains(targetOffset, actualNodeStart, actualNodeEnd)
+        ) {
           _result = javaVariable(node)
         }
       }

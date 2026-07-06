@@ -434,12 +434,12 @@ class CompilerConfiguration(
   }
 
   case class JavaLazyCompiler(
-      javaTarget: JvmTarget,
+      target: JvmTarget,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
 
-    def buildTargetId: BuildTargetIdentifier = javaTarget.id
+    def buildTargetId: BuildTargetIdentifier = target.id
 
     protected def newCompiler(
         classpath: Seq[Path],
@@ -449,10 +449,13 @@ class CompilerConfiguration(
       val shouldUseOpts = featureFlags
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
-      val options = javaTarget match {
+      val buildOptions = target match {
         case j: JavaTarget if shouldUseOpts => j.options
         case _ => Nil
       }
+      val lintOptions =
+        userConfig().javaLintOptions.values.map(option => s"-Xlint:$option")
+      val options = buildOptions ++ lintOptions
       configure(pc, search, completionItemPriority)
         .newInstance(
           buildTargetId.getUri(),

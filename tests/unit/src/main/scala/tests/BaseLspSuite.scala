@@ -26,6 +26,7 @@ import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Trace
+import scala.meta.internal.metals.JavaLintOptions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProtocol
 import scala.meta.internal.metals.logging.MetalsLogger
@@ -51,6 +52,7 @@ abstract class BaseLspSuite(
       buildChangedAction = BuildChangedAction.prompt,
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
+      javaLintOptions = JavaLintOptions(Nil),
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
 
       // Legacy settings that are enabled for tests only.  We  should eventually

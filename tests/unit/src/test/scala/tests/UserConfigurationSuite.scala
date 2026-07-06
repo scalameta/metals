@@ -20,6 +20,7 @@ import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.JavaFormatConfig
 import scala.meta.internal.metals.JavaFormatterConfig
+import scala.meta.internal.metals.JavaLintOptions
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
@@ -188,6 +189,31 @@ class UserConfigurationSuite extends BaseSuite {
       |json error: key 'sbt-script' should have value of type string but obtained []
     """.stripMargin,
   )
+
+  checkError(
+    "java-lint-options-invalid",
+    """
+      |{
+      | "java-lint-options": ["deprecation", "typo"]
+      |}
+    """.stripMargin,
+    "json error: invalid config value 'typo' for javaLintOptions. Valid values are " +
+      "\"cast\", \"dep-ann\", \"deprecation\", \"divzero\", \"empty\", \"fallthrough\", \"finally\", " +
+      "\"lossy-conversions\", \"overloads\", \"overrides\", \"preview\", \"rawtypes\", \"removal\", " +
+      "\"serial\", \"static\", \"strictfp\", \"synchronization\", \"text-blocks\", \"this-escape\", " +
+      "\"try\", \"unchecked\", \"varargs\"",
+  )
+
+  checkOK(
+    "java-lint-options-empty",
+    """
+      |{
+      | "java-lint-options": []
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assertEquals(obtained.javaLintOptions, JavaLintOptions(Nil))
+  }
 
   checkError(
     "symbol-prefixes",
@@ -398,6 +424,7 @@ class UserConfigurationSuite extends BaseSuite {
       javacServicesOverrides =
         JavacServicesOverrides.default.copy(names = false),
       scalafixRulesDependencies = List("rule1", "rule2"),
+      javaLintOptions = JavaLintOptions(List("deprecation", "unchecked")),
       customProjectRoot = Some("customs"),
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
       javaTurbineRecompileDelay = TurbineRecompileDelayConfig.testing,
@@ -478,6 +505,10 @@ class UserConfigurationSuite extends BaseSuite {
     "rule2"
   ],
   "scalafixLintEnabled": false,
+  "javaLintOptions": [
+    "deprecation",
+    "unchecked"
+  ],
   "customProjectRoot": "customs",
   "verboseCompilation": true,
   "autoImportBuilds": "all",
@@ -563,6 +594,7 @@ class UserConfigurationSuite extends BaseSuite {
           |shim-globs                                   string                         `{}`.           Shim file globs
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
           |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
+          |java-lint-options                            array                          [cast,deprecation,dep-ann,divzero,empty,fallthrough,finally,lossy-conversions,overloads,overrides,rawtypes,removal,serial,static,strictfp,synchronization,text-blocks,this-escape,try,unchecked,varargs] Java lint diagnostics
           |excluded-packages                            array                          []              Excluded Packages
           |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
