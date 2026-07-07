@@ -23,7 +23,7 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.1.0"
+  val bloop = "2.1.1"
 
   val bloopConfig = "2.3.3"
 
