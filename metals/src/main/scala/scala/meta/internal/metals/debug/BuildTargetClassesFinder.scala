@@ -50,10 +50,17 @@ class BuildTargetClassesFinder(
           val found = ex match {
             // We check whether there is a main in dependencies that is not reported via BSP
             case ClassNotFoundInBuildTargetException(className, target) =>
-              revertToDependencies(
-                className,
-                buildTargets.findByDisplayNameOrUri(target),
+              val targetOpt = buildTargets.findByDisplayNameOrUri(target)
+              val isMbtTarget = targetOpt.exists(t =>
+                buildTargets.buildServerOf(t.getId()).exists(_.isMbt)
               )
+              if (isMbtTarget) {
+                // We might not have dependency sources indexed so revertToDependencies
+                // will fail. Let's trust the input data
+                targetOpt.toList.map(t =>
+                  (new b.ScalaMainClass(className, Nil.asJava, Nil.asJava), t)
+                )
+              } else revertToDependencies(className, targetOpt)
             case _: NoMainClassFoundException =>
               revertToDependencies(className, buildTarget = None)
             case _ => Nil
