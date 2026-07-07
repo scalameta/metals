@@ -66,7 +66,7 @@ abstract class BazelMbtImporter(
         dependencyModules,
         repositoryName,
       )
-      scalaVersionFromDeps <- queryScalaVersionFromDeps()
+      scalaVersionFromDeps <- queryScalaVersionFromDeps(targets)
       effectiveScalaVersion <- scalaVersionFromDeps match {
         case Some(value) => Future.successful(Some(value))
         case None => queryScalaVersion(targets)
@@ -248,10 +248,16 @@ abstract class BazelMbtImporter(
     withoutDoubleAt.replaceAll("~[^/]+", "")
   }
 
-  private def queryScalaVersionFromDeps(): Future[Option[String]] =
-    runBazelQueryLines(s"filter('scala.library', deps(//...))").map { lines =>
-      lines.flatMap(extractScalaVersionFromLabel).headOption
-    }
+  private def queryScalaVersionFromDeps(
+      targets: List[String]
+  ): Future[Option[String]] =
+    if (targets.isEmpty) Future.successful(None)
+    else
+      runBazelQueryLines(
+        s"filter('scala.library', deps(set(${targets.mkString(" ")})))"
+      ).map { lines =>
+        lines.flatMap(extractScalaVersionFromLabel).headOption
+      }
 
   private def queryScalaVersion(
       @annotation.nowarn("msg=never used") targets: List[String]
@@ -340,6 +346,11 @@ abstract class BazelMbtImporter(
               "bazel-mbt: query cancelled"
             )
           )
+        case 3 =>
+          scribe.warn(
+            s"bazel-mbt: bazel query had errors (exit code 3), results may be incomplete"
+          )
+          Future.successful(buf.toString)
         case code =>
           Future.failed(
             new Exception(s"bazel-mbt: bazel query failed with exit code $code")
