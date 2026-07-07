@@ -85,7 +85,7 @@ class AddMissingReturnStatement(
 object AddMissingReturnStatement {
   def title: String = "Add missing return statement"
 
-  private def hasMissingReturnMessage(diagnostic: l.Diagnostic): Boolean =
+  def hasMissingReturnMessage(diagnostic: l.Diagnostic): Boolean =
     Option(diagnostic.getMessage())
       .map(_.toString().toLowerCase())
       .exists(_.contains("missing return"))
