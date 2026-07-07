@@ -78,16 +78,18 @@ final class BuildTargetClasses(
     )
 
   override def onChange(docs: TextDocuments, path: AbsolutePath): Unit = {
+    onChangeAsync(docs, path).ignoreValue
+  }
+
+  def onChangeAsync(docs: TextDocuments, path: AbsolutePath): Future[Unit] = {
     if (
-      path.isScalaFilename && hasBazelBuildServer && belongsToTestTarget(path)
+      path.isScalaOrJava && hasBazelBuildServer && belongsToTestTarget(path)
     ) {
       symbolCache.removeSymbolsForPath(path)
-      extractTestClassesFromDocuments(docs, path).foreach { testClasses =>
-        if (testClasses.nonEmpty) {
-          bazelTestClassCache.put(path, testClasses)
-        }
+      extractTestClassesFromDocuments(docs, path).map { testClasses =>
+        cacheBazelTestClasses(path, testClasses)
       }
-    }
+    } else Future.unit
   }
 
   override def onDelete(path: AbsolutePath): Unit = {
@@ -569,7 +571,7 @@ final class BuildTargetClasses(
           buildTargetIds.asScala.toList.contains(target)
         }
         .map(_._1)
-        .filter(_.isScalaFilename)
+        .filter(_.isScalaOrJava)
         .toList
 
       sourceFiles.foreach { sourcePath =>
@@ -577,6 +579,26 @@ final class BuildTargetClasses(
           testClasses.foreach { case (symbol, testInfo) =>
             classes(target).testClasses.put(symbol, testInfo)
           }
+        }
+      }
+    }
+  }
+
+  private def cacheBazelTestClasses(
+      path: AbsolutePath,
+      testClasses: List[(String, TestSymbolInfo)],
+  ): Unit = {
+    if (testClasses.nonEmpty) {
+      bazelTestClassCache.put(path, testClasses)
+      val targetIds = buildTargets.inverseSourcesAll(path)
+      for {
+        targetId <- targetIds
+        buildTarget <- buildTargets.info(targetId)
+        if buildTarget.getTags.asScala.contains("test")
+      } {
+        val classes = index.getOrElseUpdate(targetId, new Classes)
+        testClasses.foreach { case (symbol, testInfo) =>
+          classes.testClasses.put(symbol, testInfo)
         }
       }
     }
@@ -996,7 +1018,6 @@ final class BuildTargetClasses(
 
   private def mbtMainClass(symbol: String): b.ScalaMainClass =
     new b.ScalaMainClass(symbolToClassName(symbol), Nil.asJava, Nil.asJava)
-
 }
 
 object TestFrameworkDetector {
