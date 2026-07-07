@@ -27,9 +27,15 @@ import com.sun.source.tree.VariableTree
 import com.sun.source.util.TreePathScanner
 import com.sun.tools.javac.file.JavacFileManager
 import com.sun.tools.javac.parser.ParserFactory
+import com.sun.tools.javac.tree.JCTree
+import com.sun.tools.javac.tree.JCTree.JCClassDecl
+import com.sun.tools.javac.tree.JCTree.JCMethodDecl
+import com.sun.tools.javac.tree.JCTree.JCVariableDecl
+import com.sun.tools.javac.tree.JCTree.Tag
 import com.sun.tools.javac.tree.{JCTree => JavacJCTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
+import com.sun.tools.javac.util.Name
 import com.sun.tools.javac.util.Options
 import org.eclipse.{lsp4j => l}
 
@@ -659,6 +665,23 @@ object JavaTrees {
         end.offset,
         isInsertion = start.offset == end.offset,
       )
+    }
+  }
+
+  def isValid(tree: Tree): Boolean = {
+    def isErrorName(name: Name): Boolean =
+      name != null && name.contentEquals(
+        "<error>"
+      )
+    tree match {
+      case jcTree: JCTree if !jcTree.hasTag(Tag.ERRONEOUS) =>
+        jcTree match {
+          case varDecl: JCVariableDecl => !isErrorName(varDecl.name)
+          case methodDecl: JCMethodDecl => !isErrorName(methodDecl.name)
+          case classDecl: JCClassDecl => !isErrorName(classDecl.name)
+          case _ => true
+        }
+      case _ => false
     }
   }
 
