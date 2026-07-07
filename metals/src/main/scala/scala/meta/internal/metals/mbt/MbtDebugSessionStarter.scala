@@ -161,29 +161,37 @@ class MbtDebugSessionStarter(
     )
     val toolName = launcher.executableName
     val cancelPromise = Promise[Unit]()
-    debugConfigCreator.create(target.id, cancelPromise, isTests = false) match {
-      case Left(error) => Future.failed(new IllegalStateException(error))
-      case Right(projectFuture) =>
-        projectFuture.map { project =>
-          val patched = patchProjectForRun(project, target, workspace, toolName)
-          scribe.info(
-            s"MBT debug session via $toolName: ${redactedCommand(command)}"
-          )
-          val debuggee = new BuildToolDebugAdapter(
-            Future.successful(command),
-            workspace,
-            env = javaHomeEnv(target),
-            patched,
-            userJavaHome(),
-          )
-          val handler = dap.DebugServer.run(
-            debuggee,
-            new MetalsDebugToolsResolver(),
-            new DebugLogger(),
-            gracePeriod = Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
-          )
-          handler.uri
-        }
+    compile(target, workspace, scribe.info(_), scribe.warn(_)).flatMap { _ =>
+      debugConfigCreator.create(
+        target.id,
+        cancelPromise,
+        isTests = false,
+      ) match {
+        case Left(error) => Future.failed(new IllegalStateException(error))
+        case Right(projectFuture) =>
+          projectFuture.map { project =>
+            val patched =
+              patchProjectForRun(project, target, workspace, toolName)
+            scribe.info(
+              s"MBT debug session via $toolName: ${redactedCommand(command)}"
+            )
+            val debuggee = new BuildToolDebugAdapter(
+              Future.successful(command),
+              workspace,
+              env = javaHomeEnv(target),
+              patched,
+              userJavaHome(),
+            )
+            val handler = dap.DebugServer.run(
+              debuggee,
+              new MetalsDebugToolsResolver(),
+              new DebugLogger(),
+              gracePeriod =
+                Duration(debuggeeGracePeriodSeconds, TimeUnit.SECONDS),
+            )
+            handler.uri
+          }
+      }
     }
   }
 
