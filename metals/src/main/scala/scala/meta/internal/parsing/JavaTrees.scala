@@ -31,6 +31,7 @@ import com.sun.tools.javac.tree.{JCTree => JavacJCTree}
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Options
+import com.sun.tools.javac.util.{Position => JavacPosition}
 import org.eclipse.{lsp4j => l}
 
 class JavaTrees(buffers: Buffers) {
@@ -188,7 +189,14 @@ class JavaTrees(buffers: Buffers) {
       text: String,
       targetPos: l.Position,
   ) extends TreePathScanner[Unit, Unit] {
-    protected val lineMap: LineMap = cu.getLineMap()
+    // Don't use `cu.getLineMap()` here: javac's `LineMapImpl.getLineNumber`
+    // memoizes its last lookup in unsynchronized fields, and code-action
+    // providers run concurrently over the same cached tree, so sharing its
+    // line map across threads yields wrong line numbers (corrupt LSP ranges).
+    // Each finder is used by a single thread, so a private line map built from
+    // the same text is race-free and behaviorally identical.
+    protected val lineMap: LineMap =
+      JavacPosition.makeLineMap(text.toCharArray(), text.length(), false)
     protected val pos = new TreePositions(cu)
     protected val targetOffset: Int = lspPositionToOffset(lineMap, targetPos)
     protected var _result: Option[T] = None

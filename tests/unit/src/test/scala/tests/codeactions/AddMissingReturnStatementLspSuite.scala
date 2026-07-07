@@ -25,6 +25,13 @@ class AddMissingReturnStatementLspSuite
   private val onlyAddReturn: org.eclipse.lsp4j.CodeAction => Boolean =
     _.getTitle() == AddMissingReturnStatement.title
 
+  // Wait for the async "missing return" diagnostic
+  override protected def defaultAwaitDiagnostics
+      : Option[Seq[org.eclipse.lsp4j.Diagnostic] => Boolean] =
+    Some(
+      _.exists(AddMissingReturnStatement.hasMissingReturnMessage)
+    )
+
   check(
     "int",
     """|package a;
