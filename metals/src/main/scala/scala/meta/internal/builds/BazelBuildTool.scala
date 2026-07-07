@@ -251,7 +251,7 @@ case class BazelBuildTool(
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
       "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
-      "--noshow_progress", "--test_output=all",
+      "--noshow_progress", "--test_output=all", "--test_tag_filters=",
     ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
