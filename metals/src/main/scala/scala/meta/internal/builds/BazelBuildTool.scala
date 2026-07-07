@@ -191,13 +191,25 @@ case class BazelBuildTool(
       case Nil => Future.successful(List(target.name))
       case single :: Nil => Future.successful(List(single))
       case multiple =>
-        val filenames = sourceFiles.map(_.filename).distinct
+        val packagePath = target.name.stripPrefix("//").split(":", 2).head
+        val packageDir = workspace.resolve(packagePath)
+        val filenames = sourceFiles
+          .flatMap(_.toRelativeInside(packageDir))
+          .map(_.toNIO.toString.replace('\\', '/'))
+          .distinct
         if (filenames.isEmpty) Future.successful(List(multiple.head))
         else {
           val setExpr =
             s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
           val queryStr = filenames
-            .map(filename => s"attr(srcs, $filename, $setExpr)")
+            .map { filename =>
+              val pattern = java.util.regex.Pattern.quote(filename)
+              // "srcs" attribute will appear as [//pkg:sub/dir/File.scala]
+              // or as list [//pkg:a.scala, //pkg:sub/b.scala].
+              // We try to match the file path relative to BUILD.bazel directory
+              val quoted = s"\"[:]$pattern[,\\]]\""
+              s"attr(srcs, $quoted, $setExpr)"
+            }
             .mkString(" union ")
           val env =
             BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
