@@ -3,8 +3,6 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
 
-  val scala211 = "2.11.12"
-
   val scala212 = "2.12.21"
 
   val scala213 = "2.13.18"
@@ -25,21 +23,21 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.1.0"
+  val bloop = "2.1.1"
 
   val bloopConfig = "2.3.3"
 
   val bsp = "2.2.0-M2"
 
-  val coursier = "2.1.25-M25"
+  val coursier = "2.1.25-M26"
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
   val coursierInterfaces = "1.0.29-M2"
 
-  val debugAdapter = "4.2.8"
+  val debugAdapter = "4.2.9"
 
-  val genyVersion = "1.0.0"
+  val genyVersion = "1.1.1"
 
   val gitter8Version = "0.18.0"
 
@@ -55,29 +53,29 @@ object V {
 
   val lsp4jV = "1.0.0"
 
-  val mavenBloop = "2.0.4"
+  val mavenBloop = "2.0.5"
 
-  val mill = "1.1.6"
+  val mill = "1.1.7"
 
   val mdoc = "2.9.0"
 
-  val modelContextProtocol = "1.1.3"
+  val modelContextProtocol = "2.0.0"
 
   val munit = "1.3.3"
 
-  val pprint = "0.7.3"
+  val pprint = "0.9.6"
 
   val sbtBloop = bloop
 
   val sbtJdiTools = "1.2.0"
 
-  val scalaCli = "1.12.4"
+  val scalaCli = "1.14.0"
 
-  val scalafix = "0.14.6"
+  val scalafix = "0.14.7"
 
-  val scalafmt = "3.10.7"
+  val scalafmt = "3.11.1"
 
-  val scalameta = "4.15.2"
+  val scalameta = "4.17.0"
 
   val scribe = "3.19.0"
 
@@ -90,69 +88,76 @@ object V {
   val dap4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j.debug" % lsp4jV
 
   val eclipseJdt = Seq(
-    "org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0" exclude ("*", "*"),
-    "org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.500" exclude (
+    ("org.eclipse.jdt" % "org.eclipse.jdt.core" % "3.25.0").exclude("*", "*"),
+    ("org.eclipse.platform" % "org.eclipse.ant.core" % "3.5.500").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.compare.core" % "3.6.600" exclude (
+    ("org.eclipse.platform" % "org.eclipse.compare.core" % "3.6.600").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.commands" % "3.9.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.core.commands" % "3.9.500").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.contenttype" % "3.7.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.core.contenttype" % "3.7.500")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.core.expressions" % "3.6.500")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.core.filesystem" % "1.7.500")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.core.jobs" % "3.10.500").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.expressions" % "3.6.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.500")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.core.runtime" % "3.16.0").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.filesystem" % "1.7.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.core.variables" % "3.4.600").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.jobs" % "3.10.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.resources" % "3.13.500" exclude (
+    ("org.eclipse.platform" % "org.eclipse.equinox.common" % "3.10.600")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.7.600")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.600")
+      .exclude(
+        "*",
+        "*",
+      ),
+    ("org.eclipse.platform" % "org.eclipse.osgi" % "3.15.0").exclude("*", "*"),
+    ("org.eclipse.platform" % "org.eclipse.team.core" % "3.8.700").exclude(
       "*",
       "*",
     ),
-    "org.eclipse.platform" % "org.eclipse.core.runtime" % "3.16.0" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.core.variables" % "3.4.600" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.equinox.app" % "1.4.300" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.equinox.common" % "3.10.600" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.equinox.preferences" % "3.7.600" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.equinox.registry" % "3.8.600" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.osgi" % "3.15.0" exclude ("*", "*"),
-    "org.eclipse.platform" % "org.eclipse.team.core" % "3.8.700" exclude (
-      "*",
-      "*",
-    ),
-    "org.eclipse.platform" % "org.eclipse.text" % "3.9.0" exclude ("*", "*"),
+    ("org.eclipse.platform" % "org.eclipse.text" % "3.9.0").exclude("*", "*"),
   )
 
   def semanticdb(scalaVersion: String) =
@@ -169,12 +174,6 @@ object V {
       .collect { case Some((a, b)) => s"$a.$b" }
       .toList
       .distinct
-
-  // Scala 2
-  // whenever version is removed please add it to MtagsResolver under last supported Metals version
-  def deprecatedScala2Versions = Seq(
-    scala211
-  )
 
   def nonDeprecatedScala2Versions = Seq(
     scala213,
@@ -197,15 +196,13 @@ object V {
     "1.9.0"
   }
 
-  def scala2Versions = nonDeprecatedScala2Versions ++ deprecatedScala2Versions
+  def scala2Versions = nonDeprecatedScala2Versions
 
   def supportedScalaVersions = scala2Versions
   def nonDeprecatedScalaVersions = nonDeprecatedScala2Versions
-  def deprecatedScalaVersions = deprecatedScala2Versions
 
   val quickPublishScalaVersions = Set(
     bazelScalaVersion,
-    scala211,
     sbtScala,
     scala212,
     scala213,

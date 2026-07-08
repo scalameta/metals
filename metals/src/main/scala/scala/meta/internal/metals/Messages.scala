@@ -939,7 +939,7 @@ object Messages {
         ScalaVersions.scalaBinaryVersionFromFullVersion(_) == "2.11"
       )
       val deprecatedAleternative =
-        if (uses211) s" or alternatively to legacy Scala ${BuildInfo.scala211}"
+        if (uses211) s" or alternatively to legacy Scala 2.11.12"
         else ""
       val isAre = if (usingNow.size == 1) "is" else "are"
       val descriptionString = description.map(s => s"$s ").getOrElse("")

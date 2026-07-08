@@ -250,7 +250,7 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         s"""|.scalafmt.conf
             |version=${V.scalafmtVersion}
             |runner.dialect = scala213
-            |align=does-not-exist
+            |align.stripMargin = does-not-exist
             |/metals.json
             |{"a":{"scalaVersion" : ${V.scala213}}}
             |/Main.scala
@@ -264,13 +264,12 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
         client.workspaceDiagnostics,
         s"""|.scalafmt.conf:1:1: error: Invalid config: $workspace${File.separator}.scalafmt.conf:3:0 error: Type mismatch;
             |  found    : String (value: "does-not-exist")
-            |  expected : Object
-            |align=does-not-exis
+            |  expected : Bool
+            |align.stripMargin = does-not-exis
             |^
-            |
-            |> version=${V.scalafmtVersion}
+            |> version=3.11.1
             |> runner.dialect = scala213
-            |> align=does-not-exist
+            |> align.stripMargin = does-not-exist
         """.stripMargin,
       )
     } yield ()

@@ -25,12 +25,6 @@ class DefinitionCrossLspSuite
   override def serverConfig: MetalsServerConfig = super.serverConfig.copy(
   )
 
-  if (super.isValidScalaVersionForEnv(BuildInfo.scala211)) {
-    test("2.11") {
-      basicDefinitionTest(BuildInfo.scala211)
-    }
-  }
-
   if (super.isValidScalaVersionForEnv(BuildInfo.scala212)) {
     test("2.12") {
       basicDefinitionTest(BuildInfo.scala212)

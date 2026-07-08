@@ -33,7 +33,7 @@ jobs:
             java: "17"
             shard: 4
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: coursier/setup-action@v3
       - uses: actions/setup-java@v5
         with:
@@ -169,11 +169,6 @@ jobs:
             name: Scala javapc tests
             os: ubuntu-latest
             java: "21"
-          - type: cross-test-2-11
-            command: sbt cross-test-2-11
-            name: Scala 2.11 cross tests
-            os: ubuntu-latest
-            java: "21"
           - type: scalafix
             command: sbt scalafixCheck docs/docusaurusCreateSite
             name: Scalafix and docs
@@ -190,7 +185,7 @@ jobs:
             os: ubuntu-latest
             java: "21"
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
         with:
           distribution: 'temurin'
@@ -215,7 +210,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: test-reports
-          path: "**/.reports/**/*"
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
