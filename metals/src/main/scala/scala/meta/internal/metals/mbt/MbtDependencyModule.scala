@@ -6,7 +6,7 @@ import java.nio.file.Paths
 import java.util.ArrayList
 import javax.annotation.Nullable
 
-import scala.util.control.NonFatal
+import scala.util.Try
 
 import ch.epfl.scala.bsp4j
 
@@ -58,11 +58,9 @@ object MbtDependencyModule {
   /**
    * Parse a string that should be a URI but may accidentally be a file path.
    */
-  def parseUri(value: String): URI = try {
-    URI.create(value)
-  } catch {
-    case NonFatal(_) =>
-      Paths.get(value).toUri
-  }
+  private def parseUri(value: String): URI =
+    Try(URI.create(value)).toOption
+      .filterNot(_.getScheme == null)
+      .getOrElse(Paths.get(value).toUri)
 
 }
