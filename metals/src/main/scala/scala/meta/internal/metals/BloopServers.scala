@@ -128,7 +128,10 @@ final class BloopServers(
       // Wait — without blocking a thread — for the server to actually go down.
       // `check` is socket-based, so the retry only cold-starts a fresh server
       // once the old one is really gone; otherwise fail with actionable guidance.
-      awaitBloopStopped(config, System.currentTimeMillis() + 10000).map {
+      awaitBloopStopped(
+        config,
+        System.currentTimeMillis() + RecoveryTimeoutMs,
+      ).map {
         case true => ()
         case false =>
           // Show the actionable guidance directly: the reconnect path doesn't go
@@ -159,7 +162,7 @@ final class BloopServers(
         else {
           sh.schedule(
             new Runnable { def run(): Unit = poll() },
-            100,
+            RecoveryPollIntervalMs,
             TimeUnit.MILLISECONDS,
           )
           ()
@@ -579,6 +582,12 @@ final class BloopServers(
 
 object BloopServers {
   val name = "Bloop"
+
+  // How long to wait for a wedged Bloop server to stop before giving up.
+  private val RecoveryTimeoutMs = 10000L
+
+  // How often to poll whether the wedged Bloop server has stopped.
+  private val RecoveryPollIntervalMs = 100L
 
   // Needed for creating unique socket files for each bloop connection
   private[BloopServers] val connectionCounter = new AtomicInteger(0)
