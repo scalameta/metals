@@ -37,7 +37,7 @@ object TestInlayHints {
     val tooltip = Option(inlayHint.getTooltip()).map(t =>
       t.asScala match {
         case Left(tooltip) => tooltip
-        case Right(markdown) => markdown.getValue()
+        case Right(markdown) => DocstringMarkers.decode(markdown.getValue())
       }
     )
     val data = inlayHint.getData()

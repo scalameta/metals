@@ -16,6 +16,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.builds.NewProjectProvider
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.docstrings.MetalsSymbolLink
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -1064,6 +1065,36 @@ class WorkspaceLspService(
                 )
               )
             )
+          }
+        }.asJavaObject
+      case ServerCommands.GotoScaladocLink(params) =>
+        Future {
+          val linkLabel =
+            MetalsSymbolLink.parsePayload(params.payload).target
+          getServiceFor(params.uri).resolveScaladocLink(params) match {
+            case ScaladocLinkResolution.Resolved(location) =>
+              languageClient.metalsExecuteClientCommand(
+                ClientCommands.GotoLocation.toExecuteCommandParams(
+                  ClientCommands.WindowLocation(
+                    location.getUri(),
+                    location.getRange(),
+                  )
+                )
+              )
+            // Give feedback rather than doing nothing on click; overloaded
+            // links land here intentionally (scalameta/metals#3383).
+            case ScaladocLinkResolution.NotUnique =>
+              languageClient.showMessage(
+                lsp4j.MessageType.Info,
+                s"Could not uniquely resolve documentation link '${linkLabel}'.",
+              )
+            // A genuine resolver failure is already logged and reported; tell the
+            // user it errored rather than that it was merely ambiguous.
+            case ScaladocLinkResolution.Failed =>
+              languageClient.showMessage(
+                lsp4j.MessageType.Warning,
+                s"Failed to resolve documentation link '${linkLabel}'.",
+              )
           }
         }.asJavaObject
       case ServerCommands.GotoLog() =>

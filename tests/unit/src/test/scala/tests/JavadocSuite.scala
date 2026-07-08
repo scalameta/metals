@@ -10,7 +10,10 @@ class JavadocSuite extends BaseSuite {
       loc: Location
   ): Unit = {
     test(name) {
-      val obtained = MarkdownGenerator.toText(original).mkString
+      // `MarkdownGenerator` marks entity links for the server to resolve; decode
+      // them back to their plain target to assert the logical rendering here.
+      val obtained =
+        DocstringMarkers.decode(MarkdownGenerator.toText(original).mkString)
       assertNoDiff(obtained, expected)
     }
   }
@@ -34,6 +37,29 @@ class JavadocSuite extends BaseSuite {
       |
       |**See**
       |- [previousProblemsFromSuccessfulCompilation](previousProblemsFromSuccessfulCompilation)""".stripMargin,
+  )
+
+  // URI schemes are case-insensitive, so an uppercase URL stays an external link
+  // rather than becoming a (broken) symbol reference (scalameta/metals#3383).
+  check(
+    "uppercase-url-scheme",
+    """/**
+      |* See [[HTTPS://example.com Example]].
+      |*/
+    """.stripMargin,
+    "See [Example](HTTPS://example.com).",
+  )
+
+  // A quoted `@see "..."` is plain text per the Javadoc spec, not a link
+  // (scalameta/metals#3383).
+  check(
+    "see-quoted-text",
+    """/**
+      |* @see "Effective Java"
+      |*/
+    """.stripMargin,
+    """|**See**
+       |- "Effective Java"""".stripMargin,
   )
 
   check(
