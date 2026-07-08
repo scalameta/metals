@@ -49,18 +49,27 @@ object JavacDiagnostic {
       val required: String
   )
   object IncompatibleTypes {
+    private val Code = "compiler.err.prob.found.req"
     private val CannotBeConverted =
       """incompatible types: (.+) cannot be converted to (.+)""".r
     private val PossibleLossyConversion =
       """incompatible types: possible lossy conversion from (.+) to (.+)""".r
-    def unapply(d: l.Diagnostic): Option[IncompatibleTypes] =
-      d.getMessageAsString.trim() match {
-        case CannotBeConverted(found, required) =>
-          Some(new IncompatibleTypes(found, required))
-        case PossibleLossyConversion(found, required) =>
-          Some(new IncompatibleTypes(found, required))
-        case _ => None
-      }
+    def unapply(d: l.Diagnostic): Option[IncompatibleTypes] = {
+      if (!matchesCode(d)) None
+      else
+        d.getMessageAsString.trim() match {
+          case CannotBeConverted(found, required) =>
+            Some(new IncompatibleTypes(found, required))
+          case PossibleLossyConversion(found, required) =>
+            Some(new IncompatibleTypes(found, required))
+          case _ => None
+        }
+    }
+
+    private def matchesCode(d: l.Diagnostic): Boolean =
+      Option(d.getCode()).exists(code =>
+        code.isLeft() && code.getLeft() == Code
+      )
   }
 
   // Example error:

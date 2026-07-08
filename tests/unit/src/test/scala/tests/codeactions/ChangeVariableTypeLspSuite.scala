@@ -328,6 +328,34 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "commented-import-not-visible",
+    """|package a;
+       |
+       |// import java.time.LocalDate;
+       |public class Example {
+       |  public void run() {
+       |    String ignored = "import java.time.LocalDate;";
+       |    int <<today>> = java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |// import java.time.LocalDate;
+       |public class Example {
+       |  public void run() {
+       |    String ignored = "import java.time.LocalDate;";
+       |    java.time.LocalDate today = java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "same-package",
     """|package a;
        |
@@ -350,6 +378,73 @@ class ChangeVariableTypeLspSuite
        |}
        |
        |class Other {}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "legacy-array-declarator",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<values>>[] = new String[]{"a", "b"};
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String values[] = new String[]{"a", "b"};
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "legacy-array-declarator-scalar-found",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<values>>[] = "hello";
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "dollar-qualified-name",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    a.Foo$Bar <<value>> = 42;
+       |  }
+       |}
+       |
+       |class Foo$Bar {}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int value = 42;
+       |  }
+       |}
+       |
+       |class Foo$Bar {}
        |""".stripMargin,
     fileName = "Example.java",
     filterAction = onlyChangeType,

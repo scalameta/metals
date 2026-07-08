@@ -13,6 +13,7 @@ import scala.meta.internal.parsing.JavaVariable
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
+import com.sun.source.tree.CompilationUnitTree
 import org.eclipse.{lsp4j => l}
 
 class ChangeVariableType(
@@ -34,13 +35,21 @@ class ChangeVariableType(
 
     for {
       text <- buffers.get(path).orElse(path.readTextOpt).toSeq
+      sourceVisibility <- javaTrees.get(path).map(SourceVisibility.from).toSeq
       variable <- javaTrees.findEnclosingJavaVariable(path, position).toSeq
       typeRange <- variable.typeRange.toSeq
       initializerRange <- variable.initializerRange.toSeq
       if isSingleDeclaration(variable, typeRange, text)
       diagnostic <- params.getContext().getDiagnostics().asScala.toSeq
       foundType <- changedType(diagnostic, variable, initializerRange).toSeq
-    } yield build(path, diagnostic, typeRange, foundType, text)
+      legacyDimensions = legacyArrayDimensions(variable, typeRange, text)
+      if arrayDimensions(foundType) >= legacyDimensions
+      replacement = renderType(
+        foundType,
+        sourceVisibility,
+        legacyDimensions,
+      )
+    } yield build(path, diagnostic, typeRange, replacement)
   }
 
   private def changedType(
@@ -82,10 +91,9 @@ class ChangeVariableType(
       path: AbsolutePath,
       diagnostic: l.Diagnostic,
       typeRange: JavaRange,
-      foundType: String,
-      text: String,
+      replacement: String,
   ): l.CodeAction = {
-    val edit = new l.TextEdit(typeRange.range, renderType(foundType, text))
+    val edit = new l.TextEdit(typeRange.range, replacement)
     CodeActionBuilder.build(
       title,
       kind,
@@ -100,10 +108,6 @@ object ChangeVariableType {
 
   private val qualifiedName: Regex =
     """[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+""".r
-  private val packageDeclaration: Regex =
-    """(?m)^\s*package\s+([\w.]+)\s*;""".r
-  private val importDeclaration: Regex =
-    """(?m)^\s*import\s+(?:static\s+)?([\w.]+(?:\.\*)?)\s*;""".r
   private val annotation: Regex =
     """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
 
@@ -114,23 +118,55 @@ object ChangeVariableType {
     qualifiedName
       .replaceAllIn(
         tpe,
-        m => m.matched.substring(m.matched.lastIndexOf('.') + 1),
+        m =>
+          Regex.quoteReplacement(
+            m.matched.substring(m.matched.lastIndexOf('.') + 1)
+          ),
       )
       .replaceAll("""\s+""", "")
 
   private def typeName(tpe: String): String =
     annotation.replaceAllIn(tpe, "")
 
-  private def renderType(tpe: String, text: String): String = {
-    val source = SourceVisibility.from(text)
+  private def renderType(
+      tpe: String,
+      sourceVisibility: SourceVisibility,
+      legacyArrayDimensions: Int,
+  ): String = {
     qualifiedName.replaceAllIn(
-      tpe,
+      stripArrayDimensions(tpe, legacyArrayDimensions),
       m => {
         val fqn = m.matched
-        Regex.quoteReplacement(source.visibleName(fqn))
+        Regex.quoteReplacement(sourceVisibility.visibleName(fqn))
       },
     )
   }
+
+  private def stripArrayDimensions(
+      tpe: String,
+      dimensions: Int,
+  ): String = {
+    var result = tpe
+    var remaining = dimensions
+    while (remaining > 0 && result.endsWith("[]")) {
+      result = result.stripSuffix("[]")
+      remaining -= 1
+    }
+    result
+  }
+
+  private def legacyArrayDimensions(
+      variable: JavaVariable,
+      typeRange: JavaRange,
+      text: String,
+  ): Int = {
+    val sourceType = text.substring(typeRange.startOffset, typeRange.endOffset)
+    (arrayDimensions(variable.typ) - arrayDimensions(sourceType)).max(0)
+  }
+
+  private def arrayDimensions(tpe: String): Int =
+    if (tpe.endsWith("[]")) 1 + arrayDimensions(tpe.stripSuffix("[]"))
+    else 0
 
   private def sameType(left: String, right: String): Boolean =
     simpleForm(left) == simpleForm(typeName(right))
@@ -153,11 +189,18 @@ object ChangeVariableType {
   }
 
   private object SourceVisibility {
-    def from(text: String): SourceVisibility = {
-      val currentPackage =
-        packageDeclaration.findFirstMatchIn(text).map(_.group(1))
+    def from(compilationUnit: CompilationUnitTree): SourceVisibility = {
+      val currentPackage = Option(compilationUnit.getPackageName()).map(
+        _.toString()
+      )
       val imports =
-        importDeclaration.findAllMatchIn(text).map(_.group(1)).toSet
+        compilationUnit
+          .getImports()
+          .asScala
+          .map { importTree =>
+            importTree.getQualifiedIdentifier().toString()
+          }
+          .toSet
       SourceVisibility(currentPackage, imports)
     }
   }

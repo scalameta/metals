@@ -243,29 +243,75 @@ class JavaTrees(buffers: Buffers) {
     protected def javaVariable(node: VariableTree): Option[JavaVariable] = {
       val variableName = node.getName().toString()
       treeRange(node).map { range =>
+        val nameRange = findNameRange(
+          lineMap,
+          text,
+          range.startOffset,
+          range.endOffset,
+          variableName,
+        ).getOrElse(range)
+        val typeTree = Option(node.getType())
         JavaVariable(
           tree = node,
           name = variableName,
           range = range,
-          nameRange = findNameRange(
-            lineMap,
-            text,
-            range.startOffset,
-            range.endOffset,
-            variableName,
-          ).getOrElse(range),
-          typ = Option(node.getType()) match {
+          nameRange = nameRange,
+          typ = typeTree match {
             case Some(t) => t.toString()
             case None =>
               // This can happen if a variable is declared with inferred type.
               // This is going to change in Java 27, see https://bugs.openjdk.org/browse/JDK-8268850
               "var"
           },
-          typeRange = Option(node.getType()).flatMap(treeRange),
+          typeRange = typeTree.flatMap(typeRange(_, nameRange)),
           initializerRange = Option(node.getInitializer()).flatMap(treeRange),
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
+    }
+
+    private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
+
+    private def typeRange(
+        typeTree: Tree,
+        nameRange: JavaRange,
+    ): Option[JavaRange] =
+      treeRange(typeTree).flatMap { range =>
+        val legacyArraySuffix =
+          range.endOffset > nameRange.endOffset &&
+            onlyLegacyArrayDimensions(
+              text.substring(nameRange.endOffset, range.endOffset)
+            )
+        if (legacyArraySuffix) {
+          val endOffset = lastNonWhitespaceBefore(nameRange.startOffset)
+          if (endOffset <= range.startOffset) None
+          else {
+            val end = endOffset + 1
+            Some(
+              range.copy(
+                range = Positions.toLspRange(
+                  lineMap,
+                  range.startOffset,
+                  end,
+                  text,
+                ),
+                endOffset = end,
+              )
+            )
+          }
+        } else Some(range)
+      }
+
+    private def onlyLegacyArrayDimensions(suffix: String): Boolean =
+      suffix match {
+        case LegacyArrayDimensions() => true
+        case _ => false
+      }
+
+    private def lastNonWhitespaceBefore(offset: Int): Int = {
+      var i = offset - 1
+      while (i >= 0 && text.charAt(i).isWhitespace) i -= 1
+      i
     }
   }
 
