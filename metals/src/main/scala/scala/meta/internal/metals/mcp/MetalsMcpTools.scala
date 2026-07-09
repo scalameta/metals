@@ -43,6 +43,7 @@ import io.modelcontextprotocol.spec.McpSchema.Tool
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.{lsp4j => l}
 import reactor.core.publisher.Mono
 import tools.jackson.databind.json.JsonMapper
 
@@ -636,6 +637,70 @@ trait MetalsMcpTools extends Cancelable {
                 .isError(false)
                 .build()
             )
+        }.toMono
+      },
+    )
+  }
+
+  protected def createShowImplicitsTool(): AsyncToolSpecification = {
+    val schema = """
+      {
+        "type": "object",
+        "properties": {
+          "fileInFocus": {
+            "type": "string",
+            "description": "The file to analyze. If not provided, uses the currently focused document."
+          },
+          "startLine": {
+            "type": "integer",
+            "description": "Optional 1-based start line to focus on. Only applied when BOTH startLine and endLine are provided; otherwise the whole file is analyzed."
+          },
+          "endLine": {
+            "type": "integer",
+            "description": "Optional 1-based end line to focus on (inclusive). Only applied when BOTH startLine and endLine are provided; otherwise the whole file is analyzed."
+          }
+        }
+      }
+    """
+    val tool = Tool
+      .builder()
+      .name("show-implicits")
+      .description(
+        """|Show the implicits the Scala compiler silently inserts in a file —
+           |implicit/using parameters and implicit conversions — and the symbols or
+           |in-file definitions they resolve to. Invisible in the source, so use it
+           |when debugging implicit-resolution errors ("could not find implicit value"
+           |/ "no given instance") or before refactoring code that relies on implicits.
+           |Works for Scala 2 and 3 (given/using); output positions are 1-based line:col.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
+      withErrorHandling { (exchange, arguments) =>
+        val pathOpt = arguments.getFileInFocusOpt
+        val range =
+          for {
+            start <- arguments.getOptAs[Int]("startLine")
+            end <- arguments.getOptAs[Int]("endLine")
+          } yield new l.Range(
+            new l.Position(start - 1, 0),
+            new l.Position(end - 1, 0),
+          )
+        indexingPromise.future.flatMap { _ =>
+          queryEngine
+            .showImplicits(pathOpt, range)
+            .map { result =>
+              val isError = result match {
+                case _: ImplicitsResult.NoFile => true
+                case _ => false
+              }
+              CallToolResult
+                .builder()
+                .content(createContent(result.show))
+                .isError(isError)
+                .build()
+            }
         }.toMono
       },
     )
@@ -1295,6 +1360,7 @@ trait MetalsMcpTools extends Cancelable {
     asyncServer.addTool(createGlobSearchTool()).subscribe()
     asyncServer.addTool(createTypedGlobSearchTool()).subscribe()
     asyncServer.addTool(createInspectTool()).subscribe()
+    asyncServer.addTool(createShowImplicitsTool()).subscribe()
     asyncServer.addTool(createGetDocsTool()).subscribe()
     asyncServer.addTool(createGetUsagesTool()).subscribe()
     asyncServer.addTool(importBuildTool()).subscribe()

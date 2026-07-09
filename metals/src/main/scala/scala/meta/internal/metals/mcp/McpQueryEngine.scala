@@ -9,10 +9,13 @@ import scala.meta._
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.InlayHintsOption
+import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.pc.InlayHints
 import scala.meta.internal.pc.JavaSourceShortener
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
@@ -20,7 +23,10 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.transversers.Transformer
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import com.google.gson.JsonElement
+import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.{lsp4j => l}
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -342,6 +348,85 @@ class McpQueryEngine(
   }
 
   /**
+   * Show the implicits (implicit/`using` parameters and implicit conversions)
+   * that the compiler silently inserts in a file — the parts of Scala that are
+   * invisible in the source text.
+   *
+   * This is strictly file-scoped: it analyzes exactly `path` and never falls
+   * back to a different file, so it does NOT call `resolveEffectivePath` and
+   * exposes no `module` knob (the underlying `Compilers.inlayHints` ->
+   * `inverseSources` chain gives no seam to honor a caller-chosen build target).
+   *
+   * @param path  the focused document to analyze
+   * @param range optional whole-line range to focus on; both endpoints are
+   *              expected upstream. Range construction and clamping is delegated
+   *              to the buffer-safe [[Compilers.inlayHints]] entry point.
+   */
+  def showImplicits(
+      path: Option[AbsolutePath],
+      range: Option[l.Range],
+  ): Future[ImplicitsResult] = {
+    path.filter(_.exists) match {
+      case None =>
+        Future.successful(ImplicitsResult.NoFile(path.map(_.toString)))
+      case Some(file) =>
+        val relativeFile = file
+          .toRelativeInside(workspace)
+          .map(_.toString)
+          .getOrElse(file.toString)
+
+        // NOTE: the two separate passes below are deliberate and load-bearing.
+        // A returned InlayHint carries only a coarse kind, not its fine-grained
+        // origin, so a single mixed pass could not be grouped by category. Do
+        // not "optimize" this into one pass.
+        val argumentsOptions = InlayHintsOptions(
+          Map(InlayHintsOption.ImplicitArguments -> true)
+        )
+        val conversionsOptions = InlayHintsOptions(
+          Map(InlayHintsOption.ImplicitConversions -> true)
+        )
+        for {
+          argHints <- compilers.inlayHints(file, range, argumentsOptions)
+          convHints <- compilers.inlayHints(file, range, conversionsOptions)
+        } yield {
+          val arguments = argHints.asScala.toList.map(toImplicitHint)
+          // Implicit conversions emit a pair of hints per conversion: an opening
+          // `name(` hint and a standalone `)` close hint. Drop the close hints.
+          val conversions = convHints.asScala.toList
+            .map(toImplicitHint)
+            .filterNot(_.label == ")")
+          ImplicitsResult.Found(relativeFile, arguments, conversions)
+        }
+    }
+  }
+
+  private def toImplicitHint(hint: InlayHint): ImplicitHint = {
+    val labelEither = hint.getLabel()
+    val rawLabel =
+      if (labelEither.isLeft) labelEither.getLeft()
+      else labelEither.getRight().asScala.map(_.getValue()).mkString
+    // A single implicit-argument hint yields one decoded target entry per label
+    // *part* (see InlayHints.makeInlayHint), so the meaningful targets are
+    // interleaved with separator parts (`(`, `, `, `)`, ...) that decode to
+    // `Left("")`. Filtering those out is load-bearing for essentially every
+    // typed hint, not an edge case.
+    val targets = Option(hint.getData()) match {
+      case Some(data) =>
+        InlayHints
+          .fromData(data.asInstanceOf[JsonElement])
+          ._2
+          .filter {
+            case Left("") => false
+            case _ => true
+          }
+      case None => Nil
+    }
+    // The conversion opening hint's label ends in a `(` separator part; strip it
+    // so the rendered label is just the conversion name (e.g. `augmentString`).
+    ImplicitHint(hint.getPosition(), rawLabel.stripSuffix("("), targets)
+  }
+
+  /**
    * Shortens source by reducing method/body content: Scala uses ??? for bodies;
    * Java keeps only signatures (empty bodies). Returns the original content on failure.
    */
@@ -409,6 +494,45 @@ case class SymbolUsage(
     path: AbsolutePath,
     line: Int,
 )
+
+/**
+ * A single compiler-inserted implicit (implicit/`using` parameter group or an
+ * implicit conversion) resolved at a call site.
+ *
+ * @param position 0-based, adjusted position in the analyzed file
+ * @param label    the concatenated label the PC renders at that position
+ * @param targets  resolved targets, already filtered of empty separator parts:
+ *                 `Left(symbol)` is an out-of-file semanticdb symbol,
+ *                 `Right(pos)` is an in-file definition position (0-based)
+ */
+case class ImplicitHint(
+    position: l.Position,
+    label: String,
+    targets: List[Either[String, l.Position]],
+)
+
+/**
+ * Result of `resolveImplicits`. Distinguishes a successful analysis (possibly
+ * with no implicits) from an unresolved file, so the tool layer can set
+ * `CallToolResult.isError` correctly.
+ */
+sealed trait ImplicitsResult
+object ImplicitsResult {
+
+  /**
+   * @param file        the analyzed file, workspace-relative (absolute fallback)
+   * @param arguments   implicit/`using` parameter hints
+   * @param conversions implicit conversion hints (close-paren hints removed)
+   */
+  case class Found(
+      file: String,
+      arguments: List[ImplicitHint],
+      conversions: List[ImplicitHint],
+  ) extends ImplicitsResult
+
+  /** No file could be resolved from the request; rendered as a tool error. */
+  case class NoFile(requested: Option[String]) extends ImplicitsResult
+}
 
 /**
  * Result of an inspect operation with metadata about searched targets.
