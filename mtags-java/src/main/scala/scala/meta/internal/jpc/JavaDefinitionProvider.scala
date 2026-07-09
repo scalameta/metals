@@ -318,7 +318,7 @@ class JavaDefinitionProvider(
       }
 
     if (startPos >= 0 && endPos >= 0) {
-      val elementName = targetElement.getSimpleName().toString()
+      val elementName = compiler.sourceName(targetElement)
       val (start, end) = compiler.findIndentifierStartAndEnd(
         params.text(),
         elementName,

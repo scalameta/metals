@@ -65,7 +65,7 @@ class JavaRenameProvider(
             sourcePositions.getEndPosition(compile.cu, treePath.getLeaf())
           val (realStart, realEnd) = compiler.findIndentifierStartAndEnd(
             params.text(),
-            element.getSimpleName().toString(),
+            compiler.sourceName(element),
             start.toInt,
             end.toInt,
             treePath.getLeaf(),
