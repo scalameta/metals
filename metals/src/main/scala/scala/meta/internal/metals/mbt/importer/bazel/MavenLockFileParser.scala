@@ -13,14 +13,22 @@ import com.google.gson.JsonObject
 object MavenLockFileParser {
   def create(json: JsonObject): Option[MavenLockFileParser] = {
     Option(json.getAsJsonObject("artifacts")) match {
-      case Some(artifacts) => Some(new V5LockFileParser(artifacts))
+      case Some(artifacts) =>
+        scribe.debug("Using the v5 parser for the rules_jvm_external lock file")
+        Some(new V5LockFileParser(artifacts))
       case None =>
         Option(json.getAsJsonObject("dependency_tree"))
           .flatMap(dt => Option(dt.getAsJsonArray("dependencies"))) match {
           case Some(dependencies) =>
+            scribe.debug(
+              "Using the legacy (v4 and earlier) parser for the rules_jvm_external lock file"
+            )
             Some(new LegacyLockFileParser(dependencies))
           case None =>
             // Unknown format; possibly a newer version, or not a lock file at all
+            scribe.warn(
+              "Could not determine the format of rules_jvm_external lock file; skipping"
+            )
             None
         }
     }
