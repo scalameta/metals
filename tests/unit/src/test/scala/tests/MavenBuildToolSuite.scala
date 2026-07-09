@@ -61,7 +61,11 @@ class MavenBuildToolSuite extends BaseSuite {
       mavenBuildTool(workspace).mbtCompileCommand(workspace, target),
       List(
         "mvn", "-q", "-P", "dev,ci", "-pl", ":app", "--also-make", "install",
-        "-DskipTests", "-Denforcer.skip=true",
+        "-DskipTests", "-Denforcer.skip=true", "-Dcheckstyle.skip=true",
+        "-Dspotbugs.skip=true", "-Drat.skip=true", "-Dpmd.skip=true",
+        "-Dmaven.javadoc.skip=true", "-Dspring-javaformat.skip=true",
+        "-Dspotless.check.skip=true", "-Djacoco.skip=true", "-Dsonar.skip=true",
+        "-Ddependency-check.skip=true", "-Dgpg.skip=true",
       ),
     )
   }
