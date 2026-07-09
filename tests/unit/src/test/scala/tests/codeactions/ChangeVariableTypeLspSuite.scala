@@ -276,6 +276,74 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "method-return-not-imported",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<today>> = currentDate();
+       |  }
+       |
+       |  private java.time.LocalDate currentDate() {
+       |    return java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    java.time.LocalDate today = currentDate();
+       |  }
+       |
+       |  private java.time.LocalDate currentDate() {
+       |    return java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "method-return-generic",
+    """|package a;
+       |
+       |import java.util.Map;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<dates>> = dates();
+       |  }
+       |
+       |  private Map<String, java.time.LocalDate> dates() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.util.Map;
+       |
+       |public class Example {
+       |  public void run() {
+       |    Map<String,java.time.LocalDate> dates = dates();
+       |  }
+       |
+       |  private Map<String, java.time.LocalDate> dates() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "imported-generic",
     """|package a;
        |
