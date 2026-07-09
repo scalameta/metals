@@ -679,7 +679,15 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        _ <- refreshMbtTurbineClasspath(session).withInterrupt
+        // When testing we need to make sure the classpath is refreshed after mbt.json is generated
+        _ <- {
+          if (MetalsServerConfig.isTesting)
+            refreshMbtTurbineClasspath(session).withInterrupt
+          else
+            Future {
+              refreshMbtTurbineClasspath(session)
+            }.withInterrupt
+        }
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
