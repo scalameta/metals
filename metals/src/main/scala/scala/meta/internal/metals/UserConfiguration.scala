@@ -45,7 +45,8 @@ case class UserConfiguration(
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
-    useBracelessSyntaxForNewFiles: Boolean = false,
+    newFilesBracelessSyntax: NewFilesBracelessSyntax =
+      NewFilesBracelessSyntax.Auto,
     enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
@@ -115,7 +116,11 @@ case class UserConfiguration(
         )
       ),
       Some(("enableIndentOnPaste", enableIndentOnPaste)),
-      Some(("useBracelessSyntaxForNewFiles", useBracelessSyntaxForNewFiles)),
+      Some(
+        "newFilesBracelessSyntax" -> newFilesBracelessSyntax
+          .toString()
+          .toLowerCase()
+      ),
       Some(
         (
           "enableSemanticHighlighting",
@@ -471,20 +476,18 @@ object UserConfiguration {
         isBoolean = true,
       ),
       UserConfigurationOption(
-        "use-braceless-syntax-for-new-files",
-        "false",
-        "true",
-        "Use braceless syntax for newly generated Scala 3 files",
-        """|When this option is enabled, templates for newly created Scala 3 files (the
-           |"New Scala File" command, including the "Package Object" kind) avoid curly
-           |braces. Empty class/trait/object/package-object stubs are generated without a
-           |body (for example `class Foo` rather than `class Foo {}`), since an empty
-           |significant-indentation body is not valid Scala 3; the cursor is placed after
-           |the name. It only affects file creation; code actions such as "Implement all
-           |members" are not influenced by this setting, and it has no effect on Scala 2
-           |sources.
-           |""".stripMargin,
-        isBoolean = true,
+        "new-files-braceless-syntax",
+        "auto",
+        "always",
+        "Braceless syntax for newly generated Scala 3 files",
+        """|Whether new Scala 3 files (from the "New Scala File" command, including the
+           |"Package Object" kind) use optional-braces / significant-indentation syntax
+           |instead of curly braces. "auto" matches the style of nearby existing sources
+           |(the target package directory and its enclosing directories up to the source
+           |root, falling back to the `-indent` / `-no-indent` compiler option, then
+           |braces); "always" always uses braceless syntax; "never" always uses braces.
+           |Has no effect on Scala 2 sources.""".stripMargin,
+        values = Some(List("auto", "always", "never")),
       ),
       UserConfigurationOption(
         "fallback-scala-version",
@@ -862,8 +865,14 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
-    val useBracelessSyntaxForNewFiles =
-      getBooleanKey("use-braceless-syntax-for-new-files").getOrElse(false)
+    val newFilesBracelessSyntax =
+      getStringKey("new-files-braceless-syntax").map(
+        _.trim().toLowerCase()
+      ) match {
+        case Some("always") => NewFilesBracelessSyntax.Always
+        case Some("never") => NewFilesBracelessSyntax.Never
+        case _ => NewFilesBracelessSyntax.Auto
+      }
     val enableSemanticHighlighting =
       getBooleanKey("enable-semantic-highlighting").getOrElse(true)
     val excludedPackages =
@@ -951,7 +960,7 @@ object UserConfiguration {
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
-          useBracelessSyntaxForNewFiles,
+          newFilesBracelessSyntax,
           enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,
@@ -1013,4 +1022,17 @@ object AutoImportBuildKind {
   case object Off extends AutoImportBuildKind
   case object Initial extends AutoImportBuildKind
   case object All extends AutoImportBuildKind
+}
+
+sealed trait NewFilesBracelessSyntax
+object NewFilesBracelessSyntax {
+
+  /** Match the style already used in the project. */
+  case object Auto extends NewFilesBracelessSyntax
+
+  /** Always generate braceless (significant-indentation) Scala 3 code. */
+  case object Always extends NewFilesBracelessSyntax
+
+  /** Always generate braced code. */
+  case object Never extends NewFilesBracelessSyntax
 }
