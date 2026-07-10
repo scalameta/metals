@@ -44,6 +44,37 @@ case class JavaFormatConfig(
     eclipseFormatProfile: Option[String],
 )
 
+case class JavaLintOptions(values: List[String])
+
+object JavaLintOptions {
+  val allValues: List[String] = List(
+    "cast", "deprecation", "dep-ann", "divzero", "empty", "fallthrough",
+    "finally", "lossy-conversions", "overloads", "overrides", "rawtypes",
+    "removal", "serial", "static", "strictfp", "synchronization", "text-blocks",
+    "this-escape", "try", "unchecked", "varargs",
+  )
+
+  val default: JavaLintOptions = JavaLintOptions(allValues)
+
+  private val allowed: Set[String] =
+    (allValues :+ "preview").toSet
+
+  def fromConfig(
+      values: Option[List[String]]
+  ): Either[String, JavaLintOptions] =
+    values match {
+      case None => Right(default)
+      case Some(values) =>
+        values.find(value => !allowed(value)) match {
+          case Some(invalid) =>
+            Left(
+              s"invalid config value '$invalid' for javaLintOptions. Valid values are ${allowed.toSeq.sorted.map(value => s""""$value"""").mkString(", ")}"
+            )
+          case None => Right(JavaLintOptions(values))
+        }
+    }
+}
+
 /**
  * Configuration that the user can override via workspace/didChangeConfiguration.
  */
@@ -82,6 +113,7 @@ case class UserConfiguration(
     javaFormatter: Option[JavaFormatterConfig] = None,
     scalafixRulesDependencies: List[String] = Nil,
     scalafixLintEnabled: Boolean = false,
+    javaLintOptions: JavaLintOptions = JavaLintOptions.default,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
     automaticImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
@@ -220,6 +252,7 @@ case class UserConfiguration(
           Some(scalafixRulesDependencies),
         ),
         Some(("scalafixLintEnabled", scalafixLintEnabled)),
+        listField("javaLintOptions", Some(javaLintOptions.values)),
         optStringField("customProjectRoot", customProjectRoot),
         Some(("verboseCompilation", verboseCompilation)),
         Some(
@@ -520,6 +553,16 @@ object UserConfiguration {
           |compiler diagnostics. Only lint diagnostics are shown; no code rewrites are applied.
           |""".stripMargin,
         isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "java-lint-options",
+        JavaLintOptions.default.values.mkString("[", ",", "]"),
+        """["deprecation", "unchecked"]""",
+        "Java lint diagnostics",
+        """Javac `-Xlint` options passed to the Java presentation compiler.
+          |Use an empty array to disable Java lint diagnostics.
+          |""".stripMargin,
+        isArray = true,
       ),
       UserConfigurationOption(
         "excluded-packages",
@@ -1308,6 +1351,10 @@ object UserConfiguration {
 
     val scalafixLintEnabled =
       getBooleanKey("scalafix-lint-enabled").getOrElse(false)
+    val javaLintOptions = getParsedArrayKey(
+      "java-lint-options",
+      JavaLintOptions.fromConfig,
+    ).getOrElse(JavaLintOptions.default)
 
     val customProjectRoot = getStringKey("custom-project-root")
     val verboseCompilation =
@@ -1506,6 +1553,7 @@ object UserConfiguration {
           javaFormatter,
           scalafixRulesDependencies,
           scalafixLintEnabled,
+          javaLintOptions,
           customProjectRoot,
           verboseCompilation,
           autoImportBuilds,

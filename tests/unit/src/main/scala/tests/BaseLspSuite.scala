@@ -20,6 +20,7 @@ import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.JavaLintOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MtagsResolver
@@ -51,6 +52,7 @@ abstract class BaseLspSuite(
       buildChangedAction = BuildChangedAction.prompt,
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
+      javaLintOptions = JavaLintOptions(Nil),
       definitionIndexStrategy = Configs.DefinitionIndexStrategy.classpath,
 
       // Legacy settings that are enabled for tests only.  We  should eventually

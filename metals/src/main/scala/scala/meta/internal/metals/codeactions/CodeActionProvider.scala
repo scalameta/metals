@@ -63,6 +63,8 @@ final class CodeActionProvider(
     new ConvertToNamedLambdaParameters(trees, compilers),
     new AddMissingOverrideAnnotation(javaTrees, buffers),
     new RemoveUnusedJavaImport(buffers),
+    new RemoveRedundantCast(buffers),
+    new SuppressWarnings(javaTrees, buffers),
     new GenerateConstructors(javaTrees, buffers),
     new GenerateGettersSetters(javaTrees, buffers),
     new GenerateEqualsHashCodeToString(javaTrees, buffers),
