@@ -230,7 +230,11 @@ object MbtBuild {
           .getOrElse(ju.Collections.emptyList())
           .asScala).distinct.asJava
 
-    MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
+    MbtBuild(
+      mergedModules,
+      mergedNamespaces,
+      mergedUncheckedSources,
+    )
   }
 
 }

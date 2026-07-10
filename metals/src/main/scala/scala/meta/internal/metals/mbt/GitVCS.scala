@@ -152,57 +152,70 @@ object GitVCS {
         val extractDir = workspace
           .resolve(Directories.dependencies)
           .resolveZipPath(relPath)
-        val jarMetaFile = extractDir.resolve(".jar.meta")
-        val currentMeta =
-          s"${Files.getLastModifiedTime(srcJar.toNIO).toMillis}\n${srcJar.toNIO}"
-        val cachedMeta =
-          if (jarMetaFile.exists)
-            Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
-          else None
-        if (cachedMeta.contains(currentMeta) && extractDir.exists) {
-          if (!extractOnly)
-            lsFilesFromDirs(Seq(extractDir), isRelevantPath).foreach(
-              result += _
-            )
-        } else {
-          extractDir.deleteRecursively()
-          if (!extractDir.exists) extractDir.createDirectories()
-          FileIO.withJarFileSystem(srcJar, create = false) { root =>
-            root.listRecursive.foreach { path =>
-              val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
-              if (path.isFile && isRelevantPath(blob)) {
-                try {
-                  val diskPath = extractDir.resolveZipPath(path.toNIO)
-                  Files.createDirectories(diskPath.toNIO.getParent)
-                  Files.copy(
-                    path.toNIO,
-                    diskPath.toNIO,
-                    StandardCopyOption.REPLACE_EXISTING,
-                  )
-                  if (!extractOnly) {
-                    val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
-                    result += new GitBlob(
-                      diskPath.toString,
-                      oid.getBytes(StandardCharsets.UTF_8),
-                    )
-                  }
-                } catch {
-                  case NonFatal(_) =>
-                }
-              }
-            }
-          }
-          Files.write(
-            jarMetaFile.toNIO,
-            currentMeta.getBytes(StandardCharsets.UTF_8),
-          )
-        }
+        extractSrcJarInto(
+          srcJar,
+          extractDir,
+          isRelevantPath,
+          if (extractOnly) None else Some(result),
+        )
       } catch {
         case NonFatal(e) =>
           scribe.warn(s"mbt-v2: failed to read srcjar $srcJar", e)
       }
     }
     result.result()
+  }
+
+  private def extractSrcJarInto(
+      srcJar: AbsolutePath,
+      extractDir: AbsolutePath,
+      isRelevantPath: GitBlob => Boolean,
+      result: Option[mutable.Growable[GitBlob]],
+  ): Unit = {
+    val jarMetaFile = extractDir.resolve(".jar.meta")
+    val currentMeta =
+      s"${Files.getLastModifiedTime(srcJar.toNIO).toMillis}\n${srcJar.toNIO}"
+    val cachedMeta =
+      if (jarMetaFile.exists)
+        Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
+      else None
+    if (cachedMeta.contains(currentMeta) && extractDir.exists) {
+      result.foreach { r =>
+        lsFilesFromDirs(Seq(extractDir), isRelevantPath).foreach(r += _)
+      }
+    } else {
+      extractDir.deleteRecursively()
+      if (!extractDir.exists) extractDir.createDirectories()
+      FileIO.withJarFileSystem(srcJar, create = false) { root =>
+        root.listRecursive.foreach { path =>
+          val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
+          if (path.isFile && isRelevantPath(blob)) {
+            try {
+              val diskPath = extractDir.resolveZipPath(path.toNIO)
+              Files.createDirectories(diskPath.toNIO.getParent)
+              Files.copy(
+                path.toNIO,
+                diskPath.toNIO,
+                StandardCopyOption.REPLACE_EXISTING,
+              )
+              result.foreach { r =>
+                val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
+                r += new GitBlob(
+                  diskPath.toString,
+                  oid.getBytes(StandardCharsets.UTF_8),
+                )
+              }
+            } catch {
+              case NonFatal(_) =>
+            }
+          }
+        }
+      }
+      Files.write(
+        jarMetaFile.toNIO,
+        currentMeta.getBytes(StandardCharsets.UTF_8),
+      )
+    }
   }
 
   private def isIgnoredDirectory(dir: Path): Boolean = {

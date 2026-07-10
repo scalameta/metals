@@ -2,15 +2,20 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
+import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.dialects
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
+import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
@@ -22,6 +27,7 @@ final class DefinitionProviderProtobufSupport(
     mbt: MbtWorkspaceSymbolProvider,
     definitionProviders: () => DefinitionProviderConfig,
     protobufLspConfig: () => ProtobufLspConfig,
+    mtags: () => Mtags,
 ) {
 
   def hasProtoJavaLocation(res: DefinitionResult): Boolean =
@@ -88,11 +94,17 @@ final class DefinitionProviderProtobufSupport(
   def handleProtoJavaDefinition(
       res: DefinitionResult
   ): Option[DefinitionResult] = {
-    val mbtResult = mbt.definition(res.symbol)
-    if (mbtResult.nonEmpty) {
-      val locations = new ju.ArrayList[Location](mbtResult.size)
-      mbtResult.foreach(locations.add)
-      return Some(
+    // When the proto file declares no java_package option, the proto package
+    // matches the generated Java package, so the MBT index resolves the Java
+    // symbol straight to the proto document. Those proto-file hits are ignored
+    // here so the generated srcjar lookup still runs; the proto file stays
+    // reachable through the fallback below.
+    val mbtJavaResult =
+      mbt.definition(res.symbol).filterNot(_.getUri.isProtoFilename)
+    if (mbtJavaResult.nonEmpty) {
+      val locations = new ju.ArrayList[Location](mbtJavaResult.size)
+      mbtJavaResult.foreach(locations.add)
+      Some(
         DefinitionResult(
           locations,
           res.symbol,
@@ -101,11 +113,16 @@ final class DefinitionProviderProtobufSupport(
           res.querySymbol,
         )
       )
-    }
+    } else {}
 
-    val protoUri =
-      if (res.locations.isEmpty) None
-      else ProtoJavaVirtualFile.extractProtoPath(res.locations.get(0).getUri())
+    val virtualUri = Try(res.locations.get(0)).toOption.map(_.getUri())
+    val protoUri = virtualUri.flatMap(ProtoJavaVirtualFile.extractProtoPath)
+
+    val generatedJavaLocation = for {
+      uri <- virtualUri
+      protoPath <- protoUri
+      location <- findGeneratedJavaFromOutline(protoPath, res.symbol, uri)
+    } yield location
 
     val protoClassLocation = protoUri.flatMap { protoPath =>
       findProtoClassFromJavaSymbol(protoPath, res.symbol)
@@ -123,24 +140,110 @@ final class DefinitionProviderProtobufSupport(
       }
     }
 
-    protoRpcLocation match {
-      case Some(loc) =>
-        Some(
-          DefinitionResult(
-            ju.Collections.singletonList(loc),
-            res.symbol,
-            None,
-            None,
-            res.querySymbol,
-          )
+    val allLocations = (generatedJavaLocation ++ protoRpcLocation).toList
+    if (allLocations.nonEmpty) {
+      Some(
+        DefinitionResult(
+          allLocations.asJava,
+          res.symbol,
+          None,
+          None,
+          res.querySymbol,
         )
-      case None =>
-        scribe.debug(
-          s"proto-java: could not resolve symbol ${res.symbol} to proto"
-        )
-        Some(DefinitionResult.empty)
+      )
+    } else {
+      scribe.debug(
+        s"proto-java: could not resolve symbol ${res.symbol} to proto"
+      )
+      Some(DefinitionResult.empty)
     }
   }
+
+  /**
+   * Finds the definition of `javaSymbol` in the Java source that Metals
+   * synthesizes from the proto file. The outline is derived purely from the
+   * `.proto`, so this works for any build tool without a build or any
+   * configuration; it is materialized to a read-only file on disk so the
+   * client can open it.
+   */
+  private def findGeneratedJavaFromOutline(
+      protoPath: AbsolutePath,
+      javaSymbol: String,
+      virtualUri: String,
+  ): Option[Location] = try {
+    for {
+      className <- ProtoJavaVirtualFile.extractClassName(virtualUri)
+      outline <- mbt
+        .protoJavaOutlines(protoPath)
+        .find(outline =>
+          ProtoJavaVirtualFile
+            .extractClassName(outline.uri().toString())
+            .contains(className)
+        )
+      javaFile <- ProtoGeneratedJavaFiles.materialize(
+        workspace,
+        protoPath,
+        outline.pkg,
+        className,
+        outline.text,
+      )
+      range <- findJavaSymbolRange(javaFile, javaSymbol)
+    } yield new Location(javaFile.toURI.toString(), range.toLsp)
+  } catch {
+    case NonFatal(e) =>
+      scribe.debug(
+        s"proto-java: failed to resolve generated Java outline for $javaSymbol",
+        e,
+      )
+      None
+  }
+
+  /**
+   * Locates the definition range of `javaSymbol` in the given Java file,
+   * falling back to enclosing classes when the exact symbol is absent, for
+   * example when method overload disambiguators computed from the generated
+   * outline don't line up with the real generated source.
+   */
+  private def findJavaSymbolRange(
+      javaFile: AbsolutePath,
+      javaSymbol: String,
+  ): Option[s.Range] = {
+    val input = javaFile.toInputFromBuffers(buffers)
+    val doc = mtags().allToplevels(input, dialects.Scala213)
+    val definitions =
+      doc.occurrences.filter(_.role == s.SymbolOccurrence.Role.DEFINITION)
+
+    def loop(sym: Symbol): Option[s.Range] = {
+      if (sym.isNone || sym.isPackage) None
+      else findRange(sym.value, definitions).orElse(loop(sym.owner))
+    }
+
+    val querySym = Symbol(javaSymbol)
+    // For type symbols, require the type itself to be present: a message or
+    // enum missing from the generated source means the srcjar is stale or
+    // belongs to a different proto, and the proto fallback is more precise
+    // than an approximate enclosing-class location. Members may still fall
+    // back to their enclosing classes, since accessor overloads in the real
+    // generated source don't always line up with the synthesized outline.
+    if (querySym.isType) findRange(querySym.value, definitions)
+    else loop(querySym)
+  }
+
+  private def findRange(
+      symbol: String,
+      definitions: Iterable[SymbolOccurrence],
+  ): Option[s.Range] = {
+    val exact = definitions.find(_.symbol == symbol)
+    exact
+      .orElse {
+        val normalized = stripDisambiguators(symbol)
+        definitions.find(occ => stripDisambiguators(occ.symbol) == normalized)
+      }
+      .flatMap(_.range)
+  }
+
+  private def stripDisambiguators(symbol: String): String =
+    symbol.replaceAll("""\(\+\d+\)""", "()")
 
   private def symbolSuffixAfterPackage(sym: Symbol): List[String] = {
     val pkg = sym.enclosingPackage
