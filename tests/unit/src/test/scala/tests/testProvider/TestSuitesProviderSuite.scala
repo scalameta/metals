@@ -68,6 +68,45 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
   )
 
   testDiscover(
+    "single-junit5",
+    List(
+      "org.junit.jupiter:junit-jupiter-api:5.10.2",
+      "com.github.sbt.junit:jupiter-interface:0.19.0",
+    ),
+    s"""|
+        |/app/src/main/scala/NoPackage.scala
+        |import org.junit.jupiter.api.Test
+        |class NoPackage {
+        |  @Test
+        |  def test1 = ()
+        |}
+        |""".stripMargin,
+    List(
+      "app/src/main/scala/NoPackage.scala"
+    ),
+    () => {
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              "NoPackage",
+              "NoPackage",
+              "_empty_/NoPackage#",
+              QuickLocation(
+                classUriFor("app/src/main/scala/NoPackage.scala"),
+                (1, 6, 1, 15),
+              ).toLsp,
+              canResolveChildren = true,
+            )
+          ).asJava,
+        )
+      )
+    },
+  )
+
+  testDiscover(
     "single-munit",
     List("org.scalameta::munit:0.7.29"),
     s"""|
@@ -232,6 +271,58 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       )
     },
     () => Some(classUriFor("app/src/main/scala/JunitTestSuite.scala")),
+  )
+
+  testDiscover(
+    "test-cases-junit5",
+    List(
+      "org.junit.jupiter:junit-jupiter-api:5.10.2",
+      "com.github.sbt.junit:jupiter-interface:0.19.0",
+    ),
+    s"""|
+        |/app/src/main/scala/Junit5TestSuite.scala
+        |import org.junit.jupiter.api.Test
+        |class Junit5TestSuite {
+        |  @Test
+        |  def test1 = ()
+        |  @Test
+        |  def test2 = ()
+        |}
+        |""".stripMargin,
+    List("app/src/main/scala/Junit5TestSuite.scala"),
+    () => {
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestCases(
+              "Junit5TestSuite",
+              "Junit5TestSuite",
+              List(
+                TestCaseEntry(
+                  "test1()",
+                  "test1",
+                  QuickLocation(
+                    classUriFor("app/src/main/scala/Junit5TestSuite.scala"),
+                    (3, 6, 3, 11),
+                  ).toLsp,
+                ),
+                TestCaseEntry(
+                  "test2()",
+                  "test2",
+                  QuickLocation(
+                    classUriFor("app/src/main/scala/Junit5TestSuite.scala"),
+                    (5, 6, 5, 11),
+                  ).toLsp,
+                ),
+              ).asJava,
+            )
+          ).asJava,
+        )
+      )
+    },
+    () => Some(classUriFor("app/src/main/scala/Junit5TestSuite.scala")),
   )
 
   testDiscover(
@@ -528,6 +619,55 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
               className,
               List(
                 TestCaseEntry(
+                  "test1",
+                  QuickLocation(classUriFor(file), (3, 6, 3, 11)).toLsp,
+                )
+              ).asJava,
+            ),
+          ).asJava,
+        )
+      )
+    },
+  )
+
+  checkEvents(
+    "check-basic-events-junit5",
+    List(
+      "org.junit.jupiter:junit-jupiter-api:5.10.2",
+      "com.github.sbt.junit:jupiter-interface:0.19.0",
+    ),
+    s"""|
+        |/app/src/main/scala/Junit5TestSuite.scala
+        |import org.junit.jupiter.api.Test
+        |class Junit5TestSuite {
+        |  @Test
+        |  def test1 = ()
+        |}
+        |""".stripMargin,
+    file = "app/src/main/scala/Junit5TestSuite.scala",
+    expected = () => {
+      val fcqn = "Junit5TestSuite"
+      val className = "Junit5TestSuite"
+      val symbol = "_empty_/Junit5TestSuite#"
+      val file = "app/src/main/scala/Junit5TestSuite.scala"
+      List(
+        rootBuildTargetUpdate(
+          "app",
+          targetUri,
+          List[TestExplorerEvent](
+            AddTestSuite(
+              fcqn,
+              className,
+              symbol,
+              QuickLocation(classUriFor(file), (1, 6, 1, 21)).toLsp,
+              canResolveChildren = true,
+            ),
+            AddTestCases(
+              fcqn,
+              className,
+              List(
+                TestCaseEntry(
+                  "test1()",
                   "test1",
                   QuickLocation(classUriFor(file), (3, 6, 3, 11)).toLsp,
                 )
