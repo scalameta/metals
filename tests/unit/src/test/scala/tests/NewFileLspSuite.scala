@@ -568,7 +568,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     bracelessSyntax = Some("always"),
   )
 
-  // Scala 2 never uses braceless, even next to a braceless-looking sibling.
+  // Scala 2 never uses braceless, even with `always` and a braceless sibling.
   checkScala("scala2-always-braces")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
@@ -586,6 +586,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |object Existing:
                        |  def value = 1
                        |""".stripMargin,
+    bracelessSyntax = Some("always"),
   )
 
   checkScala("empty-file-with-package")(
