@@ -65,7 +65,7 @@ object JavaLintOptions {
     values match {
       case None => Right(default)
       case Some(values) =>
-        values.find(!allowed.contains(_)) match {
+        values.find(value => !allowed(value)) match {
           case Some(invalid) =>
             Left(
               s"invalid config value '$invalid' for javaLintOptions. Valid values are ${allowed.toSeq.sorted.map(value => s""""$value"""").mkString(", ")}"

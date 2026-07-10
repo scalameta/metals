@@ -424,7 +424,7 @@ class UserConfigurationSuite extends BaseSuite {
       javacServicesOverrides =
         JavacServicesOverrides.default.copy(names = false),
       scalafixRulesDependencies = List("rule1", "rule2"),
-      javaLintOptions = JavaLintOptions(List("deprecation", "unchecked")),
+      javaLintOptions = JavaLintOptions(Nil),
       customProjectRoot = Some("customs"),
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
       javaTurbineRecompileDelay = TurbineRecompileDelayConfig.testing,
@@ -505,10 +505,7 @@ class UserConfigurationSuite extends BaseSuite {
     "rule2"
   ],
   "scalafixLintEnabled": false,
-  "javaLintOptions": [
-    "deprecation",
-    "unchecked"
-  ],
+  "javaLintOptions": [],
   "customProjectRoot": "customs",
   "verboseCompilation": true,
   "autoImportBuilds": "all",
