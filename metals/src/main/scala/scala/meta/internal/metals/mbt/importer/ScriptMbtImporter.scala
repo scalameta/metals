@@ -19,6 +19,7 @@ import scala.meta.io.AbsolutePath
  * Supported script types:
  *  - `.mbt.scala` / `.mbt.java` — run with Scala CLI
  *  - `.mbt.sh`                  — run with `sh`
+ *  - `.mbt.bat`                 — run directly
  *
  * The script receives:
  *  - `MBT_OUTPUT_FILE` env var: path to write build JSON
@@ -85,6 +86,8 @@ final class ScriptMbtImporter(
   private[importer] def buildCommand(workspace: AbsolutePath): List[String] = {
     if (scriptPath.toFile.getName().endsWith(".mbt.sh"))
       List("sh", scriptPath.toString)
+    else if (scriptPath.toFile.getName().endsWith(".mbt.bat"))
+      List(scriptPath.toString)
     else {
       // .mbt.scala or .mbt.java — use Scala CLI
       val launcher = userConfig().scalaCliLauncher.getOrElse("scala-cli")
@@ -103,5 +106,5 @@ final class ScriptMbtImporter(
 
 object ScriptMbtImporter {
   val scriptExtensions: List[String] =
-    List(".mbt.scala", ".mbt.java", ".mbt.sh")
+    List(".mbt.scala", ".mbt.java", ".mbt.sh", ".mbt.bat")
 }
