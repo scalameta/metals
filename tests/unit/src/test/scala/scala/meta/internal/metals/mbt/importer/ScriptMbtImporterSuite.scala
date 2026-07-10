@@ -61,17 +61,17 @@ class ScriptMbtImporterSuite extends FunSuite {
     )
   }
 
-  test("isBuildRelated-true-for-own-script") {
+  test("isWatchedFile-true-for-own-script") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
     val script = makeScript(dir, "export.mbt.sh")
-    assert(importer(script).isBuildRelated(script))
+    assert(importer(script).isWatchedFile(script))
   }
 
-  test("isBuildRelated-false-for-other-file") {
+  test("isWatchedFile-false-for-other-file") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
     val script = makeScript(dir, "export.mbt.sh")
     val other = makeScript(dir, "other.mbt.sh")
-    assert(!importer(script).isBuildRelated(other))
+    assert(!importer(script).isWatchedFile(other))
   }
 
   test("buildCommand-sh-uses-sh") {
@@ -131,5 +131,63 @@ class ScriptMbtImporterSuite extends FunSuite {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-root"))
     val script = makeScript(dir, "export.mbt.sh")
     assertEquals(importer(script).projectRoot, dir)
+  }
+
+  test("isWatchedFile-uses-cached-watched-files") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-watched"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val buildSbt = workspace.resolve("build.sbt")
+    Files.writeString(buildSbt.toNIO, "")
+
+    // Initially false (no cache)
+    assert(!importer(script).isWatchedFile(buildSbt))
+
+    val mbtBuild = scala.meta.internal.metals.mbt.MbtBuild(
+      dependencyModules = java.util.Collections.emptyList(),
+      namespaces = java.util.Collections.emptyMap(),
+      uncheckedSources = java.util.Collections.emptyList(),
+      watchedFiles = java.util.Arrays.asList("build.sbt"),
+    )
+    scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
+      .updateWatchedFiles(script, mbtBuild)
+
+    assert(importer(script).isWatchedFile(buildSbt))
+
+    scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
+      .clearWatchedFiles(script)
+  }
+
+  test("isWatchedFile-filters-out-globs") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-no-globs"))
+    val script = makeScript(workspace, "export.mbt.sh")
+    val subDir = workspace.resolve("sub")
+    Files.createDirectories(subDir.toNIO)
+    val scalaFile = subDir.resolve("Test.scala")
+    Files.writeString(scalaFile.toNIO, "")
+
+    val mbtBuild = scala.meta.internal.metals.mbt.MbtBuild(
+      dependencyModules = java.util.Collections.emptyList(),
+      namespaces = java.util.Collections.emptyMap(),
+      uncheckedSources = java.util.Collections.emptyList(),
+      watchedFiles = java.util.Arrays.asList("**/*.scala", "sub/Test.scala"),
+    )
+    scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
+      .updateWatchedFiles(script, mbtBuild)
+
+    assert(importer(script).isWatchedFile(scalaFile))
+
+    val other = subDir.resolve("Other.scala")
+    Files.writeString(other.toNIO, "")
+    assert(!importer(script).isWatchedFile(other))
+
+    scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
+      .clearWatchedFiles(script)
+  }
+
+  test("isWatchedFile-script-itself-always-watched") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-self"))
+    val script = makeScript(workspace, "export.mbt.sh")
+
+    assert(importer(script).isWatchedFile(script))
   }
 }

@@ -96,6 +96,34 @@ final class MbtImport(
   }
 
   /**
+   * Like [[runUnconditionally]] but ignores the digest check and prompts the
+   * user for confirmation when auto-import is disabled. Used for watched files.
+   */
+  def runIgnoringDigest(
+      providers: List[MbtImportProvider],
+      isImportInProcess: AtomicBoolean,
+  ): Future[WorkspaceLoadedStatus] = {
+    val run =
+      if (userConfig().shouldAutoImportNewProject) {
+        runUnconditionally(providers, isImportInProcess)
+      } else {
+        scribe.debug("mbt-import: awaiting user response for watched file…")
+        val digest = computeDigest(providers).getOrElse("watched-file-changed")
+        for {
+          response <- requestImport(providers, digest)
+          result <-
+            if (response.isYes)
+              runUnconditionally(providers, isImportInProcess)
+            else {
+              notification.dismiss(2, TimeUnit.MINUTES)
+              Future.successful(WorkspaceLoadedStatus.Rejected)
+            }
+        } yield result
+      }
+    run
+  }
+
+  /**
    * Like [[runUnconditionally]] but first checks whether the build digest has
    * changed and prompts the user for confirmation when auto-import is disabled.
    */

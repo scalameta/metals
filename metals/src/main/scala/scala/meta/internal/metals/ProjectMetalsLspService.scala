@@ -461,8 +461,8 @@ class ProjectMetalsLspService(
         Some(languageClient),
         Some(tables),
       )
-      if (paths.exists(path => mbtImporters.exists(_.isBuildRelated(path))))
-        connectionProvider.runMbtReimport(mbtImporters)
+      if (paths.exists(path => mbtImporters.exists(_.isWatchedFile(path))))
+        connectionProvider.runMbtReimportIgnoringDigest(mbtImporters)
       else
         Future.unit
     } else if (userConfig.buildChangedAction.isNone) {

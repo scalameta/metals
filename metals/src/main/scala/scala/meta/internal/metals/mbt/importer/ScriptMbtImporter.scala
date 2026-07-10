@@ -3,11 +3,14 @@ package scala.meta.internal.metals.mbt.importer
 import java.nio.file.Files
 import java.util.concurrent.CancellationException
 
+import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
@@ -25,7 +28,7 @@ import scala.meta.io.AbsolutePath
  *  - `MBT_WORKSPACE`   env var: workspace root path
  */
 final class ScriptMbtImporter(
-    scriptPath: AbsolutePath,
+    val scriptPath: AbsolutePath,
     shellRunner: ShellRunner,
     userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext)
@@ -72,7 +75,18 @@ final class ScriptMbtImporter(
       }
   }
 
-  override def isBuildRelated(path: AbsolutePath): Boolean = path == scriptPath
+  override def isWatchedFile(path: AbsolutePath): Boolean = {
+    if (path == scriptPath) return true
+
+    val patterns =
+      ScriptMbtImporter.watchedFilesCache.getOrElse(scriptPath, Nil)
+    if (patterns.isEmpty) return false
+
+    path.toRelativeInside(projectRoot).exists { relative =>
+      val relativeStr = relative.toString.replace('\\', '/')
+      patterns.exists(_ == relativeStr)
+    }
+  }
 
   override def digest(workspace: AbsolutePath): Option[String] =
     scala.util.Try(MD5.compute(scriptPath.toNIO)).toOption
@@ -104,4 +118,25 @@ final class ScriptMbtImporter(
 object ScriptMbtImporter {
   val scriptExtensions: List[String] =
     List(".mbt.scala", ".mbt.java", ".mbt.sh")
+
+  private val watchedFilesCache =
+    TrieMap.empty[AbsolutePath, List[String]]
+
+  def updateWatchedFiles(
+      scriptPath: AbsolutePath,
+      mbtBuild: MbtBuild,
+  ): Unit = {
+    import scala.meta.internal.metals.mbt.MbtGlobMatcher
+    val allPatterns = mbtBuild.getWatchedFiles.asScala.toList
+    val explicitPaths = allPatterns
+      .filterNot(MbtGlobMatcher.isPatternGlob)
+      .map { pattern =>
+        val normalized = MbtGlobMatcher.normalizeSlashes(pattern)
+        if (normalized.startsWith("./")) normalized.substring(2) else normalized
+      }
+    watchedFilesCache(scriptPath) = explicitPaths
+  }
+
+  private[importer] def clearWatchedFiles(scriptPath: AbsolutePath): Unit =
+    watchedFilesCache.remove(scriptPath)
 }
