@@ -228,8 +228,11 @@ object MbtBuild {
           .getOrElse(ju.Collections.emptyList())
           .asScala).distinct.asJava
 
-    val mergedWatchedFiles =
-      (a.getWatchedFiles.asScala ++ b.getWatchedFiles.asScala).distinct.asJava
+    val mergedWatchedFiles = {
+      val combined =
+        (a.getWatchedFiles.asScala ++ b.getWatchedFiles.asScala).distinct
+      if (combined.isEmpty) null else combined.asJava
+    }
 
     MbtBuild(
       mergedModules,
