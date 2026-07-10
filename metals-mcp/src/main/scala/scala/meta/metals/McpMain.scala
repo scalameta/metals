@@ -279,17 +279,19 @@ object McpMain {
       userConfig,
     )(ec)
 
-    Runtime.getRuntime.addShutdownHook(new Thread(() => {
-      scribe.info("Shutting down Metals MCP server...")
-      try {
-        service.cancel()
-        ec.shutdown()
-        sh.shutdown()
-      } catch {
-        case NonFatal(e) =>
-          scribe.error("Error during shutdown", e)
-      }
-    }))
+    Runtime.getRuntime.addShutdownHook(
+      new Thread(() => {
+        scribe.info("Shutting down Metals MCP server...")
+        try {
+          service.cancel()
+          ec.shutdown()
+          sh.shutdown()
+        } catch {
+          case NonFatal(e) =>
+            scribe.error("Error during shutdown", e)
+        }
+      })
+    )
 
     try {
       service.startAndBlock()

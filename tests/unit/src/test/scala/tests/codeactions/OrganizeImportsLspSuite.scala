@@ -160,18 +160,19 @@ class OrganizeImportsLspSuite
     kind = List(sourceKind),
     scalafixConf = scalafixConf("/project/scalafix.conf"),
     scalacOptions = scalacOption,
-    configuration = Some {
-      val configPath = workspace
-        .resolve(
-          "project/scalafix.conf"
-        )
-        .toString()
-        .replace("\\", "\\\\")
+    configuration =
+      Some {
+        val configPath = workspace
+          .resolve(
+            "project/scalafix.conf"
+          )
+          .toString()
+          .replace("\\", "\\\\")
 
-      s"""|{
-          |  "scalafixConfigPath": "$configPath"
-          |}""".stripMargin
-    },
+        s"""|{
+            |  "scalafixConfigPath": "$configPath"
+            |}""".stripMargin
+      },
   )
 
   check(
