@@ -5,7 +5,6 @@ import java.nio.CharBuffer
 import java.util.logging.Level
 import java.util.logging.Logger
 
-import scala.collection.mutable
 import scala.util.Properties
 import scala.util.control.NonFatal
 
@@ -47,19 +46,6 @@ class SymbolIndexBucket(
 
   private val logger = Logger.getLogger(classOf[SymbolIndexBucket].getName)
 
-  private val maxParentResolutionDepth = 5
-
-  /**
-   * Indexing result of a single source file together with all its toplevel
-   * symbols, including the "trivial" ones filtered out of
-   * `IndexingResult.topLevels`.
-   */
-  private case class SourceIndex(
-      result: IndexingResult,
-      allToplevels: List[String],
-      qualifiedParents: List[(String, List[String])]
-  )
-
   def close(): Unit = sourceJars.close()
 
   def addSourceDirectory(
@@ -82,15 +68,14 @@ class SymbolIndexBucket(
     if (reindex || sourceJars.addEntry(jar.toNIO)) {
       FileIO.withJarFileSystem(jar, create = false) { root =>
         try {
-          val indexed = root.listRecursive.toList.flatMap {
+          root.listRecursive.toList.flatMap {
             case source if source.isScala =>
-              addSourceFileWithAllToplevels(source, None, isJava = false)
+              addSourceFile(source, None, isJava = false)
             case source if source.isJava =>
-              addSourceFileWithAllToplevels(source, None, isJava = true)
+              addSourceFile(source, None, isJava = true)
             case _ =>
               None
           }
-          enrichWithInheritedPackageObjectMembers(indexed)
         } catch {
           // this happens in broken jars since file from FileWalker should exists
           case _: UncheckedIOException => Nil
@@ -119,23 +104,18 @@ class SymbolIndexBucket(
       source: AbsolutePath,
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
-  ): Option[IndexingResult] =
-    addSourceFileWithAllToplevels(source, sourceDirectory, isJava)
-      .map(_.result)
-
-  private def addSourceFileWithAllToplevels(
-      source: AbsolutePath,
-      sourceDirectory: Option[AbsolutePath],
-      isJava: Boolean
-  ): Option[SourceIndex] = try {
-    val index = indexSource(source, dialect, sourceDirectory, isJava)
-    index.result.topLevels.foreach { symbol =>
+  ): Option[IndexingResult] = try {
+    val IndexingResult(path, topLevels, overrides, toplevelMembers) =
+      indexSource(source, dialect, sourceDirectory, isJava)
+    topLevels.foreach { symbol =>
       toplevels.updateWith(symbol) {
         case Some(acc) => Some(acc + source)
         case None => Some(Set(source))
       }
     }
-    Some(index)
+    Some(
+      IndexingResult(path, topLevels, overrides, toplevelMembers)
+    )
   } catch {
     case NonFatal(e) =>
       onError(e)
@@ -147,185 +127,26 @@ class SymbolIndexBucket(
       dialect: Dialect,
       sourceDirectory: Option[AbsolutePath],
       isJava: Boolean
-  ): SourceIndex = {
+  ): IndexingResult = {
     val uri = source.toIdeallyRelativeURI(sourceDirectory)
-    val (doc, overrides, toplevelMembers, qualifiedParents) =
+    val (doc, overrides, toplevelMembers) =
       mtags.extendedIndexing(source, dialect)
     val sourceTopLevels =
       doc.occurrences.iterator
         .filterNot(_.symbol.isPackage)
         .map(_.symbol)
-        .toList
     val topLevels =
-      if (source.isScalaScript) sourceTopLevels
+      if (source.isScalaScript) sourceTopLevels.toList
       else if (isJava) {
-        sourceTopLevels.headOption
+        sourceTopLevels.toList.headOption
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "java"))
           .toList
       } else {
         sourceTopLevels
           .filter(sym => !isTrivialToplevelSymbol(uri, sym, "scala"))
+          .toList
       }
-    SourceIndex(
-      IndexingResult(source, topLevels, overrides, toplevelMembers),
-      sourceTopLevels,
-      qualifiedParents
-    )
-  }
-
-  /**
-   * Copies type members inherited through a package object's mixin parents
-   * into its symbol space, so e.g. `import doobie.Transactor` is suggested for
-   * an alias exposed via `package object doobie extends Aliases` (issue #2583).
-   *
-   * Each parent's full dotted path (kept separate from the simple-name
-   * `overrides` channel used by the inheritance index) is resolved within the
-   * same jar -- relative to the enclosing package, then absolute, then, for
-   * unqualified names only, a unique simple-name match -- and otherwise skipped.
-   * Resolution is transitive. Only type members are copied; term/module
-   * re-exports (e.g. doobie's `val Transactor`) are a follow-up.
-   */
-  private def enrichWithInheritedPackageObjectMembers(
-      indexed: List[SourceIndex]
-  ): List[IndexingResult] = {
-    val packageObjects = for {
-      index <- indexed
-      (symbol, parents) <- index.qualifiedParents
-      if symbol.endsWith("/package.")
-      if parents.nonEmpty
-    } yield (symbol, parents)
-
-    if (packageObjects.isEmpty) indexed.map(_.result)
-    else {
-      // Toplevel type symbols of the jar, before the trivial-symbol filter,
-      // since parents like `com/foo/Aliases#` in `/com/foo/Aliases.scala`
-      // are exactly the "trivial" ones.
-      val definingFile = mutable.Map.empty[String, AbsolutePath]
-      val byName = mutable.Map.empty[String, List[String]]
-      for {
-        index <- indexed
-        symbol <- index.allToplevels
-        if symbol.owner.isPackage
-        if symbol.desc.isInstanceOf[Descriptor.Type]
-        if !definingFile.contains(symbol)
-      } {
-        definingFile(symbol) = index.result.path
-        val name = symbol.desc.name.value
-        byName(name) = symbol :: byName.getOrElse(name, Nil)
-      }
-
-      // Resolves a parent written as a dotted path (e.g. `free.Types`) to a
-      // toplevel type symbol defined in this jar. Tries the path relative to
-      // the enclosing package first, then as an absolute path, and finally a
-      // unique simple-name match anywhere in the jar.
-      def resolveParent(
-          enclosingOwner: String,
-          path: String
-      ): Option[String] = {
-        val segments = path.split('.').toList
-        def buildSymbol(prefix: String): String =
-          segments.init.foldLeft(prefix)((acc, seg) => acc + seg + "/") +
-            segments.last + "#"
-        val relative = buildSymbol(enclosingOwner)
-        if (definingFile.contains(relative)) Some(relative)
-        else {
-          val absolute = buildSymbol("")
-          if (definingFile.contains(absolute)) Some(absolute)
-          // Only an unqualified parent may fall back to a simple-name match. A
-          // qualified parent that matches neither a relative nor an absolute
-          // path is external, and must not be confused with an unrelated trait
-          // of the same simple name that happens to live in the jar.
-          else if (segments.lengthCompare(1) == 0)
-            byName.getOrElse(segments.last, Nil) match {
-              case unique :: Nil => Some(unique)
-              case _ => None
-            }
-          else None
-        }
-      }
-
-      val parsedWithMembers = mutable.Map
-        .empty[
-          AbsolutePath,
-          (s.TextDocument, List[(String, List[String])])
-        ]
-      def indexWithMembers(path: AbsolutePath) =
-        parsedWithMembers.getOrElseUpdate(
-          path, {
-            val (doc, _, _, qualifiedParents) =
-              mtags.extendedIndexing(path, dialect, includeMembers = true)
-            (doc, qualifiedParents)
-          }
-        )
-
-      // (member name, definition range, defining file) of all type members
-      // visible through `parentSymbol`, including transitively inherited ones.
-      def typeMembersOf(
-          parentSymbol: String,
-          visited: Set[String],
-          depth: Int
-      ): List[(String, s.Range, AbsolutePath)] =
-        if (depth > maxParentResolutionDepth || visited(parentSymbol)) Nil
-        else
-          definingFile.get(parentSymbol) match {
-            case None => Nil
-            case Some(path) =>
-              val (doc, parentQualifiedParents) = indexWithMembers(path)
-              val direct = doc.occurrences.iterator.collect {
-                case occ
-                    if occ.symbol.owner == parentSymbol &&
-                      occ.symbol.desc.isInstanceOf[Descriptor.Type] =>
-                  (
-                    occ.symbol.desc.name.value,
-                    occ.range.getOrElse(s.Range.defaultInstance),
-                    path
-                  )
-              }.toList
-              val transitive = for {
-                (symbol, parents) <- parentQualifiedParents
-                if symbol == parentSymbol
-                parentPath <- parents
-                resolved <- resolveParent(parentSymbol.owner, parentPath).toList
-                member <- typeMembersOf(
-                  resolved,
-                  visited + parentSymbol,
-                  depth + 1
-                )
-              } yield member
-              direct ++ transitive
-          }
-
-      val seen = mutable.Set.empty[String]
-      indexed.foreach { index =>
-        index.result.toplevelMembers.foreach(member => seen += member.symbol)
-      }
-      val synthesized =
-        mutable.Map.empty[AbsolutePath, mutable.ListBuffer[ToplevelMember]]
-      for {
-        (pkgObjSymbol, parentPaths) <- packageObjects
-        parentPath <- parentPaths.distinct
-        parent <- resolveParent(pkgObjSymbol.owner, parentPath).toList
-        (memberName, range, path) <- typeMembersOf(parent, Set.empty, 0)
-        memberSymbol = Symbols.Global(pkgObjSymbol, Descriptor.Type(memberName))
-        // a member defined directly in the package object wins over an
-        // inherited one, since it was already emitted with the same symbol
-        if !seen(memberSymbol)
-      } {
-        seen += memberSymbol
-        synthesized.getOrElseUpdate(path, mutable.ListBuffer.empty) +=
-          ToplevelMember(memberSymbol, range, ToplevelMember.Kind.Type)
-      }
-
-      indexed.map { index =>
-        synthesized.get(index.result.path) match {
-          case Some(extra) =>
-            index.result.copy(toplevelMembers =
-              index.result.toplevelMembers ++ extra.toList
-            )
-          case None => index.result
-        }
-      }
-    }
+    IndexingResult(source, topLevels, overrides, toplevelMembers)
   }
 
   // Returns true if symbol is com/foo/Bar# and path is /com/foo/Bar.scala

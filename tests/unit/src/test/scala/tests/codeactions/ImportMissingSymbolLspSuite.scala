@@ -657,4 +657,79 @@ class ImportMissingSymbolLspSuite
     expectNoDiagnostics = false,
     dependencies = List("org.tpolecat::doobie-core:0.13.4"),
   )
+
+  // Package object defined in a sibling workspace module rather than in a
+  // library dependency: discovered through workspace symbols instead of the
+  // classpath index, see https://github.com/scalameta/metals/issues/2583
+  check(
+    "package-object-mixin-workspace",
+    """|package b
+       |
+       |object B {
+       |  def alias: <<LibAlias>>[Int] = ???
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("LibAlias", "lib")}
+        |${SourceAddMissingImports.title}
+        |${CreateNewSymbol.title("LibAlias")}
+        |""".stripMargin,
+    """|package b
+       |
+       |import lib.LibAlias
+       |
+       |object B {
+       |  def alias: LibAlias[Int] = ???
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+    fileName = "B.scala",
+    overrideLayout = Some(
+      s"""|/metals.json
+          |{
+          |  "a": {"scalaVersion" : "$scalaVersion"},
+          |  "b": {"scalaVersion" : "$scalaVersion", "dependsOn": ["a"]}
+          |}
+          |/a/src/main/scala/lib/package.scala
+          |package object lib extends lib.internal.Aliases
+          |/a/src/main/scala/lib/internal/Aliases.scala
+          |package lib.internal
+          |
+          |trait Aliases {
+          |  type LibAlias[T] = List[T]
+          |}
+          |/b/src/main/scala/b/B.scala
+          |package b
+          |
+          |object B {
+          |  def alias: <<LibAlias>>[Int] = ???
+          |}
+          |""".stripMargin
+    ),
+  )
+
+  // Term re-export (`val Transactor`) inherited into `package object doobie`
+  // via the `Modules` mixin, see https://github.com/scalameta/metals/issues/2583
+  check(
+    "package-object-mixin-term",
+    """|package a
+       |
+       |object A {
+       |  val xa = <<Transactor>>.fromDriverManager
+       |}
+       |""".stripMargin,
+    s"""|${ImportMissingSymbol.title("Transactor", "doobie")}
+        |${ImportMissingSymbol.title("Transactor", "doobie.util.transactor")}
+        |${CreateNewSymbol.title("Transactor")}
+        |""".stripMargin,
+    """|package a
+       |
+       |import doobie.Transactor
+       |
+       |object A {
+       |  val xa = Transactor.fromDriverManager
+       |}
+       |""".stripMargin,
+    expectNoDiagnostics = false,
+    dependencies = List("org.tpolecat::doobie-core:0.13.4"),
+  )
 }

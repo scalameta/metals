@@ -65,24 +65,11 @@ class ScalaToplevelMtags(
   override def toplevelMembers(): List[ToplevelMember] =
     toplevelMembersBuilder.result()
 
-  override def qualifiedParents(): List[(String, List[String])] =
-    qualifiedParentsBuilder.result()
-
   private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
   private val toplevelMembersBuilder = List.newBuilder[ToplevelMember]
-  private val qualifiedParentsBuilder =
-    List.newBuilder[(String, List[String])]
 
   private def addOverridden(symbols: List[OverriddenSymbol]) =
     overridden += ((currentOwner, symbols))
-
-  private def addQualifiedParents(parents: List[String]) =
-    if (parents.nonEmpty) qualifiedParentsBuilder += ((currentOwner, parents))
-
-  private def simpleName(path: String): String = {
-    val dot = path.lastIndexOf('.')
-    if (dot < 0) path else path.substring(dot + 1)
-  }
 
   private def addToplevelMembers(members: List[ToplevelMember]) =
     toplevelMembersBuilder ++= members
@@ -559,18 +546,12 @@ class ScalaToplevelMtags(
           val (overridden, newIndent) = findOverridden(List.empty, indent)
           expectTemplate.map(tmpl =>
             withOwner(tmpl.owner) {
-              // `findOverridden` now yields the full dotted path of each
-              // parent. The inheritance index keeps only the simple name
-              // (unchanged behavior), while the qualified paths feed the
-              // package-object member resolver (#2583).
-              val parentPaths = overridden.reverse.map(_.name).distinct
               addOverridden(
-                parentPaths
-                  .map(simpleName)
+                overridden.reverse
+                  .map(_.name)
                   .distinct
                   .map(UnresolvedOverriddenSymbol(_))
               )
-              addQualifiedParents(parentPaths)
             }
           )
           loop(
@@ -770,35 +751,17 @@ class ScalaToplevelMtags(
     val newIndent = indent.withOptIndent(acceptTrivia())
     curr.token match {
       case IDENTIFIER =>
-        // Collects a (possibly qualified) parent reference such as `free.Types`
-        // into a single Identifier whose name is the full dotted path and whose
-        // position points at the last segment (the type name).
         @tailrec
-        def getIdentifier(
-            indent: Indent,
-            acc: List[Identifier]
-        ): (Option[Identifier], Indent) = {
+        def getIdentifier(indent: Indent): (Option[Identifier], Indent) = {
           val currentIdentifier = newIdentifier
           val newIndent = acceptAllAfterOverriddenIdentifier(indent)
-          val nextAcc = currentIdentifier.toList ::: acc
           curr.token match {
             case DOT =>
-              getIdentifier(newIndent.withOptIndent(acceptTrivia()), nextAcc)
-            case _ =>
-              val combined = nextAcc.reverse match {
-                case Nil => None
-                case segments =>
-                  Some(
-                    new Identifier(
-                      segments.map(_.name).mkString("."),
-                      segments.last.pos
-                    )
-                  )
-              }
-              (combined, newIndent)
+              getIdentifier(newIndent.withOptIndent(acceptTrivia()))
+            case _ => (currentIdentifier, newIndent)
           }
         }
-        val (identifier, currIdent) = getIdentifier(newIndent, List.empty)
+        val (identifier, currIdent) = getIdentifier(newIndent)
         val acc = identifier.toList ++ acc0
         curr.token match {
           case WITH => findOverridden(acc, currIdent)

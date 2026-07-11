@@ -66,7 +66,8 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
-    with WorkspaceSymbolSearch { compiler =>
+    with WorkspaceSymbolSearch
+    with PackageObjectMemberSearch { compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
@@ -80,6 +81,7 @@ class MetalsGlobal(
   val compileUnitsCache = new CompileUnitsCache(5)
   def didChange(uri: URI): Unit = {
     compileUnitsCache.didChange(uri)
+    resetPackageObjectMemberSearch()
   }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
@@ -630,17 +632,8 @@ class MetalsGlobal(
                     if (sym.isJava)
                       owner.info.decl(TermName(value).encode) :: Nil
                     else Nil
-                  val declared = owner.info.decl(TypeName(value).encode)
-                  // A type member inherited into a package object from a mixin
-                  // is not a declaration of the package object itself, e.g.
-                  // `doobie/package.Transactor#` is declared in `doobie/Types#`,
-                  // so fall back to inherited members for package objects.
-                  val inherited =
-                    if (declared == NoSymbol && parent.endsWith("/package."))
-                      owner.info.member(TypeName(value).encode) :: Nil
-                    else Nil
                   // Put the type ahead of the Java-induced term for `inverseSemanticdbSymbol`
-                  declared :: members ::: inherited
+                  owner.info.decl(TypeName(value).encode) :: members
                 case Descriptor.Term(value) =>
                   owner.info.decl(TermName(value).encode) :: Nil
                 case Descriptor.Package(value) =>

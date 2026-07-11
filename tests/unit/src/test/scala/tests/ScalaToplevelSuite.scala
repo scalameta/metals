@@ -818,37 +818,6 @@ class ScalaToplevelSuite extends BaseToplevelSuite {
   )
 
   check(
-    "package-object-with-mixins",
-    """|package a
-       |package object b extends C with D {
-       |  type A = Int
-       |}
-       |""".stripMargin,
-    List(
-      "a/",
-      "a/b/package. -> C, D",
-      "type a/b/package.A#",
-    ),
-    mode = ToplevelWithInner,
-  )
-
-  check(
-    "package-object-with-mixins-scala2",
-    """|package a
-       |package object b extends C with D {
-       |  type A = Int
-       |}
-       |""".stripMargin,
-    List(
-      "a/",
-      "a/b/package. -> C, D",
-      "type a/b/package.A#",
-    ),
-    mode = ToplevelWithInner,
-    dialect = dialects.Scala213,
-  )
-
-  check(
     "package-members-scala3",
     """|package a
        |type A = Int
