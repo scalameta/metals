@@ -142,7 +142,7 @@ class MbtWorkspaceSymbolProvider(
       progress,
       // We don't need to re-compile the workspace super regularly because we can
       // load recently changed files from the sourcepath.
-      turbineRecompileDelay().duration,
+      () => turbineRecompileDelay(),
       listProtoJavaOutlinesForPackage = pkg =>
         protobufWorkspace.listProtoJavaOutlinesForPackage(
           pkg,
