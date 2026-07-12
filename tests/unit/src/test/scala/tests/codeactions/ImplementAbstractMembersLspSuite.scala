@@ -305,10 +305,10 @@ class ImplementAbstractMembersLspSuite
   }
 
   // https://github.com/scalameta/metals/issues/2554
-  // A representable Java raw type can be implemented, so the quick fix is
-  // offered and the applied stub compiles.
+  // A Java raw type is rendered with wildcards, so the quick fix is offered and
+  // the applied stub compiles.
   checkEdit(
-    "java-raw-type-representable-offered",
+    "java-raw-type",
     s"""|/metals.json
         |{"a": {"scalaVersion": "$scalaVersion"}}
         |/a/src/main/java/example/Box.java
@@ -335,11 +335,11 @@ class ImplementAbstractMembersLspSuite
     filterAction = _.getTitle() == ImplementAbstractMembers.title,
   )
 
-  // An F-bounded Java raw type has no compiling override, so the class can't be
-  // made concrete and the quick fix must NOT be offered (it would leave the
-  // class abstract).
+  // A recursive (F-bounded) raw type renders as `Recursive[_ <: AnyRef]`. Whether
+  // that actually overrides is mode-dependent (see #2554), so we only assert it is
+  // the best-effort form we insert, not that the result compiles.
   checkEdit(
-    "java-raw-type-recursive-not-offered",
+    "java-raw-type-recursive",
     s"""|/metals.json
         |{"a": {"scalaVersion": "$scalaVersion"}}
         |/a/src/main/java/example/Recursive.java
@@ -354,10 +354,17 @@ class ImplementAbstractMembersLspSuite
         |package example
         |class <<Naivety>> extends IllConceived {}
         |""".stripMargin,
-    expectedActions = "",
-    expectedCode = "",
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    expectedCode =
+      """|package example
+         |class Naivety extends IllConceived {
+         |
+         |  override def impossible(r: Recursive[_ <: AnyRef]): Unit = ???
+         |
+         |}
+         |""".stripMargin,
     expectNoDiagnostics = false,
     filterAction = _.getTitle() == ImplementAbstractMembers.title,
-    applyCodeAction = false,
   )
 }

@@ -1297,27 +1297,6 @@ class MetalsGlobal(
   }
 
   /**
-   * True if `tpe` mentions a Java raw type whose type parameters' bounds refer
-   * to the raw type's own type parameters, e.g. `Recursive<T extends Recursive>`
-   * or `Dep<A, B extends A>`. Such raw types have no Scala form that reliably
-   * overrides the Java member, so they are not offered as override/implement
-   * completions. For the full analysis see
-   * https://github.com/scalameta/metals/issues/2554
-   */
-  def containsUnrepresentableRawType(tpe: Type): Boolean =
-    tpe.exists {
-      case TypeRef(_, sym, Nil)
-          if sym.isJavaDefined && sym.typeParams.nonEmpty =>
-        val ownParams = sym.typeParams.toSet
-        sym.typeParams.exists { tparam =>
-          tparam.info.bounds.hi.exists { bound =>
-            bound.typeSymbol == sym || ownParams(bound.typeSymbol)
-          }
-        }
-      case _ => false
-    }
-
-  /**
    * Check if a method is inherited from AnyVal, Any, or Object.
    * These methods should be filtered out from implicit extension method completions.
    */
