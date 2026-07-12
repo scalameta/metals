@@ -616,6 +616,74 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  // Scaladoc also permits `[[[ ... ]]]` (any n >= 2 matching brackets); the old
+  // `\[\[ ... \]\]` regex truncated it to `[scala.Double` (scalameta/metals#3383).
+  test("scaladoc-definition-triple-bracket") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  /**
+         |   * Returns a [[[scala.Do@@uble]]] representing yada yada yada...
+         |   */
+         |  def f: Double = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
+    } yield ()
+  }
+
+  // The link's title is not part of the target, so a titled link still navigates
+  // (scalameta/metals#3383).
+  test("scaladoc-definition-link-title") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  /** Returns a [[scala.Do@@uble the number]]. */
+         |  def f: Double = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
+    } yield ()
+  }
+
   test("scaladoc-definition-this") {
     for {
       _ <- initialize(
