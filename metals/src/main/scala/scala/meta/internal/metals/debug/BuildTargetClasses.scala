@@ -322,7 +322,7 @@ final class BuildTargetClasses(
         descriptors,
       )
     } {
-      classes(target).mainClasses.put(symbol, aClass)
+      classes(target).putMainClass(symbol, aClass)
     }
   }
 
@@ -343,7 +343,7 @@ final class BuildTargetClasses(
       // item.getFramework() can return null!
       val framework = TestFrameworkUtils.from(Option(item.getFramework()))
       val testInfo = BuildTargetClasses.TestSymbolInfo(className, framework)
-      classes(target).testClasses.put(symbol, testInfo)
+      classes(target).putTestClass(symbol, testInfo)
     }
   }
 
@@ -577,7 +577,7 @@ final class BuildTargetClasses(
       sourceFiles.foreach { sourcePath =>
         bazelTestClassCache.get(sourcePath).foreach { testClasses =>
           testClasses.foreach { case (symbol, testInfo) =>
-            classes(target).testClasses.put(symbol, testInfo)
+            classes(target).putTestClass(symbol, testInfo)
           }
         }
       }
@@ -598,7 +598,7 @@ final class BuildTargetClasses(
       } {
         val classes = index.getOrElseUpdate(targetId, new Classes)
         testClasses.foreach { case (symbol, testInfo) =>
-          classes.testClasses.put(symbol, testInfo)
+          classes.putTestClass(symbol, testInfo)
         }
       }
     }
@@ -647,10 +647,7 @@ final class BuildTargetClasses(
           (path, pathCandidates) <- candidatesByPath
           targetId <- buildTargets.inverseSourcesAll(path).filter(targetSet)
         } {
-          val existingCandidates =
-            classes(targetId).candidateTestClasses.getOrElse(path, Seq.empty)
-          classes(targetId).candidateTestClasses
-            .put(path, existingCandidates ++ pathCandidates)
+          classes(targetId).appendCandidateTestClasses(path, pathCandidates)
         }
 
         scribe.debug(
@@ -698,10 +695,7 @@ final class BuildTargetClasses(
           (path, pathCandidates) <- candidatesByPath
           targetId <- buildTargets.inverseSourcesAll(path).filter(targetSet)
         } {
-          val existingCandidates =
-            classes(targetId).candidateMainClasses.getOrElse(path, Seq.empty)
-          classes(targetId).candidateMainClasses
-            .put(path, existingCandidates ++ pathCandidates)
+          classes(targetId).appendCandidateMainClasses(path, pathCandidates)
         }
 
         scribe.debug(
@@ -776,12 +770,12 @@ final class BuildTargetClasses(
       classes <- index.get(tid)
     } {
       // Remove candidates for this path
-      classes.candidateMainClasses.remove(docPath)
+      classes.clearCandidateMainClasses(docPath)
 
       // Extract and store confirmed main classes
       val mainClasses = extractMbtMainClasses(doc)
       for ((symbol, mc) <- mainClasses) {
-        classes.mainClasses.put(symbol, mc)
+        classes.putMainClass(symbol, mc)
       }
     }
   }
@@ -907,15 +901,11 @@ final class BuildTargetClasses(
         classes <- index.get(tid)
       } {
         // Remove candidates for this path
-        classes.candidateTestClasses.remove(docPath)
+        classes.clearCandidateTestClasses(docPath)
 
         // Extract and store confirmed test classes
         for ((symbol, testInfo) <- testClasses) {
-          classes.testClasses.put(symbol, testInfo)
-          classes.confirmedMbtTestClassFile.put(
-            testInfo.fullyQualifiedName,
-            docPath,
-          )
+          classes.putTestClass(symbol, testInfo, docPath)
         }
       }
     }
@@ -1141,33 +1131,101 @@ object BuildTargetClasses {
   )
 
   final class Classes {
-    val mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
-    val testClasses = new TrieMap[Symbol, TestSymbolInfo]()
+    private val _mainClasses = new TrieMap[Symbol, b.ScalaMainClass]()
+    private val _testClasses = new TrieMap[Symbol, TestSymbolInfo]()
+
+    private val _confirmedMbtTestClassFile =
+      new TrieMap[FullyQualifiedClassName, AbsolutePath]()
+
+    private val _candidateMainClasses =
+      new TrieMap[AbsolutePath, Seq[MainClassCandidate]]()
+
+    private val _candidateTestClasses =
+      new TrieMap[AbsolutePath, Seq[TestClassCandidate]]()
+
+    def isEmpty: Boolean = _mainClasses.isEmpty && _testClasses.isEmpty
+
+    def mainClasses(): scala.collection.Map[Symbol, b.ScalaMainClass] =
+      _mainClasses.readOnlySnapshot()
+
+    def testClasses(): scala.collection.Map[Symbol, TestSymbolInfo] =
+      _testClasses.readOnlySnapshot()
 
     /**
      * Maps fully-qualified test class name to its source file, populated when
      * candidates are confirmed via semanticdb. Persists after confirmation so
      * that source-file lookups remain valid.
      */
-    val confirmedMbtTestClassFile =
-      new TrieMap[FullyQualifiedClassName, AbsolutePath]()
+    def confirmedMbtTestClassFile()
+        : scala.collection.Map[FullyQualifiedClassName, AbsolutePath] =
+      _confirmedMbtTestClassFile.readOnlySnapshot()
 
     /**
      * Candidate main classes discovered from the MBT index without semanticdb.
      * These are unconfirmed and need semanticdb verification before use.
      * Key is the file path, value is the list of candidate symbols in that file.
      */
-    val candidateMainClasses =
-      new TrieMap[AbsolutePath, Seq[MainClassCandidate]]()
+    def candidateMainClasses()
+        : scala.collection.Map[AbsolutePath, Seq[MainClassCandidate]] =
+      _candidateMainClasses.readOnlySnapshot()
 
     /**
      * Candidate test classes discovered from the MBT index without semanticdb.
      * These are unconfirmed and need semanticdb verification before use.
      * Key is the file path, value is the list of candidate symbols in that file.
      */
-    val candidateTestClasses =
-      new TrieMap[AbsolutePath, Seq[TestClassCandidate]]()
+    def candidateTestClasses()
+        : scala.collection.Map[AbsolutePath, Seq[TestClassCandidate]] =
+      _candidateTestClasses.readOnlySnapshot()
 
-    def isEmpty: Boolean = mainClasses.isEmpty && testClasses.isEmpty
+    def putMainClass(s: Symbol, cl: b.ScalaMainClass): Unit =
+      _mainClasses.put(s, cl)
+
+    def putTestClass(s: Symbol, info: TestSymbolInfo): Unit =
+      _testClasses.put(s, info)
+
+    def putTestClass(
+        s: Symbol,
+        info: TestSymbolInfo,
+        sourceFile: AbsolutePath,
+    ): Unit = {
+      putTestClass(s, info)
+      _confirmedMbtTestClassFile.put(info.fullyQualifiedName, sourceFile)
+    }
+
+    private def appendValues[K, V](
+        trie: TrieMap[K, Seq[V]]
+    )(key: K, values: Seq[V]) = {
+      trie.updateWith(key) {
+        case None => Some(values)
+        case Some(oldValues) => Some(oldValues ++ values)
+      }
+    }
+
+    def appendCandidateMainClasses(
+        sourceFile: AbsolutePath,
+        candidates: Seq[MainClassCandidate],
+    ): Unit = {
+      appendValues(_candidateMainClasses)(sourceFile, candidates)
+    }
+
+    def appendCandidateTestClasses(
+        sourceFile: AbsolutePath,
+        candidates: Seq[TestClassCandidate],
+    ): Unit = {
+      appendValues(_candidateTestClasses)(sourceFile, candidates)
+    }
+
+    def clearCandidateMainClasses(
+        sourceFile: AbsolutePath
+    ): Unit = {
+      _candidateMainClasses.remove(sourceFile)
+    }
+
+    def clearCandidateTestClasses(
+        sourceFile: AbsolutePath
+    ): Unit = {
+      _candidateTestClasses.remove(sourceFile)
+    }
   }
 }
