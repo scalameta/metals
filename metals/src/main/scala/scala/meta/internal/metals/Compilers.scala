@@ -703,67 +703,6 @@ class Compilers(
 
   }
 
-  /**
-   * Buffer-safe, clamped entry point for callers that only have a file (e.g. the
-   * `show-implicits` MCP tool), rather than a fully built [[InlayHintParams]].
-   *
-   * This owns range construction and clamping against the *buffer* text so the
-   * range handed to the presentation compiler is always in bounds. An
-   * out-of-bounds LSP range is otherwise silently dropped to `None` by `toMeta`,
-   * which would yield zero hints. The caller's `range` endpoints are treated as
-   * whole-line, 1-based, source-coordinate positions with `endLine` inclusive;
-   * columns are recomputed here and let `sourceAdjustments` map them into PC
-   * coordinates (so worksheets/`.sc` scripts keep working).
-   */
-  def inlayHints(
-      path: AbsolutePath,
-      range: Option[LspRange],
-      options: InlayHintsOptions,
-  ): Future[ju.List[InlayHint]] = {
-    val text = path.toInputFromBuffers(buffers).text
-    val params = new InlayHintParams(
-      new TextDocumentIdentifier(path.toURI.toString()),
-      wholeLineRange(text, range),
-    )
-    inlayHints(params, EmptyCancelToken, Some(options))
-  }
-
-  /**
-   * Builds a whole-line LSP range against `text`, clamping a caller-provided
-   * range into the buffer bounds.
-   *
-   *   - endpoints are 0-based and `endLine` is inclusive;
-   *   - the range always covers whole lines (start column 0, end column = end of
-   *     `endLine`); columns in the input range are ignored;
-   *   - when no range is supplied, or the parsed range is empty
-   *     (`startLine > endLine` after clamping), the whole file is used.
-   */
-  private def wholeLineRange(
-      text: String,
-      range: Option[LspRange],
-  ): LspRange = {
-    val lines = text.split("\n", -1)
-    val lastLine = math.max(0, lines.length - 1)
-    def lineEndCol(line: Int): Int = lines(line).length
-    def wholeFile =
-      new LspRange(
-        new LspPosition(0, 0),
-        new LspPosition(lastLine, lineEndCol(lastLine)),
-      )
-    range match {
-      case Some(r) =>
-        val startLine = math.max(0, math.min(r.getStart().getLine(), lastLine))
-        val endLine = math.max(0, math.min(r.getEnd().getLine(), lastLine))
-        if (startLine > endLine) wholeFile
-        else
-          new LspRange(
-            new LspPosition(startLine, 0),
-            new LspPosition(endLine, lineEndCol(endLine)),
-          )
-      case None => wholeFile
-    }
-  }
-
   def inlayHints(
       params: InlayHintParams,
       token: CancelToken,
