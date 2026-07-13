@@ -347,21 +347,7 @@ class McpQueryEngine(
     }
   }
 
-  /**
-   * Show the implicits (implicit/`using` parameters and implicit conversions)
-   * that the compiler silently inserts in a file — the parts of Scala that are
-   * invisible in the source text.
-   *
-   * This is strictly file-scoped: it analyzes exactly `path` and never falls
-   * back to a different file, so it does NOT call `resolveEffectivePath` and
-   * exposes no `module` knob (the underlying `Compilers.inlayHints` ->
-   * `inverseSources` chain gives no seam to honor a caller-chosen build target).
-   *
-   * @param path  the focused document to analyze
-   * @param range optional whole-line range to focus on; both endpoints are
-   *              expected upstream. Range construction and clamping is delegated
-   *              to the buffer-safe [[Compilers.inlayHints]] entry point.
-   */
+  /** Shows the implicits (implicit/`using` parameters and implicit conversions) inserted by the compiler in a file. */
   def showImplicits(
       path: Option[AbsolutePath],
       range: Option[l.Range],
@@ -495,16 +481,6 @@ case class SymbolUsage(
     line: Int,
 )
 
-/**
- * A single compiler-inserted implicit (implicit/`using` parameter group or an
- * implicit conversion) resolved at a call site.
- *
- * @param position 0-based, adjusted position in the analyzed file
- * @param label    the concatenated label the PC renders at that position
- * @param targets  resolved targets, already filtered of empty separator parts:
- *                 `Left(symbol)` is an out-of-file semanticdb symbol,
- *                 `Right(pos)` is an in-file definition position (0-based)
- */
 case class ImplicitHint(
     position: l.Position,
     label: String,
