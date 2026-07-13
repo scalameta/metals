@@ -178,7 +178,7 @@ abstract class BazelMbtImporter(
         output <- ruleOutputsByTarget
           .getOrElse(target, Nil)
           .find(isClassJarOutput)
-        relative <- BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(
+        relative <- BazelLabels.fileLabelToWorkspaceRelativePath(
           output
         )
       } yield target -> bin.resolve(relative).toString
@@ -313,37 +313,35 @@ abstract class BazelMbtImporter(
     }
 
   private def moduleIdFromJarLabel(label: String): Option[String] =
-    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).map {
-      relative =>
-        val lastSlash = relative.lastIndexOf('/')
-        if (lastSlash >= 0) {
-          val pkg = relative.substring(0, lastSlash).replace('/', '.')
-          val fileName = relative.substring(lastSlash + 1)
-          s"$pkg:$fileName:local"
-        } else {
-          s"root:$relative:local"
-        }
+    BazelLabels.fileLabelToWorkspaceRelativePath(label).map { relative =>
+      val lastSlash = relative.lastIndexOf('/')
+      if (lastSlash >= 0) {
+        val pkg = relative.substring(0, lastSlash).replace('/', '.')
+        val fileName = relative.substring(lastSlash + 1)
+        s"$pkg:$fileName:local"
+      } else {
+        s"root:$relative:local"
+      }
     }
 
   private def resolveJarUri(
       label: String,
       bazelBin: Option[Path],
   ): Option[String] = {
-    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).flatMap {
-      relative =>
-        val candidate = projectRoot.resolve(relative)
-        if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
-        else {
-          val generatedCandidate = bazelBin.map(_.resolve(relative))
-          generatedCandidate.filter(Files.exists(_)) match {
-            case Some(path) => Some(path.toUri.toString)
-            case None =>
-              scribe.warn(
-                s"bazel-mbt: could not resolve jar for label $label"
-              )
-              None
-          }
+    BazelLabels.fileLabelToWorkspaceRelativePath(label).flatMap { relative =>
+      val candidate = projectRoot.resolve(relative)
+      if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
+      else {
+        val generatedCandidate = bazelBin.map(_.resolve(relative))
+        generatedCandidate.filter(Files.exists(_)) match {
+          case Some(path) => Some(path.toUri.toString)
+          case None =>
+            scribe.warn(
+              s"bazel-mbt: could not resolve jar for label $label"
+            )
+            None
         }
+      }
     }
   }
 

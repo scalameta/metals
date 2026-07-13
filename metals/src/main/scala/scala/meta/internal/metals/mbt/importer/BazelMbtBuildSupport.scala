@@ -83,7 +83,7 @@ object BazelMbtBuildSupport {
           keys,
         )
       val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(fileLabelToWorkspaceRelativePath)
+        k -> v.flatMap(BazelLabels.fileLabelToWorkspaceRelativePath)
       }
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
 
@@ -187,41 +187,10 @@ object BazelMbtBuildSupport {
   ): String =
     if (granularity == BazelMbtNamespaceMode.Workspace) workspaceNamespaceName
     else if (granularity == BazelMbtNamespaceMode.BuildFile) {
-      packageKey(ruleLabel).getOrElse(ruleLabel)
+      BazelLabels.packageKey(ruleLabel).getOrElse(ruleLabel)
     } else {
       ruleLabel
     }
-
-  def packageKey(ruleLabel: String): Option[String] = {
-    val s = ruleLabel.trim
-    if (!s.startsWith("//")) None
-    else {
-      val rest = s.substring(2)
-      val c = rest.lastIndexOf(':')
-      if (c < 0) None
-      else Some("//" + rest.substring(0, c))
-    }
-  }
-
-  /**
-   * Map a Bazel file label `//path/to:File.ext` to a workspace-relative path
-   * `path/to/File.ext`.
-   */
-  def fileLabelToWorkspaceRelativePath(fileLabel: String): Option[String] = {
-    val s = fileLabel.trim
-    if (!s.startsWith("//")) None
-    else {
-      val rest = s.substring(2)
-      val c = rest.lastIndexOf(':')
-      if (c < 0) None
-      else {
-        val pkg = rest.substring(0, c)
-        val name = rest.substring(c + 1)
-        if (name.isEmpty) None
-        else Some(s"$pkg/$name")
-      }
-    }
-  }
 
   private def computeDependsOn(
       granularity: BazelMbtNamespaceMode,
