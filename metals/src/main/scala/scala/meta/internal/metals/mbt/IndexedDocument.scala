@@ -61,6 +61,16 @@ case class IndexedDocument(
     cachedProtobufJavaOutlines.set(null)
   }
 
+  /**
+   * The generated Java outlines cached by a previous
+   * [[getOrComputeJavaOutlines]] call, without computing them. Reading the
+   * cache matters when the proto file has changed on disk or in buffers:
+   * recomputing would produce outlines for the new content, while the cache
+   * still describes what earlier consumers (like the turbine classpath) saw.
+   */
+  def cachedJavaOutlines: Seq[VirtualTextDocument] =
+    Option(cachedProtobufJavaOutlines.get()).getOrElse(Seq.empty)
+
   def toSemanticdbCompilationUnit(
       input: Input.VirtualFile
   ): SemanticdbCompilationUnit with JavaFileObject = {

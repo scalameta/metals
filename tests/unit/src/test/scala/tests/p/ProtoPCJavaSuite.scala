@@ -1,5 +1,12 @@
 package tests.p
 
+import java.nio.file.Files
+
+import scala.concurrent.Future
+
+import org.eclipse.lsp4j.Location
+import tests.BuildInfoVersions
+
 /**
  * Tests for Java-to-proto code navigation.
  *
@@ -7,6 +14,22 @@ package tests.p
  * navigate to the original proto file definitions.
  */
 class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
+
+  // Goto-definition on a proto-generated Java symbol now also returns the
+  // synthesized Java outline; these tests assert the proto declaration only,
+  // so they filter to the `.proto` location. Navigation to the generated
+  // outline is covered by the `java-navigates-to-generated-outline` tests.
+  private def assertProtoDefinition(
+      filename: String,
+      query: String,
+      expected: String,
+  )(implicit loc: munit.Location): Future[List[Location]] =
+    server.assertDefinition(
+      filename,
+      query,
+      expected,
+      includeLocation = _.getUri().endsWith(".proto"),
+    )
 
   // Test multiple messages from the same proto file in the same package
   test("java-imports-multiple-proto-messages") {
@@ -42,7 +65,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       // No "package does not exist" diagnostic for proto-generated Java package
       _ = assertNoDiagnostics()
       // Navigate from Authentication import in Java to its definition in client.proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Client.java",
         "import com.example.api.jproto.Authentic@@ation;",
         """|a/src/main/proto/client.proto:5:9: definition
@@ -51,7 +74,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from Authorization import in Java to its definition in client.proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Client.java",
         "import com.example.api.jproto.Authoriz@@ation;",
         """|a/src/main/proto/client.proto:9:9: definition
@@ -92,7 +115,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       // No "package does not exist" diagnostic for enum import package
       _ = assertNoDiagnostics()
       // Navigate from Status import in Java to enum definition in status.proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Service.java",
         "import com.example.api.jproto.Sta@@tus;",
         """|a/src/main/proto/status.proto:5:6: definition
@@ -101,7 +124,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from return type Status to enum definition in status.proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Service.java",
         "public Sta@@tus getStatus() { return null; }",
         """|a/src/main/proto/status.proto:5:6: definition
@@ -143,7 +166,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       // No diagnostics for import of generated outer message class
       _ = assertNoDiagnostics()
       // Navigate from Container import in Java to message definition in nested.proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Handler.java",
         "import com.example.api.jproto.Contai@@ner;",
         """|a/src/main/proto/nested.proto:5:9: definition
@@ -152,7 +175,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from method parameter type Container to proto definition
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Handler.java",
         "public void handle(Contai@@ner container) {}",
         """|a/src/main/proto/nested.proto:5:9: definition
@@ -190,7 +213,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/api/Consumer.java")
       _ = assertNoDiagnostics()
       // Navigate from unqualified Java type to proto message via package fallback
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/api/Consumer.java",
         "public void consume(SimpleMess@@age msg) {}",
         """|a/src/main/proto/simple.proto:4:9: definition
@@ -239,7 +262,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       // All three imports should resolve to the same proto file
       _ <- server.didFocus("a/src/main/java/com/example/Api.java")
       _ = assertNoDiagnostics()
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Api.java",
         "import com.example.api.jproto.Requ@@est;",
         """|a/src/main/proto/multi.proto:5:9: definition
@@ -247,7 +270,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |        ^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Api.java",
         "import com.example.api.jproto.Respo@@nse;",
         """|a/src/main/proto/multi.proto:8:9: definition
@@ -255,7 +278,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |        ^^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/Api.java",
         "import com.example.api.jproto.ErrorCo@@de;",
         """|a/src/main/proto/multi.proto:11:6: definition
@@ -306,7 +329,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/UserBuilder.java")
       _ = assertNoDiagnostics()
       // Navigate from setName to the name field in proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/UserBuilder.java",
         ".setNa@@me(\"Alice\")",
         """|a/src/main/proto/user.proto:6:10: definition
@@ -315,7 +338,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from setAge to the age field in proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/UserBuilder.java",
         ".setA@@ge(30)",
         """|a/src/main/proto/user.proto:7:9: definition
@@ -367,7 +390,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/ContextBuilder.java")
       _ = assertNoDiagnostics()
       // Navigate from setAuthorizingPrincipal to authorizing_principal field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ContextBuilder.java",
         ".setAuthorizingPrinci@@pal(",
         """|a/src/main/proto/principal.proto:10:13: definition
@@ -376,7 +399,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from setId on nested builder to id field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ContextBuilder.java",
         ".setI@@d(123L)",
         """|a/src/main/proto/principal.proto:6:9: definition
@@ -422,7 +445,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/PersonReader.java")
       _ = assertNoDiagnostics()
       // Navigate from getFirstName to first_name field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/PersonReader.java",
         "p.getFirstNa@@me()",
         """|a/src/main/proto/person.proto:6:10: definition
@@ -431,7 +454,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from getLastName to last_name field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/PersonReader.java",
         "p.getLastNa@@me()",
         """|a/src/main/proto/person.proto:7:10: definition
@@ -484,7 +507,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/OrderHandler.java")
       _ = assertNoDiagnostics()
       // Navigate from addItems to items field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/OrderHandler.java",
         ".addIte@@ms(\"apple\")",
         """|a/src/main/proto/order.proto:6:19: definition
@@ -493,7 +516,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from getItemsList to items field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/OrderHandler.java",
         "o.getItemsLi@@st()",
         """|a/src/main/proto/order.proto:6:19: definition
@@ -502,7 +525,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from getItemsCount to items field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/OrderHandler.java",
         "o.getItemsCou@@nt()",
         """|a/src/main/proto/order.proto:6:19: definition
@@ -554,7 +577,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/ConfigHandler.java")
       _ = assertNoDiagnostics()
       // Navigate from putProperties to properties field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ConfigHandler.java",
         ".putProperti@@es(\"key\", \"value\")",
         """|a/src/main/proto/config.proto:6:23: definition
@@ -563,7 +586,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from getPropertiesMap to properties field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ConfigHandler.java",
         "c.getPropertiesMa@@p()",
         """|a/src/main/proto/config.proto:6:23: definition
@@ -572,7 +595,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from containsProperties to properties field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ConfigHandler.java",
         "c.containsProperti@@es(key)",
         """|a/src/main/proto/config.proto:6:23: definition
@@ -619,7 +642,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/StatusChecker.java")
       _ = assertNoDiagnostics()
       // Navigate from Status.PENDING to PENDING enum value
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/StatusChecker.java",
         "Status.PENDI@@NG",
         """|a/src/main/proto/status.proto:7:3: definition
@@ -628,7 +651,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from Status.APPROVED to APPROVED enum value
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/StatusChecker.java",
         "Status.APPROV@@ED",
         """|a/src/main/proto/status.proto:8:3: definition
@@ -679,7 +702,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/ContactHandler.java")
       _ = assertNoDiagnostics()
       // Navigate from hasEmail to email field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ContactHandler.java",
         "c.hasEma@@il()",
         """|a/src/main/proto/optional.proto:9:19: definition
@@ -688,7 +711,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from hasAddress to address field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ContactHandler.java",
         "c.hasAddre@@ss()",
         """|a/src/main/proto/optional.proto:10:11: definition
@@ -697,7 +720,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from clearEmail to email field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/ContactHandler.java",
         ".clearEma@@il()",
         """|a/src/main/proto/optional.proto:9:19: definition
@@ -749,7 +772,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/EchoClient.java")
       _ = assertNoDiagnostics()
       // setMessage on EchoRequest.Builder should go to EchoRequest.message
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/EchoClient.java",
         "EchoRequest.newBuilder().setMess@@age(text)",
         """|a/src/main/proto/echo.proto:9:19: definition
@@ -758,7 +781,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // setMessage on ForwardDelayedEchoRequest.Builder should go to ForwardDelayedEchoRequest.message
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/EchoClient.java",
         "ForwardDelayedEchoRequest.newBuilder().setMess@@age(text)",
         """|a/src/main/proto/echo.proto:6:19: definition
@@ -816,7 +839,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/EventHandler.java")
       _ = assertNoDiagnostics()
       // Navigate from hasTextPayload to text_payload field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/EventHandler.java",
         "e.hasTextPaylo@@ad()",
         """|a/src/main/proto/event.proto:8:12: definition
@@ -825,7 +848,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from getTextPayload to text_payload field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/EventHandler.java",
         "e.getTextPaylo@@ad()",
         """|a/src/main/proto/event.proto:8:12: definition
@@ -834,7 +857,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Navigate from setTextPayload to text_payload field
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/EventHandler.java",
         ".setTextPaylo@@ad(text)",
         """|a/src/main/proto/event.proto:8:12: definition
@@ -939,7 +962,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/AllFieldTypes.java")
       _ = assertNoDiagnostics()
       // -- scalar (line 13) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getTitl@@e()",
         """|a/src/main/proto/comprehensive.proto:13:10: definition
@@ -947,7 +970,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |         ^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.setTitl@@e(\"x\")",
         """|a/src/main/proto/comprehensive.proto:13:10: definition
@@ -955,7 +978,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |         ^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.clearTitl@@e()",
         """|a/src/main/proto/comprehensive.proto:13:10: definition
@@ -964,7 +987,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- message field (line 15) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getAddre@@ss()",
         """|a/src/main/proto/comprehensive.proto:15:11: definition
@@ -972,7 +995,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |          ^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.hasAddre@@ss()",
         """|a/src/main/proto/comprehensive.proto:15:11: definition
@@ -980,7 +1003,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |          ^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.setAddre@@ss(",
         """|a/src/main/proto/comprehensive.proto:15:11: definition
@@ -989,7 +1012,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- repeated scalar (line 17) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getTagsLi@@st()",
         """|a/src/main/proto/comprehensive.proto:17:19: definition
@@ -997,7 +1020,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                  ^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getTagsCou@@nt()",
         """|a/src/main/proto/comprehensive.proto:17:19: definition
@@ -1005,7 +1028,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                  ^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.addTa@@gs(\"t\")",
         """|a/src/main/proto/comprehensive.proto:17:19: definition
@@ -1014,7 +1037,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- repeated message (line 19) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getItemsLi@@st()",
         """|a/src/main/proto/comprehensive.proto:19:17: definition
@@ -1022,7 +1045,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                ^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.addIte@@ms(",
         """|a/src/main/proto/comprehensive.proto:19:17: definition
@@ -1031,7 +1054,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- map (line 21) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getCountsMa@@p()",
         """|a/src/main/proto/comprehensive.proto:21:22: definition
@@ -1039,7 +1062,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                     ^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.containsCoun@@ts(k)",
         """|a/src/main/proto/comprehensive.proto:21:22: definition
@@ -1047,7 +1070,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                     ^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.putCoun@@ts(\"k\",1)",
         """|a/src/main/proto/comprehensive.proto:21:22: definition
@@ -1056,7 +1079,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- oneof scalar (line 24, PLAT-154011) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getTextPaylo@@ad()",
         """|a/src/main/proto/comprehensive.proto:24:12: definition
@@ -1064,7 +1087,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |           ^^^^^^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.hasTextPaylo@@ad()",
         """|a/src/main/proto/comprehensive.proto:24:12: definition
@@ -1072,7 +1095,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |           ^^^^^^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.setTextPaylo@@ad(\"t\")",
         """|a/src/main/proto/comprehensive.proto:24:12: definition
@@ -1081,7 +1104,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- oneof message (line 25, PLAT-154011) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getLocationPaylo@@ad()",
         """|a/src/main/proto/comprehensive.proto:25:13: definition
@@ -1089,7 +1112,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |            ^^^^^^^^^^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.hasLocationPaylo@@ad()",
         """|a/src/main/proto/comprehensive.proto:25:13: definition
@@ -1097,7 +1120,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |            ^^^^^^^^^^^^^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.setLocationPaylo@@ad(",
         """|a/src/main/proto/comprehensive.proto:25:13: definition
@@ -1106,7 +1129,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // -- optional (line 28) --
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.getNot@@e()",
         """|a/src/main/proto/comprehensive.proto:28:19: definition
@@ -1114,7 +1137,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                  ^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "m.hasNot@@e()",
         """|a/src/main/proto/comprehensive.proto:28:19: definition
@@ -1122,7 +1145,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |                  ^^^^
            |""".stripMargin,
       )
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/AllFieldTypes.java",
         "b.setNot@@e(\"n\")",
         """|a/src/main/proto/comprehensive.proto:28:19: definition
@@ -1176,7 +1199,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/GreeterService.java")
       _ = assertNoDiagnostics()
       // Navigate from the GreeterGrpc import to the Greeter service in the proto
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/GreeterService.java",
         "import com.example.api.jproto.GreeterGr@@pc;",
         """|a/src/main/proto/greeter.proto:11:9: definition
@@ -1185,7 +1208,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |""".stripMargin,
       )
       // Also navigate from GreeterGrpc used as a qualifier in a method body
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/GreeterService.java",
         "return GreeterGr@@pc.class;",
         """|a/src/main/proto/greeter.proto:11:9: definition
@@ -1280,7 +1303,7 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/GreeterClient.java")
       _ = assertNoDiagnostics()
       // Navigate from stub.sayHello to rpc SayHello definition (line 12 is 0-based, so line 13 in 1-based)
-      _ <- server.assertDefinition(
+      _ <- assertProtoDefinition(
         "a/src/main/java/com/example/GreeterClient.java",
         "stub.sayHel@@lo(request)",
         """|a/src/main/proto/greeter.proto:12:7: definition
@@ -1358,4 +1381,381 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       )
     } yield ()
   }
+
+  // Goto-definition on a proto-generated class navigates to the Java source
+  // that Metals synthesizes from the proto file (materialized read-only under
+  // .metals/readonly), alongside the proto declaration. This needs no build
+  // output and no configuration.
+  test("java-navigates-to-generated-outline") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_outer_classname = "ClientProtos";
+           |message Authentication {
+           |  string token = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.ClientProtos;
+           |public class Client {
+           |  public void auth(ClientProtos.Authentication auth) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      locations <- server.definitionSubstringQuery(
+        "a/src/main/java/com/example/Client.java",
+        "public void auth(ClientProtos.Authentic@@ation auth) {}",
+      )
+      uris = locations.map(_.getUri())
+      _ = assert(
+        uris.exists(
+          _.endsWith(
+            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
+          )
+        ),
+        s"expected a generated-outline location, got:\n${uris.mkString("\n")}",
+      )
+      _ = assert(
+        uris.exists(_.endsWith("a/src/main/proto/client.proto")),
+        s"expected the proto location, got:\n${uris.mkString("\n")}",
+      )
+    } yield ()
+  }
+
+  // Same as above but the proto declares no java_package option (proto package
+  // equals the generated Java package, java_multiple_files), so the class is
+  // generated as a top-level Java file rather than nested in an outer class.
+  test("java-navigates-to-generated-outline-without-java-package-option") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api.jproto;
+           |option java_multiple_files = true;
+           |message Authentication {
+           |  string token = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.Authentication;
+           |public class Client {
+           |  public void auth(Authentication auth) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      locations <- server.definitionSubstringQuery(
+        "a/src/main/java/com/example/Client.java",
+        "public void auth(Authentic@@ation auth) {}",
+      )
+      uris = locations.map(_.getUri())
+      _ = assert(
+        uris.exists(
+          _.endsWith(
+            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java"
+          )
+        ),
+        s"expected a generated-outline location, got:\n${uris.mkString("\n")}",
+      )
+      _ = assert(
+        uris.exists(_.endsWith("a/src/main/proto/client.proto")),
+        s"expected the proto location, got:\n${uris.mkString("\n")}",
+      )
+    } yield ()
+  }
+
+  // Code navigation works inside a materialized generated-outline file: the
+  // file belongs to no build target, so it is routed to the build target that
+  // owns the proto it was generated from.
+  test("java-navigates-within-generated-outline") {
+    cleanWorkspace()
+    val sessionOutline =
+      ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Session.java"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "libraryDependencies": [
+            |      "com.google.protobuf:protobuf-java:${BuildInfoVersions.protobufVersion}"
+            |    ]
+            |  }
+            |}
+            |/a/src/main/proto/client.proto
+            |syntax = "proto3";
+            |package com.example.api;
+            |option java_package = "com.example.api.jproto";
+            |option java_multiple_files = true;
+            |message Authentication {
+            |  string token = 1;
+            |}
+            |message Session {
+            |  Authentication auth = 1;
+            |}
+            |/a/src/main/java/com/example/Client.java
+            |package com.example;
+            |import com.example.api.jproto.Session;
+            |public class Client {
+            |  public void open(Session session) {}
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      // Navigating to Session materializes its generated outline on disk.
+      locations <- server.definitionSubstringQuery(
+        "a/src/main/java/com/example/Client.java",
+        "public void open(Sess@@ion session) {}",
+      )
+      _ = assert(
+        locations.exists(_.getUri().endsWith(sessionOutline)),
+        s"expected the Session outline, got:\n${locations.map(_.getUri()).mkString("\n")}",
+      )
+      // Inside the materialized outline, goto-definition on the field type
+      // Authentication resolves to its own outline and proto declaration.
+      _ <- server.didOpen(sessionOutline)
+      innerLocations <- server.definitionSubstringQuery(
+        sessionOutline,
+        "Authentic@@ation getAuth()",
+      )
+      innerUris = innerLocations.map(_.getUri())
+      _ = assert(
+        innerUris.exists(
+          _.endsWith(
+            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java"
+          )
+        ),
+        s"expected the Authentication outline, got:\n${innerUris.mkString("\n")}",
+      )
+      _ = assert(
+        innerUris.exists(_.endsWith("a/src/main/proto/client.proto")),
+        s"expected the proto location, got:\n${innerUris.mkString("\n")}",
+      )
+      // The jump recorded the origin's build target for the materialized file
+      // (InteractiveSemanticdbs.didDefinition), so its presentation compiler
+      // has the origin's classpath and resolves the protobuf runtime too.
+      runtimeLocations <- server.definitionSubstringQuery(
+        sessionOutline,
+        "extends com.google.protobuf.GeneratedMessag@@eV3",
+      )
+      _ = assert(
+        runtimeLocations.exists(
+          _.getUri().contains("protobuf-java")
+        ),
+        s"expected GeneratedMessageV3 to resolve into protobuf-java, got:\n${runtimeLocations.map(_.getUri()).mkString("\n")}",
+      )
+    } yield ()
+  }
+
+  // Same as above but with the outer-class layout (no java_multiple_files),
+  // all messages are nested in one generated file, so type references
+  // inside the materialized outline resolve within the same file.
+  test("java-navigates-within-generated-outline-outer-class") {
+    cleanWorkspace()
+    val outline =
+      ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_outer_classname = "ClientProtos";
+           |message Authentication {
+           |  string token = 1;
+           |}
+           |message Session {
+           |  Authentication auth = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.ClientProtos;
+           |public class Client {
+           |  public void open(ClientProtos.Session session) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      // Navigating to Session materializes the outer-class outline on disk.
+      locations <- server.definitionSubstringQuery(
+        "a/src/main/java/com/example/Client.java",
+        "public void open(ClientProtos.Sess@@ion session) {}",
+      )
+      _ = assert(
+        locations.exists(_.getUri().endsWith(outline)),
+        s"expected the ClientProtos outline, got:\n${locations.map(_.getUri()).mkString("\n")}",
+      )
+      // Inside the materialized outline, goto-definition on the sibling nested
+      // type Authentication resolves.
+      _ <- server.didOpen(outline)
+      innerLocations <- server.definitionSubstringQuery(
+        outline,
+        "Authentic@@ation getAuth()",
+      )
+      innerUris = innerLocations.map(_.getUri())
+      _ = assert(
+        innerUris.nonEmpty,
+        "expected goto-definition inside the outline to resolve, got no locations",
+      )
+    } yield ()
+  }
+
+  // The materialized outline may be deleted after it was first generated (a
+  // `.metals` clean, `git clean`, or an editor reload). Navigating to it again
+  // must recreate the file rather than land on a missing target.
+  test("java-regenerates-deleted-generated-outline") {
+    cleanWorkspace()
+    val outline =
+      ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
+    val source = "a/src/main/java/com/example/Client.java"
+    val query = "public void open(ClientProtos.Sess@@ion session) {}"
+    def outlineLocation(locations: List[Location]) =
+      locations.find(_.getUri().endsWith(outline))
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_outer_classname = "ClientProtos";
+           |message Authentication {
+           |  string token = 1;
+           |}
+           |message Session {
+           |  Authentication auth = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.ClientProtos;
+           |public class Client {
+           |  public void open(ClientProtos.Session session) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen(source)
+      _ <- server.didFocus(source)
+      _ = assertNoDiagnostics()
+      // First navigation materializes the outline on disk.
+      first <- server.definitionSubstringQuery(source, query)
+      firstOutline = outlineLocation(first)
+      _ = assert(
+        firstOutline.isDefined,
+        s"expected a generated-outline location, got:\n${first.map(_.getUri()).mkString("\n")}",
+      )
+      outlinePath = server.toPath(outline)
+      // Delete the materialized outline behind Metals' back.
+      _ = Files.delete(outlinePath.toNIO)
+      _ = assert(
+        !Files.exists(outlinePath.toNIO),
+        "expected the outline to be deleted",
+      )
+      // Navigating again must regenerate it instead of returning a dead target.
+      second <- server.definitionSubstringQuery(source, query)
+      _ = assert(
+        Files.exists(outlinePath.toNIO),
+        "expected the deleted outline to be regenerated",
+      )
+      _ = assert(
+        outlineLocation(second).isDefined,
+        s"expected the regenerated outline location, got:\n${second.map(_.getUri()).mkString("\n")}",
+      )
+    } yield ()
+  }
+
+  // Hover and completion on a method whose return type is a proto-generated
+  // class, accessed transitively from another Java file.
+  test("java-transitive-proto-return-type") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message Authentication {
+           |  string token = 1;
+           |}
+           |/a/src/main/java/com/example/AuthProvider.java
+           |package com.example;
+           |import com.example.api.jproto.Authentication;
+           |public class AuthProvider {
+           |  public Authentication readAuthentication() { return null; }
+           |}
+           |/a/src/main/java/com/example/AuthConsumer.java
+           |package com.example;
+           |public class AuthConsumer {
+           |  void consume(AuthProvider provider) {
+           |    provider.readAuthentication();
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/AuthConsumer.java")
+      _ <- server.didFocus("a/src/main/java/com/example/AuthConsumer.java")
+      _ = assertNoDiagnostics()
+      _ <- server.assertHover(
+        "a/src/main/java/com/example/AuthConsumer.java",
+        """|package com.example;
+           |public class AuthConsumer {
+           |  void consume(AuthProvider provider) {
+           |    provider.readAuthenticat@@ion();
+           |  }
+           |}
+           |""".stripMargin,
+        """|```java
+           |public com.example.api.jproto.Authentication readAuthentication()
+           |```
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/java/com/example/AuthConsumer.java") {
+        _ =>
+          """|package com.example;
+             |public class AuthConsumer {
+             |  void consume(AuthProvider provider) {
+             |    provider.readAuthentication().
+             |  }
+             |}
+             |""".stripMargin
+      }
+      completions <- server.completion(
+        "a/src/main/java/com/example/AuthConsumer.java",
+        "provider.readAuthentication().@@",
+      )
+      _ = assert(
+        completions.contains("getToken"),
+        s"expected getToken in completions:\n$completions",
+      )
+    } yield ()
+  }
+
 }

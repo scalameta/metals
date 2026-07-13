@@ -131,14 +131,59 @@ class MbtWorkspaceSymbolProvider(
     protobufLspConfig,
     clearAllProtobufCaches,
   )
+
+  /**
+   * The Java outlines synthesized from the given `.proto` file (one per
+   * generated top-level class). Empty when the file isn't an indexed proto or
+   * proto Java-package indexing is disabled.
+   */
+  def protoJavaOutlines(file: AbsolutePath): Seq[VirtualTextDocument] =
+    documents.get(file).toSeq.flatMap(protobufWorkspace.allJavaOutlines)
+
+  /**
+   * The synthesized Java outline declaring `classSymbol` (a SemanticDB
+   * symbol, e.g. `com/example/Example#` or a nested
+   * `com/example/Outer#Inner#`), if any. Lets
+   * navigation recover the supertypes of a proto-generated class that the
+   * presentation compiler can't see, so it can follow inherited members into
+   * compiled base classes.
+   *
+   * An outline records only its outer class in `toplevelSymbols`, so a
+   * nested message is matched by prefix (safe since the outer symbol always
+   * ends in `#`).
+   */
+  def protoJavaOutlineFor(classSymbol: String): Option[VirtualTextDocument] =
+    documents.keysIterator
+      .filter(_.isProtoFilename)
+      .flatMap(protoJavaOutlines)
+      .find(
+        _.toplevelSymbols().asScala.exists(top => classSymbol.startsWith(top))
+      )
   private val turbineCompiler: TurbineCompiler[AbsolutePath] =
     new TurbineCompiler[AbsolutePath](
       () => documentsKeys,
       file =>
-        if (!file.toLanguage.isJava) None
-        else
+        if (file.toLanguage.isJava) {
           toInput(file)
-            .map(input => new SourceFile(file.toString(), input.text)),
+            .map(input => new SourceFile(file.toString(), input.text))
+            .toList
+        } else if (
+          file.isProtoFilename &&
+          protobufWorkspace.isJavaPackageIndexingEnabled
+        ) {
+          // Include the Java outlines generated from proto files so that
+          // turbine can resolve references to proto-generated classes when it
+          // header-compiles the workspace. Without these, a Java method
+          // returning a proto-generated class gets its signature erased to
+          // java.lang.Object in the compiled classfile, breaking hover and
+          // completion in files that use that method.
+          for {
+            doc <- documents.get(file).toList
+            outline <- protobufWorkspace.allJavaOutlines(doc)
+          } yield new SourceFile(outline.getName(), outline.text)
+        } else {
+          Nil
+        },
       () => fallbackClasspaths().javaCompilerClasspath(),
       progress,
       // We don't need to re-compile the workspace super regularly because we can
@@ -174,7 +219,32 @@ class MbtWorkspaceSymbolProvider(
    */
   def didSave(path: AbsolutePath): Unit = {
     if (path.isProtoFilename) {
-      documents.get(path).foreach(_.clearProtobufJavaOutlinesCache())
+      documents.get(path).foreach { doc =>
+        invalidateCompiledProtoJavaOutlines(path, doc)
+        doc.clearProtobufJavaOutlinesCache()
+      }
+    }
+  }
+
+  /**
+   * Excludes proto-generated classes that were compiled into the turbine
+   * classpath from a previous version of the given proto file. Javac keeps
+   * resolving the current classes from fresh SOURCE_PATH outlines; without
+   * this, classes removed from the proto file would remain resolvable from
+   * stale classfiles until the next turbine recompile.
+   */
+  private def invalidateCompiledProtoJavaOutlines(
+      file: AbsolutePath,
+      doc: IndexedDocument,
+  ): Unit = {
+    if (javaSymbolLoader().isTurbineClasspath) {
+      val binaryNames = doc.cachedJavaOutlines
+        .flatMap(_.toplevelSymbols().asScala)
+        .map(_.stripSuffix("#").stripSuffix("."))
+      if (binaryNames.nonEmpty) {
+        turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+        turbineCompiler.scheduleCompile().ignoreValue
+      }
     }
   }
   private def clearAllProtobufCaches(): Unit = {
@@ -417,6 +487,9 @@ class MbtWorkspaceSymbolProvider(
             case None =>
               Future.unit
           }
+        } else if (doc.language.isProtobuf) {
+          invalidateCompiledProtoJavaOutlines(file, doc)
+          Future.unit
         } else {
           Future.unit
         }
@@ -926,6 +999,16 @@ class MbtWorkspaceSymbolProvider(
           case None =>
             Future.unit
         }
+      } else if (
+        updateDocumentKeys &&
+        doc.language.isProtobuf &&
+        javaSymbolLoader().isTurbineClasspath
+      ) {
+        // Covers proto files changed outside the editor (e.g. git checkout);
+        // for editor saves, didSave already invalidated before the outline
+        // cache was cleared.
+        old.foreach(invalidateCompiledProtoJavaOutlines(file, _))
+        Future.unit
       } else {
         Future.unit
       }
