@@ -289,9 +289,13 @@ class ConnectionProvider(
     val build = mbtBuild()
     val patterns = build.getWatchedFiles.asScala.toList
     if (patterns.nonEmpty) {
-      val root = folder.toString()
+      val root = folder.toString().replace('\\', '/')
       val watchers = patterns.map { p =>
-        new FileSystemWatcher(JEither.forLeft(s"$root/$p"))
+        val normalized = mbt.MbtGlobMatcher.normalizeSlashes(p)
+        val withoutLeading =
+          if (normalized.startsWith("./")) normalized.substring(2)
+          else normalized
+        new FileSystemWatcher(JEither.forLeft(s"$root/$withoutLeading"))
       }
       registerMbtWatchedFiles(watchers)
     }

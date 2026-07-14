@@ -103,12 +103,12 @@ final class MbtImport(
       providers: List[MbtImportProvider],
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
+    val digest = computeDigest(providers).getOrElse("watched-file-changed")
     val run =
       if (userConfig().shouldAutoImportNewProject) {
         runUnconditionally(providers, isImportInProcess)
       } else {
         scribe.debug("mbt-import: awaiting user response for watched file…")
-        val digest = computeDigest(providers).getOrElse("watched-file-changed")
         for {
           response <- requestImport(providers, digest)
           result <-
@@ -120,7 +120,11 @@ final class MbtImport(
             }
         } yield result
       }
-    run
+    run.andThen { case Success(status) =>
+      status.toChecksumStatus.foreach(
+        tables.digests.setStatus(digest, _)
+      )
+    }
   }
 
   /**
