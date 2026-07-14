@@ -115,19 +115,7 @@ case class MavenBuildTool(
       "--also-make",
       phase,
       "-DskipTests",
-      "-Denforcer.skip=true",
-      "-Dcheckstyle.skip=true",
-      "-Dspotbugs.skip=true",
-      "-Drat.skip=true",
-      "-Dpmd.skip=true",
-      "-Dmaven.javadoc.skip=true",
-      "-Dspring-javaformat.skip=true",
-      "-Dspotless.check.skip=true",
-      "-Djacoco.skip=true",
-      "-Dsonar.skip=true",
-      "-Ddependency-check.skip=true",
-      "-Dgpg.skip=true",
-    )
+    ) ::: MavenBuildTool.pluginsToSkip
   }
 
   override def mbtRunCommand(
@@ -175,7 +163,7 @@ case class MavenBuildTool(
       "exec:exec",
       "-Dexec.executable=java",
       s"-Dexec.args=$execArgs",
-    )
+    ) ::: MavenBuildTool.pluginsToSkip
   }
 
   private def mavenModuleDirectory(target: MbtTarget): Option[AbsolutePath] =
@@ -261,7 +249,7 @@ case class MavenBuildTool(
       forkedDebugAgentFlag.map(flag => s"-Dmaven.surefire.debug=$flag").toList
     baseCommand ::: target.configurations.toList ::: moduleArgs ::: List(
       "test"
-    ) ::: testArgs ::: jvmArgs ::: debugArgs
+    ) ::: testArgs ::: jvmArgs ::: debugArgs ::: MavenBuildTool.pluginsToSkip
   }
 }
 
@@ -278,4 +266,12 @@ object MavenBuildTool {
     (path.filename == "pom.xml" ||
       nio.startsWith(ws.resolve(".mvn")))
   }
+
+  private val pluginsToSkip = List(
+    "-Denforcer.skip=true", "-Dcheckstyle.skip=true", "-Dspotbugs.skip=true",
+    "-Drat.skip=true", "-Dpmd.skip=true", "-Dmaven.javadoc.skip=true",
+    "-Dspring-javaformat.skip=true", "-Dspotless.check.skip=true",
+    "-Djacoco.skip=true", "-Dsonar.skip=true", "-Ddependency-check.skip=true",
+    "-Dgpg.skip=true",
+  )
 }
