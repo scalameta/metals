@@ -75,6 +75,78 @@ trait TypeHierarchySpec { this: BaseLspSuite =>
     } yield ()
   }
 
+  testLSP("prepare-from-usage-site") {
+    cleanWorkspace()
+    val a = "a/src/main/scala/a/Animal.scala"
+    val b = "b/src/main/scala/b/Main.scala"
+    val init = if (withMbt) {
+      """|/.metals/mbt.json
+         |{}
+         |""".stripMargin
+    } else {
+      """|/metals.json
+         |{
+         |  "a": {},
+         |  "b": {"dependsOn": ["a"]}
+         |}
+         |""".stripMargin
+    }
+    for {
+      _ <- initialize(
+        s"""|$init
+            |/$a
+            |package a
+            |
+            |trait Animal
+            |class Dog extends Animal
+            |class Cat extends Animal
+            |/$b
+            |package b
+            |
+            |import a.Dog
+            |
+            |object Main {
+            |  def getDog: Dog = new Dog()
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpenAndFocus(b)
+      item <- server.prepareTypeHierarchy(
+        b,
+        "def getDog: Do@@g",
+      )
+      _ = item match {
+        case Some(i) =>
+          assertNoDiff(
+            formatItem(i),
+            """|Dog
+               |  uri: a/src/main/scala/a/Animal.scala
+               |  detail: a
+               |  kind: Class
+               |  range: 3:6-3:9
+               |  selectionRange: 3:6-3:9
+               |""".stripMargin,
+          )
+        case None =>
+          fail("Expected to find type hierarchy item for Dog from usage site")
+      }
+      subtypes <- server.typeHierarchySubtypes(item.get)
+      _ = assertNoDiff(formatItems(subtypes), "")
+      supertypes <- server.typeHierarchySupertypes(item.get)
+      _ = assertNoDiff(
+        formatItems(supertypes),
+        """|Animal
+           |  uri: a/src/main/scala/a/Animal.scala
+           |  detail: a
+           |  kind: Interface
+           |  range: 2:6-2:12
+           |  selectionRange: 2:6-2:12
+           |
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("supertypes-simple") {
     cleanWorkspace()
     for {
@@ -475,6 +547,54 @@ trait TypeHierarchySpec { this: BaseLspSuite =>
                |""".stripMargin,
           )
         case None => fail("Expected to find type hierarchy item for Dog")
+      }
+    } yield ()
+  }
+
+  testLSP("java-prepare-from-usage-site") {
+    cleanWorkspace()
+    val animal = "a/src/main/java/a/Animal.java"
+    val context = "a/src/main/java/a/Context.java"
+    for {
+      _ <- initialize(
+        s"""|$baseInit
+            |/$animal
+            |package a;
+            |
+            |public interface Animal {
+            |  void speak();
+            |}
+            |/$context
+            |package a;
+            |
+            |public class Context {
+            |  public Animal getAnimal() {
+            |    return null;
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(context)
+      item <- server.prepareTypeHierarchy(
+        context,
+        "public Ani@@mal getAnimal",
+      )
+      _ = item match {
+        case Some(i) =>
+          assertNoDiff(
+            formatItem(i),
+            """|Animal
+               |  uri: a/src/main/java/a/Animal.java
+               |  detail: a
+               |  kind: Interface
+               |  range: 2:17-2:23
+               |  selectionRange: 2:17-2:23
+               |""".stripMargin,
+          )
+        case None =>
+          fail(
+            "Expected to find type hierarchy item for Animal from usage site"
+          )
       }
     } yield ()
   }
