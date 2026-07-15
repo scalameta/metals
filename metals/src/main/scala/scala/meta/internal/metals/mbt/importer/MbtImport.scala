@@ -28,6 +28,7 @@ final class MbtImport(
     languageClient: MetalsLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
+    onBuildWritten: MbtBuild => Future[Unit] = _ => Future.unit,
 )(implicit ec: ExecutionContext) {
 
   private lazy val notification = tables.dismissedNotifications.MbtImportChanges
@@ -46,13 +47,15 @@ final class MbtImport(
     } else if (isImportInProcess.compareAndSet(false, true)) {
       Future
         .sequence(providers.map(runProvider))
-        .map { results =>
+        .flatMap { results =>
           val builds = results.flatten
           if (builds.nonEmpty) {
             val merged = builds.foldLeft(MbtBuild.empty)(MbtBuild.merge)
             writeOutput(merged)
-            WorkspaceLoadedStatus.Installed
-          } else WorkspaceLoadedStatus.Failed(-1)
+            onBuildWritten(merged).map { _ =>
+              WorkspaceLoadedStatus.Installed
+            }
+          } else Future.successful(WorkspaceLoadedStatus.Failed(-1))
         }
         .recover { case ex =>
           scribe.error("mbt-import: unexpected error during extraction", ex)

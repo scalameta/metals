@@ -69,6 +69,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
+    onMbtBuildWritten: MbtBuild => Future[Unit] = _ => Future.unit,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -137,6 +138,7 @@ class ConnectionProvider(
     languageClient,
     tables,
     () => userConfig,
+    onMbtBuildWritten,
   )
 
   private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
@@ -681,12 +683,15 @@ class ConnectionProvider(
         buildChange <- index(check, progress)
         // When testing we need to make sure the classpath is refreshed after mbt.json is generated
         _ <- {
+          val refresh = refreshMbtTurbineClasspath(session)
           if (MetalsServerConfig.isTesting)
-            refreshMbtTurbineClasspath(session).withInterrupt
-          else
-            Future {
-              refreshMbtTurbineClasspath(session)
-            }.withInterrupt
+            refresh.withInterrupt
+          else {
+            refresh.failed.foreach { error =>
+              scribe.warn("failed to refresh MBT diagnostics", error)
+            }
+            Future.unit.withInterrupt
+          }
         }
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
@@ -701,7 +706,7 @@ class ConnectionProvider(
         MbtBuildServer.isMbtServer(session.main.name) &&
         userConfig.javaSymbolLoader.isTurbineClasspath
       ) {
-        mbtSymbolSearch.scheduleRecompileTurbineClasspath()
+        onMbtBuildWritten(mbtBuild())
       } else {
         Future.unit
       }

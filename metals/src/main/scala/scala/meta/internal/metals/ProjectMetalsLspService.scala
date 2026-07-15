@@ -236,6 +236,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
+      refreshDiagnosticsAfterMbtBuildUpdate,
       mbtDebugStarter = () => mbtDebugStarter,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())

@@ -1155,19 +1155,52 @@ abstract class MetalsLspService(
   private def refreshAllDiagnostics(): Future[Unit] = {
     refreshDiagnostics(_ => true)
   }
+
+  private def updateMbtBuild(build: MbtBuild): Unit = {
+    mbtBuild = build
+    compilers.clearFallbackCompilerCache()
+  }
+
+  protected def refreshDiagnosticsAfterMbtBuildUpdate(
+      build: MbtBuild
+  ): Future[Unit] =
+    Future(updateMbtBuild(build))
+      .flatMap { _ =>
+        if (userConfig.javaSymbolLoader.isTurbineClasspath)
+          mbt2.recompileTurbineClasspath()
+        else Future.unit
+      }
+      .map(_ => compilers.clearJavaCompilerCache())
+      .flatMap(_ => refreshAllDiagnostics())
+      .map(_ => compilers.clearJavaCompilerCache())
+      .flatMap(_ => refreshAllDiagnostics())
+
   protected def refreshDiagnostics(
       isIncludedPath: AbsolutePath => Boolean
   ): Future[Unit] = {
     // rerun diagnostics for all open documents
-    val futures =
-      buffers.open.filter(isIncludedPath).map { path =>
-        for {
-          reportedDiagnostics <- compilers.didFocus(path)
-          _ = diagnostics
-            .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
-        } yield ()
+    val paths = buffers.open.filter(isIncludedPath).toList
+    def refreshPath(path: AbsolutePath): Future[Unit] = {
+      val contents = buffers.get(path)
+      val target = buildTargets.inverseSources(path).map(_.getUri)
+      for {
+        reportedDiagnostics <- compilers.didFocus(path)
+        _ = {
+          val currentContents = buffers.get(path)
+          val currentTarget = buildTargets.inverseSources(path).map(_.getUri)
+          if (contents == currentContents && target == currentTarget) {
+            diagnostics
+              .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+          }
+        }
+      } yield ()
+    }
+
+    paths.foldLeft(Future.unit) { (previous, path) =>
+      previous.flatMap { _ =>
+        refreshPath(path)
       }
-    Future.sequence(futures).map(_ => ())
+    }
   }
 
   def resetPresentationCompilers(): Future[Unit] = {
@@ -1215,9 +1248,9 @@ abstract class MetalsLspService(
     futures += (paths.find(_.filename == "mbt.json") match {
       case Some(mbtJsonPath) =>
         Future {
-          mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
-          compilers.clearFallbackCompilerCache()
+          updateMbtBuild(MbtBuild.fromFile(mbtJsonPath.toNIO))
         }.flatMap(_ => reconnectAfterMbtJsonChange())
+          .flatMap(_ => refreshAllDiagnostics())
       case None =>
         Future.successful(())
     })

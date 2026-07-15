@@ -613,6 +613,26 @@ class Compilers(
     }
   }
 
+  def clearJavaCompilerCache(): Unit = {
+    val javaKeys = jcache
+      .keySet()
+      .asScala
+      .filter {
+        case PresentationCompilerKey.JavaBuildTarget(_) => true
+        case PresentationCompilerKey.Default(language) if language.isJava =>
+          true
+        case _ => false
+      }
+      .toSeq
+
+    for {
+      key <- javaKeys
+      pc <- Option(jcache.remove(key))
+    } {
+      pc.shutdown()
+    }
+  }
+
   def restartFallbackCompilers(): Unit = {
     for {
       language <- List(s.Language.SCALA, s.Language.JAVA)
@@ -652,10 +672,15 @@ class Compilers(
     // Restart PC for all build targets that depend on this target
     for {
       target <- buildTargets.allInverseDependencies(target)
-      compiler <- buildTargetPCFromCache(target)
     } {
-      scribe.debug(s"Restarting PC for target ${target.getUri}")
-      compiler.restart()
+      buildTargetPCFromCache(target).foreach { compiler =>
+        scribe.debug(s"Restarting PC for target ${target.getUri}")
+        compiler.restart()
+      }
+      Option(jcache.remove(PresentationCompilerKey.JavaBuildTarget(target)))
+        .foreach { compiler =>
+          compiler.shutdown()
+        }
     }
   }
 
