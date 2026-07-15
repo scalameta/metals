@@ -84,7 +84,15 @@ trait MavenLockFileParser {
         )
       }
 
-      found
+      found.map { maybeSymlink =>
+        // The "unpinned" repository is a symlink to the actual location of the artifacts.
+        // If the workspace uses the lock file, this symlink may be removed automatically
+        // once the dependencies have been pinned.
+        // To ensure the JAR is still found, we need to dealias the symlink.
+        val actualPath = maybeSymlink.dealias
+        scribe.debug(s"Dealiased $maybeSymlink to $actualPath")
+        actualPath
+      }
     }
   }
 
