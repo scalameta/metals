@@ -17,7 +17,7 @@ final case class ClassName(value: String) extends AnyVal
 
 private[testProvider] final case class SymbolsPerTarget(
     target: BuildTarget,
-    testSymbols: TrieMap[
+    testSymbols: scala.collection.Map[
       BuildTargetClasses.Symbol,
       BuildTargetClasses.TestSymbolInfo,
     ],
