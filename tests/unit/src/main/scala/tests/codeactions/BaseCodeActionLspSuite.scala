@@ -8,14 +8,28 @@ import scala.meta.internal.metals.{BuildInfo => V}
 import munit.Location
 import munit.TestOptions
 import org.eclipse.lsp4j.CodeAction
+import org.eclipse.lsp4j.Diagnostic
 import tests.BaseLspSuite
+import tests.BuildServerInitializer
 import tests.FileLayout
+import tests.MbtJsonBuilder
+import tests.QuickBuildInitializer
 
 abstract class BaseCodeActionLspSuite(
-    suiteName: String
-) extends BaseLspSuite(suiteName) {
+    suiteName: String,
+    initializer: BuildServerInitializer = QuickBuildInitializer,
+    useMbtLayout: Boolean = false,
+) extends BaseLspSuite(suiteName, initializer) {
 
   protected val scalaVersion: String = V.scala213
+
+  /**
+   * When set, `check` waits for a matching diagnostics publication before
+   * requesting code actions. Override in suites whose action is gated on an
+   * async diagnostic (e.g. presentation compiler); `checkNoAction` opts out.
+   */
+  protected def defaultAwaitDiagnostics: Option[Seq[Diagnostic] => Boolean] =
+    None
 
   def checkNoAction(
       name: TestOptions,
@@ -37,6 +51,7 @@ abstract class BaseCodeActionLspSuite(
       fileName = fileName,
       createInSrcDir = createInSrcDir,
       filterAction = filterAction,
+      awaitDiagnostics = None,
     )
   }
 
@@ -94,6 +109,8 @@ abstract class BaseCodeActionLspSuite(
       assume: () => Boolean = () => true,
       applyCodeAction: Boolean = true,
       dependencies: List[String] = Nil,
+      awaitDiagnostics: Option[Seq[Diagnostic] => Boolean] =
+        defaultAwaitDiagnostics,
   )(implicit loc: Location): Unit = {
     val scalacOptionsJson =
       if (scalacOptions.nonEmpty)
@@ -102,11 +119,20 @@ abstract class BaseCodeActionLspSuite(
     val path = toPath(fileName, createInSrcDir)
 
     val layout = overrideLayout.getOrElse {
-      s"""/metals.json
-         |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion", "libraryDependencies": ${toJsonArray(dependencies)} }}
-         |$scalafixConf
-         |/$path
-         |$input""".stripMargin
+      if (useMbtLayout) {
+        val mbtJson = new MbtJsonBuilder(scalaVersion)
+          .addNamespace("a", List("a/src/main/java/**", "a/src/main/scala/**"))
+          .build()
+        s"""/.metals/mbt.json
+           |$mbtJson
+           |/$path
+           |$input""".stripMargin
+      } else
+        s"""/metals.json
+           |{"a":{$scalacOptionsJson "scalaVersion" : "$scalaVersion", "libraryDependencies": ${toJsonArray(dependencies)} }}
+           |$scalafixConf
+           |/$path
+           |$input""".stripMargin
     }
 
     checkEdit(
@@ -126,6 +152,7 @@ abstract class BaseCodeActionLspSuite(
       retryAction,
       assume,
       applyCodeAction,
+      awaitDiagnostics,
     )
   }
 
@@ -146,6 +173,8 @@ abstract class BaseCodeActionLspSuite(
       retryAction: Int = 0,
       assumeFunc: () => Boolean = () => true,
       applyCodeAction: Boolean = true,
+      awaitDiagnostics: Option[Seq[Diagnostic] => Boolean] =
+        defaultAwaitDiagnostics,
   )(implicit loc: Location): Unit = {
     val files = FileLayout.mapFromString(layout)
     val (path, input) = files
@@ -192,10 +221,18 @@ abstract class BaseCodeActionLspSuite(
             case None => Future {}
           }
         }
+        // Register before the change that publishes diagnostics, so we wait
+        // for the action's diagnostic instead of racing its publication.
+        diagnosticsPublished = awaitDiagnostics match {
+          case Some(condition) =>
+            client.nextDiagnosticsFor(server.toPath(path), condition)
+          case None => Future.unit
+        }
         _ <- server.didChange(
           path,
           changeFile(input).replace("<<", "").replace(">>", ""),
         )
+        _ <- diagnosticsPublished
         codeActions <- assertCodeAction(retryAction)
         _ <-
           if (applyCodeAction) {

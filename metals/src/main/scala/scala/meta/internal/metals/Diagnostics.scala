@@ -12,6 +12,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.io.AbsolutePath
 
@@ -150,15 +151,15 @@ final class Diagnostics(
   }
 
   def onSyntaxError(path: AbsolutePath, diags: List[Diagnostic]): Unit = {
-    if (userConfig().presentationCompilerDiagnostics) {
-      return
-    }
-    diags.headOption match {
-      case Some(diagnostic) if !workspace.exists(path.isInReadonlyDirectory) =>
-        syntaxError(path) = diagnostic
-        publishDiagnostics(path)
-      case _ =>
-        onClose(path)
+    if (!userConfig().presentationCompilerDiagnostics) {
+      diags.headOption match {
+        case Some(diagnostic)
+            if !workspace.exists(path.isInReadonlyDirectory) =>
+          syntaxError(path) = diagnostic
+          publishDiagnostics(path)
+        case _ =>
+          onClose(path)
+      }
     }
   }
 
@@ -473,7 +474,7 @@ final class Diagnostics(
       edit: TokenEditDistance,
   ): Option[Object] =
     diagnostic match {
-      case ScalacDiagnostic.ScalaDiagnostic(Left(textEdit)) =>
+      case DiagnosticData(DiagnosticData.LegacyTextEdit(textEdit)) =>
         edit
           .toRevised(
             textEdit,
@@ -481,7 +482,7 @@ final class Diagnostics(
             fallbackToNearest = false,
           )
           .map(_.toJsonObject)
-      case ScalacDiagnostic.ScalaDiagnostic(Right(scalaDiagnostic)) =>
+      case DiagnosticData(DiagnosticData.BspActions(scalaDiagnostic)) =>
         edit
           .toRevised(
             scalaDiagnostic,

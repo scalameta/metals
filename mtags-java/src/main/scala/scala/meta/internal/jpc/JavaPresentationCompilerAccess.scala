@@ -5,6 +5,7 @@ import java.util.concurrent.ScheduledExecutorService
 import scala.concurrent.ExecutionContextExecutor
 
 import scala.meta.internal.pc.CompilerAccess
+import scala.meta.pc.DisplayableException
 import scala.meta.pc.PresentationCompilerConfig
 
 import org.slf4j.Logger
@@ -27,7 +28,10 @@ class JavaPresentationCompilerAccess(
   override protected def newReporter: Unit = ()
   override protected def handleSharedCompilerException(
       t: Throwable
-  ): Option[String] = Some(s"an error in the Java compiler: ${t}")
+  ): Option[String] = t match {
+    case _: DisplayableException => throw t
+    case _ => Some(s"an error in the Java compiler: ${t}")
+  }
 
   override protected def ignoreException(t: Throwable): Boolean = false
 

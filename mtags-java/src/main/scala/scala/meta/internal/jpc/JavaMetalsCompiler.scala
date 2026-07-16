@@ -8,6 +8,7 @@ import java.nio.file.Path
 import java.util.concurrent.ScheduledExecutorService
 import java.{util => ju}
 import javax.lang.model.element.Element
+import javax.lang.model.element.ElementKind
 import javax.lang.model.element.ExecutableElement
 import javax.lang.model.element.TypeElement
 import javax.tools.JavaCompiler
@@ -244,6 +245,17 @@ class JavaMetalsCompiler(
    * @param originalStart
    * @param originalEnd
    */
+  /**
+   * The name of the element as it appears in source. For constructors
+   * `getSimpleName` returns the internal `<init>`, so we fall back to the
+   * enclosing type's name, which is what is actually written in the source.
+   */
+  def sourceName(element: Element): String =
+    if (element.getKind() == ElementKind.CONSTRUCTOR)
+      element.getEnclosingElement().getSimpleName().toString()
+    else
+      element.getSimpleName().toString()
+
   def findIndentifierStartAndEnd(
       text: String,
       elementName: String,

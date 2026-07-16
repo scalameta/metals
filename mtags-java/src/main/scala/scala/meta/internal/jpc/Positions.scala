@@ -54,7 +54,7 @@ object Positions {
       line: Int,
       text: String
   ): Int = {
-    val startPos = lineMap.getPosition(line, 0).intValue()
+    val startPos = lineMap.getPosition(line, 0).intValue().max(0)
     var offset = startPos
     while (offset < text.length() && text.charAt(offset) == '\t') {
       offset += 1

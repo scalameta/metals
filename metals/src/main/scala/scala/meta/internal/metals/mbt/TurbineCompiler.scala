@@ -19,6 +19,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
@@ -130,7 +131,7 @@ class TurbineCompiler[T](
     parseUnit: T => Option[SourceFile],
     classpath: () => Seq[Path],
     progressBars: ProgressBars,
-    debounceDelay: FiniteDuration,
+    turbineRecompileDelay: () => TurbineRecompileDelayConfig,
     listProtoJavaOutlinesForPackage: String => Iterator[JavaFileObject],
     sleeper: Sleeper,
     onIndexingDone: () => Unit,
@@ -152,9 +153,10 @@ class TurbineCompiler[T](
       sourcepathJavaFileObject <- deque.asScala.iterator
     } yield sourcepathJavaFileObject
   }.toSeq
+  private def debounceDelay: FiniteDuration = turbineRecompileDelay().duration
   // When delay is >= 1 hour, consider turbine recompilation effectively disabled.
   // In this mode, we rely entirely on SOURCE_PATH fallback for updated sources.
-  private val isRecompilationDisabled: Boolean =
+  private def isRecompilationDisabled: Boolean =
     debounceDelay.toMillis >= 3600000
 
   private val doCompile =

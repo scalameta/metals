@@ -66,6 +66,38 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
     } yield ()
   }
 
+  test("unused-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/UnusedImport.java
+           |package a;
+           |
+           |import java.util.List;
+           |import java.util.Map;
+           |
+           |public class UnusedImport {
+           |  public List<String> names;
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/UnusedImport.java")
+      _ <- server.didFocus("a/src/main/java/a/UnusedImport.java")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/UnusedImport.java:4:1: warning: unused import
+           |import java.util.Map;
+           |^^^^^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("introduce-type-error") {
     cleanWorkspace()
     for {
@@ -270,6 +302,113 @@ class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
            |  location: class a.Person
            |    return new a.Person("Alice", 30).name2;
            |                                    ^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("missing-override-class") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/Example.java
+           |package a;
+           |
+           |public class Example {
+           |  public String toString() {
+           |    return "";
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Example.java")
+      _ <- server.didFocus("a/src/main/java/a/Example.java")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Example.java:4:17: warning: missing @Override annotation on 'toString'
+           |  public String toString() {
+           |                ^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("missing-override-interface") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/Example.java
+           |package a;
+           |
+           |interface Named {
+           |  String name();
+           |}
+           |
+           |public class Example implements Named {
+           |  public String name() {
+           |    return "";
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Example.java")
+      _ <- server.didFocus("a/src/main/java/a/Example.java")
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Example.java:8:17: warning: missing @Override annotation on 'name'
+           |  public String name() {
+           |                ^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("missing-override-diamond") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/Example.java
+           |package a;
+           |
+           |interface Base {
+           |  String id();
+           |}
+           |
+           |interface Left extends Base {}
+           |
+           |interface Right extends Base {}
+           |
+           |public class Example implements Left, Right {
+           |  public String id() {
+           |    return "";
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Example.java")
+      _ <- server.didFocus("a/src/main/java/a/Example.java")
+      // `id` is declared in `Base`, reachable via both `Left` and `Right`.
+      // The transitive supertype walk must find it, and report it only once.
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Example.java:12:17: warning: missing @Override annotation on 'id'
+           |  public String id() {
+           |                ^^
            |""".stripMargin,
       )
     } yield ()

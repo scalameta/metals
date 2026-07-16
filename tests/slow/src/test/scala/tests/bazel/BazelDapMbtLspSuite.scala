@@ -24,12 +24,12 @@ import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import tests.BaseDapSuite
 import tests.BazelBuildLayout
-import tests.BazelMbtTestInitializer
+import tests.MbtTestInitializer
 
 class BazelDapMbtLspSuite
     extends BaseDapSuite(
       "bazel-mbt-dap",
-      BazelMbtTestInitializer,
+      MbtTestInitializer,
       BazelBuildLayout,
     ) {
 
@@ -221,6 +221,94 @@ class BazelDapMbtLspSuite
       output <- debugger.allOutput
     } yield assertContains(output, "FooBar")
   }
+
+  test("bazel-mbt-test-multiple-test-targets-same-build-file", maxRetry = 3) {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          multipleJavaTargetsLayout,
+          V.scala213,
+          bazelVersion,
+          List("junit:junit:4.13.2"),
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("test/FooTest.java")
+      _ <- awaitMbtTestClassDiscovery("test/FooTest.java")
+      fooDebugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams("test.FooTest").toJson
+      )
+      _ <- fooDebugger.initialize
+      _ <- fooDebugger.launch
+      _ <- fooDebugger.configurationDone
+      _ <- fooDebugger.shutdown
+      fooOutput <- fooDebugger.allOutput
+      _ <- server.didOpen("test/BarTest.java")
+      _ <- awaitMbtTestClassDiscovery("test/BarTest.java")
+      barDebugger <- server.startDebuggingUnresolved(
+        new DebugUnresolvedTestClassParams("test.BarTest").toJson
+      )
+      _ <- barDebugger.initialize
+      _ <- barDebugger.launch
+      _ <- barDebugger.configurationDone
+      _ <- barDebugger.shutdown
+      barOutput <- barDebugger.allOutput
+    } yield {
+      assertContains(fooOutput, "OK (1 test)")
+      assertContains(barOutput, "OK (1 test)")
+    }
+  }
+
+  private def multipleJavaTargetsLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/test/BUILD
+       |java_test(
+       |    name = "BarTest",
+       |    srcs = ["BarTest.java"],
+       |    test_class = "test.BarTest",
+       |    deps = ["@maven//:junit_junit"],
+       |)
+       |
+       |java_test(
+       |    name = "FooTest",
+       |    srcs = ["FooTest.java"],
+       |    test_class = "test.FooTest",
+       |    deps = ["@maven//:junit_junit"],
+       |)
+       |
+       |/test/BarTest.java
+       |package test;
+       |
+       |import org.junit.Test;
+       |import static org.junit.Assert.*;
+       |
+       |public class BarTest {
+       |  @Test
+       |  public void testAddition() {
+       |    assertEquals(4, 2 + 2);
+       |  }
+       |}
+       |
+       |/test/FooTest.java
+       |package test;
+       |
+       |import org.junit.Test;
+       |import static org.junit.Assert.*;
+       |
+       |public class FooTest {
+       |  @Test
+       |  public void testAddition() {
+       |    assertEquals(4, 2 + 2);
+       |  }
+       |}
+       |""".stripMargin
 
   private def bazelTestWorkspaceLayout: String =
     """|/.bazelproject

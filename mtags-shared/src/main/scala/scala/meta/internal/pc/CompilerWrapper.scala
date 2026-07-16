@@ -8,8 +8,6 @@ trait CompilerWrapper[Reporter, Compiler] {
 
   def reporterAccess: ReporterAccess[Reporter]
 
-  def askShutdown(): Unit
-
   def isAlive(): Boolean
 
   def stop(): Unit

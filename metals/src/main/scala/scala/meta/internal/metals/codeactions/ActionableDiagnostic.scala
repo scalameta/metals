@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
 import scala.meta.pc.CancelToken
 
 import ch.epfl.scala.{bsp4j => b}
@@ -47,23 +47,18 @@ class ActionableDiagnostic() extends CodeAction {
 
     }
 
-    val codeActions = params
-      .getContext()
-      .getDiagnostics()
-      .asScala
-      .toSeq
-      .groupBy {
-        case ScalacDiagnostic.ScalaDiagnostic(action) =>
-          Some(action)
-        case _ => None
-      }
+    val diagnostics =
+      params.getContext().getDiagnostics().asScala.toSeq
+
+    val codeActions = diagnostics
+      .groupBy(DiagnosticData.unapply)
       .collect {
-        case (Some(Left(textEdit)), diags)
+        case (Some(DiagnosticData.LegacyTextEdit(textEdit)), diags)
             if params.getRange().overlapsWith(diags.head.getRange()) =>
           Seq(createActionableDiagnostic(diags.head, Left(textEdit)))
-        case (Some(Right(action)), diags)
+        case (Some(DiagnosticData.BspActions(scalaDiagnostic)), diags)
             if params.getRange().overlapsWith(diags.head.getRange()) =>
-          action
+          scalaDiagnostic
             .getActions()
             .asScala
             .toSeq
@@ -75,16 +70,12 @@ class ActionableDiagnostic() extends CodeAction {
       .flatten
       .sorted
 
-    val scala3CodeActions = params
-      .getContext()
-      .getDiagnostics()
-      .asScala
-      .toSeq
-      .flatMap {
-        case ScalacDiagnostic.Scala3Diagnostic(actions) =>
-          actions
-        case _ => Nil
-      }
+    val scala3CodeActions = diagnostics.flatMap {
+      case diagnostic @ DiagnosticData(DiagnosticData.PcActions(actions))
+          if params.getRange().overlapsWith(diagnostic.getRange()) =>
+        actions
+      case _ => Nil
+    }
 
     Future.successful(codeActions ++ scala3CodeActions)
   }

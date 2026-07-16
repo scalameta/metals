@@ -35,7 +35,18 @@ object BazelQuery {
   object OutputMode {
     case object Label extends OutputMode("label")
     case object Xml extends OutputMode("xml")
+
+    // valid only for "bazel cquery"
+    case object Starlark extends OutputMode("starlark")
   }
+  sealed abstract class QueryType(name: String) {
+    override def toString(): String = name
+  }
+  object QueryType {
+    case object Query extends QueryType("query")
+    case object CQuery extends QueryType("cquery")
+  }
+
   import OutputMode._
 
   def buildRuleKindsQuery(patterns: List[String]): BazelQuery = {
@@ -67,7 +78,7 @@ object BazelQuery {
         }
     }
 
-  private def quoteTarget(target: String): Option[String] =
+  def quoteTarget(target: String): Option[String] =
     if (needsQuoting(target)) {
       val hasDouble = target.contains('"')
       val hasSingle = target.contains('\'')
@@ -95,7 +106,7 @@ object BazelQuery {
   private val ruleKinds: List[String] =
     List(
       "scala_library", "java_library", "scala_binary", "java_binary",
-      "scala_test", "java_test",
+      "scala_test", "java_test", "scala_import", "java_import",
     )
 
 }
@@ -103,6 +114,8 @@ object BazelQuery {
 case class BazelQuery(
     query: String,
     outputMode: BazelQuery.OutputMode,
+    extraArgs: List[String] = Nil,
+    queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query,
 ) {
   import BazelQuery._
 
@@ -114,13 +127,13 @@ case class BazelQuery(
     val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner
       .run(
-        "bazel-mbt-query",
+        s"bazel-mbt-$queryType",
         List(
           "bazel",
-          "query",
+          queryType.toString,
           s"--output=$outputMode",
           "--keep_going",
-        ) ++ queryArgs,
+        ) ++ queryArgs ++ extraArgs,
         projectRoot,
         redirectErrorOutput = false,
         javaHome,

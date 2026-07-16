@@ -83,6 +83,8 @@ object InlineValueProvider {
       "Non-local value cannot be inlined."
     val didNotFindReference =
       "The chosen reference couldn't be identified."
+    val isReassigned =
+      "A value that is reassigned cannot be inlined."
     def variablesAreShadowed(fullName: String): String =
       s"Following variables are shadowed: $fullName."
   }

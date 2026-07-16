@@ -1,5 +1,7 @@
 package tests.j
 
+import tests.JavaModuleExports
+
 class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
 
   checkNoErrors(
@@ -53,6 +55,7 @@ class JavaPruneCompilerSuite extends BaseJavaPruneCompilerSuite {
        |}
        |""".stripMargin,
     "foo/Example.java",
+    JavaModuleExports.options,
   )
 
   checkNoErrors(

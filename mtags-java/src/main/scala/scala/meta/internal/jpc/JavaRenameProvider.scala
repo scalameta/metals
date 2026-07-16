@@ -49,7 +49,6 @@ class JavaRenameProvider(
         val trees = Trees.instance(compile.task)
         val element = trees.getElement(treePath)
 
-        // TODO also make sure that it's a local symbol
         def atIdentifier = compiler.isAtIdentifier(
           treePath,
           element,
@@ -58,7 +57,7 @@ class JavaRenameProvider(
           trees,
           compile.cu
         )
-        if (element != null && canRenameSymbol(element) && atIdentifier) {
+        if (element != null && atIdentifier) {
           val sourcePositions = trees.getSourcePositions()
           val start =
             sourcePositions.getStartPosition(compile.cu, treePath.getLeaf())
@@ -66,7 +65,7 @@ class JavaRenameProvider(
             sourcePositions.getEndPosition(compile.cu, treePath.getLeaf())
           val (realStart, realEnd) = compiler.findIndentifierStartAndEnd(
             params.text(),
-            element.getSimpleName().toString(),
+            compiler.sourceName(element),
             start.toInt,
             end.toInt,
             treePath.getLeaf(),

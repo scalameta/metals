@@ -764,4 +764,66 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+
+  // https://github.com/scalameta/metals/pull/8594
+  test("java-constructor-completion") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package a;
+          |
+          |public class Test {
+          |  public void f(){
+          |    Test t = // @@
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "new Tes@@",
+        expectedLabel = "Test()",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Test()"),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
+
+  test("java-completion-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package a;
+          |
+          |public class Test {
+          |  // @@
+          |}
+          |/a/src/main/java/a/Foo.java
+          |package a;
+          |
+          |public class Foo {
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "Foo@@",
+        expectedLabel = "Foo - a",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Foo"),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
 }
