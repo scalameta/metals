@@ -45,6 +45,7 @@ object BazelMbtBuildSupport {
       versionSpecificSourceLabels: Set[String],
       toolchain: ScalaToolchainModules.Resolution,
       genSrcOutputsByTarget: Map[String, List[String]],
+      generatedProtoModules: BazelGeneratedProtoModules.Result,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
@@ -77,6 +78,7 @@ object BazelMbtBuildSupport {
         inactiveSources,
         versionSpecificSourceLabels,
         genSrcOutputsByTarget,
+        generatedProtoModules,
       )
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
       if (granularity == BazelMbtNamespaceMode.BuildFile)
@@ -95,6 +97,7 @@ object BazelMbtBuildSupport {
           attributes,
           aggregates,
           toolchain,
+          generatedProtoModules,
           scalaVersion,
         )
       buildVersionBranchNamespaces(
@@ -102,11 +105,13 @@ object BazelMbtBuildSupport {
         attributes,
         aggregates,
         toolchain,
+        generatedProtoModules,
       )
       referencedToolchainModules(
         namespaces,
         dependencyModules,
         toolchain,
+        generatedProtoModules,
       ).foreach(depModules.add)
       MbtBuild(
         depModules,
@@ -131,6 +136,7 @@ object BazelMbtBuildSupport {
       targetsByNs: Map[String, List[String]],
       dependsByNs: Map[String, Set[String]],
       externalDepsByNs: Map[String, Set[String]],
+      generatedProtoIdsByNs: Map[String, Set[String]],
       runTargetsByNs: Map[String, Set[String]],
       classDirectoriesByNs: Map[String, List[String]],
       unconditionalFilesByNs: Map[String, Set[String]],
@@ -151,6 +157,7 @@ object BazelMbtBuildSupport {
       inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
       versionSpecificSourceLabels: Set[String],
       genSrcOutputsByTarget: Map[String, List[String]],
+      generatedProtoModules: BazelGeneratedProtoModules.Result,
   ): (TargetAttributes, NamespaceAggregates) = {
     val keys = targetLabels.map(t => t -> namespaceKey(granularity, t)).toMap
     val targetsByNs = targetLabels.groupBy(keys(_))
@@ -165,6 +172,12 @@ object BazelMbtBuildSupport {
       )
     val externalDepsByNs =
       computeExternalDeps(granularity, targetLabels, externalDepsByTarget, keys)
+    val generatedProtoIdsByNs =
+      computeNamespaceModuleIds(
+        targetLabels,
+        generatedProtoModules.moduleIdsByTarget,
+        keys,
+      )
     val runTargetsByNs =
       computeRunTargets(granularity, targetLabels, runTargets, keys)
     val classDirectoriesByNs =
@@ -210,6 +223,7 @@ object BazelMbtBuildSupport {
       targetsByNs = targetsByNs,
       dependsByNs = dependsByNs,
       externalDepsByNs = externalDepsByNs,
+      generatedProtoIdsByNs = generatedProtoIdsByNs,
       runTargetsByNs = runTargetsByNs,
       classDirectoriesByNs = classDirectoriesByNs,
       unconditionalFilesByNs =
@@ -255,11 +269,12 @@ object BazelMbtBuildSupport {
       val nsScalaVersion =
         BazelScalaVersions.maxVersion(nsScalaVersions).orElse(scalaVersion)
       val externalDeps = agg.externalDepsByNs.getOrElse(namespace, Set.empty)
+      val protoDeps = agg.generatedProtoIdsByNs.getOrElse(namespace, Set.empty)
       putNamespace(
         namespaces,
         namespace,
         files.toSet,
-        dependencyModuleIds = externalDeps ++
+        dependencyModuleIds = externalDeps ++ protoDeps ++
           toolchainIdsFor(
             toolchain,
             files,
@@ -284,11 +299,14 @@ object BazelMbtBuildSupport {
       attrs: TargetAttributes,
       agg: NamespaceAggregates,
       toolchain: ScalaToolchainModules.Resolution,
+      generatedProtoModules: BazelGeneratedProtoModules.Result,
       scalaVersion: Option[String],
   ): Unit = {
     val allSrcs = attrs.srcFilesByTarget.values.flatten.toSet
     val allExtDeps = attrs.externalDepsByTarget.values.flatten.toSet
     val allGenSrcOutputs = attrs.genSrcOutputsByTarget.values.flatten.toSeq
+    val allProtoDeps =
+      generatedProtoModules.moduleIdsByTarget.values.flatten.toSet
     val wsScalaVersions = targetLabels
       .flatMap(attrs.scalaVersionByTarget.getOrElse(_, None))
       .distinct
@@ -300,7 +318,7 @@ object BazelMbtBuildSupport {
       namespaces,
       workspaceNamespaceName,
       allSrcs,
-      dependencyModuleIds = allExtDeps ++
+      dependencyModuleIds = allExtDeps ++ allProtoDeps ++
         toolchainIdsFor(
           toolchain,
           allSrcs,
@@ -323,6 +341,7 @@ object BazelMbtBuildSupport {
       attrs: TargetAttributes,
       agg: NamespaceAggregates,
       toolchain: ScalaToolchainModules.Resolution,
+      generatedProtoModules: BazelGeneratedProtoModules.Result,
   ): Unit =
     for (
       ((nsKey, version), branch) <-
@@ -332,6 +351,10 @@ object BazelMbtBuildSupport {
       val depTargets: Set[String] = branch.originTargets ++ targetsForNs
       val externalDeps =
         depTargets.flatMap(attrs.externalDepsByTarget.getOrElse(_, Nil))
+      val protoDeps =
+        depTargets.flatMap(
+          generatedProtoModules.moduleIdsByTarget.getOrElse(_, Set.empty)
+        )
       val files =
         branch.files ++ agg.unconditionalFilesByNs.getOrElse(nsKey, Set.empty)
       val dependsOn = agg.dependsByNs.getOrElse(nsKey, Set.empty).map { dep =>
@@ -343,7 +366,7 @@ object BazelMbtBuildSupport {
         s"$nsKey@$version",
         files,
         dependsOn = dependsOn,
-        dependencyModuleIds = externalDeps ++
+        dependencyModuleIds = externalDeps ++ protoDeps ++
           toolchainIdsFor(
             toolchain,
             files,
@@ -361,6 +384,7 @@ object BazelMbtBuildSupport {
       namespaces: ju.Map[String, MbtNamespace],
       dependencyModules: Seq[MbtDependencyModule],
       toolchain: ScalaToolchainModules.Resolution,
+      generatedProtoModules: BazelGeneratedProtoModules.Result,
   ): Seq[MbtDependencyModule] = {
     val referencedIds = namespaces
       .values()
@@ -368,7 +392,7 @@ object BazelMbtBuildSupport {
       .flatMap(_.getDependencyModuleIds.asScala)
       .toSet
     val knownIds = dependencyModules.map(_.id).toSet
-    toolchain.modules
+    (toolchain.modules ++ generatedProtoModules.modules)
       .filter(module => referencedIds(module.id) && !knownIds(module.id))
   }
 
@@ -490,8 +514,18 @@ object BazelMbtBuildSupport {
     else aggregateByNamespace(targetLabels, externalDepsByTarget, keys)
 
   /**
-   * Union each target's ids into the namespace key it belongs to.
+   * Aggregate per-target dependency-module ids to per-namespace, unioning the
+   * ids of every target mapped to the same namespace key. Used for generated
+   * proto jars, which (unlike external deps) are computed per consuming target
+   * by [[BazelGeneratedProtoModules]].
    */
+  private def computeNamespaceModuleIds(
+      targetLabels: List[String],
+      moduleIdsByTarget: Map[String, Set[String]],
+      keys: Map[String, String],
+  ): Map[String, Set[String]] =
+    aggregateByNamespace(targetLabels, moduleIdsByTarget, keys)
+
   private def aggregateByNamespace[A](
       targetLabels: List[String],
       idsByTarget: Map[String, Iterable[A]],

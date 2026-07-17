@@ -391,7 +391,7 @@ class BazelMbtToolchainLspSuite
     )
   }
 
-  test("bazel-mbt-generated-proto-classes".ignore) {
+  test("bazel-mbt-generated-proto-classes") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {

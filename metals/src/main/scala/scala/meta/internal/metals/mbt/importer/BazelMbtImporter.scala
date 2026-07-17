@@ -277,6 +277,16 @@ abstract class BazelMbtImporter(
       runTargets,
       protoDump.ruleOutputsByTarget,
     )
+    val generatedProtoModules = BazelGeneratedProtoModules.discover(
+      targets,
+      protoDump.ruleClassesByTarget,
+      protoDump.depsByTarget,
+      bazelBin,
+    )
+    scribe.info(
+      s"bazel-mbt: discovered ${generatedProtoModules.modules.size} " +
+        "generated java_proto_library jars"
+    )
     val deps = queryDeps(targets, protoDump)
     val reachableLabelsByTarget = protoDump.reachableLabels(targets)
     val externalDeps =
@@ -329,6 +339,7 @@ abstract class BazelMbtImporter(
         classification.versionSpecificSourceLabels,
         toolchain,
         classification.genSrcOutputsByTarget,
+        generatedProtoModules,
       ),
     )
     Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
