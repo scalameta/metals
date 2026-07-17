@@ -11,6 +11,7 @@ import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.mbt.MbtCrossVersionDefinition
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
@@ -71,7 +72,13 @@ final class DefinitionProvider(
     protobufLspConfig: () => ProtobufLspConfig,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
-  private val fallback = new FallbackDefinitionProvider(trees, index)
+  private val fallback =
+    new FallbackDefinitionProvider(
+      trees,
+      index,
+      (source, candidates) =>
+        destinationProvider.orderDefinitionsForSource(source, candidates),
+    )
   private val protobufDefinitions = new DefinitionProviderProtobufSupport(
     workspace,
     buffers,
@@ -484,37 +491,96 @@ class DestinationProvider(
       source: Option[AbsolutePath],
   ): Option[SymbolDefinition] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    definition(symbol, targets)
+    definition(symbol, targets, source.flatMap(buildTargets.scalaVersion))
   }
 
   def definition(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String] = None,
   ): Option[SymbolDefinition] = {
-    val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
-    val result =
-      if (allowedBuildTargets.isEmpty)
-        definitions.headOption
-      else {
-        val matched = definitions.find { defn =>
-          sourceBuildTargets(defn.path).exists(id =>
-            allowedBuildTargets.contains(id)
-          )
-        }
-        // Fallback to any definition - it's needed for worksheets
-        // They might have dynamic `import $dep` and these sources jars
-        // aren't registered in buildTargets
-        matched.orElse(definitions.headOption)
-      }
-    result.orElse(definitionFromMbt(symbol))
+    val candidates = index.definitions(Symbol(symbol)).filter(_.path.exists)
+    pickDefinition(candidates, allowedBuildTargets, preferredScalaVersion)(
+      _.path
+    ).orElse(
+      definitionFromMbt(symbol, allowedBuildTargets, preferredScalaVersion)
+    )
   }
 
-  private def definitionFromMbt(symbol: String): Option[SymbolDefinition] = {
-    val mbtDefinitions = mbt.definition(symbol)
+  private def annotate[T](
+      candidates: List[T],
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+  )(pathOf: T => AbsolutePath): List[(T, MbtCrossVersionDefinition.Candidate)] =
+    candidates.map { candidate =>
+      val path = pathOf(candidate)
+      val ids = sourceBuildTargets(path)
+      candidate -> MbtCrossVersionDefinition.Candidate(
+        path = path.toString,
+        targetUris = ids.map(_.getUri),
+        scalaVersions =
+          ids.flatMap(id => buildTargets.scalaTarget(id).map(_.scalaVersion)),
+        reachable = ids.exists(allowedBuildTargets.contains),
+      )
+    }
+
+  private def crossVersionOrder[T](
+      annotated: List[(T, MbtCrossVersionDefinition.Candidate)],
+      preferredScalaVersion: Option[String],
+  ): Option[List[T]] =
+    Option.when(
+      MbtCrossVersionDefinition.hasVersionBranch(annotated.map(_._2))
+    ) {
+      annotated
+        .sortBy { case (_, info) => info.rankKey(preferredScalaVersion) }
+        .map { case (candidate, _) => candidate }
+    }
+
+  private def pickDefinition[T](
+      candidates: List[T],
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String],
+  )(pathOf: T => AbsolutePath): Option[T] =
+    if (candidates.sizeIs < 2) candidates.headOption
+    else {
+      val annotated = annotate(candidates, allowedBuildTargets)(pathOf)
+      crossVersionOrder(annotated, preferredScalaVersion) match {
+        case Some(ordered) => ordered.headOption
+        case None if allowedBuildTargets.isEmpty => candidates.headOption
+        case None =>
+          // Fallback to any definition - it's needed for worksheets. They might
+          // have dynamic `import $dep` and these sources jars aren't registered
+          // in buildTargets.
+          annotated
+            .find { case (_, info) => info.reachable }
+            .map { case (candidate, _) => candidate }
+            .orElse(candidates.headOption)
+      }
+    }
+
+  def orderDefinitionsForSource(
+      source: AbsolutePath,
+      candidates: List[SymbolDefinition],
+  ): List[SymbolDefinition] =
+    if (candidates.sizeIs < 2) candidates
+    else {
+      val annotated =
+        annotate(candidates, sourceToAllowedBuildTargets(source))(_.path)
+      crossVersionOrder(annotated, buildTargets.scalaVersion(source))
+        .getOrElse(candidates)
+    }
+
+  private def definitionFromMbt(
+      symbol: String,
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String],
+  ): Option[SymbolDefinition] = {
+    val candidates = mbt.definition(symbol)
     scribe.info(
-      s"MBT fallback for symbol $symbol: found ${mbtDefinitions.size} definitions"
+      s"MBT fallback for symbol $symbol: found ${candidates.size} definitions"
     )
-    mbtDefinitions.headOption.map { location =>
+    pickDefinition(candidates, allowedBuildTargets, preferredScalaVersion)(
+      _.getUri.toAbsolutePath
+    ).map { location =>
       val path = location.getUri.toAbsolutePath
       val lspRange = location.getRange
       val range = semanticdb.Range(
@@ -556,42 +622,44 @@ class DestinationProvider(
   def fromSymbol(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
+      preferredScalaVersion: Option[String] = None,
   ): Option[DefinitionResult] = {
-    definition(symbol, allowedBuildTargets).flatMap { defn =>
-      val destinationPath =
-        if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
-        else defn.path
-      val uri = destinationPath.toURI.toString
+    definition(symbol, allowedBuildTargets, preferredScalaVersion).flatMap {
+      defn =>
+        val destinationPath =
+          if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
+          else defn.path
+        val uri = destinationPath.toURI.toString
 
-      defn.range match {
-        // read only source - no need to adjust positions
-        case Some(range) if defn.path.isJarFileSystem =>
-          Some(
-            DefinitionResult(
-              ju.Collections.singletonList(range.toLocation(uri)),
+        defn.range match {
+          // read only source - no need to adjust positions
+          case Some(range) if defn.path.isJarFileSystem =>
+            Some(
+              DefinitionResult(
+                ju.Collections.singletonList(range.toLocation(uri)),
+                defn.definitionSymbol.value,
+                Some(defn.path),
+                None,
+                defn.querySymbol.value,
+              )
+            )
+          case _ =>
+            val destinationDoc = bestTextDocument(defn)
+            val destinationDistance =
+              buffers.tokenEditDistance(
+                destinationPath,
+                destinationDoc.text,
+                scalaVersionSelector,
+              )
+            DefinitionDestination(
+              destinationDoc,
+              destinationDistance,
               defn.definitionSymbol.value,
-              Some(defn.path),
-              None,
+              Some(destinationPath),
+              uri,
               defn.querySymbol.value,
-            )
-          )
-        case _ =>
-          val destinationDoc = bestTextDocument(defn)
-          val destinationDistance =
-            buffers.tokenEditDistance(
-              destinationPath,
-              destinationDoc.text,
-              scalaVersionSelector,
-            )
-          DefinitionDestination(
-            destinationDoc,
-            destinationDistance,
-            defn.definitionSymbol.value,
-            Some(destinationPath),
-            uri,
-            defn.querySymbol.value,
-          ).toResult
-      }
+            ).toResult
+        }
     }
   }
 
@@ -600,7 +668,7 @@ class DestinationProvider(
       source: Option[AbsolutePath],
   ): Option[DefinitionResult] = {
     val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    fromSymbol(symbol, targets)
+    fromSymbol(symbol, targets, source.flatMap(buildTargets.scalaVersion))
   }
 
   private def sourceToAllowedBuildTargets(

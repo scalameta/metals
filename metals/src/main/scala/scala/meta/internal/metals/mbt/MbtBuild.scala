@@ -199,6 +199,21 @@ object MbtBuild {
     s"mbt://namespace/$name"
   }
 
+  private val versionBranchSuffix = """@\d+\.\d+\.\d+$""".r
+
+  /**
+   * Whether a build target id names a synthetic `<origin>@<scala version>`
+   * namespace — sources from an inactive cross-version `select()` branch
+   * Version always comes from a `:scala_version_<x_y_z>`
+   * [[scala.meta.internal.metals.mbt.importer.BazelBuildSrcs.scalaVersionKey]]
+   *
+   * exactly three numeric components — avoids treating a real package
+   * like `//commons-io@2.11` as a version branch.
+   */
+  def isVersionBranchNamespaceUri(uri: String): Boolean =
+    uri.startsWith("mbt://namespace/") &&
+      versionBranchSuffix.findFirstIn(uri).nonEmpty
+
   /**
    * Merge two [[MbtBuild]] values produced by different importers.
    *

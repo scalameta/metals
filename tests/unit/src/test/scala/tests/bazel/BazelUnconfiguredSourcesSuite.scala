@@ -99,4 +99,42 @@ class BazelUnconfiguredSourcesSuite extends BaseSuite {
     val result = BazelBuildSrcs.inactiveSources(srcsByTarget, scalaVersions)
     assertEquals(result, Map.empty[String, InactiveSource])
   }
+
+  test("version-branch-namespace-uri-detection") {
+    import scala.meta.internal.metals.mbt.MbtBuild
+    assert(
+      MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("//pkg/fg@3.8.4")
+      )
+    )
+    assert(
+      MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("//pkg@2.12.21")
+      )
+    )
+    assert(
+      !MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("//pkg/fg")
+      )
+    )
+    // A real package that merely ends in `@<major>.<minor>` is not a synthetic
+    // version branch: those always carry a full three-component Scala version.
+    assert(
+      !MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("//commons-io@2.11")
+      )
+    )
+    assert(
+      !MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("bazel-workspace")
+      )
+    )
+    // An external-repo label's leading @ is not a version-branch suffix.
+    assert(
+      !MbtBuild.isVersionBranchNamespaceUri(
+        MbtBuild.namespaceTargetId("@repo//pkg:t")
+      )
+    )
+    assert(!MbtBuild.isVersionBranchNamespaceUri("file:///pkg@3.8.4"))
+  }
 }
