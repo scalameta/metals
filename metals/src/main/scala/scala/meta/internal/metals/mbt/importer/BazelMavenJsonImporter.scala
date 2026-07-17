@@ -27,7 +27,7 @@ object BazelMavenJsonImporter {
   private val gson = new Gson()
 
   /** Pre-scanned snapshot of an external directory listing. */
-  private[importer] case class ScannedExtDir(
+  case class ScannedExtDir(
       dir: AbsolutePath,
       entries: List[AbsolutePath],
   )

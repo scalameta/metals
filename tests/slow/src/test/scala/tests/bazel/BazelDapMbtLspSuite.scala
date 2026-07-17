@@ -222,7 +222,7 @@ class BazelDapMbtLspSuite
     } yield assertContains(output, "FooBar")
   }
 
-  test("bazel-mbt-test-multiple-test-targets-same-build-file", maxRetry = 3) {
+  test("bazel-mbt-test-multiple-test-targets-same-build-file") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
 
