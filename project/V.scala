@@ -57,7 +57,8 @@ object V {
 
   val mill = "1.1.7"
 
-  val mdoc = "2.9.0"
+  // use from project/plugins.sbt
+  val mdoc = _root_.mdoc.BuildInfo.version
 
   val modelContextProtocol = "2.0.0"
 
