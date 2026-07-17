@@ -13,14 +13,22 @@ import com.google.gson.JsonObject
 object MavenLockFileParser {
   def create(json: JsonObject): Option[MavenLockFileParser] = {
     Option(json.getAsJsonObject("artifacts")) match {
-      case Some(artifacts) => Some(new V5LockFileParser(artifacts))
+      case Some(artifacts) =>
+        scribe.debug("Using the v5 parser for the rules_jvm_external lock file")
+        Some(new V5LockFileParser(artifacts))
       case None =>
         Option(json.getAsJsonObject("dependency_tree"))
           .flatMap(dt => Option(dt.getAsJsonArray("dependencies"))) match {
           case Some(dependencies) =>
+            scribe.debug(
+              "Using the legacy (v4 and earlier) parser for the rules_jvm_external lock file"
+            )
             Some(new LegacyLockFileParser(dependencies))
           case None =>
             // Unknown format; possibly a newer version, or not a lock file at all
+            scribe.warn(
+              "Could not determine the format of rules_jvm_external lock file; skipping"
+            )
             None
         }
     }
@@ -76,7 +84,15 @@ trait MavenLockFileParser {
         )
       }
 
-      found
+      found.map { maybeSymlink =>
+        // The "unpinned" repository is a symlink to the actual location of the artifacts.
+        // If the workspace uses the lock file, this symlink may be removed automatically
+        // once the dependencies have been pinned.
+        // To ensure the JAR is still found, we need to dealias the symlink.
+        val actualPath = maybeSymlink.dealias
+        scribe.debug(s"Dealiased $maybeSymlink to $actualPath")
+        actualPath
+      }
     }
   }
 
