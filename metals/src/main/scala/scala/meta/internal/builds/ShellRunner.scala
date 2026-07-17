@@ -18,6 +18,7 @@ import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -72,7 +73,7 @@ class ShellRunner(
       dir,
       redirectErrorOutput,
       javaHome,
-      processOut = processOut,
+      processOut = ProcessOutput.Lines(processOut),
       processErr = processErr,
       propagateError = propagateError,
     )
@@ -85,7 +86,7 @@ class ShellRunner(
       redirectErrorOutput: Boolean,
       javaHome: Option[String],
       additionalEnv: Map[String, String] = Map.empty,
-      processOut: String => Unit = scribe.info(_),
+      processOut: ProcessOutput = ProcessOutput.Lines(scribe.info(_)),
       processErr: String => Unit = scribe.error(_),
       propagateError: Boolean = false,
       logInfo: Boolean = true,
@@ -155,7 +156,7 @@ object ShellRunner {
       directory,
       redirectErrorOutput,
       env,
-      Some(s => {
+      Some(ProcessOutput.Lines { s =>
         sbOut.append(s)
         sbOut.append(Properties.lineSeparator)
       }),

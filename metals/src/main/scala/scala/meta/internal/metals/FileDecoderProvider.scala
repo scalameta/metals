@@ -33,6 +33,7 @@ import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.parsing.ClassArtifact
 import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.parsing.ClassFinderGranularity
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
 import scala.meta.metap.Format
@@ -635,7 +636,7 @@ final class FileDecoderProvider(
             redirectErrorOutput = false,
             userConfig().javaHome,
             Map.empty,
-            s => {
+            ProcessOutput.Lines { s =>
               sbOut.append(s)
               sbOut.append(Properties.lineSeparator)
             },

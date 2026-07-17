@@ -16,6 +16,7 @@ import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -73,7 +74,7 @@ class MbtDebugSessionStarter(
           workspace,
           redirectErrorOutput = false,
           env = javaHomeEnv(target),
-          processOut = Some(out),
+          processOut = Some(ProcessOutput.Lines(out)),
           processErr = Some(err),
         )
         .complete,
@@ -97,7 +98,7 @@ class MbtDebugSessionStarter(
         workspace,
         redirectErrorOutput = false,
         env = javaHomeEnv(target),
-        processOut = Some(out),
+        processOut = Some(ProcessOutput.Lines(out)),
         processErr = Some(err),
       )
       .complete
@@ -139,7 +140,7 @@ class MbtDebugSessionStarter(
             workspace,
             redirectErrorOutput = false,
             env = javaHomeEnv(target),
-            processOut = Some(out),
+            processOut = Some(ProcessOutput.Lines(out)),
             processErr = Some(err),
           )
           .complete,

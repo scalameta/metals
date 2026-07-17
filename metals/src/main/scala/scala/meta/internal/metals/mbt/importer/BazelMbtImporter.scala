@@ -18,6 +18,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
 
 /**
@@ -494,7 +495,7 @@ abstract class BazelMbtImporter(
         projectRoot,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,
-        processOut = line => buf.append(line),
+        processOut = ProcessOutput.Lines(line => buf.append(line)),
         processErr = _ => (),
       )
       .future

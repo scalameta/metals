@@ -9,6 +9,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.sys.process.BasicIO
+import scala.util.Using
+import scala.util.Using.Releasable
 import scala.util.control.NonFatal
 
 import scala.meta.internal.ansi.AnsiFilter
@@ -30,7 +32,9 @@ object SystemProcess {
       cwd: AbsolutePath,
       redirectErrorOutput: Boolean,
       env: Map[String, String],
-      processOut: Option[String => Unit] = Some(scribe.info(_)),
+      processOut: Option[ProcessOutput] = Some(
+        ProcessOutput.Lines(scribe.info(_))
+      ),
       processErr: Option[String => Unit] = Some(scribe.error(_)),
       propagateError: Boolean = false,
       discardInput: Boolean = true,
@@ -68,30 +72,20 @@ object SystemProcess {
   def wrapProcess(
       ps: Process,
       redirectErrorOutput: Boolean,
-      processOut: Option[String => Unit],
+      processOut: Option[ProcessOutput],
       processErr: Option[String => Unit],
       discardInput: Boolean,
       threadNamePrefix: String,
   )(implicit ec: ExecutionContext): SystemProcess = {
-    def readOutput(
-        name: String,
-        stream: InputStream,
-        f: String => Unit,
-    ): Thread = {
-      val filter = AnsiFilter()
+    def spawnReader(name: String)(body: => Unit): Thread = {
       val thread = new Thread {
-        override def run(): Unit = {
-          // use scala.sys.process implementation
-          try {
-            BasicIO.processFully(line => f(filter(line)))(
-              stream
-            )
-          } catch {
+        override def run(): Unit =
+          try body
+          catch {
             case _: IOException => // that's ok, happens on cancel
             case NonFatal(e) =>
               scribe.error("Unexcepted error in reading out", e)
           }
-        }
       }
       if (threadNamePrefix.nonEmpty)
         thread.setName(s"$threadNamePrefix-$name")
@@ -100,14 +94,42 @@ object SystemProcess {
       thread
     }
 
+    def readOutput(
+        name: String,
+        stream: InputStream,
+        f: String => Unit,
+    ): Thread = {
+      val filter = AnsiFilter()
+      // use scala.sys.process implementation
+      spawnReader(name)(BasicIO.processFully(line => f(filter(line)))(stream))
+    }
+
+    def readRawOutput(
+        name: String,
+        stream: InputStream,
+        out: OutputStream,
+    ): Thread = {
+      // `out` is caller-owned, so it is released by flushing
+      implicit val flushSink: Releasable[OutputStream] = _.flush()
+      spawnReader(name)(
+        Using.resource(stream)(in => Using.resource(out)(in.transferTo))
+      )
+    }
+
     if (discardInput) {
       // sbt might ask - Project loading failed: (r)etry, (q)uit, (l)ast, or (i)gnore? (default: r)
       // and stuck there
       ps.getOutputStream().close
     }
 
+    val stdoutReader = processOut.map {
+      case ProcessOutput.Lines(f) =>
+        readOutput("stdout", ps.getInputStream(), f)
+      case ProcessOutput.RawBytes(sink) =>
+        readRawOutput("stdout", ps.getInputStream(), sink)
+    }
     val outReaders = List(
-      processOut.map(f => readOutput("stdout", ps.getInputStream(), f)),
+      stdoutReader,
       if (redirectErrorOutput) None
       else processErr.map(f => readOutput("stderr", ps.getErrorStream(), f)),
     ).flatten
