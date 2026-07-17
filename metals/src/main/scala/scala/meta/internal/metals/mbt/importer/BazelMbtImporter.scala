@@ -56,11 +56,11 @@ abstract class BazelMbtImporter(
       bazelBin <- queryBazelBin()
       maven = resolveMavenDependencies(outputBase)
       (targets, protoDump) <- queryTargetsAndRules(patterns)
-      effectiveScalaVersion = BazelEffectiveScalaVersionResolver.resolve(
+      classification = computeSourceClassification(
+        targets,
+        protoDump,
         outputBase,
         maven.dependencyModules,
-        protoDump.getStrings("scala_version"),
-        userConfig(),
       )
       _ <- assembleAndWrite(
         workspace,
@@ -69,7 +69,7 @@ abstract class BazelMbtImporter(
         targets,
         protoDump,
         bazelBin,
-        effectiveScalaVersion,
+        classification,
         maven,
       )
     } yield ()
@@ -121,16 +121,12 @@ abstract class BazelMbtImporter(
         else Future.unit
     } yield (targets, protoDump)
 
-  private def assembleAndWrite(
-      workspace: AbsolutePath,
-      namespaceMode: BazelMbtNamespaceMode,
-      out: AbsolutePath,
+  private def computeSourceClassification(
       targets: List[String],
       protoDump: BazelTargetsProtoDump,
-      bazelBin: Option[Path],
-      effectiveScalaVersion: Option[String],
-      maven: MavenResolution,
-  ): Future[Unit] = {
+      outputBase: Option[Path],
+      dependencyModules: Seq[MbtDependencyModule],
+  ): SourceClassification = {
     val srcs = protoDump.srcLabelsByTarget
     val (genSrcOutputsByTarget, genSrcLabels) =
       if (userConfig().importGeneratedSourcesMbt)
@@ -140,6 +136,55 @@ abstract class BazelMbtImporter(
     val filteredSrcs = srcs.map { case (t, labels) =>
       t -> labels.filterNot(genSrcLabels)
     }
+    val scalaVersions = protoDump.getStrings("scala_version")
+    val effectiveScalaVersionValue =
+      BazelEffectiveScalaVersionResolver.resolve(
+        outputBase,
+        dependencyModules,
+        scalaVersions,
+        userConfig(),
+      )
+
+    val filegroupLabels = protoDump.filegroupLabels.toList.sorted
+    val scalaVersionByTarget = (targets ++ filegroupLabels).map { target =>
+      val targetScalaVersion = scalaVersions
+        .get(target)
+        .flatMap(BazelScalaVersions.maxVersion)
+        .orElse(effectiveScalaVersionValue)
+      target -> targetScalaVersion
+    }.toMap
+    val inactiveSources = BazelBuildSrcs.inactiveSources(
+      protoDump.srcsByTarget,
+      scalaVersionByTarget,
+    )
+    // Every source living in a `select_for_scala_version` branch (active or
+    // inactive); sources outside any branch are version-agnostic.
+    val versionSpecificSourceLabels = protoDump.srcsByTarget.values
+      .flatMap(_.byVersion.values.flatten)
+      .toSet
+    scribe.info(
+      s"bazel-mbt: ${inactiveSources.size} version-specific sources " +
+        "from inactive select() branches"
+    )
+    SourceClassification(
+      filteredSrcs,
+      genSrcOutputsByTarget,
+      scalaVersionByTarget,
+      inactiveSources,
+      versionSpecificSourceLabels,
+    )
+  }
+
+  private def assembleAndWrite(
+      workspace: AbsolutePath,
+      namespaceMode: BazelMbtNamespaceMode,
+      out: AbsolutePath,
+      targets: List[String],
+      protoDump: BazelTargetsProtoDump,
+      bazelBin: Option[Path],
+      classification: SourceClassification,
+      maven: MavenResolution,
+  ): Future[Unit] = {
     val scalacOptions = protoDump.getStrings("scalacopts")
     val javacOptions = protoDump.getStrings("javacopts")
     val runTargets = targets
@@ -191,7 +236,7 @@ abstract class BazelMbtImporter(
     val build = BazelMbtBuildSupport.fromDiscovery(
       namespaceMode,
       targets,
-      filteredSrcs,
+      classification.filteredSrcs,
       scalacOptions,
       javacOptions,
       deps,
@@ -199,8 +244,10 @@ abstract class BazelMbtImporter(
       runTargets,
       classDirectories,
       allDependencyModules,
-      effectiveScalaVersion,
-      genSrcOutputsByTarget,
+      classification.scalaVersionByTarget,
+      classification.inactiveSources,
+      classification.versionSpecificSourceLabels,
+      classification.genSrcOutputsByTarget,
     )
     Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
   }
@@ -357,6 +404,14 @@ object BazelMbtImporter {
   private case class MavenResolution(
       hubs: List[BazelMavenJsonImporter.MavenHub],
       dependencyModules: Seq[MbtDependencyModule],
+  )
+
+  private case class SourceClassification(
+      filteredSrcs: Map[String, List[String]],
+      genSrcOutputsByTarget: Map[String, List[String]],
+      scalaVersionByTarget: Map[String, Option[String]],
+      inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
+      versionSpecificSourceLabels: Set[String],
   )
 
   private def isClassJarOutput(label: String): Boolean =

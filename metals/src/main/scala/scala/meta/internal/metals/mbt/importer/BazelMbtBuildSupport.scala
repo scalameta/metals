@@ -40,11 +40,17 @@ object BazelMbtBuildSupport {
       runTargets: Set[String],
       classDirectoriesByTarget: Map[String, String],
       dependencyModules: Seq[MbtDependencyModule],
-      scalaVersion: Option[String],
-      genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
+      scalaVersionByTarget: Map[String, Option[String]],
+      inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
+      versionSpecificSourceLabels: Set[String],
+      genSrcOutputsByTarget: Map[String, List[String]],
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
+    // The latest Scala version used anywhere in the project, used as a fallback
+    // for real namespaces whose targets declare no version.
+    val scalaVersion =
+      BazelScalaVersions.maxVersion(scalaVersionByTarget.values.flatten)
     if (targetLabels.isEmpty) {
       if (granularity == BazelMbtNamespaceMode.Workspace) {
         MbtBuild(
@@ -56,123 +62,43 @@ object BazelMbtBuildSupport {
         MbtBuild.empty
       }
     } else {
-      val keys = targetLabels.map(t => t -> namespaceKey(granularity, t)).toMap
-      val targetSet = targetLabels.toSet
-      val dependsByNs =
-        computeDependsOn(
-          granularity,
-          targetLabels,
-          directDepRules,
-          keys,
-          targetSet,
-        )
-      val externalDepsByNs =
-        computeExternalDeps(
-          granularity,
-          targetLabels,
-          externalDepsByTarget,
-          keys,
-        )
-      val runTargetsByNs =
-        computeRunTargets(granularity, targetLabels, runTargets, keys)
-      val classDirectoriesByNs =
-        computeClassDirectories(
-          targetLabels,
-          runTargetsByNs,
-          classDirectoriesByTarget,
-          keys,
-        )
-      val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(BazelLabels.fileLabelToWorkspaceRelativePath)
-      }
+      val (attributes, aggregates) = prepareAssembly(
+        granularity,
+        targetLabels,
+        srcsByTarget,
+        scalacOptionsByTarget,
+        javacOptionsByTarget,
+        directDepRules,
+        externalDepsByTarget,
+        runTargets,
+        classDirectoriesByTarget,
+        scalaVersionByTarget,
+        inactiveSources,
+        versionSpecificSourceLabels,
+        genSrcOutputsByTarget,
+      )
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
-
-      if (granularity == BazelMbtNamespaceMode.BuildFile) {
-        val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
-        val scalacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
-        val javacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
-        val genSrcOutputsByNamespaces =
-          mutable.Map.empty[String, mutable.Buffer[String]]
-        for {
-          t <- targetLabels
-          p = keys(t)
-          f <- srcFilesByTarget.getOrElse(t, Nil)
-        } {
-          byBuildFile.getOrElseUpdate(p, mutable.Set.empty) += f
-        }
-        // Ensure targets with no srcs (e.g. export-only targets) still produce
-        // a namespace so their dependsOn (exports) are preserved.
-        for (t <- targetLabels) {
-          byBuildFile.getOrElseUpdate(keys(t), mutable.Set.empty)
-        }
-        for {
-          t <- targetLabels
-          p = keys(t)
-          scalacOptions = scalacOptionsByTarget.getOrElse(t, Nil)
-          if scalacOptions.nonEmpty
-        } {
-          scalacOptionsByBuildFile.update(
-            p,
-            scalacOptionsByBuildFile.getOrElse(p, Nil) ++ scalacOptions,
-          )
-        }
-        for {
-          t <- targetLabels
-          p = keys(t)
-          javacOptions = javacOptionsByTarget.getOrElse(t, Nil)
-          if javacOptions.nonEmpty
-        } {
-          javacOptionsByBuildFile.update(
-            p,
-            javacOptionsByBuildFile.getOrElse(p, Nil) ++ javacOptions,
-          )
-        }
-        for {
-          t <- targetLabels
-          p = keys(t)
-          path <- genSrcOutputsByTarget.getOrElse(t, Nil)
-        } {
-          genSrcOutputsByNamespaces.getOrElseUpdate(
-            p,
-            mutable.Buffer.empty,
-          ) += path
-        }
-        for ((namespace, files) <- byBuildFile) {
-          putNamespace(
-            namespaces,
-            namespace,
-            files.toSet,
-            scalacOptionsByBuildFile.getOrElse(namespace, Nil),
-            javacOptionsByBuildFile.getOrElse(namespace, Nil),
-            dependsByNs.getOrElse(namespace, Set.empty),
-            externalDepsByNs.getOrElse(namespace, Set.empty),
-            runTargetsByNs.getOrElse(namespace, Set.empty),
-            classDirectoriesByNs.getOrElse(namespace, Nil),
-            scalaVersion,
-            genSrcOutputsByNamespaces
-              .getOrElse(namespace, mutable.Buffer.empty)
-              .toSeq,
-          )
-        }
-      } else {
-        val allSrcs = srcFilesByTarget.values.flatten.toSet
-        val allExtDeps = externalDepsByTarget.values.flatten.toSet
-        val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
-        putNamespace(
+      if (granularity == BazelMbtNamespaceMode.BuildFile)
+        buildBuildFileNamespaces(
           namespaces,
-          workspaceNamespaceName,
-          allSrcs,
-          // We don't want to merge compiler options for workspace namespaces, as it's easy to get conflicts
-          Nil,
-          Nil,
-          Set.empty,
-          allExtDeps,
-          runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
-          classDirectoriesByNs.getOrElse(workspaceNamespaceName, Nil),
+          targetLabels,
+          attributes,
+          aggregates,
           scalaVersion,
-          allGenSrcOutputs,
         )
-      }
+      else
+        buildWorkspaceNamespace(
+          namespaces,
+          targetLabels,
+          attributes,
+          aggregates,
+          scalaVersion,
+        )
+      buildVersionBranchNamespaces(
+        namespaces,
+        attributes,
+        aggregates,
+      )
       MbtBuild(
         depModules,
         namespaces,
@@ -180,6 +106,221 @@ object BazelMbtBuildSupport {
       )
     }
   }
+
+  private case class TargetAttributes(
+      srcFilesByTarget: Map[String, List[String]],
+      scalacOptionsByTarget: Map[String, List[String]],
+      javacOptionsByTarget: Map[String, List[String]],
+      externalDepsByTarget: Map[String, List[String]],
+      genSrcOutputsByTarget: Map[String, List[String]],
+      scalaVersionByTarget: Map[String, Option[String]],
+  )
+
+  /** Per-namespace aggregations derived from the target attributes. */
+  private case class NamespaceAggregates(
+      keys: Map[String, String],
+      targetsByNs: Map[String, List[String]],
+      dependsByNs: Map[String, Set[String]],
+      externalDepsByNs: Map[String, Set[String]],
+      runTargetsByNs: Map[String, Set[String]],
+      classDirectoriesByNs: Map[String, List[String]],
+      unconditionalFilesByNs: Map[String, Set[String]],
+      branchGroups: Map[(String, String), VersionBranch],
+  )
+
+  private def prepareAssembly(
+      granularity: BazelMbtNamespaceMode,
+      targetLabels: List[String],
+      srcsByTarget: Map[String, List[String]],
+      scalacOptionsByTarget: Map[String, List[String]],
+      javacOptionsByTarget: Map[String, List[String]],
+      directDepRules: Map[String, List[String]],
+      externalDepsByTarget: Map[String, List[String]],
+      runTargets: Set[String],
+      classDirectoriesByTarget: Map[String, String],
+      scalaVersionByTarget: Map[String, Option[String]],
+      inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
+      versionSpecificSourceLabels: Set[String],
+      genSrcOutputsByTarget: Map[String, List[String]],
+  ): (TargetAttributes, NamespaceAggregates) = {
+    val keys = targetLabels.map(t => t -> namespaceKey(granularity, t)).toMap
+    val targetsByNs = targetLabels.groupBy(keys(_))
+    val targetSet = targetLabels.toSet
+    val dependsByNs =
+      computeDependsOn(
+        granularity,
+        targetLabels,
+        directDepRules,
+        keys,
+        targetSet,
+      )
+    val externalDepsByNs =
+      computeExternalDeps(granularity, targetLabels, externalDepsByTarget, keys)
+    val runTargetsByNs =
+      computeRunTargets(granularity, targetLabels, runTargets, keys)
+    val classDirectoriesByNs =
+      computeClassDirectories(
+        targetLabels,
+        runTargetsByNs,
+        classDirectoriesByTarget,
+        keys,
+      )
+
+    val isInactiveSource: String => Boolean = inactiveSources.contains
+    val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
+      k -> v
+        .filterNot(isInactiveSource)
+        .flatMap(BazelLabels.fileLabelToWorkspaceRelativePath)
+    }
+    val isVersionSpecific: String => Boolean =
+      versionSpecificSourceLabels.contains
+    val unconditional = mutable.Map.empty[String, mutable.Set[String]]
+    for {
+      target <- targetLabels
+      label <- srcsByTarget.getOrElse(target, Nil)
+      if !isVersionSpecific(label)
+      path <- BazelLabels.fileLabelToWorkspaceRelativePath(label)
+    } unconditional.getOrElseUpdate(keys(target), mutable.Set.empty) += path
+    val branchGroups =
+      versionBranchGroups(
+        granularity,
+        targetLabels,
+        srcsByTarget,
+        inactiveSources,
+      )
+    val attributes = TargetAttributes(
+      srcFilesByTarget = srcFilesByTarget,
+      scalacOptionsByTarget = scalacOptionsByTarget,
+      javacOptionsByTarget = javacOptionsByTarget,
+      externalDepsByTarget = externalDepsByTarget,
+      genSrcOutputsByTarget = genSrcOutputsByTarget,
+      scalaVersionByTarget = scalaVersionByTarget,
+    )
+    val aggregates = NamespaceAggregates(
+      keys = keys,
+      targetsByNs = targetsByNs,
+      dependsByNs = dependsByNs,
+      externalDepsByNs = externalDepsByNs,
+      runTargetsByNs = runTargetsByNs,
+      classDirectoriesByNs = classDirectoriesByNs,
+      unconditionalFilesByNs =
+        unconditional.map { case (k, v) => k -> v.toSet }.toMap,
+      branchGroups = branchGroups,
+    )
+    (attributes, aggregates)
+  }
+
+  private def buildBuildFileNamespaces(
+      namespaces: ju.Map[String, MbtNamespace],
+      targetLabels: List[String],
+      attrs: TargetAttributes,
+      agg: NamespaceAggregates,
+      scalaVersion: Option[String],
+  ): Unit = {
+    // Targets with no srcs (e.g. export-only targets) still produce a
+    // namespace so their dependsOn (exports) are preserved.
+    val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
+    for (t <- targetLabels) {
+      byBuildFile.getOrElseUpdate(agg.keys(t), mutable.Set.empty) ++=
+        attrs.srcFilesByTarget.getOrElse(t, Nil)
+    }
+    val scalacOptionsByBuildFile =
+      concatByNamespace(targetLabels, attrs.scalacOptionsByTarget, agg.keys)
+    val javacOptionsByBuildFile =
+      concatByNamespace(targetLabels, attrs.javacOptionsByTarget, agg.keys)
+    val genSrcOutputsByNamespace =
+      concatByNamespace(targetLabels, attrs.genSrcOutputsByTarget, agg.keys)
+    for ((namespace, files) <- byBuildFile) {
+      val targetsForNs = agg.targetsByNs.getOrElse(namespace, Nil)
+      val nsScalaVersions = targetsForNs
+        .flatMap(attrs.scalaVersionByTarget.getOrElse(_, None))
+        .distinct
+      if (nsScalaVersions.sizeIs > 1)
+        scribe.warn(
+          s"bazel-mbt: build-file namespace '$namespace' has active targets " +
+            s"with multiple Scala versions ${nsScalaVersions.sorted.mkString(", ")}; " +
+            s"analyzing all of them as ${BazelScalaVersions.maxVersion(nsScalaVersions).getOrElse("?")}. " +
+            "Split mixed-version targets into separate packages for correct analysis."
+        )
+      val nsScalaVersion =
+        BazelScalaVersions.maxVersion(nsScalaVersions).orElse(scalaVersion)
+      val externalDeps = agg.externalDepsByNs.getOrElse(namespace, Set.empty)
+      putNamespace(
+        namespaces,
+        namespace,
+        files.toSet,
+        dependencyModuleIds = externalDeps,
+        scalaVersion = nsScalaVersion,
+        scalacOptions = scalacOptionsByBuildFile.getOrElse(namespace, Nil),
+        javacOptions = javacOptionsByBuildFile.getOrElse(namespace, Nil),
+        dependsOn = agg.dependsByNs.getOrElse(namespace, Set.empty),
+        runTargets = agg.runTargetsByNs.getOrElse(namespace, Set.empty),
+        classDirectories = agg.classDirectoriesByNs.getOrElse(namespace, Nil),
+        uncheckedSources = genSrcOutputsByNamespace.getOrElse(namespace, Nil),
+      )
+    }
+  }
+
+  private def buildWorkspaceNamespace(
+      namespaces: ju.Map[String, MbtNamespace],
+      targetLabels: List[String],
+      attrs: TargetAttributes,
+      agg: NamespaceAggregates,
+      scalaVersion: Option[String],
+  ): Unit = {
+    val allSrcs = attrs.srcFilesByTarget.values.flatten.toSet
+    val allExtDeps = attrs.externalDepsByTarget.values.flatten.toSet
+    val allGenSrcOutputs = attrs.genSrcOutputsByTarget.values.flatten.toSeq
+    val wsScalaVersions = targetLabels
+      .flatMap(attrs.scalaVersionByTarget.getOrElse(_, None))
+      .distinct
+    val wsScalaVersion =
+      BazelScalaVersions.maxVersion(wsScalaVersions).orElse(scalaVersion)
+    // Compiler options are deliberately left empty for the workspace
+    // namespace — merging flags from unrelated targets easily conflicts.
+    putNamespace(
+      namespaces,
+      workspaceNamespaceName,
+      allSrcs,
+      dependencyModuleIds = allExtDeps,
+      runTargets =
+        agg.runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
+      classDirectories =
+        agg.classDirectoriesByNs.getOrElse(workspaceNamespaceName, Nil),
+      scalaVersion = wsScalaVersion,
+      uncheckedSources = allGenSrcOutputs,
+    )
+  }
+
+  /** Builds the synthetic `<namespace>@<version>` branch namespaces. */
+  private def buildVersionBranchNamespaces(
+      namespaces: ju.Map[String, MbtNamespace],
+      attrs: TargetAttributes,
+      agg: NamespaceAggregates,
+  ): Unit =
+    for (
+      ((nsKey, version), branch) <-
+        agg.branchGroups.toSeq.sortBy { case (group, _) => group }
+    ) {
+      val targetsForNs = agg.targetsByNs.getOrElse(nsKey, Nil)
+      val depTargets: Set[String] = branch.originTargets ++ targetsForNs
+      val externalDeps =
+        depTargets.flatMap(attrs.externalDepsByTarget.getOrElse(_, Nil))
+      val files =
+        branch.files ++ agg.unconditionalFilesByNs.getOrElse(nsKey, Set.empty)
+      val dependsOn = agg.dependsByNs.getOrElse(nsKey, Set.empty).map { dep =>
+        if (agg.branchGroups.contains((dep, version))) s"$dep@$version"
+        else dep
+      }
+      putNamespace(
+        namespaces,
+        s"$nsKey@$version",
+        files,
+        dependsOn = dependsOn,
+        dependencyModuleIds = externalDeps,
+        scalaVersion = Some(version),
+      )
+    }
 
   def namespaceKey(
       granularity: BazelMbtNamespaceMode,
@@ -191,6 +332,63 @@ object BazelMbtBuildSupport {
     } else {
       ruleLabel
     }
+
+  private case class VersionBranch(
+      files: Set[String],
+      originTargets: Set[String],
+  )
+
+  /** Groups inactive sources by (namespace key, branch version). */
+  private def versionBranchGroups(
+      granularity: BazelMbtNamespaceMode,
+      targetLabels: List[String],
+      srcsByTarget: Map[String, List[String]],
+      inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
+  ): Map[(String, String), VersionBranch] = {
+    val groups = mutable.Map.empty[(String, String), VersionBranch]
+    val consumersByLabel = mutable.Map.empty[String, mutable.ListBuffer[String]]
+    for {
+      target <- targetLabels
+      label <- srcsByTarget.getOrElse(target, Nil)
+      if inactiveSources.contains(label)
+    } consumersByLabel.getOrElseUpdate(label, mutable.ListBuffer.empty) +=
+      target
+    for {
+      label <- srcsByTarget.values.flatten.toSet[String]
+      inactive <- inactiveSources.get(label)
+      path <- BazelLabels.fileLabelToWorkspaceRelativePath(label)
+    } {
+      val consumers = consumersByLabel
+        .getOrElse(label, mutable.ListBuffer.empty[String])
+        .filterNot(_ == inactive.originTarget)
+        .toList
+      val attributedTargets =
+        if (consumers.nonEmpty) consumers else List(inactive.originTarget)
+      for (attributed <- attributedTargets) {
+        val key = (namespaceKey(granularity, attributed), inactive.version)
+        val branch = groups.getOrElse(key, VersionBranch(Set.empty, Set.empty))
+        groups(key) = VersionBranch(
+          branch.files + path,
+          branch.originTargets + attributed,
+        )
+      }
+    }
+    groups.toMap
+  }
+
+  private def concatByNamespace(
+      targetLabels: List[String],
+      valuesByTarget: Map[String, List[String]],
+      keys: Map[String, String],
+  ): Map[String, List[String]] = {
+    val acc = mutable.Map.empty[String, mutable.ListBuffer[String]]
+    for {
+      target <- targetLabels
+      values = valuesByTarget.getOrElse(target, Nil)
+      if values.nonEmpty
+    } acc.getOrElseUpdate(keys(target), mutable.ListBuffer.empty) ++= values
+    acc.map { case (namespace, values) => namespace -> values.toList }.toMap
+  }
 
   private def computeDependsOn(
       granularity: BazelMbtNamespaceMode,
@@ -223,20 +421,26 @@ object BazelMbtBuildSupport {
       targetLabels: List[String],
       externalDepsByTarget: Map[String, List[String]],
       keys: Map[String, String],
-  ): Map[String, Set[String]] = {
-    if (granularity == BazelMbtNamespaceMode.Workspace) {
-      Map.empty
-    } else {
-      val outgoing = mutable.Map.empty[String, mutable.Set[String]]
-      for {
-        t <- targetLabels
-        moduleId <- externalDepsByTarget.getOrElse(t, Nil)
-      } {
-        val nsKey = keys(t)
-        outgoing.getOrElseUpdate(nsKey, mutable.Set.empty) += moduleId
-      }
-      outgoing.map { case (k, v) => k -> v.toSet }.toMap
+  ): Map[String, Set[String]] =
+    if (granularity == BazelMbtNamespaceMode.Workspace) Map.empty
+    else aggregateByNamespace(targetLabels, externalDepsByTarget, keys)
+
+  /**
+   * Union each target's ids into the namespace key it belongs to.
+   */
+  private def aggregateByNamespace[A](
+      targetLabels: List[String],
+      idsByTarget: Map[String, Iterable[A]],
+      keys: Map[String, String],
+  ): Map[String, Set[A]] = {
+    val outgoing = mutable.Map.empty[String, mutable.Set[A]]
+    for {
+      target <- targetLabels
+      id <- idsByTarget.getOrElse(target, Nil)
+    } {
+      outgoing.getOrElseUpdate(keys(target), mutable.Set.empty) += id
     }
+    outgoing.map { case (k, v) => k -> v.toSet }.toMap
   }
 
   private def computeRunTargets(
@@ -281,13 +485,13 @@ object BazelMbtBuildSupport {
       namespaces: ju.Map[String, MbtNamespace],
       name: String,
       sources: Set[String],
-      scalacOptions: Seq[String],
-      javacOptions: Seq[String],
-      dependsOn: Set[String],
       dependencyModuleIds: Set[String],
-      runTargets: Set[String],
-      classDirectories: List[String],
       scalaVersion: Option[String],
+      scalacOptions: Seq[String] = Nil,
+      javacOptions: Seq[String] = Nil,
+      dependsOn: Set[String] = Set.empty,
+      runTargets: Set[String] = Set.empty,
+      classDirectories: List[String] = Nil,
       uncheckedSources: Seq[String] = Nil,
   ): Unit = {
     val sortedRunTargets =
@@ -321,13 +525,8 @@ object BazelMbtBuildSupport {
       m,
       name,
       Set.empty,
-      Nil,
-      Nil,
-      Set.empty,
-      dependencyModuleIds,
-      Set.empty,
-      Nil,
-      scalaVersion,
+      dependencyModuleIds = dependencyModuleIds,
+      scalaVersion = scalaVersion,
     )
     m
   }
