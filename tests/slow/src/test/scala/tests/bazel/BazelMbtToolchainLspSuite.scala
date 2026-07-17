@@ -128,7 +128,7 @@ class BazelMbtToolchainLspSuite
        |}
        |""".stripMargin
 
-  test("bazel-mbt-srcjar-sources-navigation".ignore) {
+  test("bazel-mbt-srcjar-sources-navigation") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {

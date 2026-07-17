@@ -233,21 +233,24 @@ abstract class BazelMbtImporter(
       externalDepModules,
       importDepModules,
     )
-    val build = BazelMbtBuildSupport.fromDiscovery(
-      namespaceMode,
-      targets,
-      classification.filteredSrcs,
-      scalacOptions,
-      javacOptions,
-      deps,
-      allExternalDepModules,
-      runTargets,
-      classDirectories,
-      allDependencyModules,
-      classification.scalaVersionByTarget,
-      classification.inactiveSources,
-      classification.versionSpecificSourceLabels,
-      classification.genSrcOutputsByTarget,
+    val build = BazelSrcjarSources.materializeAll(
+      workspace,
+      BazelMbtBuildSupport.fromDiscovery(
+        namespaceMode,
+        targets,
+        classification.filteredSrcs,
+        scalacOptions,
+        javacOptions,
+        deps,
+        allExternalDepModules,
+        runTargets,
+        classDirectories,
+        allDependencyModules,
+        classification.scalaVersionByTarget,
+        classification.inactiveSources,
+        classification.versionSpecificSourceLabels,
+        classification.genSrcOutputsByTarget,
+      ),
     )
     Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
   }
