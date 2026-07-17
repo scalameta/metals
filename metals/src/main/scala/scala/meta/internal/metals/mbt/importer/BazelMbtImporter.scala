@@ -348,7 +348,17 @@ abstract class BazelMbtImporter(
     queryBazelInfo("bazel-bin")
   }
 
-  private def queryBazelInfo(key: String): Future[Option[Path]] = {
+  // Retried once: a stale Bazel server can fail this first call with exit 36
+  // while restarting.
+  private def queryBazelInfo(key: String): Future[Option[Path]] =
+    runBazelInfo(key).flatMap {
+      case Some(path) => Future.successful(Some(path))
+      case None =>
+        scribe.info(s"bazel-mbt: retrying failed 'bazel info $key'")
+        runBazelInfo(key)
+    }
+
+  private def runBazelInfo(key: String): Future[Option[Path]] = {
     val buf = new StringBuilder()
     shellRunner
       .run(
