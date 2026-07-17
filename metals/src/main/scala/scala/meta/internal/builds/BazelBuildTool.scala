@@ -3,6 +3,7 @@ package scala.meta.internal.builds
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.builds.BazelBuildTool.minBazelVersion
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -60,7 +61,7 @@ case class BazelBuildTool(
     ) ++ BazelBuildTool.projectViewArgs(projectRoot)
   }
 
-  override def minimumVersion: String = "5.0.0"
+  override def minimumVersion: String = minBazelVersion
 
   override def recommendedVersion: String = version
 
@@ -270,6 +271,7 @@ object BazelBuildTool {
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
   val bspVersion: String = "4.0.3"
+  val minBazelVersion = "5.0.0"
   val defaultBazelVersion = "8.2.1"
 
   def resolveBazelVersion(projectRoot: AbsolutePath): String = {
