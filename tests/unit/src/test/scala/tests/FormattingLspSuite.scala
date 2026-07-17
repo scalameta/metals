@@ -267,7 +267,6 @@ class FormattingLspSuite extends BaseLspSuite("formatting") {
             |  expected : Object
             |align=does-not-exis
             |^
-            |
             |> version=${V.scalafmtVersion}
             |> runner.dialect = scala213
             |> align=does-not-exist

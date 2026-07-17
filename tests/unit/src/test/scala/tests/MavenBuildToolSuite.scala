@@ -2,7 +2,9 @@ package tests
 
 import java.nio.file.Files
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 import scala.util.Properties
 
 import scala.meta.internal.builds.MavenBuildTool
@@ -125,14 +127,18 @@ class MavenBuildToolSuite extends BaseSuite {
     )
 
     assertEquals(
-      mavenBuildTool(workspace).mbtTestCommand(
-        workspace,
-        mbtTarget(
-          "com.example:app:1.0.0",
-          "app/target/test-classes",
-          projectDir = Some(workspace.resolve("app")),
+      Await.result(
+        mavenBuildTool(workspace).mbtTestCommand(
+          workspace,
+          mbtTarget(
+            "com.example:app:1.0.0",
+            "app/target/test-classes",
+            projectDir = Some(workspace.resolve("app")),
+          ),
+          testSuites,
+          Nil,
         ),
-        testSuites,
+        Duration.Inf,
       ),
       List(
         "mvn",
@@ -140,6 +146,18 @@ class MavenBuildToolSuite extends BaseSuite {
         modulePom.toString,
         "test",
         "-Dtest=com.example.MySuite#testFoo",
+        "-Denforcer.skip=true",
+        "-Dcheckstyle.skip=true",
+        "-Dspotbugs.skip=true",
+        "-Drat.skip=true",
+        "-Dpmd.skip=true",
+        "-Dmaven.javadoc.skip=true",
+        "-Dspring-javaformat.skip=true",
+        "-Dspotless.check.skip=true",
+        "-Djacoco.skip=true",
+        "-Dsonar.skip=true",
+        "-Ddependency-check.skip=true",
+        "-Dgpg.skip=true",
       ),
     )
   }

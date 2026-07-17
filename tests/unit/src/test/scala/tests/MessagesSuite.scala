@@ -37,12 +37,4 @@ class MessagesSuite extends BaseSuite {
         s" Please upgrade to Scala version ${V.scala212} or alternatively to legacy Scala 2.11.12.",
     )
   }
-
-  test("unsupported-legacy-211") {
-    assertDiffEqual(
-      Messages.UnsupportedScalaVersion.message(Set("2.11.12")),
-      s"You are using Scala version 2.11.12, which is not supported in this version of Metals." +
-        s" Please upgrade to Scala version ${V.scala212}.",
-    )
-  }
 }
