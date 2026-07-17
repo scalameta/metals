@@ -5,11 +5,12 @@ import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.importer.BazelBuildSrcs
 import scala.meta.internal.metals.mbt.importer.BazelMbtBuildSupport
 import scala.meta.internal.metals.mbt.importer.BazelMbtNamespaceMode
+import scala.meta.internal.metals.mbt.importer.ScalaToolchainModules
 
 /**
- * [[BazelMbtBuildSupport.fromDiscovery]] with test defaults for the
- * generated-sources input the production call site always supplies but most
- * namespace-assembly tests leave empty.
+ * [[BazelMbtBuildSupport.fromDiscovery]] with test defaults for the toolchain
+ * and generated-sources inputs the production call site always supplies but
+ * most namespace-assembly tests leave empty.
  */
 object MbtBuildFixture {
 
@@ -27,6 +28,8 @@ object MbtBuildFixture {
       scalaVersionByTarget: Map[String, Option[String]],
       inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
       versionSpecificSourceLabels: Set[String],
+      toolchain: ScalaToolchainModules.Resolution =
+        ScalaToolchainModules.Resolution.empty,
       genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild =
     BazelMbtBuildSupport.fromDiscovery(
@@ -43,6 +46,7 @@ object MbtBuildFixture {
       scalaVersionByTarget,
       inactiveSources,
       versionSpecificSourceLabels,
+      toolchain,
       genSrcOutputsByTarget,
     )
 

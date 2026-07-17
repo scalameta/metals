@@ -43,6 +43,7 @@ object BazelMbtBuildSupport {
       scalaVersionByTarget: Map[String, Option[String]],
       inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
       versionSpecificSourceLabels: Set[String],
+      toolchain: ScalaToolchainModules.Resolution,
       genSrcOutputsByTarget: Map[String, List[String]],
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
@@ -84,6 +85,7 @@ object BazelMbtBuildSupport {
           targetLabels,
           attributes,
           aggregates,
+          toolchain,
           scalaVersion,
         )
       else
@@ -92,13 +94,20 @@ object BazelMbtBuildSupport {
           targetLabels,
           attributes,
           aggregates,
+          toolchain,
           scalaVersion,
         )
       buildVersionBranchNamespaces(
         namespaces,
         attributes,
         aggregates,
+        toolchain,
       )
+      referencedToolchainModules(
+        namespaces,
+        dependencyModules,
+        toolchain,
+      ).foreach(depModules.add)
       MbtBuild(
         depModules,
         namespaces,
@@ -215,6 +224,7 @@ object BazelMbtBuildSupport {
       targetLabels: List[String],
       attrs: TargetAttributes,
       agg: NamespaceAggregates,
+      toolchain: ScalaToolchainModules.Resolution,
       scalaVersion: Option[String],
   ): Unit = {
     // Targets with no srcs (e.g. export-only targets) still produce a
@@ -249,7 +259,14 @@ object BazelMbtBuildSupport {
         namespaces,
         namespace,
         files.toSet,
-        dependencyModuleIds = externalDeps,
+        dependencyModuleIds = externalDeps ++
+          toolchainIdsFor(
+            toolchain,
+            files,
+            nsScalaVersion,
+            targetsForNs,
+            externalDeps,
+          ),
         scalaVersion = nsScalaVersion,
         scalacOptions = scalacOptionsByBuildFile.getOrElse(namespace, Nil),
         javacOptions = javacOptionsByBuildFile.getOrElse(namespace, Nil),
@@ -266,6 +283,7 @@ object BazelMbtBuildSupport {
       targetLabels: List[String],
       attrs: TargetAttributes,
       agg: NamespaceAggregates,
+      toolchain: ScalaToolchainModules.Resolution,
       scalaVersion: Option[String],
   ): Unit = {
     val allSrcs = attrs.srcFilesByTarget.values.flatten.toSet
@@ -282,7 +300,14 @@ object BazelMbtBuildSupport {
       namespaces,
       workspaceNamespaceName,
       allSrcs,
-      dependencyModuleIds = allExtDeps,
+      dependencyModuleIds = allExtDeps ++
+        toolchainIdsFor(
+          toolchain,
+          allSrcs,
+          wsScalaVersion,
+          targetLabels,
+          allExtDeps,
+        ),
       runTargets =
         agg.runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
       classDirectories =
@@ -297,6 +322,7 @@ object BazelMbtBuildSupport {
       namespaces: ju.Map[String, MbtNamespace],
       attrs: TargetAttributes,
       agg: NamespaceAggregates,
+      toolchain: ScalaToolchainModules.Resolution,
   ): Unit =
     for (
       ((nsKey, version), branch) <-
@@ -317,10 +343,48 @@ object BazelMbtBuildSupport {
         s"$nsKey@$version",
         files,
         dependsOn = dependsOn,
-        dependencyModuleIds = externalDeps,
+        dependencyModuleIds = externalDeps ++
+          toolchainIdsFor(
+            toolchain,
+            files,
+            Some(version),
+            depTargets,
+            externalDeps,
+          ),
         scalaVersion = Some(version),
       )
     }
+
+  // Toolchain/generated-proto modules join the module list only when
+  // referenced.
+  private def referencedToolchainModules(
+      namespaces: ju.Map[String, MbtNamespace],
+      dependencyModules: Seq[MbtDependencyModule],
+      toolchain: ScalaToolchainModules.Resolution,
+  ): Seq[MbtDependencyModule] = {
+    val referencedIds = namespaces
+      .values()
+      .asScala
+      .flatMap(_.getDependencyModuleIds.asScala)
+      .toSet
+    val knownIds = dependencyModules.map(_.id).toSet
+    toolchain.modules
+      .filter(module => referencedIds(module.id) && !knownIds(module.id))
+  }
+
+  private def toolchainIdsFor(
+      toolchain: ScalaToolchainModules.Resolution,
+      files: Iterable[String],
+      version: Option[String],
+      targets: Iterable[String],
+      existing: Set[String],
+  ): Set[String] =
+    if (
+      files.exists(BazelSrcjarSources.isScalaBearingSource) ||
+      targets.exists(toolchain.compilerClasspathTargets)
+    )
+      toolchain.moduleIdsFor(version, targets, existing)
+    else Set.empty
 
   def namespaceKey(
       granularity: BazelMbtNamespaceMode,

@@ -213,7 +213,7 @@ class BazelMbtToolchainLspSuite
         |$compilerToolJava
         |""".stripMargin
 
-  test("bazel-mbt-java-target-compiler-classpath".ignore) {
+  test("bazel-mbt-java-target-compiler-classpath") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {
@@ -276,7 +276,7 @@ class BazelMbtToolchainLspSuite
        |}
        |""".stripMargin
 
-  test("bazel-mbt-workspace-scala-version-over-user-fallback".ignore) {
+  test("bazel-mbt-workspace-scala-version-over-user-fallback") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()
     for {

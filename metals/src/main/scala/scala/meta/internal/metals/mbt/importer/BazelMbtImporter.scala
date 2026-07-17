@@ -62,6 +62,8 @@ abstract class BazelMbtImporter(
         outputBase,
         maven.dependencyModules,
       )
+      versions = computeVersionSets(targets, protoDump, classification)
+      toolchain <- resolveToolchainAndTesting(versions, outputBase)
       _ <- assembleAndWrite(
         workspace,
         namespaceMode,
@@ -71,6 +73,7 @@ abstract class BazelMbtImporter(
         bazelBin,
         classification,
         maven,
+        toolchain,
       )
     } yield ()
   }
@@ -175,6 +178,80 @@ abstract class BazelMbtImporter(
     )
   }
 
+  private def computeVersionSets(
+      targets: List[String],
+      protoDump: BazelTargetsProtoDump,
+      classification: SourceClassification,
+  ): VersionSets = {
+    val srcs = protoDump.srcLabelsByTarget
+    val scalaVersionByTarget = classification.scalaVersionByTarget
+    val inactiveSources = classification.inactiveSources
+
+    // Supplied through toolchain resolution; invisible to the maven matching
+    // above (see ScalaToolchainModules).
+    val compilerClasspathTargets = targets.filter { target =>
+      protoDump.depsByTarget
+        .getOrElse(target, Nil)
+        .exists(ScalaToolchainModules.isCompilerClasspathLabel)
+    }.toSet
+    val libraryVersions =
+      (scalaVersionByTarget.collect {
+        case (target, Some(version))
+            if srcs
+              .getOrElse(target, Nil)
+              .exists(BazelSrcjarSources.isScalaBearingSource) =>
+          version
+      } ++ inactiveSources.collect {
+        case (label, inactive)
+            if BazelSrcjarSources.isScalaBearingSource(label) =>
+          inactive.version
+      }).toSet
+    val compilerVersions = scalaVersionsOfTargets(
+      scalaVersionByTarget,
+      inactiveSources,
+      compilerClasspathTargets,
+    )
+    val testTargets = targets.filter { target =>
+      protoDump.ruleClassesByTarget.get(target).contains("scala_test")
+    }.toSet
+    val testingVersions = scalaVersionsOfTargets(
+      scalaVersionByTarget,
+      inactiveSources,
+      testTargets,
+    )
+    VersionSets(
+      libraryVersions,
+      compilerVersions,
+      testingVersions,
+      compilerClasspathTargets,
+      testTargets,
+    )
+  }
+
+  private def resolveToolchainAndTesting(
+      versions: VersionSets,
+      outputBase: Option[Path],
+  ): Future[ScalaToolchainModules.Resolution] = {
+    val testingModulesByVersion = discoverTestingModules(
+      versions.testTargets,
+      versions.testingVersions,
+      outputBase,
+    )
+    for {
+      toolchain <- ScalaToolchainModules.resolve(
+        versions.libraryVersions,
+        versions.compilerVersions,
+        versions.compilerClasspathTargets,
+        testingModulesByVersion,
+        versions.testTargets,
+      )
+      _ = scribe.info(
+        s"bazel-mbt: resolved ${toolchain.modules.size} Scala toolchain " +
+          s"modules for versions ${versions.libraryVersions.toSeq.sorted.mkString(", ")}"
+      )
+    } yield toolchain
+  }
+
   private def assembleAndWrite(
       workspace: AbsolutePath,
       namespaceMode: BazelMbtNamespaceMode,
@@ -184,6 +261,7 @@ abstract class BazelMbtImporter(
       bazelBin: Option[Path],
       classification: SourceClassification,
       maven: MavenResolution,
+      toolchain: ScalaToolchainModules.Resolution,
   ): Future[Unit] = {
     val scalacOptions = protoDump.getStrings("scalacopts")
     val javacOptions = protoDump.getStrings("javacopts")
@@ -249,6 +327,7 @@ abstract class BazelMbtImporter(
         classification.scalaVersionByTarget,
         classification.inactiveSources,
         classification.versionSpecificSourceLabels,
+        toolchain,
         classification.genSrcOutputsByTarget,
       ),
     )
@@ -362,6 +441,59 @@ abstract class BazelMbtImporter(
   override def digest(workspace: AbsolutePath): Option[String] =
     BazelDigest.current(projectRoot)
 
+  private def scalaVersionsOfTargets(
+      scalaVersionByTarget: Map[String, Option[String]],
+      inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
+      isRelevant: String => Boolean,
+  ): Set[String] =
+    (scalaVersionByTarget.collect {
+      case (target, Some(version)) if isRelevant(target) => version
+    } ++ inactiveSources.values.collect {
+      case BazelBuildSrcs.InactiveSource(version, origin)
+          if isRelevant(origin) =>
+        version
+    }).toSet
+
+  /**
+   * scalatest/scalactic jars for the `scala_test` targets, discovered in the
+   * Bazel output base where rules_scala materializes the testing toolchain
+   * (invisible to `@maven//` matching like the compiler jars).
+   */
+  private def discoverTestingModules(
+      testTargets: Set[String],
+      testingVersions: Set[String],
+      outputBase: Option[Path],
+  ): Map[String, List[MbtDependencyModule]] =
+    if (testTargets.isEmpty) Map.empty
+    else
+      outputBase match {
+        case None =>
+          scribe.warn(
+            "bazel-mbt: scala_test targets are present but the Bazel output " +
+              "base could not be resolved; scalatest/scalactic will be missing " +
+              "from test sources on the presentation-compiler classpath"
+          )
+          Map.empty
+        case Some(base) =>
+          val external = base.resolve("external")
+          val discovered = ScalaToolchainModules
+            .testingModules(external)
+            .filter { case (version, _) => testingVersions(version) }
+          val declaredButMissing = ScalaToolchainModules
+            .testingToolchainVersions(external)
+            .intersect(testingVersions)
+            .diff(discovered.keySet)
+          if (declaredButMissing.nonEmpty)
+            scribe.warn(
+              "bazel-mbt: rules_scala testing-toolchain repositories for Scala " +
+                s"${declaredButMissing.toSeq.sorted.mkString(", ")} are present " +
+                s"under $external but their jars are not materialized; build or " +
+                "fetch the scala_test targets so navigation into " +
+                "scalatest/scalactic works"
+            )
+          discovered
+      }
+
   private def queryOutputBase(): Future[Option[Path]] = {
     queryBazelInfo("output_base")
   }
@@ -415,6 +547,14 @@ object BazelMbtImporter {
       scalaVersionByTarget: Map[String, Option[String]],
       inactiveSources: Map[String, BazelBuildSrcs.InactiveSource],
       versionSpecificSourceLabels: Set[String],
+  )
+
+  private case class VersionSets(
+      libraryVersions: Set[String],
+      compilerVersions: Set[String],
+      testingVersions: Set[String],
+      compilerClasspathTargets: Set[String],
+      testTargets: Set[String],
   )
 
   private def isClassJarOutput(label: String): Boolean =
