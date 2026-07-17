@@ -56,11 +56,12 @@ abstract class BazelMbtImporter(
       bazelBin <- queryBazelBin()
       maven = resolveMavenDependencies(outputBase)
       (targets, protoDump) <- queryTargetsAndRules(patterns)
-      scalaVersionFromDeps <- queryScalaVersionFromDeps()
-      effectiveScalaVersion <- scalaVersionFromDeps match {
-        case Some(value) => Future.successful(Some(value))
-        case None => queryScalaVersion(targets)
-      }
+      effectiveScalaVersion = BazelEffectiveScalaVersionResolver.resolve(
+        outputBase,
+        maven.dependencyModules,
+        protoDump.getStrings("scala_version"),
+        userConfig(),
+      )
       _ <- assembleAndWrite(
         workspace,
         namespaceMode,
@@ -310,35 +311,6 @@ abstract class BazelMbtImporter(
 
   override def digest(workspace: AbsolutePath): Option[String] =
     BazelDigest.current(projectRoot)
-
-  private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
-    queryOutput <- BazelQuery.allScalaLibrariesQuery.run(queryEnv)
-    lines = asLines(queryOutput)
-  } yield lines.flatMap(extractScalaVersionFromLabel).headOption
-
-  private def queryScalaVersion(
-      @annotation.nowarn("msg=never used") targets: List[String]
-  ): Future[Option[String]] =
-    Future.successful(parseScalaVersionFromBuildFiles())
-
-  private def parseScalaVersionFromBuildFiles(): Option[String] = {
-    val versionPattern = """scala_version\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
-    val moduleFile = projectRoot.resolve("MODULE.bazel")
-    val workspaceFile = projectRoot.resolve("WORKSPACE")
-
-    def extractFromFile(path: AbsolutePath): Option[String] =
-      if (Files.exists(path.toNIO)) {
-        val content = new String(Files.readAllBytes(path.toNIO))
-        versionPattern.findFirstMatchIn(content).map(_.group(1))
-      } else None
-
-    extractFromFile(moduleFile).orElse(extractFromFile(workspaceFile))
-  }
-
-  private def extractScalaVersionFromLabel(label: String): Option[String] = {
-    val versionPattern = """scala[_-]library[_-](\d+\.\d+\.\d+)""".r
-    versionPattern.findFirstMatchIn(label).map(_.group(1))
-  }
 
   private def queryOutputBase(): Future[Option[Path]] = {
     queryBazelInfo("output_base")
