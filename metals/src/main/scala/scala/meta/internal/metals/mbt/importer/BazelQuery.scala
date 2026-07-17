@@ -36,10 +36,6 @@ object BazelQuery {
   }
   object OutputMode {
     case object Label extends OutputMode("label", Nil)
-    case object Xml extends OutputMode("xml", Nil)
-
-    // valid only for "bazel cquery"
-    case object Starlark extends OutputMode("starlark", Nil)
 
     private val targetStreamArgs = List(
       "--proto:flatten_selects=false",
@@ -49,13 +45,6 @@ object BazelQuery {
     // Binary length-delimited `Target` stream; must be captured as raw bytes.
     case object StreamedProto
         extends OutputMode("streamed_proto", targetStreamArgs)
-  }
-  sealed abstract class QueryType(name: String) {
-    override def toString(): String = name
-  }
-  object QueryType {
-    case object Query extends QueryType("query")
-    case object CQuery extends QueryType("cquery")
   }
 
   import OutputMode._
@@ -108,7 +97,7 @@ object BazelQuery {
   def fullInformationQuery(targets: List[String]): BazelQuery = {
     val escaped = targets.flatMap(quoteTarget)
     val query = s"deps(set(${escaped.mkString(" ")}))"
-    BazelQuery(query, outputMode = Xml)
+    BazelQuery(query, outputMode = StreamedProto)
   }
 
   def allScalaLibrariesQuery: BazelQuery =
@@ -125,8 +114,6 @@ object BazelQuery {
 case class BazelQuery(
     query: String,
     outputMode: BazelQuery.OutputMode,
-    extraArgs: List[String] = Nil,
-    queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query,
 ) {
   import BazelQuery._
 
@@ -143,12 +130,6 @@ case class BazelQuery(
     )(() => buf.toString)
   }
 
-  /**
-   * Runs the query and parses its binary `streamed_proto` `Target` stream
-   * (see [[fullInformationQuery]]) into a [[BazelTargetsProtoDump]].
-   * Stream captured as raw bytes — the line-based [[run]] path would
-   * mangle non-text bytes — and parsed by [[BazelStreamedProto.parseRules]].
-   */
   def runProtoDump(
       env: Env
   )(implicit ec: ExecutionContext): Future[BazelTargetsProtoDump] =
@@ -171,7 +152,7 @@ case class BazelQuery(
     val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner
       .run(
-        s"bazel-mbt-$queryType",
+        "bazel-mbt-query",
         bazelQueryArgs(queryArgs),
         projectRoot,
         redirectErrorOutput = false,
@@ -201,9 +182,9 @@ case class BazelQuery(
   private def bazelQueryArgs(queryArgs: List[String]): List[String] =
     List(
       "bazel",
-      queryType.toString,
+      "query",
       s"--output=$outputMode",
-    ) ++ outputMode.extraArgs ++ List("--keep_going") ++ queryArgs ++ extraArgs
+    ) ++ outputMode.extraArgs ++ List("--keep_going") ++ queryArgs
 
   private def prepareQueryArgs(query: String): (List[String], Option[Path]) = {
     if (query.length() <= queryStringMaxLength) (List(query), None)

@@ -34,6 +34,7 @@ abstract class BazelMbtImporter(
     tables: Option[Tables] = None,
 )(implicit ec: ExecutionContext)
     extends MbtImportProvider {
+  import BazelMbtImporter._
 
   override val name: String = "bazel"
 
@@ -53,191 +54,154 @@ abstract class BazelMbtImporter(
     for {
       outputBase <- queryOutputBase()
       bazelBin <- queryBazelBin()
-      mavenHubs = BazelMavenJsonImporter
-        .discoverMavenHubs(
-          BazelMavenJsonImporter.externalDirs(
-            projectRoot,
-            outputBase.map(AbsolutePath.apply),
-          )
-        )
-      _ = scribe.info(
-        s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
-      )
-      mavenImportStart = System.nanoTime()
-      dependencyModules = BazelMavenJsonImporter
-        .importMaven(projectRoot, outputBase, mavenHubs)
-      _ = scribe.debug(
-        s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
-      )
-      ruleKindsQueryOutput <- BazelQuery
-        .buildRuleKindsQuery(patterns)
-        .run(queryEnv)
-      targets = asLines(ruleKindsQueryOutput)
-      _ = scribe.info(s"bazel-mbt: found ${targets.size} targets")
-      targetsXmlQueryOutput <- BazelQuery
-        .fullInformationQuery(targets)
-        .run(queryEnv)
-      targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
-      srcs = targetsXmlDump.getLabels("srcs")
-      (genSrcOutputsByTarget, genSrcLabels) <-
-        if (userConfig().importGeneratedSourcesMbt)
-          queryGenSrcOutputsByTarget(srcs)
-        else
-          Future.successful(
-            (Map.empty[String, List[String]], Set.empty[String])
-          )
-      filteredSrcs = srcs.map { case (t, labels) =>
-        t -> labels.filterNot(genSrcLabels)
-      }
-      scalacOptions = targetsXmlDump.getStrings("scalacopts")
-      javacOptions = targetsXmlDump.getStrings("javacopts")
-      runTargets = targets
-        .filter(target =>
-          targetsXmlDump.ruleClassesByTarget
-            .get(target)
-            .exists(isRunnableRule)
-        )
-        .toSet
-      classDirectories = classDirectoriesForRunTargets(
-        bazelBin,
-        runTargets,
-        targetsXmlDump.ruleOutputsByTarget,
-      )
-      targetSet = targets.toSet
-      deps = queryDeps(targetSet, targets, targetsXmlDump)
-      reachableLabelsByTarget = targetsXmlDump.reachableLabels(targets)
-      externalDeps =
-        targetsXmlDump.externalDepsByTarget(reachableLabelsByTarget)
-      externalDepModules = BazelMavenJsonImporter.matchExternalDeps(
-        externalDeps,
-        dependencyModules,
-        mavenHubs,
-      )
-      importTargets =
-        targetSet.filter(targetsXmlDump.jarLabelsByImportTarget.contains)
-      _ = scribe.info(s"bazel-mbt: import targets: $importTargets")
-      importTargetJarLabels = importTargets.map { target =>
-        target -> resolvedJarLabels(
-          target,
-          targetsXmlDump.jarLabelsByImportTarget,
-          targetsXmlDump.ruleOutputsByTarget,
-        )
-      }.toMap
-      importJarModules = buildImportJarModules(
-        importTargetJarLabels,
-        targetsXmlDump.sourcesJarByImportTarget,
-        bazelBin,
-      )
-      importDepModules = buildImportModuleIdsByTarget(
-        targets,
-        importTargetJarLabels,
-        reachableLabelsByTarget,
-      )
-      allDependencyModules = dependencyModules ++ importJarModules
-      allExternalDepModules = mergeDepsModuleMaps(
-        externalDepModules,
-        importDepModules,
-      )
+      maven = resolveMavenDependencies(outputBase)
+      (targets, protoDump) <- queryTargetsAndRules(patterns)
       scalaVersionFromDeps <- queryScalaVersionFromDeps()
       effectiveScalaVersion <- scalaVersionFromDeps match {
         case Some(value) => Future.successful(Some(value))
         case None => queryScalaVersion(targets)
       }
-      build = BazelMbtBuildSupport.fromDiscovery(
+      _ <- assembleAndWrite(
+        workspace,
         namespaceMode,
+        out,
         targets,
-        filteredSrcs,
-        scalacOptions,
-        javacOptions,
-        deps,
-        allExternalDepModules,
-        runTargets,
-        classDirectories,
-        allDependencyModules,
+        protoDump,
+        bazelBin,
         effectiveScalaVersion,
-        genSrcOutputsByTarget,
+        maven,
       )
-      _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()
   }
 
-  private def asLines(output: String) =
-    output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
-
-  private def isRunnableRule(ruleClass: String): Boolean =
-    ruleClass == "scala_binary" || ruleClass == "java_binary" ||
-      ruleClass == "scala_test" || ruleClass == "java_test"
-
-  private def classDirectoriesForRunTargets(
-      bazelBin: Option[Path],
-      runTargets: Set[String],
-      ruleOutputsByTarget: Map[String, List[String]],
-  ): Map[String, String] =
-    bazelBin.toList.flatMap { bin =>
-      for {
-        target <- runTargets.toList
-        output <- ruleOutputsByTarget
-          .getOrElse(target, Nil)
-          .find(isClassJarOutput)
-        relative <- BazelLabels.fileLabelToWorkspaceRelativePath(
-          output
+  private def resolveMavenDependencies(
+      outputBase: Option[Path]
+  ): MavenResolution = {
+    val mavenHubs = BazelMavenJsonImporter
+      .discoverMavenHubs(
+        BazelMavenJsonImporter.externalDirs(
+          projectRoot,
+          outputBase.map(AbsolutePath.apply),
         )
-      } yield target -> bin.resolve(relative).toString
+      )
+    scribe.info(
+      s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
+    )
+    val mavenImportStart = System.nanoTime()
+    val dependencyModules =
+      BazelMavenJsonImporter.importMaven(projectRoot, outputBase, mavenHubs)
+    scribe.debug(
+      s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
+    )
+    MavenResolution(mavenHubs, dependencyModules)
+  }
+
+  private def queryTargetsAndRules(
+      patterns: List[String]
+  ): Future[(List[String], BazelTargetsProtoDump)] =
+    for {
+      ruleKindsQueryOutput <- BazelQuery
+        .buildRuleKindsQuery(patterns)
+        .run(queryEnv)
+      targets = asLines(ruleKindsQueryOutput)
+      _ = scribe.info(s"bazel-mbt: found ${targets.size} targets")
+      protoDump <- BazelQuery
+        .fullInformationQuery(targets)
+        .runProtoDump(queryEnv)
+      _ <-
+        if (targets.nonEmpty && protoDump.isEmpty)
+          Future.failed(
+            new IllegalStateException(
+              s"bazel-mbt: the rule-kinds query matched ${targets.size} targets " +
+                "but the full-information query returned no rule data; keeping " +
+                "the previous MBT import."
+            )
+          )
+        else Future.unit
+    } yield (targets, protoDump)
+
+  private def assembleAndWrite(
+      workspace: AbsolutePath,
+      namespaceMode: BazelMbtNamespaceMode,
+      out: AbsolutePath,
+      targets: List[String],
+      protoDump: BazelTargetsProtoDump,
+      bazelBin: Option[Path],
+      effectiveScalaVersion: Option[String],
+      maven: MavenResolution,
+  ): Future[Unit] = {
+    val srcs = protoDump.srcLabelsByTarget
+    val (genSrcOutputsByTarget, genSrcLabels) =
+      if (userConfig().importGeneratedSourcesMbt)
+        computeGenSrcOutputs(srcs, protoDump)
+      else
+        (Map.empty[String, List[String]], Set.empty[String])
+    val filteredSrcs = srcs.map { case (t, labels) =>
+      t -> labels.filterNot(genSrcLabels)
+    }
+    val scalacOptions = protoDump.getStrings("scalacopts")
+    val javacOptions = protoDump.getStrings("javacopts")
+    val runTargets = targets
+      .filter(target =>
+        protoDump.ruleClassesByTarget
+          .get(target)
+          .exists(isRunnableRule)
+      )
+      .toSet
+    val classDirectories = classDirectoriesForRunTargets(
+      bazelBin,
+      runTargets,
+      protoDump.ruleOutputsByTarget,
+    )
+    val deps = queryDeps(targets, protoDump)
+    val reachableLabelsByTarget = protoDump.reachableLabels(targets)
+    val externalDeps =
+      protoDump.externalDepsByTarget(reachableLabelsByTarget)
+    val externalDepModules = BazelMavenJsonImporter.matchExternalDeps(
+      externalDeps,
+      maven.dependencyModules,
+      maven.hubs,
+    )
+    val importTargets =
+      targets.filter(protoDump.jarLabelsByImportTarget.contains)
+    scribe.info(s"bazel-mbt: import targets: ${importTargets.toSet}")
+    val importTargetJarLabels = importTargets.map { target =>
+      target -> resolvedJarLabels(
+        target,
+        protoDump.jarLabelsByImportTarget,
+        protoDump.ruleOutputsByTarget,
+      )
     }.toMap
-
-  private def isClassJarOutput(label: String): Boolean =
-    label.endsWith(".jar") &&
-      !label.endsWith("-src.jar") &&
-      !label.endsWith("_deploy.jar") &&
-      !label.endsWith("_deploy-src.jar")
-
-  private def selectedNamespaceMode(): Future[BazelMbtNamespaceMode] =
-    rememberedNamespaceMode match {
-      case Some(mode) => Future.successful(mode)
-      case None => requestNamespaceMode()
-    }
-
-  private def rememberedNamespaceMode: Option[BazelMbtNamespaceMode] =
-    tables.flatMap { tables =>
-      tables.bazelMbtNamespaceModes
-        .selectedMode(projectRoot)
-        .flatMap(BazelMbtNamespaceMode.fromName)
-    }
-
-  private def requestNamespaceMode(): Future[BazelMbtNamespaceMode] =
-    languageClient match {
-      case Some(client) =>
-        client
-          .showMessageRequest(Messages.BazelMbtNamespaceChoice.params())
-          .asScala
-          .map { item =>
-            val selected = Messages.BazelMbtNamespaceChoice.selectedMode(item)
-            selected.foreach(rememberNamespaceMode)
-            selected.getOrElse(BazelMbtNamespaceMode.Workspace)
-          }
-      case None =>
-        Future.successful(BazelMbtNamespaceMode.Workspace)
-    }
-
-  private def rememberNamespaceMode(mode: BazelMbtNamespaceMode): Unit =
-    tables.foreach { tables =>
-      tables.bazelMbtNamespaceModes.chooseMode(projectRoot, mode.name)
-    }
-
-  override def isBuildRelated(path: AbsolutePath): Boolean =
-    BazelBuildTool.isBazelRelatedPath(projectRoot, path)
-
-  override def digest(workspace: AbsolutePath): Option[String] =
-    BazelDigest.current(projectRoot)
-
-  private def queryDeps(
-      targetSet: Set[String],
-      orderedTargets: List[String],
-      targetsXml: BazelTargetsXmlDump,
-  ): Map[String, List[String]] = {
-    orderedTargets.map { target =>
-      target -> targetsXml.depsByTarget.getOrElse(target, Nil).filter(targetSet)
-    }.toMap
+    val importJarModules = buildImportJarModules(
+      importTargetJarLabels,
+      protoDump.sourcesJarByImportTarget,
+      bazelBin,
+    )
+    val importDepModules = buildImportModuleIdsByTarget(
+      targets,
+      importTargetJarLabels,
+      reachableLabelsByTarget,
+    )
+    val allDependencyModules = maven.dependencyModules ++ importJarModules
+    val allExternalDepModules = mergeDepsModuleMaps(
+      externalDepModules,
+      importDepModules,
+    )
+    val build = BazelMbtBuildSupport.fromDiscovery(
+      namespaceMode,
+      targets,
+      filteredSrcs,
+      scalacOptions,
+      javacOptions,
+      deps,
+      allExternalDepModules,
+      runTargets,
+      classDirectories,
+      allDependencyModules,
+      effectiveScalaVersion,
+      genSrcOutputsByTarget,
+    )
+    Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
   }
 
   private def buildImportJarModules(
@@ -280,51 +244,6 @@ abstract class BazelMbtImporter(
     }
   }
 
-  private def buildImportModuleIdsByTarget(
-      targets: List[String],
-      importTargetJarLabels: Map[String, List[String]],
-      reachableLabelsByTarget: Map[String, List[String]],
-  ): Map[String, List[String]] = {
-    val ownModuleIds = importTargetJarLabels.map { case (target, jarLabels) =>
-      target -> jarLabels.flatMap(moduleIdFromJarLabel).distinct
-    }
-    targets.map { target =>
-      val transitiveIds = reachableLabelsByTarget
-        .getOrElse(target, Nil)
-        .flatMap(ownModuleIds.getOrElse(_, Nil))
-      target -> (ownModuleIds.getOrElse(target, Nil) ++ transitiveIds).distinct
-    }.toMap
-  }
-
-  /**
-   * A `java_import`/`scala_import`'s `jars` attribute can point at a
-   * genrule or a raw file. We try to return the outputted jar of that genrule,
-   * or, if it doesn't exist, we return it as if it was a raw file.
-   */
-  private def resolvedJarLabels(
-      target: String,
-      jarLabelsByTarget: Map[String, List[String]],
-      ruleOutputsByTarget: Map[String, List[String]],
-  ): List[String] =
-    jarLabelsByTarget.getOrElse(target, Nil).map { label =>
-      ruleOutputsByTarget
-        .getOrElse(label, Nil)
-        .find(isClassJarOutput)
-        .getOrElse(label)
-    }
-
-  private def moduleIdFromJarLabel(label: String): Option[String] =
-    BazelLabels.fileLabelToWorkspaceRelativePath(label).map { relative =>
-      val lastSlash = relative.lastIndexOf('/')
-      if (lastSlash >= 0) {
-        val pkg = relative.substring(0, lastSlash).replace('/', '.')
-        val fileName = relative.substring(lastSlash + 1)
-        s"$pkg:$fileName:local"
-      } else {
-        s"root:$relative:local"
-      }
-    }
-
   private def resolveJarUri(
       label: String,
       bazelBin: Option[Path],
@@ -346,14 +265,51 @@ abstract class BazelMbtImporter(
     }
   }
 
-  private def mergeDepsModuleMaps(
-      maps: Map[String, List[String]]*
-  ): Map[String, List[String]] = {
-    val allKeys = maps.flatMap(_.keySet).toSet
-    allKeys.map { key =>
-      key -> maps.flatMap(_.getOrElse(key, Nil)).distinct.toList
-    }.toMap
-  }
+  private def asLines(output: String) =
+    output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
+
+  private def isRunnableRule(ruleClass: String): Boolean =
+    ruleClass == "scala_binary" || ruleClass == "java_binary" ||
+      ruleClass == "scala_test" || ruleClass == "java_test"
+
+  private def selectedNamespaceMode(): Future[BazelMbtNamespaceMode] =
+    rememberedNamespaceMode match {
+      case Some(mode) => Future.successful(mode)
+      case None => requestNamespaceMode()
+    }
+
+  private def rememberedNamespaceMode: Option[BazelMbtNamespaceMode] =
+    tables.flatMap { tables =>
+      tables.bazelMbtNamespaceModes
+        .selectedMode(projectRoot)
+        .flatMap(BazelMbtNamespaceMode.fromName)
+    }
+
+  private def requestNamespaceMode(): Future[BazelMbtNamespaceMode] =
+    languageClient match {
+      case Some(client) =>
+        client
+          .showMessageRequest(Messages.BazelMbtNamespaceChoice.params())
+          .asScala
+          .map { item =>
+            val selected = Messages.BazelMbtNamespaceChoice.selectedMode(item)
+            selected.foreach(rememberNamespaceMode)
+            selected.getOrElse(BazelMbtNamespaceMode.Workspace)
+          }
+      case None =>
+        Future.successful(BazelMbtNamespaceMode.Workspace)
+    }
+
+  private def rememberNamespaceMode(mode: BazelMbtNamespaceMode): Unit =
+    tables.foreach { tables =>
+      tables.bazelMbtNamespaceModes.chooseMode(projectRoot, mode.name)
+    }
+
+  override def isBuildRelated(path: AbsolutePath): Boolean =
+    BazelBuildTool.isBazelRelatedPath(projectRoot, path)
+
+  override def digest(workspace: AbsolutePath): Option[String] =
+    BazelDigest.current(projectRoot)
 
   private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
     queryOutput <- BazelQuery.allScalaLibrariesQuery.run(queryEnv)
@@ -384,119 +340,6 @@ abstract class BazelMbtImporter(
     versionPattern.findFirstMatchIn(label).map(_.group(1))
   }
 
-  /**
-   * For any entry in `srcsByTarget` that is a Bazel rule (not a real source
-   * file), runs `bazel cquery --output=files` on those rules and maps the
-   * output file paths to `uncheckedSources` for the owning target.
-   * Also returns the set of gen src labels so callers can exclude them from
-   * `sources`.
-   */
-  private def queryGenSrcOutputsByTarget(
-      srcsByTarget: Map[String, List[String]]
-  ): Future[(Map[String, List[String]], Set[String])] = {
-    val allSrcLabels =
-      srcsByTarget.values.flatten.filter(_.startsWith("//")).toSet
-    if (allSrcLabels.isEmpty) {
-      Future.successful((Map.empty[String, List[String]], Set.empty[String]))
-    } else {
-      queryRuleLabels(allSrcLabels)
-        .flatMap { ruleLabels =>
-          if (ruleLabels.isEmpty)
-            Future.successful(
-              (Map.empty[String, List[String]], Set.empty[String])
-            )
-          else
-            runBazelCqueryOutputsByLabel(ruleLabels).map { outputsByGenLabel =>
-              (
-                groupGenOutputsByTarget(
-                  srcsByTarget,
-                  ruleLabels,
-                  outputsByGenLabel,
-                ),
-                ruleLabels,
-              )
-            }
-        }
-        .recover { case e =>
-          scribe.warn(s"bazel-mbt: failed to query generated source outputs", e)
-          (Map.empty[String, List[String]], Set.empty[String])
-        }
-    }
-  }
-
-  private def queryRuleLabels(srcLabels: Set[String]): Future[Set[String]] =
-    BazelQuery(s"set(${srcLabels.mkString(" ")})", BazelQuery.OutputMode.Xml)
-      .run(queryEnv)
-      .map { xml =>
-        val srcFiles = new BazelTargetsXmlDump(xml).sourceFileLabels
-        srcLabels.filterNot(srcFiles)
-      }
-
-  private def groupGenOutputsByTarget(
-      srcsByTarget: Map[String, List[String]],
-      ruleLabels: Set[String],
-      outputsByGenLabel: Map[String, List[String]],
-  ): Map[String, List[String]] =
-    srcsByTarget.flatMap { case (target, srcs) =>
-      val genPaths = srcs
-        .filter(ruleLabels)
-        .flatMap(outputsByGenLabel.getOrElse(_, Nil))
-      genPaths.foreach { genPath =>
-        if (!Files.exists(projectRoot.resolve(genPath).toNIO))
-          scribe.warn(
-            s"bazel-mbt: generated source output for target $target does not exist on disk: $genPath"
-          )
-      }
-      Option.when(genPaths.nonEmpty)(target -> genPaths)
-    }
-
-  /**
-   * Reanchor `bazel-out/<mnemonic>/bin/<file>` directory paths to `bazel-bin/<file>`.
-   * That current configuration mnemonic can differ after changes to bazel config.
-   * `bazel-bin` convenience symlink points to whichever configuration was
-   * most recently built.
-   */
-  private def anchorUnderBazelBin(path: String): String =
-    path.split("/").toList match {
-      case "bazel-out" :: _ :: "bin" :: rest =>
-        ("bazel-bin" :: rest).mkString("/")
-      case _ => path
-    }
-
-  /** bazel cquery that returns output file paths grouped by label. */
-  private def runBazelCqueryOutputsByLabel(
-      labels: Set[String]
-  ): Future[Map[String, List[String]]] = {
-    val starlarkExpr =
-      """str(target.label) + "\t" + "\t".join([f.path for f in target.files.to_list()])"""
-    BazelQuery(
-      s"set(${labels.mkString(" ")})",
-      BazelQuery.OutputMode.Starlark,
-      extraArgs = List(s"--starlark:expr=$starlarkExpr"),
-      queryType = BazelQuery.QueryType.CQuery,
-    ).run(queryEnv)
-      .map { output =>
-        output.linesIterator
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .flatMap { line =>
-            line.split("\t") match {
-              case Array(rawLabel, paths @ _*) =>
-                val label =
-                  if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
-                  else rawLabel
-                Some(label -> paths.map(anchorUnderBazelBin).toList)
-              case _ =>
-                scribe.warn(
-                  s"bazel-mbt: unexpected cquery starlark line: $line"
-                )
-                None
-            }
-          }
-          .toMap
-      }
-  }
-
   private def queryOutputBase(): Future[Option[Path]] = {
     queryBazelInfo("output_base")
   }
@@ -525,4 +368,127 @@ abstract class BazelMbtImporter(
         case _ => None
       }
   }
+}
+
+object BazelMbtImporter {
+
+  private case class MavenResolution(
+      hubs: List[BazelMavenJsonImporter.MavenHub],
+      dependencyModules: Seq[MbtDependencyModule],
+  )
+
+  private def isClassJarOutput(label: String): Boolean =
+    label.endsWith(".jar") &&
+      !label.endsWith("-src.jar") &&
+      !label.endsWith("_deploy.jar") &&
+      !label.endsWith("_deploy-src.jar")
+
+  // A `jars` label may be a genrule (return its output jar) or a raw file.
+  private def resolvedJarLabels(
+      target: String,
+      jarLabelsByTarget: Map[String, List[String]],
+      ruleOutputsByTarget: Map[String, List[String]],
+  ): List[String] =
+    jarLabelsByTarget.getOrElse(target, Nil).map { label =>
+      ruleOutputsByTarget
+        .getOrElse(label, Nil)
+        .find(isClassJarOutput)
+        .getOrElse(label)
+    }
+
+  private def moduleIdFromJarLabel(label: String): Option[String] =
+    BazelLabels.fileLabelToWorkspaceRelativePath(label).map { relative =>
+      val lastSlash = relative.lastIndexOf('/')
+      if (lastSlash >= 0) {
+        val pkg = relative.substring(0, lastSlash).replace('/', '.')
+        val fileName = relative.substring(lastSlash + 1)
+        s"$pkg:$fileName:local"
+      } else {
+        s"root:$relative:local"
+      }
+    }
+
+  private def buildImportModuleIdsByTarget(
+      targets: List[String],
+      importTargetJarLabels: Map[String, List[String]],
+      reachableLabelsByTarget: Map[String, List[String]],
+  ): Map[String, List[String]] = {
+    val ownModuleIds = importTargetJarLabels.map { case (target, jarLabels) =>
+      target -> jarLabels.flatMap(moduleIdFromJarLabel).distinct
+    }
+    targets.map { target =>
+      val transitiveIds = reachableLabelsByTarget
+        .getOrElse(target, Nil)
+        .flatMap(ownModuleIds.getOrElse(_, Nil))
+      target -> (ownModuleIds.getOrElse(target, Nil) ++ transitiveIds).distinct
+    }.toMap
+  }
+
+  private def mergeDepsModuleMaps(
+      maps: Map[String, List[String]]*
+  ): Map[String, List[String]] = {
+    val allKeys = maps.flatMap(_.keySet).toSet
+    allKeys.map { key =>
+      key -> maps.flatMap(_.getOrElse(key, Nil)).distinct.toList
+    }.toMap
+  }
+
+  private def classDirectoriesForRunTargets(
+      bazelBin: Option[Path],
+      runTargets: Set[String],
+      ruleOutputsByTarget: Map[String, List[String]],
+  ): Map[String, String] =
+    bazelBin.toList.flatMap { bin =>
+      for {
+        target <- runTargets
+        output <- ruleOutputsByTarget
+          .getOrElse(target, Nil)
+          .find(isClassJarOutput)
+        relative <- BazelLabels.fileLabelToWorkspaceRelativePath(output)
+      } yield target -> bin.resolve(relative).toString
+    }.toMap
+
+  private def queryDeps(
+      targets: List[String],
+      protoDump: BazelTargetsProtoDump,
+  ): Map[String, List[String]] = {
+    val targetSet = targets.toSet
+    targets.map { target =>
+      target -> protoDump.depsByTarget.getOrElse(target, Nil).filter(targetSet)
+    }.toMap
+  }
+
+  // Resolves generated-output `srcs` labels to their `bazel-bin`-relative paths
+  // (as `uncheckedSources`) and returns those labels so callers drop them from
+  // `sources`.
+  private def computeGenSrcOutputs(
+      srcsByTarget: Map[String, List[String]],
+      protoDump: BazelTargetsProtoDump,
+  ): (Map[String, List[String]], Set[String]) = {
+    val outputLabelToRule: Map[String, String] =
+      protoDump.ruleOutputsByTarget.flatMap { case (rule, outputs) =>
+        outputs.map(_ -> rule)
+      }
+    def isGenerated(label: String): Boolean =
+      protoDump.ruleClassesByTarget.contains(label) ||
+        outputLabelToRule.contains(label)
+    def outputsOf(label: String): List[String] =
+      protoDump.ruleClassesByTarget
+        .get(label)
+        .map(_ => protoDump.ruleOutputsByTarget.getOrElse(label, Nil))
+        .getOrElse(List(label))
+
+    val genLabels = srcsByTarget.values.flatten.toSet.filter(isGenerated)
+    val genSrcOutputsByTarget = srcsByTarget.flatMap { case (target, labels) =>
+      val genPaths = for {
+        label <- labels
+        if genLabels(label)
+        output <- outputsOf(label)
+        relative <- BazelLabels.fileLabelToWorkspaceRelativePath(output)
+      } yield s"bazel-bin/$relative"
+      Option.when(genPaths.nonEmpty)(target -> genPaths)
+    }
+    (genSrcOutputsByTarget, genLabels)
+  }
+
 }
