@@ -436,6 +436,20 @@ class BazelMbtToolchainLspSuite
        |}
        |""".stripMargin
 
+  private val orphanJava: String =
+    """|package orphan;
+       |
+       |import cats.data.NonEmptyVector;
+       |import cats.kernel.Order;
+       |import scala.Function1;
+       |
+       |public class OrphanBridge {
+       |  static <A> Object dedup(NonEmptyVector<A> v, Function1<A, A> f, Order<A> o) {
+       |    return v.distinctBy(f, o);
+       |  }
+       |}
+       |""".stripMargin
+
   private def duplicateArtifactWorkspaceLayout: String =
     s"""|/.bazelproject
         |targets:
@@ -471,6 +485,9 @@ class BazelMbtToolchainLspSuite
         |
         |/orphan/Orphan.scala
         |$orphanScala
+        |
+        |/orphan/OrphanBridge.java
+        |$orphanJava
         |""".stripMargin
 
   private def pinHubs(hubNames: List[String])(workspace: AbsolutePath): Unit = {
@@ -499,7 +516,7 @@ class BazelMbtToolchainLspSuite
     }
   }
 
-  test("bazel-mbt-fallback-classpath-dedup".ignore) {
+  test("bazel-mbt-fallback-classpath-dedup") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     useMbtFallbackClasspath = true
     cleanWorkspace()
@@ -537,6 +554,47 @@ class BazelMbtToolchainLspSuite
         s"expected hover with the cats 2.13.0 `distinctBy` member, got: $hover",
       )
       _ = assertNoDiagnostics()
+    } yield ()
+    result.andThen { case _ => useMbtFallbackClasspath = false }
+  }
+
+  test("bazel-mbt-fallback-classpath-dedup-java") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    useMbtFallbackClasspath = true
+    cleanWorkspace()
+    val result = for {
+      _ <- initialize(
+        BazelBuildLayout.multiHub(
+          duplicateArtifactWorkspaceLayout,
+          V.scala213,
+          bazelVersion,
+          List(
+            hubA -> List(s"org.typelevel:cats-core_2.13:$catsVersionA"),
+            hubB -> List(s"org.typelevel:cats-core_2.13:$catsVersionB"),
+          ),
+        ),
+        runAdditionalCommands = pinHubs(List(hubA, hubB)),
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didChangeWatchedFiles(".metals/mbt.json")
+      // `orphan/OrphanBridge.java` belongs to no target, so it is compiled by
+      // the fallback *Java* presentation compiler. Its classpath is the same
+      // MBT module list, deduplicated per artifact: with both cats-core jars
+      // present javac binds the first (2.12.0) jar and the 2.13.0-only
+      // `NonEmptyVector.distinctBy` fails with `cannot find symbol`.
+      _ <- server.didOpen("orphan/OrphanBridge.java")
+      _ <- server.didFocus("orphan/OrphanBridge.java")
+      _ <- server.didSave("orphan/OrphanBridge.java")
+      _ = assertNoDiagnostics()
+      hover <- server.hover(
+        "orphan/OrphanBridge.java",
+        orphanJava.replace(".distinctBy(", ".distinct@@By("),
+        workspace,
+      )
+      _ = assert(
+        hover.contains("distinctBy"),
+        s"expected hover with the cats 2.13.0 `distinctBy` member, got: $hover",
+      )
     } yield ()
     result.andThen { case _ => useMbtFallbackClasspath = false }
   }
