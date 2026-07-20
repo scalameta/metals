@@ -59,7 +59,8 @@ object V {
 
   val mill = "1.1.7"
 
-  val mdoc = "2.9.1"
+  // use from project/plugins.sbt
+  val mdoc = _root_.mdoc.BuildInfo.version
 
   val munit = "1.3.3"
 
