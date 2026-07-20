@@ -5,6 +5,7 @@ import javax.annotation.Nullable
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
 import ch.epfl.scala.{bsp4j => b}
+import com.google.gson.JsonElement
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
@@ -178,7 +179,9 @@ object ServerCommands {
 
   /** If uri is null discover all test suites, otherwise discover testcases in file */
   final case class DiscoverTestParams(
-      @Nullable uri: String = null
+      @Nullable uri: String = null,
+      // Force the discovery of all test suites when in MBT mode
+      @Nullable forceAll: Boolean = false,
   )
   val DiscoverTestSuites = new ParametrizedCommand[DiscoverTestParams](
     "discover-tests",
@@ -347,7 +350,7 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val StartDebugAdapter = new ParametrizedCommand[b.DebugSessionParams](
+  val StartDebugAdapter = new ParametrizedCommand[DebugAdapterStartParams](
     "debug-adapter-start",
     "Start debug adapter",
     "Start a new debugger session with fully specified DebugSessionParams",
@@ -907,9 +910,17 @@ case class DebugUnresolvedMainClassParams(
     @Nullable envFile: String = null,
 )
 
+final case class DebugAdapterStartParams(
+    @Nullable targets: java.util.List[b.BuildTargetIdentifier],
+    @Nullable dataKind: String,
+    @Nullable data: JsonElement,
+    noDebug: Boolean = false,
+)
+
 final case class ScalaTestSuitesDebugRequest(
     @Nullable target: b.BuildTargetIdentifier,
     requestData: ScalaTestSuites,
+    noDebug: Boolean = false,
 )
 
 final case class ScalaTestSuites(

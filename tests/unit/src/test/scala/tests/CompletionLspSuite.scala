@@ -721,4 +721,109 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
       )
     } yield ()
   }
+  // https://github.com/scalameta/metals/issues/8426
+  test("java-annotation-private") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/A.java
+          |package a;
+          |
+          |// @@
+          |public class A {
+          |  String name = "";
+          |}
+          |/a/src/main/java/test/annon/AnnotationPrivate.java
+          |package test.annon;
+          |
+          |import java.lang.annotation.ElementType;
+          |import java.lang.annotation.Target;
+          |
+          |@Target(ElementType.TYPE)
+          |@interface AnnotationPrivate {}
+          |/a/src/main/java/test/annon/AnnotationPublic.java
+          |package test.annon;
+          |
+          |import java.lang.annotation.ElementType;
+          |import java.lang.annotation.Target;
+          |
+          |@Target(ElementType.TYPE)
+          |public @interface AnnotationPublic {}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/A.java")
+      _ <- assertCompletion(
+        "@AnnotationP@@",
+        """|AnnotationPublic - test.annon
+           |""".stripMargin,
+        filename = Some("a/src/main/java/a/A.java"),
+      )
+    } yield ()
+  }
+
+  // https://github.com/scalameta/metals/pull/8594
+  test("java-constructor-completion") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package a;
+          |
+          |public class Test {
+          |  public void f(){
+          |    Test t = // @@
+          |  }
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "new Tes@@",
+        expectedLabel = "Test()",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Test()"),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
+
+  test("java-completion-import") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """/metals.json
+          |{
+          |  "a": {}
+          |}
+          |/a/src/main/java/a/Test.java
+          |package a;
+          |
+          |public class Test {
+          |  // @@
+          |}
+          |/a/src/main/java/a/Foo.java
+          |package a;
+          |
+          |public class Foo {
+          |}
+          |""".stripMargin
+      )
+      _ <- server.didSave("a/src/main/java/a/Test.java")
+      _ <- assertCompletionItemResolve(
+        "Foo@@",
+        expectedLabel = "Foo - a",
+        expectedDoc = Some(""),
+        expectedInsertText = Some("Foo"),
+        filename = Some("a/src/main/java/a/Test.java"),
+      )
+    } yield ()
+  }
 }

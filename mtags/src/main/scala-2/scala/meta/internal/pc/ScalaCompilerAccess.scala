@@ -28,16 +28,12 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
       def reporter = global.reporter.asInstanceOf[MetalsReporter]
     }
 
-  override def askShutdown(): Unit = {
+  override def stop(): Unit = {
     global.askShutdown()
   }
 
   override def isAlive(): Boolean = {
     global.presentationCompilerThread.isAlive()
-  }
-
-  override def stop(): Unit = {
-    global.presentationCompilerThread.stop()
   }
 
   override def presentationCompilerThread: Option[Thread] = {

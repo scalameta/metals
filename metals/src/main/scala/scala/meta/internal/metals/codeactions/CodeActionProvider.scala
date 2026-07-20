@@ -7,6 +7,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -20,13 +21,11 @@ final class CodeActionProvider(
     buildTargets: BuildTargets,
     scalafixProvider: ScalafixProvider,
     trees: Trees,
+    javaTrees: JavaTrees,
     diagnostics: Diagnostics,
     languageClient: MetalsLanguageClient,
     clientConfig: ClientConfiguration,
 )(implicit ec: ExecutionContext) {
-
-  private val extractMemberAction =
-    new ExtractRenameMember(trees, languageClient, buffers)
 
   private val allActions: List[CodeAction] = List(
     new ImplementAbstractMembers(compilers),
@@ -43,7 +42,7 @@ final class CodeActionProvider(
     ),
     new StringActions(trees),
     new RemoveInfixRefactor(trees),
-    extractMemberAction,
+    new ExtractRenameMember(trees, languageClient, buffers),
     new SourceOrganizeImports(scalafixProvider, buildTargets, diagnostics),
     new OrganizeImportsQuickFix(scalafixProvider, buildTargets, diagnostics),
     new InsertInferredType(trees, compilers, languageClient),
@@ -52,7 +51,7 @@ final class CodeActionProvider(
     new ExtractValueCodeAction(trees, buffers),
     new CreateCompanionObjectCodeAction(trees, buffers),
     new ExtractMethodCodeAction(trees, compilers),
-    new InlineValueCodeAction(trees, compilers, languageClient),
+    new InlineValueCodeAction(trees, javaTrees, compilers, languageClient),
     new ConvertToNamedArguments(trees, compilers),
     new FlatMapToForComprehensionCodeAction(trees, buffers),
     new FilterMapToCollectCodeAction(trees, compilers),
@@ -62,6 +61,13 @@ final class CodeActionProvider(
     new RemoveInvalidImportQuickFix(trees, buildTargets),
     new SourceRemoveInvalidImports(trees, buildTargets, diagnostics),
     new ConvertToNamedLambdaParameters(trees, compilers),
+    new AddMissingOverrideAnnotation(javaTrees, buffers),
+    new RemoveUnusedJavaImport(buffers),
+    new GenerateConstructors(javaTrees, buffers),
+    new GenerateGettersSetters(javaTrees, buffers),
+    new GenerateEqualsHashCodeToString(javaTrees, buffers),
+    new AddMissingReturnStatement(javaTrees, buffers),
+    new JavaExtractMethodCodeAction(javaTrees, compilers),
   )
 
   def actionsForParams(params: l.CodeActionParams): List[CodeAction] = {

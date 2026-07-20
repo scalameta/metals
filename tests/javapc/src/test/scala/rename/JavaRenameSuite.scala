@@ -155,7 +155,7 @@ class JavaRenameSuite extends BaseJavaPCSuite with RangeReplace {
        |    }
        |
        |    public static void main(String args[]){
-       |      fo@@o();
+       |      <<fo@@o>>();
        |    }
        |}
        |""".stripMargin,

@@ -39,6 +39,7 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
 
   val tmp: AbsolutePath = AbsolutePath(Files.createTempDirectory("java.metals"))
 
+  protected def javacOptions: List[String] = Nil
   protected lazy val presentationCompiler: JavaPresentationCompiler = {
     val fetch = createFetch()
     extraDependencies.foreach(fetch.addDependencies(_))
@@ -50,8 +51,7 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
     }
 
     indexJdkSources()
-
-    JavaPresentationCompiler()
+    JavaPresentationCompiler(options = javacOptions)
       .withSearch(search(myclasspath))
       .withConfiguration(
         PresentationCompilerConfigImpl()
@@ -63,7 +63,12 @@ abstract class BaseJavaPCSuite extends BaseSuite with PCSuite {
       .withLogger(LoggerFactory.getLogger("java.metals"))
       // TODO: we need a real instance of the embedded client here.
       .withEmbeddedClient(new TestingEmbeddedClient(tmp))
-      .newInstance("", myclasspath.asJava, Nil.asJava, () => Nil.asJava)
+      .newInstance(
+        "",
+        myclasspath.asJava,
+        javacOptions.asJava,
+        () => Nil.asJava,
+      )
       .asInstanceOf[JavaPresentationCompiler]
   }
 

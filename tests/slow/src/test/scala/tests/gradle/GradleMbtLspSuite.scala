@@ -1,7 +1,5 @@
 package tests.gradle
 
-import scala.util.Properties
-
 import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
@@ -123,7 +121,7 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "javaHome": "<javaHome-path>",
             |      "classDirectories": [
             |        "build/classes/java/main",
             |        "build/classes/scala/main"
@@ -142,7 +140,7 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "javaHome": "<javaHome-path>",
             |      "dependsOn": [
             |        "basic"
             |      ],
@@ -152,7 +150,8 @@ class GradleMbtLspSuite
             |      ],
             |      "projectPath": ":"
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}
             |""".stripMargin,
       )
@@ -256,7 +255,7 @@ class GradleMbtLspSuite
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "javaHome": "<javaHome-path>",
             |      "classDirectories": ["<classDirectories-path>"],
             |      "projectPath": ":"
             |    },
@@ -269,14 +268,15 @@ class GradleMbtLspSuite
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
-            |      "javaHome": "file://${Properties.javaHome.replace("\\", "/")}/",
+            |      "javaHome": "<javaHome-path>",
             |      "dependsOn": [
             |        "plain-java"
             |      ],
             |      "classDirectories": ["<classDirectories-path>"],
             |      "projectPath": ":"
             |    }
-            |  }
+            |  },
+            |  "uncheckedSources": []
             |}
             |""".stripMargin,
       )

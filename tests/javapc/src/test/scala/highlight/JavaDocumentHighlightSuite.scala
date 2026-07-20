@@ -233,6 +233,30 @@ class JavaDocumentHighlightSuite extends BaseJavaPCSuite with RangeReplace {
   )
 
   check(
+    "constructor-name-def",
+    """|class Foo {
+       |    public <<F@@oo>>() {}
+       |    public static Foo create() {
+       |        return new <<Foo>>();
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  // Clicking on `new Foo()` resolves to the type `Foo`, so all type
+  // occurrences are highlighted (not just the constructor).
+  check(
+    "constructor-name-usage",
+    """|class <<Foo>> {
+       |    public Foo() {}
+       |    public static <<Foo>> create() {
+       |        return new <<F@@oo>>();
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "this-reference",
     """|class Foo {
        |    private int <<value>>;

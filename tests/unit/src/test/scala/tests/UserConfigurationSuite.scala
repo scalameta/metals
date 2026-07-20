@@ -522,7 +522,8 @@ class UserConfigurationSuite extends BaseSuite {
     "semanticTokens": false
   },
   "enableBestEffort": false,
-  "startMcpServer": false
+  "startMcpServer": false,
+  "importGeneratedSourcesMbt": false
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
@@ -600,7 +601,8 @@ class UserConfigurationSuite extends BaseSuite {
           |enable-best-effort                           boolean                        false           Use best effort compilation for Scala 3.
           |default-shell                                string                         ""              Full path to the shell executable to be used as the default
           |start-mcp-server                             boolean                        false           Start MCP server
-          |mcp-client                                   string                         ""              MCP Client Name""".stripMargin
+          |mcp-client                                   string                         ""              MCP Client Name
+          |import-generated-sources-mbt                 boolean                        false           Import Generated Sources In MBT Builds""".stripMargin
     assertNoDiff(obtained, expected)
   }
 

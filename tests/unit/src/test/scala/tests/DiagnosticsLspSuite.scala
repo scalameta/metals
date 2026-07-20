@@ -93,6 +93,86 @@ class DiagnosticsLspSuite extends BaseLspSuite("diagnostics") {
     } yield ()
   }
 
+  test("java-parse-diagnostics") {
+    cleanCompileCache("a")
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/java/a/Main.java
+           |package a;
+           |
+           |public class Main {
+           |  public void run() {
+           |    int value = 1;
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Main.java")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      _ <- server.didChange("a/src/main/java/a/Main.java")(
+        _.replace("int value = 1;", "int value = ;")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Main.java:5:17: error: illegal start of expression
+           |    int value = ;
+           |                ^
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/java/a/Main.java")(
+        _.replace("int value = ;", "int value = 1")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Main.java:5:18: error: ';' expected
+           |    int value = 1
+           |                 ^
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/java/a/Main.java")(
+        _.replace("int value = 1", "int value = 1;").replace("  }\n}", "")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Main.java:5:19: error: reached end of file while parsing
+           |    int value = 1;
+           |                  ^
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/java/a/Main.java")(_ =>
+        """|package a;
+           |
+           |public class Main {
+           |  public void int x() {}
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/a/Main.java:4:14: error: <identifier> expected
+           |  public void int x() {}
+           |             ^
+           |""".stripMargin,
+      )
+      _ <- server.didChange("a/src/main/java/a/Main.java")(_ =>
+        """|package a;
+           |
+           |public class Main {
+           |  public void run() {
+           |    int value = 1;
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+    } yield ()
+  }
+
   test("reset".ignore) {
     cleanCompileCache("a")
     for {

@@ -77,18 +77,44 @@ final class TargetData() {
   def sourceBuildTargets(
       sourceItem: AbsolutePath
   ): Option[Iterable[BuildTargetIdentifier]] = {
-    val valueOrNull = sourceBuildTargetsCache.get(sourceItem)
+    val dealiasedSourceItem = sourceItem.dealias
+    val valueOrNull = sourceBuildTargetsCache.get(dealiasedSourceItem)
     if (valueOrNull == null) {
       val value = sourceItemsToBuildTarget
         .collect {
           case (source, buildTargets)
-              if sourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
-                sourceItem.toNIO.startsWith(source.toNIO) =>
+              if dealiasedSourceItem.toNIO.getFileSystem == source.toNIO.getFileSystem &&
+                dealiasedSourceItem.toNIO.startsWith(source.toNIO) =>
             (source, buildTargets.asScala)
         }
         .maxByOption { case (source, _) => source.toNIO.getNameCount }
         .map { case (_, buildTargets) => buildTargets }
-      val prevOrNull = sourceBuildTargetsCache.putIfAbsent(sourceItem, value)
+      val prevOrNull =
+        sourceBuildTargetsCache.putIfAbsent(dealiasedSourceItem, value)
+      if (prevOrNull == null) value
+      else prevOrNull
+    } else valueOrNull
+  }
+
+  def dependencySourceBuildTargets(
+      source: AbsolutePath
+  ): Option[Iterable[BuildTargetIdentifier]] = {
+    val dealiasedSource = source.dealias
+    val valueOrNull = dependencySourceBuildTargetsCache.get(dealiasedSource)
+    if (valueOrNull == null) {
+      val value = inverseDependencySources
+        .collect {
+          case (dependencySource, buildTargets)
+              if dealiasedSource.toNIO.getFileSystem == dependencySource.toNIO.getFileSystem &&
+                dealiasedSource.toNIO.startsWith(dependencySource.toNIO) =>
+            (dependencySource, buildTargets)
+        }
+        .maxByOption { case (dependencySource, _) =>
+          dependencySource.toNIO.getNameCount
+        }
+        .map { case (_, buildTargets) => buildTargets }
+      val prevOrNull =
+        dependencySourceBuildTargetsCache.putIfAbsent(dealiasedSource, value)
       if (prevOrNull == null) value
       else prevOrNull
     } else valueOrNull
@@ -126,6 +152,10 @@ final class TargetData() {
     List(scalaTarget(id), javaTarget(id)).flatten
 
   private val sourceBuildTargetsCache =
+    new util.concurrent.ConcurrentHashMap[AbsolutePath, Option[
+      Iterable[BuildTargetIdentifier]
+    ]]
+  private val dependencySourceBuildTargetsCache =
     new util.concurrent.ConcurrentHashMap[AbsolutePath, Option[
       Iterable[BuildTargetIdentifier]
     ]]
@@ -328,10 +358,10 @@ final class TargetData() {
     sourceItem.getKind match {
       case DIRECTORY =>
         if (sourceItem.getGenerated)
-          buildTargetGeneratedDirs(sourceItemPath) = ()
+          buildTargetGeneratedDirs(sourceItemPath.dealias) = ()
       case FILE =>
         if (sourceItem.getGenerated)
-          buildTargetGeneratedFiles(sourceItemPath) = ()
+          buildTargetGeneratedFiles(sourceItemPath.dealias) = ()
         sourceItemFiles.add(sourceItemPath)
     }
     addSourceItem(sourceItemPath, buildTarget)
@@ -346,6 +376,7 @@ final class TargetData() {
     sourceItemsToBuildTarget.values.foreach(_.clear())
     sourceItemsToBuildTarget.clear()
     sourceBuildTargetsCache.clear()
+    dependencySourceBuildTargetsCache.clear()
     buildTargetInfo.clear()
     javaTargetInfo.clear()
     scalaTargetInfo.clear()
@@ -397,7 +428,7 @@ final class TargetData() {
   }
 
   def checkIfGeneratedSource(source: Path): Boolean = {
-    val absolutePath = AbsolutePath(source)
+    val absolutePath = AbsolutePath(source).dealias
     buildTargetGeneratedFiles.contains(absolutePath) ||
     buildTargetGeneratedDirs.keys.exists(generatedDir =>
       absolutePath.toNIO.startsWith(generatedDir.toNIO)
@@ -405,7 +436,7 @@ final class TargetData() {
   }
 
   def checkIfGeneratedDir(path: AbsolutePath): Boolean =
-    buildTargetGeneratedDirs.contains(path)
+    buildTargetGeneratedDirs.contains(path.dealias)
 
   def addScalacOptions(
       result: ScalacOptionsResult,
@@ -445,11 +476,14 @@ final class TargetData() {
       sourcesJar: AbsolutePath,
       target: BuildTargetIdentifier,
   ): Unit = {
-    sourceJarNameToJarFile(sourcesJar.filename) = sourcesJar
-    val acc = inverseDependencySources.getOrElseUpdate(sourcesJar, Set(target))
+    val dealiasedSourcesJar = sourcesJar.dealias
+    sourceJarNameToJarFile(dealiasedSourcesJar.filename) = dealiasedSourcesJar
+    val acc =
+      inverseDependencySources.getOrElseUpdate(dealiasedSourcesJar, Set(target))
+    dependencySourceBuildTargetsCache.clear()
     // avoid relatively expensive TrieMap updates if the target is already in the set
     if (!acc.contains(target)) {
-      inverseDependencySources(sourcesJar) = acc + target
+      inverseDependencySources(dealiasedSourcesJar) = acc + target
     }
   }
 

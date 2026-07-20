@@ -639,6 +639,8 @@ lazy val `gradle-extractor` = project
       "org.gradle" % "gradle-tooling-api" % V.gradleToolingApi,
       "com.lihaoyi" %% "upickle" % "4.3.2",
       "org.scalameta" %% "munit" % V.munit % Test,
+      "com.outr" %% "scribe" % V.scribe(scalaVersion.value),
+      "com.outr" %% "scribe-slf4j2" % V.scribe(scalaVersion.value),
     ),
     testFrameworks := List(TestFrameworks.MUnit),
   )

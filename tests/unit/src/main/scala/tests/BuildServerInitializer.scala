@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Messages.ImportBuild
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -158,8 +159,9 @@ object SbtServerInitializer extends BuildServerInitializer {
       // we create bsp/sbt.json file manually because `sbt bspConfig` takes too long
       val sbtLaunchJar =
         BuildTool.copyFromResource(bspFolder.toNIO, "sbt-launch.jar")
+      val ext = if (Properties.isWin) ".exe" else ""
       val argv = List(
-        s"${Properties.javaHome}/bin/java",
+        s"${Properties.javaHome}/bin/java$ext",
         "-Xms100m",
         "-Xmx100m",
         "-classpath",
@@ -233,9 +235,9 @@ object BazelServerInitializer extends BuildServerInitializer {
 
 /**
  * Initializes Metals without QuickBuild / Bloop install, then applies user
- * configuration and waits for the BSP session (e.g. MBT after Bazel import).
+ * configuration and waits for the MBT BSP session.
  */
-object BazelMbtTestInitializer extends BuildServerInitializer {
+object MbtTestInitializer extends BuildServerInitializer {
   this: BaseLspSuite =>
   override def initialize(
       workspace: AbsolutePath,
@@ -245,10 +247,12 @@ object BazelMbtTestInitializer extends BuildServerInitializer {
       userConfig: UserConfiguration,
       workspaceFolders: Option[List[String]] = None,
   )(implicit ec: ExecutionContext): Future[InitializeResult] = {
+    val mbtUserConfig =
+      userConfig.copy(preferredBuildServer = Some(MbtBuildServer.name))
     for {
       initializeResult <- server.initialize(workspaceFolders)
       _ <- server.initialized()
-      _ <- server.didChangeConfiguration(userConfig.toString)
+      _ <- server.didChangeConfiguration(mbtUserConfig.toString)
     } yield {
       if (!expectError) {
         server.assertBuildServerConnection()

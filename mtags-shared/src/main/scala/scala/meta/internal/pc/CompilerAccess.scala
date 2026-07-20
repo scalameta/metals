@@ -61,7 +61,7 @@ abstract class CompilerAccess[Reporter, Compiler](
   def shutdownCurrentCompiler(): Unit = {
     val compiler = _compiler
     if (compiler != null) {
-      compiler.askShutdown()
+      compiler.stop()
       _compiler = null
       sh.foreach { scheduler =>
         scheduler.schedule[Unit](

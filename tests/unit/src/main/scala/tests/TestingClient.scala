@@ -22,6 +22,7 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.ScalacDiagnostic.gson
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.WorkspaceChoicePopup
@@ -38,6 +39,7 @@ import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.tvp.TreeViewDidChangeParams
 import scala.meta.io.AbsolutePath
 
+import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
@@ -60,7 +62,9 @@ import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
+import org.eclipse.{lsp4j => l}
 import tests.TestOrderings._
+import tests.TestingClient.normalizeData
 
 /**
  * Fake LSP client that responds to notifications/requests initiated by the server.
@@ -350,12 +354,15 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   override def telemetryEvent(`object`: Any): Unit = ()
   override def publishDiagnostics(params: PublishDiagnosticsParams): Unit = {
     val path = params.getUri.toAbsolutePath
-    diagnostics(path) = params.getDiagnostics.asScala.toSeq
+    val diags = params.getDiagnostics.asScala.toSeq
+      .tapEach(normalizeData)
+
+    diagnostics(path) = diags
     diagnosticsCount
       .getOrElseUpdate(path, new AtomicInteger())
       .incrementAndGet()
     diagnosticsPromises.get(path).foreach { case (promise, condition) =>
-      if (condition(params.getDiagnostics.asScala.toSeq)) {
+      if (condition(diags)) {
         diagnosticsPromises.remove(path)
         promise.trySuccess(())
       }
@@ -618,4 +625,19 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
     } else Future.unit
   }
 
+}
+object TestingClient {
+
+  /**
+   * Serializes a diagnostic's `data` to the gson tree it becomes once sent over
+   * the wire, so that in-process consumers (and tests) observe the same
+   * representation a real editor round-trips back to Metals. A no-op when the
+   * `data` is absent or already a gson tree.
+   */
+  def normalizeData(diagnostic: l.Diagnostic): Unit =
+    diagnostic.getData match {
+      case null => ()
+      case _: JsonElement => ()
+      case raw => diagnostic.setData(gson.toJsonTree(raw))
+    }
 }

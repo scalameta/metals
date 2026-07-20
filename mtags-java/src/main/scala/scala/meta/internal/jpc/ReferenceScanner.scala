@@ -37,7 +37,7 @@ abstract class ReferenceScanner[T](
         val treeEnd = sourcePositions.getEndPosition(root, tree)
         if (treeStart >= 0 && treeEnd >= 0) {
           // Extract just the name position from the full tree range
-          val elementName = element.getSimpleName().toString()
+          val elementName = compiler.sourceName(element)
 
           // Find the name as a complete identifier, not as a substring
           val (start, end) = compiler.findIndentifierStartAndEnd(

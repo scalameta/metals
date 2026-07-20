@@ -33,8 +33,9 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
   def compileFilesWithFormattedDiagnostics(
       layout: String,
       mainPath: String,
+      options: List[String] = Nil,
   ): String = {
-    val result = compileFiles(layout, mainPath)
+    val result = compileFiles(layout, mainPath, options)
     result.diagnostics
       .map(d => d.formatMessage(result.input))
       .mkString("\n")
@@ -49,6 +50,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
   def compileFiles(
       layout: String,
       mainPath: String,
+      options: List[String] = Nil,
   ): CompileFilesResult = {
     val main = Paths.get(mainPath)
     if (main.isAbsolute) {
@@ -76,7 +78,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       javaFileManagerFactory = mbt,
       metalsConfig = PresentationCompilerConfigImpl(),
       classpath = Nil,
-      options = Nil,
+      options = options,
       progressBars = ProgressBars.EMPTY,
     )
     val params = CompilerVirtualFileParams(uri, text)
@@ -89,9 +91,11 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       name: munit.TestOptions,
       layout: String,
       mainPath: String,
+      options: List[String] = Nil,
   )(implicit loc: munit.Location): Unit = {
     test(name) {
-      val withPlugin = compileFilesWithFormattedDiagnostics(layout, mainPath)
+      val withPlugin =
+        compileFilesWithFormattedDiagnostics(layout, mainPath, options)
       assertNoDiff(withPlugin, "")
     }
   }

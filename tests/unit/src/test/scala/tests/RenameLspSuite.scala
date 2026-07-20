@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 
-class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
+class RenameLspSuite extends BaseRenameLspSuite("rename") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
@@ -481,6 +481,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(
@@ -501,6 +503,8 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Renamed",
+    fileRenames =
+      Map("a/src/main/java/a/Other.java" -> "a/src/main/java/a/Renamed.java"),
   )
 
   renamed(
@@ -947,6 +951,46 @@ class RenameLspSuite extends BaseRenameLspSuite(s"rename") {
        |}
        |""".stripMargin,
     newName = "Foo",
+  )
+
+  // Renames started from the *declaration* of a public Java symbol (the scenario
+  // in https://github.com/scalameta/metals/issues/8495), cross-file.
+  renamed(
+    "java-public-field-from-definition",
+    """|/a/src/main/java/a/Upstream.java
+       |package a;
+       |public class Upstream {
+       |  public static String <<gree@@ting>> = "Hello";
+       |}
+       |/a/src/main/java/a/Downstream.java
+       |package a;
+       |public class Downstream {
+       |  public static void main(String[] args) {
+       |    System.out.println(Upstream.<<greeting>>);
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "salutation",
+  )
+
+  renamed(
+    "java-public-class-from-definition",
+    """|/a/src/main/java/a/Upstream.java
+       |package a;
+       |public class <<Upstr@@eam>> {
+       |  public static String greeting = "Hello";
+       |}
+       |/a/src/main/java/a/Downstream.java
+       |package a;
+       |public class Downstream {
+       |  public static void main(String[] args) {
+       |    System.out.println(<<Upstream>>.greeting);
+       |  }
+       |}
+       |""".stripMargin,
+    newName = "Greeter",
+    fileRenames =
+      Map("a/src/main/java/a/Upstream.java" -> "a/src/main/java/a/Greeter.java"),
   )
 
   override protected def libraryDependencies: List[String] =

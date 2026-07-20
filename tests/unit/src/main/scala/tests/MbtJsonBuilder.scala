@@ -107,6 +107,7 @@ case class MbtJsonBuilder(
     val mbtBuild = MbtBuild(
       dependencyModules = distinctDeps.asJava,
       namespaces = namespacesMap,
+      uncheckedSources = null,
     )
     MbtBuild.toJson(mbtBuild)
   }

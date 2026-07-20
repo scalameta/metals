@@ -5,6 +5,7 @@ import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
+import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
 
 import scala.collection.mutable
@@ -13,6 +14,9 @@ import scala.sys.process.Process
 import scala.sys.process.ProcessLogger
 import scala.util.control.NonFatal
 
+import scala.meta.internal.io.FileIO
+import scala.meta.internal.metals.Directories
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
 object GitVCS {
@@ -79,6 +83,126 @@ object GitVCS {
     case NonFatal(e) =>
       scribe.error(s"GitVCS.lsFilesStage failed in workspace $workspace", e)
       ParArray.empty[GitBlob]
+  }
+
+  /**
+   * Walks the given directories on disk without any gitignore or hardcoded
+   * exclusions. Intended for explicitly listed generated-source directories
+   * (e.g. `uncheckedSources` in `mbt.json`) that are gitignored and therefore
+   * invisible to `lsFilesStage`.
+   */
+  def lsFilesFromDirs(
+      dirs: Seq[AbsolutePath],
+      isRelevantPath: GitBlob => Boolean = blob =>
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+  ): ParArray[GitBlob] = {
+    val result = ParArray.newBuilder[GitBlob]
+    dirs.foreach { dir =>
+      if (Files.isDirectory(dir.toNIO)) {
+        Files.walkFileTree(
+          dir.toNIO,
+          new SimpleFileVisitor[Path] {
+            override def visitFile(
+                file: Path,
+                attrs: BasicFileAttributes,
+            ): FileVisitResult = {
+              val blob = new GitBlob(file.toString, Array.emptyByteArray)
+              if (attrs.isRegularFile && isRelevantPath(blob)) {
+                try {
+                  val oid = OID.fromBlob(Files.readAllBytes(file))
+                  blob.oidBytes = oid.getBytes(StandardCharsets.UTF_8)
+                  result += blob
+                } catch {
+                  case NonFatal(_) => // silently ignore unreadable files
+                }
+              }
+              FileVisitResult.CONTINUE
+            }
+          },
+        )
+      }
+    }
+    result.result()
+  }
+
+  /**
+   * Opens the given srcjar archives and lists source files inside them so the
+   * resulting paths are real on-disk paths. Intended for `.srcjar` entries in
+   * `uncheckedSources` in `mbt.json`.
+   *
+   * Extraction is skipped when `extractDir/.jar.meta` matches the srcjar's
+   * current modification time and path, in which case already-extracted files
+   * are listed directly from disk.
+   *
+   * `extractOnly` skips the reading and listing of the files, and returns
+   * an empty ParArray, only ensuring the files are extracted from the `.srcjars`.
+   */
+
+  def lsFilesFromSrcJars(
+      srcJars: Seq[AbsolutePath],
+      workspace: AbsolutePath,
+      isRelevantPath: GitBlob => Boolean = blob =>
+        MbtWorkspaceSymbolProvider.isRelevantPath(blob.path),
+      extractOnly: Boolean = false,
+  ): ParArray[GitBlob] = {
+    val result = ParArray.newBuilder[GitBlob]
+    srcJars.foreach { srcJar =>
+      try {
+        val relPath = workspace.toNIO.relativize(srcJar.toNIO)
+        val extractDir = workspace
+          .resolve(Directories.dependencies)
+          .resolveZipPath(relPath)
+        val jarMetaFile = extractDir.resolve(".jar.meta")
+        val currentMeta =
+          s"${Files.getLastModifiedTime(srcJar.toNIO).toMillis}\n${srcJar.toNIO}"
+        val cachedMeta =
+          if (jarMetaFile.exists)
+            Some(FileIO.slurp(jarMetaFile, StandardCharsets.UTF_8))
+          else None
+        if (cachedMeta.contains(currentMeta) && extractDir.exists) {
+          if (!extractOnly)
+            lsFilesFromDirs(Seq(extractDir), isRelevantPath).foreach(
+              result += _
+            )
+        } else {
+          extractDir.deleteRecursively()
+          if (!extractDir.exists) extractDir.createDirectories()
+          FileIO.withJarFileSystem(srcJar, create = false) { root =>
+            root.listRecursive.foreach { path =>
+              val blob = new GitBlob(path.toNIO.toString, Array.emptyByteArray)
+              if (path.isFile && isRelevantPath(blob)) {
+                try {
+                  val diskPath = extractDir.resolveZipPath(path.toNIO)
+                  Files.createDirectories(diskPath.toNIO.getParent)
+                  Files.copy(
+                    path.toNIO,
+                    diskPath.toNIO,
+                    StandardCopyOption.REPLACE_EXISTING,
+                  )
+                  if (!extractOnly) {
+                    val oid = OID.fromBlob(Files.readAllBytes(diskPath.toNIO))
+                    result += new GitBlob(
+                      diskPath.toString,
+                      oid.getBytes(StandardCharsets.UTF_8),
+                    )
+                  }
+                } catch {
+                  case NonFatal(_) =>
+                }
+              }
+            }
+          }
+          Files.write(
+            jarMetaFile.toNIO,
+            currentMeta.getBytes(StandardCharsets.UTF_8),
+          )
+        }
+      } catch {
+        case NonFatal(e) =>
+          scribe.warn(s"mbt-v2: failed to read srcjar $srcJar", e)
+      }
+    }
+    result.result()
   }
 
   private def isIgnoredDirectory(dir: Path): Boolean = {

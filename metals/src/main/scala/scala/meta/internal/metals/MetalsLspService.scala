@@ -53,6 +53,7 @@ import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtIndexFilter
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
@@ -67,6 +68,7 @@ import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentLinksProvider
 import scala.meta.internal.parsing.DocumentSymbolProvider
 import scala.meta.internal.parsing.FoldingRangeProvider
+import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
@@ -140,6 +142,7 @@ abstract class MetalsLspService(
   @volatile
   var userConfig: UserConfiguration = initialUserConfig
   @volatile protected var mbtBuild: MbtBuild = MbtBuild.fromWorkspace(folder)
+  def currentMbtBuild: MbtBuild = mbtBuild
   protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -283,6 +286,7 @@ abstract class MetalsLspService(
   )
 
   protected val trees = new Trees(buffers, scalaVersionSelector)
+  protected val javaTrees = new JavaTrees(buffers)
 
   protected val documentSymbolProvider = new DocumentSymbolProvider(
     trees,
@@ -358,12 +362,10 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
-    indexFilters = List(
-      mbt.ProtobufVersionHistoryIndexFilter,
-      mbt.ProtobufTemplateAndTestIndexFilter,
-    ),
+    indexFilters = MbtIndexFilter.allFilters,
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
+    mbtBuild = () => mbtBuild,
   )
 
   override val mbtSymbolSearch: MbtWorkspaceSymbolProvider = mbt2
@@ -419,6 +421,7 @@ abstract class MetalsLspService(
     languageClient,
     getVisibleName,
     folder,
+    workDoneProgress,
   )
 
   protected lazy val codeLensProvider: CodeLensProvider = {
@@ -697,14 +700,14 @@ abstract class MetalsLspService(
   protected val callHierarchyProvider: CallHierarchyProvider =
     new CallHierarchyProvider(
       folder,
-      semanticdbs,
       definitionProvider,
-      referencesProvider,
       clientConfig.icons(),
       () => compilers,
       trees,
+      javaTrees,
       buildTargets,
-      supermethods,
+      mbtReferenceProvider,
+      workDoneProgress,
     )
 
   protected val typeHierarchyProvider: TypeHierarchyProvider =
@@ -716,9 +719,7 @@ abstract class MetalsLspService(
     )
 
   protected val renameProvider: RenameProvider = new RenameProvider(
-    referencesProvider,
-    implementationProvider,
-    symbolHierarchyOps,
+    mbtReferenceProvider,
     definitionProvider,
     folder,
     languageClient,
@@ -739,6 +740,7 @@ abstract class MetalsLspService(
     buildTargets,
     scalafixProvider,
     trees,
+    javaTrees,
     diagnostics,
     languageClient,
     clientConfig,
@@ -783,6 +785,8 @@ abstract class MetalsLspService(
       .traverse(paths.distinct) { path =>
         if (path.isScalaFilename && buffers.contains(path)) {
           Future(diagnostics.onSyntaxError(path, trees.didChange(path)))
+        } else if (path.isJavaFilename && buffers.contains(path)) {
+          Future(diagnostics.onSyntaxError(path, javaTrees.didChange(path)))
         } else {
           Future.successful(())
         }
@@ -863,7 +867,7 @@ abstract class MetalsLspService(
 
   def onShutdown(): Unit = {
     tables.fingerprints.save(fingerprints.getAllFingerprints().filter {
-      case (path, _) => path.isScalaOrJava && !path.isDependencySource(folder)
+      case (path, _) => path.isScalaOrJava && !isDependencySource(path)
     })
     cancel()
   }
@@ -948,7 +952,7 @@ abstract class MetalsLspService(
 
     val parser = parseTrees(path)
 
-    if (path.isDependencySource(folder)) {
+    if (isDependencySource(path)) {
       Future
         .sequence(
           List(parser)
@@ -999,25 +1003,34 @@ abstract class MetalsLspService(
       compilers.restartJavaCompilers()
     }
 
-    // when focusing on a new file, display updated diagnostics
-    val future = for {
-      // when focusing on a new file, display updated diagnostics
-      reportedDiagnostics <- compilers.didFocus(path)
-      _ = diagnostics.publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
-      result <-
-        // Don't trigger compilation on didFocus events under cascade compilation
-        // because save events already trigger compile in inverse dependencies.
-        if (path.isDependencySource(folder)) {
-          Future.successful(DidFocusResult.NoBuildTarget)
-        } else if (recentlyOpenedFiles.isRecentlyActive(path)) {
-          Future.successful(DidFocusResult.RecentlyActive)
-        } else {
-          maybeCompileOnDidFocus(path, prevBuildTarget)
-        }
-    } yield result
+    val future =
+      if (isDependencySource(path)) {
+        diagnostics.publishDiagnosticsNotAdjusted(path, Nil)
+        Future.successful(DidFocusResult.NoBuildTarget)
+      } else {
+        for {
+          reportedDiagnostics <- compilers.didFocus(path)
+          _ = diagnostics.publishDiagnosticsNotAdjusted(
+            path,
+            reportedDiagnostics,
+          )
+          result <-
+            if (recentlyOpenedFiles.isRecentlyActive(path)) {
+              Future.successful(DidFocusResult.RecentlyActive)
+            } else {
+              maybeCompileOnDidFocus(path, prevBuildTarget)
+            }
+        } yield result
+      }
 
     future.asJava
   }
+
+  private def isDependencySource(path: AbsolutePath): Boolean =
+    path.isDependencySource(folder) ||
+      !path.isWorkspaceSource(folder) ||
+      buildTargets.isDependencySource(path) ||
+      buildTargets.checkIfGeneratedSource(path.toNIO)
 
   def sync(
       uri: String,
@@ -1106,6 +1119,7 @@ abstract class MetalsLspService(
     buffers.remove(path)
     compilers.didClose(path)
     trees.didClose(path)
+    javaTrees.didClose(path)
     diagnostics.onClose(path)
     interactiveSemanticdbs.onClose(path)
   }
@@ -1750,6 +1764,9 @@ abstract class MetalsLspService(
   def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
     testProvider.discoverTests(uri.map(_.toAbsolutePath))
 
+  def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
+    testProvider.discoverAllTestSuites()
+
   def runScalafix(uri: String): Future[ApplyWorkspaceEditResponse] =
     scalafixProvider
       .runAllRules(uri.toAbsolutePath)
@@ -1996,7 +2013,7 @@ abstract class MetalsLspService(
     buildTargets,
     buildClient,
     languageClient,
-    semanticdbs,
+    mbtReferenceProvider,
     () => userConfig,
     folder,
     buildTargetClassesFinder,
@@ -2077,16 +2094,18 @@ abstract class MetalsLspService(
 
   def debugDiscovery(params: DebugDiscoveryParams): Future[DebugSession] =
     afterCompilationFinished(params)(debugDiscovery.debugDiscovery)
-      .flatMap(debugProvider.asSession)
+      .flatMap(debugProvider.asSession(_, noDebug = false))
 
   def runClosest(params: DebugDiscoveryParams): Future[DebugSession] =
     afterCompilationFinished(params)(debugDiscovery.debugDiscovery)
-      .flatMap(debugProvider.asSession)
+      .flatMap(debugProvider.asSession(_, noDebug = false))
 
   def createDebugSession(
       target: b.BuildTargetIdentifier
   ): Future[DebugSession] =
-    debugProvider.createDebugSession(target).flatMap(debugProvider.asSession)
+    debugProvider
+      .createDebugSession(target)
+      .flatMap(debugProvider.asSession(_, noDebug = false))
 
   def testClassSearch(
       params: DebugUnresolvedTestClassParams
@@ -2103,9 +2122,12 @@ abstract class MetalsLspService(
       params: ScalaTestSuitesDebugRequest,
   ): Future[DebugSession] = debugProvider
     .startTestSuite(target, params)
-    .flatMap(debugProvider.asSession)
+    .flatMap(debugProvider.asSession(_, noDebug = params.noDebug))
 
-  def startDebugProvider(params: b.DebugSessionParams): Future[DebugSession] = {
+  def startDebugProvider(
+      params: b.DebugSessionParams,
+      noDebug: Boolean,
+  ): Future[DebugSession] = {
     val targets = params.getTargets.asScala.toSeq
     val mbtConnections = targets.flatMap { target =>
       val connOpt = buildTargets.buildServerOf(target)
@@ -2136,7 +2158,7 @@ abstract class MetalsLspService(
     compileFuture.flatMap { _ =>
       debugProvider
         .ensureNoWorkspaceErrors(targets)
-        .flatMap(_ => debugProvider.asSession(params))
+        .flatMap(_ => debugProvider.asSession(params, noDebug))
     }
   }
 

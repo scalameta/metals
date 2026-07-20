@@ -261,6 +261,7 @@ final class MbtBuildServer(
   ): CompletableFuture[SourcesResult] = {
     val requestedTargets = params.getTargets.asScala.toSet
     val targets = importedBuildTargets.filter(t => requestedTargets(t.id))
+    extractUncheckedSrcJars(targets)
     val globbedSources = globbedSourceFiles(targets)
     CompletableFuture.completedFuture(
       new SourcesResult(
@@ -274,6 +275,20 @@ final class MbtBuildServer(
           .asJava
       )
     )
+  }
+
+  /**
+   * Extracts any `.srcjar` uncheckedSources into `.metals/readonly/dependencies/`
+   * so that their extraction directories exist when `indexWorkspaceSources` runs.
+   */
+  private def extractUncheckedSrcJars(targets: Seq[MbtTarget]): Unit = {
+    val srcJars = targets
+      .flatMap(_.uncheckedSources)
+      .filter(_.endsWith(".srcjar"))
+      .map(workspace.resolve)
+      .filter(p => p.exists && p.isFile)
+    if (srcJars.nonEmpty)
+      GitVCS.lsFilesFromSrcJars(srcJars, workspace, extractOnly = true)
   }
   override def buildTargetInverseSources(
       params: InverseSourcesParams
@@ -705,6 +720,25 @@ object MbtBuildServer {
   def isMbtServer(name: String): Boolean =
     name == MbtBuildServer.name
 
+  def decodeTestSuites(data: Any): Option[ScalaTestSuites] =
+    data match {
+      case json: com.google.gson.JsonElement =>
+        // TestSuitesProvider (test explorer) sends ScalaTestSuites
+        json
+          .as[ScalaTestSuites]
+          .toOption
+          .orElse(
+            // RunTestCodeLens (code lenses) sends a plain list of class names
+            json.as[java.util.List[String]].toOption.map { tests =>
+              val suites = tests.asScala
+                .map(new ScalaTestSuiteSelection(_, List.empty.asJava))
+                .asJava
+              new ScalaTestSuites(suites, List.empty.asJava, List.empty.asJava)
+            }
+          )
+      case _ => None
+    }
+
   def newServer(
       workspace: AbsolutePath,
       buildClient: MetalsBuildClient,
@@ -771,7 +805,7 @@ object MbtBuildServer {
 
     BuildServerConnection.fromSockets(
       workspace,
-      workspace.resolve(".metals").resolve("bsp.trace"),
+      workspace,
       buildClient,
       languageClient,
       connect,

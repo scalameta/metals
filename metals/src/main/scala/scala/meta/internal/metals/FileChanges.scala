@@ -92,7 +92,10 @@ class FileChanges(
   ): Future[Option[BuildTargetIdentifier]] = {
     val isCompilable =
       (path.isScalaOrJava || path.isSbt) &&
+        path.isWorkspaceSource(workspace()) &&
         !path.isDependencySource(workspace()) &&
+        !buildTargets.isDependencySource(path) &&
+        !buildTargets.checkIfGeneratedSource(path.toNIO) &&
         !path.isInTmpDirectory(workspace())
 
     if (isCompilable) {

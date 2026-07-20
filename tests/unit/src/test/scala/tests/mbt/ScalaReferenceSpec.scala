@@ -221,6 +221,9 @@ trait ScalaReferenceSpec { this: BaseMbtReferenceSuite =>
             |a/src/main/scala/a/Upstream.scala:2:7: reference
             |class Upstream(i: Int) {
             |      ^^^^^^^^
+            |a/src/main/scala/a/Upstream.scala:5:8: reference
+            |object Upstream {
+            |       ^^^^^^^^
             |""".stripMargin,
       )
       _ <- server.assertReferencesSubquery(

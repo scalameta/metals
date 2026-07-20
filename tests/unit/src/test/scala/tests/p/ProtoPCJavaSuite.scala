@@ -1166,8 +1166,6 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |/a/src/main/java/com/example/GreeterService.java
            |package com.example;
            |import com.example.api.jproto.GreeterGrpc;
-           |import com.example.api.jproto.HelloRequest;
-           |import com.example.api.jproto.HelloReply;
            |public class GreeterService {
            |  public static Class<?> grpcClass() { return GreeterGrpc.class; }
            |}

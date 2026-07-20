@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
 import java.{util => ju}
@@ -89,6 +90,28 @@ class CompilerConfiguration(
     def isScala2 = !ScalaVersions.isScala3Version(
       scalaVersion
     )
+    def collectUncheckedSources(): Seq[Path] = {
+      val uncheckedSources = mbtBuild().getUncheckedSources.asScala.toSeq
+      val (genSrcJarStrs, genDirStrs) =
+        uncheckedSources.partition(_.endsWith(".srcjar"))
+      val genDirs = genDirStrs.map(workspace.resolve)
+      val srcJars =
+        genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+      val dirFiles =
+        GitVCS
+          .lsFilesFromDirs(genDirs)
+          .seq
+          .map(b => Paths.get(b.path))
+          .filter(Files.exists(_))
+      val srcJarFiles =
+        GitVCS
+          .lsFilesFromSrcJars(srcJars, workspace)
+          .seq
+          .map(b => Paths.get(b.path))
+          .filter(Files.exists(_))
+      (dirFiles ++ srcJarFiles).toIndexedSeq
+    }
+
     if (
       !shouldUseFullSourcepathForFallback ||
       // uses symbols from MBT for Scala 2
@@ -96,7 +119,7 @@ class CompilerConfiguration(
     ) () => ju.Collections.emptyList()
     else
       () => {
-        def defaultSourcepath(): ju.List[Path] = {
+        def defaultSourcepath(): Seq[Path] = {
           val blobs = GitVCS.lsFilesStage(
             workspace,
             blob =>
@@ -107,16 +130,15 @@ class CompilerConfiguration(
             .map(b => workspace.resolve(b.path).toNIO)
             .filter(Files.exists(_))
             .toSeq
-            .asJava
         }
-        semanticdbFileManager match {
+        val regularSources = semanticdbFileManager match {
           case mbt: MbtWorkspaceSymbolProvider =>
             val all = mbt.allFiles()
-            if (all.nonEmpty) all.map(_.toNIO).asJava else defaultSourcepath()
+            if (all.nonEmpty) all.map(_.toNIO) else defaultSourcepath()
           case _ =>
             defaultSourcepath()
         }
-
+        (regularSources ++ collectUncheckedSources()).asJava
       }
   }
   def shouldRunRefchecks: Boolean =
@@ -177,15 +199,10 @@ class CompilerConfiguration(
         srcFiles,
         overrideSourcePathMode = {
           if (shouldUseFullSourcepathForFallback) {
-            // Default to PRUNED for Scala 3, where MBT is not yet supported
-            if (
-              ScalaVersions.isScala3Version(
-                scalaVersion
-              ) || !userConfig().workspaceSymbolProvider.isMBT
-            ) {
-              Some(SourcePathMode.PRUNED)
-            } else {
+            if (userConfig().workspaceSymbolProvider.isMBT) {
               Some(SourcePathMode.MBT)
+            } else {
+              Some(SourcePathMode.PRUNED)
             }
           } else None
         },

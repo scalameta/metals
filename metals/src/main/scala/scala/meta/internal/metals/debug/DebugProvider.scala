@@ -56,6 +56,7 @@ import scala.meta.internal.metals.debug.server.MainClassDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
+import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
@@ -122,7 +123,8 @@ class DebugProvider(
   }
 
   def start(
-      parameters: b.DebugSessionParams
+      parameters: b.DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     val cancelPromise = Promise[Unit]()
     for {
@@ -139,8 +141,21 @@ class DebugProvider(
         .forall(
           _.scalaInfo.getPlatform == b.ScalaPlatform.JVM
         )
+      isTestDataKind =
+        jvmOptionsTranslatedParams.getDataKind == b.TestParamsDataKind.SCALA_TEST_SUITES ||
+          jvmOptionsTranslatedParams.getDataKind == b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION
+      isMbtTestRun = noDebug && MbtBuildServer.isMbtServer(
+        buildServer.name
+      ) && isTestDataKind
       debugServer <-
-        if (isJvm)
+        if (isMbtTestRun)
+          runMbtTestLocally(
+            sessionName,
+            jvmOptionsTranslatedParams,
+            buildServer,
+            cancelPromise,
+          )
+        else if (isJvm)
           workDoneProgress.trackFuture(
             "Starting debug server",
             start(
@@ -161,11 +176,11 @@ class DebugProvider(
     } yield debugServer
   }
 
-  private def runLocally(
+  private def openLocalDebugServer(
       sessionName: String,
-      parameters: b.DebugSessionParams,
-      buildServer: BuildServerConnection,
       cancelPromise: Promise[Unit],
+  )(
+      runFuture: () => Future[b.RunResult]
   )(implicit ec: ExecutionContext): Future[DebugServer] = {
     if (runningLocal.compareAndSet(false, true)) {
       val proxyServer = new ServerSocket(0, 50, localAddress)
@@ -181,26 +196,7 @@ class DebugProvider(
           sessionName,
           awaitClient,
           stacktraceAnalyzer,
-          () => {
-            val runParams =
-              new b.RunParams(parameters.getTargets().asScala.head)
-            runParams.setOriginId(ju.UUID.randomUUID().toString())
-
-            /**
-             * We set data and dataKind with the information about the main class to run,
-             * otherwise if multiple main classes are found we would not know which one to run.
-             */
-            if (
-              parameters
-                .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
-            ) {
-              runParams.setDataKind(parameters.getDataKind())
-              runParams.setData(parameters.getData())
-            }
-            val run = buildServer.buildTargetRun(runParams, cancelPromise)
-            run.onComplete(_ => runningLocal.set(false))
-            run
-          },
+          runFuture,
           cancelPromise,
         )
         .flatMap { runner =>
@@ -221,6 +217,86 @@ class DebugProvider(
       Future.failed(
         new IllegalStateException("Cannot run multiple debug processes.")
       )
+    }
+  }
+
+  private def runLocally(
+      sessionName: String,
+      parameters: b.DebugSessionParams,
+      buildServer: BuildServerConnection,
+      cancelPromise: Promise[Unit],
+  )(implicit ec: ExecutionContext): Future[DebugServer] =
+    openLocalDebugServer(sessionName, cancelPromise) { () =>
+      val runParams =
+        new b.RunParams(parameters.getTargets().asScala.head)
+      runParams.setOriginId(ju.UUID.randomUUID().toString())
+
+      /**
+       * We set data and dataKind with the information about the main class to run,
+       * otherwise if multiple main classes are found we would not know which one to run.
+       */
+      if (
+        parameters
+          .getDataKind() == b.DebugSessionParamsDataKind.SCALA_MAIN_CLASS
+      ) {
+        runParams.setDataKind(parameters.getDataKind())
+        runParams.setData(parameters.getData())
+      }
+      val run = buildServer.buildTargetRun(runParams, cancelPromise)
+      run.onComplete(_ => runningLocal.set(false))
+      run
+    }
+
+  private def runMbtTestLocally(
+      sessionName: String,
+      parameters: b.DebugSessionParams,
+      buildServer: BuildServerConnection,
+      cancelPromise: Promise[Unit],
+  )(implicit ec: ExecutionContext): Future[DebugServer] = {
+    val testSuites: Seq[b.ScalaTestSuiteSelection] =
+      MbtBuildServer
+        .decodeTestSuites(parameters.getData)
+        .map(_.getSuites.asScala.toSeq)
+        .getOrElse(Seq.empty)
+
+    openLocalDebugServer(sessionName, cancelPromise) { () =>
+      val testParams = new b.TestParams(parameters.getTargets())
+      testParams.setOriginId(ju.UUID.randomUUID().toString())
+      testParams.setDataKind(parameters.getDataKind)
+      testParams.setData(parameters.getData)
+      val test = buildServer.buildTargetTest(testParams, cancelPromise)
+      test.onComplete(_ => runningLocal.set(false))
+      test.map { result =>
+        val runner = currentRunner.get()
+        if (runner != null && testSuites.nonEmpty) {
+          val passed = result.getStatusCode == b.StatusCode.OK
+          // 0 is an obviously untrue value - a real duration will show up in the logs.
+          // Parsing the bazel xml output is an option, but might be hard to maintain.
+          val duration = 0L
+          testSuites.foreach { suite =>
+            val entry: dap.testing.SingleTestSummary =
+              if (passed)
+                dap.testing.SingleTestResult
+                  .Passed(suite.getClassName, duration)
+              else
+                dap.testing.SingleTestResult.Failed(
+                  suite.getClassName,
+                  duration,
+                  "Test suite failed",
+                  null,
+                  null,
+                )
+            runner.testResult(
+              dap.testing.TestSuiteSummary(
+                suite.getClassName,
+                duration,
+                ju.Collections.singletonList(entry),
+              )
+            )
+          }
+        }
+        result
+      }
     }
   }
 
@@ -507,10 +583,12 @@ class DebugProvider(
   }
 
   def asSession(
-      debugParams: DebugSessionParams
+      debugParams: DebugSessionParams,
+      noDebug: Boolean,
   )(implicit ec: ExecutionContext): Future[DebugSession] = {
+    if (noDebug) scribe.info("Starting debug session without debugging")
     for {
-      server <- start(debugParams)
+      server <- start(debugParams, noDebug)
     } yield {
       statusBar.addMessage("Started debug server!")
       DebugSession(server.sessionName, server.uri.toString)
@@ -930,7 +1008,9 @@ object DebugProvider {
     protected def search(): Future[Try[A]]
     protected def dapSessionParams(res: A): Future[DebugSessionParams]
     def createDapSession(args: A): Future[DebugSession] =
-      dapSessionParams(args).flatMap(debugProvider.asSession(_))
+      dapSessionParams(args).flatMap(
+        debugProvider.asSession(_, noDebug = false)
+      )
     def searchResult: Future[(Try[A], ClassSearch[A])] = {
       search().onComplete {
         case Success(resolved) => searchPromise.trySuccess(resolved)

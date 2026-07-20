@@ -1,6 +1,5 @@
 package scala.meta.internal.metals
 
-import java.lang.reflect.Type
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
@@ -56,11 +55,6 @@ import scala.meta.trees.Origin.Parsed
 
 import ch.epfl.scala.{bsp4j => b}
 import com.google.gson.Gson
-import com.google.gson.GsonBuilder
-import com.google.gson.JsonDeserializationContext
-import com.google.gson.JsonDeserializer
-import com.google.gson.JsonElement
-import com.google.gson.JsonObject
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -91,6 +85,32 @@ object MetalsEnrichments
     extends AsJavaExtensions
     with AsScalaExtensions
     with MtagsEnrichments {
+
+  private def inString(
+      text: String,
+      startLine: Int,
+      startCharacter: Int,
+      endLine: Int,
+      endCharacter: Int,
+  ): Option[String] = {
+    var i = 0
+    var max = 0
+    def isNewline = text.charAt(i) == '\n'
+    while (max < startLine) {
+      if (isNewline) max += 1
+      i += 1
+    }
+    val start = i + startCharacter
+    while (max < endLine) {
+      if (isNewline) max += 1
+      i += 1
+    }
+    val end = i + endCharacter
+    if (start < text.size && end <= text.size)
+      Some(text.substring(start, end))
+    else
+      None
+  }
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
 
@@ -915,52 +935,6 @@ object MetalsEnrichments
       val severity = d.getSeverity.toString.toLowerCase()
       s"$severity:$hint $uri:${d.getRange.getStart.getLine} ${d.getMessageAsString}"
     }
-    def asTextEdit: Option[l.TextEdit] = {
-      decodeJson(d.getData, classOf[l.TextEdit])
-    }
-
-    /**
-     * Useful for decoded the diagnostic data since there are overlapping
-     * unrequired keys in the structure that causes issues when we try to
-     * deserialize the old top level text edit vs the newly nested actions.
-     */
-    object DiagnosticDataDeserializer
-        extends JsonDeserializer[Either[l.TextEdit, b.ScalaDiagnostic]] {
-      override def deserialize(
-          json: JsonElement,
-          typeOfT: Type,
-          context: JsonDeserializationContext,
-      ): Either[l.TextEdit, b.ScalaDiagnostic] = {
-        json match {
-          case o: JsonObject if o.has("actions") =>
-            Right(new Gson().fromJson(o, classOf[b.ScalaDiagnostic]))
-          case o => Left(new Gson().fromJson(o, classOf[l.TextEdit]))
-        }
-      }
-    }
-
-    def asScalaDiagnostic: Option[Either[l.TextEdit, b.ScalaDiagnostic]] = {
-      val gson = new GsonBuilder()
-        .registerTypeAdapter(
-          classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
-          DiagnosticDataDeserializer,
-        )
-        .create()
-      d.getData() match {
-        case o: JsonObject =>
-          decodeJson(
-            o,
-            classOf[Either[l.TextEdit, b.ScalaDiagnostic]],
-            Some(gson),
-          )
-        case other =>
-          if (other != null)
-            scribe.warn(
-              s"Unexpected data type: ${d.getData().getClass().getName()}, data: ${d.getData()}"
-            )
-          None
-      }
-    }
   }
 
   implicit class XtensionSeverityBsp(sev: b.DiagnosticSeverity) {
@@ -980,23 +954,13 @@ object MetalsEnrichments
 
   implicit class XtensionPositionRange(range: s.Range) {
     def inString(text: String): Option[String] = {
-      var i = 0
-      var max = 0
-      def isNewline = text.charAt(i) == '\n'
-      while (max < range.startLine) {
-        if (isNewline) max += 1
-        i += 1
-      }
-      val start = i + range.startCharacter
-      while (max < range.endLine) {
-        if (isNewline) max += 1
-        i += 1
-      }
-      val end = i + range.endCharacter
-      if (start < text.size && end <= text.size)
-        Some(text.substring(start, end))
-      else
-        None
+      MetalsEnrichments.inString(
+        text,
+        range.startLine,
+        range.startCharacter,
+        range.endLine,
+        range.endCharacter,
+      )
     }
 
     def toMeta(input: Input): Option[Position] =
@@ -1117,6 +1081,18 @@ object MetalsEnrichments
   implicit class XtensionLspRangeBsp(range: l.Range) {
     def toBsp: b.Range =
       new b.Range(range.getStart.toBsp, range.getEnd.toBsp)
+
+    def inString(text: String): Option[String] = {
+      val start = range.getStart()
+      val end = range.getEnd()
+      MetalsEnrichments.inString(
+        text,
+        start.getLine(),
+        start.getCharacter(),
+        end.getLine(),
+        end.getCharacter(),
+      )
+    }
   }
 
   implicit class XtensionScalaAction(scalaAction: b.ScalaAction) {

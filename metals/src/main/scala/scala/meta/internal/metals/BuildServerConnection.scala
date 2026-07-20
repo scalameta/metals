@@ -388,6 +388,21 @@ class BuildServerConnection private (
     completableFuture.asScala
   }
 
+  def buildTargetTest(
+      params: TestParams,
+      cancelPromise: Promise[Unit],
+  ): Future[RunResult] = {
+    val completableFuture = register(server =>
+      server
+        .buildTargetTest(params)
+        .thenApply(result => new RunResult(result.getStatusCode()))
+    )
+    cancelPromise.future.foreach { _ =>
+      completableFuture.cancel(true)
+    }
+    completableFuture.asScala
+  }
+
   def buildTargetJvmClasspath(
       params: JvmCompileClasspathParams,
       cancelPromise: Promise[Unit],
@@ -753,8 +768,8 @@ object BuildServerConnection {
             localClient,
             languageClient,
             connect,
-            reconnectNotification,
             requestTimeOutNotification,
+            reconnectNotification,
             config,
             userConfiguration,
             serverName,
@@ -907,8 +922,8 @@ object BuildServerConnection {
      * field, so that's what we use here, with that "scala-sc" language.
      */
     def supportsWrappedSources: Boolean =
-      capabilities.getCompileProvider.getLanguageIds.asScala
-        .contains("scala-sc")
+      Option(capabilities.getCompileProvider())
+        .exists(_.getLanguageIds().contains("scala-sc"))
   }
 }
 

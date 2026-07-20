@@ -18,7 +18,6 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 import org.eclipse.{lsp4j => l}
 
@@ -248,15 +247,14 @@ final class MbtProtobufReferenceProvider(
   def references(
       path: AbsolutePath,
       timer: Timer,
-      params: ReferenceParams,
       requestDoc: s.TextDocument,
-      enclosingOccurrences: Seq[s.SymbolOccurrence],
+      protoSymbols: Seq[String],
       toQuerySymbols: Seq[String],
       taskProgress: TaskProgress,
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
+      token: Option[JEither[String, Integer]],
+      includeDefinition: Boolean,
   ): List[ReferencesResult] = {
-    val token = params.getPartialResultToken()
-    val protoSymbols = enclosingOccurrences.map(_.symbol)
     val protoJavaResult = {
       val result =
         ProtoJavaSymbolMapper.protoToJavaSymbols(path, protoSymbols, buffers)
@@ -416,12 +414,13 @@ final class MbtProtobufReferenceProvider(
 
       def addLocation(symbol: String, location: l.Location): Unit = {
         referenceResults.get(symbol).foreach { locations =>
-          if (token == null) {
-            locations += location
-          } else {
-            languageClient.notifyProgress(
-              new l.ProgressParams(token, JEither.forRight(location))
-            )
+          token match {
+            case Some(token) =>
+              languageClient.notifyProgress(
+                new l.ProgressParams(token, JEither.forRight(location))
+              )
+            case None =>
+              locations += location
           }
         }
       }
@@ -458,15 +457,16 @@ final class MbtProtobufReferenceProvider(
         }
         if !isProtoDoc || protobufTokenAt(range)
           .contains(Symbol(matchSymbol).displayName)
-        if occ.role.isReference || occ.symbol == matchSymbol
+        if occ.role.isReference || (includeDefinition && occ.symbol == matchSymbol)
       } {
         val location = range.toLocation(doc.uri)
-        if (token == null) {
-          referenceResults.get(matchSymbol).foreach(_ += location)
-        } else {
-          languageClient.notifyProgress(
-            new l.ProgressParams(token, JEither.forRight(location))
-          )
+        token match {
+          case Some(token) =>
+            languageClient.notifyProgress(
+              new l.ProgressParams(token, JEither.forRight(location))
+            )
+          case None =>
+            referenceResults.get(matchSymbol).foreach(_ += location)
         }
       }
 

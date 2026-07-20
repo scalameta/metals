@@ -4,12 +4,14 @@ import java.{util => ju}
 
 import scala.concurrent.ExecutionContext
 import scala.io.Source
+import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 case class JdkVersion(
     major: Int,
@@ -38,7 +40,14 @@ object JdkVersion {
   )(implicit ec: ExecutionContext): Option[JdkVersion] = try {
     ShellRunner
       .runSync(
-        List(javaHome.resolve("bin/java").toString, "-version"),
+        List(
+          javaHome
+            .resolve(
+              RelativePath(if (Properties.isWin) "bin/java.exe" else "bin/java")
+            )
+            .toString,
+          "-version",
+        ),
         javaHome,
         redirectErrorOutput = true,
         maybeJavaHome = Some(javaHome.toString()),

@@ -116,7 +116,16 @@ class TurbineClasspathFileManager(
         }
         objects
       case StandardLocation.SOURCE_PATH =>
-        listSourcepath(packageName)
+        val objects = new ju.ArrayList[JavaFileObject]()
+        val isAddedFileName = new ju.HashSet[String]()
+        def add(obj: JavaFileObject): Unit = {
+          if (isAddedFileName.add(obj.getName())) {
+            objects.add(obj)
+          }
+        }
+        listSourcepath(packageName).forEach(add)
+        super.list(location, packageName, kinds, recurse).asScala.foreach(add)
+        objects
       case _ =>
         super.list(location, packageName, kinds, recurse)
     }

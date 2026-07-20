@@ -23,6 +23,7 @@ import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.MemberSelectTree
 import com.sun.source.tree.MethodTree
+import com.sun.source.tree.Scope
 import com.sun.source.tree.Tree.Kind._
 import com.sun.source.util.JavacTask
 import com.sun.source.util.TreePath
@@ -209,8 +210,9 @@ class JavaCompletionProvider(
     autoImportItems(
       identifier,
       inScope,
+      path,
       (elem, item) => {
-        if (!inScope.contains(elem)) {
+        if (!inScope.contains(elem) && isAccessible(task, trees, scope, elem)) {
           items += item
         }
       }
@@ -219,9 +221,41 @@ class JavaCompletionProvider(
     items.result()
   }
 
+  private def isAccessible(
+      task: JavacTask,
+      trees: Trees,
+      scope: Scope,
+      fqn: String
+  ): Boolean = {
+    Option(task.getElements.getTypeElement(fqn)) match {
+      case Some(typeElement) => trees.isAccessible(scope, typeElement)
+      case None =>
+        fqn.lastIndexOf('.') match {
+          case -1 => false
+          case lastDot =>
+            Option(
+              task.getElements.getTypeElement(fqn.substring(0, lastDot))
+            ) match {
+              case None => false
+              case Some(parentClass) =>
+                parentClass.getEnclosedElements.asScala
+                  .find(_.getSimpleName.toString == fqn.substring(lastDot + 1))
+                  .exists(member =>
+                    trees.isAccessible(
+                      scope,
+                      member,
+                      task.getTypes.getDeclaredType(parentClass)
+                    )
+                  )
+            }
+        }
+    }
+  }
+
   private def autoImportItems(
       query: String,
       inScope: Set[String],
+      path: TreePath,
       onMatch: (String, CompletionItem) => Unit
   ): Unit = {
     val simpleNamesInScope = inScope.map(_.split('.').last)
@@ -260,7 +294,7 @@ class JavaCompletionProvider(
         item.setKind(CompletionItemKind.Class)
         // TODO?: move auto-import computation to completionItem/resolve so we
         // don't compute this eagerly for all items here.
-        if (!isSimpleNameInScope) {
+        if (!isSimpleNameInScope && !isSamePackage(path, fqn)) {
           val additionalEdit =
             new JavaAutoImportEditor(params.text(), fqn).textEdit()
           item.setAdditionalTextEdits(List(additionalEdit).asJava)
@@ -268,6 +302,20 @@ class JavaCompletionProvider(
         onMatch(fqn, item)
         item
     }
+  }
+
+  private def isSamePackage(
+      path: TreePath,
+      fqn: String
+  ): Boolean = {
+    val pathPackageName = Option(path.getCompilationUnit)
+      .flatMap(cu => Option(cu.getPackageName))
+      .fold("")(_.toString)
+    val packageName = fqn.lastIndexOf('.') match {
+      case -1 => ""
+      case idx => fqn.substring(0, idx)
+    }
+    packageName.equals(pathPackageName)
   }
 
   private def textEdit(
@@ -446,7 +494,11 @@ class JavaCompletionProvider(
   }
 
   private def completionItem(element: Element): CompletionItem = {
-    val simpleName = element.getSimpleName.toString
+    val simpleName = element.getKind match {
+      case ElementKind.CONSTRUCTOR =>
+        element.getEnclosingElement.getSimpleName.toString
+      case _ => element.getSimpleName.toString
+    }
 
     val (label, insertText) = element match {
       case e: ExecutableElement

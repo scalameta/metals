@@ -105,13 +105,11 @@ class MbtWorkspaceSymbolProvider(
     sleeper: Sleeper = Sleeper.TestingSleeper,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
       TurbineRecompileDelayConfig.fromConfig(None),
-    indexFilters: List[MbtIndexFilter] = List(
-      ProtobufVersionHistoryIndexFilter,
-      ProtobufTemplateAndTestIndexFilter,
-    ),
+    indexFilters: List[MbtIndexFilter] = MbtIndexFilter.allFilters,
     protobufLspConfig: () => ProtobufLspConfig = () =>
       ProtobufLspConfig.default,
     metalsOutDir: Option[Path] = None,
+    mbtBuild: () => MbtBuild = () => MbtBuild.empty,
 )(implicit
     val ec: ExecutionContext = ExecutionContext.Implicits.global,
     val rc: ReportContext = LoggerReportContext,
@@ -144,7 +142,7 @@ class MbtWorkspaceSymbolProvider(
       progress,
       // We don't need to re-compile the workspace super regularly because we can
       // load recently changed files from the sourcepath.
-      turbineRecompileDelay().duration,
+      () => turbineRecompileDelay(),
       listProtoJavaOutlinesForPackage = pkg =>
         protobufWorkspace.listProtoJavaOutlinesForPackage(
           pkg,
@@ -235,7 +233,16 @@ class MbtWorkspaceSymbolProvider(
 
     val timer = new Timer(time)
     // Step 1: list all files in HEAD and include OIDs.
-    val files = GitVCS.lsFilesStage(workspace)
+    val gitFiles = GitVCS.lsFilesStage(workspace)
+    val uncheckedSources = mbtBuild().getUncheckedSources.asScala.toSeq
+    val (genSrcJarStrs, genDirStrs) =
+      uncheckedSources.partition(_.endsWith(".srcjar"))
+    val genDirs = genDirStrs.map(workspace.resolve)
+    val srcJars =
+      genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+    val files = gitFiles ++ GitVCS.lsFilesFromDirs(genDirs) ++ GitVCS
+      .lsFilesFromSrcJars(srcJars, workspace)
+
     if (files.isEmpty) {
       // A more detailed error message is logged if GitVCS.lsFilesStage fails.
       return IndexingStats.empty
@@ -246,8 +253,8 @@ class MbtWorkspaceSymbolProvider(
     val toIndex = ParArray.fromSpecific(for {
       file <- files
       path = workspace.resolve(file.path)
-      candidate = MbtFileCandidate(path, file.path)
-      if indexFilters.forall(_.decide(candidate) == MbtIndexDecision.Continue)
+      candidate = MbtFileCandidate(path)
+      if MbtIndexFilter.included(indexFilters, candidate)
       isCached = documents.get(path).exists(_.oid == file.oid)
       if !isCached
     } yield path)
@@ -413,17 +420,19 @@ class MbtWorkspaceSymbolProvider(
       file: AbsolutePath,
       updateDocumentKeys: Boolean,
   ): Future[Unit] = try {
-    val enableProtoJavaPackage =
-      file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
-    val mdoc =
-      IndexedDocument.fromFile(
-        file,
-        mtags(),
-        buffers,
-        dialects.Scala3,
-        enableProtoJavaPackage = enableProtoJavaPackage,
-      )
-    putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
+    if (MbtIndexFilter.included(indexFilters, MbtFileCandidate(file))) {
+      val enableProtoJavaPackage =
+        file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
+      val mdoc =
+        IndexedDocument.fromFile(
+          file,
+          mtags(),
+          buffers,
+          dialects.Scala3,
+          enableProtoJavaPackage = enableProtoJavaPackage,
+        )
+      putDocument(file, mdoc, updateDocumentKeys = updateDocumentKeys)
+    } else Future.unit
   } catch {
     case _: NoSuchFileException =>
       onDidDelete(file)
@@ -634,6 +643,54 @@ class MbtWorkspaceSymbolProvider(
   }
 
   /**
+   * BFS through the inheritance chain starting from the given symbols.
+   * Returns all files that transitively reference those symbols as parents.
+   *
+   * At each level, top-level traits and classes defined in the current
+   * frontier files are extracted from the MBT index and used as seeds for
+   * the next [[possibleReferences]] call. Already-visited paths are excluded
+   * to prevent cycles.
+   */
+  private def transitiveReferenceFiles(
+      references: Seq[String],
+      implementations: Seq[String],
+  ): Set[AbsolutePath] = {
+    val allMatchedPaths = scala.collection.mutable.HashSet.empty[AbsolutePath]
+    var frontier: Set[AbsolutePath] = possibleReferences(
+      MbtPossibleReferencesParams(
+        references = references,
+        implementations = implementations,
+      )
+    )
+
+    while (frontier.nonEmpty) {
+      allMatchedPaths ++= frontier
+
+      val nextBaseSymbols = frontier.flatMap { path =>
+        documents.get(path).toSeq.flatMap { doc =>
+          doc.symbols
+            .filter { sym =>
+              val kind = sym.getKind()
+              (kind == Semanticdb.SymbolInformation.Kind.TRAIT ||
+                kind == Semanticdb.SymbolInformation.Kind.CLASS) &&
+              Symbol(sym.getSymbol()).isToplevel
+            }
+            .map(_.getSymbol())
+        }
+      }.toSeq
+
+      frontier =
+        if (nextBaseSymbols.isEmpty) Set.empty
+        else
+          possibleReferences(
+            MbtPossibleReferencesParams(implementations = nextBaseSymbols)
+          ) -- allMatchedPaths
+    }
+
+    allMatchedPaths.toSet
+  }
+
+  /**
    * Extracts potential test class candidates from the MBT index without loading semanticdb.
    * Returns candidates that need to be confirmed via semanticdb before use.
    *
@@ -654,15 +711,13 @@ class MbtWorkspaceSymbolProvider(
       scala.collection.mutable.ArrayBuffer
         .empty[BuildTargetClasses.TestClassCandidate]
 
-    val pathsFromReferences = possibleReferences(
-      MbtPossibleReferencesParams(
-        references = annotationSymbols,
-        implementations = baseParentSymbols,
-      )
+    val allMatchedPaths = transitiveReferenceFiles(
+      references = annotationSymbols,
+      implementations = baseParentSymbols,
     )
 
     for {
-      path <- pathsFromReferences
+      path <- allMatchedPaths
       if filterPath(path)
       doc <- documents.get(path).toList
     } {
@@ -838,7 +893,7 @@ class MbtWorkspaceSymbolProvider(
     // .metals/out contains JDK sources materialized for --patch-module; they are not workspace sources
     if (metalsOutDir.exists(outDir => file.toNIO.startsWith(outDir))) {
       Future.unit
-    } else {
+    } else if (MbtIndexFilter.included(indexFilters, MbtFileCandidate(file))) {
       val old = documents.put(file, doc)
       if (old == None && updateDocumentKeys) {
         updateDocumentsKeys(documents)
@@ -864,7 +919,7 @@ class MbtWorkspaceSymbolProvider(
       } else {
         Future.unit
       }
-    }
+    } else Future.unit
   }
 
   private def addDocumentToPackages(

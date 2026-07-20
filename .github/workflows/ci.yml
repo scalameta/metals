@@ -52,20 +52,19 @@ jobs:
           GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
         shell: bash
       - name: Upload heap dump if exists
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()  # This ensures the step runs even if previous steps fail
         with:
-          name: heap-dumps-${{ matrix.os }}-${{ matrix.shard }}
+          name: heap-dumps-${{ matrix.os }}-${{ matrix.shard }}-${{ github.run_id }}
           path: |
             ./**/*.hprof
           retention-days: 5
-
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports-${{ matrix.os }}-${{ matrix.shard }}
-          path: "**/.reports/**/*"
+          name: unit-test-reports-${{ matrix.os }}-${{ matrix.shard }}-${{ github.run_id }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9
@@ -171,8 +170,8 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: test-reports
-          path: "**/.reports/**/*"
+          name: integration-test-reports-${{ matrix.type }}-${{ github.run_id }}
+          path: "**/target/test-reports/*.xml"
           if-no-files-found: ignore
           retention-days: 7
           compression-level: 9

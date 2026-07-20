@@ -41,6 +41,7 @@ object BazelMbtBuildSupport {
       classDirectoriesByTarget: Map[String, String],
       dependencyModules: Seq[MbtDependencyModule],
       scalaVersion: Option[String],
+      genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
@@ -49,6 +50,7 @@ object BazelMbtBuildSupport {
         MbtBuild(
           depModules,
           singleNamespace(workspaceNamespaceName, Set.empty, scalaVersion),
+          uncheckedSources = ju.Collections.emptyList(),
         )
       } else {
         MbtBuild.empty
@@ -81,7 +83,7 @@ object BazelMbtBuildSupport {
           keys,
         )
       val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(fileLabelToWorkspaceRelativePath)
+        k -> v.flatMap(BazelLabels.fileLabelToWorkspaceRelativePath)
       }
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
 
@@ -89,6 +91,8 @@ object BazelMbtBuildSupport {
         val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
         val scalacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
         val javacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
+        val genSrcOutputsByNamespaces =
+          mutable.Map.empty[String, mutable.Buffer[String]]
         for {
           t <- targetLabels
           p = keys(t)
@@ -123,6 +127,16 @@ object BazelMbtBuildSupport {
             javacOptionsByBuildFile.getOrElse(p, Nil) ++ javacOptions,
           )
         }
+        for {
+          t <- targetLabels
+          p = keys(t)
+          path <- genSrcOutputsByTarget.getOrElse(t, Nil)
+        } {
+          genSrcOutputsByNamespaces.getOrElseUpdate(
+            p,
+            mutable.Buffer.empty,
+          ) += path
+        }
         for ((namespace, files) <- byBuildFile) {
           putNamespace(
             namespaces,
@@ -135,11 +149,15 @@ object BazelMbtBuildSupport {
             runTargetsByNs.getOrElse(namespace, Set.empty),
             classDirectoriesByNs.get(namespace),
             scalaVersion,
+            genSrcOutputsByNamespaces
+              .getOrElse(namespace, mutable.Buffer.empty)
+              .toSeq,
           )
         }
       } else {
         val allSrcs = srcFilesByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
+        val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
         putNamespace(
           namespaces,
           workspaceNamespaceName,
@@ -152,9 +170,14 @@ object BazelMbtBuildSupport {
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
           classDirectoriesByNs.get(workspaceNamespaceName),
           scalaVersion,
+          allGenSrcOutputs,
         )
       }
-      MbtBuild(depModules, namespaces)
+      MbtBuild(
+        depModules,
+        namespaces,
+        uncheckedSources = ju.Collections.emptyList(),
+      )
     }
   }
 
@@ -164,41 +187,10 @@ object BazelMbtBuildSupport {
   ): String =
     if (granularity == BazelMbtNamespaceMode.Workspace) workspaceNamespaceName
     else if (granularity == BazelMbtNamespaceMode.BuildFile) {
-      packageKey(ruleLabel).getOrElse(ruleLabel)
+      BazelLabels.packageKey(ruleLabel).getOrElse(ruleLabel)
     } else {
       ruleLabel
     }
-
-  def packageKey(ruleLabel: String): Option[String] = {
-    val s = ruleLabel.trim
-    if (!s.startsWith("//")) None
-    else {
-      val rest = s.substring(2)
-      val c = rest.lastIndexOf(':')
-      if (c < 0) None
-      else Some("//" + rest.substring(0, c))
-    }
-  }
-
-  /**
-   * Map a Bazel file label `//path/to:File.ext` to a workspace-relative path
-   * `path/to/File.ext`.
-   */
-  def fileLabelToWorkspaceRelativePath(fileLabel: String): Option[String] = {
-    val s = fileLabel.trim
-    if (!s.startsWith("//")) None
-    else {
-      val rest = s.substring(2)
-      val c = rest.lastIndexOf(':')
-      if (c < 0) None
-      else {
-        val pkg = rest.substring(0, c)
-        val name = rest.substring(c + 1)
-        if (name.isEmpty) None
-        else Some(s"$pkg/$name")
-      }
-    }
-  }
 
   private def computeDependsOn(
       granularity: BazelMbtNamespaceMode,
@@ -295,6 +287,7 @@ object BazelMbtBuildSupport {
       runTargets: Set[String],
       classDirectory: Option[String],
       scalaVersion: Option[String],
+      uncheckedSources: Seq[String] = Nil,
   ): Unit = {
     val sortedRunTargets =
       if (runTargets.isEmpty) null else runTargets.toSeq.sorted.asJava
@@ -310,6 +303,9 @@ object BazelMbtBuildSupport {
         dependsOn = dependsOn.toSeq.sorted.asJava,
         classDirectories = classDirectory.toList.asJava,
         configurations = sortedRunTargets,
+        uncheckedSources =
+          if (uncheckedSources.isEmpty) null
+          else uncheckedSources.distinct.sorted.asJava,
       ),
     )
   }

@@ -7,6 +7,8 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 import scala.jdk.CollectionConverters._
+import scala.util.Failure
+import scala.util.Try
 import scala.util.control.NonFatal
 
 import org.gradle.tooling.GradleConnector
@@ -64,11 +66,12 @@ object GradleInfoExtractor {
     require(absRoot.isDirectory, s"Not a directory: $absRoot")
 
     val connection = buildConnector(absRoot, config).connect()
+    scribe.info("GradleInfoExtractor: Connected to the Gradle daemon")
     try {
-      val env = fetchModel(connection, classOf[BuildEnvironment], config)
+      val env = fetchModel(connection, classOf[BuildEnvironment], config).get
       val (idea, modules) = fetchIdeaModules(connection, config, config)
 
-      val gradleBuild = fetchModel(connection, classOf[GradleBuild], config)
+      val gradleBuild = fetchModel(connection, classOf[GradleBuild], config).get
       val editableModules = gradleBuild.getEditableBuilds.asScala.toSeq
         .flatMap(extractEditableBuildModules(_, absRoot.toPath, config))
       val allModules =
@@ -186,7 +189,7 @@ object GradleInfoExtractor {
         classOf[IdeaProject],
         fetchConfig,
         extraArgs = List("--init-script", initScriptFile.toString) ::: extraArgs,
-      )
+      ).get
       val sourceSetsMap = readSourceSetsMap(sourceSetsOutputFile)
       val modules = idea.getModules.asScala.toSeq
         .map(extractModule(_, relativeToConfig, sourceSetsMap))
@@ -259,11 +262,45 @@ object GradleInfoExtractor {
       modelType: Class[T],
       config: ExtractorConfig,
       extraArgs: List[String] = Nil,
-  ): T = {
+  ): Try[T] = {
     val builder: ModelBuilder[T] = connection.model(modelType)
-    config.gradleJvm.foreach(builder.setJavaHome)
+    config.gradleJvm.foreach { javaHome =>
+      scribe.info(
+        s"GradleInfoExtractor: Setting Java home for the Gradle model builder: $javaHome"
+      )
+      builder.setJavaHome(javaHome)
+    }
     if (extraArgs.nonEmpty) builder.withArguments(extraArgs: _*)
-    builder.get()
+    Try {
+      builder.get()
+    }.recoverWith { case NonFatal(e) =>
+      val javaMismatchError = new StacktraceIterator(e).find { t =>
+        Option(t.getMessage()).exists(_.startsWith("Unsupported class file"))
+      }
+      /*
+       * If the model builder compiles the custom build scripts supplied by the importer
+       * with Java version that's not supported by the Gradle daemon, an exception will be thrown.
+       * This failure mode seems to be quite likely (e.g. when importing a legacy project),
+       * and the exception has a very long stack trace which is not particularly helpful.
+       * In this particular situation, we hide most of that stack trace and re-throw just the root cause.
+       */
+      javaMismatchError.foreach { _ =>
+        scribe.error(
+          """|GradleInfoExtractor: error while fetching data from the Gradle daemon.
+             |  This is very likely caused by incompatible versions of the JDK.
+             |
+             |  To mitigate this, open your workspace configuration (e.g. .vscode/settings.json)
+             |  and set "metals.java-home" to a path to a compatible JDK distribution.
+             |  See the table of compatible versions at
+             |  https://docs.gradle.org/current/userguide/compatibility.html.
+             |
+             |  (Turn on debug logging to see the full stack trace.)
+             |""".stripMargin
+        )
+        scribe.debug(e)
+      }
+      Failure[T](javaMismatchError.getOrElse(e))
+    }
   }
 
   private def extractModule(
@@ -425,5 +462,15 @@ object GradleInfoExtractor {
   private def stripJarExtension(f: File): String = {
     val n = f.getName
     if (n.endsWith(".jar")) n.dropRight(4) else n
+  }
+
+  private class StacktraceIterator(e: Throwable) extends Iterator[Throwable] {
+    var t = e
+    def hasNext: Boolean = t.getCause() != null
+
+    def next(): Throwable = {
+      t = t.getCause()
+      t
+    }
   }
 }

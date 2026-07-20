@@ -12,10 +12,6 @@ class JavaMetalsCompilerWrapper(factory: () => JavaMetalsCompiler)
     override def reporter: Unit = ()
   }
 
-  override def askShutdown(): Unit = {
-    stop()
-  }
-
   override def isAlive(): Boolean = _compiler != null
 
   override def stop(): Unit = {
