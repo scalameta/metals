@@ -264,16 +264,18 @@ object BazelMbtBuildSupport {
       runTargetsByNs: Map[String, Set[String]],
       classDirectoriesByTarget: Map[String, String],
       keys: Map[String, String],
-  ): Map[String, List[String]] =
+  ): Map[String, List[String]] = {
+    val targetLabelsByNamespace = targetLabels.groupBy(keys)
     keys.values.toSet.flatMap { (namespace: String) =>
       val preferredTargets = runTargetsByNs.getOrElse(namespace, Set.empty)
       val fallbackTargets =
-        targetLabels.filter(target => keys(target) == namespace)
+        targetLabelsByNamespace.getOrElse(namespace, Nil)
       val candidates = preferredTargets.toSeq.sorted ++ fallbackTargets
       val dirs =
         candidates.flatMap(classDirectoriesByTarget.get).distinct.toList
       if (dirs.isEmpty) None else Some(namespace -> dirs)
     }.toMap
+  }
 
   private def putNamespace(
       namespaces: ju.Map[String, MbtNamespace],

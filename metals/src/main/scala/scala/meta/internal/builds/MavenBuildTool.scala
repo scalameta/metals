@@ -138,7 +138,7 @@ case class MavenBuildTool(
     val moduleArgs =
       mavenModuleDirectory(target)
         .map(_.resolve("pom.xml"))
-        .filter(_.isFile) match {
+        .filter(_.exists) match {
         case Some(pom) =>
           List("-f", pom.toString())
         case _ => Nil
@@ -222,7 +222,7 @@ case class MavenBuildTool(
     val moduleArgs =
       mavenModuleDirectory(target)
         .map(_.resolve("pom.xml"))
-        .filter(_.isFile) match {
+        .filter(_.exists) match {
         case Some(pom) =>
           List("-f", pom.toString())
         case _ => Nil
