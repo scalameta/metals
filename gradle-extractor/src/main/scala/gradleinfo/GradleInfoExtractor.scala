@@ -3,8 +3,6 @@ package gradleinfo
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.logging.Level
-import java.util.logging.Logger
 
 import scala.jdk.CollectionConverters._
 import scala.util.Failure
@@ -47,8 +45,6 @@ final case class ExtractorConfig(
 
 /** Pulls structural information out of a Gradle build via the Tooling API. */
 object GradleInfoExtractor {
-  private val logger = Logger.getLogger(getClass.getName)
-
   private final case class SourceSetDirectories(
       classDirectories: List[String] = Nil,
       testClassDirectory: List[String] = Nil,
@@ -112,23 +108,32 @@ object GradleInfoExtractor {
       dependency: ExternalDependency,
       moduleNames: Set[String],
   ): Option[ProjectDependency] =
-    Option
-      .when(dependency.gav.startsWith(UnresolvedDependencyPrefix)) {
-        dependency.gav
-          .stripPrefix(UnresolvedDependencyPrefix)
-          .split("\\s+")
-          .dropRight(1)
-          .reverse
+    if (dependency.gav.startsWith(UnresolvedDependencyPrefix)) {
+      val tokens = dependency.gav
+        .stripPrefix(UnresolvedDependencyPrefix)
+        .trim
+        .split("\\s+")
+        .filter(_.nonEmpty)
+      val dependencyOpt = tokens
+        .dropRight(1)
+        .reverse
+        .find(moduleNames)
+        .map(ProjectDependency(_, dependency.scope))
+      if (dependencyOpt.isEmpty) {
+        scribe.debug(
+          s"GradleInfoExtractor: unresolved dependency did not match an editable build module: ${dependency.gav}"
+        )
       }
-      .flatMap(_.find(moduleNames))
-      .map(ProjectDependency(_, dependency.scope))
+      dependencyOpt
+    } else None
 
   private def extractEditableBuildModules(
       editableBuild: GradleBuild,
       mainProjectDir: Path,
       config: ExtractorConfig,
-  ): Seq[ModuleReport] =
-    Option(editableBuild.getRootProject)
+  ): Seq[ModuleReport] = {
+    val rootProject = Option(editableBuild.getRootProject)
+    rootProject
       .flatMap(project => Option(project.getProjectDirectory))
       .map(_.toPath.toAbsolutePath.normalize.toFile.getCanonicalFile())
       .filter(_.isDirectory)
@@ -138,8 +143,8 @@ object GradleInfoExtractor {
         try {
           val mainConfig = config.copy(projectDir = mainProjectDir)
           val includedBuildName =
-            Option(editableBuild.getRootProject)
-              .flatMap(p => Option(p.getName))
+            rootProject
+              .flatMap(project => Option(project.getName))
               .getOrElse("")
           val (_, modules) = fetchIdeaModules(
             connection,
@@ -154,14 +159,14 @@ object GradleInfoExtractor {
           )
         } catch {
           case NonFatal(e) =>
-            logger.log(
-              Level.WARNING,
+            scribe.warn(
               s"Failed to extract modules from editable build $editableBuildDir",
               e,
             )
             Nil
         } finally connection.close()
       }
+  }
 
   private def buildConnector(
       dir: java.io.File,

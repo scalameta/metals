@@ -180,27 +180,6 @@ case class GradleBuildTool(
     )
   }
 
-  /**
-   * Decomposes a Metals project-path token into an optional included-build name
-   * and the Gradle project path within that build.
-   *
-   * Examples:
-   *   ":"                    → (None,                  ":")
-   *   ":server"              → (None,                  ":server")
-   *   "build-tools-internal:"  → (Some("build-tools-internal"), ":")
-   *   "build-tools:reaper"   → (Some("build-tools"),   ":reaper")
-   */
-  private def decomposeProjectPath(
-      path: String
-  ): (Option[String], String) =
-    if (path == ":" || path.isEmpty) (None, ":")
-    else if (path.startsWith(":")) (None, path)
-    else if (path.endsWith(":")) (Some(path.dropRight(1)), ":")
-    else {
-      val sep = path.indexOf(':')
-      (Some(path.take(sep)), path.drop(sep))
-    }
-
   private def gradleInitScript(
       target: MbtTarget,
       taskName: String,
@@ -208,7 +187,8 @@ case class GradleBuildTool(
   )(taskCode: String => String): Path = {
     val projectBlock = target.projectPath match {
       case Some(path) =>
-        val (buildNameOpt, internalPath) = decomposeProjectPath(path)
+        val (buildNameOpt, internalPath) =
+          GradleBuildTool.decomposeProjectPath(path)
 
         // For included builds the same init script runs in every build's
         // context.  Guard so we only configure the intended build.
@@ -377,6 +357,28 @@ object GradleBuildTool {
       .replace("'", "\\'")
       .replace("\n", "\\n")
       .replace("\r", "\\r") + "'"
+
+  /**
+   * Decomposes a Metals project-path token into an optional included-build name
+   * and the Gradle project path within that build.
+   *
+   * Examples:
+   *   ":"                      -> (None,                         ":")
+   *   ":server"                -> (None,                         ":server")
+   *   "build-tools-internal:"  -> (Some("build-tools-internal"), ":")
+   *   "build-tools:reaper"     -> (Some("build-tools"),          ":reaper")
+   */
+  private[builds] def decomposeProjectPath(
+      path: String
+  ): (Option[String], String) =
+    if (path == ":" || path.isEmpty) (None, ":")
+    else if (path.startsWith(":")) (None, path)
+    else if (path.endsWith(":")) (Some(path.dropRight(1)), ":")
+    else {
+      val sep = path.indexOf(':')
+      if (sep < 0) (None, s":$path")
+      else (Some(path.take(sep)), path.drop(sep))
+    }
 
   def isGradleRelatedPath(
       workspace: AbsolutePath,
