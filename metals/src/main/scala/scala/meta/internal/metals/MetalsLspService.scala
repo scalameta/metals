@@ -24,6 +24,7 @@ import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.docstrings.MetalsSymbolLink
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
@@ -1393,6 +1394,72 @@ abstract class MetalsLspService(
       .fromSymbol(symbol, focusedDocument)
       .asScala
       .headOption
+
+  /**
+   * Resolves a hover documentation link to its definition. A unique match is
+   * `Resolved`; a miss or ambiguous/overloaded link is `NotUnique`; an
+   * unexpected (logged) error is `Failed` (scalameta/metals#3383).
+   */
+  def resolveScaladocLink(
+      params: ScaladocLinkParams
+  ): ScaladocLinkResolution =
+    try {
+      val path = params.uri.toAbsolutePath
+      // Build fallbacks from the marker's DocScope with the same generator as
+      // go-to-definition, so the two paths can't drift (scalameta/metals#3383).
+      val parsed = MetalsSymbolLink.parsePayload(params.payload)
+      val docScope = parsed.docScope
+      // The docstring's own dialect (from the marker), not the hovered file's,
+      // so a Scala 2 library's docs aren't parsed as Scala 3 (scalameta/metals#3383).
+      val isScala3 = docScope.docIsScala3
+      val context = docScope.owner match {
+        case Some(owner) =>
+          ContextSymbols.fromSymbols(owner, docScope.alternative)
+        case None => ContextSymbols.empty
+      }
+      val fallbacksOf = (target: String) =>
+        MetalsSymbolLink.fallbacksForTarget(
+          target,
+          docScope.isJava,
+          (name, rest, bare) =>
+            ScaladocImportScope
+              .fallbacksFor(docScope.imports, docScope.isJava, name, rest, bare),
+        )
+      val locations = definitionProvider.scaladocDefinitionProvider
+        .resolveLinkLocations(
+          parsed.target,
+          path,
+          isScala3,
+          context,
+          fallbacksOf,
+          docScope.isJava,
+          // The docstring's own file, so hover keeps the same-compilation-unit
+          // precedence even when the owner is unresolvable (scalameta/metals#3383).
+          knownDocstringFile = docScope.docstringFile.map(_.toAbsolutePath),
+        )
+      // Navigate only on a unique match; reporting ambiguity beats jumping to
+      // an arbitrary overload or ambiguous form (scalameta/metals#3383).
+      locations match {
+        case location :: Nil => ScaladocLinkResolution.Resolved(location)
+        case _ => ScaladocLinkResolution.NotUnique
+      }
+    } catch {
+      case NonFatal(e) =>
+        // An exception here is a real failure (lookups are guarded), not a
+        // miss — report it rather than show ambiguity (scalameta/metals#3383).
+        reports.incognito.create(() =>
+          Report(
+            "scaladoc-link-resolution",
+            s"Failed to resolve documentation link `${params.payload}`",
+            e,
+          )
+        )
+        scribe.error(
+          s"failed to resolve documentation link `${params.payload}`",
+          e,
+        )
+        ScaladocLinkResolution.Failed
+    }
 
   def gotoSupermethod(
       textDocumentPositionParams: TextDocumentPositionParams

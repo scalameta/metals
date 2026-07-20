@@ -138,6 +138,7 @@ class JavacMtags(
       )
       val cu = parser.parseCompilationUnit()
       cu.sourcefile = source
+      onCompilationUnit(cu)
       val trees = JavacTrees.instance(context)
       val visitor = new Visitor(cu, trees)
       visitor.scan(cu, ())
@@ -148,6 +149,10 @@ class JavacMtags(
       fileManager.foreach(_.close())
     }
   }
+
+  // Hook for subclasses (e.g. JavadocIndexer) to inspect the parsed compilation
+  // unit (e.g. its import declarations) once, before any member is visited.
+  protected def onCompilationUnit(cu: CompilationUnitTree): Unit = {}
 
   // Hook for subclasses (e.g. JavadocIndexer).
   // `sym` is the SemanticDB symbol for the declaration.
@@ -172,6 +177,11 @@ class JavacMtags(
       typeParams: List[String],
       docComment: Option[String]
   ): Unit = {}
+
+  // Reports each declaration's doc-comment owner (what its relative links
+  // resolve against) and start offset, so go-to-definition can map a cursor in a
+  // leading doc comment to the declaration it documents (scalameta/metals#3383).
+  protected def onDeclaration(contextOwner: String, startOffset: Int): Unit = {}
 
   private class Visitor(cu: CompilationUnitTree, trees: Trees)
       extends TreePathScanner[TreePath, Unit] {
@@ -379,6 +389,11 @@ class JavacMtags(
 
         val typeParams = extractTypeParamNames(node)
         onClass(currentOwner, name, typeParams, getDocComment(node))
+        // A class's own doc resolves relative links against the class itself.
+        onDeclaration(
+          currentOwner,
+          sourcePositions.getStartPosition(cu, node).intValue()
+        )
 
         lazy val constructorCount = node.getMembers().asScala.count {
           case method: MethodTree =>
@@ -424,6 +439,8 @@ class JavacMtags(
         return null
       }
       mtags.withOwner() {
+        // The enclosing class, captured before `method` pushes the method as owner.
+        val enclosingClass = currentOwner
         val sym = mtags.method(
           name = name,
           disambiguator = disambiguators.getOrDefault(node, 0) match {
@@ -472,6 +489,10 @@ class JavacMtags(
             getDocComment(node)
           )
         }
+        onDeclaration(
+          enclosingClass,
+          sourcePositions.getStartPosition(cu, node).intValue()
+        )
         null // don't scan method body
       }
     }
@@ -491,6 +512,8 @@ class JavacMtags(
       mtags.withOwner() {
         // Skip local variables (inside method bodies)
         if (!mtags.currentOwner.endsWith(").")) {
+          // The enclosing class — a field's doc resolves relative links against it.
+          val enclosingClass = mtags.currentOwner
           val pos = findNameRange(
             start = Option(node.getType()) match {
               case Some(value)
@@ -524,6 +547,10 @@ class JavacMtags(
                 else 0
             )
           }
+          onDeclaration(
+            enclosingClass,
+            sourcePositions.getStartPosition(cu, node).intValue()
+          )
         }
       }
       null // don't scan variable initializers
