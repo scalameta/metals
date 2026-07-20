@@ -96,7 +96,12 @@ class CompilerConfiguration(
         uncheckedSources.partition(_.endsWith(".srcjar"))
       val genDirs = genDirStrs.map(workspace.resolve)
       val srcJars =
-        genSrcJarStrs.map(workspace.resolve).filter(p => p.exists && p.isFile)
+        genSrcJarStrs.map(workspace.resolve).filter { p =>
+          val ok = p.exists && p.isFile
+          if (!ok)
+            scribe.warn(s"mbt-v2: uncheckedSources srcjar does not exist: $p")
+          ok
+        }
       val dirFiles =
         GitVCS
           .lsFilesFromDirs(genDirs)
