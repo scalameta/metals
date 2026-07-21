@@ -1,5 +1,6 @@
 package pc
 
+import scala.meta.internal.proto.diag.ProtoError
 import scala.meta.internal.proto.diag.SourceFile
 import scala.meta.internal.proto.parse.Parser
 
@@ -17,6 +18,13 @@ class ParserEdgeCasesSuite extends FunSuite {
       val result = Parser.parse(source)
       // Just verify we can parse without exception
       assert(result != null, s"Parser returned null for: $name")
+    }
+  }
+
+  def parseError(name: String, code: String): Unit = {
+    test(name) {
+      val source = new SourceFile("test.proto", code)
+      intercept[ProtoError](Parser.parse(source))
     }
   }
 
@@ -156,6 +164,25 @@ class ParserEdgeCasesSuite extends FunSuite {
        |      "[hc4q8] [2023-01-10 19:12:58 +0000] [2] [INFO] Using worker: sync\n"
        |  ];
        |}
+       |""".stripMargin,
+  )
+
+  parseOk(
+    "edition-2023-basic",
+    """|edition = "2023";
+       |package devtools.skyframe;
+       |message FileInvalidationData {
+       |  string overflow_key = 1;
+       |  int64 parent_mtsv = 2;
+       |}
+       |""".stripMargin,
+  )
+
+  parseError(
+    "edition-then-syntax-is-duplicate-declaration",
+    """|edition = "2023";
+       |syntax = "proto3";
+       |message Foo {}
        |""".stripMargin,
   )
 }
