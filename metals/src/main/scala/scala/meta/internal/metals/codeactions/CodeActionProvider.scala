@@ -67,6 +67,7 @@ final class CodeActionProvider(
     new GenerateGettersSetters(javaTrees, buffers),
     new GenerateEqualsHashCodeToString(javaTrees, buffers),
     new AddMissingReturnStatement(javaTrees, buffers),
+    new ChangeVariableType(javaTrees, buffers),
     new JavaExtractMethodCodeAction(javaTrees, compilers),
   )
 
