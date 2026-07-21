@@ -94,6 +94,10 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
           .map(_.getEnvironmentVariables().asScala.toMap)
           .getOrElse(Map.empty)
 
+        val jvmOptions = jvmRunEnv
+          .map(_.getJvmOptions().asScala.toList)
+          .getOrElse(Nil)
+
         new DebugeeProject(
           scalaVersion,
           target.displayName,
@@ -102,6 +106,7 @@ class DebugeeParamsCreator(buildTargetClasses: BuildTargetClasses) {
           filteredClassPath,
           runClasspath,
           environmentVariables = envVars,
+          jvmOptions = jvmOptions,
         )
       }
     }
@@ -166,7 +171,20 @@ case class DebugeeProject(
     unmanagedEntries: Seq[UnmanagedEntry],
     runClassPath: List[AbsolutePath],
     environmentVariables: Map[String, String],
+    jvmOptions: List[String],
 ) {
   def environmentVariablesAsStrings: Iterator[String] =
     environmentVariables.iterator.map { case (k, v) => s"$k=$v" }
+
+  /**
+   * Merge the build server's JVM options with the user-provided ones (e.g. from
+   * launch.json). User options go last so that they take precedence, since the
+   * JVM uses the last occurrence of a repeated option (e.g. -Duser.dir, -Xmx).
+   * `distinct` drops exact duplicates, which can occur when the same build
+   * server options are also threaded through the user list (the MCP test runner
+   * passes them via `ScalaTestSuites` as well) — keeping the first occurrence
+   * still leaves any differing user value last, so the user wins.
+   */
+  def jvmOptionsWith(userJvmOptions: List[String]): List[String] =
+    (jvmOptions ++ userJvmOptions).distinct
 }
