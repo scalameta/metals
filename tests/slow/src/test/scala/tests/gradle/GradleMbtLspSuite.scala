@@ -377,23 +377,95 @@ class GradleMbtLspSuite
       )
       _ <- server.headServer.connectionProvider.buildServerPromise.future
       mbtFile = workspace.resolve(".metals/mbt.json").readText
-      _ = assert(
-        mbtFile.contains(""""plugin-lib""""),
-        s"Expected 'plugin-lib' namespace in mbt.json but got:\n$mbtFile",
-      )
-      _ = assert(
-        mbtFile.contains(""""plugin-lib/src/main/java""""),
-        s"Expected 'plugin-lib/src/main/java' sources in mbt.json but got:\n$mbtFile",
-      )
-      _ = assert(
-        mbtFile.contains(""""plugin-lib/src/test/java""""),
-        s"Expected 'plugin-lib/src/test/java' sources in mbt.json but got:\n$mbtFile",
-      )
-      _ = assert(
-        mbtFile
-          .replaceAll("\\s+", "")
-          .contains(""""dependsOn":["plugin-lib"]"""),
-        s"Expected 'main-project' to depend on 'plugin-lib' in mbt.json but got:\n$mbtFile",
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [
+            |    {
+            |      "id": "junit:junit:4.13.2",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.hamcrest:hamcrest-core:1.3",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.jsoup:jsoup:1.21.1",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    }
+            |  ],
+            |  "namespaces": {
+            |    "main-project": {
+            |      "sources": [
+            |        "src/main/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": ":"
+            |    },
+            |    "main-project:test": {
+            |      "sources": [
+            |        "src/test/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "main-project",
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": ":"
+            |    },
+            |    "plugin-lib": {
+            |      "sources": [
+            |        "plugin-lib/src/main/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": "plugin-lib:"
+            |    },
+            |    "plugin-lib:test": {
+            |      "sources": [
+            |        "plugin-lib/src/test/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "junit:junit:4.13.2",
+            |        "org.hamcrest:hamcrest-core:1.3",
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": "plugin-lib:"
+            |    }
+            |  },
+            |  "uncheckedSources": []
+            |}
+            |""".stripMargin,
       )
       _ <- server.didOpen("plugin-lib/src/main/java/lib/Parser.java")
       _ <- server.didFocus("plugin-lib/src/main/java/lib/Parser.java")
