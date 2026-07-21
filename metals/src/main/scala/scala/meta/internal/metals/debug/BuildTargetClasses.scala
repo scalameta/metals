@@ -56,7 +56,7 @@ final class BuildTargetClasses(
 
   private val symbolCache = new SymbolCache(compilers, symbolIndex)
 
-  private val MbtSemanticdbBatchSize = 5
+  private val MbtSemanticdbBatchSize = 50
 
   type JVMRunEnvironmentsMap =
     TrieMap[b.BuildTargetIdentifier, b.JvmEnvironmentItem]
