@@ -303,4 +303,68 @@ class ImplementAbstractMembersLspSuite
       )
     } yield ()
   }
+
+  // https://github.com/scalameta/metals/issues/2554
+  // A Java raw type is rendered with wildcards, so the quick fix is offered and
+  // the applied stub compiles.
+  checkEdit(
+    "java-raw-type",
+    s"""|/metals.json
+        |{"a": {"scalaVersion": "$scalaVersion"}}
+        |/a/src/main/java/example/Box.java
+        |package example;
+        |public interface Box<T> {}
+        |/a/src/main/java/example/Reasonable.java
+        |package example;
+        |public interface Reasonable {
+        |  public void box(Box b);
+        |}
+        |/a/src/main/scala/example/Reasonably.scala
+        |package example
+        |class <<Reasonably>> extends Reasonable {}
+        |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    expectedCode = """|package example
+                      |class Reasonably extends Reasonable {
+                      |
+                      |  override def box(b: Box[_]): Unit = ???
+                      |
+                      |}
+                      |""".stripMargin,
+    filterAction = _.getTitle() == ImplementAbstractMembers.title,
+  )
+
+  // A recursive (F-bounded) raw type renders as `Recursive[_ <: AnyRef]`. Whether
+  // that actually overrides is mode-dependent (see #2554), so we only assert it is
+  // the best-effort form we insert, not that the result compiles.
+  checkEdit(
+    "java-raw-type-recursive",
+    s"""|/metals.json
+        |{"a": {"scalaVersion": "$scalaVersion"}}
+        |/a/src/main/java/example/Recursive.java
+        |package example;
+        |public interface Recursive<T extends Recursive> {}
+        |/a/src/main/java/example/IllConceived.java
+        |package example;
+        |public interface IllConceived {
+        |  public void impossible(Recursive r);
+        |}
+        |/a/src/main/scala/example/Naivety.scala
+        |package example
+        |class <<Naivety>> extends IllConceived {}
+        |""".stripMargin,
+    s"""|${ImplementAbstractMembers.title}
+        |""".stripMargin,
+    expectedCode =
+      """|package example
+         |class Naivety extends IllConceived {
+         |
+         |  override def impossible(r: Recursive[_ <: AnyRef]): Unit = ???
+         |
+         |}
+         |""".stripMargin,
+    expectNoDiagnostics = false,
+    filterAction = _.getTitle() == ImplementAbstractMembers.title,
+  )
 }

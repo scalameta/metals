@@ -349,6 +349,12 @@ class MetalsGlobal(
         if (isVisited(key)) return cached.getOrDefault(key, tpe)
         isVisited += key
         val result = tpe match {
+          case TypeRef(_, sym, args)
+              if args.isEmpty && sym.typeParams.nonEmpty && sym.isJavaDefined =>
+            // Java raw type, render it as the existential the compiler uses for
+            // it (e.g. `Box` => `Box[_]`), otherwise the result is invalid
+            // Scala. See https://github.com/scalameta/metals/issues/2554
+            loop(rawToExistential(tpe), name)
           case TypeRef(pre, sym, args) =>
             def shortSymbol = {
               // workaround for Tuple1 (which is incorrectly printed by Scala 2 compiler)
