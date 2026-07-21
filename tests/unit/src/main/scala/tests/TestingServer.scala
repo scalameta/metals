@@ -2028,7 +2028,7 @@ final case class TestingServer(
                 s"Cannot find ${l.getRange()} in ${l.getUri()}"
               )
             )
-          pos.formatMessage("info", "reference")
+          pos.formatMessage("info", "reference").stripLineEnd
         }
         .mkString("\n")
     }

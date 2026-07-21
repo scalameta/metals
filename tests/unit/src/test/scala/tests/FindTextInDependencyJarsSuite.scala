@@ -112,7 +112,7 @@ class FindTextInDependencyJarsSuite
           .getRange()
           .toMeta(input)
       }
-      .map(_.formatMessage("info", "result"))
+      .map(_.formatMessage("info", "result").stripLineEnd)
       .mkString("\n")
     assertNoDiff(rendered, expected)
   }

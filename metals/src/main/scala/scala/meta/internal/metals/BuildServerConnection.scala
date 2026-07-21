@@ -158,7 +158,8 @@ class BuildServerConnection private[metals] (
   /* Currently only Bloop and sbt support running single test cases
    * and ScalaCLI uses Bloop underneath.
    */
-  def supportsTestSelection: Boolean = isBloop || isSbt || isScalaCLI || isBazel
+  def supportsTestSelection: Boolean =
+    isBloop || isSbt || isScalaCLI || isBazel || isMbt
 
   /* Some users may still use an old version of Bloop that relies on scala-debug-adapter 1.x.
    * Metals does not support scala-debug-adapter 1.x anymore.

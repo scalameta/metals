@@ -3,8 +3,6 @@ import sbt._
 object V {
   val scala210 = "2.10.7"
 
-  val scala211 = "2.11.12"
-
   val scala212 = "2.12.21"
 
   val scala213 = "2.13.18"
@@ -37,7 +35,7 @@ object V {
 
   val coursierInterfaces = "1.0.29-M2"
 
-  val debugAdapter = "4.2.8"
+  val debugAdapter = "4.2.9"
 
   val genyVersion = "1.0.0"
 
@@ -61,7 +59,7 @@ object V {
 
   val mill = "1.1.3"
 
-  val mdoc = "2.8.2"
+  val mdoc = "2.9.0"
 
   val munit = "1.2.4"
 
@@ -79,7 +77,7 @@ object V {
 
   val scalafmt = "3.10.7"
 
-  val scalameta = "4.15.2"
+  val scalameta = "4.17.0"
 
   val scribe = "3.18.0"
 
@@ -178,12 +176,6 @@ object V {
       .toList
       .distinct
 
-  // Scala 2
-  // whenever version is removed please add it to MtagsResolver under last supported Metals version
-  def deprecatedScalaVersions: Seq[String] = Seq(
-//    scala211
-  )
-
   def nonDeprecatedScalaVersions = Seq(
     scala213,
     scala212,
@@ -205,11 +197,10 @@ object V {
   }
 
   def supportedScalaVersions =
-    nonDeprecatedScalaVersions ++ deprecatedScalaVersions
+    nonDeprecatedScalaVersions
 
   val quickPublishScalaVersions = Set(
 //     bazelScalaVersion,
-//    scala211,
     // sbtScala,
     scala212,
     scala213,

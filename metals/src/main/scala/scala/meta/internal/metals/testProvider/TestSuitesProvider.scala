@@ -372,7 +372,11 @@ final class TestSuitesProvider(
       doc: Option[TextDocument],
   ): Seq[AddTestCases] = {
     doc
-      .orElse(semanticdbs().textDocument(path).documentIncludingStale)
+      .orElse(
+        semanticdbs()
+          .textDocument(path, requestInteractive = true)
+          .documentIncludingStale
+      )
       .map { semanticdb =>
         suites.flatMap { suite =>
           val testCases = suite.framework match {

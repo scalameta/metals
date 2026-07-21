@@ -297,9 +297,7 @@ case class GradleBuildTool(
         testSuites.getJvmOptions
       )
     val initScriptArgs =
-      if (jvmOptions.isEmpty) Nil
-      else
-        List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
+      List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
 
     gradleBaseCommand() ::: List(
       "--console=plain"
@@ -326,8 +324,18 @@ case class GradleBuildTool(
       jvmOptions: List[String],
   ): Path =
     gradleInitScript(target, GradleBuildTool.metalsTestTask, "test") { _ =>
+      val jvmArgsLine =
+        if (jvmOptions.isEmpty) ""
+        else s"    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})\n"
       s"""|  project.tasks.withType(Test).configureEach { task ->
-          |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+          |$jvmArgsLine
+          |    task.testLogging {
+          |      events 'failed', 'skipped'
+          |      exceptionFormat = 'full'
+          |      showStackTraces = true
+          |      showCauses = true
+          |      showExceptions = true
+          |    }
           |  }""".stripMargin
     }
 

@@ -165,12 +165,11 @@ class GradleBuildToolSuite extends BaseSuite {
         Duration.Inf,
       )
 
+    assertEquals(command.take(2), List("gradle", "--console=plain"))
+    assert(command.contains("--init-script"))
     assertEquals(
-      command,
-      List(
-        "gradle", "--console=plain", ":app:test", "--tests",
-        "a.FooTest.testAddition",
-      ),
+      command.takeRight(3),
+      List(":app:test", "--tests", "a.FooTest.testAddition"),
     )
   }
 

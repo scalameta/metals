@@ -22,6 +22,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
+import ch.epfl.scala.debugadapter.MultiOutputModule
 import ch.epfl.scala.{debugadapter => dap}
 
 class MbtDebugSessionStarter(
@@ -316,7 +317,14 @@ class MbtDebugSessionStarter(
           m.name == target.name &&
           m.absolutePath.toString.replace('\\', '/').contains(".metals/mbt-out")
         )
-          m.copy(absolutePath = primary.toNIO)
+          MultiOutputModule(
+            name = m.name,
+            scalaVersion = m.scalaVersion,
+            scalacOptions = m.scalacOptions,
+            absolutePath = primary.toNIO,
+            classPath = realClassDirs.map(_.toNIO),
+            sourceEntries = m.sourceEntries,
+          )
         else m
       }
       val patchedRunClassPath =
