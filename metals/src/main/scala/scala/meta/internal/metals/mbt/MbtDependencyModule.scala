@@ -16,17 +16,17 @@ case class MbtDependencyModule(
     @Nullable sources: String, // URI string, e.g. "file:///path/to/jar-sources.jar"
 ) {
 
-  def jarUri: Option[URI] = Option(jar).map(MbtDependencyModule.parseUri)
-  def jarPath: Option[Path] = jarUri.map(Paths.get)
-  def sourcesURI: Option[URI] =
+  lazy val jarUri: Option[URI] = Option(jar).map(MbtDependencyModule.parseUri)
+  lazy val jarPath: Option[Path] = jarUri.map(Paths.get)
+  lazy val sourcesURI: Option[URI] =
     Option(sources).map(MbtDependencyModule.parseUri)
-  private def idParts: Array[String] = id.split(":", 3)
-  def isValid: Boolean = idParts.length > 0
-  def organization: String =
+  private lazy val idParts: Array[String] = id.split(":", 3)
+  lazy val isValid: Boolean = idParts.length > 0
+  lazy val organization: String =
     idParts.lift(0).getOrElse(s"INVALID_ORGANIZATION=$id")
-  def name: String =
+  lazy val name: String =
     idParts.lift(1).getOrElse(s"INVALID_NAME=$id")
-  def version: String =
+  lazy val version: String =
     idParts.lift(2).getOrElse(s"INVALID_VERSION=$id")
 
   lazy val asBsp: bsp4j.DependencyModule = {
