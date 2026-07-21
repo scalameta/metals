@@ -36,6 +36,18 @@ class JavadocSuite extends BaseSuite {
       |- [previousProblemsFromSuccessfulCompilation](previousProblemsFromSuccessfulCompilation)""".stripMargin,
   )
 
+  // A quoted `@see "..."` is plain text per the Javadoc spec, not a link
+  // (scalameta/metals#3383).
+  check(
+    "see-quoted-text",
+    """/**
+      |* @see "Effective Java"
+      |*/
+    """.stripMargin,
+    """|**See**
+       |- "Effective Java"""".stripMargin,
+  )
+
   check(
     "escapee",
     """/**

@@ -10,6 +10,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
+import scala.meta.internal.docstrings.WikiLink
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.mtags
 import scala.meta.internal.parsing.Trees
@@ -272,18 +273,16 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
 }
 
 object ScalaDocLink {
-  private val irrelevantWhite = "[ \\n\\t\\r]"
-  private val regex = s"\\[\\[$irrelevantWhite*(.*?)$irrelevantWhite*\\]\\]".r
 
+  // Extraction is shared with the renderer (`WikiLink`), so source
+  // go-to-definition navigates exactly the links the renderer renders —
+  // including `[[[ ... ]]]` and a link's title (scalameta/metals#3383).
   def atOffset(
       text: String,
       offset: Int,
       isScala3: Boolean,
   ): Option[ScalaDocLink] =
-    regex.findAllMatchIn(text).collectFirst {
-      case m if m.start(1) <= offset && offset <= m.end(1) =>
-        ScalaDocLink(m.group(1), isScala3)
-    }
+    WikiLink.atOffset(text, offset).map(ScalaDocLink(_, isScala3))
 
   sealed trait SymbolType
   object SymbolType {
