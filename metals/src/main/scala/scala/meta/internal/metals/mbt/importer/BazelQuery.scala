@@ -11,6 +11,7 @@ import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
 
 object BazelQuery {
@@ -137,7 +138,7 @@ case class BazelQuery(
         projectRoot,
         redirectErrorOutput = false,
         javaHome,
-        processOut = line => {
+        processOut = ProcessOutput.Lines { line =>
           buf.append(line)
           buf.append(System.lineSeparator())
         },

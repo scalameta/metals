@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -53,7 +54,7 @@ class ForkedTestDebugAdapter(
         cwd = workspace,
         redirectErrorOutput = false,
         env = env,
-        processOut = Some(logger.logOutput),
+        processOut = Some(ProcessOutput.Lines(logger.logOutput)),
         processErr = Some(logger.logError),
       )
       processRef.set(Some(process))
