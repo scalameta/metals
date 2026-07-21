@@ -441,7 +441,26 @@ abstract class BazelMbtImporter(
       val genPaths = srcs
         .filter(ruleLabels)
         .flatMap(outputsByGenLabel.getOrElse(_, Nil))
+      genPaths.foreach { genPath =>
+        if (!Files.exists(projectRoot.resolve(genPath).toNIO))
+          scribe.warn(
+            s"bazel-mbt: generated source output for target $target does not exist on disk: $genPath"
+          )
+      }
       Option.when(genPaths.nonEmpty)(target -> genPaths)
+    }
+
+  /**
+   * Reanchor `bazel-out/<mnemonic>/bin/<file>` directory paths to `bazel-bin/<file>`.
+   * That current configuration mnemonic can differ after changes to bazel config.
+   * `bazel-bin` convenience symlink points to whichever configuration was
+   * most recently built.
+   */
+  private def anchorUnderBazelBin(path: String): String =
+    path.split("/").toList match {
+      case "bazel-out" :: _ :: "bin" :: rest =>
+        ("bazel-bin" :: rest).mkString("/")
+      case _ => path
     }
 
   /** bazel cquery that returns output file paths grouped by label. */
@@ -466,7 +485,7 @@ abstract class BazelMbtImporter(
                 val label =
                   if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
                   else rawLabel
-                Some(label -> paths.toList)
+                Some(label -> paths.map(anchorUnderBazelBin).toList)
               case _ =>
                 scribe.warn(
                   s"bazel-mbt: unexpected cquery starlark line: $line"

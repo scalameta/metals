@@ -286,7 +286,12 @@ final class MbtBuildServer(
       .flatMap(_.uncheckedSources)
       .filter(_.endsWith(".srcjar"))
       .map(workspace.resolve)
-      .filter(p => p.exists && p.isFile)
+      .filter { p =>
+        val ok = p.exists && p.isFile
+        if (!ok)
+          scribe.warn(s"mbt-v2: uncheckedSources srcjar does not exist: $p")
+        ok
+      }
     if (srcJars.nonEmpty)
       GitVCS.lsFilesFromSrcJars(srcJars, workspace, extractOnly = true)
   }

@@ -187,7 +187,11 @@ object GitVCS {
                     )
                   }
                 } catch {
-                  case NonFatal(_) =>
+                  case NonFatal(e) =>
+                    scribe.warn(
+                      s"mbt-v2: failed to extract ${path.toNIO} from srcjar $srcJar",
+                      e,
+                    )
                 }
               }
             }
