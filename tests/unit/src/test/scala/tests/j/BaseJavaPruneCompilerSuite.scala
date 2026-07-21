@@ -1,5 +1,6 @@
 package tests.j
 
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import scala.meta.inputs.Input
@@ -34,8 +35,9 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       layout: String,
       mainPath: String,
       options: List[String] = Nil,
+      classpath: List[Path] = Nil,
   ): String = {
-    val result = compileFiles(layout, mainPath, options)
+    val result = compileFiles(layout, mainPath, options, classpath)
     result.diagnostics
       .map(d => d.formatMessage(result.input))
       .mkString("\n")
@@ -51,6 +53,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       layout: String,
       mainPath: String,
       options: List[String] = Nil,
+      classpath: List[Path] = Nil,
   ): CompileFilesResult = {
     val main = Paths.get(mainPath)
     if (main.isAbsolute) {
@@ -77,7 +80,7 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       embedded = embedded,
       javaFileManagerFactory = mbt,
       metalsConfig = PresentationCompilerConfigImpl(),
-      classpath = Nil,
+      classpath = classpath,
       options = options,
       progressBars = ProgressBars.EMPTY,
     )
@@ -92,10 +95,16 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
       layout: String,
       mainPath: String,
       options: List[String] = Nil,
+      classpath: List[Path] = Nil,
   )(implicit loc: munit.Location): Unit = {
     test(name) {
       val withPlugin =
-        compileFilesWithFormattedDiagnostics(layout, mainPath, options)
+        compileFilesWithFormattedDiagnostics(
+          layout,
+          mainPath,
+          options,
+          classpath,
+        )
       assertNoDiff(withPlugin, "")
     }
   }
