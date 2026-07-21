@@ -29,7 +29,7 @@ case class MbtDependencyModule(
   def version: String =
     idParts.lift(2).getOrElse(s"INVALID_VERSION=$id")
 
-  def asBsp: bsp4j.DependencyModule = {
+  lazy val asBsp: bsp4j.DependencyModule = {
     val module = new bsp4j.DependencyModule(id, version)
     val artifacts = new ArrayList[bsp4j.MavenDependencyModuleArtifact]()
     jarUri.foreach { jarUri =>
