@@ -346,7 +346,7 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
        |    boolean c = true;
        |    boolean d = false;
        |    boolean e = <<a && b && c &&>> d;
-       |   
+       |
        |    System.out.println(e);
        |  }
        |}
@@ -362,7 +362,7 @@ class JavaExtractMethodSuite extends BaseJavaExtractMethodSuite {
        |    boolean c = true;
        |    boolean d = false;
        |    boolean e = newMethod(a, b, c) && d;
-       |   
+       |
        |    System.out.println(e);
        |  }
        |}
