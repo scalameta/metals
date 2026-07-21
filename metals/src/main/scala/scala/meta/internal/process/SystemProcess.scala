@@ -89,7 +89,7 @@ object SystemProcess {
           } catch {
             case _: IOException => // that's ok, happens on cancel
             case NonFatal(e) =>
-              scribe.error("Unexcepted error in reading out", e)
+              scribe.error("Unexpected error in reading out", e)
           }
         }
       }
