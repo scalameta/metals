@@ -1156,7 +1156,7 @@ abstract class MetalsLspService(
     refreshDiagnostics(_ => true)
   }
 
-  private def updateMbtBuild(build: MbtBuild): Unit = {
+  protected def updateMbtBuild(build: MbtBuild): Unit = {
     mbtBuild = build
     compilers.clearFallbackCompilerCache()
   }
@@ -1174,6 +1174,7 @@ abstract class MetalsLspService(
         else Future.unit
       }
       .map(_ => compilers.clearJavaCompilerCache())
+      .map(_ => diagnostics.reset(buffers.open.toSeq))
       .flatMap(_ => refreshAllDiagnostics())
 
   protected def refreshDiagnostics(

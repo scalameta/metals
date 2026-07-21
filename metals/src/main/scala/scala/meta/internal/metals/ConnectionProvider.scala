@@ -69,7 +69,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
-    refreshMbtDiagnostics: () => Future[Unit] = () => Future.unit,
+    onMbtBuildUpdated: () => Future[Unit] = () => Future.unit,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -219,7 +219,8 @@ class ConnectionProvider(
       .flatMap { item =>
         if (item == null) Future.unit
         else if (item == Messages.ChooseBuildServer.mbt) {
-          runMbtImportUnconditionally(mbtImporters)
+          mbtImport
+            .runUnconditionally(mbtImporters, isMbtImportInProcess)
             .flatMap { importStatus =>
               if (importStatus.isInstalled) {
                 tables.buildServers.chooseServer(MbtBuildServer.name)
@@ -241,28 +242,19 @@ class ConnectionProvider(
     userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
 
-  private def refreshAfterMbtImport(
-      status: WorkspaceLoadedStatus
-  ): Future[WorkspaceLoadedStatus] =
-    if (status == WorkspaceLoadedStatus.Installed)
-      refreshMbtDiagnostics().map(_ => status)
-    else Future.successful(status)
-
-  private def runMbtImportUnconditionally(
-      importers: List[MbtImportProvider]
-  ): Future[WorkspaceLoadedStatus] =
-    mbtImport
-      .runUnconditionally(importers, isMbtImportInProcess)
-      .flatMap(refreshAfterMbtImport)
-
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
+    mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
+
+  def reimportMbtAndReload(importers: List[MbtImportProvider]): Future[Unit] =
     mbtImport
       .runIfApproved(importers, isMbtImportInProcess)
-      .flatMap(refreshAfterMbtImport)
-      .ignoreValue
+      .flatMap {
+        case status if status.isInstalled => reloadCurrentSession()
+        case _ => Future.unit
+      }
 
   def forceMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
-    runMbtImportUnconditionally(importers).ignoreValue
+    mbtImport.runUnconditionally(importers, isMbtImportInProcess).ignoreValue
 
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
@@ -698,15 +690,14 @@ class ConnectionProvider(
         buildChange <- index(check, progress)
         // When testing we need to make sure the classpath is refreshed after mbt.json is generated
         _ <- {
-          val refresh = refreshMbtTurbineClasspath(session)
-          if (MetalsServerConfig.isTesting)
-            refresh.withInterrupt
-          else {
-            refresh.failed.foreach { error =>
-              scribe.warn("failed to refresh MBT diagnostics", error)
-            }
-            Future.unit.withInterrupt
-          }
+          val refresh = refreshMbtState(session)
+          val handledRefresh =
+            if (MetalsServerConfig.isTesting) refresh
+            else
+              refresh.recover { case error =>
+                scribe.warn("failed to refresh MBT diagnostics", error)
+              }
+          handledRefresh.withInterrupt
         }
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
@@ -714,14 +705,11 @@ class ConnectionProvider(
       }
     }
 
-    private def refreshMbtTurbineClasspath(
+    private def refreshMbtState(
         session: BspSession
     ): Future[Unit] =
-      if (
-        MbtBuildServer.isMbtServer(session.main.name) &&
-        userConfig.javaSymbolLoader.isTurbineClasspath
-      ) {
-        refreshMbtDiagnostics()
+      if (MbtBuildServer.isMbtServer(session.main.name)) {
+        onMbtBuildUpdated()
       } else {
         Future.unit
       }
@@ -1068,15 +1056,17 @@ class ConnectionProvider(
                   for {
                     importStatus <-
                       if (isMbtPreferred) {
-                        runMbtImportUnconditionally(
-                          buildTools
-                            .mbtImporters(
-                              shellRunner,
-                              () => userConfig,
-                              Some(languageClient),
-                              Some(tables),
-                            )
-                        )
+                        mbtImport
+                          .runUnconditionally(
+                            buildTools
+                              .mbtImporters(
+                                shellRunner,
+                                () => userConfig,
+                                Some(languageClient),
+                                Some(tables),
+                              ),
+                            isMbtImportInProcess,
+                          )
                       } else Future.successful(WorkspaceLoadedStatus.Installed)
                     change <-
                       if (importStatus.isInstalled) connect(request, progress)

@@ -625,12 +625,7 @@ class Compilers(
       }
       .toSeq
 
-    for {
-      key <- javaKeys
-      pc <- Option(jcache.remove(key))
-    } {
-      pc.shutdown()
-    }
+    javaKeys.foreach(jcache.remove)
   }
 
   def restartFallbackCompilers(): Unit = {
