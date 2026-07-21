@@ -2,33 +2,21 @@ package scala.meta.internal.metals
 
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.io.IOException
 import java.io.OutputStream
-import java.lang.management.ManagementFactory
-import java.net.ConnectException
-import java.net.Socket
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.file.attribute.PosixFilePermissions
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicInteger
 
-import scala.annotation.tailrec
-import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.concurrent.Promise
-import scala.concurrent.duration.FiniteDuration
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.Interruptable.MetalsCancelException
-import scala.meta.internal.metals.Messages.OldBloopVersionRunning
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
@@ -36,8 +24,6 @@ import scala.meta.io.AbsolutePath
 import bloop.rifle.BloopRifle
 import bloop.rifle.BloopRifleConfig
 import bloop.rifle.BloopRifleLogger
-import bloop.rifle.BspConnection
-import bloop.rifle.BspConnectionAddress
 
 /**
  * Establishes a connection with a bloop server using Bloop Launcher.
@@ -62,17 +48,16 @@ final class BloopServers(
 
   import BloopServers._
 
-  private def metalsJavaHome = sys.props
-    .get("java.home")
-    .orElse(sys.env.get("JAVA_HOME"))
   private val bloopWorkingDir = createBloopWorkingDir
   private val bloopDaemonDir = bloopWorkingDir.resolve("daemon")
-  private val folderIdMap = TrieMap.empty[AbsolutePath, Int]
+
+  private val configFactory =
+    new BloopServerConfigFactory(bloopWorkingDir, bloopDaemonDir, bloopLogger)
 
   def shutdownServer(): Boolean = {
     // user config is just useful for starting a new bloop server or connection
     val retCode = BloopRifle.exit(
-      bloopConfig(userConfig = None, projectRoot = None),
+      configFactory.bloopConfig(userConfig = None, projectRoot = None),
       bloopWorkingDir.toNIO,
       bloopLogger,
     )
@@ -89,13 +74,12 @@ final class BloopServers(
   def newServer(
       projectRoot: AbsolutePath,
       bspTraceRoot: AbsolutePath,
-      userConfiguration: () => UserConfiguration,
+      userConfig: () => UserConfiguration,
       bspStatusOpt: Option[ConnectionBspStatus],
       progress: TaskProgress,
   ): Future[BuildServerConnection] = {
     progress.message = "connecting to bloop"
-    val outer = this
-    val connectionFactory = new BuildServerConnectionFactory(
+    val connectionFactory = new BloopServerConnectionFactory(
       projectRoot,
       bspTraceRoot,
       client,
@@ -103,13 +87,21 @@ final class BloopServers(
       tables.dismissedNotifications.RequestTimeout,
       tables.dismissedNotifications.ReconnectBsp,
       serverConfig,
-      userConfiguration(),
-      name,
       bspStatusOpt,
-      workDoneProgress = workDoneProgress,
+      workDoneProgress,
+      bloopLogger,
+      sh,
+      bloopWorkingDir,
     ) {
-      override def connect(): Future[SocketConnection] =
-        outer.connect(projectRoot, userConfiguration())
+
+      override protected def userConfiguration(): UserConfiguration =
+        userConfig()
+
+      override protected def bloopConfig(
+          userConfig: Option[UserConfiguration],
+          projectRoot: Option[AbsolutePath],
+      ): BloopRifleConfig =
+        configFactory.bloopConfig(userConfig, projectRoot)
 
     }
     connectionFactory
@@ -263,210 +255,6 @@ final class BloopServers(
     def bloopCliInheritStderr = false
   }
 
-  /* Added after 1.3.4, we can probably remove this in a future version.
-   */
-  private def checkOldBloopRunning(): Future[Unit] = try {
-    metalsJavaHome.flatMap { home =>
-      ShellRunner
-        .runSync(
-          List(s"${home}/bin/jps", "-l"),
-          bloopWorkingDir,
-          redirectErrorOutput = false,
-        )
-        .flatMap { processes =>
-          "(\\d+) bloop[.]Server".r
-            .findFirstMatchIn(processes)
-            .map(_.group(1).toInt)
-        }
-    } match {
-      case None => Future.unit
-      case Some(value) =>
-        def killOldBloop(): Unit =
-          ShellRunner.runSync(
-            List("kill", "-9", value.toString()),
-            bloopWorkingDir,
-            redirectErrorOutput = false,
-          )
-        languageClient
-          .showMessageRequest(
-            OldBloopVersionRunning.params(),
-            ConnectionProvider.ConnectRequestCancelationGroup,
-            throw MetalsCancelException,
-          )
-          .map { res =>
-            Option(res) match {
-              case Some(item) if item == OldBloopVersionRunning.yes =>
-                killOldBloop()
-              case Some(Messages.missedByUser) =>
-                languageClient.showMessage(
-                  OldBloopVersionRunning.killingBloopParams()
-                )
-                killOldBloop()
-              case _ =>
-            }
-          }
-    }
-  } catch {
-    case NonFatal(e) =>
-      scribe.warn(
-        "Could not check if the deprecated bloop server is still running",
-        e,
-      )
-      Future.unit
-  }
-
-  private def bloopConfig(
-      userConfig: Option[UserConfiguration],
-      projectRoot: Option[AbsolutePath],
-  ) = {
-
-    val addr = BloopRifleConfig.Address.DomainSocket(
-      bloopDaemonDir.toNIO
-    )
-
-    val config = BloopRifleConfig
-      .default(addr, fetchBloop _, bloopWorkingDir.toNIO.toFile)
-      .copy(
-        bspSocketOrPort = Some { () =>
-          val pid =
-            ManagementFactory.getRuntimeMXBean.getName.takeWhile(_ != '@').toInt
-          val dir = bloopWorkingDir.resolve("bsp").toNIO
-          if (!Files.exists(dir)) {
-            Files.createDirectories(dir.getParent)
-            if (Properties.isWin)
-              Files.createDirectory(dir)
-            else
-              Files.createDirectory(
-                dir,
-                PosixFilePermissions
-                  .asFileAttribute(PosixFilePermissions.fromString("rwx------")),
-              )
-          }
-          // We need to use a different socket for each folder, since it's a separate connection
-          val uniqueFolderId = projectRoot
-            .map { path =>
-              this.folderIdMap
-                .getOrElseUpdate(path, connectionCounter.incrementAndGet())
-                .toString()
-            }
-            .getOrElse("")
-
-          val socketPath = dir.resolve(s"$pid-$uniqueFolderId")
-          if (Files.exists(socketPath))
-            try Files.delete(socketPath)
-            catch {
-              case NonFatal(e) =>
-                // This seems to be happening sometimes in tests
-                scribe
-                  .debug("Unexpected error while deleting the BSP socket", e)
-            }
-          BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
-        },
-        bspStdout = bloopLogger.bloopBspStdout,
-        bspStderr = bloopLogger.bloopBspStderr,
-      )
-
-    val additionalProperties = List(
-      Properties
-        .propOrNone("coursier.credentials")
-        .map(value => s"-Dcoursier.credentials=$value")
-    ).flatten
-    userConfig.map(_.bloopJvmProperties.properties).flatten match {
-      case Some(opts) if opts.nonEmpty =>
-        config.copy(javaOpts = opts ++ additionalProperties)
-      case _ => config.copy(javaOpts = config.javaOpts ++ additionalProperties)
-    }
-  }
-
-  private def connect(
-      projectRoot: AbsolutePath,
-      userConfiguration: UserConfiguration,
-  ): Future[SocketConnection] = {
-    val config = bloopConfig(Some(userConfiguration), Some(projectRoot))
-
-    val maybeStartBloop = {
-
-      val running = BloopRifle.check(config, bloopLogger)
-
-      if (running) {
-        scribe.debug("Found a Bloop server running")
-        Future.unit
-      } else {
-        scribe.info("No running Bloop server found, starting one.")
-        val ext = if (Properties.isWin) ".exe" else ""
-        val javaCommand = metalsJavaHome match {
-          case Some(metalsJavaHome) =>
-            Paths.get(metalsJavaHome).resolve(s"bin/java$ext").toString
-          case None => "java"
-        }
-        val version =
-          userConfiguration.bloopVersion.getOrElse(defaultBloopVersion)
-        checkOldBloopRunning().flatMap { _ =>
-          BloopRifle.startServer(
-            config,
-            sh,
-            bloopLogger,
-            version,
-            javaCommand,
-          )
-        }
-      }
-    }
-
-    def openConnection(
-        conn: BspConnection,
-        period: FiniteDuration,
-        timeout: FiniteDuration,
-    ): Socket = {
-
-      @tailrec
-      def create(stopAt: Long): Socket = {
-        val maybeSocket =
-          try Right(conn.openSocket(period, timeout))
-          catch {
-            case e: ConnectException => Left(e)
-          }
-        maybeSocket match {
-          case Right(socket) => socket
-          case Left(e) =>
-            if (System.currentTimeMillis() >= stopAt)
-              throw new IOException(s"Can't connect to ${conn.address}", e)
-            else {
-              Thread.sleep(period.toMillis)
-              create(stopAt)
-            }
-        }
-      }
-
-      create(System.currentTimeMillis() + timeout.toMillis)
-    }
-
-    def openBspConn = Future {
-      val conn = BloopRifle.bsp(
-        config,
-        bloopWorkingDir.toNIO,
-        bloopLogger,
-      )
-
-      val finished = Promise[Unit]()
-      conn.closed.ignoreValue.onComplete(finished.tryComplete)
-
-      val socket = openConnection(conn, config.period, config.timeout)
-
-      SocketConnection(
-        name,
-        new ClosableOutputStream(socket.getOutputStream, "Bloop OutputStream"),
-        new QuietInputStream(socket.getInputStream, "Bloop InputStream"),
-        Nil,
-        finished,
-      )
-    }
-
-    for {
-      _ <- maybeStartBloop
-      conn <- openBspConn
-    } yield conn
-  }
 }
 
 object BloopServers {
@@ -474,6 +262,8 @@ object BloopServers {
 
   // Needed for creating unique socket files for each bloop connection
   private[BloopServers] val connectionCounter = new AtomicInteger(0)
+
+  def nextConnectionNo(): Int = connectionCounter.incrementAndGet()
 
   def createBloopWorkingDir(implicit ec: ExecutionContext): AbsolutePath = {
 
