@@ -14,6 +14,7 @@ import scala.util.Try
 import scala.meta.internal.bsp.BspServers.readInBspConfig
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildServerConnectionFactory
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.Directories
@@ -191,12 +192,11 @@ final class BspServers(
         debugStarter = mbtDebugStarter(),
       )
     } else {
-      BuildServerConnection.fromSockets(
+      val connectionFactory = new BuildServerConnectionFactory(
         projectDirectory,
         bspTraceRoot,
         buildClient,
         client,
-        newConnection,
         tables.dismissedNotifications.RequestTimeout,
         tables.dismissedNotifications.ReconnectBsp,
         config,
@@ -204,7 +204,10 @@ final class BspServers(
         details.getName(),
         bspStatusOpt,
         workDoneProgress = workDoneProgress,
-      )
+      ) {
+        override def connect(): Future[SocketConnection] = newConnection()
+      }
+      connectionFactory.fromSockets()
     }
   }
 

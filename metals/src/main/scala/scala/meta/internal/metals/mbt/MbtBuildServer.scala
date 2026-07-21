@@ -25,6 +25,7 @@ import scala.util.Success
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.BuildServerConnection
+import scala.meta.internal.metals.BuildServerConnectionFactory
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.DismissedNotifications
@@ -760,60 +761,12 @@ object MbtBuildServer {
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
-    def connect(): Future[SocketConnection] = Future.successful {
-      val clientInput = new PipedInputStream()
-      val serverOutput = new PipedOutputStream(clientInput)
-      val serverInput = new PipedInputStream()
-      val clientOutput = new PipedOutputStream(serverInput)
-      val finished = Promise[Unit]()
-      def eagerBuild() = {
-        val updatedBuild = mbtBuild()
-        if (updatedBuild.isEmpty) MbtBuild.fromWorkspace(workspace)
-        else updatedBuild
-      }
-      val server =
-        new MbtBuildServer(
-          workspace,
-          eagerBuild,
-          scalaVersionSelector,
-          debugStarter,
-        )
-      val serverLauncher = new Launcher.Builder[BuildClient]()
-        .setInput(serverInput)
-        .setOutput(serverOutput)
-        .setLocalService(server)
-        .setRemoteInterface(classOf[BuildClient])
-        .setExecutorService(ec)
-        .create()
-      server.onConnectWithClient(serverLauncher.getRemoteProxy)
-      val listening = serverLauncher.startListening()
-      Future {
-        listening.get()
-        ()
-      }.onComplete(finished.tryComplete)
-      val cancel = Cancelable { () =>
-        listening.cancel(false)
-        clientOutput.close()
-        clientInput.close()
-        serverInput.close()
-        serverOutput.close()
-        finished.trySuccess(())
-      }
-      SocketConnection(
-        name,
-        new ClosableOutputStream(clientOutput, s"$name output stream"),
-        new QuietInputStream(clientInput, s"$name input stream"),
-        List(cancel),
-        finished,
-      )
-    }
 
-    BuildServerConnection.fromSockets(
+    val connectionFactory = new BuildServerConnectionFactory(
       workspace,
       workspace,
       buildClient,
       languageClient,
-      connect,
       requestTimeOutNotification,
       reconnectNotification,
       config,
@@ -821,6 +774,58 @@ object MbtBuildServer {
       name,
       bspStatusOpt,
       workDoneProgress = workDoneProgress,
-    )
+    ) {
+
+      override def connect(): Future[SocketConnection] = Future.successful {
+        val clientInput = new PipedInputStream()
+        val serverOutput = new PipedOutputStream(clientInput)
+        val serverInput = new PipedInputStream()
+        val clientOutput = new PipedOutputStream(serverInput)
+        val finished = Promise[Unit]()
+        def eagerBuild() = {
+          val updatedBuild = mbtBuild()
+          if (updatedBuild.isEmpty) MbtBuild.fromWorkspace(workspace)
+          else updatedBuild
+        }
+        val server =
+          new MbtBuildServer(
+            workspace,
+            eagerBuild,
+            scalaVersionSelector,
+            debugStarter,
+          )
+        val serverLauncher = new Launcher.Builder[BuildClient]()
+          .setInput(serverInput)
+          .setOutput(serverOutput)
+          .setLocalService(server)
+          .setRemoteInterface(classOf[BuildClient])
+          .setExecutorService(ec)
+          .create()
+        server.onConnectWithClient(serverLauncher.getRemoteProxy)
+        val listening = serverLauncher.startListening()
+        Future {
+          listening.get()
+          ()
+        }.onComplete(finished.tryComplete)
+        val cancel = Cancelable { () =>
+          listening.cancel(false)
+          clientOutput.close()
+          clientInput.close()
+          serverInput.close()
+          serverOutput.close()
+          finished.trySuccess(())
+        }
+        SocketConnection(
+          name,
+          new ClosableOutputStream(clientOutput, s"$name output stream"),
+          new QuietInputStream(clientInput, s"$name input stream"),
+          List(cancel),
+          finished,
+        )
+      }
+
+    }
+
+    connectionFactory.fromSockets()
   }
 }
