@@ -672,15 +672,10 @@ class Compilers(
     // Restart PC for all build targets that depend on this target
     for {
       target <- buildTargets.allInverseDependencies(target)
+      compiler <- buildTargetPCFromCache(target)
     } {
-      buildTargetPCFromCache(target).foreach { compiler =>
-        scribe.debug(s"Restarting PC for target ${target.getUri}")
-        compiler.restart()
-      }
-      Option(jcache.remove(PresentationCompilerKey.JavaBuildTarget(target)))
-        .foreach { compiler =>
-          compiler.shutdown()
-        }
+      scribe.debug(s"Restarting PC for target ${target.getUri}")
+      compiler.restart()
     }
   }
 

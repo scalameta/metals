@@ -1161,7 +1161,10 @@ abstract class MetalsLspService(
     compilers.clearFallbackCompilerCache()
   }
 
-  protected def refreshDiagnosticsAfterMbtBuildUpdate(
+  protected def refreshDiagnosticsAfterMbtBuildUpdate(): Future[Unit] =
+    refreshDiagnosticsAfterMbtBuildUpdate(MbtBuild.fromWorkspace(folder))
+
+  private def refreshDiagnosticsAfterMbtBuildUpdate(
       build: MbtBuild
   ): Future[Unit] =
     Future(updateMbtBuild(build))
