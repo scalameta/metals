@@ -25,12 +25,12 @@ def crossSetting[A](
     if211: List[A] = Nil,
     if213: List[A] = Nil,
     if3: List[A] = Nil,
-    if2: List[A] = Nil,
+    if212: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case partialVersion if isScala211(partialVersion) => if211 ::: if2
-    case partialVersion if isScala212(partialVersion) => if2
-    case partialVersion if isScala213(partialVersion) => if2 ::: if213
+    case partialVersion if isScala211(partialVersion) => if211 ::: if212
+    case partialVersion if isScala212(partialVersion) => if212
+    case partialVersion if isScala213(partialVersion) => if212 ::: if213
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -226,7 +226,7 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
-    if2 = List(
+    if212 = List(
       compilerPlugin(
         ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
           scalaVersion.value
@@ -356,7 +356,7 @@ val mtagsSettings = List(
   libraryDependencies ++= {
     crossSetting(
       scalaVersion.value,
-      if2 = List(
+      if212 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
         ("org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
@@ -549,7 +549,10 @@ lazy val `sbt-metals` = project
     ),
     scalaVersion := V.scala212,
     crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
-    scalacOptions := Seq("-release", "8"),
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if212 = List("-release", "8"),
+    ),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
