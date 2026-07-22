@@ -696,12 +696,10 @@ class ConnectionProvider(
         else Future.unit
 
       if (MetalsServerConfig.isTesting) refresh.withInterrupt
-      else {
+      else
         refresh.recover { case error =>
           scribe.warn("failed to refresh MBT diagnostics", error)
-        }
-        Future.unit.withInterrupt
-      }
+        }.withInterrupt
     }
 
     private def saveProjectReferencesInfo(
