@@ -7,6 +7,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
+import java.util.Comparator
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -194,6 +195,10 @@ class MbtWorkspaceSymbolProvider(
   // -sourcepath imports for JavaPruneCompilerFileManager. It's important to manually
   private val documentsByPackage: TrieMap[String, ConcurrentSkipListSet[Path]] =
     TrieMap.empty[String, ju.concurrent.ConcurrentSkipListSet[Path]]
+
+  private val PathComparator: Comparator[Path] = new Comparator[Path] {
+    override def compare(o1: Path, o2: Path): Int = o1.compareTo(o2)
+  }
 
   // The source of truth for what files belong to the workspace, and their attached indexed data.
   // DO NOT update this map directly since have a couple derivative collections.
@@ -931,18 +936,13 @@ class MbtWorkspaceSymbolProvider(
       pkgs: Seq[String],
       file: AbsolutePath,
   ): Unit = {
+    val nioFile = file.toNIO
     for (pkg <- pkgs) {
       val files = documentsByPackage.getOrElseUpdate(
         pkg,
-        new ju.concurrent.ConcurrentSkipListSet[Path](
-          new ju.Comparator[Path]() {
-            override def compare(o1: Path, o2: Path): Int = {
-              o1.toString.compareTo(o2.toString)
-            }
-          }
-        ),
+        new ConcurrentSkipListSet[Path](PathComparator),
       )
-      files.add(file.toNIO)
+      files.add(nioFile)
     }
   }
 
