@@ -9,7 +9,7 @@ object V {
 
   val scala3 = "3.3.8"
 
-  val scala3ForSBT2 = "3.7.4"
+  val scala3ForSBT2 = "3.8.4"
 
   val latestScala3Next = "3.8.4"
 
@@ -92,7 +92,7 @@ object V {
 
   val protobuf = "4.35.1"
 
-  val sbt2Version = "2.0.0-RC8"
+  val sbt2Version = "2.0.3"
 
   val guava = "com.google.guava" % "guava" % "33.6.0-jre"
 
