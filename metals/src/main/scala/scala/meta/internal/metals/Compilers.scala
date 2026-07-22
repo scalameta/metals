@@ -613,21 +613,6 @@ class Compilers(
     }
   }
 
-  def clearJavaCompilerCache(): Unit = {
-    val javaKeys = jcache
-      .keySet()
-      .asScala
-      .filter {
-        case PresentationCompilerKey.JavaBuildTarget(_) => true
-        case PresentationCompilerKey.Default(language) if language.isJava =>
-          true
-        case _ => false
-      }
-      .toSeq
-
-    javaKeys.foreach(jcache.remove)
-  }
-
   def restartFallbackCompilers(): Unit = {
     for {
       language <- List(s.Language.SCALA, s.Language.JAVA)

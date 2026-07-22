@@ -236,7 +236,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
-      () => refreshDiagnosticsAfterMbtBuildUpdate(),
+      () => refreshMbtStateAfterIndex(),
       mbtDebugStarter = () => mbtDebugStarter,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
@@ -463,7 +463,7 @@ class ProjectMetalsLspService(
         Some(tables),
       )
       if (paths.exists(path => mbtImporters.exists(_.isBuildRelated(path))))
-        connectionProvider.reimportMbtAndReload(mbtImporters)
+        connectionProvider.runMbtReimport(mbtImporters)
       else
         Future.unit
     } else if (userConfig.buildChangedAction.isNone) {

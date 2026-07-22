@@ -1156,26 +1156,16 @@ abstract class MetalsLspService(
     refreshDiagnostics(_ => true)
   }
 
-  protected def updateMbtBuild(build: MbtBuild): Unit = {
-    mbtBuild = build
-    compilers.clearFallbackCompilerCache()
-  }
-
-  protected def refreshDiagnosticsAfterMbtBuildUpdate(): Future[Unit] =
-    refreshDiagnosticsAfterMbtBuildUpdate(MbtBuild.fromWorkspace(folder))
-
-  private def refreshDiagnosticsAfterMbtBuildUpdate(
-      build: MbtBuild
-  ): Future[Unit] =
-    Future(updateMbtBuild(build))
-      .flatMap { _ =>
-        if (userConfig.javaSymbolLoader.isTurbineClasspath)
-          mbt2.recompileTurbineClasspath()
-        else Future.unit
-      }
-      .map(_ => compilers.clearJavaCompilerCache())
+  protected def refreshMbtStateAfterIndex(): Future[Unit] = {
+    val refresh =
+      if (userConfig.javaSymbolLoader.isTurbineClasspath)
+        mbt2.recompileTurbineClasspath()
+      else Future.unit
+    refresh
+      .map(_ => compilers.cancel())
       .map(_ => diagnostics.reset(buffers.open.toSeq))
       .flatMap(_ => refreshAllDiagnostics())
+  }
 
   protected def refreshDiagnostics(
       isIncludedPath: AbsolutePath => Boolean
@@ -1237,9 +1227,9 @@ abstract class MetalsLspService(
     futures += (paths.find(_.filename == "mbt.json") match {
       case Some(mbtJsonPath) =>
         Future {
-          updateMbtBuild(MbtBuild.fromFile(mbtJsonPath.toNIO))
+          mbtBuild = MbtBuild.fromFile(mbtJsonPath.toNIO)
+          compilers.clearFallbackCompilerCache()
         }.flatMap(_ => reconnectAfterMbtJsonChange())
-          .flatMap(_ => refreshAllDiagnostics())
       case None =>
         Future.successful(())
     })

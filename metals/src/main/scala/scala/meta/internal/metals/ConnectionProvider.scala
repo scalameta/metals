@@ -69,7 +69,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
-    onMbtBuildUpdated: () => Future[Unit] = () => Future.unit,
+    refreshMbtStateAfterIndex: () => Future[Unit] = () => Future.unit,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -244,14 +244,6 @@ class ConnectionProvider(
 
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
     mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
-
-  def reimportMbtAndReload(importers: List[MbtImportProvider]): Future[Unit] =
-    mbtImport
-      .runIfApproved(importers, isMbtImportInProcess)
-      .flatMap {
-        case status if status.isInstalled => reloadCurrentSession()
-        case _ => Future.unit
-      }
 
   def forceMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
     mbtImport.runUnconditionally(importers, isMbtImportInProcess).ignoreValue
@@ -688,31 +680,29 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        // When testing we need to make sure the classpath is refreshed after mbt.json is generated
-        _ <- {
-          val refresh = refreshMbtState(session)
-          val handledRefresh =
-            if (MetalsServerConfig.isTesting) refresh
-            else
-              refresh.recover { case error =>
-                scribe.warn("failed to refresh MBT diagnostics", error)
-              }
-          handledRefresh.withInterrupt
-        }
+        _ <- refreshMbtStateAfterIndexIfNeeded(session)
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
       }
     }
 
-    private def refreshMbtState(
+    private def refreshMbtStateAfterIndexIfNeeded(
         session: BspSession
-    ): Future[Unit] =
-      if (MbtBuildServer.isMbtServer(session.main.name)) {
-        onMbtBuildUpdated()
-      } else {
-        Future.unit
+    ): Interruptable[Unit] = {
+      val refresh =
+        if (MbtBuildServer.isMbtServer(session.main.name))
+          refreshMbtStateAfterIndex()
+        else Future.unit
+
+      if (MetalsServerConfig.isTesting) refresh.withInterrupt
+      else {
+        refresh.recover { case error =>
+          scribe.warn("failed to refresh MBT diagnostics", error)
+        }
+        Future.unit.withInterrupt
       }
+    }
 
     private def saveProjectReferencesInfo(
         bspBuilds: List[BspSession.BspBuild]
