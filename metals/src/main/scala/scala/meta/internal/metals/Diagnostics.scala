@@ -123,7 +123,9 @@ final class Diagnostics(
 
     // Bazel doesn't clean diagnostics for paths with no errors, so instead we remove everything
     // from previous compilations.
-    val isBazel = buildTargets.buildServerOf(target).exists(_.isBazel)
+    val isBazel = buildTargets
+      .buildServerOf(target)
+      .exists(c => c.isBazel || c.isBazelNative)
     if (isBazel) {
       diagnostics
         .filter { case (path, _) =>

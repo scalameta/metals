@@ -480,6 +480,11 @@ lazy val metals = project
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
       // For Twirl
       "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
+      // For Bazel Native BSP (gRPC BES server)
+      "io.grpc" % "grpc-netty-shaded" % V.grpcVersion,
+      "io.grpc" % "grpc-stub" % V.grpcVersion,
+      "io.grpc" % "grpc-protobuf" % V.grpcVersion,
+      "com.google.api.grpc" % "proto-google-common-protos" % "2.48.0",
     ),
     // Force correct version of json-schema-validator for MCP SDK 2.0
     // dependencyOverrides += "com.networknt" % "json-schema-validator" % "2.0.0",

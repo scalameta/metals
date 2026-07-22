@@ -139,6 +139,12 @@ object TestGroups {
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
     "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
+    "tests.bazelnative.BazelNativeBepTranslatorSuite",
+    "tests.bazelnative.BazelNativeBesServerSuite",
+    "tests.bazelnative.BazelNativeDiscoverySuite",
+    "tests.bazelnative.BazelNativeTargetInfoReaderSuite",
+    "tests.bazelnative.BazelNativeAspectsManagerSuite",
+    "tests.bazelnative.BazelNativeTargetDataSuite",
   )
 
   val numberOfShards = 4
