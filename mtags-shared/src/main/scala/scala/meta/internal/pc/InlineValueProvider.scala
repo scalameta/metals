@@ -54,7 +54,7 @@ trait InlineValueProvider {
       endOffset: Int,
       range: l.Range
   ): l.Range = {
-    val (startWithSpace, endWithSpace): (Int, Int) =
+    val (startWithSpace, endWithSpace) =
       extendRangeToIncludeWhiteCharsAndTheFollowingNewLine(
         text
       )(startOffset, endOffset)
