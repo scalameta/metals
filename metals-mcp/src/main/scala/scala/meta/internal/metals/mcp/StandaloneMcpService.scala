@@ -103,6 +103,11 @@ class StandaloneMcpService(
       initialUserConfig = initialUserConfig.getOrElse(UserConfiguration.default)
     )
 
+  private val jarFileSystemCache: JarFileSystemCache = new JarFileSystemCache
+
+  private val uriMapper: WorkspaceURIMapper =
+    new WorkspaceURIMapper(() => Seq(projectMetalsLspService.folderUriMapper))
+
   lazy val projectMetalsLspService = new ProjectMetalsLspService(
     ec,
     scheduledExecutor,
@@ -121,6 +126,8 @@ class StandaloneMcpService(
     workDoneProgress,
     maxScalaCliServers = 3,
     moduleStatus,
+    jarFileSystemCache,
+    uriMapper,
   )
 
   /**

@@ -78,6 +78,9 @@ final class ClientConfiguration(
   def isVirtualDocumentSupported(): Boolean =
     initializationOptions.isVirtualDocumentSupported.getOrElse(false)
 
+  def isLibraryFileSystemSupported(): Boolean =
+    initializationOptions.isLibraryFileSystemSupported.getOrElse(false)
+
   def icons(): Icons =
     initializationOptions.icons
       .map(Icons.fromString)
