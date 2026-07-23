@@ -8,8 +8,11 @@ import org.eclipse.{lsp4j => l}
 
 class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
 
+  private def normalizeLayout(layout: String): String =
+    layout.replace("\r\n", "\n")
+
   private def cleanMarkedLayout(layout: String): String =
-    layout
+    normalizeLayout(layout)
       .replace("<<start>>", "")
       .replace("<<end>>", "")
       .replace("[[start]]", "")
@@ -19,33 +22,35 @@ class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
       file: String,
       markedLayout: String,
   ): (l.Range, l.Range) = {
+    // stripMargin uses System.lineSeparator, so normalize CRLF for Windows.
+    val layout = normalizeLayout(markedLayout)
     val fileMarker = s"\n/$file\n"
-    val fileStart = markedLayout.indexOf(fileMarker)
-    assert(fileStart >= 0, s"missing file $file in:\n$markedLayout")
+    val fileStart = layout.indexOf(fileMarker)
+    assert(fileStart >= 0, s"missing file $file in:\n$layout")
     val contentStart = fileStart + fileMarker.length
-    val cleanLayout = cleanMarkedLayout(markedLayout)
+    val cleanLayout = cleanMarkedLayout(layout)
     val cleanFileText = cleanLayout.substring(contentStart)
     val input = Input.VirtualFile(file, cleanFileText)
 
     def rangeFor(start: String, end: String, fallback: Boolean): l.Range = {
-      val startMarker = markedLayout.indexOf(start)
-      val endMarker = markedLayout.indexOf(end)
+      val startMarker = layout.indexOf(start)
+      val endMarker = layout.indexOf(end)
       if (startMarker < 0 || endMarker < 0) {
         assert(
           fallback,
-          s"missing $start/$end marker in:\n$markedLayout",
+          s"missing $start/$end marker in:\n$layout",
         )
         rangeFor("<<start>>", "<<end>>", fallback = false)
       } else {
         assert(
           startMarker < endMarker,
-          s"invalid marker order for $start/$end in:\n$markedLayout",
+          s"invalid marker order for $start/$end in:\n$layout",
         )
         val startOffset =
-          cleanMarkedLayout(markedLayout.substring(contentStart, startMarker))
+          cleanMarkedLayout(layout.substring(contentStart, startMarker))
             .length()
         val endOffset =
-          cleanMarkedLayout(markedLayout.substring(contentStart, endMarker))
+          cleanMarkedLayout(layout.substring(contentStart, endMarker))
             .length()
         Position.Range(input, startOffset, endOffset).toLsp
       }
