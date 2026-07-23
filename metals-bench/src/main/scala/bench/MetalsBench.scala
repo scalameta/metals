@@ -5,7 +5,6 @@ import scala.reflect.io.VirtualFile
 import scala.tools.nsc.interactive.Global
 
 import scala.meta.dialects
-import scala.meta.interactive.InteractiveSemanticdb
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.IdentifierIndex
 import scala.meta.internal.metals.JdkSources
@@ -154,7 +153,12 @@ class MetalsBench {
     }
   }
 
-  lazy val global: Global = InteractiveSemanticdb.newCompiler()
+  lazy val global: Global = {
+    val settings = new scala.tools.nsc.Settings
+    settings.usejavacp.value = true
+    val reporter = new scala.tools.nsc.reporters.StoreReporter(settings)
+    new Global(settings, reporter)
+  }
 
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
