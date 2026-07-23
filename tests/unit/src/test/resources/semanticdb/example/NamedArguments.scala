@@ -1,7 +1,7 @@
 package example
 
 case class User/*example.User#*/(
-    name/*example.User#name.*/: String/*scala.Predef.String#*/ = {
+    name/*example.User#name.*//*example.User#`<init>`().(name)*/: String/*scala.Predef.String#*/ = {
       // assert default values have occurrences
       Map/*scala.Predef.Map.*/.toString/*java.lang.Object#toString().*/
     }

@@ -1,6 +1,6 @@
 package example
 
-class MethodOverload/*example.MethodOverload#*/(b/*example.MethodOverload#b.*/: String/*scala.Predef.String#*/) {
+class MethodOverload/*example.MethodOverload#*/(b/*example.MethodOverload#b.*//*example.MethodOverload#`<init>`().(b)*/: String/*scala.Predef.String#*/) {
   def this/*example.MethodOverload#`<init>`(+1).*/() = this("")
   def this/*example.MethodOverload#`<init>`(+2).*/(c/*example.MethodOverload#`<init>`(+2).(c)*/: Int/*scala.Int#*/) = this("")
   val a/*example.MethodOverload#a.*/ = 2
