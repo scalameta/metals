@@ -1,9 +1,11 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.TimeUnit
 
-import scala.meta.pc.HoverSignature
+import scala.meta.bench.PcBenchmark
+import scala.meta.bench.SourceRequest
 
+import org.eclipse.lsp4j.SignatureHelp
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -13,27 +15,27 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 
 @State(Scope.Benchmark)
-class HoverBench extends PcBenchmark {
+class SignatureHelpBench extends PcBenchmark {
 
   var requests: Map[String, SourceRequest] = Map.empty
 
   def beforeAll(): Unit = {
-
     requests = Map(
-      "scopeOpen" -> SourceRequest.fromPath(
+      "basic" -> SourceRequest.fromPath(
         "A.scala",
         """|package a
            |
-           |object Main extends App{
-           |  
+           |object Main{
+           |  def foo(a: Int, bab: String, dbl: Double = 1.0)
+           |  foo(a = 12,)
            |}
            |""".stripMargin,
-        "object Main extends Ap@@p",
+        "  foo(a = 12,@@)",
       )
     )
   }
 
-  @Param(Array("scopeOpen"))
+  @Param(Array("basic"))
   var currentRequest: String = _
 
   @Param(Array("3.3.1", "2.13.12"))
@@ -42,12 +44,12 @@ class HoverBench extends PcBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def hover(): HoverSignature = {
+  def signatureHelp(): SignatureHelp = {
     val pc = presentationCompiler(scalaVersion)
-    currentHover.hover(pc).get()
+    currentSignatureHelp.signatureHelp(pc)
   }
 
-  def currentHover: SourceRequest = requests(
+  def currentSignatureHelp: SourceRequest = requests(
     currentRequest
   )
 

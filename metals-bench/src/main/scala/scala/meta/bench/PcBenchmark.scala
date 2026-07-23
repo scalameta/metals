@@ -1,4 +1,4 @@
-package bench
+package scala.meta.bench
 
 import java.nio.file.Path
 

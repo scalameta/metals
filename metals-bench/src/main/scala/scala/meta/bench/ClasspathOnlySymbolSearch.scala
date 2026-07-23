@@ -1,4 +1,4 @@
-package bench
+package scala.meta.bench
 
 import java.net.URI
 import java.util.Optional
