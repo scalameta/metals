@@ -12,7 +12,7 @@ Global / resolvers += "scala-nightlies" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.8"
+val forkBaseVersion = "1.6.9"
 
 val currentVersion = "2.0.0"
 
@@ -324,6 +324,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
       "org.scalameta" % "mtags-interfaces" % "1.5.2",
+      "org.scalameta" % "mtags-interfaces" % "1.6.7",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
