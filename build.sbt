@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.8-SNAPSHOT"
-def latestReleaseVersion = "1.6.7"
+def localSnapshotVersion = "1.6.9-SNAPSHOT"
+def latestReleaseVersion = "1.6.8"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -255,6 +255,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
       "org.scalameta" % "mtags-interfaces" % "1.5.2",
+      "org.scalameta" % "mtags-interfaces" % "1.6.7",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
