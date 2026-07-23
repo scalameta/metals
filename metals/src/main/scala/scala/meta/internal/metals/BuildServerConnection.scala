@@ -21,6 +21,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
 import scala.util.Success
+import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BazelBuildTool
@@ -41,6 +42,13 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
+
+/**
+ * A build-server connection failure whose message has already been shown to the
+ * user, so `ConnectionProvider` should not add a generic one on top of it.
+ */
+class AlreadyReportedConnectException(message: String)
+    extends IOException(message)
 
 /**
  * An actively running and initialized BSP connection
@@ -600,6 +608,41 @@ class BuildServerConnection private (
 object BuildServerConnection {
 
   /**
+   * What to do after an attempt to connect to the build server has failed.
+   *
+   * A failed connection can mean the server is wedged (it reported itself as
+   * running but never finished the handshake, or its socket disappeared). The
+   * first such failure is worth a one-shot recovery — let `recoverConnection`
+   * restart the server before retrying. After recovery has been spent we fall
+   * back to plain timeout retries, and otherwise give up.
+   */
+  sealed trait RecoverConnectAction
+  object RecoverConnectAction {
+
+    /** Run `recoverConnection` to restart a possibly-wedged server, then retry. */
+    case object RecoverAndRetry extends RecoverConnectAction
+
+    /** Retry the connection without restarting the server. */
+    case object Retry extends RecoverConnectAction
+
+    /** Give up and propagate the failure. */
+    case object GiveUp extends RecoverConnectAction
+
+    def apply(
+        error: Throwable,
+        retriesLeft: Int,
+        alreadyRecovered: Boolean,
+    ): RecoverConnectAction =
+      error match {
+        case (_: TimeoutException | _: IOException)
+            if retriesLeft > 0 && !alreadyRecovered =>
+          RecoverAndRetry
+        case _: TimeoutException if retriesLeft > 0 => Retry
+        case _ => GiveUp
+      }
+  }
+
+  /**
    * Establishes a new build server connection with the given input/output streams.
    *
    * This method is blocking, doesn't return Future[], because if the `initialize` handshake
@@ -623,6 +666,7 @@ object BuildServerConnection {
       retry: Int = 5,
       supportsWrappedSources: Option[Boolean] = None,
       workDoneProgress: WorkDoneProgress,
+      recoverConnection: () => Future[Unit] = () => Future.unit,
   )(implicit
       ec: ExecutionContextExecutorService
   ): Future[BuildServerConnection] = {
@@ -697,43 +741,48 @@ object BuildServerConnection {
       }
     }
 
-    setupServer()
-      .map { connection =>
-        new BuildServerConnection(
-          setupServer,
-          connection,
-          languageClient,
-          requestTimeOutNotification,
-          reconnectNotification,
-          config,
-          projectRoot,
-          supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
-          workDoneProgress,
-        )
-      }
-      .recoverWith { case e: TimeoutException =>
-        if (retry > 0) {
-          scribe.warn(s"Retrying connection to the build server $serverName")
-          fromSockets(
-            projectRoot,
-            bspTraceRoot,
-            localClient,
-            languageClient,
-            connect,
-            reconnectNotification,
-            requestTimeOutNotification,
-            config,
-            userConfiguration,
-            serverName,
-            bspStatusOpt,
-            retry - 1,
-            supportsWrappedSources,
-            workDoneProgress,
-          )
-        } else {
-          Future.failed(e)
+    // Establish a connection, recovering a possibly-wedged server on the first
+    // failure (`recoverConnection` restarts it) before retrying. This is used
+    // both for the initial connection and, via the `setupConnection` argument of
+    // `BuildServerConnection` below, for every later reconnect — so a server that
+    // wedges mid-session is recovered too, not only on the first connect.
+    def setupServerWithRecovery(
+        retriesLeft: Int,
+        alreadyRecovered: Boolean,
+    ): Future[LauncherConnection] =
+      setupServer().recoverWith { case NonFatal(e) =>
+        RecoverConnectAction(e, retriesLeft, alreadyRecovered) match {
+          // The server accepted the connection but didn't complete the handshake
+          // (or the socket was gone). It may be wedged, so give
+          // `recoverConnection` a chance to restart it, then retry.
+          case RecoverConnectAction.RecoverAndRetry =>
+            scribe.warn(
+              s"Couldn't connect to the build server $serverName, attempting to recover it."
+            )
+            recoverConnection().flatMap { _ =>
+              setupServerWithRecovery(retriesLeft - 1, alreadyRecovered = true)
+            }
+          case RecoverConnectAction.Retry =>
+            scribe.warn(s"Retrying connection to the build server $serverName")
+            setupServerWithRecovery(retriesLeft - 1, alreadyRecovered)
+          case RecoverConnectAction.GiveUp =>
+            Future.failed(e)
         }
       }
+
+    setupServerWithRecovery(retry, alreadyRecovered = false).map { connection =>
+      new BuildServerConnection(
+        () => setupServerWithRecovery(retry, alreadyRecovered = false),
+        connection,
+        languageClient,
+        requestTimeOutNotification,
+        reconnectNotification,
+        config,
+        projectRoot,
+        supportsWrappedSources.getOrElse(connection.supportsWrappedSources),
+        workDoneProgress,
+      )
+    }
   }
 
   final case class BspExtraBuildParams(
