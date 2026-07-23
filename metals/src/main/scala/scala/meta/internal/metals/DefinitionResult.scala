@@ -4,6 +4,7 @@ import java.util
 import java.util.Collections
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MtagsIndexer.ParameterSignature
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.io.AbsolutePath
@@ -16,6 +17,7 @@ case class DefinitionResult(
     definition: Option[AbsolutePath],
     semanticdb: Option[TextDocument],
     querySymbol: String,
+    parameters: List[ParameterSignature] = Nil,
 ) {
   def isEmpty: Boolean = locations.isEmpty()
   def ++(other: DefinitionResult): DefinitionResult = DefinitionResult(
@@ -24,6 +26,7 @@ case class DefinitionResult(
     definition,
     semanticdb,
     querySymbol,
+    parameters,
   )
 }
 

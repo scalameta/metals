@@ -36,6 +36,7 @@ import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsIndexer.ParameterSignature
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
@@ -1533,6 +1534,12 @@ class Compilers(
           definitionPath,
           None,
           c.symbol(),
+          parameters = c
+            .parameterNames()
+            .asScala
+            .zip(c.parameterTypeNames().asScala)
+            .map { case (name, typeName) => ParameterSignature(name, typeName) }
+            .toList,
         )
       }
     }.getOrElse(Future.successful(DefinitionResult.empty))

@@ -5,9 +5,9 @@ import java.nio.file.Files
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 /**
@@ -110,10 +110,9 @@ object ProtoGeneratedJavaFiles {
     }
 
   private def writeIfChanged(file: AbsolutePath, content: String): Unit = {
-    val current =
-      if (file.exists) Some(FileIO.slurp(file, StandardCharsets.UTF_8))
-      else None
-    if (!current.contains(content)) {
+    val changed =
+      !file.exists || MD5.compute(file.toNIO) != MD5.compute(content)
+    if (changed) {
       Files.createDirectories(file.toNIO.getParent)
       Files.write(file.toNIO, content.getBytes(StandardCharsets.UTF_8))
     }

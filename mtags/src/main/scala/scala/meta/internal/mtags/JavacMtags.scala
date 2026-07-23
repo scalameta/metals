@@ -114,6 +114,8 @@ class JavacMtags(
 )(implicit rc: ReportContext)
     extends MtagsIndexer { mtags =>
   private val _names = new ju.LinkedHashSet[String]()
+  private val _parameterSignatures =
+    new ju.LinkedHashMap[String, Seq[MtagsIndexer.ParameterSignature]]()
   private var parseTask = Option.empty[ParseTask]
   private val logger = LoggerFactory.getLogger(getClass)
   private var isInsideLocalScope: Boolean = false
@@ -121,6 +123,8 @@ class JavacMtags(
   def language: Language = Language.JAVA
   def identifiers(): Seq[String] =
     _names.asScala.iterator.toIndexedSeq
+  override def parameterSignatures(): MtagsIndexer.AllParameterSignatures =
+    _parameterSignatures.asScala.toMap
 
   override def addSignature(
       signature: s.Scala.Descriptor,
@@ -470,6 +474,9 @@ class JavacMtags(
     private def extractParamNames(node: MethodTree): Seq[String] =
       node.getParameters().asScala.map(_.getName().toString()).toSeq
 
+    private def extractParamTypeNames(node: MethodTree): Seq[String] =
+      node.getParameters().asScala.map(_.getType().toString()).toSeq
+
     private def extractTypeParamNames(node: ClassTree): Seq[String] =
       node.getTypeParameters().asScala.map(_.getName().toString()).toSeq
 
@@ -685,10 +692,19 @@ class JavacMtags(
             if (name == "<init>") s.SymbolInformation.Kind.CONSTRUCTOR
             else s.SymbolInformation.Kind.METHOD
         )
+        val paramNames = extractParamNames(node)
+        _parameterSignatures.put(
+          sym,
+          paramNames
+            .zip(extractParamTypeNames(node))
+            .map { case (name, typeName) =>
+              MtagsIndexer.ParameterSignature(name, typeName)
+            }
+        )
         if (name == "<init>") {
           mtags.onConstructor(
             sym,
-            extractParamNames(node),
+            paramNames,
             extractMethodTypeParamNames(node),
             getDocComment(node)
           )
@@ -696,7 +712,7 @@ class JavacMtags(
           mtags.onMethod(
             sym,
             name,
-            extractParamNames(node),
+            paramNames,
             extractMethodTypeParamNames(node),
             getDocComment(node)
           )

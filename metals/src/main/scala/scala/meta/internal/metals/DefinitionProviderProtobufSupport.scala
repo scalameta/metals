@@ -15,6 +15,8 @@ import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsIndexer.AllParameterSignatures
+import scala.meta.internal.mtags.MtagsIndexer.ParameterSignature
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
@@ -120,12 +122,15 @@ final class DefinitionProviderProtobufSupport(
       Try(res.locations.get(0)).toOption.map(_.getUri())
     val protoFilePath =
       generatedJavaFileUri.flatMap(ProtoJavaVirtualFile.extractProtoPath)
-
-    val generatedJavaLocation = for {
+    val generatedJavaLocations = (for {
       javaPath <- generatedJavaFileUri
       protoPath <- protoFilePath
-      location <- findSymbolInGeneratedJavaFile(protoPath, res.symbol, javaPath)
-    } yield location
+    } yield findSymbolInGeneratedJavaFile(
+      protoPath,
+      res.symbol,
+      javaPath,
+      res.parameters,
+    )).getOrElse(Seq.empty)
 
     val protoClassLocation = protoFilePath.flatMap { protoPath =>
       findProtoClassFromJavaSymbol(protoPath, res.symbol)
@@ -143,7 +148,7 @@ final class DefinitionProviderProtobufSupport(
       }
     }
 
-    val allLocations = (generatedJavaLocation ++ protoRpcLocation).toList
+    val allLocations = (generatedJavaLocations ++ protoRpcLocation).toList
     if (allLocations.nonEmpty) {
       Some(
         DefinitionResult(
@@ -154,7 +159,9 @@ final class DefinitionProviderProtobufSupport(
           // (InteractiveSemanticdbs.didDefinition), so later requests inside
           // the materialized file use that target's classpath, which includes
           // the protobuf runtime.
-          definition = generatedJavaLocation.map(_.getUri().toAbsolutePath),
+          definition = generatedJavaLocations.headOption.map(
+            _.getUri().toAbsolutePath
+          ),
           semanticdb = None,
           res.querySymbol,
         )
@@ -178,8 +185,9 @@ final class DefinitionProviderProtobufSupport(
       protoPath: AbsolutePath,
       javaSymbol: String,
       virtualUri: String,
-  ): Option[Location] = try {
-    for {
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[Location] = try {
+    (for {
       className <- ProtoJavaVirtualFile.extractClassName(virtualUri)
       outline <- mbt
         .protoJavaOutlines(protoPath)
@@ -194,15 +202,20 @@ final class DefinitionProviderProtobufSupport(
         className,
         outline.text,
       )
-      range <- findJavaSymbolRange(javaFile, javaSymbol)
-    } yield new Location(javaFile.toURI.toString(), range.toLsp)
+    } yield findJavaSymbolRange(
+      javaFile,
+      javaSymbol,
+      callSiteParameterSignature,
+    )
+      .map(range => new Location(javaFile.toURI.toString(), range.toLsp)))
+      .getOrElse(Seq.empty)
   } catch {
     case NonFatal(e) =>
       scribe.debug(
         s"proto-java: failed to resolve generated Java outline for $javaSymbol",
         e,
       )
-      None
+      Seq.empty
   }
 
   /**
@@ -214,15 +227,25 @@ final class DefinitionProviderProtobufSupport(
   private def findJavaSymbolRange(
       javaFile: AbsolutePath,
       javaSymbol: String,
-  ): Option[s.Range] = {
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[s.Range] = {
     val input = javaFile.toInputFromBuffers(buffers)
-    val doc = mtags().allToplevels(input, dialects.Scala213)
+    val (doc, paramSignaturesBySymbol) =
+      mtags().allToplevelsWithParameterSignatures(input, dialects.Scala213)
     val definitions =
       doc.occurrences.filter(_.role == s.SymbolOccurrence.Role.DEFINITION)
 
-    def loop(sym: Symbol): Option[s.Range] = {
-      if (sym.isNone || sym.isPackage) None
-      else findRange(sym.value, definitions).orElse(loop(sym.owner))
+    def loop(sym: Symbol): Seq[s.Range] = {
+      if (sym.isNone || sym.isPackage) Seq.empty
+      else {
+        val ranges = findRange(
+          sym.value,
+          definitions,
+          paramSignaturesBySymbol,
+          callSiteParameterSignature,
+        )
+        if (ranges.nonEmpty) ranges else loop(sym.owner)
+      }
     }
 
     val querySym = Symbol(javaSymbol)
@@ -233,30 +256,81 @@ final class DefinitionProviderProtobufSupport(
     // still fall back to their enclosing classes, since accessor overloads
     // in the real generated source don't always line up with the
     // synthesized outline.
-    if (querySym.isType) findRange(querySym.value, definitions)
+    if (querySym.isType)
+      findRange(
+        querySym.value,
+        definitions,
+        paramSignaturesBySymbol,
+        callSiteParameterSignature,
+      )
     else loop(querySym)
   }
 
+  /**
+   * `symbol` comes from javac resolving a call site against the
+   * turbine-compiled classfile ([[scala.meta.internal.jpc.JavaDefinitionProvider]]).
+   * `definitions` comes from mtags re-parsing the outline from scratch
+   * ([[scala.meta.internal.mtags.JavacMtags]]). The two independently
+   * compute the SemanticDB overload disambiguator, so it can order overloads
+   * differently and the exact match can miss. When that happens and there's
+   * more than one name match, `callSiteParameterSignature` (the call site's real
+   * resolved parameter names and types) narrows the candidates down to the
+   * one whose signature actually matches; otherwise every name match is
+   * returned, since neither side can tell overloads apart on name alone.
+   */
   private def findRange(
       symbol: String,
       definitions: Iterable[SymbolOccurrence],
-  ): Option[s.Range] = {
-    val exact = definitions.find(_.symbol == symbol)
-    exact
-      .orElse {
-        val normalized = stripDisambiguators(symbol)
-        definitions.find(occ => stripDisambiguators(occ.symbol) == normalized)
-      }
+      paramSignaturesBySymbol: AllParameterSignatures,
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[s.Range] = {
+    val normalized = withoutOverloadIndex(symbol)
+    val candidates =
+      definitions
+        .filter(occ => withoutOverloadIndex(occ.symbol) == normalized)
+        .toSeq
+    val narrowed =
+      if (candidates.size > 1 && callSiteParameterSignature.nonEmpty)
+        candidates.filter(occ =>
+          paramSignaturesBySymbol
+            .get(occ.symbol)
+            .exists(sameParameterSignature(_, callSiteParameterSignature))
+        )
+      else Seq.empty
+    (if (narrowed.size == 1) narrowed else candidates)
       .flatMap(_.range)
+      .toSeq
   }
 
+  private def sameParameterSignature(
+      a: Seq[ParameterSignature],
+      b: Seq[ParameterSignature],
+  ): Boolean =
+    a.size == b.size && a.zip(b).forall { case (x, y) =>
+      x.name == y.name && sameParamType(x.typeName, y.typeName)
+    }
+
+  // The generated outline refers to sibling types (e.g. other messages in
+  // the same file) by their simple name, while the call site's resolved
+  // type is always fully qualified, so an exact string match would miss;
+  // comparing by dotted suffix instead lets `Token` match
+  // `com.example.ClientProtos.Token`.
+  private def sameParamType(a: String, b: String): Boolean = {
+    val na = normalizeParamType(a)
+    val nb = normalizeParamType(b)
+    na == nb || na.endsWith("." + nb) || nb.endsWith("." + na)
+  }
+
+  private def normalizeParamType(tpe: String): String =
+    tpe.replaceAll("\\s+", "")
+
   /**
-   * Strips SemanticDB overload disambiguators, which are appended to
-   * overloaded method symbols to keep them unique, for example:
+   * Strips the SemanticDB overload index, which is appended to overloaded
+   * method symbols to keep them unique, for example:
    *   - `getFoo(+1).` -> `getFoo().`
    *   - `setBar(+3).` -> `setBar().`
    */
-  private def stripDisambiguators(symbol: String): String =
+  private def withoutOverloadIndex(symbol: String): String =
     symbol.replaceAll("""\(\+\d+\)""", "()")
 
   /**

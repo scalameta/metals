@@ -117,4 +117,26 @@ object SemanticdbSymbol {
     }
   }
 
+  def parameterNames(element: Element): List[String] = element match {
+    case executableElement: ExecutableElement =>
+      executableElement
+        .getParameters()
+        .asScala
+        .iterator
+        .map(_.getSimpleName().toString())
+        .toList
+    case _ => Nil
+  }
+
+  def parameterTypeNames(element: Element): List[String] = element match {
+    case executableElement: ExecutableElement =>
+      executableElement
+        .getParameters()
+        .asScala
+        .iterator
+        .map(_.asType().toString())
+        .toList
+    case _ => Nil
+  }
+
 }

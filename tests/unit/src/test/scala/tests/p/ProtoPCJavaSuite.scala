@@ -1412,22 +1412,17 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didOpen("a/src/main/java/com/example/Client.java")
       _ <- server.didFocus("a/src/main/java/com/example/Client.java")
       _ = assertNoDiagnostics()
-      locations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         "a/src/main/java/com/example/Client.java",
         "public void auth(ClientProtos.Authentic@@ation auth) {}",
-      )
-      uris = locations.map(_.getUri())
-      _ = assert(
-        uris.exists(
-          _.endsWith(
-            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
-          )
-        ),
-        s"expected a generated-outline location, got:\n${uris.mkString("\n")}",
-      )
-      _ = assert(
-        uris.exists(_.endsWith("a/src/main/proto/client.proto")),
-        s"expected the proto location, got:\n${uris.mkString("\n")}",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java:LINE:COLUMN: definition
+           |  public static final class Authentication extends com.google.protobuf.GeneratedMessageV3 implements AuthenticationOrBuilder {
+           |                            ^^^^^^^^^^^^^^
+           |a/src/main/proto/client.proto:LINE:COLUMN: definition
+           |message Authentication {
+           |        ^^^^^^^^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
     } yield ()
   }
@@ -1460,22 +1455,17 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didOpen("a/src/main/java/com/example/Client.java")
       _ <- server.didFocus("a/src/main/java/com/example/Client.java")
       _ = assertNoDiagnostics()
-      locations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         "a/src/main/java/com/example/Client.java",
         "public void auth(Authentic@@ation auth) {}",
-      )
-      uris = locations.map(_.getUri())
-      _ = assert(
-        uris.exists(
-          _.endsWith(
-            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java"
-          )
-        ),
-        s"expected a generated-outline location, got:\n${uris.mkString("\n")}",
-      )
-      _ = assert(
-        uris.exists(_.endsWith("a/src/main/proto/client.proto")),
-        s"expected the proto location, got:\n${uris.mkString("\n")}",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java:LINE:COLUMN: definition
+           |public final class Authentication extends com.google.protobuf.GeneratedMessageV3 implements AuthenticationOrBuilder {
+           |                   ^^^^^^^^^^^^^^
+           |a/src/main/proto/client.proto:LINE:COLUMN: definition
+           |message Authentication {
+           |        ^^^^^^^^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
     } yield ()
   }
@@ -1521,33 +1511,32 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/Client.java")
       _ = assertNoDiagnostics()
       // Navigating to Session materializes its generated outline on disk.
-      locations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         "a/src/main/java/com/example/Client.java",
         "public void open(Sess@@ion session) {}",
-      )
-      _ = assert(
-        locations.exists(_.getUri().endsWith(sessionOutline)),
-        s"expected the Session outline, got:\n${locations.map(_.getUri()).mkString("\n")}",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Session.java:LINE:COLUMN: definition
+           |public final class Session extends com.google.protobuf.GeneratedMessageV3 implements SessionOrBuilder {
+           |                   ^^^^^^^
+           |a/src/main/proto/client.proto:LINE:COLUMN: definition
+           |message Session {
+           |        ^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
       // Inside the materialized outline, goto-definition on the field type
       // Authentication resolves to its own outline and proto declaration.
       _ <- server.didOpen(sessionOutline)
-      innerLocations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         sessionOutline,
         "Authentic@@ation getAuth()",
-      )
-      innerUris = innerLocations.map(_.getUri())
-      _ = assert(
-        innerUris.exists(
-          _.endsWith(
-            ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java"
-          )
-        ),
-        s"expected the Authentication outline, got:\n${innerUris.mkString("\n")}",
-      )
-      _ = assert(
-        innerUris.exists(_.endsWith("a/src/main/proto/client.proto")),
-        s"expected the proto location, got:\n${innerUris.mkString("\n")}",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/Authentication.java:LINE:COLUMN: definition
+           |public final class Authentication extends com.google.protobuf.GeneratedMessageV3 implements AuthenticationOrBuilder {
+           |                   ^^^^^^^^^^^^^^
+           |a/src/main/proto/client.proto:LINE:COLUMN: definition
+           |message Authentication {
+           |        ^^^^^^^^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
       // The jump recorded the origin's build target for the materialized file
       // (InteractiveSemanticdbs.didDefinition), so its presentation compiler
@@ -1600,25 +1589,29 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus("a/src/main/java/com/example/Client.java")
       _ = assertNoDiagnostics()
       // Navigating to Session materializes the outer-class outline on disk.
-      locations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         "a/src/main/java/com/example/Client.java",
         "public void open(ClientProtos.Sess@@ion session) {}",
-      )
-      _ = assert(
-        locations.exists(_.getUri().endsWith(outline)),
-        s"expected the ClientProtos outline, got:\n${locations.map(_.getUri()).mkString("\n")}",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java:LINE:COLUMN: definition
+           |  public static final class Session extends com.google.protobuf.GeneratedMessageV3 implements SessionOrBuilder {
+           |                            ^^^^^^^
+           |a/src/main/proto/client.proto:LINE:COLUMN: definition
+           |message Session {
+           |        ^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
       // Inside the materialized outline, goto-definition on the sibling nested
       // type Authentication resolves.
       _ <- server.didOpen(outline)
-      innerLocations <- server.definitionSubstringQuery(
+      _ <- server.assertDefinition(
         outline,
         "Authentic@@ation getAuth()",
-      )
-      innerUris = innerLocations.map(_.getUri())
-      _ = assert(
-        innerUris.nonEmpty,
-        "expected goto-definition inside the outline to resolve, got no locations",
+        """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java:LINE:COLUMN: definition
+           |  public static final class Authentication extends com.google.protobuf.GeneratedMessageV3 implements AuthenticationOrBuilder {
+           |                            ^^^^^^^^^^^^^^
+           |""".stripMargin,
+        redactLineNumbers = true,
       )
     } yield ()
   }
@@ -1632,8 +1625,14 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
     val source = "a/src/main/java/com/example/Client.java"
     val query = "public void open(ClientProtos.Sess@@ion session) {}"
-    def outlineLocation(locations: List[Location]) =
-      locations.find(_.getUri().endsWith(outline))
+    val expectedLocations =
+      """|.metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java:LINE:COLUMN: definition
+         |  public static final class Session extends com.google.protobuf.GeneratedMessageV3 implements SessionOrBuilder {
+         |                            ^^^^^^^
+         |a/src/main/proto/client.proto:LINE:COLUMN: definition
+         |message Session {
+         |        ^^^^^^^
+         |""".stripMargin
     for {
       _ <- initialize(
         """|/metals.json
@@ -1662,11 +1661,11 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ <- server.didFocus(source)
       _ = assertNoDiagnostics()
       // First navigation materializes the outline on disk.
-      first <- server.definitionSubstringQuery(source, query)
-      firstOutline = outlineLocation(first)
-      _ = assert(
-        firstOutline.isDefined,
-        s"expected a generated-outline location, got:\n${first.map(_.getUri()).mkString("\n")}",
+      _ <- server.assertDefinition(
+        source,
+        query,
+        expectedLocations,
+        redactLineNumbers = true,
       )
       outlinePath = server.toPath(outline)
       // Delete the materialized outline behind Metals' back.
@@ -1676,14 +1675,15 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
         "expected the outline to be deleted",
       )
       // Navigating again must regenerate it instead of returning a dead target.
-      second <- server.definitionSubstringQuery(source, query)
+      _ <- server.assertDefinition(
+        source,
+        query,
+        expectedLocations,
+        redactLineNumbers = true,
+      )
       _ = assert(
         Files.exists(outlinePath.toNIO),
         "expected the deleted outline to be regenerated",
-      )
-      _ = assert(
-        outlineLocation(second).isDefined,
-        s"expected the regenerated outline location, got:\n${second.map(_.getUri()).mkString("\n")}",
       )
     } yield ()
   }
@@ -1754,6 +1754,131 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ = assert(
         completions.contains("getToken"),
         s"expected getToken in completions:\n$completions",
+      )
+    } yield ()
+  }
+
+  // Builder setters for message-type fields are generated as overloads
+  // sharing one name (`setToken(Token)` / `setToken(Token.Builder)`);
+  // goto-definition on each call site must resolve to its own overload.
+  test("java-navigates-to-overloaded-builder-setter") {
+    cleanWorkspace()
+    val outline =
+      ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_outer_classname = "ClientProtos";
+           |message Token {
+           |  string value = 1;
+           |}
+           |message Session {
+           |  Token token = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.ClientProtos;
+           |public class Client {
+           |  ClientProtos.Session withValue(ClientProtos.Token token) {
+           |    return ClientProtos.Session.newBuilder().setToken(token).build();
+           |  }
+           |  ClientProtos.Session withBuilder() {
+           |    return ClientProtos.Session.newBuilder()
+           |      .setToken(ClientProtos.Token.newBuilder())
+           |      .build();
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/Client.java",
+        ".setTo@@ken(token)",
+        s"""|$outline:LINE:COLUMN: definition
+            |      public Builder setToken(Token value) {
+            |                     ^^^^^^^^
+            |""".stripMargin,
+        redactLineNumbers = true,
+        includeLocation = _.getUri().endsWith(outline),
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/Client.java",
+        ".setTo@@ken(ClientProtos.Token.newBuilder())",
+        s"""|$outline:LINE:COLUMN: definition
+            |      public Builder setToken(Token.Builder builderForValue) {
+            |                     ^^^^^^^^
+            |""".stripMargin,
+        redactLineNumbers = true,
+        includeLocation = _.getUri().endsWith(outline),
+      )
+    } yield ()
+  }
+
+  test("java-navigates-to-overloaded-repeated-field-adder") {
+    cleanWorkspace()
+    val outline =
+      ".metals/readonly/dependencies/proto-generated/a/src/main/proto/client.proto/ClientProtos.java"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/client.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_outer_classname = "ClientProtos";
+           |message Token {
+           |  string value = 1;
+           |}
+           |message Session {
+           |  repeated Token tokens = 1;
+           |}
+           |/a/src/main/java/com/example/Client.java
+           |package com.example;
+           |import com.example.api.jproto.ClientProtos;
+           |public class Client {
+           |  ClientProtos.Session withValue(ClientProtos.Token token) {
+           |    return ClientProtos.Session.newBuilder().addTokens(token).build();
+           |  }
+           |  ClientProtos.Session withBuilder() {
+           |    return ClientProtos.Session.newBuilder()
+           |      .addTokens(ClientProtos.Token.newBuilder())
+           |      .build();
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/client.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Client.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Client.java")
+      _ = assertNoDiagnostics()
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/Client.java",
+        ".addTok@@ens(token)",
+        s"""|$outline:LINE:COLUMN: definition
+            |      public Builder addTokens(Token value) {
+            |                     ^^^^^^^^^
+            |""".stripMargin,
+        redactLineNumbers = true,
+        includeLocation = _.getUri().endsWith(outline),
+      )
+      _ <- server.assertDefinition(
+        "a/src/main/java/com/example/Client.java",
+        ".addTok@@ens(ClientProtos.Token.newBuilder())",
+        s"""|$outline:LINE:COLUMN: definition
+            |      public Builder addTokens(Token.Builder builderForValue) {
+            |                     ^^^^^^^^^
+            |""".stripMargin,
+        redactLineNumbers = true,
+        includeLocation = _.getUri().endsWith(outline),
       )
     } yield ()
   }

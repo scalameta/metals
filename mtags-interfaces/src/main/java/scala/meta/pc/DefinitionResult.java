@@ -33,4 +33,20 @@ public interface DefinitionResult {
   default boolean isResolved() {
     return true;
   }
+
+  /**
+   * The simple names of the resolved method's parameters, in declaration order, or empty if the
+   * symbol isn't a method or this information isn't available.
+   */
+  default List<String> parameterNames() {
+    return Collections.emptyList();
+  }
+
+  /**
+   * The type names of the resolved method's parameters, in declaration order, or empty if the
+   * symbol isn't a method or this information isn't available.
+   */
+  default List<String> parameterTypeNames() {
+    return Collections.emptyList();
+  }
 }

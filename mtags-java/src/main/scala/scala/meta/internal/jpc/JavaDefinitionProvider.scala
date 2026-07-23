@@ -146,7 +146,11 @@ class JavaDefinitionProvider(
           val firstElement = trees.getElement(firstPath)
           DefinitionResultImpl(
             SemanticdbSymbol.fromElement(firstElement),
-            locations.toBuffer.asJava
+            locations.toBuffer.asJava,
+            parameterNames =
+              SemanticdbSymbol.parameterNames(firstElement).asJava,
+            parameterTypeNames =
+              SemanticdbSymbol.parameterTypeNames(firstElement).asJava
           )
         case Classpath(all @ (firstElement :: _)) =>
           val sym = SemanticdbSymbol.fromElement(firstElement)
@@ -155,7 +159,14 @@ class JavaDefinitionProvider(
               .definition(SemanticdbSymbol.fromElement(e), params.uri())
               .asScala
           )
-          DefinitionResultImpl(sym, locations.asJava)
+          DefinitionResultImpl(
+            sym,
+            locations.asJava,
+            parameterNames =
+              SemanticdbSymbol.parameterNames(firstElement).asJava,
+            parameterTypeNames =
+              SemanticdbSymbol.parameterTypeNames(firstElement).asJava
+          )
         case Classpath(Nil) | Sourcepath(Nil) =>
           DefinitionResultImpl.empty
       }
