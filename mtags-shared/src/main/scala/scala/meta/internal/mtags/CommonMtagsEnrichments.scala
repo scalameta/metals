@@ -345,6 +345,13 @@ trait CommonMtagsEnrichments {
       && endCharsAcceptedOnce.contains(source(endWithSpace))
     )
       (startWithSpace, endWithSpace + 1)
+    else if (
+      endWithSpace + 1 < source.size
+      && source(endWithSpace) == '\r'
+      && source(endWithSpace + 1) == '\n'
+    )
+      // Handle Windows \r\n line endings
+      (startWithSpace, endWithSpace + 2)
     else (startWithSpace, endWithSpace)
   }
 
