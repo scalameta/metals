@@ -280,6 +280,7 @@ class MbtDebugSessionStarter(
 
   private def javaHomeEnv(target: MbtTarget): Map[String, String] =
     target.javaHome
+      .orElse(userJavaHome())
       .map { raw =>
         val path =
           if (raw.startsWith("file:")) Paths.get(URI.create(raw)).toString
