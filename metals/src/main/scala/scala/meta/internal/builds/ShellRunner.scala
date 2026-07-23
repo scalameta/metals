@@ -34,6 +34,9 @@ class ShellRunner(
 
   private val cancelables = new MutableCancelable()
 
+  private def shellQuote(arg: String): String =
+    "'" + arg.replace("'", "'\\''") + "'"
+
   override def cancel(): Unit = {
     cancelables.cancel()
   }
@@ -96,7 +99,8 @@ class ShellRunner(
 
     val shellArguments = userConfiguration().defaultShell match {
       case Some(shell) if shell.contains("fish") => shell :: args
-      case Some(shell) => List(shell, "-i", "-l", "-c", args.mkString(" "))
+      case Some(shell) =>
+        List(shell, "-i", "-l", "-c", args.map(shellQuote).mkString(" "))
       case None => args
     }
     scribe.info(s"Running command: ${shellArguments.mkString(" ")}")
