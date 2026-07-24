@@ -2,6 +2,7 @@ package scala.meta.internal.metals
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

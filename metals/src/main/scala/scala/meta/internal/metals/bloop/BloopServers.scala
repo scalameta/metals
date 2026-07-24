@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.bloop
 
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -17,7 +17,17 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.Embedded
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsProjectDirectories
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.Tables
+import scala.meta.internal.metals.TaskProgress
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 

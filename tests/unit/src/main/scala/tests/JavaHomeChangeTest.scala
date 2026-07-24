@@ -2,8 +2,8 @@ package tests
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.bloop.BloopJvmProperties
 
 import coursierapi.JvmManager
 import munit.Location

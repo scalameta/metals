@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.buildserver
 
 import java.io.IOException
 import java.io.InputStream
@@ -28,7 +28,21 @@ import scala.meta.internal.bsp.sync.WorkspaceSyncResult
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.metals.CancelTokens
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.CancelableFuture
+import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.ConnectionProvider
+import scala.meta.internal.metals.DismissedNotifications
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsBspException
+import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.MutableCancelable
+import scala.meta.internal.metals.ServerLivenessMonitor
+import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.logging.JvmRunEnvironmentNotSupported
 import scala.meta.internal.metals.logging.LogOnce

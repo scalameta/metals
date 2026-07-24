@@ -11,7 +11,6 @@ import scala.util.Try
 
 import scala.meta.internal.bsp.BspServers.readInBspConfig
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -22,6 +21,7 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer

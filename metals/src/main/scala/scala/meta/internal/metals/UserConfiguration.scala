@@ -29,6 +29,7 @@ import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.bloop.BloopJvmProperties
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
@@ -1581,21 +1582,6 @@ case class BuildChangedAction(value: String) {
   )
   def isNone: Boolean = value == "none"
   def isPrompt: Boolean = value == "prompt"
-}
-
-sealed trait BloopJvmProperties {
-  def properties: Option[List[String]]
-}
-object BloopJvmProperties {
-  case object Uninitialized extends BloopJvmProperties {
-    def properties: Option[List[String]] = None
-  }
-  case object Empty extends BloopJvmProperties {
-    def properties: Option[List[String]] = None
-  }
-  case class WithProperties(props: List[String]) extends BloopJvmProperties {
-    def properties: Option[List[String]] = Some(props)
-  }
 }
 
 sealed trait AutoImportBuildKind
