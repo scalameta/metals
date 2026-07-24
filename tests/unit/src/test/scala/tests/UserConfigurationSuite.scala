@@ -301,7 +301,6 @@ class UserConfigurationSuite extends BaseSuite {
           |    "b",
           |    "c"
           |  ],
-          |  "enableStripMarginOnTypeFormatting": false,
           |  "gradleScript": "gradle",
           |  "scalafixConfigPath": "$fakePathString",
           |  "superMethodLensesEnabled": true,
@@ -335,6 +334,8 @@ class UserConfigurationSuite extends BaseSuite {
           |  "worksheetCancelTimeout": 10,
           |  "worksheetScreenWidth": 140,
           |  "enableBestEffort": false,
+          |  "newFilesBracelessSyntax": "auto",
+          |  "enableStripMarginOnTypeFormatting": false,
           |  "scalafmtConfigPath": "$fakePathString",
           |  "javaHome": "/fake/home"
           |}
@@ -389,6 +390,7 @@ class UserConfigurationSuite extends BaseSuite {
           |inlay-hints.closing-labels.enable            boolean                        false           Should display closing label hints for methods/classes/objects next to their closing braces
           |enable-semantic-highlighting                 boolean                        true            Use semantic tokens highlight
           |enable-indent-on-paste                       boolean                        false           Indent snippets when pasted.
+          |new-files-braceless-syntax                   [auto,always,never]            auto            Braceless syntax for newly generated Scala 3 files
           |fallback-scala-version                       string                         $scala3Padded Default fallback Scala version
           |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
           |java-format.eclipse-config-path              string                         ""              Eclipse Java formatter config path

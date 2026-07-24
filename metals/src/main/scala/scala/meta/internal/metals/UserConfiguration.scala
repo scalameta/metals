@@ -45,6 +45,8 @@ case class UserConfiguration(
     inlayHintsOptions: InlayHintsOptions = InlayHintsOptions(Map.empty),
     enableStripMarginOnTypeFormatting: Boolean = true,
     enableIndentOnPaste: Boolean = false,
+    newFilesBracelessSyntax: NewFilesBracelessSyntax =
+      NewFilesBracelessSyntax.Auto,
     enableSemanticHighlighting: Boolean = true,
     excludedPackages: Option[List[String]] = None,
     fallbackScalaVersion: Option[String] = None,
@@ -114,6 +116,11 @@ case class UserConfiguration(
         )
       ),
       Some(("enableIndentOnPaste", enableIndentOnPaste)),
+      Some(
+        "newFilesBracelessSyntax" -> newFilesBracelessSyntax
+          .toString()
+          .toLowerCase()
+      ),
       Some(
         (
           "enableSemanticHighlighting",
@@ -467,6 +474,20 @@ object UserConfiguration {
            |try to adjust the indentation to that of the current cursor.
            |""".stripMargin,
         isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "new-files-braceless-syntax",
+        "auto",
+        "always",
+        "Braceless syntax for newly generated Scala 3 files",
+        """|Whether new Scala 3 files (from the "New Scala File" command, including the
+           |"Package Object" kind) use optional-braces / significant-indentation syntax
+           |instead of curly braces. "auto" matches the style of nearby existing sources
+           |(the target package directory and its enclosing directories up to the source
+           |root, falling back to the `-indent` / `-no-indent` compiler option, then
+           |braces); "always" always uses braceless syntax; "never" always uses braces.
+           |Has no effect on Scala 2 sources.""".stripMargin,
+        values = Some(List("auto", "always", "never")),
       ),
       UserConfigurationOption(
         "fallback-scala-version",
@@ -844,6 +865,14 @@ object UserConfiguration {
       getBooleanKey("enable-strip-margin-on-type-formatting").getOrElse(true)
     val enableIndentOnPaste =
       getBooleanKey("enable-indent-on-paste").getOrElse(true)
+    val newFilesBracelessSyntax =
+      getStringKey("new-files-braceless-syntax").map(
+        _.trim().toLowerCase()
+      ) match {
+        case Some("always") => NewFilesBracelessSyntax.Always
+        case Some("never") => NewFilesBracelessSyntax.Never
+        case _ => NewFilesBracelessSyntax.Auto
+      }
     val enableSemanticHighlighting =
       getBooleanKey("enable-semantic-highlighting").getOrElse(true)
     val excludedPackages =
@@ -931,6 +960,7 @@ object UserConfiguration {
           inlayHintsOptions,
           enableStripMarginOnTypeFormatting,
           enableIndentOnPaste,
+          newFilesBracelessSyntax,
           enableSemanticHighlighting,
           excludedPackages,
           defaultScalaVersion,
@@ -992,4 +1022,17 @@ object AutoImportBuildKind {
   case object Off extends AutoImportBuildKind
   case object Initial extends AutoImportBuildKind
   case object All extends AutoImportBuildKind
+}
+
+sealed trait NewFilesBracelessSyntax
+object NewFilesBracelessSyntax {
+
+  /** Match the style already used in the project. */
+  case object Auto extends NewFilesBracelessSyntax
+
+  /** Always generate braceless (significant-indentation) Scala 3 code. */
+  case object Always extends NewFilesBracelessSyntax
+
+  /** Always generate braced code. */
+  case object Never extends NewFilesBracelessSyntax
 }
