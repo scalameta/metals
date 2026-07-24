@@ -133,6 +133,24 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
         TextDocument()
     }
 
+  def allToplevelsWithParameterSignatures(
+      input: Input.VirtualFile,
+      dialect: Dialect
+  )(implicit
+      rc: ReportContext = EmptyReportContext
+  ): (TextDocument, MtagsIndexer.AllParameterSignatures) =
+    input.toLanguage match {
+      case Language.JAVA =>
+        val indexer = config.javaInstance(input, includeMembers = true)
+        (indexer.index(), indexer.parameterSignatures())
+      case Language.SCALA =>
+        val mtags =
+          new ScalaToplevelMtags(input, true, includeMembers = true, dialect)
+        (mtags.index(), Map.empty)
+      case _ =>
+        (TextDocument(), Map.empty)
+    }
+
   def index(
       path: AbsolutePath,
       dialect: Dialect

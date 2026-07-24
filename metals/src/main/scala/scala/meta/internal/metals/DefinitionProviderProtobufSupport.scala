@@ -2,15 +2,23 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
+import scala.util.Try
 import scala.util.control.NonFatal
 
+import scala.meta.dialects
 import scala.meta.internal.jmbt.Mbt
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
+import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
+import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsIndexer.AllParameterSignatures
+import scala.meta.internal.mtags.MtagsIndexer.ParameterSignature
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
@@ -22,6 +30,7 @@ final class DefinitionProviderProtobufSupport(
     mbt: MbtWorkspaceSymbolProvider,
     definitionProviders: () => DefinitionProviderConfig,
     protobufLspConfig: () => ProtobufLspConfig,
+    mtags: () => Mtags,
 ) {
 
   def hasProtoJavaLocation(res: DefinitionResult): Boolean =
@@ -88,10 +97,16 @@ final class DefinitionProviderProtobufSupport(
   def handleProtoJavaDefinition(
       res: DefinitionResult
   ): Option[DefinitionResult] = {
-    val mbtResult = mbt.definition(res.symbol)
-    if (mbtResult.nonEmpty) {
-      val locations = new ju.ArrayList[Location](mbtResult.size)
-      mbtResult.foreach(locations.add)
+    // When the proto file declares no java_package option, the proto package
+    // matches the generated Java package, so the MBT index resolves the Java
+    // symbol straight to the proto document. Those proto-file hits are ignored
+    // here so the generated Java outline lookup still runs; the proto file
+    // stays reachable through the fallback below.
+    val mbtJavaResult =
+      mbt.definition(res.symbol).filterNot(_.getUri.isProtoFilename)
+    if (mbtJavaResult.nonEmpty) {
+      val locations = new ju.ArrayList[Location](mbtJavaResult.size)
+      mbtJavaResult.foreach(locations.add)
       return Some(
         DefinitionResult(
           locations,
@@ -103,45 +118,227 @@ final class DefinitionProviderProtobufSupport(
       )
     }
 
-    val protoUri =
-      if (res.locations.isEmpty) None
-      else ProtoJavaVirtualFile.extractProtoPath(res.locations.get(0).getUri())
+    val generatedJavaFileUri =
+      Try(res.locations.get(0)).toOption.map(_.getUri())
+    val protoFilePath =
+      generatedJavaFileUri.flatMap(ProtoJavaVirtualFile.extractProtoPath)
+    val generatedJavaLocations = (for {
+      javaPath <- generatedJavaFileUri
+      protoPath <- protoFilePath
+    } yield findSymbolInGeneratedJavaFile(
+      protoPath,
+      res.symbol,
+      javaPath,
+      res.parameters,
+    )).getOrElse(Seq.empty)
 
-    val protoClassLocation = protoUri.flatMap { protoPath =>
+    val protoClassLocation = protoFilePath.flatMap { protoPath =>
       findProtoClassFromJavaSymbol(protoPath, res.symbol)
     }
 
     val protoFieldLocation = protoClassLocation.orElse {
-      protoUri.flatMap { protoPath =>
+      protoFilePath.flatMap { protoPath =>
         findProtoFieldFromJavaMethod(protoPath, res.symbol)
       }
     }
 
     val protoRpcLocation = protoFieldLocation.orElse {
-      protoUri.flatMap { protoPath =>
+      protoFilePath.flatMap { protoPath =>
         findProtoRpcFromJavaMethod(protoPath, res.symbol)
       }
     }
 
-    protoRpcLocation match {
-      case Some(loc) =>
-        Some(
-          DefinitionResult(
-            ju.Collections.singletonList(loc),
-            res.symbol,
-            None,
-            None,
-            res.querySymbol,
-          )
+    val allLocations = (generatedJavaLocations ++ protoRpcLocation).toList
+    if (allLocations.nonEmpty) {
+      Some(
+        DefinitionResult(
+          allLocations.asJava,
+          res.symbol,
+          // Recording the materialized file as the definition destination lets
+          // Metals remember which build target the user jumped from
+          // (InteractiveSemanticdbs.didDefinition), so later requests inside
+          // the materialized file use that target's classpath, which includes
+          // the protobuf runtime.
+          definition = generatedJavaLocations.headOption.map(
+            _.getUri().toAbsolutePath
+          ),
+          semanticdb = None,
+          res.querySymbol,
         )
-      case None =>
-        scribe.debug(
-          s"proto-java: could not resolve symbol ${res.symbol} to proto"
-        )
-        Some(DefinitionResult.empty)
+      )
+    } else {
+      scribe.debug(
+        s"proto-java: could not resolve symbol ${res.symbol} to proto"
+      )
+      Some(DefinitionResult.empty)
     }
   }
 
+  /**
+   * Finds the definition of `javaSymbol` in the Java source that Metals
+   * synthesizes from the proto file. The outline is derived purely from the
+   * `.proto`, so this works for any build tool without a build or any
+   * configuration; it is materialized to a read-only file on disk so the
+   * client can open it.
+   */
+  private def findSymbolInGeneratedJavaFile(
+      protoPath: AbsolutePath,
+      javaSymbol: String,
+      virtualUri: String,
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[Location] = try {
+    (for {
+      className <- ProtoJavaVirtualFile.extractClassName(virtualUri)
+      outline <- mbt
+        .protoJavaOutlines(protoPath)
+        .find(outline =>
+          ProtoJavaVirtualFile
+            .extractClassName(outline.uri().toString())
+            .contains(className)
+        )
+      javaFile <- ProtoGeneratedJavaFiles.materialize(
+        workspace,
+        protoPath,
+        className,
+        outline.text,
+      )
+    } yield findJavaSymbolRange(
+      javaFile,
+      javaSymbol,
+      callSiteParameterSignature,
+    )
+      .map(range => new Location(javaFile.toURI.toString(), range.toLsp)))
+      .getOrElse(Seq.empty)
+  } catch {
+    case NonFatal(e) =>
+      scribe.debug(
+        s"proto-java: failed to resolve generated Java outline for $javaSymbol",
+        e,
+      )
+      Seq.empty
+  }
+
+  /**
+   * Locates the definition range of `javaSymbol` in the given Java file,
+   * falling back to enclosing classes when the exact symbol is absent, for
+   * example when method overload disambiguators computed from the generated
+   * outline don't line up with the real generated source.
+   */
+  private def findJavaSymbolRange(
+      javaFile: AbsolutePath,
+      javaSymbol: String,
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[s.Range] = {
+    val input = javaFile.toInputFromBuffers(buffers)
+    val (doc, paramSignaturesBySymbol) =
+      mtags().allToplevelsWithParameterSignatures(input, dialects.Scala213)
+    val definitions =
+      doc.occurrences.filter(_.role == s.SymbolOccurrence.Role.DEFINITION)
+
+    def loop(sym: Symbol): Seq[s.Range] = {
+      if (sym.isNone || sym.isPackage) Seq.empty
+      else {
+        val ranges = findRange(
+          sym.value,
+          definitions,
+          paramSignaturesBySymbol,
+          callSiteParameterSignature,
+        )
+        if (ranges.nonEmpty) ranges else loop(sym.owner)
+      }
+    }
+
+    val querySym = Symbol(javaSymbol)
+    // For type symbols, require the type itself to be present: a message or
+    // enum missing from the generated source means the synthesized outline
+    // is stale or belongs to a different proto, and the proto fallback is
+    // more precise than an approximate enclosing-class location. Members may
+    // still fall back to their enclosing classes, since accessor overloads
+    // in the real generated source don't always line up with the
+    // synthesized outline.
+    if (querySym.isType)
+      findRange(
+        querySym.value,
+        definitions,
+        paramSignaturesBySymbol,
+        callSiteParameterSignature,
+      )
+    else loop(querySym)
+  }
+
+  /**
+   * `symbol` comes from javac resolving a call site against the
+   * turbine-compiled classfile ([[scala.meta.internal.jpc.JavaDefinitionProvider]]).
+   * `definitions` comes from mtags re-parsing the outline from scratch
+   * ([[scala.meta.internal.mtags.JavacMtags]]). The two independently
+   * compute the SemanticDB overload disambiguator, so it can order overloads
+   * differently and the exact match can miss. When that happens and there's
+   * more than one name match, `callSiteParameterSignature` (the call site's real
+   * resolved parameter names and types) narrows the candidates down to the
+   * one whose signature actually matches; otherwise every name match is
+   * returned, since neither side can tell overloads apart on name alone.
+   */
+  private def findRange(
+      symbol: String,
+      definitions: Iterable[SymbolOccurrence],
+      paramSignaturesBySymbol: AllParameterSignatures,
+      callSiteParameterSignature: Seq[ParameterSignature],
+  ): Seq[s.Range] = {
+    val normalized = withoutOverloadIndex(symbol)
+    val candidates =
+      definitions
+        .filter(occ => withoutOverloadIndex(occ.symbol) == normalized)
+        .toSeq
+    val narrowed =
+      if (candidates.size > 1 && callSiteParameterSignature.nonEmpty)
+        candidates.filter(occ =>
+          paramSignaturesBySymbol
+            .get(occ.symbol)
+            .exists(sameParameterSignature(_, callSiteParameterSignature))
+        )
+      else Seq.empty
+    (if (narrowed.size == 1) narrowed else candidates)
+      .flatMap(_.range)
+      .toSeq
+  }
+
+  private def sameParameterSignature(
+      a: Seq[ParameterSignature],
+      b: Seq[ParameterSignature],
+  ): Boolean =
+    a.size == b.size && a.zip(b).forall { case (x, y) =>
+      x.name == y.name && sameParamType(x.typeName, y.typeName)
+    }
+
+  // The generated outline refers to sibling types (e.g. other messages in
+  // the same file) by their simple name, while the call site's resolved
+  // type is always fully qualified, so an exact string match would miss;
+  // comparing by dotted suffix instead lets `Token` match
+  // `com.example.ClientProtos.Token`.
+  private def sameParamType(a: String, b: String): Boolean = {
+    val na = normalizeParamType(a)
+    val nb = normalizeParamType(b)
+    na == nb || na.endsWith("." + nb) || nb.endsWith("." + na)
+  }
+
+  private def normalizeParamType(tpe: String): String =
+    tpe.replaceAll("\\s+", "")
+
+  /**
+   * Strips the SemanticDB overload index, which is appended to overloaded
+   * method symbols to keep them unique, for example:
+   *   - `getFoo(+1).` -> `getFoo().`
+   *   - `setBar(+3).` -> `setBar().`
+   */
+  private def withoutOverloadIndex(symbol: String): String =
+    symbol.replaceAll("""\(\+\d+\)""", "()")
+
+  /**
+   * The lowercased chain of owner names between `sym` and its enclosing
+   * package, for example the SemanticDB symbol
+   * `com/example/Foo#Bar#baz().` with package `com.example` becomes
+   * `List("foo", "bar", "baz")`.
+   */
   private def symbolSuffixAfterPackage(sym: Symbol): List[String] = {
     val pkg = sym.enclosingPackage
     def loop(s: Symbol, acc: List[String]): List[String] = {
@@ -305,16 +502,14 @@ final class DefinitionProviderProtobufSupport(
     import scala.meta.internal.mtags.proto.ProtoMtagsV2
 
     try {
-      val isGrpcClass = javaSymbol.contains("ImplBase#") ||
-        javaSymbol.contains("Stub#") ||
-        javaSymbol.contains("BlockingStub#") ||
-        javaSymbol.contains("FutureStub#")
-
-      if (!isGrpcClass) return None
+      if (!ProtoJavaSymbolMapper.isGrpcStubMethodSymbol(javaSymbol)) return None
 
       val methodNameOpt = extractMethodName(javaSymbol)
 
       methodNameOpt.flatMap { methodName =>
+        // Java stub methods use the lowerCamel RPC name (e.g. `doSomething`),
+        // while the proto symbol uses the UpperCamel RPC name declared in the
+        // service (e.g. `DoSomething`).
         val rpcName = capitalize(methodName)
 
         val input = protoPath.toInputFromBuffers(buffers)
@@ -356,6 +551,10 @@ final class DefinitionProviderProtobufSupport(
     else s.head.toUpper + s.tail
   }
 
+  /**
+   * The top-level class name owning `symbol`, for example the SemanticDB
+   * symbol `com/example/Foo#Bar#baz().` becomes `Foo`.
+   */
   private def extractClassName(symbol: String): Option[String] = {
     val sym = Symbol(symbol)
     def findTopLevelClass(s: Symbol): Option[String] = {
@@ -366,6 +565,10 @@ final class DefinitionProviderProtobufSupport(
     findTopLevelClass(sym)
   }
 
+  /**
+   * The method name of `symbol`, for example the SemanticDB symbol
+   * `com/example/Foo#bar(+1).` becomes `bar`.
+   */
   private def extractMethodName(symbol: String): Option[String] = {
     val hashIndex = symbol.lastIndexOf('#')
     if (hashIndex < 0) return None
@@ -379,6 +582,17 @@ final class DefinitionProviderProtobufSupport(
     }
   }
 
+  /**
+   * The proto field name accessed by a generated Java accessor method, for
+   * example:
+   *   - `getFooBar` -> `foo_bar`
+   *   - `setFooBarList` -> `foo_bar` (repeated field)
+   *   - `hasFooBar` / `clearFooBar` -> `foo_bar`
+   *   - `getHTTPCode` -> `HTTP_CODE` (already-uppercase names, e.g. proto
+   *     enum-like fields, are kept as-is instead of snake-cased)
+   *
+   * Inverse of [[scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper#protoFieldToJavaMethods]].
+   */
   private def javaMethodToProtoField(methodName: String): Option[String] = {
     val fieldName =
       if (methodName.startsWith("set") && methodName.length > 3)

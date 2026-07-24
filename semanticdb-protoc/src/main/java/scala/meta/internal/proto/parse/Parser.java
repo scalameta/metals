@@ -62,7 +62,13 @@ public final class Parser {
           if (syntax.isPresent()) {
             error("Duplicate syntax declaration");
           }
-          syntax = Optional.of(parseSyntax());
+          syntax = Optional.of(parseSyntax("syntax"));
+          break;
+        case "edition":
+          if (syntax.isPresent()) {
+            error("Duplicate syntax declaration");
+          }
+          syntax = Optional.of(parseSyntax("edition"));
           break;
         case "package":
           if (pkg.isPresent()) {
@@ -104,9 +110,9 @@ public final class Parser {
         ImmutableList.copyOf(declarations));
   }
 
-  private SyntaxDecl parseSyntax() {
+  private SyntaxDecl parseSyntax(String keyword) {
     int startPos = currentPos();
-    expectIdentifier("syntax");
+    expectIdentifier(keyword);
     expectSymbol('=');
     String version = expectString();
     expectSymbol(';');
