@@ -37,6 +37,7 @@ object Configs {
         (List(
           new FileSystemWatcher(JEither.forLeft(s"$root/**/*.scala")),
           new FileSystemWatcher(JEither.forLeft(s"$root/**/*.java")),
+          new FileSystemWatcher(JEither.forLeft(s"$root/**/*.proto")),
           new FileSystemWatcher(JEither.forLeft(s"$root/*.sbt")),
           new FileSystemWatcher(JEither.forLeft(s"$root/**/pom.xml")),
           new FileSystemWatcher(JEither.forLeft(s"$root/*.sc")),

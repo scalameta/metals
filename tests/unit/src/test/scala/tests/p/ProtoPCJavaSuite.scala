@@ -1358,4 +1358,70 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       )
     } yield ()
   }
+
+  // Regression test: same scenario as "proto-rename-invalidates-java" above,
+  // but WITHOUT the extra didFocus after the proto save. A live F2 rename in
+  // the editor never re-focuses the already-open Java file, so the Java PC
+  // restart that surfaces the "cannot find symbol" error must happen at
+  // didSave time for the .proto file, not be deferred until the next time the
+  // user happens to focus a Java file.
+  test("proto-rename-invalidates-java-without-refocus") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |/a/src/main/java/com/example/Service.java
+           |package com.example;
+           |import com.example.api.jproto.User;
+           |public class Service {
+           |  public void process(User user) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/model.proto")
+      _ <- server.didOpen("a/src/main/java/com/example/Service.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
+      // Initially no errors - User class is found from proto
+      _ = assertNoDiagnostics()
+
+      // Rename User to Customer in the proto file and save. The Java file
+      // itself is neither edited nor refocused.
+      _ <- server.didChange("a/src/main/proto/model.proto") { _ =>
+        """|syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message Customer {
+           |  string name = 1;
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("a/src/main/proto/model.proto")
+
+      // The save itself must be enough: User no longer exists.
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/Service.java:2:30: error: cannot find symbol
+           |  symbol:   class User
+           |  location: package com.example.api.jproto
+           |import com.example.api.jproto.User;
+           |                             ^^^^^
+           |a/src/main/java/com/example/Service.java:4:23: error: cannot find symbol
+           |  symbol:   class User
+           |  location: class com.example.Service
+           |  public void process(User user) {}
+           |                      ^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
