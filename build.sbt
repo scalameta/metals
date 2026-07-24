@@ -776,7 +776,6 @@ lazy val metals = project
       "supportedScalaVersions" -> V.supportedScalaVersions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
-      "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
       "scala212" -> V.scala212,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
@@ -980,8 +979,6 @@ lazy val mtest = project
           else if (scalaVersion.value == "2.13.17") "1.2.1"
           else if (scalaVersion.value == "2.13.16") "1.2.0"
           else if (scalaVersion.value == "2.13.15") "1.0.4"
-          else if (scalaVersion.value == "2.13.13") "1.0.0"
-          else if (scalaVersion.value == "2.13.12") "1.0.0-M11"
           else V.munit
         },
         "com.outr" %% "scribe" % V.scribe(scalaVersion.value),
@@ -1000,7 +997,7 @@ lazy val mtest = project
       "betterMonadicFor" -> V.betterMonadicFor,
       "lastSupportedSemanticdb" -> SemanticDbSupport.last,
     ),
-    crossScalaVersions := V.nonDeprecatedScalaVersions,
+    crossScalaVersions := V.supportedScalaVersions,
     Compile / unmanagedSourceDirectories ++= multiScalaDirectories(
       (ThisBuild / baseDirectory).value / "tests" / "mtest",
       scalaVersion.value,
@@ -1014,7 +1011,9 @@ lazy val cross = project
   .settings(
     testSettings,
     sharedSettings,
-    crossScalaVersions := V.nonDeprecatedScalaVersions,
+    crossScalaVersions := V.supportedScalaVersions,
+    // these are only tests
+    allowUnsafeScalaLibUpgrade := true,
   )
   .dependsOn(mtest)
 
