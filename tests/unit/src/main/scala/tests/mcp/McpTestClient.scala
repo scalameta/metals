@@ -51,6 +51,45 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
       )
   }
 
+  /**
+   * Like [[callTool]], but surfaces `CallToolResult.isError` alongside the text
+   * content (the plain `callTool` discards it). Needed to assert error wiring.
+   */
+  def callToolRaw(
+      toolName: String,
+      params: tools.jackson.databind.node.ObjectNode,
+  ): Future[(Boolean, List[String])] = {
+    val callToolRequest =
+      new CallToolRequest(
+        jsonMapper,
+        toolName,
+        objectMapper.writeValueAsString(params),
+      )
+    client
+      .callTool(callToolRequest)
+      .toFuture()
+      .toScala
+      .map { result =>
+        val isError = Option(result.isError()).exists(_.booleanValue())
+        val texts = result.content.asScala.collect { case text: TextContent =>
+          text.text
+        }.toList
+        (isError, texts)
+      }
+  }
+
+  def showImplicits(
+      filePath: Option[String],
+      startLine: Option[Int] = None,
+      endLine: Option[Int] = None,
+  ): Future[(Boolean, List[String])] = {
+    val params = objectMapper.createObjectNode()
+    filePath.foreach(p => params.put("fileInFocus", p))
+    startLine.foreach(line => params.put("startLine", line))
+    endLine.foreach(line => params.put("endLine", line))
+    callToolRaw("show-implicits", params)
+  }
+
   override def initialize(): Future[InitializeResult] = {
     client.initialize().toFuture().asScala
   }

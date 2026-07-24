@@ -6,13 +6,18 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta._
+import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Docstrings
+import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.InlayHintsOption
+import scala.meta.internal.metals.InlayHintsOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferenceProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.pc.InlayHints
 import scala.meta.internal.pc.JavaSourceShortener
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.ContentType
@@ -20,7 +25,12 @@ import scala.meta.pc.ParentSymbols
 import scala.meta.transversers.Transformer
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import com.google.gson.JsonElement
+import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.SymbolKind
+import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.{lsp4j => l}
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
@@ -36,6 +46,7 @@ class McpQueryEngine(
     scalaVersionSelector: ScalaVersionSelector,
     mcpSearch: McpSymbolSearch,
     workspace: AbsolutePath,
+    buffers: Buffers,
 )(implicit ec: ExecutionContext) {
   private val mcpDefinitionProvider =
     new McpSymbolProvider(scalaVersionSelector, mcpSearch)
@@ -341,6 +352,120 @@ class McpQueryEngine(
     }
   }
 
+  /** Shows the implicits (implicit/`using` parameters and implicit conversions) inserted by the compiler in a file. */
+  def showImplicits(
+      path: Option[AbsolutePath],
+      range: Option[l.Range],
+  ): Future[ImplicitsResult] = {
+    path.filter(_.exists) match {
+      case None =>
+        Future.successful(ImplicitsResult.NoFile(path.map(_.toString)))
+      case Some(file) =>
+        val relativeFile = file
+          .toRelativeInside(workspace)
+          .map(_.toString)
+          .getOrElse(file.toString)
+
+        // NOTE: the two separate passes below are deliberate and load-bearing.
+        // A returned InlayHint carries only a coarse kind, not its fine-grained
+        // origin, so a single mixed pass could not be grouped by category. Do
+        // not "optimize" this into one pass.
+        val argumentsOptions = InlayHintsOptions(
+          Map(InlayHintsOption.ImplicitArguments -> true)
+        )
+        val conversionsOptions = InlayHintsOptions(
+          Map(InlayHintsOption.ImplicitConversions -> true)
+        )
+        for {
+          argHints <- inlayHints(file, range, argumentsOptions)
+          convHints <- inlayHints(file, range, conversionsOptions)
+        } yield {
+          val arguments = argHints.asScala.toList.map(toImplicitHint)
+          // Implicit conversions emit a pair of hints per conversion: an opening
+          // `name(` hint and a standalone `)` close hint. Drop the close hints.
+          val conversions = convHints.asScala.toList
+            .map(toImplicitHint)
+            .filterNot(_.label == ")")
+          ImplicitsResult.Found(relativeFile, arguments, conversions)
+        }
+    }
+  }
+
+  private def toImplicitHint(hint: InlayHint): ImplicitHint = {
+    val labelEither = hint.getLabel()
+    val rawLabel =
+      if (labelEither.isLeft) labelEither.getLeft()
+      else labelEither.getRight().asScala.map(_.getValue()).mkString
+    // A single implicit-argument hint yields one decoded target entry per label
+    // *part* (see InlayHints.makeInlayHint), so the meaningful targets are
+    // interleaved with separator parts (`(`, `, `, `)`, ...) that decode to
+    // `Left("")`. Filtering those out is load-bearing for essentially every
+    // typed hint, not an edge case.
+    val targets = Option(hint.getData()) match {
+      case Some(data) =>
+        InlayHints
+          .fromData(data.asInstanceOf[JsonElement])
+          ._2
+          .filter {
+            case Left("") => false
+            case _ => true
+          }
+      case None => Nil
+    }
+    // The conversion opening hint's label ends in a `(` separator part; strip it
+    // so the rendered label is just the conversion name (e.g. `augmentString`).
+    ImplicitHint(hint.getPosition(), rawLabel.stripSuffix("("), targets)
+  }
+
+  /**
+   * Buffer-safe `inlayHints` entry point for callers that only have a file,
+   * building and constraining the range to the buffer text so an out-of-bounds
+   * range isn't silently dropped to zero hints.
+   */
+  private def inlayHints(
+      path: AbsolutePath,
+      range: Option[l.Range],
+      options: InlayHintsOptions,
+  ): Future[ju.List[InlayHint]] = {
+    val text = path.toInputFromBuffers(buffers).text
+    val params = new InlayHintParams(
+      new TextDocumentIdentifier(path.toURI.toString()),
+      wholeLineRange(text, range),
+    )
+    compilers.inlayHints(params, EmptyCancelToken, Some(options))
+  }
+
+  /**
+   * Builds a whole-line LSP range against `text`, constraining the caller's
+   * range to the buffer bounds; falls back to the whole file when no (or an
+   * empty) range is given. Endpoints are 0-based, `endLine` inclusive.
+   */
+  private def wholeLineRange(
+      text: String,
+      range: Option[l.Range],
+  ): l.Range = {
+    val lines = text.split("\n", -1)
+    val lastLine = math.max(0, lines.length - 1)
+    def lineEndCol(line: Int): Int = lines(line).length
+    def wholeFile =
+      new l.Range(
+        new l.Position(0, 0),
+        new l.Position(lastLine, lineEndCol(lastLine)),
+      )
+    range match {
+      case Some(r) =>
+        val startLine = math.max(0, math.min(r.getStart().getLine(), lastLine))
+        val endLine = math.max(0, math.min(r.getEnd().getLine(), lastLine))
+        if (startLine > endLine) wholeFile
+        else
+          new l.Range(
+            new l.Position(startLine, 0),
+            new l.Position(endLine, lineEndCol(endLine)),
+          )
+      case None => wholeFile
+    }
+  }
+
   /**
    * Shortens source by reducing method/body content: Scala uses ??? for bodies;
    * Java keeps only signatures (empty bodies). Returns the original content on failure.
@@ -409,6 +534,75 @@ case class SymbolUsage(
     path: AbsolutePath,
     line: Int,
 )
+
+case class ImplicitHint(
+    position: l.Position,
+    label: String,
+    targets: List[Either[String, l.Position]],
+) {
+
+  /**
+   * Renders a single implicit hint line. Positions are 1-based `line:col`
+   * (human/editor convention), converted from the 0-based positions the
+   * presentation compiler returns. `->` targets are semanticdb symbols for
+   * out-of-file implicits or `(line:col)` (1-based) for in-file definitions;
+   * the `->` is omitted entirely when there are no targets.
+   */
+  def show(file: String): String = {
+    val line = position.getLine() + 1
+    val col = position.getCharacter() + 1
+    val targetStrings = targets.map {
+      case Left(symbol) => symbol
+      case Right(pos) => s"(${pos.getLine() + 1}:${pos.getCharacter() + 1})"
+    }
+    val arrow =
+      if (targetStrings.isEmpty) ""
+      else s"  ->  ${targetStrings.mkString(", ")}"
+    s"  $file:$line:$col  $label$arrow"
+  }
+}
+
+/**
+ * Result of `resolveImplicits`. Distinguishes a successful analysis (possibly
+ * with no implicits) from an unresolved file, so the tool layer can set
+ * `CallToolResult.isError` correctly.
+ */
+sealed trait ImplicitsResult {
+  def show: String
+}
+object ImplicitsResult {
+
+  /**
+   * @param file        the analyzed file, workspace-relative (absolute fallback)
+   * @param arguments   implicit/`using` parameter hints
+   * @param conversions implicit conversion hints (close-paren hints removed)
+   */
+  case class Found(
+      file: String,
+      arguments: List[ImplicitHint],
+      conversions: List[ImplicitHint],
+  ) extends ImplicitsResult {
+    override def show: String =
+      if (arguments.isEmpty && conversions.isEmpty)
+        s"No implicits found in $file"
+      else
+        List(
+          "Implicit arguments:" -> arguments,
+          "Implicit conversions:" -> conversions,
+        ).collect {
+          case (header, hints) if hints.nonEmpty =>
+            (header :: hints.map(_.show(file))).mkString("\n")
+        }.mkString("\n")
+  }
+
+  /** No file could be resolved from the request; rendered as a tool error. */
+  case class NoFile(requested: Option[String]) extends ImplicitsResult {
+    override def show: String = {
+      val what = requested.getOrElse("<no file provided>")
+      s"Error: could not resolve file: $what"
+    }
+  }
+}
 
 /**
  * Result of an inspect operation with metadata about searched targets.

@@ -706,6 +706,7 @@ class Compilers(
   def inlayHints(
       params: InlayHintParams,
       token: CancelToken,
+      optionsOverride: Option[InlayHintsOptions] = None,
   ): Future[ju.List[InlayHint]] = {
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       def inlayHintsFallback(
@@ -756,7 +757,7 @@ class Compilers(
           token,
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
-      val options = userConfig().inlayHintsOptions
+      val options = optionsOverride.getOrElse(userConfig().inlayHintsOptions)
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
         inferredTypes = options.inferredType,
