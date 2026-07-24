@@ -22,6 +22,7 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor

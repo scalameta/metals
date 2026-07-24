@@ -17,6 +17,7 @@ import scala.meta.internal.bsp.sync.WorkspaceSyncParams
 import scala.meta.internal.bsp.sync.WorkspaceSyncResult
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semver.SemVer.Version
 import scala.meta.io.AbsolutePath

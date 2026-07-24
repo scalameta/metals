@@ -7,7 +7,6 @@ import java.util.Properties
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
@@ -25,6 +24,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.bloop.BloopJvmProperties
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 

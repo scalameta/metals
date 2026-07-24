@@ -33,6 +33,7 @@ import scala.meta.internal.builds.WorkspaceLoadedStatus
 import scala.meta.internal.metals.Interruptable._
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild

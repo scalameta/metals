@@ -11,8 +11,6 @@ import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.BloopServers
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.ConnectKind
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.CreateSession
@@ -27,6 +25,8 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.bloop.BloopServers
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.semver.SemVer
