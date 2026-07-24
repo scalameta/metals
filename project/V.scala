@@ -83,7 +83,11 @@ object V {
 
   // scribe dropped Scala 2.12 support after 3.15.2
   def scribe(scalaVersion: String): String =
-    if (scalaVersion.startsWith("2.12")) "3.15.2" else scribe
+    if (scalaVersion.startsWith("2.12")) "3.15.2"
+    else if (scalaVersion == "2.13.15") "3.16.0"
+    else if (scalaVersion == "2.13.16") "3.17.0"
+    else if (scalaVersion == "2.13.17") "3.17.0"
+    else scribe
 
   val protobuf = "4.34.0"
 
@@ -176,34 +180,28 @@ object V {
       .toList
       .distinct
 
-  def nonDeprecatedScalaVersions = Seq(
+  def supportedScalaVersions = Seq(
     scala213,
     scala212,
-    // "2.12.19",
-    // "2.12.18",
-    // "2.12.17",
-    // "2.13.14",
-    // "2.13.15",
+    "2.12.20",
+    "2.12.19",
+    "2.13.17",
+    "2.13.16",
+    "2.13.15",
   )
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
     val sbtScalaVersion = "2.12.21"
-    if (!nonDeprecatedScalaVersions.contains(sbtScalaVersion))
+    if (!supportedScalaVersions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
     "1.11.0"
   }
 
-  def supportedScalaVersions =
-    nonDeprecatedScalaVersions
-
   val quickPublishScalaVersions = Set(
-//     bazelScalaVersion,
-    // sbtScala,
     scala212,
     scala213,
-    // sbtMill,
   ).toList
 }
