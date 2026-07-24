@@ -176,34 +176,28 @@ object V {
       .toList
       .distinct
 
-  def nonDeprecatedScalaVersions = Seq(
+  def supportedScalaVersions = Seq(
     scala213,
     scala212,
-    // "2.12.19",
-    // "2.12.18",
-    // "2.12.17",
-    // "2.13.14",
-    // "2.13.15",
+    "2.12.20",
+    "2.12.19",
+    "2.13.17",
+    "2.13.16",
+    "2.13.15",
   )
 
   def minimumSupportedSbtVersion = {
     // Update when deprecating a Scala version together with sbt version
     val sbtScalaVersion = "2.12.21"
-    if (!nonDeprecatedScalaVersions.contains(sbtScalaVersion))
+    if (!supportedScalaVersions.contains(sbtScalaVersion))
       throw new RuntimeException(
         "Please change minimalSupportedSbtVersion when removing support for a particular Scala version"
       )
     "1.11.0"
   }
 
-  def supportedScalaVersions =
-    nonDeprecatedScalaVersions
-
   val quickPublishScalaVersions = Set(
-//     bazelScalaVersion,
-    // sbtScala,
     scala212,
     scala213,
-    // sbtMill,
   ).toList
 }
