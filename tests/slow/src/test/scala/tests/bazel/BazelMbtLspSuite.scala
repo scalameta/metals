@@ -133,7 +133,7 @@ class BazelMbtLspSuite
        |        "org.typelevel:cats-core_2.13:2.13.0",
        |        "org.typelevel:cats-kernel_2.13:2.13.0"
        |      ],
-       |      "scalaVersion": "2.13.16",
+       |      "scalaVersion": "2.13.18",
        |      "dependsOn": [],
        |      "classDirectories": []
        |    }
@@ -421,7 +421,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.12.0",
             |        "org.typelevel:cats-kernel_2.13:2.12.0"
             |      ],
-            |      "scalaVersion": "2.13.14",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    },
@@ -436,7 +436,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.14",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    }
@@ -497,7 +497,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    },
@@ -513,7 +513,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [
             |        "//core"
             |      ],
@@ -591,7 +591,13 @@ class BazelMbtLspSuite
       _ = assertNoDiff(
         escapeMbtFile(mbtFile),
         s"""|{
-            |  "dependencyModules": [],
+            |  "dependencyModules": [
+            |    {
+            |      "id": "org.scala-lang:scala-library:2.13.18",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    }
+            |  ],
             |  "namespaces": {
             |    "//lib": {
             |      "sources": [
@@ -600,7 +606,9 @@ class BazelMbtLspSuite
             |      ],
             |      "scalacOptions": [],
             |      "javacOptions": [],
-            |      "dependencyModules": [],
+            |      "dependencyModules": [
+            |        "org.scala-lang:scala-library:2.13.18"
+            |      ],
             |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
@@ -853,6 +861,11 @@ class BazelMbtLspSuite
             |    {
             |      "id": "third_party:myother.jar:local",
             |      "jar": "<jar-path>"
+            |    },
+            |    {
+            |      "id": "org.scala-lang:scala-library:2.13.18",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
             |    }
             |  ],
             |  "namespaces": {
@@ -875,6 +888,7 @@ class BazelMbtLspSuite
             |      "scalacOptions": [],
             |      "javacOptions": [],
             |      "dependencyModules": [
+            |        "org.scala-lang:scala-library:2.13.18",
             |        "third_party:mylib.jar:local",
             |        "third_party:myother.jar:local"
             |      ],
@@ -947,7 +961,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [
@@ -1024,7 +1038,13 @@ class BazelMbtLspSuite
       _ = assertNoDiff(
         escapeMbtFile(mbtFile),
         s"""|{
-            |  "dependencyModules": [],
+            |  "dependencyModules": [
+            |    {
+            |      "id": "org.scala-lang:scala-library:2.13.18",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    }
+            |  ],
             |  "namespaces": {
             |    "//": {
             |      "sources": [
@@ -1032,7 +1052,9 @@ class BazelMbtLspSuite
             |      ],
             |      "scalacOptions": [],
             |      "javacOptions": [],
-            |      "dependencyModules": [],
+            |      "dependencyModules": [
+            |        "org.scala-lang:scala-library:2.13.18"
+            |      ],
             |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
@@ -1043,7 +1065,9 @@ class BazelMbtLspSuite
             |      ],
             |      "scalacOptions": [],
             |      "javacOptions": [],
-            |      "dependencyModules": [],
+            |      "dependencyModules": [
+            |        "org.scala-lang:scala-library:2.13.18"
+            |      ],
             |      "scalaVersion": "2.13.18",
             |      "dependsOn": [
             |        "//"

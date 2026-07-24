@@ -6,12 +6,12 @@ import javax.annotation.Nullable
 import scala.jdk.CollectionConverters._
 
 case class MbtNamespace(
-    @Nullable sources: ju.List[String],
-    @Nullable scalacOptions: ju.List[String],
-    @Nullable javacOptions: ju.List[String],
+    @Nullable sources: ju.List[String] = null,
+    @Nullable scalacOptions: ju.List[String] = null,
+    @Nullable javacOptions: ju.List[String] = null,
     @Nullable dependencyModules: ju.List[String] = ju.Collections.emptyList(),
-    @Nullable scalaVersion: String,
-    @Nullable javaHome: String,
+    @Nullable scalaVersion: String = null,
+    @Nullable javaHome: String = null,
     @Nullable dependsOn: ju.List[String] = null,
     @Nullable classDirectories: ju.List[String] = null,
     @Nullable projectPath: String = null,

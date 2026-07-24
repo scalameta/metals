@@ -251,59 +251,40 @@ class Compilers(
   // The "fallback" compiler is used for source files that don't belong to a build target.
   private def fallbackCompiler(path: AbsolutePath): PresentationCompiler = {
     val language = path.toLanguage
-    jcache
-      .compute(
-        PresentationCompilerKey.Default(language),
-        (_, value) => {
-          val scalaVersion =
-            scalaVersionSelector.fallbackScalaVersion()
-
-          Option(value) match {
-            case Some(lazyPc) =>
-              if (language.isJava) {
-                // Always use the same compiler for Java because the fallback
-                // Java compiler is not switching between compiler versions like
-                // we do for the fallback Scala 2.12/2.13/3 Scala compilers.
-                lazyPc
-              } else {
-                val presentationCompiler = lazyPc.await
-                if (presentationCompiler.scalaVersion() == scalaVersion) {
-                  lazyPc
-                } else {
-                  presentationCompiler.shutdown()
-                  StandaloneCompiler(
-                    scalaVersion,
-                    search,
-                    fallbackClasspaths.scalaCompilerClasspath(),
-                    completionItemPriority(),
-                    fallbackPresentationCompilerSourcepathSupplier(
-                      scalaVersion
-                    ),
-                    serverConfig.compilers.sourcePathMode,
-                  )
-                }
-              }
-            case None =>
-              if (language.isJava) {
-                StandaloneJavaCompiler(
-                  search,
-                  completionItemPriority(),
-                  fallbackClasspaths.javaCompilerClasspath(),
-                )
-              } else {
-                StandaloneCompiler(
-                  scalaVersion,
-                  search,
-                  fallbackClasspaths.scalaCompilerClasspath(),
-                  completionItemPriority(),
-                  fallbackPresentationCompilerSourcepathSupplier(scalaVersion),
-                  serverConfig.compilers.sourcePathMode,
-                )
-              }
-          }
-        },
-      )
-      .await
+    if (language.isJava)
+      jcache
+        .compute(
+          PresentationCompilerKey.Default(language),
+          (_, value) =>
+            Option(value).getOrElse(
+              StandaloneJavaCompiler(
+                search,
+                completionItemPriority(),
+                fallbackClasspaths.javaCompilerClasspath(),
+              )
+            ),
+        )
+        .await
+    else {
+      // One fallback compiler per Scala version.
+      val scalaVersion = scalaVersionSelector.scalaVersionForPath(path)
+      jcache
+        .compute(
+          PresentationCompilerKey.DefaultScala(scalaVersion),
+          (_, value) =>
+            Option(value).getOrElse(
+              StandaloneCompiler(
+                scalaVersion,
+                search,
+                fallbackClasspaths.scalaCompilerClasspath(scalaVersion),
+                completionItemPriority(),
+                fallbackPresentationCompilerSourcepathSupplier(scalaVersion),
+                serverConfig.compilers.sourcePathMode,
+              )
+            ),
+        )
+        .await
+    }
   }
 
   def loadedPresentationCompilerCount(): Int =
@@ -599,26 +580,26 @@ class Compilers(
     }
   }
 
+  private def fallbackCompilerKeys: List[PresentationCompilerKey] =
+    cache.keys.collect {
+      case key @ (_: PresentationCompilerKey.Default |
+          _: PresentationCompilerKey.DefaultScala) =>
+        key
+    }.toList
+
   def clearFallbackCompilerCache(): Unit = {
-    for {
-      language <- List(s.Language.SCALA, s.Language.JAVA)
-    } yield {
-      val default = Option(
-        jcache.get(PresentationCompilerKey.Default(language))
-      )
-      default.foreach { pc =>
+    for (key <- fallbackCompilerKeys) {
+      Option(jcache.get(key)).foreach { pc =>
         pc.await.shutdown()
-        jcache.remove(PresentationCompilerKey.Default(language))
+        jcache.remove(key)
       }
     }
   }
 
   def restartFallbackCompilers(): Unit = {
     for {
-      language <- List(s.Language.SCALA, s.Language.JAVA)
-      compiler <- Option(
-        jcache.get(PresentationCompilerKey.Default(language))
-      )
+      key <- fallbackCompilerKeys
+      compiler <- Option(jcache.get(key))
     } {
       compiler.await.restart()
     }
@@ -2318,6 +2299,9 @@ object Compilers {
     final case class JavaBuildTarget(id: BuildTargetIdentifier)
         extends PresentationCompilerKey
     final case class Default(language: s.Language)
+        extends PresentationCompilerKey
+
+    final case class DefaultScala(scalaVersion: String)
         extends PresentationCompilerKey
   }
 

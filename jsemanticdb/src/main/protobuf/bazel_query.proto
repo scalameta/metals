@@ -1,0 +1,44 @@
+// A trimmed subset of Bazel's `src/main/protobuf/build.proto` for the MBT
+// importer. Field NUMBERS must stay identical to build.proto — that is what the
+// wire format depends on.
+// Based on
+// https://github.com/bazelbuild/bazel/blob/master/src/main/protobuf/build.proto
+syntax = "proto2";
+
+package metals_bazel_query;
+
+option java_package = "scala.meta.internal.metals.mbt.importer.bazelproto";
+option java_outer_classname = "BazelQueryProto";
+
+message Attribute {
+  message SelectorEntry {
+    optional string label = 1;
+    optional string string_value = 3;
+    repeated string string_list_value = 6;
+  }
+
+  message Selector {
+    repeated SelectorEntry entries = 1;
+  }
+
+  message SelectorList {
+    repeated Selector elements = 2;
+  }
+
+  optional string name = 1;
+  optional string string_value = 5;
+  repeated string string_list_value = 6;
+  optional SelectorList selector_list = 21;
+}
+
+message Rule {
+  optional string name = 1;
+  optional string rule_class = 2;
+  repeated Attribute attribute = 4;
+  repeated string rule_input = 5;
+  repeated string rule_output = 6;
+}
+
+message Target {
+  optional Rule rule = 2;
+}
