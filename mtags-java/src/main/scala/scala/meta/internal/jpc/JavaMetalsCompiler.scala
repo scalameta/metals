@@ -16,6 +16,7 @@ import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager
 import javax.tools.ToolProvider
 
+import scala.collection.mutable.ListBuffer
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.ReportLevel
@@ -37,6 +38,7 @@ import com.sun.source.util.JavacTask
 import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePath
 import com.sun.source.util.Trees
+import com.sun.tools.javac.api.JavacTaskImpl
 import org.eclipse.lsp4j.Position
 import org.slf4j.Logger
 
@@ -327,19 +329,13 @@ object JavaMetalsCompiler {
   val COMPILER: JavaCompiler = ToolProvider.getSystemJavaCompiler()
   val STANDARD_FILE_MANAGER: StandardJavaFileManager =
     COMPILER.getStandardFileManager(null, null, StandardCharsets.UTF_8)
+
   def parse(params: VirtualFileParams): Option[(Trees, CompilationUnitTree)] = {
     parse(SourceJavaFileObject.fromParams(params))
   }
+
   def parse(source: JavaFileObject): Option[(Trees, CompilationUnitTree)] = {
-    val printer = new StringWriter()
-    val task = COMPILER.getTask(
-      printer,
-      STANDARD_FILE_MANAGER,
-      null,
-      List.empty[String].asJava,
-      null,
-      List(source).asJava
-    )
+    val task = createParseTask(source)
     val elems = task.asInstanceOf[JavacTask].parse()
     val trees = Trees.instance(task)
     val iter = elems.iterator
@@ -348,10 +344,56 @@ object JavaMetalsCompiler {
     else None
   }
 
+  private[internal] def parseWithComments(
+      source: JavaFileObject
+  ): Option[JavaParseResult] = {
+    val task = createParseTask(source)
+    val comments = ListBuffer.empty[JavaComment]
+    registerCommentCollectingScannerFactory(
+      task,
+      onComment = comment => comments += comment
+    )
+
+    val elems = task.asInstanceOf[JavacTask].parse()
+    val trees = Trees.instance(task)
+    val iter = elems.iterator
+    // only one CompilationUnitTree for a single file
+    if (iter.hasNext())
+      Some(JavaParseResult(trees, iter.next(), comments.toList))
+    else None
+  }
+
+  private def createParseTask(
+      source: JavaFileObject
+  ): JavaCompiler.CompilationTask = {
+    val printer = new StringWriter()
+    COMPILER.getTask(
+      printer,
+      STANDARD_FILE_MANAGER,
+      null,
+      List.empty[String].asJava,
+      null,
+      List(source).asJava
+    )
+  }
+
   def makeFileObject(file: File): JavaFileObject = {
     val files =
       STANDARD_FILE_MANAGER.getJavaFileObjectsFromFiles(List(file).asJava)
     files.iterator().next()
+  }
+
+  // `onComment` is invoked by CommentCollectingTokenizer for every comment found
+  private def registerCommentCollectingScannerFactory(
+      task: JavaCompiler.CompilationTask,
+      onComment: JavaComment => Unit
+  ): Unit = {
+    val context = task.asInstanceOf[JavacTaskImpl].getContext
+
+    // Register the comment-saving scanner before parsing.
+    // `ScannerFactory`'s constructor puts itself into the context,
+    // so the parser picks it up when it later calls `ScannerFactory.instance`.
+    new CommentCollectingScannerFactory(context, onComment)
   }
 
 }
