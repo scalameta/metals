@@ -153,8 +153,6 @@ abstract class MetalsLspService(
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   val wasInitialized = new AtomicBoolean(false)
-  // Tracks whether proto files have been saved since the last Java PC restart.
-  private val protoFilesHaveChanged = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -998,11 +996,6 @@ abstract class MetalsLspService(
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
 
-    // Restart Java PCs if proto files have been saved since last Java file focus
-    if (path.isJavaFilename && protoFilesHaveChanged.getAndSet(false)) {
-      compilers.restartJavaCompilers()
-    }
-
     val future =
       if (isDependencySource(path)) {
         diagnostics.publishDiagnosticsNotAdjusted(path, Nil)
@@ -1130,9 +1123,10 @@ abstract class MetalsLspService(
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
     mbt2.didSave(path)
-    // Invalidate proto cache and track change so we restart Java PCs on next focus
+    // The Java presentation compiler caches resolved symbols from the
+    // synthesized proto outline and won't re-request them until restarted.
     if (path.isProtoFilename) {
-      protoFilesHaveChanged.set(true)
+      compilers.restartJavaCompilers()
     }
     Future
       .sequence(
@@ -1221,6 +1215,15 @@ abstract class MetalsLspService(
       case None =>
         Future.successful(())
     })
+    // A proto file can change on disk without ever going through didSave,
+    // for example when a rename's workspace edit is applied to a file that
+    // isn't open in an editor. Without this, the synthesized outline and
+    // the Java presentation compiler's cached symbols go stale until the
+    // next full restart.
+    if (paths.exists(_.isProtoFilename)) {
+      paths.filter(_.isProtoFilename).foreach(mbt2.didSave)
+      compilers.restartJavaCompilers()
+    }
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
   }
@@ -1231,7 +1234,8 @@ abstract class MetalsLspService(
    */
   protected def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
+    abs.isScalaOrJava || abs.isProtoFilename || abs.isSemanticdb ||
+    abs.isInBspDirectory(folder)
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {
