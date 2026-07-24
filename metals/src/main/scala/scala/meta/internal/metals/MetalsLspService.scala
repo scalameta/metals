@@ -1149,6 +1149,18 @@ abstract class MetalsLspService(
   private def refreshAllDiagnostics(): Future[Unit] = {
     refreshDiagnostics(_ => true)
   }
+
+  protected def refreshMbtStateAfterIndex(): Future[Unit] = {
+    val refresh =
+      if (userConfig.javaSymbolLoader.isTurbineClasspath)
+        mbt2.recompileTurbineClasspath()
+      else Future.unit
+    refresh
+      .map(_ => compilers.cancel())
+      .map(_ => diagnostics.reset(buffers.open.toSeq))
+      .flatMap(_ => refreshAllDiagnostics())
+  }
+
   protected def refreshDiagnostics(
       isIncludedPath: AbsolutePath => Boolean
   ): Future[Unit] = {

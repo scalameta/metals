@@ -69,6 +69,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
+    refreshMbtStateAfterIndex: () => Future[Unit] = () => Future.unit,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -679,32 +680,27 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        // When testing we need to make sure the classpath is refreshed after mbt.json is generated
-        _ <- {
-          if (MetalsServerConfig.isTesting)
-            refreshMbtTurbineClasspath(session).withInterrupt
-          else
-            Future {
-              refreshMbtTurbineClasspath(session)
-            }.withInterrupt
-        }
+        _ <- refreshMbtStateAfterIndexIfNeeded(session)
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
       }
     }
 
-    private def refreshMbtTurbineClasspath(
+    private def refreshMbtStateAfterIndexIfNeeded(
         session: BspSession
-    ): Future[Unit] =
-      if (
-        MbtBuildServer.isMbtServer(session.main.name) &&
-        userConfig.javaSymbolLoader.isTurbineClasspath
-      ) {
-        mbtSymbolSearch.scheduleRecompileTurbineClasspath()
-      } else {
-        Future.unit
-      }
+    ): Interruptable[Unit] = {
+      val refresh =
+        if (MbtBuildServer.isMbtServer(session.main.name))
+          refreshMbtStateAfterIndex()
+        else Future.unit
+
+      if (MetalsServerConfig.isTesting) refresh.withInterrupt
+      else
+        refresh.recover { case error =>
+          scribe.warn("failed to refresh MBT diagnostics", error)
+        }.withInterrupt
+    }
 
     private def saveProjectReferencesInfo(
         bspBuilds: List[BspSession.BspBuild]
