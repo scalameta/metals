@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.io.ByteArrayOutputStream
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -30,15 +31,24 @@ object BazelQuery {
       javaHome: Option[String],
   )
 
-  sealed abstract class OutputMode(name: String) {
+  sealed abstract class OutputMode(name: String, val extraArgs: List[String]) {
     override def toString(): String = name
   }
   object OutputMode {
-    case object Label extends OutputMode("label")
-    case object Xml extends OutputMode("xml")
+    case object Label extends OutputMode("label", Nil)
+    case object Xml extends OutputMode("xml", Nil)
 
     // valid only for "bazel cquery"
-    case object Starlark extends OutputMode("starlark")
+    case object Starlark extends OutputMode("starlark", Nil)
+
+    private val targetStreamArgs = List(
+      "--proto:flatten_selects=false",
+      "--proto:output_rule_attrs=srcs,scalacopts,javacopts,scala_version,jars,srcjar",
+    )
+
+    // Binary length-delimited `Target` stream; must be captured as raw bytes.
+    case object StreamedProto
+        extends OutputMode("streamed_proto", targetStreamArgs)
   }
   sealed abstract class QueryType(name: String) {
     override def toString(): String = name
@@ -123,40 +133,56 @@ case class BazelQuery(
   def run(
       env: Env
   )(implicit ec: ExecutionContext): Future[String] = {
-    import env._
     val buf = new StringBuilder()
+    execute(
+      env,
+      ProcessOutput.Lines { line =>
+        buf.append(line)
+        buf.append(System.lineSeparator())
+      },
+    )(() => buf.toString)
+  }
+
+  /**
+   * Runs the query and parses its binary `streamed_proto` `Target` stream
+   * (see [[fullInformationQuery]]) into a [[BazelTargetsProtoDump]].
+   * Stream captured as raw bytes — the line-based [[run]] path would
+   * mangle non-text bytes — and parsed by [[BazelStreamedProto.parseRules]].
+   */
+  def runProtoDump(
+      env: Env
+  )(implicit ec: ExecutionContext): Future[BazelTargetsProtoDump] =
+    runRaw(env)
+      .map(BazelStreamedProto.parseRules)
+      .map(new BazelTargetsProtoDump(_))
+
+  private def runRaw(
+      env: Env
+  )(implicit ec: ExecutionContext): Future[Array[Byte]] = {
+    val buf = new ByteArrayOutputStream()
+    execute(env, ProcessOutput.RawBytes(buf))(() => buf.toByteArray)
+  }
+
+  private def execute[A](
+      env: Env,
+      processOut: ProcessOutput,
+  )(result: () => A)(implicit ec: ExecutionContext): Future[A] = {
+    import env._
     val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner
       .run(
         s"bazel-mbt-$queryType",
-        List(
-          "bazel",
-          queryType.toString,
-          s"--output=$outputMode",
-          "--keep_going",
-        ) ++ queryArgs ++ extraArgs,
+        bazelQueryArgs(queryArgs),
         projectRoot,
         redirectErrorOutput = false,
         javaHome,
-        processOut = ProcessOutput.Lines { line =>
-          buf.append(line)
-          buf.append(System.lineSeparator())
-        },
+        processOut = processOut,
         processErr = scribe.warn(_),
       )
       .future
-      .andThen {
-        case result => {
-          Try {
-            // Just ignore the possible error; we will have a second attempt to delete the file upon the VM exit
-            queryFile.foreach(Files.delete)
-          }
-          result
-        }
-      }
+      // Ignore a failed delete; the VM-exit hook retries it.
+      .andThen { case _ => Try(queryFile.foreach(Files.delete)) }
       .flatMap {
-        case ExitCodes.Success =>
-          Future.successful(buf.toString)
         case ExitCodes.Cancel =>
           Future.failed(
             new java.util.concurrent.CancellationException(
@@ -164,12 +190,20 @@ case class BazelQuery(
             )
           )
         case code =>
-          scribe.warn(
-            s"bazel-mbt: bazel query failed with exit code $code, but might be unreleated."
-          )
-          Future.successful(buf.toString)
+          if (code != ExitCodes.Success)
+            scribe.warn(
+              s"bazel-mbt: bazel query failed with exit code $code, but might be unrelated."
+            )
+          Future.successful(result())
       }
   }
+
+  private def bazelQueryArgs(queryArgs: List[String]): List[String] =
+    List(
+      "bazel",
+      queryType.toString,
+      s"--output=$outputMode",
+    ) ++ outputMode.extraArgs ++ List("--keep_going") ++ queryArgs ++ extraArgs
 
   private def prepareQueryArgs(query: String): (List[String], Option[Path]) = {
     if (query.length() <= queryStringMaxLength) (List(query), None)
