@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.buildserver
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -12,9 +12,22 @@ import scala.meta.internal.bsp.ProtocolExtension
 import scala.meta.internal.bsp.sync.SyncExtension
 import scala.meta.internal.bsp.sync.SyncMode
 import scala.meta.internal.builds.BazelBuildTool
-import scala.meta.internal.metals.BuildServerConnection.BspExtraBuildParams
-import scala.meta.internal.metals.BuildServerConnection.InitializeBuildData
+import scala.meta.internal.metals.BuildInfo
+import scala.meta.internal.metals.Cancelable
+import scala.meta.internal.metals.DismissedNotifications
+import scala.meta.internal.metals.LargeLauncher
+import scala.meta.internal.metals.MetalsBuildClient
+import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.RequestMonitorImpl
+import scala.meta.internal.metals.ServerLivenessMonitor
+import scala.meta.internal.metals.Trace
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.bloop.BloopServers
+import scala.meta.internal.metals.buildserver.BuildServerConnection.BspExtraBuildParams
+import scala.meta.internal.metals.buildserver.BuildServerConnection.InitializeBuildData
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath

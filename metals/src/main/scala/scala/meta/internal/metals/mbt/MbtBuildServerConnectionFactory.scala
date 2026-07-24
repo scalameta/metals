@@ -8,7 +8,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.metals.BuildServerConnectionFactory
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.DismissedNotifications
@@ -16,8 +15,9 @@ import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnectionFactory
+import scala.meta.internal.metals.buildserver.SocketConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 

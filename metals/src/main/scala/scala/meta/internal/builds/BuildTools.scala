@@ -11,13 +11,13 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter

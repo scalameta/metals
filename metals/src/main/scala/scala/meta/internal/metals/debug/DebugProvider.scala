@@ -18,7 +18,6 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClientConfiguration
@@ -42,6 +41,7 @@ import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
