@@ -35,7 +35,7 @@ object V {
 
   val coursierInterfaces = "1.0.29-M2"
 
-  val debugAdapter = "4.2.9"
+  val debugAdapter = "4.2.13"
 
   val genyVersion = "1.1.1"
 
