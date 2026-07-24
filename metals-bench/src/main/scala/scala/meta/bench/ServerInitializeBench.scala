@@ -1,4 +1,4 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors

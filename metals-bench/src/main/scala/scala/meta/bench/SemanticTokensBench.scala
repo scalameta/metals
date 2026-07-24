@@ -1,10 +1,11 @@
-package bench
+package scala.meta.bench
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
+import scala.meta.bench.PcBenchmark
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
