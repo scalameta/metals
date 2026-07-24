@@ -137,7 +137,7 @@ case class BazelBuildTool(
       sourceFiles: Seq[AbsolutePath],
   ): Future[List[String]] =
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(runTargets, target, testSuites, debugAgentFlag = None)
+      mbtTestExecCommand(runTargets, testSuites, debugAgentFlag = None)
     }
 
   override def mbtTestDebugCommand(
@@ -150,7 +150,6 @@ case class BazelBuildTool(
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
       mbtTestExecCommand(
         runTargets,
-        target,
         testSuites,
         debugAgentFlag = Some(debugAgentFlag),
       )
@@ -170,7 +169,6 @@ case class BazelBuildTool(
       resolvedRunTargets.map { runTargets =>
         mbtTestExecCommand(
           runTargets,
-          target,
           testSuites,
           debugAgentFlag = None,
         ) ::: List(
@@ -214,7 +212,7 @@ case class BazelBuildTool(
           val env =
             BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
           BazelQuery(queryStr, BazelQuery.OutputMode.Label)
-            .run(env)(ec)
+            .run(env, target.javaHome)(ec)
             .recover { case e =>
               scribe.warn(
                 s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
@@ -230,7 +228,6 @@ case class BazelBuildTool(
 
   private def mbtTestExecCommand(
       runTargets: List[String],
-      target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: Option[String],
   ): List[String] = {
