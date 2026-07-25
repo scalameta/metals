@@ -10,6 +10,7 @@ import scala.meta.trees.Origin
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.{lsp4j => l}
+import scala.meta.internal.metals.UserConfiguration
 
 /**
  *  Retrieves all the symbols defined in a document
@@ -20,6 +21,7 @@ import org.eclipse.{lsp4j => l}
 final class DocumentSymbolProvider(
     trees: Trees,
     supportsHierarchicalDocumentSymbols: Boolean,
+    userConfig: () => UserConfiguration,
 ) {
 
   def documentSymbols(
@@ -95,6 +97,12 @@ final class DocumentSymbolProvider(
           )
         }
       }
+    }
+
+    // don't show local variables, parameters, and private members in the outline view, since they are not visible outside of their enclosing class or method. This is especially important for parameters, since they can be very numerous and clutter the outline view.
+    def filterSymbols(addPatF: => Unit) = {
+      if (userConfig().symbolsViewShowAll) { addPatF }
+      else {}
     }
 
     override def apply(tree: Tree): Unit = {
@@ -209,45 +217,64 @@ final class DocumentSymbolProvider(
           )
           newOwner()
         case t: Defn.Val =>
-          addPats(
-            t.pats,
-            SymbolKind.Constant,
-            t.pos,
-            t.decltpe.fold("")(_.syntax),
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Constant,
+                t.pos,
+                t.decltpe.fold("")(_.syntax),
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Term.Param =>
-          addChild(
-            t.name.value,
-            SymbolKind.Variable,
-            t.pos,
-            t.name.pos,
-            t.decltpe.fold("")(_.syntax),
-          )
+          filterSymbols({
+            addChild(
+              t.name.value,
+              SymbolKind.Variable,
+              t.pos,
+              t.name.pos,
+              t.decltpe.fold("")(_.syntax),
+            )
+          })
+
         case t: Decl.Val =>
-          addPats(
-            t.pats,
-            SymbolKind.Constant,
-            t.pos,
-            t.decltpe.syntax,
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Constant,
+                t.pos,
+                t.decltpe.syntax,
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Defn.Var =>
-          addPats(
-            t.pats,
-            SymbolKind.Variable,
-            t.pos,
-            t.decltpe.fold("")(_.syntax),
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Variable,
+                t.pos,
+                t.decltpe.fold("")(_.syntax),
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Decl.Var =>
-          addPats(
-            t.pats,
-            SymbolKind.Variable,
-            t.pos,
-            t.decltpe.syntax,
+          filterSymbols(
+            {
+              addPats(
+                t.pats,
+                SymbolKind.Variable,
+                t.pos,
+                t.decltpe.syntax,
+              )
+              newOwner()
+            }
           )
-          newOwner()
         case t: Defn.Type =>
           addChild(
             t.name.value,

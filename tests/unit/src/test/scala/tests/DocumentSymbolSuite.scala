@@ -28,6 +28,7 @@ abstract class DocumentSymbolSuite(
           val documentSymbolProvider = new DocumentSymbolProvider(
             trees = trees,
             supportsHierarchicalDocumentSymbols = true,
+            userConfig = () => scala.meta.internal.metals.UserConfiguration(),
           )
 
           // populate buffers
