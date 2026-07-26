@@ -260,6 +260,8 @@ class WorkspaceLspService(
       featureFlags,
       metrics,
       moduleStatus,
+      workspaceFolders = () =>
+        (folderServices.map(_.path) ++ nonScalaProjects.map(_.path)).distinct,
     )
   }
 
