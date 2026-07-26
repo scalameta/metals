@@ -14,6 +14,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.scalacli.ScalaCliAutoStart
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.Semanticdbs
@@ -41,6 +42,7 @@ class FallbackMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
     moduleStatus: ModuleStatus,
+    workspaceFolders: () => Seq[AbsolutePath],
 ) extends MetalsLspService(
       ec,
       sh,
@@ -106,8 +108,14 @@ class FallbackMetalsLspService(
   ): Future[Unit] =
     for {
       _ <-
-        if (!path.isScala) Future.unit
-        else {
+        if (!ScalaCliAutoStart.shouldAutoStart(path, workspaceFolders())) {
+          if (path.isScala) {
+            scribe.info(
+              s"Skipping Scala CLI auto-start for out-of-workspace file: $path"
+            )
+          }
+          Future.unit
+        } else {
           val prev = files.getAndUpdate(_ + path)
           if (prev.contains(path)) Future.unit
           else scalaCli.start(path)
