@@ -1,7 +1,5 @@
 package tests
 
-import scala.concurrent.Future
-
 import scala.meta.internal.metals.{BuildInfo => V}
 
 /**
@@ -10,6 +8,10 @@ import scala.meta.internal.metals.{BuildInfo => V}
  * When the client opens Scala files outside the LSP workspace folder(s), the
  * fallback service must not auto-start Scala CLI. Manual
  * `metals.scala-cli-start` remains unchanged (covered by ScalaCliSuite).
+ *
+ * `TestingServer.didOpen` awaits the fallback `maybeImportFileAndLoad` future,
+ * so assertions after `didOpen` already run after auto-start has been decided
+ * (and either skipped or completed).
  */
 class OutOfWorkspaceScalaCliLspSuite
     extends BaseLspSuite("out-of-workspace-scala-cli") {
@@ -40,8 +42,6 @@ class OutOfWorkspaceScalaCliLspSuite
            |""".stripMargin
       )
       _ <- server.didOpen("outsider/Foo.scala")
-      // Give the fallback import path a moment to finish (or skip).
-      _ <- Future { Thread.sleep(500) }
       _ = assertEquals(
         server.fullServer.fallbackService.scalaCli.servers.size,
         0,
@@ -79,7 +79,6 @@ class OutOfWorkspaceScalaCliLspSuite
            |""".stripMargin
       )
       _ <- server.didOpen("anode/src/Main.scala")
-      _ <- Future { Thread.sleep(500) }
       _ = assertEquals(
         server.fullServer.fallbackService.scalaCli.servers.size,
         0,
