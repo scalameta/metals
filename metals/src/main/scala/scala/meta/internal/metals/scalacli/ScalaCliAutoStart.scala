@@ -15,6 +15,17 @@ import scala.meta.io.AbsolutePath
 object ScalaCliAutoStart {
 
   /**
+   * True when `workspaceFolders` is non-empty and `path` is not under any of
+   * them.
+   */
+  def isOutsideWorkspace(
+      path: AbsolutePath,
+      workspaceFolders: Seq[AbsolutePath],
+  ): Boolean =
+    workspaceFolders.nonEmpty &&
+      !workspaceFolders.exists(folder => path.startWith(folder))
+
+  /**
    * Whether FallbackMetalsLspService should automatically start Scala CLI when
    * `path` is opened.
    *
@@ -30,6 +41,6 @@ object ScalaCliAutoStart {
   ): Boolean = {
     if (!path.isScala) false
     else if (workspaceFolders.isEmpty) true
-    else workspaceFolders.exists(folder => path.startWith(folder))
+    else !isOutsideWorkspace(path, workspaceFolders)
   }
 }

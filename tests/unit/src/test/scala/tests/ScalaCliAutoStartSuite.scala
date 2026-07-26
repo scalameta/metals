@@ -22,6 +22,10 @@ class ScalaCliAutoStartSuite extends BaseSuite {
     scalaFile.toFile.deleteOnExit()
 
     assertEquals(
+      ScalaCliAutoStart.isOutsideWorkspace(scalaFile, Seq(workspace)),
+      true,
+    )
+    assertEquals(
       ScalaCliAutoStart.shouldAutoStart(scalaFile, Seq(workspace)),
       false,
     )

@@ -6,7 +6,8 @@ import scala.meta.internal.metals.{BuildInfo => V}
  * Regression tests for https://github.com/scalameta/metals/issues/8736
  *
  * When the client opens Scala files outside the LSP workspace folder(s), the
- * fallback service must not auto-start Scala CLI. Manual
+ * fallback service must not auto-start Scala CLI and must not run presentation
+ * compiler load (both produce spurious Problems). Manual
  * `metals.scala-cli-start` remains unchanged (covered by ScalaCliSuite).
  *
  * `TestingServer.didOpen` awaits the fallback `maybeImportFileAndLoad` future,
@@ -50,6 +51,13 @@ class OutOfWorkspaceScalaCliLspSuite
       _ = assertEquals(
         server.fullServer.fallbackService.scalaCli.paths.toList,
         Nil,
+      )
+      _ = assertEquals(
+        client.diagnostics
+          .get(workspace.resolve("outsider/Foo.scala"))
+          .getOrElse(Nil),
+        Nil,
+        "Out-of-workspace didOpen must not publish Problems diagnostics",
       )
     } yield ()
   }
