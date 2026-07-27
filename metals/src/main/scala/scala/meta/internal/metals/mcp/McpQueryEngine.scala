@@ -392,7 +392,7 @@ class McpQueryEngine(
               super.apply(other)
           }
         }
-        shortenBodies(source).toString()
+        shortenBodies.transform(source).toString()
       case _ =>
         content
     }

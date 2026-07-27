@@ -5,6 +5,7 @@
 //       ^^^^^^^^^^^^^^ definition example/MethodOverload#
 //                     ^ definition example/MethodOverload#`<init>`().
 //                      ^ definition example/MethodOverload#b.
+//                      ^ definition example/MethodOverload#`<init>`().(b)
 //                         ^^^^^^ reference scala/Predef.String#
      def this() = this("")
 //       ^^^^ definition example/MethodOverload#`<init>`(+1).

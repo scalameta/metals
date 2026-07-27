@@ -17,6 +17,7 @@
    case class MacroAnnotation(
        name: String
 //     ^^^^ definition example/MacroAnnotation#name.
+//     ^^^^ definition example/MacroAnnotation#`<init>`().(name)
 //           ^^^^^^ reference scala/Predef.String#
    ) {
      def method = 42

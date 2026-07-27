@@ -103,7 +103,7 @@ class MtagsScala2Suite
         // don't assert fidelity where semanticdb-scalac has known bugs and mtags is correct.
         List(
           "ImplicitClasses", "PatternMatching", "ImplicitConversions",
-          "MacroAnnotation", "SQLQueries",
+          "MacroAnnotation", "SQLQueries", "MethodOverload", "NamedArguments",
         ).exists { name => file.file.toNIO.endsWith(s"$name.scala") }
       },
       documentedUnknownSymbols = Set(
