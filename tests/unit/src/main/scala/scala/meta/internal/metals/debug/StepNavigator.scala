@@ -3,7 +3,6 @@ package scala.meta.internal.metals.debug
 import scala.collection.mutable
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.debug.StepNavigator._
 import scala.meta.io.AbsolutePath
 

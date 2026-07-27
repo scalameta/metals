@@ -1,6 +1,9 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.TimeUnit
+
+import scala.meta.bench.PcBenchmark
+import scala.meta.bench.SourceRequest
 
 import org.eclipse.lsp4j.CompletionList
 import org.openjdk.jmh.annotations.Benchmark

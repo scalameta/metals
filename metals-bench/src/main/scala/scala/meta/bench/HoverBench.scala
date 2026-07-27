@@ -1,9 +1,11 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
 
-import org.eclipse.lsp4j.DocumentHighlight
+import scala.meta.bench.PcBenchmark
+import scala.meta.bench.SourceRequest
+import scala.meta.pc.HoverSignature
+
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -13,27 +15,27 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 
 @State(Scope.Benchmark)
-class DocumentHighlightBench extends PcBenchmark {
+class HoverBench extends PcBenchmark {
 
   var requests: Map[String, SourceRequest] = Map.empty
 
   def beforeAll(): Unit = {
+
     requests = Map(
-      "basic" -> SourceRequest.fromPath(
+      "scopeOpen" -> SourceRequest.fromPath(
         "A.scala",
         """|package a
            |
-           |object Main{
-           |  def foo(a: Int, bab: String, dbl: Double = 1.0)
-           |  foo(1, "")
+           |object Main extends App{
+           |  
            |}
            |""".stripMargin,
-        "  f@@oo(1, \"\")",
+        "object Main extends Ap@@p",
       )
     )
   }
 
-  @Param(Array("basic"))
+  @Param(Array("scopeOpen"))
   var currentRequest: String = _
 
   @Param(Array("3.3.1", "2.13.12"))
@@ -42,12 +44,12 @@ class DocumentHighlightBench extends PcBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def documentHighlight(): ju.List[DocumentHighlight] = {
+  def hover(): HoverSignature = {
     val pc = presentationCompiler(scalaVersion)
-    currentHighlight.documentHighlight(pc)
+    currentHover.hover(pc).get()
   }
 
-  def currentHighlight: SourceRequest = requests(
+  def currentHover: SourceRequest = requests(
     currentRequest
   )
 

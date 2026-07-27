@@ -7,6 +7,7 @@
 //                  ^^^^^^^^ definition example/ImplicitClasses.Xtension#
 //                          ^ definition example/ImplicitClasses.Xtension#`<init>`().
 //                           ^^^^^^ definition example/ImplicitClasses.Xtension#number.
+//                           ^^^^^^ definition example/ImplicitClasses.Xtension#`<init>`().(number)
 //                                   ^^^ reference scala/Int#
        def increment: Int = number + 1
 //         ^^^^^^^^^ definition example/ImplicitClasses.Xtension#increment().
@@ -18,6 +19,7 @@
 //                  ^^^^^^^^^^^^^^ definition example/ImplicitClasses.XtensionAnyVal#
 //                                ^ definition example/ImplicitClasses.XtensionAnyVal#`<init>`().
 //                                             ^^^^^^ definition example/ImplicitClasses.XtensionAnyVal#number.
+//                                             ^^^^^^ definition example/ImplicitClasses.XtensionAnyVal#`<init>`().(number)
 //                                                     ^^^ reference scala/Int#
 //                                                                  ^^^^^^ reference scala/AnyVal#
 //                                                                         ^ reference scala/AnyVal#`<init>`().

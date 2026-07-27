@@ -1,9 +1,12 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.TimeUnit
+import java.{util => ju}
 
-import scala.meta.pc.DefinitionResult
+import scala.meta.bench.PcBenchmark
+import scala.meta.bench.SourceRequest
 
+import org.eclipse.lsp4j.DocumentHighlight
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -13,7 +16,7 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 
 @State(Scope.Benchmark)
-class DefinitionBench extends PcBenchmark {
+class DocumentHighlightBench extends PcBenchmark {
 
   var requests: Map[String, SourceRequest] = Map.empty
 
@@ -42,12 +45,12 @@ class DefinitionBench extends PcBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def definition(): DefinitionResult = {
+  def documentHighlight(): ju.List[DocumentHighlight] = {
     val pc = presentationCompiler(scalaVersion)
-    currentDefinition.definition(pc)
+    currentHighlight.documentHighlight(pc)
   }
 
-  def currentDefinition: SourceRequest = requests(
+  def currentHighlight: SourceRequest = requests(
     currentRequest
   )
 
