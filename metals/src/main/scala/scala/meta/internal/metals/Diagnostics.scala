@@ -6,6 +6,8 @@ import java.{util => ju}
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Promise
 import scala.util.Try
 
 import scala.meta.inputs.Input
@@ -13,6 +15,8 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.io.AbsolutePath
 
@@ -54,7 +58,8 @@ final class Diagnostics(
     config: MetalsServerConfig,
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,
-) {
+    mbtWorkspaceSymbolProvider: () => MbtWorkspaceSymbolProvider,
+)(implicit ec: ExecutionContext, rc: ReportContext) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[DiagnosticWithOrigin]]
   private val syntaxError =
@@ -390,6 +395,9 @@ final class Diagnostics(
       ds: List[Diagnostic],
   ): Unit = {
     if (userConfig().presentationCompilerDiagnostics) {
+      val errors = ds.filter(_.getSeverity == l.DiagnosticSeverity.Error)
+      if (errors.nonEmpty)
+        reportMbtCompileError(path, errors)
       languageClient.publishDiagnostics(
         new PublishDiagnosticsParams(
           path.toURI.toString,
@@ -398,6 +406,44 @@ final class Diagnostics(
       )
     }
   }
+
+  private def reportMbtCompileError(
+      path: AbsolutePath,
+      errors: List[Diagnostic],
+  ): Unit =
+    for {
+      id <- buildTargets.inverseSources(path)
+      if buildTargets.buildServerOf(id).exists(_.isMbt)
+      futureClasspath <- buildTargets.targetClasspath(id, Promise[Unit]())
+    } futureClasspath.foreach { classpath =>
+      val sourcepath: Iterable[AbsolutePath] =
+        if (path.filename.endsWith(".java"))
+          mbtWorkspaceSymbolProvider().allFiles()
+        else
+          buildTargets.buildTargetTransitiveSources(id).toList
+      val errorLines = errors.map { d =>
+        val start = d.getRange.getStart
+        s"[${start.getLine + 1}:${start.getCharacter + 1}] ${d.getMessageAsString}"
+      }
+      val errorsStr = errorLines.mkString("\n\n")
+      // Deduplicate on the error position, its content and path of the failing file
+      val contentId = MD5.compute(errorLines.mkString("\n"))
+      rc.unsanitized.create(
+        () =>
+          Report(
+            name = "mbt-compile-error",
+            text =
+              s"""|Errors in $path:
+                  |$errorsStr
+                  |
+                  |Classpath:${classpath.mkString("\n  ", "\n  ", "")}
+                  |Sourcepath:${sourcepath.mkString("\n  ", "\n  ", "")}""".stripMargin,
+            shortSummary = s"MBT compile error for build target '${id.getUri}'",
+            id = Some(s"$path#$contentId").asJava,
+          ),
+        true, // only generate this with loglevel debug
+      )
+    }
 
   private def publishDiagnosticsBuffer(): Unit = {
     clearDiagnosticsBuffer().foreach { path => publishDiagnostics(path) }
