@@ -19,6 +19,7 @@ import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.PresentationCompiler
 
 import ch.epfl.scala.bsp4j
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -59,6 +60,7 @@ final class Diagnostics(
     userConfig: () => UserConfiguration,
     clientConfig: ClientConfiguration,
     mbtWorkspaceSymbolProvider: () => MbtWorkspaceSymbolProvider,
+    loadCompiler: AbsolutePath => Option[PresentationCompiler],
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val diagnostics =
     TrieMap.empty[AbsolutePath, ju.Queue[DiagnosticWithOrigin]]
@@ -416,11 +418,14 @@ final class Diagnostics(
       if buildTargets.buildServerOf(id).exists(_.isMbt)
       futureClasspath <- buildTargets.targetClasspath(id, Promise[Unit]())
     } futureClasspath.foreach { classpath =>
-      val sourcepath: Iterable[AbsolutePath] =
-        if (path.filename.endsWith(".java"))
-          mbtWorkspaceSymbolProvider().allFiles()
+      val isJava = path.filename.endsWith(".java")
+      val candidatePool: Iterable[String] =
+        if (isJava) mbtWorkspaceSymbolProvider().allFiles().map(_.toString)
         else
-          buildTargets.buildTargetTransitiveSources(id).toList
+          buildTargets.buildTargetTransitiveSources(id).toList.map(_.toString)
+      val loadedFromSourcePath: Iterable[String] =
+        if (isJava) Nil
+        else loadCompiler(path).toList.flatMap(_.loadedFromSourcePath().asScala)
       val errorLines = errors.map { d =>
         val start = d.getRange.getStart
         s"[${start.getLine + 1}:${start.getCharacter + 1}] ${d.getMessageAsString}"
@@ -437,7 +442,8 @@ final class Diagnostics(
                   |$errorsStr
                   |
                   |Classpath:${classpath.mkString("\n  ", "\n  ", "")}
-                  |Sourcepath:${sourcepath.mkString("\n  ", "\n  ", "")}""".stripMargin,
+                  |Sourcepath (candidate pool):${candidatePool.mkString("\n  ", "\n  ", "")}
+                  |Sourcepath (actually loaded)${if (isJava) " - not tracked for Java" else ""}:${loadedFromSourcePath.mkString("\n  ", "\n  ", "")}""".stripMargin,
             shortSummary = s"MBT compile error for build target '${id.getUri}'",
             id = Some(s"$path#$contentId").asJava,
           ),

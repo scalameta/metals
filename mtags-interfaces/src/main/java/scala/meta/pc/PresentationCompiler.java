@@ -382,6 +382,15 @@ public abstract class PresentationCompiler {
   public abstract List<String> diagnosticsForDebuggingPurposes();
 
   /**
+   * Returns the paths of any source files that were lazily loaded from the `-sourcepath` while
+   * resolving symbols for the current compiler instance, in addition to the file(s) that were
+   * explicitly compiled.
+   */
+  public List<String> loadedFromSourcePath() {
+    return java.util.Collections.emptyList();
+  }
+
+  /**
    * Returns false if the presentation compiler has not been used since the last reset.
    *
    * <p>NOTE(olafur) This method was added for testing purposes. It's critical that we correctly

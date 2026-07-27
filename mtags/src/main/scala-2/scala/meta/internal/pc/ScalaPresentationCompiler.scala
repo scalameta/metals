@@ -989,6 +989,24 @@ case class ScalaPresentationCompiler(
     Nil.asJava
   }
 
+  override def loadedFromSourcePath(): util.List[String] = {
+    compilerAccess
+      .withSharedCompiler(List.empty[String]) { pc =>
+        // catch potential error stemming from concurrent loadedFromSource
+        // access to avoid catching it upstream and resetting the the whole compiler
+        try
+          pc.compiler()
+            .PruneLateSourcesComponent
+            .loadedFromSource
+            .toList
+            .flatMap(f => Option(f.path))
+        catch {
+          case NonFatal(_) => Nil
+        }
+      }(emptyQueryContext)
+      .asJava
+  }
+
   implicit class XtensionParams(params: VirtualFileParams) {
     def toQueryContext: PcQueryContext =
       PcQueryContext(Some(params), additionalReportData)
