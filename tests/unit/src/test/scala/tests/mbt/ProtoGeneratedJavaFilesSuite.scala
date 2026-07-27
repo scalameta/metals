@@ -1,8 +1,6 @@
 package tests.mbt
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.Files
-
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.metals.mbt.VirtualTextDocument
@@ -10,6 +8,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc
 
 import munit.AnyFixture
+import tests.MetalsTestEnrichments._
 
 class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
   val workspace = new tests.TemporaryDirectoryFixture()
@@ -19,8 +18,7 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
   private val className = "ClientProtos"
   private val content =
     """|package com.example.api.jproto;
-       |public final class ClientProtos {}
-       |""".stripMargin
+       |public final class ClientProtos {}""".stripMargin
 
   private def protoPath: AbsolutePath = workspace().resolve(protoRelative)
 
@@ -33,15 +31,11 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       Nil,
     )
 
-  private def readText(file: AbsolutePath): String =
-    new String(Files.readAllBytes(file.toNIO), StandardCharsets.UTF_8)
-
   test("regenerates-when-missing") {
     val file = ProtoGeneratedJavaFiles
       .materialize(workspace(), protoPath, className, content)
       .getOrElse(fail("expected the outline to be materialized"))
-    Files.delete(file.toNIO)
-    assert(!Files.exists(file.toNIO))
+    file.delete()
 
     ProtoGeneratedJavaFiles.regenerateIfMissing(
       workspace(),
@@ -50,8 +44,8 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       Seq(outline(className, content)),
     )
 
-    assert(Files.exists(file.toNIO), "expected the outline to be regenerated")
-    assertEquals(readText(file), content)
+    assert(file.exists, "expected the outline to be regenerated")
+    assertEquals(file.text, content)
   }
 
   test("no-op-when-present") {
@@ -67,14 +61,14 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       fail("outlines should not be evaluated when the file exists"),
     )
 
-    assertEquals(readText(file), content)
+    assertEquals(file.text, content)
   }
 
   test("matches-outline-by-class-name") {
     val file = ProtoGeneratedJavaFiles
       .materialize(workspace(), protoPath, className, content)
       .getOrElse(fail("expected the outline to be materialized"))
-    Files.delete(file.toNIO)
+    file.delete()
 
     ProtoGeneratedJavaFiles.regenerateIfMissing(
       workspace(),
@@ -86,6 +80,6 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       ),
     )
 
-    assertEquals(readText(file), content)
+    assertEquals(file.text, content)
   }
 }

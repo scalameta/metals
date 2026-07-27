@@ -208,8 +208,8 @@ final class DefinitionProviderProtobufSupport(
   /**
    * Locates the definition range of `javaSymbol` in the given Java file,
    * falling back to enclosing classes when the exact symbol is absent, for
-   * example when method overload disambiguators computed from the generated
-   * outline don't line up with the real generated source.
+   * example when it refers to an inherited member not present in the
+   * synthesized outline.
    */
   private def findJavaSymbolRange(
       javaFile: AbsolutePath,
@@ -230,9 +230,8 @@ final class DefinitionProviderProtobufSupport(
     // enum missing from the generated source means the synthesized outline
     // is stale or belongs to a different proto, and the proto fallback is
     // more precise than an approximate enclosing-class location. Members may
-    // still fall back to their enclosing classes, since accessor overloads
-    // in the real generated source don't always line up with the
-    // synthesized outline.
+    // still fall back to their enclosing classes, since inherited members
+    // aren't always present in the synthesized outline.
     if (querySym.isType) findRange(querySym.value, definitions)
     else loop(querySym)
   }
@@ -240,24 +239,8 @@ final class DefinitionProviderProtobufSupport(
   private def findRange(
       symbol: String,
       definitions: Iterable[SymbolOccurrence],
-  ): Option[s.Range] = {
-    val exact = definitions.find(_.symbol == symbol)
-    exact
-      .orElse {
-        val normalized = stripDisambiguators(symbol)
-        definitions.find(occ => stripDisambiguators(occ.symbol) == normalized)
-      }
-      .flatMap(_.range)
-  }
-
-  /**
-   * Strips SemanticDB overload disambiguators, which are appended to
-   * overloaded method symbols to keep them unique, for example:
-   *   - `getFoo(+1).` -> `getFoo().`
-   *   - `setBar(+3).` -> `setBar().`
-   */
-  private def stripDisambiguators(symbol: String): String =
-    symbol.replaceAll("""\(\+\d+\)""", "()")
+  ): Option[s.Range] =
+    definitions.find(_.symbol == symbol).flatMap(_.range)
 
   /**
    * The lowercased chain of owner names between `sym` and its enclosing
