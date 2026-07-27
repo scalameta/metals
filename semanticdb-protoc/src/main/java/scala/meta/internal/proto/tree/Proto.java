@@ -145,9 +145,9 @@ public abstract class Proto {
     }
   }
 
-  /** syntax = "proto3"; */
+  /** syntax = "proto3"; or edition = "2023"; */
   public static final class SyntaxDecl extends Proto {
-    private final String version; // "proto2" or "proto3"
+    private final String version; // "proto2"/"proto3" for syntax, e.g. "2023" for edition
 
     public SyntaxDecl(int position, int endPosition, String version) {
       super(position, endPosition);
