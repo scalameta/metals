@@ -334,21 +334,18 @@ object SbtBuildTool {
     val mainMeta = projectRoot.resolve("project")
     val metaMeta = projectRoot.resolve("project").resolve("project")
 
+    val writtenPlugin =
+      writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
     val isSbt2 =
       SbtBuildTool.loadVersion(projectRoot).exists(_.startsWith("2."))
     if (isSbt2) {
-      val writtenPlugin = writePlugins(mainMeta, metalsPluginDetails)
       val writtenMeta = writePlugins(
         metaMeta,
         metalsPluginDetails,
+        // sbt 2.x doesn't need sbt-jdi-tools plugin because it only runs on Java 17+ where the JDI tools are included.
       )
       writtenMeta || writtenPlugin
     } else {
-      val writtenPlugin = writePlugins(
-        mainMeta,
-        metalsPluginDetails,
-        debugAdapterPluginDetails,
-      )
       val writtenMeta =
         writePlugins(metaMeta, metalsPluginDetails, jdiToolsPluginDetails)
       writtenMeta || writtenPlugin
