@@ -5,7 +5,7 @@ import io.circe.derivation.annotations.JsonCodec/*io.circe.derivation.annotation
 @/*local1*/JsonCodec/*example.MacroAnnotation#*//*java.lang.Object#`<init>`().*/
 // FIXME: https://github.com/scalameta/scalameta/issues/1789
 case class MacroAnnotation(
-    name/*example.MacroAnnotation#name.*/: String/*scala.Predef.String#*/
+    name/*example.MacroAnnotation#name.*//*example.MacroAnnotation#`<init>`().(name)*/: String/*scala.Predef.String#*/
 ) {
   def method/*example.MacroAnnotation#method().*/ = 42
 }

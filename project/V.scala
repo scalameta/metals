@@ -35,7 +35,7 @@ object V {
 
   val coursierInterfaces = "1.0.29-M2"
 
-  val debugAdapter = "4.2.9"
+  val debugAdapter = "4.2.13"
 
   val genyVersion = "1.1.1"
 
@@ -76,7 +76,7 @@ object V {
 
   val scalafmt = "3.11.4"
 
-  val scalameta = "4.17.0"
+  val scalameta = "4.17.3"
 
   val scribe = "3.19.0"
 

@@ -1,4 +1,4 @@
-package bench
+package scala.meta.bench
 
 import scala.reflect.internal.util.BatchSourceFile
 import scala.reflect.io.VirtualFile
