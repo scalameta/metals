@@ -894,15 +894,25 @@ final case class TestingServer(
       filename: String,
       changeType: l.FileChangeType = l.FileChangeType.Changed,
   ): Future[Unit] = {
+    didChangeWatchedFiles(List(filename -> changeType))
+  }
+
+  /**
+   * Sends a single notification batching all the given file events, as a
+   * file watcher would when several files change close together in time.
+   */
+  def didChangeWatchedFiles(
+      events: Seq[(String, l.FileChangeType)]
+  ): Future[Unit] = {
     fullServer
       .didChangeWatchedFiles(
         new l.DidChangeWatchedFilesParams(
-          Collections.singletonList(
+          events.map { case (filename, changeType) =>
             new l.FileEvent(
               toPath(filename).toURI.toString(),
               changeType,
             )
-          )
+          }.asJava
         )
       )
       .asScala
