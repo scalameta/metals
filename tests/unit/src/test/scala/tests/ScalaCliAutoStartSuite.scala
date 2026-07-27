@@ -2,7 +2,6 @@ package tests
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.scalacli.ScalaCliAutoStart
 import scala.meta.io.AbsolutePath
 
