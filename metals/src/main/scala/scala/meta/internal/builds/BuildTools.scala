@@ -69,7 +69,8 @@ final class BuildTools(
     // flow so the custom server is used (or the user is asked when a supported
     // build tool is also detected). See https://github.com/scalameta/metals/issues/2420
     (bloopAvailable && !(hasCustomBsp && !explicitChoiceMade())) ||
-    (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) || 
+    isMbt ||
+    (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) ||
     (isBsp && userConfig().preferredBuildServer.isDefined)
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))

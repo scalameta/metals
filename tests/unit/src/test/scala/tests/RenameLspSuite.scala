@@ -993,7 +993,7 @@ class RenameLspSuite extends BaseRenameLspSuite("rename") {
     fileRenames =
       Map("a/src/main/java/a/Upstream.java" -> "a/src/main/java/a/Greeter.java"),
   )
-  
+
   // https://github.com/scalameta/metals/issues/1665
   // The rename response must carry the real document version for files that are
   // open in the editor, not `null`.

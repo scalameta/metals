@@ -225,8 +225,8 @@ final class JavaFoldingRangeSuite extends BaseSuite {
          |  void bar() {
          |    int x = 1;
          |  }
-         |}<<region<<
-         |""".stripMargin
+         |}
+         |<<region<<""".stripMargin
     )
   }
 
@@ -475,7 +475,9 @@ final class JavaFoldingRangeSuite extends BaseSuite {
     )
   }
 
-  private def check(expected: String, spanThreshold: Int = 0): Unit = {
+  private def check(expected: String, spanThreshold: Int = 0)(implicit
+      location: munit.Location
+  ): Unit = {
     val text = expected
       .replace(">>region>>", "")
       .replace("<<region<<", "")

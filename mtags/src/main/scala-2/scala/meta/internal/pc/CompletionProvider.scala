@@ -590,7 +590,8 @@ class CompletionProvider(
       (kind, query, matching)
     }
     try {
-      val firstPass = SimpleTimer.timedThunk("completionsAt", thresholdMillis = 1000) {
+      val firstPass =
+        SimpleTimer.timedThunk("completionsAt", thresholdMillis = 1000) {
           completionsAt(pos) match {
             case CompletionResult.NoResults =>
               new DynamicFallbackCompletions(pos).print()
@@ -700,7 +701,7 @@ class CompletionProvider(
           // code path (see the TODO in `interactive.Global#typeMembers`), so
           // re-typechecking one can throw instead of reporting the error.
           case NonFatal(e) =>
-            logger.warning(
+            logger.warn(
               s"unexpected error retrying completions with a recovered qualifier: $e"
             )
             None

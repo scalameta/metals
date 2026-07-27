@@ -58,9 +58,6 @@ class BazelLspSuite
 
   val importMessage: String =
     GenerateBspAndConnect.params("bazel", "bazelbsp").getMessage()
-  def unsupportedScalaVersionMessage: String =
-    UnsupportedScalaVersion.message(Set(V.bazelScalaVersion))
-
   test("basic") {
     cleanWorkspace()
     for {
@@ -71,7 +68,7 @@ class BazelLspSuite
         client.workspaceMessageRequests,
         List(
           importMessage,
-          unsupportedScalaVersionMessage,
+          Messages.DeprecatedRemovedScalaVersion.message(Set("2.13.12")),
         ).mkString("\n"),
       )
       _ = assert(bazelBspConfig.exists)
