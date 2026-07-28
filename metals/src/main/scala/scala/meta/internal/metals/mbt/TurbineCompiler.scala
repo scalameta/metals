@@ -5,6 +5,7 @@ import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
 import java.{util => ju}
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
@@ -158,6 +159,8 @@ class TurbineCompiler[T](
   // In this mode, we rely entirely on SOURCE_PATH fallback for updated sources.
   private def isRecompilationDisabled: Boolean =
     debounceDelay.toMillis >= 3600000
+  private val compileGeneration = new AtomicLong(0L)
+  private val compileLock = new Object
 
   private val doCompile =
     BatchedFunction.fromFuture[Unit, TurbineCompileResult](
@@ -168,12 +171,14 @@ class TurbineCompiler[T](
           Future.successful(result)
         } else {
           val toCompile = sourcepathSources()
+          val generation = compileGeneration.get()
           for {
             _ <- sleeper.sleep(debounceDelay)
           } yield {
-            val result = doCompileNow()
-            toCompile.foreach(_.isCompiled.set(true))
-            result
+            doCompileNow(
+              expectedGeneration = generation,
+              markCompiled = toCompile,
+            )
           }
         }
       },
@@ -185,20 +190,31 @@ class TurbineCompiler[T](
     )
   }
 
-  var result = TurbineCompiler.emptyResult
-  def doCompileNow(): TurbineCompileResult = {
-    result = TurbineCompiler.compileClassfiles(
-      allCompilationUnits(),
-      parseUnit,
-      classpath(),
-      progressBars,
-    )
-    cleanup()
-    // Clear deleted binary names after recompile - they are no longer in the compiled output
-    deletedBinaryNames.clear()
-    onIndexingDone()
-    result
-  }
+  @volatile var result = TurbineCompiler.emptyResult
+  private def doCompileNow(
+      expectedGeneration: Long,
+      markCompiled: Seq[SourcepathJavaFileObject] = Nil,
+  ): TurbineCompileResult =
+    compileLock.synchronized {
+      if (expectedGeneration != compileGeneration.get()) result
+      else {
+        val compiled = TurbineCompiler.compileClassfiles(
+          allCompilationUnits(),
+          parseUnit,
+          classpath(),
+          progressBars,
+        )
+        if (expectedGeneration == compileGeneration.get()) {
+          result = compiled
+          markCompiled.foreach(_.isCompiled.set(true))
+          cleanup()
+          // Clear deleted binary names after recompile - they are no longer in the compiled output
+          deletedBinaryNames.clear()
+          onIndexingDone()
+        }
+        result
+      }
+    }
 
   /**
    * Called when a file is deleted. Tracks the binary names of the deleted classes
@@ -227,8 +243,12 @@ class TurbineCompiler[T](
     deletedBinaryNames.contains(binaryName)
   }
 
-  def compileNow(): Future[TurbineCompileResult] = Future {
-    doCompileNow()
+  def compileNow(): Future[TurbineCompileResult] = {
+    val generation = compileGeneration.incrementAndGet()
+    doCompile.cancelAll()
+    Future {
+      doCompileNow(expectedGeneration = generation)
+    }
   }
 
   def scheduleCompile(): Future[TurbineCompileResult] = {

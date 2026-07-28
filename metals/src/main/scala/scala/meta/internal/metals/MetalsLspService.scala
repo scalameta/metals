@@ -1161,10 +1161,12 @@ abstract class MetalsLspService(
       if (userConfig.javaSymbolLoader.isTurbineClasspath)
         mbt2.recompileTurbineClasspath()
       else Future.unit
-    refresh
-      .map(_ => compilers.cancel())
-      .map(_ => diagnostics.reset(buffers.open.toSeq))
-      .flatMap(_ => refreshAllDiagnostics())
+    for {
+      _ <- refresh
+      _ = compilers.cancel()
+      _ = diagnostics.reset(buffers.open.toSeq)
+      _ <- refreshAllDiagnostics()
+    } yield ()
   }
 
   protected def refreshDiagnostics(

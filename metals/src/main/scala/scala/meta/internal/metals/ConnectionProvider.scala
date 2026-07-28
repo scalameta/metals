@@ -285,6 +285,13 @@ class ConnectionProvider(
         else runMbtReimport(mbtImporters)
       runImport.flatMap { _ =>
         bspSession match {
+          case Some(session)
+              if MbtBuildServer.isMbtServer(session.main.name) &&
+                session.canReloadWorkspace =>
+            for {
+              _ <- session.workspaceReload()
+              buildChange <- connect(new ImportBuildAndIndex(session), progress)
+            } yield buildChange
           case Some(session) =>
             connect(new ImportBuildAndIndex(session), progress)
           case None =>
