@@ -15,6 +15,11 @@ import com.google.turbine.lower.Lower
 case class TurbineCompileResult(
     classpath: ClassPath,
     lowered: Lower.Lowered,
+    // The binary names of every class that was compiled from a given source
+    // file, keyed by `SourceFile.path()`. Nested classes are included, so a
+    // deleted source can be invalidated without guessing which classes it
+    // declared. See `TurbineCompiler.onDidDelete`.
+    binaryNamesBySource: collection.Map[String, Iterable[String]],
 ) {
   val symbolsByPackage: collection.Map[String, ArrayList[ClassSymbol]] = {
     val x = new HashMap[String, ArrayList[ClassSymbol]]()

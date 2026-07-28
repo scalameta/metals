@@ -1199,8 +1199,20 @@ abstract class MetalsLspService(
           }
         ) // de-duplicate didSave events.
         .toSeq
-    val (deleteEvents, changeAndCreateEvents) =
+    val (allDeleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
+    // Restoring a file, or rewriting it outside the editor, can report a
+    // delete and a create for the same path in the same batch. The file is
+    // back on disk, so the create is what describes the final state; handling
+    // the delete too would remove the freshly indexed document again, since
+    // the two are processed concurrently. Re-indexing already invalidates
+    // whatever the previous version of the file contributed.
+    val changedOrCreatedPaths =
+      changeAndCreateEvents.flatMap(_.getUri().toAbsolutePathSafe).toSet
+    val deleteEvents =
+      allDeleteEvents.filterNot(
+        _.getUri().toAbsolutePathSafe.exists(changedOrCreatedPaths)
+      )
     val (bloopReportDelete, otherDeleteEvents) =
       deleteEvents.partition(
         _.getUri().toAbsolutePath.toNIO
@@ -1245,7 +1257,13 @@ abstract class MetalsLspService(
       )
       futures += Future
         .sequence(List(protoChangeInvalidation, protoDeleteInvalidation))
-        .map(_ => compilers.restartJavaCompilers())
+        .flatMap { _ =>
+          compilers.restartJavaCompilers()
+          // The restarted compilers only report the classes the proto file
+          // now declares once they run again, so re-run them right away
+          // instead of waiting for the next edit or focus change.
+          refreshDiagnostics(_.isJavaFilename)
+        }
     }
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue

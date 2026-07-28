@@ -1991,9 +1991,9 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
         protoFile.toURI.toString(),
         FileChangeType.Deleted,
       )
-      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
 
-      // User no longer exists - the Java PC must have been restarted.
+      // User no longer exists - the Java PC must have been restarted and the
+      // diagnostics republished without waiting for another focus or edit.
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/java/com/example/Service.java:2:30: error: package com.example.api.jproto does not exist
@@ -2004,6 +2004,128 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
            |  location: class com.example.Service
            |  public void process(User user) {}
            |                      ^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // Restoring a deleted .proto file re-creates it at the very same path, so
+  // the classes it declares have to become resolvable again.
+  test("proto-restore-after-delete") {
+    cleanWorkspace()
+    val protoLayout =
+      """|/a/src/main/proto/model.proto
+         |syntax = "proto3";
+         |package com.example.api;
+         |option java_package = "com.example.api.jproto";
+         |option java_multiple_files = true;
+         |message User {
+         |  string name = 1;
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |$protoLayout
+            |/a/src/main/java/com/example/Service.java
+            |package com.example;
+            |import com.example.api.jproto.User;
+            |public class Service {
+            |  public void process(User user) {}
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/com/example/Service.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
+      _ = assertNoDiagnostics()
+
+      protoFile = workspace.resolve("a/src/main/proto/model.proto")
+      _ = protoFile.delete()
+      _ <- server.didChangeWatchedFiles(
+        protoFile.toURI.toString(),
+        FileChangeType.Deleted,
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/Service.java:2:30: error: package com.example.api.jproto does not exist
+           |import com.example.api.jproto.User;
+           |                             ^^^^^
+           |a/src/main/java/com/example/Service.java:4:23: error: cannot find symbol
+           |  symbol:   class User
+           |  location: class com.example.Service
+           |  public void process(User user) {}
+           |                      ^^^^
+           |""".stripMargin,
+      )
+
+      // Restore the same file at the same path.
+      _ = FileLayout.fromString(protoLayout, root = workspace)
+      _ <- server.didChangeWatchedFiles(
+        protoFile.toURI.toString(),
+        FileChangeType.Created,
+      )
+
+      // User resolves again from the restored proto file.
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
+  // Same restore as above, but the delete and the create arrive in one
+  // notification, so both events touch the very same path.
+  test("proto-restore-after-delete-batched") {
+    cleanWorkspace()
+    val protoLayout =
+      """|/a/src/main/proto/model.proto
+         |syntax = "proto3";
+         |package com.example.api;
+         |option java_package = "com.example.api.jproto";
+         |option java_multiple_files = true;
+         |message User {
+         |  string name = 1;
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |$protoLayout
+            |/a/src/main/java/com/example/Service.java
+            |package com.example;
+            |import com.example.api.jproto.User;
+            |public class Service {
+            |  public void process(User user) {}
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/com/example/Service.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
+      _ = assertNoDiagnostics()
+
+      protoFile = workspace.resolve("a/src/main/proto/model.proto")
+      _ = protoFile.delete()
+      _ = FileLayout.fromString(protoLayout, root = workspace)
+      _ <- server.didChangeWatchedFiles(
+        List(
+          protoFile.toURI.toString() -> FileChangeType.Deleted,
+          protoFile.toURI.toString() -> FileChangeType.Created,
+        )
+      )
+
+      // User resolves again from the restored proto file. Hovering it says so
+      // outright; silence on its own would also hold if nothing had recompiled.
+      _ = assertNoDiagnostics()
+      _ <- server.assertHover(
+        "a/src/main/java/com/example/Service.java",
+        """|package com.example;
+           |import com.example.api.jproto.User;
+           |public class Service {
+           |  public void process(Us@@er user) {}
+           |}
+           |""".stripMargin,
+        """|```java
+           |public final class com.example.api.jproto.User extends  implements com.example.api.jproto.UserOrBuilder
+           |```
            |""".stripMargin,
       )
     } yield ()
@@ -2186,10 +2308,11 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
         "a/src/main/proto/model.proto",
         FileChangeType.Created,
       )
-      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
 
       // User now exists - the newly created proto file must have been
-      // indexed, not just cache-cleared for a path mbt never saw before.
+      // indexed, not just cache-cleared for a path mbt never saw before. The
+      // errors above have to clear without a refocus, so this also covers the
+      // diagnostics being republished on the watched-file event.
       _ = assertNoDiagnostics()
     } yield ()
   }

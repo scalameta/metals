@@ -44,6 +44,7 @@ object TurbineCompiler {
   val emptyResult: TurbineCompileResult = TurbineCompileResult(
     ClassPathBinder.bindClasspath(List.empty.asJava),
     Lower.Lowered.create(ImmutableMap.of(), ImmutableSet.of()),
+    Map.empty,
   )
 
   def compileClassfiles[T](
@@ -107,8 +108,24 @@ object TurbineCompiler {
       result.modules(),
       result.classPathEnv(),
     )
-    TurbineCompileResult(boundClasspath, lowered)
+    TurbineCompileResult(
+      boundClasspath,
+      lowered,
+      binaryNamesBySource(result),
+    )
   }
+
+  /**
+   * Groups every compiled class by the source file it was declared in. Turbine
+   * binds nested classes as their own units, so this covers all the classes a
+   * source contributes to the classpath, not only its top-level ones.
+   */
+  private def binaryNamesBySource(
+      result: Binder.BindingResult
+  ): collection.Map[String, Iterable[String]] =
+    result.units().asScala.groupMap { case (_, unit) => unit.source().path() } {
+      case (symbol, _) => symbol.binaryName()
+    }
   private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
     classpath.filter(isJarFile)
   }
@@ -203,11 +220,21 @@ class TurbineCompiler[T](
    * so they can be excluded from CLASS_PATH listing until the next turbine recompile.
    * Also soft-deletes the file from the sourcepath so it's not returned via SOURCE_PATH.
    *
-   * @param binaryNames The binary names of classes defined in the deleted file
+   * The classes are looked up in the latest compile result, which knows exactly
+   * what each source contributed, so classes the file's symbol index doesn't
+   * describe - nested classes, or extra top-level classes in the same file -
+   * stop resolving too.
+   *
+   * @param sourcePaths The `SourceFile.path()` of the sources turbine compiled
+   *                    for the deleted file. A deleted `.proto` file maps to
+   *                    the Java outlines synthesized from it, not to itself.
    * @param fileUri The URI of the deleted file (used to soft-delete from sourcepath)
    */
-  def onDidDelete(binaryNames: Seq[String], fileUri: String): Unit = {
-    binaryNames.foreach(deletedBinaryNames.add)
+  def onDidDelete(sourcePaths: Seq[String], fileUri: String): Unit = {
+    for {
+      sourcePath <- sourcePaths
+      binaryName <- result.binaryNamesBySource.getOrElse(sourcePath, Nil)
+    } deletedBinaryNames.add(binaryName)
     // Soft-delete from sourcepath so the deleted file isn't returned via SOURCE_PATH
     sourcepathByPackageName.valuesIterator.foreach { deque =>
       deque.asScala.foreach { obj =>

@@ -219,11 +219,11 @@ class MbtWorkspaceSymbolProvider(
       doc: IndexedDocument,
   ): Unit = {
     if (javaSymbolLoader().isTurbineClasspath) {
-      val binaryNames = doc.cachedJavaOutlines
-        .flatMap(_.toplevelSymbols().asScala)
-        .map(_.stripSuffix("#").stripSuffix("."))
-      if (binaryNames.nonEmpty) {
-        turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+      // Turbine compiled the outlines, not the proto file itself, so the
+      // outline names are what identifies the classes to invalidate.
+      val outlineSourcePaths = doc.cachedJavaOutlines.map(_.getName())
+      if (outlineSourcePaths.nonEmpty) {
+        turbineCompiler.onDidDelete(outlineSourcePaths, file.toURI.toString())
         turbineCompiler.scheduleCompile().ignoreValue
       }
     }
@@ -444,13 +444,13 @@ class MbtWorkspaceSymbolProvider(
         // This adds an empty source to SOURCE_PATH so javac won't find the class.
         // We also track deleted binary names to exclude from CLASS_PATH.
         if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
-          val binaryNames = doc.symbols
-            .map(_.getSymbol())
-            .filter(sym => Symbol(sym).isToplevel)
-            .map(sym => sym.stripSuffix("#").stripSuffix("."))
-            .toSeq
-          // Track deleted binary names for CLASS_PATH exclusion
-          turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+          // Track the classes compiled from this file for CLASS_PATH exclusion.
+          // The source path has to match the one used when the file was handed
+          // to turbine, see `turbineCompiler`'s `parseUnit`.
+          turbineCompiler.onDidDelete(
+            Seq(file.toString()),
+            file.toURI.toString(),
+          )
           // Add empty file to SOURCE_PATH so javac parses it and doesn't find the class
           doc.semanticdbPackages.headOption match {
             case Some(pkg) =>
