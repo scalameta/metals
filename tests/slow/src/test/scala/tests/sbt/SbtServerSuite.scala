@@ -217,7 +217,7 @@ class SbtServerSuite
     }
   }
 
-  test("sbt-2.0.0") {
+  test("sbt-2.0.4") {
     cleanWorkspace()
     client.importBuildChanges = ImportBuildChanges.yes
     for {
