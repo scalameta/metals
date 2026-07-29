@@ -253,16 +253,21 @@ class ConnectionProvider(
       case Some(session) if session.canReloadWorkspace =>
         workDoneProgress.trackProgressFuture(
           "Sync",
-          progress =>
-            for {
-              _ <- session.workspaceReload()
-              _ <- connect(new ImportBuildAndIndex(session), progress)
-            } yield (),
+          progress => reloadAndImport(session, progress).ignoreValue,
           metricName = Some("reload_build_server"),
         )
       case _ =>
         fullConnect()
     }
+
+  private def reloadAndImport(
+      session: BspSession,
+      progress: TaskProgress,
+  ): Future[BuildChange] =
+    for {
+      _ <- session.workspaceReload()
+      buildChange <- connect(new ImportBuildAndIndex(session), progress)
+    } yield buildChange
 
   private def isBspAvailable(buildTool: BuildTool) =
     buildTool.isBspGenerated(folder) || bspGlobalDirectories.exists(
@@ -288,10 +293,7 @@ class ConnectionProvider(
           case Some(session)
               if MbtBuildServer.isMbtServer(session.main.name) &&
                 session.canReloadWorkspace =>
-            for {
-              _ <- session.workspaceReload()
-              buildChange <- connect(new ImportBuildAndIndex(session), progress)
-            } yield buildChange
+            reloadAndImport(session, progress)
           case Some(session) =>
             connect(new ImportBuildAndIndex(session), progress)
           case None =>
