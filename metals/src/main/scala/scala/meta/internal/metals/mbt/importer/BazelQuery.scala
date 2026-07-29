@@ -121,7 +121,8 @@ case class BazelQuery(
   import BazelQuery._
 
   def run(
-      env: Env
+      env: Env,
+      mbtJavaHome: Option[String] = None,
   )(implicit ec: ExecutionContext): Future[String] = {
     import env._
     val buf = new StringBuilder()
@@ -137,7 +138,7 @@ case class BazelQuery(
         ) ++ queryArgs ++ extraArgs,
         projectRoot,
         redirectErrorOutput = false,
-        javaHome,
+        mbtJavaHome.orElse(javaHome),
         processOut = ProcessOutput.Lines { line =>
           buf.append(line)
           buf.append(System.lineSeparator())

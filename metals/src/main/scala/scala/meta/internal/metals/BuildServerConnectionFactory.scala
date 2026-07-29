@@ -33,13 +33,16 @@ abstract class BuildServerConnectionFactory(
     requestTimeOutNotification: DismissedNotifications#Notification,
     reconnectNotification: DismissedNotifications#Notification,
     config: MetalsServerConfig,
-    userConfiguration: UserConfiguration,
-    serverName: String,
+    protected val serverName: String,
     bspStatusOpt: Option[ConnectionBspStatus] = None,
     supportsWrappedSources: Option[Boolean] = None,
     workDoneProgress: WorkDoneProgress,
 ) {
-  protected def connect(): Future[SocketConnection]
+  protected def connect()(implicit
+      ec: ExecutionContextExecutorService
+  ): Future[SocketConnection]
+
+  protected def userConfiguration(): UserConfiguration
 
   def fromSockets(retry: Int = 5)(implicit
       ec: ExecutionContextExecutorService
@@ -94,13 +97,7 @@ abstract class BuildServerConnectionFactory(
         Cancelable(() => listening.cancel(false))
       val result =
         try {
-          initialize(
-            projectRoot,
-            server,
-            serverName,
-            config,
-            userConfiguration,
-          )
+          initialize(server)
         } catch {
           case NonFatal(e) =>
             conn.cancelables.foreach(_.cancel())
@@ -178,11 +175,7 @@ abstract class BuildServerConnectionFactory(
    * Run build/initialize handshake
    */
   private def initialize(
-      workspace: AbsolutePath,
-      server: MetalsBuildServer,
-      serverName: String,
-      config: MetalsServerConfig,
-      userConfiguration: UserConfiguration,
+      server: MetalsBuildServer
   ): InitializeBuildResult = {
     val isBazel = serverName == BazelBuildTool.bspName
     val gson = new Gson
@@ -190,7 +183,9 @@ abstract class BuildServerConnectionFactory(
       if (isBazel)
         (
           gson.toJsonTree(
-            InitializeBuildData(BazelBuildTool.enabledRules(workspace).toArray)
+            InitializeBuildData(
+              BazelBuildTool.enabledRules(projectRoot).toArray
+            )
           ),
           "bazel-data-kind",
         )
@@ -201,7 +196,7 @@ abstract class BuildServerConnectionFactory(
               BuildInfo.javaSemanticdbVersion,
               BuildInfo.scalametaVersion,
               BuildInfo.supportedScalaVersions.asJava,
-              config.enableBestEffort || userConfiguration.enableBestEffort,
+              config.enableBestEffort || userConfiguration().enableBestEffort,
             )
           ),
           "bloop-data-kind",
@@ -216,7 +211,7 @@ abstract class BuildServerConnectionFactory(
         "Metals",
         BuildInfo.metalsVersion,
         BuildInfo.bspVersion,
-        workspace.toURI.toString,
+        projectRoot.toURI.toString,
         capabilities,
       )
 
