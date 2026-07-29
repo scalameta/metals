@@ -4,25 +4,32 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 /**
- * Regression tests for https://github.com/scalameta/metals/issues/8736
+ * Regression coverage for out-of-workspace fallback Scala CLI auto-start.
  *
- * When the client opens Scala files outside the LSP workspace folder(s), the
- * fallback service must not auto-start Scala CLI and must not run presentation
- * compiler load (both produce spurious Problems). Manual
- * `metals.scala-cli-start` remains unchanged (covered by ScalaCliSuite).
- *
- * Enable `scalaCliEnabled` so these assertions are meaningful on main-v2, where
- * Scala CLI is opt-in by default.
- *
- * `TestingServer.didOpen` awaits the fallback `maybeImportFileAndLoad` future,
- * so assertions after `didOpen` already run after auto-start has been decided
- * (and either skipped or completed).
+ * Enables `scalaCliEnabled` because Scala CLI is opt-in on main-v2.
+ * `TestingServer.didOpen` awaits fallback `maybeImportFileAndLoad`, so
+ * assertions after `didOpen` run after auto-start has been decided.
  */
 class OutOfWorkspaceScalaCliLspSuite
     extends BaseLspSuite("out-of-workspace-scala-cli") {
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(scalaCliEnabled = true)
+
+  private def assertNoScalaCli(
+      clue: String
+  )(implicit loc: munit.Location): Unit = {
+    assertEquals(
+      server.fullServer.fallbackService.scalaCli.servers.size,
+      0,
+      clue,
+    )
+    assertEquals(
+      server.fullServer.fallbackService.scalaCli.paths.toList,
+      Nil,
+      clue,
+    )
+  }
 
   test("didOpen-outside-workspace-does-not-start-scala-cli") {
     cleanWorkspace()
@@ -41,7 +48,6 @@ class OutOfWorkspaceScalaCliLspSuite
         ),
         expectError = false,
       )
-      // Sibling of the workspace folder, still under the test root on disk.
       _ = writeLayout(
         """|/outsider/Foo.scala
            |object Foo {
@@ -50,14 +56,8 @@ class OutOfWorkspaceScalaCliLspSuite
            |""".stripMargin
       )
       _ <- server.didOpen("outsider/Foo.scala")
-      _ = assertEquals(
-        server.fullServer.fallbackService.scalaCli.servers.size,
-        0,
-        "Scala CLI must not auto-start for files outside workspace folders",
-      )
-      _ = assertEquals(
-        server.fullServer.fallbackService.scalaCli.paths.toList,
-        Nil,
+      _ = assertNoScalaCli(
+        "Scala CLI must not auto-start for files outside workspace folders"
       )
       _ = assertEquals(
         client.diagnostics
@@ -70,8 +70,6 @@ class OutOfWorkspaceScalaCliLspSuite
   }
 
   test("sibling-under-common-parent-still-outside-workspace-folder") {
-    // Mirrors multi-repo layouts (e.g. ~/projects/fun/{zipx,anode}): opening a
-    // file in a sibling directory must not count as "in workspace".
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -94,40 +92,127 @@ class OutOfWorkspaceScalaCliLspSuite
            |""".stripMargin
       )
       _ <- server.didOpen("anode/src/Main.scala")
-      _ = assertEquals(
-        server.fullServer.fallbackService.scalaCli.servers.size,
-        0,
-        "Sibling repo under a common parent is still outside the workspace folder",
+      _ = assertNoScalaCli(
+        "Sibling repo under a common parent is still outside the workspace folder"
       )
     } yield ()
   }
 
-  test("in-workspace-orphan-under-non-scala-folder-still-eligible") {
-    // WorkspaceLspService must pass nonScalaProjects into the auto-start check
-    // so orphans under a non-Scala workspace folder remain eligible.
+  test("empty-workspace-folders-policy-allows-auto-start") {
+    // Empty-folder Scala CLI auto-start hangs in this branch's LSP harness
+    // (SingleFileSuite is ignored). Check the live empty folder list against
+    // the auto-start policy instead.
+    cleanWorkspace()
+    writeLayout(
+      s"""|/Orphan.scala
+          |//> using scala ${V.scala213}
+          |object Orphan
+          |""".stripMargin
+    )
+    for {
+      _ <- initialize(Map.empty[String, String], expectError = false)
+      folders =
+        server.fullServer.folderServices.map(_.path) ++
+          server.fullServer.nonScalaProjects.map(_.path)
+      _ = assertEquals(folders, Nil)
+      _ = assertEquals(
+        scala.meta.internal.metals.scalacli.ScalaCliAutoStart
+          .shouldAutoStart(workspace.resolve("Orphan.scala"), folders),
+        true,
+      )
+    } yield ()
+  }
+
+  test("outside-scala-script-does-not-start-scala-cli") {
     cleanWorkspace()
     for {
       _ <- initialize(
         Map(
-          "docs" ->
-            """|/README.md
-               |Not a metals project yet.
-               |""".stripMargin
+          "project" ->
+            s"""|/metals.json
+                |{
+                |  "a": { "scalaVersion": "${V.scala213}" }
+                |}
+                |/a/src/main/scala/a/A.scala
+                |package a
+                |object A
+                |""".stripMargin
         ),
         expectError = false,
       )
       _ = writeLayout(
-        """|/Snippet.scala
-           |object Snippet
-           |""".stripMargin,
-        "docs",
+        """|/outsider/script.sc
+           |println(1)
+           |""".stripMargin
       )
-      eligible = scala.meta.internal.metals.scalacli.ScalaCliAutoStart
-        .shouldAutoStart(
-          workspace.resolve("docs").resolve("Snippet.scala"),
-          Seq(workspace.resolve("docs")),
-        )
-      _ = assertEquals(eligible, true)
+      _ <- server.didOpen("outsider/script.sc")
+      _ = assertNoScalaCli(
+        "Out-of-workspace Scala scripts must not auto-start Scala CLI"
+      )
+    } yield ()
+  }
+
+  test("multiple-outside-files-do-not-start-scala-cli") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        Map(
+          "project" ->
+            s"""|/metals.json
+                |{
+                |  "a": { "scalaVersion": "${V.scala213}" }
+                |}
+                |/a/src/main/scala/a/A.scala
+                |package a
+                |object A
+                |""".stripMargin
+        ),
+        expectError = false,
+      )
+      _ = writeLayout(
+        """|/outsider/Foo.scala
+           |object Foo
+           |/outsider/Bar.scala
+           |object Bar
+           |/other/Baz.scala
+           |object Baz
+           |""".stripMargin
+      )
+      _ <- server.didOpen("outsider/Foo.scala")
+      _ <- server.didOpen("outsider/Bar.scala")
+      _ <- server.didOpen("other/Baz.scala")
+      _ = assertNoScalaCli(
+        "Repeated out-of-workspace didOpen must not spawn Scala CLI"
+      )
+    } yield ()
+  }
+
+  test("outside-non-scala-didOpen-is-ignored") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        Map(
+          "project" ->
+            s"""|/metals.json
+                |{
+                |  "a": { "scalaVersion": "${V.scala213}" }
+                |}
+                |/a/src/main/scala/a/A.scala
+                |package a
+                |object A
+                |""".stripMargin
+        ),
+        expectError = false,
+      )
+      _ = writeLayout(
+        """|/outsider/README.md
+           |# docs
+           |""".stripMargin
+      )
+      _ <- server.didOpen("outsider/README.md")
+      _ = assertNoScalaCli(
+        "Out-of-workspace non-Scala didOpen must not start Scala CLI"
+      )
     } yield ()
   }
 }

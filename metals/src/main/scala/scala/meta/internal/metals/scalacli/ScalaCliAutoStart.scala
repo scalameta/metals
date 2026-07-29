@@ -7,13 +7,8 @@ import scala.meta.io.AbsolutePath
  * Policy for when the fallback Metals service may auto-start Scala CLI for an
  * orphan document.
  *
- * Editor agents (and some LSP clients) can send `textDocument/didOpen` for
- * files outside the configured workspace folder(s). Auto-starting Scala CLI for
- * those paths floods Problems with fake diagnostics and spawns many BSP
- * processes. See https://github.com/scalameta/metals/issues/8736.
- *
- * This is independent of `UserConfiguration.scalaCliEnabled`, which is checked
- * separately when starting Scala CLI.
+ * Independent of `UserConfiguration.scalaCliEnabled`, which is checked when
+ * starting Scala CLI.
  */
 object ScalaCliAutoStart {
 
