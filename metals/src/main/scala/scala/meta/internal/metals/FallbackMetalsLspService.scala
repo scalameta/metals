@@ -110,11 +110,8 @@ class FallbackMetalsLspService(
     val path = params.getTextDocument.getUri.toAbsolutePath
     if (ScalaCliAutoStart.isOutsideWorkspace(path, workspaceFolders())) {
       if (path.isScala) {
-        scribe.info(
-          s"Ignoring didOpen for out-of-workspace file: $path"
-        )
+        scribe.debug(s"Ignoring didOpen for out-of-workspace file: $path")
       }
-      // Clear any stale Problems entries from earlier sessions / clients.
       diagnostics.didDelete(path)
       CompletableFuture.completedFuture(())
     } else {
@@ -127,11 +124,9 @@ class FallbackMetalsLspService(
       load: () => Future[Unit],
   ): Future[Unit] = {
     val folders = workspaceFolders()
-    // Defense in depth: didOpen already short-circuits out-of-workspace paths,
-    // but ModuleStatus / other callers may still invoke this.
     if (ScalaCliAutoStart.isOutsideWorkspace(path, folders)) {
       if (path.isScala) {
-        scribe.info(
+        scribe.debug(
           s"Skipping fallback import/load for out-of-workspace file: $path"
         )
       }
