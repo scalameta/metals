@@ -191,7 +191,7 @@ class TurbineCompiler[T](
   @volatile var result = TurbineCompiler.emptyResult
   private def doCompileNow(
       expectedGeneration: Long,
-      markCompiled: Seq[SourcepathJavaFileObject] = Nil,
+      markCompiled: Seq[SourcepathJavaFileObject],
   ): TurbineCompileResult =
     compileLock.synchronized {
       if (expectedGeneration != compileGeneration.get()) result
@@ -242,10 +242,14 @@ class TurbineCompiler[T](
   }
 
   def compileNow(): Future[TurbineCompileResult] = {
+    val toCompile = sourcepathSources()
     val generation = compileGeneration.incrementAndGet()
     doCompile.cancelAll()
     Future {
-      doCompileNow(expectedGeneration = generation)
+      doCompileNow(
+        expectedGeneration = generation,
+        markCompiled = toCompile,
+      )
     }
   }
 

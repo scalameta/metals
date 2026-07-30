@@ -457,6 +457,9 @@ class Compilers(
                     )
                   }
                 }
+                .andThen { case _ =>
+                  inFlightDidChange.remove(file, token)
+                }
             }
           _ <- Future.sequence(futures)
         } yield ()

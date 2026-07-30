@@ -48,6 +48,12 @@ class JavaPruneCompiler(
 ) extends Closeable {
 
   private val isDebugEnabled = reportsLevel == ReportLevel.Debug
+  // Requests are serialized within one Java PC, but different build targets
+  // compile concurrently and must not mutate the same javac name table.
+  private[jpc] val namesTable: Names = new Names(new Context()) {
+    // Task contexts may dispose Names while this compiler still reuses it.
+    override def dispose(): Unit = ()
+  }
 
   // Only used for testing purposes
   var isCacheEnabled = true
@@ -206,22 +212,22 @@ class JavaPruneCompiler(
 
   /**
    * Creates a new context with minimal pre-registration.
-   * Only SharedNames is registered before getTask() - following NetBeans' pattern
-   * where most custom components are registered AFTER getTask() when the
+   * Only the compiler's Names is registered before getTask() - following NetBeans'
+   * pattern where most custom components are registered AFTER getTask() when the
    * classpath is already configured.
    */
   private def hotContext(): Context = {
     val context = new Context()
     try {
-      // Only register SharedNames before getTask() - this is safe because
+      // Only register Names before getTask() - this is safe because
       // Names doesn't depend on classpath configuration
       if (servicesOverrides.names()) {
-        context.put(Names.namesKey, JavaPruneCompiler.sharedNames)
+        context.put(Names.namesKey, namesTable)
       }
     } catch {
       case _: IllegalAccessError =>
         logger.warn(
-          "Failed to pre-register SharedNames. To fix this problem, make sure you include all the required --add-exports VM options. The full list is defined in META-INF/metals-required-vm-options.txt"
+          "Failed to pre-register Names. To fix this problem, make sure you include all the required --add-exports VM options. The full list is defined in META-INF/metals-required-vm-options.txt"
         )
     }
     context
@@ -386,10 +392,4 @@ class JavaPruneCompiler(
     options.result()
   }
 
-}
-
-object JavaPruneCompiler {
-  val sharedNames: Names = new Names(new Context()) {
-    override def dispose(): Unit = ()
-  }
 }

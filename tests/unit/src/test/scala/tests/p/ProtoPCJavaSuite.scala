@@ -1448,6 +1448,46 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
     } yield ()
   }
 
+  test("proto-delete-invalidates-java") {
+    cleanWorkspace()
+    val proto = "a/src/main/proto/model.proto"
+    val java = "a/src/main/java/com/example/Service.java"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |/$proto
+            |syntax = "proto3";
+            |package com.example.api;
+            |option java_package = "com.example.api.jproto";
+            |option java_multiple_files = true;
+            |message User {
+            |  string name = 1;
+            |}
+            |/$java
+            |package com.example;
+            |import com.example.api.jproto.User;
+            |public class Service {
+            |  public void process(User user) {}
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(java)
+      _ <- server.didFocus(java)
+      _ = assertNoDiagnostics()
+      protoPath = workspace.resolve(proto)
+      _ = Files.delete(protoPath.toNIO)
+      _ <- server.didChangeWatchedFiles(
+        protoPath.toURI.toString(),
+        org.eclipse.lsp4j.FileChangeType.Deleted,
+      )
+      _ = assert(
+        client.workspaceDiagnostics.contains("cannot find symbol"),
+        client.workspaceDiagnostics,
+      )
+    } yield ()
+  }
+
   // Goto-definition on a proto-generated class navigates to the Java source
   // that Metals synthesizes from the proto file (materialized read-only under
   // .metals/readonly), alongside the proto declaration. This needs no build

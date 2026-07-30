@@ -1303,6 +1303,12 @@ abstract class MetalsLspService(
         )
       )
       .ignoreValue
+      .flatMap { _ =>
+        if (path.isProtoFilename) {
+          compilers.restartJavaCompilers()
+          refreshAllDiagnostics()
+        } else Future.unit
+      }
   }
 
   override def definition(
