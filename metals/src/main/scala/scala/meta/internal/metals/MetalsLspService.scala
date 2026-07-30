@@ -320,8 +320,6 @@ abstract class MetalsLspService(
     initialServerConfig,
     () => userConfig,
     clientConfig,
-    () => mbt2,
-    path => compilers.loadCompiler(path),
   )
 
   protected def semanticdbs(): Semanticdbs
