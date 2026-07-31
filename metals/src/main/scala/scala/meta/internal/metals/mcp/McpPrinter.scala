@@ -44,6 +44,23 @@ object McpPrinter {
     def show: String = result.map(_.show).sorted.mkString("\n")
   }
 
+  implicit class XtensionGlobSearchResult(result: GlobSearchResult) {
+    def show: String = {
+      // `McpQueryEngine.normalize` guarantees dedupe, cap and display order
+      val body =
+        if (result.results.isEmpty) "No symbols found."
+        else result.results.map(_.show).mkString("\n")
+      // both flags mean the same to the caller: the answer is partial
+      if (!result.isPartial) body
+      else if (result.results.isEmpty)
+        body + "\n\n[The search stopped early, matches may exist beyond it. " +
+          "Use a longer or more specific query.]"
+      else
+        body + s"\n\n[Showing ${result.results.size} results; " +
+          "additional matches may exist. Narrow the query.]"
+    }
+  }
+
   implicit class XtensionSymbolDocumentation(
       result: SymbolDocumentationSearchResult
   ) {

@@ -18,8 +18,10 @@ import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.io.AbsolutePath
+import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j
 import org.eclipse.lsp4j.SymbolKind
 
@@ -29,11 +31,14 @@ class McpSymbolSearch(
     workspaceSearchProvider: WorkspaceSymbolProvider,
 ) {
 
+  /**
+   * Search all build targets and every dependency on the workspace classpath
+   * for symbols whose last name segment contains the query, ignoring case.
+   */
   def nameSearch(
       query: String,
       symbolTypes: Set[SymbolType] = Set.empty,
-      path: Option[AbsolutePath],
-  ): Seq[SearchResult] = {
+  ): NameSearchResult = {
     val lowerCaseQuery = query.toLowerCase
     val matches: String => Boolean = { symbol =>
       val fqcn = symbol.fqcn
@@ -44,7 +49,7 @@ class McpSymbolSearch(
       WorkspaceSymbolQuery.fromTextQuery(query),
       matches,
       symbolTypes,
-      path,
+      target = None,
     )
   }
 
@@ -55,15 +60,39 @@ class McpSymbolSearch(
     val matches: String => Boolean = { symbol =>
       symbol.fqcn == query
     }
-    search(WorkspaceSymbolQuery.exact(query), matches, Set.empty, path)
+    search(
+      WorkspaceSymbolQuery.exact(query),
+      matches,
+      Set.empty,
+      target = singleBuildTarget(path),
+    ).results
   }
+
+  /**
+   * The build target to search from: the first one owning `path`, or, without a
+   * path, the first target that is not a build meta-target (e.g. `root-build`,
+   * which has no project dependencies).
+   *
+   * Both picks depend on target iteration order.
+   */
+  private def singleBuildTarget(
+      path: Option[AbsolutePath]
+  ): Option[BuildTargetIdentifier] =
+    path
+      .flatMap(buildTargets.sourceBuildTargets)
+      .flatMap(_.headOption)
+      .orElse {
+        buildTargets.allBuildTargetIds
+          .filterNot(McpQueryEngine.isBuildMetaTarget(buildTargets, _))
+          .headOption
+      }
 
   private def search(
       wsQuery: WorkspaceSymbolQuery,
       matches: String => Boolean,
       symbolTypes: Set[SymbolType],
-      path: Option[AbsolutePath],
-  ): Seq[SearchResult] = {
+      target: Option[BuildTargetIdentifier],
+  ): NameSearchResult = {
 
     val visitor = new McpSearchVisitor(
       index,
@@ -71,32 +100,41 @@ class McpSymbolSearch(
       matches,
     )
 
-    // Smart fallback: if no path provided, use first available build target
-    // Exclude build meta-targets (e.g., root-build) as they don't have project dependencies
-    val buildTarget =
-      path
-        .flatMap(buildTargets.sourceBuildTargets)
-        .flatMap(_.headOption)
-        .orElse {
-          buildTargets.allBuildTargetIds
-            .filterNot(McpQueryEngine.isBuildMetaTarget(buildTargets, _))
-            .headOption
-        }
-
-    // use focused document build target (or fallback)
-    workspaceSearchProvider.search(
+    // the returned result covers dependencies only, and
+    // `ClasspathSearch.maxNonExactMatches` caps them at 10 non-exact matches
+    val (dependencyResult, _) = workspaceSearchProvider.search(
       wsQuery,
       visitor,
-      buildTarget,
+      target,
     )
-    workspaceSearchProvider.searchWorkspacePackages(
+    // add separately indexed workspace packages to the visitor
+    val _ = workspaceSearchProvider.searchWorkspacePackages(
       visitor,
-      buildTarget,
+      target,
     )
 
-    visitor.getResults
+    NameSearchResult(
+      results = visitor.getResults,
+      // workspace sources are capped silently for queries under
+      // `Fuzzy.PrefixSearchLimit` chars, and the discarded count above mixes
+      // all layers, so flag every short query, as `ClasspathSearch` does
+      searchBudgetExhausted =
+        dependencyResult == SymbolSearch.Result.INCOMPLETE || wsQuery.isShortQuery,
+    )
   }
 }
+
+/**
+ * Results of a symbol name search.
+ *
+ * @param results the collected matches, neither deduplicated nor capped
+ * @param searchBudgetExhausted true when a search layer below stopped early,
+ *                              which does not guarantee that more matches exist
+ */
+private[mcp] case class NameSearchResult(
+    results: Seq[SearchResult],
+    searchBudgetExhausted: Boolean,
+)
 
 private[mcp] class McpSearchVisitor(
     index: GlobalSymbolIndex,
@@ -122,7 +160,10 @@ private[mcp] class McpSearchVisitor(
   }
 
   override def visitWorkspacePackage(pkg: String): Int = {
-    if (matches(pkg)) {
+    val shouldIncludePackages =
+      symbolTypes.isEmpty || symbolTypes.contains(SymbolType.Package)
+
+    if (shouldIncludePackages && matches(pkg)) {
       results += SearchResult(
         symbol = pkg,
         SymbolType.Package,

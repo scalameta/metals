@@ -4,6 +4,7 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 import scala.meta.internal.metals.Configs._
+import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
@@ -50,6 +51,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
  * @param debuggeeGracePeriod Grace period in seconds for the debuggee to start.
+ * @param maxMcpSearchResults The maximum number of results a single MCP symbol search returns.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,
@@ -97,21 +99,20 @@ final case class MetalsServerConfig(
       "metals.allow-multiline-string-formatting",
       default = true,
     ),
-    macOsMaxWatchRoots: Int =
-      Option(System.getProperty("metals.macos-max-watch-roots"))
-        .filter(_.forall(Character.isDigit(_)))
-        .map(_.toInt)
-        .getOrElse(32),
+    macOsMaxWatchRoots: Int = MetalsServerConfig.intProperty(
+      "metals.macos-max-watch-roots",
+      default = 32,
+    ),
     loglevel: String =
       sys.props.get("metals.loglevel").map(_.toLowerCase()).getOrElse("info"),
     maxLogFileSize: Long = Option(System.getProperty("metals.max-logfile-size"))
       .withFilter(_.forall(Character.isDigit(_)))
       .map(_.toLong)
       .getOrElse(3 << 20),
-    maxLogBackups: Int = Option(System.getProperty("metals.max-log-backups"))
-      .withFilter(_.forall(Character.isDigit(_)))
-      .map(_.toInt)
-      .getOrElse(10),
+    maxLogBackups: Int = MetalsServerConfig.intProperty(
+      "metals.max-log-backups",
+      default = 10,
+    ),
     metalsToIdleTime: Duration =
       Option(System.getProperty("metals.server-to-idle-time"))
         .flatMap(opt => Try(Duration(opt)).toOption)
@@ -120,33 +121,33 @@ final case class MetalsServerConfig(
       Option(System.getProperty("metals.build-server-ping-interval"))
         .flatMap(opt => Try(Duration(opt)).toOption)
         .getOrElse(Duration("1m")),
-    worksheetTimeout: Int =
-      Option(System.getProperty("metals.worksheet-timeout"))
-        .filter(_.forall(Character.isDigit(_)))
-        .map(_.toInt)
-        .getOrElse(30),
-    debugServerStartTimeout: Int =
-      Option(System.getProperty("metals.debug-server-start-timeout"))
-        .filter(_.forall(Character.isDigit(_)))
-        .map(_.toInt)
-        .getOrElse(60),
-    debuggeeGracePeriod: Int =
-      Option(System.getProperty("metals.debuggee-grace-period"))
-        .filter(_.forall(Character.isDigit(_)))
-        .map(_.toInt)
-        .getOrElse(60),
+    worksheetTimeout: Int = MetalsServerConfig.intProperty(
+      "metals.worksheet-timeout",
+      default = 30,
+    ),
+    debugServerStartTimeout: Int = MetalsServerConfig.intProperty(
+      "metals.debug-server-start-timeout",
+      default = 60,
+    ),
+    debuggeeGracePeriod: Int = MetalsServerConfig.intProperty(
+      "metals.debuggee-grace-period",
+      default = 60,
+    ),
     enableBestEffort: Boolean = MetalsServerConfig.binaryOption(
       "metals.enable-best-effort",
       default = false,
     ),
-    foldingRageMinimumSpan: Int =
-      Option(System.getProperty("metals.folding-range-minimum-span"))
-        .filter(_.forall(Character.isDigit(_)))
-        .map(_.toInt)
-        .getOrElse(3),
+    foldingRageMinimumSpan: Int = MetalsServerConfig.intProperty(
+      "metals.folding-range-minimum-span",
+      default = 3,
+    ),
     disableShowMessageRequest: Boolean = MetalsServerConfig.binaryOption(
       "metals.disable-show-message-request",
       default = false,
+    ),
+    maxMcpSearchResults: Int = MetalsServerConfig.intProperty(
+      "metals.max-mcp-search-results",
+      default = McpQueryEngine.MaxMcpSearchResults,
     ),
 ) {
   override def toString: String =
@@ -176,6 +177,7 @@ final case class MetalsServerConfig(
       s"enable-best-effort=$enableBestEffort",
       s"folding-range-minimum-span=$foldingRageMinimumSpan",
       s"disable-show-message-request=$disableShowMessageRequest",
+      s"max-mcp-search-results=$maxMcpSearchResults",
     ).mkString("MetalsServerConfig(\n  ", ",\n  ", "\n)")
 }
 object MetalsServerConfig {
@@ -190,6 +192,12 @@ object MetalsServerConfig {
           .toSet
       )
       .getOrElse(Set.empty)
+  def intProperty(key: String, default: Int): Int =
+    sys.props
+      .get(key)
+      .filter(_.forall(Character.isDigit(_)))
+      .map(_.toInt)
+      .getOrElse(default)
   def binaryOption(key: String, default: Boolean): Boolean =
     sys.props.get(key) match {
       case Some("true" | "on") => true
