@@ -92,10 +92,10 @@ class SbtDialectSuite extends BaseSuite {
   test("fallback-getDialect-sbt2-parses-significant-indentation") {
     val root = FileLayout.fromString(
       s"""|/project/build.properties
-         |sbt.version=2.0.4
-         |/build.sbt
-         |$significantIndentSbt
-         |""".stripMargin
+          |sbt.version=2.0.4
+          |/build.sbt
+          |$significantIndentSbt
+          |""".stripMargin
     )
     val path = root.resolve("build.sbt")
     val dialect = emptySelector().getDialect(path)
@@ -107,10 +107,10 @@ class SbtDialectSuite extends BaseSuite {
   test("fallback-getDialect-sbt1-rejects-significant-indentation") {
     val root = FileLayout.fromString(
       s"""|/project/build.properties
-         |sbt.version=1.11.2
-         |/build.sbt
-         |$significantIndentSbt
-         |""".stripMargin
+          |sbt.version=1.11.2
+          |/build.sbt
+          |$significantIndentSbt
+          |""".stripMargin
     )
     val path = root.resolve("build.sbt")
     val dialect = emptySelector().getDialect(path)
