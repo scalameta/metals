@@ -24,9 +24,7 @@ import org.eclipse.lsp4j.SymbolKind
 
 /**
  * Query engine for searching symbols in the workspace and classpath.
- * Supports glob search, symbol inspection, and documentation retrieval.
- *
- * @param workspaceSearchProvider Provider for workspace symbol search
+ * Supports name search, symbol inspection, and documentation retrieval.
  */
 class McpQueryEngine(
     compilers: Compilers,
@@ -36,30 +34,40 @@ class McpQueryEngine(
     scalaVersionSelector: ScalaVersionSelector,
     mcpSearch: McpSymbolSearch,
     workspace: AbsolutePath,
+    maxSearchResults: Int,
 )(implicit ec: ExecutionContext) {
   private val mcpDefinitionProvider =
     new McpSymbolProvider(scalaVersionSelector, mcpSearch)
 
   /**
-   * Search for symbols matching a glob pattern.
+   * Search all modules and every dependency on the workspace classpath for
+   * symbols whose last name segment contains `query`, ignoring case.
    *
-   * @param query The search query (e.g., "matching" will search for "*matching*")
-   * @param symbolTypes Set of symbol types to filter results (empty means all types)
-   * @param path Path to the file in context
-   * @return Collection of matching symbols with their information
+   * `WorkspaceSymbolQuery` matches candidates at name boundaries, so mid-name
+   * matches can be missed; `searchWorkspacePackages` never applies it, so
+   * workspace packages match on plain substrings. Wildcards are literal.
+   *
+   * Results are deduplicated and capped at `maxSearchResults`, keeping the most
+   * relevant ones.
+   *
+   * @param symbolTypes Requested symbol types, empty means all types
+   * @return Matching symbols, with flags describing whether matches were dropped
    */
   def globSearch(
       query: String,
       symbolTypes: Set[SymbolType] = Set.empty,
-      path: AbsolutePath,
-  ): Future[Seq[SymbolSearchResult]] = Future {
-    mcpSearch
-      .nameSearch(
-        query,
-        symbolTypes,
-        Some(path),
-      )
-      .map(_.toMcpSymbolSearchResult)
+  ): Future[GlobSearchResult] = Future {
+    val searchResult = mcpSearch.nameSearch(query, symbolTypes)
+    val (results, cappedByResultLimit) = McpQueryEngine.normalize(
+      query,
+      searchResult.results.map(_.toMcpSymbolSearchResult),
+      maxSearchResults,
+    )
+    GlobSearchResult(
+      results = results,
+      searchBudgetExhausted = searchResult.searchBudgetExhausted,
+      cappedByResultLimit = cappedByResultLimit,
+    )
   }
 
   /**
@@ -449,6 +457,22 @@ case class SymbolSearchResult(
   def name: String = path.split('.').lastOption.getOrElse(path)
 }
 
+/**
+ * Result of a glob search.
+ *
+ * @param results deduplicated, relevance-capped and display-sorted matches
+ * @param searchBudgetExhausted a search layer below stopped early, which does
+ *                              not guarantee that more matches exist
+ * @param cappedByResultLimit `maxSearchResults` dropped matches
+ */
+case class GlobSearchResult(
+    results: Seq[SymbolSearchResult],
+    searchBudgetExhausted: Boolean,
+    cappedByResultLimit: Boolean,
+) {
+  def isPartial: Boolean = searchBudgetExhausted || cappedByResultLimit
+}
+
 case class MethodSignature(
     name: String
 )
@@ -556,6 +580,54 @@ object SymbolType {
 }
 
 object McpQueryEngine {
+
+  /**
+   * Default result cap of a single MCP symbol search, a budget that keeps tool
+   * output within an LLM context window.
+   */
+  val MaxMcpSearchResults = 100
+
+  /**
+   * Deduplicate, rank, cap and finally display-sort search results.
+   *
+   * Capping raw order would be nondeterministic, as the indexes below are
+   * iterated in an unspecified order. Capping display order would prefer
+   * whichever kind sorts first, because `show` starts with the kind. Hence rank
+   * by relevance, cap, then sort for display.
+   *
+   * @return the results to show and whether the cap dropped anything
+   */
+  private[mcp] def normalize(
+      query: String,
+      raw: Seq[SymbolSearchResult],
+      limit: Int,
+  ): (Seq[SymbolSearchResult], Boolean) = {
+    val lowerCaseQuery = query.toLowerCase
+    def relevance(
+        result: SymbolSearchResult
+    ): (Int, Int, Int, String, String, String) = {
+      val isExactName = if (result.name.toLowerCase == lowerCaseQuery) 0 else 1
+      (
+        isExactName,
+        result.name.length,
+        result.path.count(_ == '.'),
+        result.path,
+        // picks the same duplicate every time, overloads share kind and path
+        result.symbol,
+        // makes the order total across everything the dedupe keeps apart
+        result.symbolType.name,
+      )
+    }
+    // the rendered form is `kind + path`, so results sharing both would render
+    // as duplicate lines and would otherwise consume the cap; ranking first
+    // makes the surviving duplicate deterministic
+    val ranked = raw
+      .sortBy(relevance)
+      .distinctBy(result => (result.symbolType, result.path))
+    // a cap below 1 would report a partial result with nothing in it
+    val shown = ranked.take(limit.max(1))
+    (shown.sortBy(_.show), ranked.size > shown.size)
+  }
 
   /**
    * Check if a build target is a meta-target (e.g., SBT build definition).

@@ -94,24 +94,18 @@ class TestMcpStdioClient(
   def typedGlobSearch(
       query: String,
       symbolTypes: List[String],
-      fileInFocus: Option[String] = None,
   ): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("query", query)
     val symbolTypeArray = objectMapper.createArrayNode()
     symbolTypes.foreach(symbolTypeArray.add)
     params.set("symbolType", symbolTypeArray)
-    fileInFocus.foreach(f => params.put("fileInFocus", f))
     callTool("typed-glob-search", params).map(_.mkString)
   }
 
-  def globSearch(
-      query: String,
-      fileInFocus: Option[String] = None,
-  ): Future[String] = {
+  def globSearch(query: String): Future[String] = {
     val params = objectMapper.createObjectNode()
     params.put("query", query)
-    fileInFocus.foreach(f => params.put("fileInFocus", f))
     callTool("glob-search", params).map(_.mkString)
   }
 

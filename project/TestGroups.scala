@@ -139,6 +139,8 @@ object TestGroups {
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
     "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
+    "tests.mcp.McpGlobSearchCapLspSuite",
+    "scala.meta.internal.metals.mcp.tests.McpGlobSearchNormalizeSuite",
   )
 
   val numberOfShards = 4
