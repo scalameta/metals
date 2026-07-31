@@ -399,8 +399,10 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         List("invalid_type", "another_invalid"),
       )
       validTypes = SymbolType.values.map(_.name).mkString(", ")
-      expectedError = s"Error: Invalid symbol types: invalid_type, another_invalid. Valid types are: $validTypes, arguments: " +
-        """{"query":"Hello","symbolType":["invalid_type","another_invalid"]}"""
+      expectedError =
+        "Tool (typed-glob-search) input validation failed: Validation failed: JSON schema validation errors: " +
+          """[/symbolType/0: does not have a value in the enumeration ["package", "class", "object", "function", "method", "trait"], """ +
+          """/symbolType/1: does not have a value in the enumeration ["package", "class", "object", "function", "method", "trait"]]"""
       _ = assertNoDiff(result, expectedError)
       _ <- client.shutdown()
     } yield ()
@@ -421,7 +423,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       )
       _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
       client <- startMcpServer()
-      result <- client.typedGlobSearch("Hello", """["class", "object"]""")
+      result <- client.typedGlobSearch("Hello", List("class", "object"))
       _ = assert(
         result.contains("com.example.Hello"),
         s"Expected to find Hello object, got: $result",
@@ -448,7 +450,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
       result <- client.typedGlobSearch("Hello", """invalid_json""")
       _ = assertNoDiff(
         result,
-        """|Error: Incorrect argument type for symbolType, expected: Array[String], arguments: {"query":"Hello","symbolType":"invalid_json"}
+        """|Tool (typed-glob-search) input validation failed: Validation failed: JSON schema validation errors: [/symbolType: string found, array expected]
            |""".stripMargin,
       )
       _ <- client.shutdown()

@@ -3,8 +3,8 @@ package tests.mcp
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
+import tools.jackson.databind.ObjectMapper
 
 abstract class TestMcpBaseClient(implicit protected val ec: ExecutionContext) {
 
@@ -12,7 +12,7 @@ abstract class TestMcpBaseClient(implicit protected val ec: ExecutionContext) {
 
   protected def callTool(
       toolName: String,
-      params: com.fasterxml.jackson.databind.node.ObjectNode,
+      params: tools.jackson.databind.node.ObjectNode,
   ): Future[List[String]]
 
   def initialize(): Future[InitializeResult]

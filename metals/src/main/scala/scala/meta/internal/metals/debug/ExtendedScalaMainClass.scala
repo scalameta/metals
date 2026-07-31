@@ -121,7 +121,10 @@ object ExtendedScalaMainClass {
       javaBinary: AbsolutePath,
       workspace: AbsolutePath,
   ): ExtendedScalaMainClass = {
-    val jvmOpts = (main.getJvmOptions().asScala ++ env
+    // user-provided options (launch.json for VSCode) go last, so that they
+    // take precedence over build server ones (the JVM uses the last
+    // occurrence of a repeated option, e.g. -Duser.dir or -Xmx)
+    val jvmOpts = (env.getJvmOptions().asScala ++ main
       .getJvmOptions()
       .asScala).distinct.toList
 
