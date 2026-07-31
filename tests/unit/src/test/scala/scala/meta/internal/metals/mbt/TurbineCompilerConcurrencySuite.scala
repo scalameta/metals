@@ -110,20 +110,24 @@ class TurbineCompilerConcurrencySuite extends munit.FunSuite {
   private def assertContains(
       result: TurbineCompileResult,
       name: String,
-  ): Unit =
+  ): Unit = {
+    val names = binaryNames(result)
     assert(
-      binaryNames(result).exists(_.endsWith(name)),
-      binaryNames(result).mkString(", "),
+      names.exists(_.endsWith(name)),
+      names.mkString(", "),
     )
+  }
 
   private def assertNotContains(
       result: TurbineCompileResult,
       name: String,
-  ): Unit =
+  ): Unit = {
+    val names = binaryNames(result)
     assert(
-      !binaryNames(result).exists(_.endsWith(name)),
-      binaryNames(result).mkString(", "),
+      !names.exists(_.endsWith(name)),
+      names.mkString(", "),
     )
+  }
 
   private def binaryNames(result: TurbineCompileResult): Set[String] =
     result.lowered.symbols().asScala.map(_.binaryName()).toSet

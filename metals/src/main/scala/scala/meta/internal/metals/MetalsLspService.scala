@@ -1150,33 +1150,30 @@ abstract class MetalsLspService(
     refreshDiagnostics(_ => true)
   }
 
-  protected def refreshMbtStateAfterIndex(): Future[Unit] = {
-    val refresh =
-      if (userConfig.javaSymbolLoader.isTurbineClasspath)
-        mbt2.recompileTurbineClasspath()
-      else Future.unit
+  protected def refreshMbtStateAfterIndex(): Future[Unit] =
     for {
-      _ <- refresh
+      _ <-
+        if (userConfig.javaSymbolLoader.isTurbineClasspath)
+          mbt2.recompileTurbineClasspath()
+        else Future.unit
       _ = compilers.cancel()
       _ = diagnostics.reset(buffers.open.toSeq)
       _ <- refreshAllDiagnostics()
     } yield ()
-  }
 
   protected def refreshDiagnostics(
       isIncludedPath: AbsolutePath => Boolean
-  ): Future[Unit] = {
+  ): Future[Unit] =
     // rerun diagnostics for all open documents
-    val futures =
-      buffers.open.filter(isIncludedPath).map { path =>
+    Future
+      .traverse(buffers.open.filter(isIncludedPath)) { path =>
         for {
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics
             .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
         } yield ()
       }
-    Future.sequence(futures).map(_ => ())
-  }
+      .ignoreValue
 
   def resetPresentationCompilers(): Future[Unit] = {
     compilers.restartAll()
@@ -1303,12 +1300,6 @@ abstract class MetalsLspService(
         )
       )
       .ignoreValue
-      .flatMap { _ =>
-        if (path.isProtoFilename) {
-          compilers.restartJavaCompilers()
-          refreshAllDiagnostics()
-        } else Future.unit
-      }
   }
 
   override def definition(

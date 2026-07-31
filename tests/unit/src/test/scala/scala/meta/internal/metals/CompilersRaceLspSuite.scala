@@ -11,21 +11,22 @@ class CompilersRaceLspSuite extends BaseCompletionLspSuite("compilers-race") {
       buildOnFocus = false,
     )
 
+  private val filename = "a/src/main/scala/a/A.scala"
+  private val goodText =
+    """|package a
+       |object A {
+       |  val value: String = "ok"
+       |}
+       |""".stripMargin
+  private val badText =
+    """|package a
+       |object A {
+       |  val value: String = 1
+       |}
+       |""".stripMargin
+
   test("cancel-retries-stale-did-focus-diagnostics") {
     cleanWorkspace()
-    val filename = "a/src/main/scala/a/A.scala"
-    val goodText =
-      """|package a
-         |object A {
-         |  val value: String = "ok"
-         |}
-         |""".stripMargin
-    val badText =
-      """|package a
-         |object A {
-         |  val value: String = 1
-         |}
-         |""".stripMargin
 
     for {
       _ <- initialize(
@@ -52,7 +53,6 @@ class CompilersRaceLspSuite extends BaseCompletionLspSuite("compilers-race") {
 
   test("cancel-drops-stale-did-change-diagnostics") {
     cleanWorkspace()
-    val filename = "a/src/main/scala/a/A.scala"
 
     for {
       _ <- initialize(
@@ -61,22 +61,14 @@ class CompilersRaceLspSuite extends BaseCompletionLspSuite("compilers-race") {
            |  "a": {}
            |}
            |/$filename
-           |package a
-           |object A {
-           |  val value: String = "ok"
-           |}
+           |$goodText
            |""".stripMargin
       )
       _ <- server.didOpen(filename)
       _ = assertNoDiagnostics()
       path = server.toPath(filename)
-      didChange = server.didChange(filename) { _ =>
-        """|package a
-           |object A {
-           |  val value: String = 1
-           |}
-           |""".stripMargin
-      }
+      didChange = server.didChange(filename)(_ => badText)
+      _ = server.buffers.put(path, goodText)
       _ = server.server.compilers.cancel()
       _ = server.server.diagnostics.reset(Seq(path))
       _ <- didChange
