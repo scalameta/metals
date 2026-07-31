@@ -19,7 +19,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
@@ -33,6 +32,7 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
 import scala.meta.io.AbsolutePath

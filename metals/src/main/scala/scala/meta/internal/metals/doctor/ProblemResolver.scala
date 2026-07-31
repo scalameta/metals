@@ -4,7 +4,6 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.bsp.BspSession
-import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.JdkSources
@@ -14,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.semver.SemVer
 
 class ProblemResolver(

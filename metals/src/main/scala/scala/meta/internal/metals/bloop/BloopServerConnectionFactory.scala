@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.bloop
 
 import java.io.IOException
 import java.net.ConnectException
@@ -17,9 +17,20 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.metals.ClosableOutputStream
+import scala.meta.internal.metals.ConnectionProvider
+import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.Interruptable.MetalsCancelException
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.OldBloopVersionRunning
+import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.QuietInputStream
+import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnectionFactory
+import scala.meta.internal.metals.buildserver.SocketConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 

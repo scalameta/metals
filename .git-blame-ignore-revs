@@ -1,3 +1,7 @@
+# https://github.com/scalameta/metals/pull/8726
+# Moved some classes into separate packages
+1b4ceebbb5a0529967387a37d9ead63867ca8305
+
 
 # https://github.com/scalameta/metals/pull/4050
 # add 'trailingCommas = multiple' in scalafmt

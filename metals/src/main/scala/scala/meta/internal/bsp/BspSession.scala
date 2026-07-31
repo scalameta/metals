@@ -5,11 +5,11 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.BloopServers
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.TaskProgress
+import scala.meta.internal.metals.bloop.BloopServers
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 
 case class BspSession(
     main: BuildServerConnection,
