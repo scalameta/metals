@@ -43,7 +43,8 @@ case class ScalaTarget(
     )
 
   def dialect(path: AbsolutePath): Dialect =
-    if (info.isSbtBuild && path.isSbt) Sbt
+    if (info.isSbtBuild && path.isSbt)
+      ScalaVersions.dialectForSbtVersion(sbtVersion)
     else scalaDialect
 
   private def scalaDialect: Dialect = {
