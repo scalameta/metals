@@ -78,7 +78,7 @@ object TestGroups {
     "tests.digest.GradleDigestSuite", "tests.DetectionSuite",
     "tests.NewFileTemplateSuite", "tests.ScalaVersionsSuite",
     "tests.HttpServerSuite", "tests.BatchedFunctionSuite",
-    "tests.SbtVersionSuite", "tests.MessagesSuite",
+    "tests.SbtVersionSuite", "tests.SbtDialectSuite", "tests.MessagesSuite",
     "tests.TrigramSubstringsSuite", "tests.SelectBspServerSuite",
     "tests.InverseDependenciesSuite", "tests.TimerSuite",
     "tests.FoldingRangesSuite", "tests.SelectionRangeLspSuite",

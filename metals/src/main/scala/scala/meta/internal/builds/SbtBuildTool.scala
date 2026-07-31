@@ -337,7 +337,7 @@ object SbtBuildTool {
     val writtenPlugin =
       writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
     val isSbt2 =
-      SbtBuildTool.loadVersion(projectRoot).exists(_.startsWith("2."))
+      SbtBuildTool.loadVersion(projectRoot).exists(ScalaVersions.isSbt2Version)
     if (isSbt2) {
       val writtenMeta = writePlugins(
         metaMeta,
@@ -465,6 +465,22 @@ object SbtBuildTool {
       finally in.close()
       Option(props.getProperty("sbt.version"))
     }
+  }
+
+  /** `sbt.version` from the nearest `project/build.properties` above `sbtFile`. */
+  def loadVersionForPath(sbtFile: AbsolutePath): Option[String] = {
+    @tailrec
+    def loop(dir: AbsolutePath): Option[String] = {
+      loadVersion(dir) match {
+        case some @ Some(_) => some
+        case None =>
+          dir.parentOpt match {
+            case Some(parent) => loop(parent)
+            case None => None
+          }
+      }
+    }
+    loop(sbtFile.parent)
   }
 
   def sbtInputPosAdjustment(
