@@ -125,6 +125,24 @@ class ParserEdgeCasesSuite extends FunSuite {
        |""".stripMargin,
   )
 
+  // Bracketed options on an extension range, as upstream `descriptor.proto` has.
+  // The message literal spans lines and separates fields with neither commas nor
+  // semicolons.
+  parseOk(
+    "extensions-range-with-declaration-options",
+    """|syntax = "proto2";
+       |message FileDescriptorSet {
+       |  optional string name = 1;
+       |  extensions 536000000 [declaration = {
+       |    number: 536000000
+       |    type: ".buf.descriptor.v1.FileDescriptorSetExtension"
+       |    full_name: ".buf.descriptor.v1.buf_file_descriptor_set_extension"
+       |  }];
+       |  extensions 1000 to max [verification = UNVERIFIED];
+       |}
+       |""".stripMargin,
+  )
+
   parseOk(
     "group-declaration",
     """|syntax = "proto2";
