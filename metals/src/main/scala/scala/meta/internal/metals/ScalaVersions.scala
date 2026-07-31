@@ -138,7 +138,7 @@ class ScalaVersions(
     }
   }
 
-  /** Scalameta dialect for `*.sbt` files for the given sbt version. */
+  /** Scalameta dialect for `*.sbt` from an sbt version string. */
   def dialectForSbtVersion(sbtVersion: Option[String]): Dialect =
     sbtVersion match {
       case Some(version) if isSbt2Version(version) =>
