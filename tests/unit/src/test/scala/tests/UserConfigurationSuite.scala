@@ -14,6 +14,7 @@ import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
+import scala.meta.internal.metals.Configs.MbtConfig
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.InlayHintsOption
@@ -410,6 +411,7 @@ class UserConfigurationSuite extends BaseSuite {
       scalaImportsPlacement = ScalaImportsPlacement.SMART,
       batchSemanticdbCompilerInstances = BatchSemanticdbConfig(4),
       promptBuildImport = true,
+      mbtConfig = MbtConfig(false, true, 1000),
     )
 
     val json = nonDefault.toString()
@@ -523,7 +525,11 @@ class UserConfigurationSuite extends BaseSuite {
   },
   "enableBestEffort": false,
   "startMcpServer": false,
-  "importGeneratedSourcesMbt": false
+  "mbt": {
+    "importGeneratedSources": false,
+    "semanticdbCacheEnabled": true,
+    "semanticdbCacheMaxSize": 1000
+  }
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
@@ -602,7 +608,9 @@ class UserConfigurationSuite extends BaseSuite {
           |default-shell                                string                         ""              Full path to the shell executable to be used as the default
           |start-mcp-server                             boolean                        false           Start MCP server
           |mcp-client                                   string                         ""              MCP Client Name
-          |import-generated-sources-mbt                 boolean                        false           Import Generated Sources In MBT Builds""".stripMargin
+          |mbt.import-generated-sources                 boolean                        false           Import Generated Sources In MBT Builds
+          |mbt.semanticdb-cache-enabled                 boolean                        false           Enable MBT Semanticdb Cache
+          |mbt.semanticdb-cache-max-size                string                         ${Int.MaxValue.toString.padTo(15, ' ')} MBT Semanticdb In-Memory Cache Size Limit""".stripMargin
     assertNoDiff(obtained, expected)
   }
 
@@ -695,5 +703,37 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
   ) { obtained =>
     assert(obtained.targetBuildTool == Some("sbt"))
+  }
+
+  checkOK(
+    "mbt-config-old-format",
+    """
+      |{
+      | "import-generated-sources-mbt": true,
+      | "mbt-semanticdb-cache": true,
+      | "mbt-semanticdb-cache-max-size": "500"
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.mbtConfig.importGeneratedSources == true)
+    assert(obtained.mbtConfig.semanticdbCacheEnabled == true)
+    assert(obtained.mbtConfig.semanticdbCacheMaxSize == 500)
+  }
+
+  checkOK(
+    "mbt-config-new-format",
+    """
+      |{
+      | "mbt": {
+      |   "import-generated-sources": true,
+      |   "semanticdb-cache-enabled": true,
+      |   "semanticdb-cache-max-size": "500"
+      | }
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(obtained.mbtConfig.importGeneratedSources == true)
+    assert(obtained.mbtConfig.semanticdbCacheEnabled == true)
+    assert(obtained.mbtConfig.semanticdbCacheMaxSize == 500)
   }
 }
