@@ -1,6 +1,7 @@
 package scala.meta.internal.proto.codegen.java;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import scala.meta.internal.proto.codegen.CodeGenerator;
 import scala.meta.internal.proto.tree.Proto;
@@ -82,7 +83,8 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       sb.append("    ").append(STUB).append(";\n");
       sb.append("  }\n");
       sb.append("}\n");
-      outputs.add(outputFile(packagePath + outerClassName + ".java", sb.toString()));
+      outputs.add(
+          outputFile(packagePath + outerClassName + ".java", sb.toString(), outerClassName));
     } else {
       // Generate all in a single outer class file
       StringBuilder sb = new StringBuilder();
@@ -126,7 +128,8 @@ public final class JavaOutlineGenerator implements CodeGenerator {
       }
 
       sb.append("}\n");
-      outputs.add(outputFile(packagePath + outerClassName + ".java", sb.toString()));
+      outputs.add(
+          outputFile(packagePath + outerClassName + ".java", sb.toString(), outerClassName));
     }
 
     return outputs;
@@ -155,7 +158,9 @@ public final class JavaOutlineGenerator implements CodeGenerator {
 
     sb.append("}\n");
 
-    return outputFile(packagePath + className + ".java", sb.toString());
+    // `OrBuilder` is a second top-level type, which the file name doesn't describe.
+    return outputFile(
+        packagePath + className + ".java", sb.toString(), className, className + "OrBuilder");
   }
 
   /** Generate a separate file for a top-level enum. */
@@ -174,7 +179,7 @@ public final class JavaOutlineGenerator implements CodeGenerator {
     generateEnumBody(sb, e, "  ");
     sb.append("}\n");
 
-    return outputFile(packagePath + enumName + ".java", sb.toString());
+    return outputFile(packagePath + enumName + ".java", sb.toString(), enumName);
   }
 
   /** Generate a separate file for a top-level service. */
@@ -188,7 +193,7 @@ public final class JavaOutlineGenerator implements CodeGenerator {
 
     generateServiceClass(sb, svc, "");
 
-    return outputFile(packagePath + serviceName + ".java", sb.toString());
+    return outputFile(packagePath + serviceName + ".java", sb.toString(), serviceName);
   }
 
   /**
@@ -217,7 +222,7 @@ public final class JavaOutlineGenerator implements CodeGenerator {
         .append(" {\n");
     sb.append("}\n");
 
-    return outputFile(packagePath + implBaseName + ".java", sb.toString());
+    return outputFile(packagePath + implBaseName + ".java", sb.toString(), implBaseName);
   }
 
   /** Generate the ImplBase abstract class, either static-nested or top-level. */
@@ -2098,8 +2103,17 @@ public final class JavaOutlineGenerator implements CodeGenerator {
     return Character.toLowerCase(s.charAt(0)) + s.substring(1);
   }
 
-  private OutputFile outputFile(String path, String content) {
-    return new OutputFile(path, applyProtobufPackagePrefix(content));
+  /**
+   * @param primaryType the top-level type the file is named after. Separate from the rest so that a
+   *     call site can't leave the list empty, which would hand out an outline that declares
+   *     nothing.
+   */
+  private OutputFile outputFile(
+      String path, String content, String primaryType, String... otherTypes) {
+    List<String> topLevelTypes = new ArrayList<>();
+    topLevelTypes.add(primaryType);
+    topLevelTypes.addAll(Arrays.asList(otherTypes));
+    return new OutputFile(path, applyProtobufPackagePrefix(content), topLevelTypes);
   }
 
   private String applyProtobufPackagePrefix(String content) {

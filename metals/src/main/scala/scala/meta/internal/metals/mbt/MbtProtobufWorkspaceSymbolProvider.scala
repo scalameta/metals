@@ -127,6 +127,16 @@ final class MbtProtobufWorkspaceSymbolProvider(
             if (outputPackage.nonEmpty) outputPackage.replace('.', '/') + "/"
             else ""
 
+          // A message outline declares its `OrBuilder` interface too. Its own
+          // type comes first: consumers read the head as the binary name.
+          val toplevelSymbols =
+            output.topLevelTypes().asScala.toSeq.map { typeName =>
+              val fullName =
+                if (outputPackage.nonEmpty) s"$outputPackage.$typeName"
+                else typeName
+              Symbol.fromToplevelClassName(fullName).value
+            }
+
           scribe.debug(
             s"mbt-v2: generated Java outline for $fullClassName from ${doc.file}"
           )
@@ -136,7 +146,7 @@ final class MbtProtobufWorkspaceSymbolProvider(
             pc.Language.JAVA,
             javaContent,
             Seq(pkg),
-            Seq(fullClassName.replace('.', '/') + "#"),
+            toplevelSymbols,
           )
         }.toSeq
       } catch {

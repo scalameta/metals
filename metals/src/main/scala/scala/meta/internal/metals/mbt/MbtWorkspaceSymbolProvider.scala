@@ -219,11 +219,15 @@ class MbtWorkspaceSymbolProvider(
       doc: IndexedDocument,
   ): Unit = {
     if (javaSymbolLoader().isTurbineClasspath) {
-      // Turbine compiled the outlines, not the proto file itself, so the
-      // outline names are what identifies the classes to invalidate.
-      val outlineSourcePaths = doc.cachedJavaOutlines.map(_.getName())
-      if (outlineSourcePaths.nonEmpty) {
-        turbineCompiler.onDidDelete(outlineSourcePaths, file.toURI.toString())
+      // Turbine compiled the outlines, not the proto file, so their classes are
+      // what has to be invalidated - including the `OrBuilder` interface, which
+      // isn't named after the outline that declares it.
+      val toplevelBinaryNames = for {
+        outline <- doc.cachedJavaOutlines
+        symbol <- outline.toplevelSymbols().asScala
+      } yield Symbol(symbol).toplevelBinaryName
+      if (toplevelBinaryNames.nonEmpty) {
+        turbineCompiler.onDidDelete(toplevelBinaryNames, file.toURI.toString())
         turbineCompiler.scheduleCompile().ignoreValue
       }
     }
@@ -444,11 +448,15 @@ class MbtWorkspaceSymbolProvider(
         // This adds an empty source to SOURCE_PATH so javac won't find the class.
         // We also track deleted binary names to exclude from CLASS_PATH.
         if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
-          // Track the classes compiled from this file for CLASS_PATH exclusion.
-          // The source path has to match the one used when the file was handed
-          // to turbine, see `turbineCompiler`'s `parseUnit`.
+          // The index has every top-level class the file declares, not only the
+          // one it is named after; nested classes follow from those.
+          val toplevelBinaryNames = for {
+            info <- doc.symbols.toSeq
+            symbol = Symbol(info.getSymbol())
+            if symbol.isToplevel
+          } yield symbol.toplevelBinaryName
           turbineCompiler.onDidDelete(
-            Seq(file.toString()),
+            toplevelBinaryNames,
             file.toURI.toString(),
           )
           // Add empty file to SOURCE_PATH so javac parses it and doesn't find the class

@@ -23,10 +23,12 @@ public interface CodeGenerator {
   class OutputFile {
     private final String path;
     private final String content;
+    private final List<String> topLevelTypes;
 
-    public OutputFile(String path, String content) {
+    public OutputFile(String path, String content, List<String> topLevelTypes) {
       this.path = path;
       this.content = content;
+      this.topLevelTypes = topLevelTypes;
     }
 
     /** The relative path of the output file. */
@@ -37,6 +39,16 @@ public interface CodeGenerator {
     /** The content of the output file. */
     public String content() {
       return content;
+    }
+
+    /**
+     * The simple names of the top-level types this file declares, starting with the one it is named
+     * after. Simple as in unqualified - {@code User}, not {@code com.example.User} - since the
+     * package is already part of {@link #path()}. A message file also declares its {@code
+     * OrBuilder} interface, which callers can't recover from the path.
+     */
+    public List<String> topLevelTypes() {
+      return topLevelTypes;
     }
   }
 }

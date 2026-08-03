@@ -2316,4 +2316,72 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
       _ = assertNoDiagnostics()
     } yield ()
   }
+
+  // A deleted Java file takes every class it declared out of the Turbine
+  // classpath: the secondary top-level class and the nested ones too.
+  test("java-delete-invalidates-all-declared-classes") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/java/com/example/Models.java
+           |package com.example;
+           |public class Models {
+           |  public static class Inner {}
+           |}
+           |class Helper {
+           |  static class Nested {}
+           |}
+           |/a/src/main/java/com/example/Service.java
+           |package com.example;
+           |public class Service {
+           |  public void inner(Models.Inner inner) {}
+           |  public void helper(Helper helper) {}
+           |  public void nested(Helper.Nested nested) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/com/example/Service.java")
+      _ <- server.didFocus("a/src/main/java/com/example/Service.java")
+      _ = assertNoDiagnostics()
+
+      modelsFile = workspace.resolve("a/src/main/java/com/example/Models.java")
+      _ = modelsFile.delete()
+      _ <- server.didChangeWatchedFiles(
+        modelsFile.toURI.toString(),
+        FileChangeType.Deleted,
+      )
+      // Re-run the Java compiler on the file that uses the deleted classes.
+      // The trailing comment is what makes the content differ; an identical
+      // didChange recompiles nothing, and the assertion below would then pass
+      // on empty output.
+      _ <- server.didChange("a/src/main/java/com/example/Service.java") { _ =>
+        """|package com.example;
+           |public class Service {
+           |  public void inner(Models.Inner inner) {}
+           |  public void helper(Helper helper) {}
+           |  public void nested(Helper.Nested nested) {}
+           |}
+           |// touched
+           |""".stripMargin
+      }
+
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/Service.java:3:27: error: package Models does not exist
+           |  public void inner(Models.Inner inner) {}
+           |                          ^^^^^^
+           |a/src/main/java/com/example/Service.java:4:22: error: cannot find symbol
+           |  symbol:   class Helper
+           |  location: class com.example.Service
+           |  public void helper(Helper helper) {}
+           |                     ^^^^^^
+           |a/src/main/java/com/example/Service.java:5:28: error: package Helper does not exist
+           |  public void nested(Helper.Nested nested) {}
+           |                           ^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
