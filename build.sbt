@@ -110,24 +110,6 @@ def configureMtagsScalaVersionDynamically(
     )
 }
 
-def crossTestDyn(state: State, scalaV: String): State = {
-  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
-  val (out, _) =
-    Project
-      .extract(configured)
-      .runTask(cross / Test / test, configured)
-  out
-}
-
-def crossTestDynOnly(state: State, scalaV: String, testName: String): State = {
-  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
-  val (out, _) =
-    Project
-      .extract(configured)
-      .runInputTask(cross / Test / testOnly, testName, configured)
-  out
-}
-
 commands ++= Seq(
   Command.command("save-expect") { s =>
     "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
@@ -140,9 +122,6 @@ commands ++= Seq(
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
-  },
-  Command.single("test-mtags-dyn") { (s, scalaV) =>
-    crossTestDyn(s, scalaV)
   },
 )
 
@@ -588,7 +567,6 @@ lazy val input3 = project
   .settings(
     sharedSettings,
     scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "tests" / "input" / "target" / "target3",
     Compile / unmanagedSourceDirectories := Seq(
       (input / baseDirectory).value / "src" / "main" / "scala",
       (input / baseDirectory).value / "src" / "main" / "scala-3",
@@ -794,13 +772,14 @@ lazy val unit = project
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties
       .resourceGenerator(input, input3),
-    Compile / compile :=
+    Compile / compile := Def.uncached(
       (Compile / compile)
         .dependsOn(
           input / Test / compile,
           input3 / Test / compile,
         )
-        .value,
+        .value
+    ),
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> (ThisBuild / baseDirectory).value,
       "targetDirectory" -> (Test / target).value,
@@ -833,7 +812,7 @@ lazy val slow = project
       .evaluated,
     Test / test := (Test / test)
       .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
-      .value,
+      .evaluated,
   )
   .dependsOn(unit, `metals-mcp`)
 
