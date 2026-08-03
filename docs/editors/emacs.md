@@ -270,11 +270,15 @@ completion popup appears while you type is up to the client, not Metals.
 With Eglot and [Corfu](https://github.com/minad/corfu), the popup does not
 appear inside an empty `${ }` splice: Corfu auto-completes only after
 `corfu-auto-prefix` typed characters, and at `${|}` the prefix is empty.
-Add Metals' completion trigger characters to `corfu-auto-trigger`:
+Teach Corfu the trigger characters for Scala buffers:
 
 ```elisp
-(setq corfu-auto-trigger ".${")
+(add-hook 'scala-mode-hook
+          (lambda () (setq-local corfu-auto-trigger ".${")))
 ```
+
+`corfu-auto-trigger` is a global variable, so scope the setting to
+`scala-mode` to avoid popups on every `{` in other major modes.
 
 - `$` opens the popup the moment a splice starts, matching other editors.
 - `{` keeps the popup alive across the `${` opener. Drop it if popups on
