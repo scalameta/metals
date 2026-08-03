@@ -6,6 +6,7 @@ import java.util
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonElement
@@ -295,7 +296,7 @@ final class DocumentLinksProvider(
       else
         List(simpleSymbol)
     } else {
-      List(classRef.replace('.', '/') + "#")
+      List(Symbol.fromToplevelClassName(classRef).value)
     }
   }
 

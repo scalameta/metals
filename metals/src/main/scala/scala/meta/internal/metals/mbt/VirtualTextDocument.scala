@@ -6,6 +6,7 @@ import javax.tools.JavaFileObject.Kind
 import javax.tools.SimpleJavaFileObject
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc
 import scala.meta.pc.SemanticdbCompilationUnit
@@ -32,7 +33,7 @@ final case class VirtualTextDocument(
       case None =>
         pkg.replace('/', '.')
       case Some(sym) =>
-        sym.stripSuffix("#").stripSuffix(".").replace('/', '.')
+        Symbol(sym).toplevelClassName
     }
   }
   override def getName(): String = uri.toString
