@@ -298,6 +298,19 @@ case class JavaPresentationCompiler(
       codeActionPayload: Optional[T]
   ): CompletableFuture[util.List[TextEdit]] =
     codeActionId match {
+      case CodeActionId.ChangeVariableType =>
+        val diagnosticRange =
+          if (codeActionPayload.isPresent())
+            codeActionPayload.get() match {
+              case range: lsp4j.Range => Some(range)
+              case _ => None
+            }
+          else None
+        request(params, util.Collections.emptyList[TextEdit]()) { pc =>
+          new JavaChangeVariableTypeProvider(pc, params, diagnosticRange)
+            .textEdits()
+            .asJava
+        }
       case CodeActionId.InlineValue =>
         val default: Either[String, util.List[TextEdit]] =
           Right(util.Collections.emptyList[TextEdit]())
@@ -318,7 +331,7 @@ case class JavaPresentationCompiler(
     }
 
   override def supportedCodeActions(): util.List[String] = {
-    util.Collections.singletonList(CodeActionId.InlineValue)
+    List(CodeActionId.ChangeVariableType, CodeActionId.InlineValue).asJava
   }
 
   override def didClose(uri: URI): Unit = ()

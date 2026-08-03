@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ChangeVariableType
 
+import org.eclipse.lsp4j.Diagnostic
 import tests.MbtTestInitializer
 
 class ChangeVariableTypeLspSuite
@@ -14,6 +15,10 @@ class ChangeVariableTypeLspSuite
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(presentationCompilerDiagnostics = true)
+
+  override protected def defaultAwaitDiagnostics
+      : Option[Seq[Diagnostic] => Boolean] =
+    Some(_.nonEmpty)
 
   override protected def toPath(
       fileName: String,
@@ -331,10 +336,42 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    Map<String,java.time.LocalDate> dates = dates();
+       |    Map<String, java.time.LocalDate> dates = dates();
        |  }
        |
        |  private Map<String, java.time.LocalDate> dates() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "method-return-generic-not-imported",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<dates>> = dates();
+       |  }
+       |
+       |  private java.util.Map<String, java.time.LocalDate> dates() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    java.util.Map<String, java.time.LocalDate> dates = dates();
+       |  }
+       |
+       |  private java.util.Map<String, java.time.LocalDate> dates() {
        |    return null;
        |  }
        |}
