@@ -373,7 +373,7 @@ class SymbolIndexBucket(
   // Output: scala/collection/immutable/List.scala
   //         scala/collection/immutable/List.java
   private def trivialPaths(toplevel: Symbol): List[String] = {
-    val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
+    val noExtension = toplevel.toplevelBinaryName
     List(
       noExtension + ".scala",
       noExtension + ".java"
@@ -382,8 +382,8 @@ class SymbolIndexBucket(
 
   private def modulePaths(toplevel: Symbol): List[String] = {
     if (Properties.isJavaAtLeast("9")) {
-      val noExtension = toplevel.value.stripSuffix(".").stripSuffix("#")
-      val javaSymbol = noExtension.replace("/", ".")
+      val noExtension = toplevel.toplevelBinaryName
+      val javaSymbol = toplevel.toplevelClassName
       for {
         cls <- sourceJars.loadClassSafe(javaSymbol).toList
         // note(@tgodzik) Modules are only available in Java 9+, so we need to invoke this reflectively
