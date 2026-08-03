@@ -823,4 +823,95 @@ class CompletionInterpolatorSuite extends BaseCompletionSuite {
     filter = _.contains("[A]")
   )
 
+  check(
+    "brace-member",
+    """|object Main {
+       |  val foo = ""
+       |  s"Hello ${foo.toStr@@}!"
+       |}
+       |""".stripMargin,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
+  check(
+    "brace-member-empty-query",
+    """|object Main {
+       |  val foo = ""
+       |  s"Hello ${foo.@@}!"
+       |}
+       |""".stripMargin,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
+  check(
+    "brace-member-triple-quote",
+    """|object Main {
+       |  val foo = ""
+       |  s'''Hello ${foo.toStr@@}!'''
+       |}
+       |""".stripMargin.triplequoted,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
+  check(
+    "brace-scope-mid-expression",
+    """|object Main {
+       |  val foo = 1
+       |  val bar = 2
+       |  s"Hello ${foo + ba@@}!"
+       |}
+       |""".stripMargin,
+    """|bar: Int
+       |""".stripMargin,
+    filter = _.contains("bar")
+  )
+
+  check(
+    "brace-member-nested-lambda",
+    """|object Main {
+       |  val xs = List("")
+       |  s"Hello ${xs.map(x => x.toStr@@)}!"
+       |}
+       |""".stripMargin,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
+  check(
+    "brace-member-custom-interpolator",
+    """|object Main {
+       |  implicit class XtensionStringContext(c: StringContext) {
+       |    def sql(args: Any*): String = ""
+       |  }
+       |  val foo = ""
+       |  sql"SELECT ${foo.toStr@@}"
+       |}
+       |""".stripMargin,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
+  check(
+    "brace-member-custom-interpolator-triple-quote",
+    """|object Main {
+       |  implicit class XtensionStringContext(c: StringContext) {
+       |    def sql(args: Any*): String = ""
+       |  }
+       |  val foo = ""
+       |  sql'''SELECT ${foo.toStr@@}'''
+       |}
+       |""".stripMargin.triplequoted,
+    """|toString(): String
+       |""".stripMargin,
+    filter = _.contains("toString")
+  )
+
 }
