@@ -10,6 +10,10 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
 
+import com.sun.source.tree.ClassTree
+import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.util.TreePath
+
 /**
  * Renders Java types using simple names where it is safe to do so, collecting
  * the imports that need to be added for the shortened names to resolve.
@@ -124,4 +128,49 @@ class JavaTypeShortener(
       case names => names.mkString(".", ".", "")
     }
   }
+}
+
+object JavaTypeShortener {
+
+  def forPath(
+      compilationUnit: CompilationUnitTree,
+      path: TreePath
+  ): JavaTypeShortener = {
+    val currentPackage =
+      Option(compilationUnit.getPackageName()).map(_.toString()).getOrElse("")
+    val imports = compilationUnit.getImports().asScala.filterNot(_.isStatic())
+    val existingImports = imports.collect {
+      case imp if !imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        val fqn = imp.getQualifiedIdentifier().toString()
+        fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
+    }.toMap
+    val topLevelTypeNames = compilationUnit
+      .getTypeDecls()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
+    val memberTypeNames = enclosingClass(path)
+      .map(collectMemberTypeNames)
+      .getOrElse(Set.empty)
+    new JavaTypeShortener(
+      currentPackage,
+      existingImports,
+      topLevelTypeNames ++ memberTypeNames
+    )
+  }
+
+  private def collectMemberTypeNames(classTree: ClassTree): Set[String] =
+    classTree
+      .getMembers()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
+
+  private def enclosingClass(path: TreePath): Option[ClassTree] =
+    if (path == null) None
+    else
+      path.getLeaf() match {
+        case classTree: ClassTree => Some(classTree)
+        case _ => enclosingClass(path.getParentPath())
+      }
 }

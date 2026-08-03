@@ -7,6 +7,26 @@ import com.sun.source.util.Trees
 import org.eclipse.{lsp4j => l}
 object Positions {
 
+  def findNameOffset(
+      text: String,
+      start: Int,
+      end: Int,
+      name: String
+  ): Option[Int] = {
+    val searchEnd = Math.min(end, text.length())
+    if (start < 0 || end < 0 || name.isEmpty) None
+    else
+      (start until searchEnd).find { offset =>
+        val nameEnd = offset + name.length()
+        Character.isJavaIdentifierStart(text.charAt(offset)) &&
+        text.startsWith(name, offset) &&
+        (offset == 0 ||
+          !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
+        (nameEnd >= text.length() ||
+          !Character.isJavaIdentifierPart(text.charAt(nameEnd)))
+      }
+  }
+
   def toLspRange(
       trees: Trees,
       cu: CompilationUnitTree,

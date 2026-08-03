@@ -3,6 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ChangeVariableType
 
+import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.Diagnostic
 import tests.MbtTestInitializer
 
@@ -27,7 +28,7 @@ class ChangeVariableTypeLspSuite
     if (isSource) s"a/src/main/java/a/$fileName"
     else s"a/$fileName"
 
-  private val onlyChangeType: org.eclipse.lsp4j.CodeAction => Boolean =
+  private val onlyChangeType: CodeAction => Boolean =
     _.getTitle() == ChangeVariableType.title
 
   check(
@@ -36,7 +37,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<x>> = "hello";
+       |    int x = <<"hello">>;
        |  }
        |}
        |""".stripMargin,
@@ -60,7 +61,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    String <<s>> = 42;
+       |    String s = <<42>>;
        |  }
        |}
        |""".stripMargin,
@@ -84,7 +85,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<ratio>> = 3.5;
+       |    int ratio = <<3.5>>;
        |  }
        |}
        |""".stripMargin,
@@ -107,7 +108,7 @@ class ChangeVariableTypeLspSuite
     """|package a;
        |
        |public class Example {
-       |  private int <<count>> = "many";
+       |  private int count = <<"many">>;
        |}
        |""".stripMargin,
     s"""|${ChangeVariableType.title}
@@ -128,7 +129,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    final int <<x>> = "hello";
+       |    final int x = <<"hello">>;
        |  }
        |}
        |""".stripMargin,
@@ -152,7 +153,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    @Deprecated int <<x>> = "hello";
+       |    @Deprecated int x = <<"hello">>;
        |  }
        |}
        |""".stripMargin,
@@ -176,7 +177,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<x>> = new String[]{"a", "b"};
+       |    int x = <<new String[]{"a", "b"}>>;
        |  }
        |}
        |""".stripMargin,
@@ -200,7 +201,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    String <<x>> = new Object();
+       |    String x = <<new Object()>>;
        |  }
        |}
        |""".stripMargin,
@@ -224,7 +225,22 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int a = 1, <<b>> = "test", c = 3;
+       |    int a = 1, b = <<"test">>, c = 3;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "multi-variable-declaration-comment-before-comma",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int a = <<"test">> /* c */, b = 1;
        |  }
        |}
        |""".stripMargin,
@@ -239,7 +255,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<x>> = new java.util.ArrayList<>();
+       |    int x = <<new java.util.ArrayList<>()>>;
        |  }
        |}
        |""".stripMargin,
@@ -254,7 +270,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<x>> = name();
+       |    int x = <<name()>>;
        |  }
        |
        |  private String name() {
@@ -286,7 +302,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<today>> = currentDate();
+       |    int today = <<currentDate()>>;
        |  }
        |
        |  private java.time.LocalDate currentDate() {
@@ -298,9 +314,11 @@ class ChangeVariableTypeLspSuite
         |""".stripMargin,
     """|package a;
        |
+       |import java.time.LocalDate;
+       |
        |public class Example {
        |  public void run() {
-       |    java.time.LocalDate today = currentDate();
+       |    LocalDate today = currentDate();
        |  }
        |
        |  private java.time.LocalDate currentDate() {
@@ -320,7 +338,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<dates>> = dates();
+       |    int dates = <<dates()>>;
        |  }
        |
        |  private Map<String, java.time.LocalDate> dates() {
@@ -333,10 +351,11 @@ class ChangeVariableTypeLspSuite
     """|package a;
        |
        |import java.util.Map;
+       |import java.time.LocalDate;
        |
        |public class Example {
        |  public void run() {
-       |    Map<String, java.time.LocalDate> dates = dates();
+       |    Map<String, LocalDate> dates = dates();
        |  }
        |
        |  private Map<String, java.time.LocalDate> dates() {
@@ -354,7 +373,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<dates>> = dates();
+       |    int dates = <<dates()>>;
        |  }
        |
        |  private java.util.Map<String, java.time.LocalDate> dates() {
@@ -366,9 +385,12 @@ class ChangeVariableTypeLspSuite
         |""".stripMargin,
     """|package a;
        |
+       |import java.time.LocalDate;
+       |import java.util.Map;
+       |
        |public class Example {
        |  public void run() {
-       |    java.util.Map<String, java.time.LocalDate> dates = dates();
+       |    Map<String, LocalDate> dates = dates();
        |  }
        |
        |  private java.util.Map<String, java.time.LocalDate> dates() {
@@ -388,7 +410,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<names>> = new ArrayList<String>();
+       |    int names = <<new ArrayList<String>()>>;
        |  }
        |}
        |""".stripMargin,
@@ -414,8 +436,36 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<today>> = java.time.LocalDate.now();
+       |    int today = <<java.time.LocalDate.now()>>;
        |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.time.LocalDate;
+       |
+       |public class Example {
+       |  public void run() {
+       |    LocalDate today = java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "not-imported-name-clash",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int today = <<java.time.LocalDate.now()>>;
+       |  }
+       |
+       |  static class LocalDate {}
        |}
        |""".stripMargin,
     s"""|${ChangeVariableType.title}
@@ -426,6 +476,8 @@ class ChangeVariableTypeLspSuite
        |  public void run() {
        |    java.time.LocalDate today = java.time.LocalDate.now();
        |  }
+       |
+       |  static class LocalDate {}
        |}
        |""".stripMargin,
     fileName = "Example.java",
@@ -440,7 +492,7 @@ class ChangeVariableTypeLspSuite
        |public class Example {
        |  public void run() {
        |    String ignored = "import java.time.LocalDate;";
-       |    int <<today>> = java.time.LocalDate.now();
+       |    int today = <<java.time.LocalDate.now()>>;
        |  }
        |}
        |""".stripMargin,
@@ -448,11 +500,13 @@ class ChangeVariableTypeLspSuite
         |""".stripMargin,
     """|package a;
        |
+       |import java.time.LocalDate;
+       |
        |// import java.time.LocalDate;
        |public class Example {
        |  public void run() {
        |    String ignored = "import java.time.LocalDate;";
-       |    java.time.LocalDate today = java.time.LocalDate.now();
+       |    LocalDate today = java.time.LocalDate.now();
        |  }
        |}
        |""".stripMargin,
@@ -466,7 +520,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<other>> = new Other();
+       |    int other = <<new Other()>>;
        |  }
        |}
        |
@@ -489,12 +543,44 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "same-package-nested-class",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int inner = <<new a.Outer.Inner()>>;
+       |  }
+       |}
+       |
+       |class Outer {
+       |  static class Inner {}
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    a.Outer.Inner inner = new a.Outer.Inner();
+       |  }
+       |}
+       |
+       |class Outer {
+       |  static class Inner {}
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "legacy-array-declarator",
     """|package a;
        |
        |public class Example {
        |  public void run() {
-       |    int <<values>>[] = new String[]{"a", "b"};
+       |    int values[] = <<new String[]{"a", "b"}>>;
        |  }
        |}
        |""".stripMargin,
@@ -518,7 +604,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<values>>[] = "hello";
+       |    int values[] = <<"hello">>;
        |  }
        |}
        |""".stripMargin,
@@ -533,7 +619,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    a.Foo$Bar <<value>> = 42;
+       |    a.Foo$Bar value = <<42>>;
        |  }
        |}
        |
@@ -561,7 +647,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    int <<x>> = twice("a");
+       |    int x = twice(<<"a">>);
        |  }
        |
        |  private int twice(int i) {
@@ -603,6 +689,45 @@ class ChangeVariableTypeLspSuite
        |}
        |""".stripMargin,
     "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "cursor-on-variable-name",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<x>> = "hello";
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "selection-overlaps-initializer",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int <<x = "hello">>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String x = "hello";
+       |  }
+       |}
+       |""".stripMargin,
     fileName = "Example.java",
     filterAction = onlyChangeType,
   )

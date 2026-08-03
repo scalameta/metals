@@ -386,7 +386,8 @@ class JavaTrees(buffers: Buffers) {
       if (positionContains(targetOffset, nodeStart, nodeEnd)) {
         val name = node.getName().toString()
         val actualNodeStart =
-          findNameOffset(text, nodeStart, nodeEnd, name)
+          Positions
+            .findNameOffset(text, nodeStart, nodeEnd, name)
             .getOrElse(nodeStart)
         val actualNodeEnd = actualNodeStart + name.length()
         if (positionContains(targetOffset, actualNodeStart, actualNodeEnd)) {
@@ -588,39 +589,13 @@ class JavaTrees(buffers: Buffers) {
       endPos: Int,
       name: String,
   ): Option[JavaRange] = {
-    findNameOffset(text, startPos, endPos, name).map { offset =>
+    Positions.findNameOffset(text, startPos, endPos, name).map { offset =>
       val endOffset = offset + name.length()
       JavaRange(
         Positions.toLspRange(lineMap, offset, endOffset, text),
         startOffset = offset,
         endOffset = endOffset,
       )
-    }
-  }
-
-  private def findNameOffset(
-      text: String,
-      startPos: Int,
-      endPos: Int,
-      name: String,
-  ): Option[Int] = {
-    if (startPos < 0 || endPos < 0) None
-    else {
-      val searchEnd = Math.min(endPos, text.length())
-      (startPos until searchEnd)
-        .find { offset =>
-          val endOffset = offset + name.length()
-          // Char at `offset` is a valid identifier start.
-          Character.isJavaIdentifierStart(text.charAt(offset)) &&
-          // Substring at `offset` matches the target name exactly.
-          text.startsWith(name, offset) &&
-          // Left boundary: previous char does not continue an identifier.
-          (offset == 0 ||
-            !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
-          // Right boundary: next char is end-of-text or does not continue an identifier.
-          (endOffset >= text.length() ||
-            !Character.isJavaIdentifierPart(text.charAt(endOffset)))
-        }
     }
   }
 

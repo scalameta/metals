@@ -19,28 +19,32 @@ class ChangeVariableType(
   override def kind: String = l.CodeActionKind.QuickFix
   override def isScala: Boolean = false
   override def isJava: Boolean = true
+  override def maybeCodeActionId: Option[String] =
+    Some(CodeActionId.ChangeVariableType)
 
   override def contribute(
       params: l.CodeActionParams,
       token: CancelToken,
   )(implicit ec: ExecutionContext): Future[Seq[l.CodeAction]] = {
     val path = params.getTextDocument().getUri().toAbsolutePath
-    val position = params.getRange().getStart()
+    val requestRange = params.getRange()
 
     val matchingDiagnostics =
       params.getContext().getDiagnostics().asScala.toSeq.collect {
         case diagnostic
             if JavacDiagnostic.IncompatibleTypes
               .unapply(diagnostic)
-              .isDefined =>
+              .isDefined && requestRange.overlapsWith(diagnostic.getRange()) =>
           diagnostic
       }
 
-    val editParams =
-      new l.TextDocumentPositionParams(params.getTextDocument(), position)
     Future
       .sequence {
         matchingDiagnostics.map { diagnostic =>
+          val editParams = new l.TextDocumentPositionParams(
+            params.getTextDocument(),
+            diagnostic.getRange().getStart(),
+          )
           compilers
             .codeAction(
               editParams,

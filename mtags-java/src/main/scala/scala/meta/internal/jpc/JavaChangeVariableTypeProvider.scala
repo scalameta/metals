@@ -6,9 +6,14 @@ import scala.jdk.CollectionConverters._
 import scala.util.matching.Regex
 
 import scala.meta.internal.metals.CompilerOffsetParams
+import scala.meta.internal.mtags.CommonMtagsEnrichments._
 import scala.meta.pc.OffsetParams
 
+import com.sun.source.tree.BlockTree
+import com.sun.source.tree.CaseTree
+import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.tree.ForLoopTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
 import com.sun.source.util.TreePath
@@ -34,22 +39,34 @@ final class JavaChangeVariableTypeProvider(
           params.text()
         )
 
-        for {
+        (for {
           variablePath <- enclosingVariable(cursorPath).toSeq
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
-          located = LocatedVariable(variable, variablePath)
           typeRange <- typeRange(variable, context).toSeq
-          if isSingleDeclaration(located, typeRange, context)
+          if isSingleDeclaration(variablePath)
           initializer <- Option(variable.getInitializer()).toSeq
           if diagnosticMatchesInitializer(initializer, context)
           if !initializer.toString().contains("<>")
-          replacement <- inferInitializerType(typeRange, context).toSeq
-          legacyDimensions = legacyArrayDimensions(located, typeRange, context)
+          shortener = JavaTypeShortener.forPath(
+            context.cu,
+            variablePath
+          )
+          replacement <- inferInitializerType(
+            typeRange,
+            context,
+            shortener
+          ).toSeq
+          legacyDimensions = legacyArrayDimensions(variable, typeRange, context)
           if arrayDimensions(replacement) >= legacyDimensions
-        } yield new l.TextEdit(
-          typeRange.range,
-          stripArrayDimensions(replacement, legacyDimensions)
-        )
+          typeEdit = new l.TextEdit(
+            typeRange.range,
+            replacement.stripSuffix("[]" * legacyDimensions)
+          )
+          importEdit = JavaAutoImportEditor.imports(
+            context.text,
+            shortener.newImports
+          )
+        } yield importEdit.toSeq :+ typeEdit).flatten
       case None => Nil
     }
   }
@@ -60,16 +77,17 @@ final class JavaChangeVariableTypeProvider(
   ): Boolean =
     diagnosticRange match {
       case Some(range) =>
-        treeRange(initializer, context).exists { initializerRange =>
-          encloses(initializerRange.range, range) &&
-          samePosition(initializerRange.range.getEnd(), range.getEnd())
+        context.rangeOf(initializer).exists { initializerRange =>
+          initializerRange.range.encloses(range) &&
+          initializerRange.range.getEnd() == range.getEnd()
         }
       case None => true
     }
 
   private def inferInitializerType(
-      originalTypeRange: JavaTypeRange,
-      originalContext: Context
+      originalTypeRange: SourceRange,
+      originalContext: Context,
+      shortener: JavaTypeShortener
   ): Option[String] = {
     val placeholder = "Object"
     val originalTypeLength =
@@ -92,6 +110,7 @@ final class JavaChangeVariableTypeProvider(
       params.outlineFiles()
     )
 
+    adjustedParams.checkCanceled()
     compiler.nodeAtPosition(adjustedParams).flatMap {
       case (compile, cursorPath) =>
         val context = Context(
@@ -103,8 +122,14 @@ final class JavaChangeVariableTypeProvider(
           variablePath <- enclosingVariable(cursorPath)
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
           initializer <- Option(variable.getInitializer())
-          initializerType <- typeOf(variablePath, initializer, context)
-          replacement <- inferredTypeText(initializerType, originalContext)
+          initializerType <- Option(
+            context.trees.getTypeMirror(new TreePath(variablePath, initializer))
+          )
+          replacement <- inferredTypeText(
+            initializerType,
+            originalContext,
+            shortener
+          )
         } yield replacement
     }
   }
@@ -112,26 +137,39 @@ final class JavaChangeVariableTypeProvider(
   private def typeRange(
       variable: VariableTree,
       context: Context
-  ): Option[JavaTypeRange] =
+  ): Option[SourceRange] = {
+    val name = variable.getName().toString()
     for {
       typeTree <- Option(variable.getType())
-      nameRange <- nameRange(variable, context)
-      range <- treeRange(typeTree, context)
-      adjusted <- trimLegacyArraySuffix(range, nameRange, context)
+      nameStart <- Positions.findNameOffset(
+        context.text,
+        context.startOf(variable),
+        context.endOf(variable),
+        name
+      )
+      range <- context.rangeOf(typeTree)
+      adjusted <- trimLegacyArraySuffix(
+        range,
+        nameStart,
+        nameStart + name.length(),
+        context
+      )
     } yield adjusted
+  }
 
   private def trimLegacyArraySuffix(
-      range: JavaTypeRange,
-      nameRange: JavaTypeRange,
+      range: SourceRange,
+      nameStart: Int,
+      nameEnd: Int,
       context: Context
-  ): Option[JavaTypeRange] = {
+  ): Option[SourceRange] = {
     val legacyArraySuffix =
-      range.endOffset > nameRange.endOffset &&
-        onlyLegacyArrayDimensions(
-          context.text.substring(nameRange.endOffset, range.endOffset)
-        )
+      range.endOffset > nameEnd &&
+        LegacyArrayDimensions.pattern
+          .matcher(context.text.substring(nameEnd, range.endOffset))
+          .matches()
     if (legacyArraySuffix) {
-      val endOffset = lastNonWhitespaceBefore(nameRange.startOffset, context)
+      val endOffset = context.lastNonWhitespaceBefore(nameStart)
       if (endOffset <= range.startOffset) None
       else {
         val end = endOffset + 1
@@ -150,87 +188,45 @@ final class JavaChangeVariableTypeProvider(
     } else Some(range)
   }
 
-  private def typeOf(
-      variablePath: TreePath,
-      initializer: Tree,
-      context: Context
-  ): Option[TypeMirror] =
-    Option(context.trees.getTypeMirror(new TreePath(variablePath, initializer)))
-
   private def inferredTypeText(
       tpe: TypeMirror,
-      context: Context
+      context: Context,
+      shortener: JavaTypeShortener
   ): Option[String] = {
-    val fullType = new JavaTypeVisitor().visit(tpe)
-    Option(renderType(fullType, SourceVisibility.from(context.cu)))
-      .filter(isRenderableType)
-  }
-
-  private def treeRange(
-      tree: Tree,
-      context: Context
-  ): Option[JavaTypeRange] = {
-    val start = context.startOf(tree)
-    val end = context.endOf(tree)
-    if (start < 0 || end < 0) None
-    else
-      Some(
-        JavaTypeRange(
-          Positions.toLspRange(
-            context.cu.getLineMap(),
-            start,
-            end,
-            context.text
-          ),
-          start,
-          end
+    val shortenedType = shortener.shorten(tpe)
+    val renderedType =
+      if (shortener.newImports.isEmpty)
+        renderType(
+          new JavaTypeVisitor().visit(tpe),
+          SourceVisibility.from(context.cu)
         )
-      )
+      else annotation.replaceAllIn(shortenedType, "")
+    Option.when(isRenderableType(renderedType))(renderedType)
   }
 
-  private def nameRange(
-      variable: VariableTree,
-      context: Context
-  ): Option[JavaTypeRange] = {
-    val name = variable.getName().toString()
-    findNameOffset(
-      context.text,
-      context.startOf(variable),
-      context.endOf(variable),
-      name
-    ).map { start =>
-      val end = start + name.length()
-      JavaTypeRange(
-        Positions.toLspRange(context.cu.getLineMap(), start, end, context.text),
-        start,
-        end
-      )
+  private def isSingleDeclaration(variablePath: TreePath): Boolean = {
+    val variable = variablePath.getLeaf().asInstanceOf[VariableTree]
+    val siblingTrees: Iterable[Tree] =
+      variablePath.getParentPath().getLeaf() match {
+        case block: BlockTree => block.getStatements().asScala
+        case caseTree: CaseTree =>
+          Option(caseTree.getStatements()).toSeq.flatMap(_.asScala)
+        case classTree: ClassTree => classTree.getMembers().asScala
+        case forLoop: ForLoopTree => forLoop.getInitializer().asScala
+        case _ => Nil
+      }
+    !siblingTrees.exists {
+      case sibling: VariableTree =>
+        (sibling ne variable) && (sibling.getType() eq variable.getType())
+      case _ => false
     }
-  }
-
-  private def isSingleDeclaration(
-      variable: LocatedVariable,
-      typeRange: JavaTypeRange,
-      context: Context
-  ): Boolean = {
-    val text = context.text
-    val nameStart = nameRange(variable.tree, context)
-      .map(_.startOffset)
-      .getOrElse(Int.MaxValue)
-    val typeAdjacentToName =
-      typeRange.endOffset <= nameStart &&
-        text.substring(typeRange.endOffset, nameStart).forall(_.isWhitespace)
-    val nextOffset =
-      text.indexWhere(!_.isWhitespace, context.endOf(variable.tree).max(0))
-    val continuesWithComma = nextOffset >= 0 && text.charAt(nextOffset) == ','
-    typeAdjacentToName && !continuesWithComma
   }
 }
 
 object JavaChangeVariableTypeProvider {
   private val qualifiedName: Regex =
     """[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+""".r
-  private val annotation: Regex =
+  private val annotation =
     """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
   private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
 
@@ -243,31 +239,27 @@ object JavaChangeVariableTypeProvider {
       trees.getSourcePositions().getStartPosition(cu, tree).toInt
     def endOf(tree: Tree): Int =
       trees.getSourcePositions().getEndPosition(cu, tree).toInt
+
+    def rangeOf(tree: Tree): Option[SourceRange] = {
+      val start = startOf(tree)
+      val end = endOf(tree)
+      Option.when(start >= 0 && end >= 0)(
+        SourceRange(Positions.toLspRange(trees, cu, tree), start, end)
+      )
+    }
+
+    def lastNonWhitespaceBefore(offset: Int): Int = {
+      var index = offset - 1
+      while (index >= 0 && text.charAt(index).isWhitespace) index -= 1
+      index
+    }
   }
 
-  private case class LocatedVariable(
-      tree: VariableTree,
-      path: TreePath
-  )
-
-  private case class JavaTypeRange(
+  private case class SourceRange(
       range: l.Range,
       startOffset: Int,
       endOffset: Int
   )
-
-  private def encloses(outer: l.Range, inner: l.Range): Boolean =
-    comparePosition(outer.getStart(), inner.getStart()) <= 0 &&
-      comparePosition(inner.getEnd(), outer.getEnd()) <= 0
-
-  private def samePosition(left: l.Position, right: l.Position): Boolean =
-    comparePosition(left, right) == 0
-
-  private def comparePosition(left: l.Position, right: l.Position): Int = {
-    val line = left.getLine().compare(right.getLine())
-    if (line == 0) left.getCharacter().compare(right.getCharacter())
-    else line
-  }
 
   private def enclosingVariable(path: TreePath): Option[TreePath] =
     if (path == null) None
@@ -276,43 +268,6 @@ object JavaChangeVariableTypeProvider {
         case _: VariableTree => Some(path)
         case _ => enclosingVariable(path.getParentPath())
       }
-
-  private def findNameOffset(
-      text: String,
-      startPos: Int,
-      endPos: Int,
-      name: String
-  ): Option[Int] = {
-    if (startPos < 0 || endPos < 0) None
-    else {
-      val searchEnd = Math.min(endPos, text.length())
-      (startPos until searchEnd)
-        .find { offset =>
-          val endOffset = offset + name.length()
-          Character.isJavaIdentifierStart(text.charAt(offset)) &&
-          text.startsWith(name, offset) &&
-          (offset == 0 ||
-            !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
-          (endOffset >= text.length() ||
-            !Character.isJavaIdentifierPart(text.charAt(endOffset)))
-        }
-    }
-  }
-
-  private def onlyLegacyArrayDimensions(suffix: String): Boolean =
-    suffix match {
-      case LegacyArrayDimensions() => true
-      case _ => false
-    }
-
-  private def lastNonWhitespaceBefore(
-      offset: Int,
-      context: Context
-  ): Int = {
-    var i = offset - 1
-    while (i >= 0 && context.text.charAt(i).isWhitespace) i -= 1
-    i
-  }
 
   private def isRenderableType(tpe: String): Boolean =
     tpe.nonEmpty &&
@@ -325,40 +280,21 @@ object JavaChangeVariableTypeProvider {
   private def renderType(
       tpe: String,
       sourceVisibility: SourceVisibility
-  ): String = {
+  ): String =
     qualifiedName.replaceAllIn(
-      typeName(tpe),
-      m => {
-        val fqn = m.matched
-        Regex.quoteReplacement(sourceVisibility.visibleName(fqn))
-      }
+      annotation.replaceAllIn(tpe, ""),
+      matched =>
+        Regex.quoteReplacement(sourceVisibility.visibleName(matched.matched))
     )
-  }
-
-  private def typeName(tpe: String): String =
-    annotation.replaceAllIn(tpe, "")
-
-  private def stripArrayDimensions(
-      tpe: String,
-      dimensions: Int
-  ): String = {
-    var result = tpe
-    var remaining = dimensions
-    while (remaining > 0 && result.endsWith("[]")) {
-      result = result.stripSuffix("[]")
-      remaining -= 1
-    }
-    result
-  }
 
   private def legacyArrayDimensions(
-      variable: LocatedVariable,
-      typeRange: JavaTypeRange,
+      variable: VariableTree,
+      typeRange: SourceRange,
       context: Context
   ): Int = {
     val sourceType =
       context.text.substring(typeRange.startOffset, typeRange.endOffset)
-    (arrayDimensions(variable.tree.getType().toString()) -
+    (arrayDimensions(variable.getType().toString()) -
       arrayDimensions(sourceType)).max(0)
   }
 
@@ -388,15 +324,13 @@ object JavaChangeVariableTypeProvider {
       val currentPackage = Option(compilationUnit.getPackageName()).map(
         _.toString()
       )
-      val imports =
-        compilationUnit
-          .getImports()
-          .asScala
-          .map { importTree =>
-            importTree.getQualifiedIdentifier().toString()
-          }
-          .toSet
+      val imports = compilationUnit
+        .getImports()
+        .asScala
+        .map(_.getQualifiedIdentifier().toString())
+        .toSet
       SourceVisibility(currentPackage, imports)
     }
   }
+
 }
