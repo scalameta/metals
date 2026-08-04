@@ -60,10 +60,35 @@ class RequestRegistry(
       case _ => Future.successful(FutureWithTimeout.Cancel)
     }
 
+  // sticky: set by `cancel()`, after which no request may be registered.
+  // Guarded by `lock` together with the registration itself, so admission and
+  // insertion are one atomic operation and a request can never be added to an
+  // already drained registry (see scalameta/metals#3464).
+  private val lock = new Object
+  private var cancelled = false
+
+  def isCancelled: Boolean = lock.synchronized(cancelled)
+
   def register[T](
       action: () => CompletableFuture[T],
       timeout: Option[Timeout],
       cancelByDefault: Boolean = false,
+  ): CancelableFuture[T] =
+    lock.synchronized {
+      if (cancelled)
+        CancelableFuture(
+          Future.failed(
+            new IllegalStateException("the connection is already closed")
+          ),
+          Cancelable.empty,
+        )
+      else registerOpen(action, timeout, cancelByDefault)
+    }
+
+  private def registerOpen[T](
+      action: () => CompletableFuture[T],
+      timeout: Option[Timeout],
+      cancelByDefault: Boolean,
   ): CancelableFuture[T] = {
     val CancelableFuture(result, cancelable) =
       timeout match {
@@ -102,6 +127,7 @@ class RequestRegistry(
     ongoingRequests.addAll(values)
 
   def cancel(): Unit = {
+    lock.synchronized { cancelled = true }
     ongoingRequests.cancel()
   }
 

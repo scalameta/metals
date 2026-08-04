@@ -20,7 +20,9 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.FiniteDuration
 import scala.reflect.ClassTag
+import scala.util.Failure
 import scala.util.Success
+import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.builds.BazelBuildTool
@@ -41,6 +43,8 @@ import org.eclipse.lsp4j.jsonrpc.JsonRpcException
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
+import org.eclipse.lsp4j.jsonrpc.messages.Message
+import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 
 /**
  * An actively running and initialized BSP connection
@@ -50,6 +54,7 @@ class BuildServerConnection private (
       BuildServerConnection.LauncherConnection
     ],
     initialConnection: BuildServerConnection.LauncherConnection,
+    localClient: MetalsBuildClient,
     languageClient: ConfiguredLanguageClient,
     reconnectNotification: DismissedNotifications#Notification,
     requestTimeOutNotification: DismissedNotifications#Notification,
@@ -65,10 +70,29 @@ class BuildServerConnection private (
   )
 
   @volatile private var connection = Future.successful(initialConnection)
+
+  /**
+   * Lifecycle of the underlying launcher connection, all transitions inside
+   * `synchronized`. Invariants: at most one reconnect attempt in flight, and
+   * only the attempt that commits back to `Connected` publishes side effects
+   * (see scalameta/metals#3464).
+   */
+  private sealed trait LifecycleState
+  private case class Connected(
+      launcher: BuildServerConnection.LauncherConnection
+  ) extends LifecycleState
+  private case class Reconnecting(
+      from: BuildServerConnection.LauncherConnection
+  ) extends LifecycleState
+  private case object Closed extends LifecycleState
+
+  // all reads and writes are guarded by `synchronized`
+  private var state: LifecycleState = Connected(initialConnection)
+
   private def reestablishConnection(
-      original: Future[BuildServerConnection.LauncherConnection]
+      lost: BuildServerConnection.LauncherConnection
   ) = {
-    original.foreach(_.optLivenessMonitor.foreach(_.shutdown()))
+    lost.optLivenessMonitor.foreach(_.shutdown())
     setupConnection()
   }
 
@@ -80,6 +104,24 @@ class BuildServerConnection private (
     )
 
   private val isShuttingDown = new AtomicBoolean(false)
+
+  /** Whether `shutdown()` has been initiated on this connection. */
+  def shutdownInitiated: Boolean = isShuttingDown.get()
+
+  /**
+   * Runs `action` unless this connection is shutting down, atomically with
+   * `shutdown()`: both take this connection's monitor, so publishing a
+   * session can never resurrect one whose teardown has started
+   * (see scalameta/metals#3464). Returns whether the action ran.
+   */
+  def unlessShutdown(action: () => Unit): Boolean =
+    synchronized {
+      if (shutdownInitiated) false
+      else {
+        action()
+        true
+      }
+    }
   private val onReconnection =
     new AtomicReference[BuildServerConnection => Future[Unit]](_ =>
       Future.successful(())
@@ -94,7 +136,7 @@ class BuildServerConnection private (
   private def capabilities: BuildServerCapabilities =
     initialConnection.capabilities
 
-  initialConnection.setReconnect(() => reconnect().ignoreValue)
+  initialConnection.setReconnect(() => reconnect(initialConnection).ignoreValue)
 
   def isBloop: Boolean = name == BloopServers.name
 
@@ -164,33 +206,81 @@ class BuildServerConnection private (
     onReconnection.set(index)
   }
 
+  private val shutdownDone = Promise[Unit]()
+
   /**
    * Run build/shutdown procedure
    */
-  def shutdown(): Future[Unit] =
-    connection.map { conn =>
-      try {
-        if (isShuttingDown.compareAndSet(false, true)) {
-          conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
-          conn.server.onBuildExit()
-          conn.optLivenessMonitor.foreach(_.shutdown())
-          scribe.info("Shut down connection with build server.")
-          // Cancel pending compilations on our side, this is not needed for Bloop.
-          cancel()
+  def shutdown(): Future[Unit] = {
+    // The close transition is atomic with reconnect admission (same monitor):
+    // no reconnect can start between the flag and `Closed`, and the current
+    // launcher's gate closes before the cleanup scan so a late `taskStart`
+    // cannot slip in after it (see scalameta/metals#3464).
+    val isFirst = synchronized {
+      if (isShuttingDown.compareAndSet(false, true)) {
+        // Tear the launcher down from the state machine, not from the
+        // `connection` future: that future may be incomplete for an already
+        // current launcher, or never complete while a reconnect prompt is
+        // open, leaving the gate open and the liveness monitor scheduled.
+        val closing = state match {
+          case Connected(launcher) => Some(launcher)
+          case Reconnecting(from) => Some(from)
+          case Closed => None
         }
-      } catch {
-        case _: TimeoutException =>
-          scribe.error(
-            s"timeout: build server '${conn.displayName}' during shutdown"
-          )
-        case InterruptException() =>
-        case e: Throwable =>
-          scribe.error(
-            s"build shutdown: ${conn.displayName}",
-            e,
-          )
-      }
+        closing.foreach { launcher =>
+          launcher.dispatchGate.close()
+          launcher.optLivenessMonitor.foreach(_.shutdown())
+        }
+        state = Closed
+        true
+      } else false
     }
+    if (isFirst) {
+      localClient.onConnectionClosed(this)
+      shutdownDone.completeWith(remoteShutdown())
+    }
+    // duplicate calls join the in-flight shutdown, so no caller tears the
+    // transport down while `build/shutdown` is still being delivered
+    shutdownDone.future
+  }
+
+  private def remoteShutdown(): Future[Unit] =
+    if (!connection.isCompleted) {
+      // A reconnect attempt is in flight, waiting for it could hang the
+      // disconnect indefinitely behind its prompt or setup. The attempt
+      // observes `Closed` when it completes and tears its launcher down.
+      cancel()
+      Future.successful(())
+    } else
+      connection
+        .map { conn =>
+          try {
+            conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
+            conn.server.onBuildExit()
+            scribe.info("Shut down connection with build server.")
+          } catch {
+            case _: TimeoutException =>
+              scribe.error(
+                s"timeout: build server '${conn.displayName}' during shutdown"
+              )
+            case InterruptException() =>
+            case e: Throwable =>
+              scribe.error(
+                s"build shutdown: ${conn.displayName}",
+                e,
+              )
+          } finally {
+            // the drain window ends with the handshake, it must not stay
+            // open indefinitely
+            conn.dispatchGate.close()
+            conn.optLivenessMonitor.foreach(_.shutdown())
+            // Cancel pending compilations on our side, this is not needed for Bloop.
+            cancel()
+          }
+        }
+        // a failed connection future must still cancel and complete so the
+        // caller's teardown is not skipped
+        .recover { case NonFatal(_) => cancel() }
 
   def compile(
       params: CompileParams,
@@ -480,9 +570,15 @@ class BuildServerConnection private (
     }
   }
 
+  /**
+   * On connection loss, reconnects or asks the user to. Returns `None` when
+   * declined or dismissed. NOTE: no branch may return the mutable
+   * `connection` field, which already holds the future built from this
+   * result, so returning it would make that future wait on itself forever.
+   */
   private def askUser(
-      original: Future[BuildServerConnection.LauncherConnection]
-  ): Future[BuildServerConnection.LauncherConnection] = {
+      lost: BuildServerConnection.LauncherConnection
+  ): Future[Option[BuildServerConnection.LauncherConnection]] = {
     if (config.askToReconnect) {
       if (!reconnectNotification.isDismissed) {
         val params = Messages.DisconnectedServer.params()
@@ -494,49 +590,190 @@ class BuildServerConnection private (
           .flatMap {
             case response
                 if response == Messages.DisconnectedServer.reconnect =>
-              reestablishConnection(original)
+              reestablishConnection(lost).map(Some(_))
             case response if response == Messages.DisconnectedServer.notNow =>
               reconnectNotification.dismiss(5, TimeUnit.MINUTES)
-              connection
+              Future.successful(None)
             case _ =>
-              connection
+              Future.successful(None)
           }
       } else {
-        connection
+        Future.successful(None)
       }
     } else {
-      reestablishConnection(original)
+      reestablishConnection(lost).map(Some(_))
     }
   }
 
-  private def reconnect(): Future[BuildServerConnection.LauncherConnection] = {
-    val original = connection
-    if (!isShuttingDown.get()) {
-      synchronized {
-        // if the future is different then the connection is already being reestablished
-        if (connection eq original) {
-          connection = askUser(original).map { conn =>
-            // version can change when reconnecting
-            _version.set(conn.version)
-            requestRegistry.addOngoingRequest(conn.cancelables)
-            conn.setReconnect(() => reconnect().ignoreValue)
-            conn
+  private def reconnect(
+      lost: BuildServerConnection.LauncherConnection
+  ): Future[BuildServerConnection.LauncherConnection] =
+    synchronized {
+      state match {
+        case Closed | Reconnecting(_) =>
+          // shutting down, or an attempt is already in flight and its outcome
+          // serves this trigger as well
+          connection
+        case Connected(current) if current ne lost =>
+          // a trigger from a launcher that is no longer current, e.g. a
+          // delayed failure of a request that ran on the previous connection
+          connection
+        case Connected(_) =>
+          state = Reconnecting(lost)
+          // `close()` serializes with dispatch, so afterwards no task
+          // buffered on the dead socket can register a new compilation and
+          // the scan below ends what this connection owns (metals#3464).
+          lost.dispatchGate.close()
+          localClient.onConnectionClosed(this)
+          val attempt = askUser(lost)
+          connection = attempt
+            .map {
+              case Some(newConn) => install(lost, newConn)
+              case None =>
+                // declined: the old, dead connection stays current, requests
+                // on it fail fast and a later failure may ask again
+                rollbackTo(lost)
+                lost
+            }
+            .recover { case NonFatal(error) =>
+              // only the attempt itself can fail, `install` never throws.
+              // Falling back to the dead connection keeps `state` and
+              // `connection` consistent and lets the next request trigger a
+              // fresh attempt, so a transient setup failure is recoverable.
+              scribe.error("Failed to reconnect to the build server", error)
+              rollbackTo(lost)
+              lost
+            }
+          connection
+      }
+    }
+
+  /**
+   * Atomically installs a reconnect attempt's launcher as the current
+   * connection, all-or-nothing: on any internal failure the fresh launcher is
+   * torn down and the lost connection is kept instead. Never throws and
+   * returns the launcher that becomes the value of `connection`, so `state`
+   * and the chosen transport cannot diverge.
+   */
+  private def install(
+      lost: BuildServerConnection.LauncherConnection,
+      newConn: BuildServerConnection.LauncherConnection,
+  ): BuildServerConnection.LauncherConnection =
+    synchronized {
+      def tearDown(): Unit = {
+        // each step isolated: one failure must not skip the others
+        def attempt(step: => Unit): Unit =
+          try step
+          catch {
+            case NonFatal(error) =>
+              scribe.error("Failed to close a build server connection", error)
           }
-          connection.foreach(_ => onReconnection.get()(this))
-        }
-        connection
+        attempt(newConn.dispatchGate.close())
+        // not part of `cancelables`, would keep pinging the dead launcher
+        attempt(newConn.optLivenessMonitor.foreach(_.shutdown()))
+        newConn.cancelables.foreach(cancelable => attempt(cancelable.cancel()))
       }
-    } else {
-      connection
+      state match {
+        case Reconnecting(from) if from eq lost =>
+          val installed =
+            try {
+              // version can change when reconnecting
+              _version.set(newConn.version)
+              requestRegistry.addOngoingRequest(newConn.cancelables)
+              newConn.setReconnect(() => reconnect(newConn).ignoreValue)
+              state = Connected(newConn)
+              true
+            } catch {
+              case NonFatal(error) =>
+                scribe.error(
+                  "Failed to install the reconnected build server connection",
+                  error,
+                )
+                tearDown()
+                state = Connected(lost)
+                false
+            }
+          if (installed) {
+            notifyReconnected(newConn)
+            newConn
+          } else lost
+        case _ =>
+          // the connection was closed while the attempt was in flight
+          scribe.info(
+            "closing a build server connection that was replaced before it completed connecting"
+          )
+          tearDown()
+          lost
+      }
     }
 
-  }
+  /**
+   * Runs the `onReconnection` hook outside the transport-selection chain, so
+   * its failure can never affect which connection is current. It runs only
+   * if the installed launcher is still current at execution time, so it
+   * cannot republish a session whose teardown or replacement has started.
+   */
+  private def notifyReconnected(
+      installed: BuildServerConnection.LauncherConnection
+  ): Unit =
+    try {
+      Future {
+        val stillCurrent = synchronized {
+          state match {
+            case Connected(current) => current eq installed
+            case _ => false
+          }
+        }
+        if (stillCurrent) onReconnection.get()(this)
+        else Future.successful(())
+      }.flatten.onComplete {
+        case Failure(error) =>
+          scribe.error("The build server reconnection callback failed", error)
+        case _ => ()
+      }
+    } catch {
+      case NonFatal(error) =>
+        scribe.error("The build server reconnection callback failed", error)
+    }
+
+  private def rollbackTo(
+      lost: BuildServerConnection.LauncherConnection
+  ): Unit =
+    synchronized {
+      state match {
+        case Reconnecting(from) if from eq lost => state = Connected(lost)
+        case _ =>
+      }
+    }
 
   private def register[T: ClassTag](
       action: MetalsBuildServer => CompletableFuture[T],
       onFail: => Option[(T, String)] = None,
       timeout: Option[Timeout] = None,
       restartByDefault: Boolean = false,
+  ): CompletableFuture[T] =
+    // sticky admission: a closed connection accepts no further requests, they
+    // would perform stale remote work on the old transport
+    if (isShuttingDown.get()) {
+      onFail match {
+        case Some((defaultResult, message)) =>
+          scribe.info(message)
+          CompletableFuture.completedFuture(defaultResult)
+        case None =>
+          CompletableFuture.failedFuture(
+            new MetalsBspException(
+              implicitly[ClassTag[T]].runtimeClass.getSimpleName,
+              new IllegalStateException("build server connection is closed"),
+            )
+          )
+      }
+    } else registerWithOpenConnection(action, onFail, timeout, restartByDefault)
+
+  private def registerWithOpenConnection[T: ClassTag](
+      action: MetalsBuildServer => CompletableFuture[T],
+      onFail: => Option[(T, String)],
+      timeout: Option[Timeout],
+      restartByDefault: Boolean,
   ): CompletableFuture[T] = {
     val localCancelable = new MutableCancelable()
     def runWithCanceling(
@@ -555,13 +792,15 @@ class BuildServerConnection private (
     val original = connection
     val actionFuture = original
       .flatMap { launcherConnection =>
-        runWithCanceling(launcherConnection)
+        runWithCanceling(launcherConnection).recoverWith {
+          case io: JsonRpcException if io.getCause.isInstanceOf[IOException] =>
+            synchronized {
+              reconnect(launcherConnection)
+                .flatMap(conn => runWithCanceling(conn))
+            }
+        }
       }
       .recoverWith {
-        case io: JsonRpcException if io.getCause.isInstanceOf[IOException] =>
-          synchronized {
-            reconnect().flatMap(conn => runWithCanceling(conn))
-          }
         case t
             if implicitly[ClassTag[T]].runtimeClass.getSimpleName != "Object" =>
           val name = implicitly[ClassTag[T]].runtimeClass.getSimpleName
@@ -634,6 +873,7 @@ object BuildServerConnection {
           bspStatusOpt.map(new RequestMonitorImpl(_, serverName))
         val wrapper: MessageConsumer => MessageConsumer =
           requestMonitorOpt.map(_.wrapper).getOrElse(identity)
+        val dispatchGate = new LauncherDispatchGate
         val launcher =
           new Launcher.Builder[MetalsBuildServer]()
             .traceMessages(tracePrinter.orNull)
@@ -642,7 +882,10 @@ object BuildServerConnection {
             .setLocalService(localClient)
             .setRemoteInterface(classOf[MetalsBuildServer])
             .setExecutorService(ec)
-            .wrapMessages(wrapper(_))
+            .wrapMessages { consumer =>
+              val monitored = wrapper(consumer)
+              (message: Message) => dispatchGate.dispatch(monitored, message)
+            }
             .create()
         val listening = launcher.startListening()
         val server = launcher.getRemoteProxy
@@ -693,6 +936,7 @@ object BuildServerConnection {
           result.getVersion(),
           result.getCapabilities(),
           optServerLivenessMonitor,
+          dispatchGate,
         )
       }
     }
@@ -702,6 +946,7 @@ object BuildServerConnection {
         new BuildServerConnection(
           setupServer,
           connection,
+          localClient,
           languageClient,
           requestTimeOutNotification,
           reconnectNotification,
@@ -818,6 +1063,7 @@ object BuildServerConnection {
       version: String,
       capabilities: BuildServerCapabilities,
       optLivenessMonitor: Option[ServerLivenessMonitor],
+      dispatchGate: LauncherDispatchGate,
   ) {
 
     def cancelables: List[Cancelable] =
@@ -855,3 +1101,48 @@ case class SocketConnection(
     cancelables: List[Cancelable],
     finishedPromise: Promise[Unit],
 )
+
+/**
+ * Ties the launcher's incoming state-mutating notifications to its lifecycle:
+ * once `close()` returns, none of them are dispatched anymore. A dead
+ * generation can then neither create a "Compiling" progress that never
+ * finishes, nor keep a replacement's progress alive, nor repopulate
+ * diagnostics that teardown has just reset (see scalameta/metals#3464).
+ * Requests, responses and outgoing notifications, e.g. `build/exit`, always
+ * pass and bypass the monitor, so a blocked write can never delay them.
+ */
+final class LauncherDispatchGate {
+  import LauncherDispatchGate._
+
+  private var closed = false
+
+  def close(): Unit = synchronized { closed = true }
+
+  def dispatch(consumer: MessageConsumer, message: Message): Unit =
+    message match {
+      case notification: NotificationMessage
+          if generationBound(notification.getMethod()) =>
+        synchronized {
+          if (!closed) consumer.consume(message)
+          else
+            scribe.debug(
+              s"dropped ${notification.getMethod()} from a closed build server connection"
+            )
+        }
+      case _ => consumer.consume(message)
+    }
+}
+
+object LauncherDispatchGate {
+
+  /**
+   * Server-to-client notifications that mutate Metals state. Enumerated
+   * rather than matched by prefix so that outgoing notifications, above all
+   * `build/exit`, keep flowing while the connection is closing.
+   */
+  private val generationBound: Set[String] = Set(
+    "build/taskStart", "build/taskFinish", "build/taskProgress",
+    "build/publishDiagnostics", "build/logMessage", "build/showMessage",
+    "buildTarget/didChange",
+  )
+}
