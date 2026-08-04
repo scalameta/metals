@@ -243,47 +243,28 @@ class JavaTrees(buffers: Buffers) {
     protected def javaVariable(node: VariableTree): Option[JavaVariable] = {
       val variableName = node.getName().toString()
       treeRange(node).map { range =>
-        val nameRange = findNameRange(
-          lineMap,
-          text,
-          range.startOffset,
-          range.endOffset,
-          variableName,
-        ).getOrElse(range)
-        val typeTree = Option(node.getType())
-        val typeRange = typeTree.flatMap(treeRange).flatMap { range =>
-          Positions
-            .trimLegacyArraySuffix(
-              range.startOffset,
-              range.endOffset,
-              nameRange.startOffset,
-              nameRange.endOffset,
-              lineMap,
-              text,
-            )
-            .map { case (lspRange, endOffset) =>
-              range.copy(range = lspRange, endOffset = endOffset)
-            }
-        }
         JavaVariable(
           tree = node,
           name = variableName,
           range = range,
-          nameRange = nameRange,
-          typ = typeTree match {
+          nameRange = findNameRange(
+            lineMap,
+            text,
+            range.startOffset,
+            range.endOffset,
+            variableName,
+          ).getOrElse(range),
+          typ = Option(node.getType()) match {
             case Some(t) => t.toString()
             case None =>
               // This can happen if a variable is declared with inferred type.
               // This is going to change in Java 27, see https://bugs.openjdk.org/browse/JDK-8268850
               "var"
           },
-          typeRange = typeRange,
-          initializerRange = Option(node.getInitializer()).flatMap(treeRange),
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
     }
-
   }
 
   private class EnclosingMethodFinder(
@@ -766,8 +747,6 @@ case class JavaVariable(
     range: JavaRange,
     nameRange: JavaRange,
     typ: String,
-    typeRange: Option[JavaRange],
-    initializerRange: Option[JavaRange],
     modifiers: Set[Modifier],
 ) extends JavaMember
     with HasModifiers {

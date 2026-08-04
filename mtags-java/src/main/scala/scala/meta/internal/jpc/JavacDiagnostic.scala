@@ -44,10 +44,6 @@ object JavacDiagnostic {
   // Example errors:
   // error: incompatible types: java.lang.String cannot be converted to int
   // error: incompatible types: possible lossy conversion from double to int
-  class IncompatibleTypes(
-      val found: String,
-      val required: String
-  )
   object IncompatibleTypes {
     private val Code = "compiler.err.prob.found.req"
     private val CannotBeConverted =
@@ -56,17 +52,14 @@ object JavacDiagnostic {
       """(?s)incompatible types: bad type in conditional expression\s+(.+?) cannot be converted to (.+)""".r
     private val PossibleLossyConversion =
       """incompatible types: possible lossy conversion from (.+) to (.+)""".r
-    def unapply(d: l.Diagnostic): Option[IncompatibleTypes] = {
-      if (!matchesCode(d)) None
+    def unapply(d: l.Diagnostic): Boolean = {
+      if (!matchesCode(d)) false
       else
         d.getMessageAsString.trim() match {
-          case CannotBeConverted(found, required) =>
-            Some(new IncompatibleTypes(found, required))
-          case BadTypeInConditionalExpression(found, required) =>
-            Some(new IncompatibleTypes(found, required))
-          case PossibleLossyConversion(found, required) =>
-            Some(new IncompatibleTypes(found, required))
-          case _ => None
+          case CannotBeConverted(_, _) => true
+          case BadTypeInConditionalExpression(_, _) => true
+          case PossibleLossyConversion(_, _) => true
+          case _ => false
         }
     }
 

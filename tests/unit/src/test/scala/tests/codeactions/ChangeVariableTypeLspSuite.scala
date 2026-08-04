@@ -30,6 +30,7 @@ class ChangeVariableTypeLspSuite
 
   private val onlyChangeType: CodeAction => Boolean =
     _.getTitle() == ChangeVariableType.title
+  private val expectedAction = s"${ChangeVariableType.title}\n"
 
   check(
     "string-to-int",
@@ -41,8 +42,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -65,8 +65,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -89,8 +88,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -111,8 +109,7 @@ class ChangeVariableTypeLspSuite
        |  private int count = <<"many">>;
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -133,8 +130,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -157,8 +153,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -180,8 +175,7 @@ class ChangeVariableTypeLspSuite
        |  public static final int x = <<"hello">>;
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -203,8 +197,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -227,8 +220,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -251,8 +243,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -292,8 +283,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -383,8 +373,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -411,8 +400,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -456,8 +444,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.LocalDate;
@@ -492,8 +479,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.util.Map;
@@ -527,8 +513,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.LocalDate;
@@ -560,8 +545,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.util.ArrayList;
@@ -586,8 +570,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.LocalDate;
@@ -614,8 +597,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.*;
@@ -643,8 +625,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.sql.*;
@@ -675,8 +656,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.*;
@@ -705,8 +685,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import static java.time.DayOfWeek.*;
@@ -735,8 +714,7 @@ class ChangeVariableTypeLspSuite
        |  static class LocalDate {}
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -767,8 +745,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.*;
@@ -800,8 +777,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |import java.time.LocalDate;
@@ -830,8 +806,7 @@ class ChangeVariableTypeLspSuite
        |
        |class Other {}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -860,8 +835,7 @@ class ChangeVariableTypeLspSuite
        |  static class Inner {}
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -888,8 +862,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -912,8 +885,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -939,8 +911,7 @@ class ChangeVariableTypeLspSuite
        |@java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE_USE)
        |@interface Dimension {}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -983,8 +954,7 @@ class ChangeVariableTypeLspSuite
        |
        |class Foo$Bar {}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {
@@ -1092,8 +1062,7 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
-    s"""|${ChangeVariableType.title}
-        |""".stripMargin,
+    expectedAction,
     """|package a;
        |
        |public class Example {

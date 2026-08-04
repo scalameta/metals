@@ -2,7 +2,6 @@ package scala.meta.internal.jpc
 
 import javax.lang.model.`type`.TypeKind
 import javax.lang.model.`type`.TypeMirror
-import javax.lang.model.util.Elements
 
 import scala.jdk.CollectionConverters._
 
@@ -13,8 +12,8 @@ import scala.meta.pc.OffsetParams
 import com.sun.source.tree.BlockTree
 import com.sun.source.tree.CaseTree
 import com.sun.source.tree.ClassTree
-import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.ForLoopTree
+import com.sun.source.tree.LineMap
 import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
@@ -35,12 +34,7 @@ final class JavaChangeVariableTypeProvider(
     compiler.nodeAtPosition(params) match {
       case Some((compilation, cursorPath)) =>
         params.checkCanceled()
-        val source = SourceContext(
-          Trees.instance(compilation.task),
-          compilation.cu,
-          params.text(),
-          compilation.task.getElements()
-        )
+        val source = new SourceContext(compilation, params.text())
         findTargetVariable(cursorPath, source)
           .map(createEdits(_, source))
           .getOrElse(Nil)
@@ -66,45 +60,36 @@ final class JavaChangeVariableTypeProvider(
       target: TargetVariable,
       source: SourceContext
   ): Seq[l.TextEdit] = {
-    val shortener = JavaTypeShortener.forPath(
-      source.compilationUnit,
-      target.path,
-      source.elements
-    )
-    inferReplacementType(target, source, shortener) match {
-      case Some(replacementType) =>
-        val legacyArrayDimensions =
-          legacyArrayDimensionCount(
-            target.variable,
-            target.declaredTypeRange,
-            source
-          )
-        if (arrayDimensionCount(replacementType) >= legacyArrayDimensions) {
-          val typeEdit = new l.TextEdit(
-            target.declaredTypeRange.range,
-            replacementType.stripSuffix("[]" * legacyArrayDimensions)
-          )
-          val importEdit = JavaAutoImportEditor.imports(
-            source.text,
-            shortener.newImports
-          )
-          importEdit.toSeq :+ typeEdit
-        } else Nil
-      case None => Nil
+    val shortener = source.typeShortener(target.path)
+    val edits = for {
+      replacementType <- inferReplacementType(target, source, shortener)
+      legacyArrayDimensions = legacyArrayDimensionCount(
+        target.variable,
+        target.declaredTypeRange,
+        source
+      )
+      if arrayDimensionCount(replacementType) >= legacyArrayDimensions
+    } yield {
+      val typeEdit = new l.TextEdit(
+        target.declaredTypeRange.range,
+        replacementType.stripSuffix("[]" * legacyArrayDimensions)
+      )
+      JavaAutoImportEditor
+        .imports(source.text, shortener.newImports)
+        .toSeq :+ typeEdit
     }
+    edits.getOrElse(Nil)
   }
 
   private def diagnosticMatchesInitializer(
       initializer: Tree,
       source: SourceContext
   ): Boolean =
-    diagnosticRange match {
-      case Some(range) =>
-        source.rangeOf(initializer).exists { initializerRange =>
-          initializerRange.range.encloses(range) &&
-          initializerRange.range.getEnd() == range.getEnd()
-        }
-      case None => true
+    diagnosticRange.forall { range =>
+      source.rangeOf(initializer).exists { initializerRange =>
+        initializerRange.range.encloses(range) &&
+        initializerRange.range.getEnd() == range.getEnd()
+      }
     }
 
   private def inferReplacementType(
@@ -112,18 +97,19 @@ final class JavaChangeVariableTypeProvider(
       source: SourceContext,
       shortener: JavaTypeShortener
   ): Option[String] = {
+    // Javac does not expose a usable initializer type while the assignment is
+    // ill-typed. Replace the declared type and analyze the source again.
     val typeRange = target.declaredTypeRange
     val placeholder = target.variable.getInitializer().getKind() match {
       case Tree.Kind.CONDITIONAL_EXPRESSION => "var"
       case _ => "Object"
     }
     val typeLength = typeRange.endOffset - typeRange.startOffset
-    val patchedText =
-      source.text.patch(
-        typeRange.startOffset,
-        placeholder,
-        typeLength
-      )
+    val patchedText = source.text.patch(
+      typeRange.startOffset,
+      placeholder,
+      typeLength
+    )
     val patchedOffset =
       if (params.offset() >= typeRange.endOffset)
         params.offset() + placeholder.length() - typeLength
@@ -139,12 +125,7 @@ final class JavaChangeVariableTypeProvider(
     patchedParams.checkCanceled()
     compiler.nodeAtPosition(patchedParams).flatMap {
       case (compilation, cursorPath) =>
-        val patchedSource = SourceContext(
-          Trees.instance(compilation.task),
-          compilation.cu,
-          patchedText,
-          compilation.task.getElements()
-        )
+        val patchedSource = new SourceContext(compilation, patchedText)
         for {
           variablePath <- enclosingVariablePath(cursorPath)
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
@@ -154,10 +135,7 @@ final class JavaChangeVariableTypeProvider(
             initializer,
             patchedSource
           )
-          replacementType <- renderInferredType(
-            initializerType,
-            shortener
-          )
+          replacementType <- renderInferredType(initializerType, shortener)
         } yield replacementType
     }
   }
@@ -173,7 +151,7 @@ final class JavaChangeVariableTypeProvider(
         new TreePath(initializerPath, newClass.getIdentifier())
       case _ => initializerPath
     }
-    Option(source.trees.getTypeMirror(inferredTypePath))
+    source.typeOf(inferredTypePath)
   }
 
   private def declaredTypeRange(
@@ -195,7 +173,7 @@ final class JavaChangeVariableTypeProvider(
         sourceRange.endOffset,
         nameStart,
         nameStart + variableName.length(),
-        source.compilationUnit.getLineMap(),
+        source.lineMap,
         source.text
       )
     } yield sourceRange.copy(range = range, endOffset = endOffset)
@@ -251,23 +229,33 @@ object JavaChangeVariableTypeProvider {
   private val TypeAnnotation =
     """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
 
-  private case class SourceContext(
-      trees: Trees,
-      compilationUnit: CompilationUnitTree,
-      text: String,
-      elements: Elements
+  private class SourceContext(
+      compilation: JavaSourceCompile,
+      val text: String
   ) {
+    private val task = compilation.task
+    private val compilationUnit = compilation.cu
+    private val trees = Trees.instance(task)
+    private val sourcePositions = trees.getSourcePositions()
+    val lineMap: LineMap = compilationUnit.getLineMap()
+
+    def typeShortener(path: TreePath): JavaTypeShortener =
+      JavaTypeShortener.forPath(compilationUnit, path, task.getElements())
+
     def startOf(tree: Tree): Int =
-      trees.getSourcePositions().getStartPosition(compilationUnit, tree).toInt
+      sourcePositions.getStartPosition(compilationUnit, tree).toInt
     def endOf(tree: Tree): Int =
-      trees.getSourcePositions().getEndPosition(compilationUnit, tree).toInt
+      sourcePositions.getEndPosition(compilationUnit, tree).toInt
+
+    def typeOf(path: TreePath): Option[TypeMirror] =
+      Option(trees.getTypeMirror(path))
 
     def rangeOf(tree: Tree): Option[SourceRange] = {
       val start = startOf(tree)
       val end = endOf(tree)
       Option.when(start >= 0 && end >= 0)(
         SourceRange(
-          Positions.toLspRange(trees, compilationUnit, tree),
+          Positions.toLspRange(lineMap, start, end, text),
           start,
           end
         )

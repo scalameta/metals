@@ -31,10 +31,8 @@ class ChangeVariableType(
 
     val matchingDiagnostics =
       params.getContext().getDiagnostics().asScala.toSeq.collect {
-        case diagnostic
-            if JavacDiagnostic.IncompatibleTypes
-              .unapply(diagnostic)
-              .isDefined && requestRange.overlapsWith(diagnostic.getRange()) =>
+        case diagnostic @ JavacDiagnostic.IncompatibleTypes()
+            if requestRange.overlapsWith(diagnostic.getRange()) =>
           diagnostic
       }
 
