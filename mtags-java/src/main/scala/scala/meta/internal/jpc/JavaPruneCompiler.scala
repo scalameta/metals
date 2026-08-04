@@ -83,7 +83,6 @@ class JavaPruneCompiler(
       classpath: Seq[Path] = Nil,
       extraOptions: List[String] = Nil
   ): List[String] = {
-    val finalClasspath = classpath :+ headerCompiler
     val options = List.newBuilder[String]
     options ++= List(
       "-Xprefer:source",
@@ -98,10 +97,12 @@ class JavaPruneCompiler(
       "-proc:none"
     )
     val processedExtraOptions = processExtraOptions(extraOptions, files)
-    if (finalClasspath.nonEmpty) {
-      options += "-classpath"
-      options += finalClasspath.mkString(File.pathSeparator)
-    }
+    // Always pass -classpath explicitly, even when empty: an absent
+    // -classpath makes javac fall back to the host JVM's own
+    // java.class.path, leaking our own runtime dependencies into the
+    // compiled target's classpath.
+    options += "-classpath"
+    options += classpath.mkString(File.pathSeparator)
     options ++= processedExtraOptions
     // Add --patch-module option if we're compiling sources from the JDK.
     for {
@@ -348,10 +349,12 @@ class JavaPruneCompiler(
       .mkString("-Xplugin:MetalsHeaderCompiler ", " ", "")
     options += headerCompilerOption
     var isAnnotationPath = false
+    var processorPathPresent = false
     extraOptions.foreach { extraOption =>
       val nextOption: String =
         if (extraOption == "-processorpath") {
           isAnnotationPath = true
+          processorPathPresent = true
           extraOption
         } else if (isAnnotationPath) {
           // Processing the option following "-processorpath"
@@ -361,11 +364,24 @@ class JavaPruneCompiler(
               .mkString(File.pathSeparator)
           processorPath
         } else if (extraOption.startsWith("-processorpath=")) {
+          processorPathPresent = true
           s"${extraOption}${File.pathSeparator}${headerCompiler}"
         } else {
           extraOption
         }
       options += nextOption
+    }
+    if (!processorPathPresent) {
+      // Without an explicit -processorpath, javac's Plugin/Processor
+      // ServiceLoader lookup falls back to scanning the entire -classpath
+      // (JavacProcessingEnvironment.getProcessorClassLoader). That classpath
+      // can contain a jar built for a newer JDK than the one running this
+      // presentation compiler, and merely loading such a jar's Plugin
+      // crashes the whole lookup before MetalsHeaderCompiler is ever found.
+      // Always setting -processorpath scopes plugin discovery to a
+      // classpath we control instead.
+      options += "-processorpath"
+      options += headerCompiler.toString()
     }
     options.result()
   }

@@ -78,6 +78,7 @@ final class DefinitionProvider(
     mbt,
     definitionProviders,
     protobufLspConfig,
+    mtags,
   )
   val destinationProvider = new DestinationProvider(
     index,

@@ -91,22 +91,22 @@ import org.eclipse.{lsp4j => l}
 /**
  * Metals implementation of the Scala Language Service.
  * @param ec
- *  Execution context used for submitting tasks. This class DO NOT manage the
- *  lifecycle of this execution context.
+ *  Execution context used for submitting tasks.
+ *  This class DOES NOT manage the lifecycle of this execution context.
  * @param sh
- *  Scheduled executor service used for scheduling tasks. This class DO NOT
- *  manage the lifecycle of this executor.
+ *  Scheduled executor service used for scheduling tasks.
+ *  This class DOES NOT manage the lifecycle of this executor.
  * @param serverInputs
- *  Collection of different parameters used by Metals for running,
- *  which main purpose is allowing for custom behavior in tests.
+ *  Collection of different parameters used by Metals for running.
+ *  Their main purpose is allowing for custom behavior in tests.
  * @param workspace
  *  An absolute path to the workspace.
  * @param client
- *  Metals client used for sending notifications to the client. This class DO
- *  NOT manage the lifecycle of this client. It is the responsibility of the
- *  caller to shut down the client.
+ *  Metals client used for sending notifications to the client.
+ *  This class DOES NOT manage the lifecycle of this client.
+ *  It is the responsibility of the caller to shut down the client.
  * @param initializeParams
- *  Initialization parameters send by the client in the initialize request,
+ *  Initialization parameters received from the client in the initialize request,
  *  which is the first request sent to the server by the client.
  */
 abstract class MetalsLspService(
@@ -153,8 +153,6 @@ abstract class MetalsLspService(
   protected val cancelables = new MutableCancelable()
   val isCancelled = new AtomicBoolean(false)
   val wasInitialized = new AtomicBoolean(false)
-  // Tracks whether proto files have been saved since the last Java PC restart.
-  private val protoFilesHaveChanged = new AtomicBoolean(false)
 
   override def cancel(): Unit = {
     if (isCancelled.compareAndSet(false, true)) {
@@ -938,7 +936,11 @@ abstract class MetalsLspService(
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
     // Update in-memory buffer contents from LSP client
-    buffers.put(path, params.getTextDocument.getText)
+    buffers.put(
+      path,
+      params.getTextDocument.getText,
+      params.getTextDocument.getVersion(),
+    )
 
     val optVersion =
       Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
@@ -997,11 +999,6 @@ abstract class MetalsLspService(
     }
     scalaCli.didFocus(path)
     syncStatusReporter.didFocus(uri)
-
-    // Restart Java PCs if proto files have been saved since last Java file focus
-    if (path.isJavaFilename && protoFilesHaveChanged.getAndSet(false)) {
-      compilers.restartJavaCompilers()
-    }
 
     val future =
       if (isDependencySource(path)) {
@@ -1104,7 +1101,10 @@ abstract class MetalsLspService(
       case None => CompletableFuture.completedFuture(())
       case Some(change) =>
         val path = params.getTextDocument.getUri.toAbsolutePath
-        buffers.put(path, change.getText)
+        Option(params.getTextDocument.getVersion()) match {
+          case Some(version) => buffers.put(path, change.getText, version)
+          case None => buffers.put(path, change.getText)
+        }
         diagnostics.didChange(path)
         val futures = List.newBuilder[Future[Unit]]
         futures += compilers.didChange(path)
@@ -1130,9 +1130,10 @@ abstract class MetalsLspService(
     val path = params.getTextDocument.getUri.toAbsolutePath
     savedFiles.add(path)
     mbt2.didSave(path)
-    // Invalidate proto cache and track change so we restart Java PCs on next focus
+    // The Java presentation compiler caches resolved symbols from the
+    // synthesized proto outline and won't re-request them until restarted.
     if (path.isProtoFilename) {
-      protoFilesHaveChanged.set(true)
+      compilers.restartJavaCompilers()
     }
     Future
       .sequence(
@@ -1221,6 +1222,15 @@ abstract class MetalsLspService(
       case None =>
         Future.successful(())
     })
+    // A proto file can change on disk without ever going through didSave,
+    // for example when a rename's workspace edit is applied to a file that
+    // isn't open in an editor. Without this, the synthesized outline and
+    // the Java presentation compiler's cached symbols go stale until the
+    // next full restart.
+    if (paths.exists(_.isProtoFilename)) {
+      paths.filter(_.isProtoFilename).foreach(mbt2.didSave)
+      compilers.restartJavaCompilers()
+    }
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
   }
@@ -1231,7 +1241,8 @@ abstract class MetalsLspService(
    */
   protected def fileWatchFilter(path: Path): Boolean = {
     val abs = AbsolutePath(path)
-    abs.isScalaOrJava || abs.isSemanticdb || abs.isInBspDirectory(folder)
+    abs.isScalaOrJava || abs.isProtoFilename || abs.isSemanticdb ||
+    abs.isInBspDirectory(folder)
   }
 
   protected def onChange(paths: Seq[AbsolutePath]): Future[Unit] = {

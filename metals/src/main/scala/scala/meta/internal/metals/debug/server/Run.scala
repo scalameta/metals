@@ -7,6 +7,7 @@ import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.ManifestJar
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
@@ -54,7 +55,7 @@ object Run {
           redirectErrorOutput = false,
           envOptions,
           processErr = Some(logger.logError),
-          processOut = Some(logger.logOutput),
+          processOut = Some(ProcessOutput.Lines(logger.logOutput)),
         )
       } else {
         ManifestJar.withTempManifestJar(classPath) { manifestJar =>
@@ -67,7 +68,7 @@ object Run {
             redirectErrorOutput = false,
             envOptions,
             processErr = Some(logger.logError),
-            processOut = Some(logger.logOutput),
+            processOut = Some(ProcessOutput.Lines(logger.logOutput)),
           )
         }
       }

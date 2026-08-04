@@ -16,11 +16,13 @@ import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
+import ch.epfl.scala.debugadapter.MultiOutputModule
 import ch.epfl.scala.{debugadapter => dap}
 
 class MbtDebugSessionStarter(
@@ -73,7 +75,7 @@ class MbtDebugSessionStarter(
           workspace,
           redirectErrorOutput = false,
           env = javaHomeEnv(target),
-          processOut = Some(out),
+          processOut = Some(ProcessOutput.Lines(out)),
           processErr = Some(err),
         )
         .complete,
@@ -97,7 +99,7 @@ class MbtDebugSessionStarter(
         workspace,
         redirectErrorOutput = false,
         env = javaHomeEnv(target),
-        processOut = Some(out),
+        processOut = Some(ProcessOutput.Lines(out)),
         processErr = Some(err),
       )
       .complete
@@ -139,7 +141,7 @@ class MbtDebugSessionStarter(
             workspace,
             redirectErrorOutput = false,
             env = javaHomeEnv(target),
-            processOut = Some(out),
+            processOut = Some(ProcessOutput.Lines(out)),
             processErr = Some(err),
           )
           .complete,
@@ -280,6 +282,7 @@ class MbtDebugSessionStarter(
 
   private def javaHomeEnv(target: MbtTarget): Map[String, String] =
     target.javaHome
+      .orElse(userJavaHome())
       .map { raw =>
         val path =
           if (raw.startsWith("file:")) Paths.get(URI.create(raw)).toString
@@ -315,7 +318,14 @@ class MbtDebugSessionStarter(
           m.name == target.name &&
           m.absolutePath.toString.replace('\\', '/').contains(".metals/mbt-out")
         )
-          m.copy(absolutePath = primary.toNIO)
+          MultiOutputModule(
+            name = m.name,
+            scalaVersion = m.scalaVersion,
+            scalacOptions = m.scalacOptions,
+            absolutePath = primary.toNIO,
+            classPath = realClassDirs.map(_.toNIO),
+            sourceEntries = m.sourceEntries,
+          )
         else m
       }
       val patchedRunClassPath =

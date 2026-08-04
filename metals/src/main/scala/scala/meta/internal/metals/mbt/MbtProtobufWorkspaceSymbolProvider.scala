@@ -87,7 +87,19 @@ final class MbtProtobufWorkspaceSymbolProvider(
   ): Iterator[VirtualTextDocument] = {
     val packagePath = requestedPackage.stripSuffix("/").replace('/', '.')
 
-    val allOutlines = doc.getOrComputeJavaOutlines(() =>
+    allJavaOutlines(doc).iterator.filter { outline =>
+      outline.packages.headOption
+        .map(_.stripSuffix("/").replace('/', '.'))
+        .contains(packagePath)
+    }
+  }
+
+  /**
+   * All Java outlines generated from the given proto document, regardless of
+   * package.
+   */
+  def allJavaOutlines(doc: IndexedDocument): Seq[VirtualTextDocument] = {
+    doc.getOrComputeJavaOutlines(() =>
       try {
         val input = doc.file.toInputFromBuffers(buffers)
         val source = new ProtoSourceFile(input.path, input.text)
@@ -136,12 +148,6 @@ final class MbtProtobufWorkspaceSymbolProvider(
           Seq.empty
       }
     )
-
-    allOutlines.iterator.filter { outline =>
-      outline.packages.headOption
-        .map(_.stripSuffix("/").replace('/', '.'))
-        .contains(packagePath)
-    }
   }
 
   def findProtoRpcDefinition(

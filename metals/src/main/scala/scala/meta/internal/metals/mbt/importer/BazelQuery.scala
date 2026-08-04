@@ -11,6 +11,7 @@ import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
 
 object BazelQuery {
@@ -106,7 +107,7 @@ object BazelQuery {
   private val ruleKinds: List[String] =
     List(
       "scala_library", "java_library", "scala_binary", "java_binary",
-      "scala_test", "java_test",
+      "scala_test", "java_test", "scala_import", "java_import",
     )
 
 }
@@ -120,7 +121,8 @@ case class BazelQuery(
   import BazelQuery._
 
   def run(
-      env: Env
+      env: Env,
+      mbtJavaHome: Option[String] = None,
   )(implicit ec: ExecutionContext): Future[String] = {
     import env._
     val buf = new StringBuilder()
@@ -136,8 +138,8 @@ case class BazelQuery(
         ) ++ queryArgs ++ extraArgs,
         projectRoot,
         redirectErrorOutput = false,
-        javaHome,
-        processOut = line => {
+        mbtJavaHome.orElse(javaHome),
+        processOut = ProcessOutput.Lines { line =>
           buf.append(line)
           buf.append(System.lineSeparator())
         },

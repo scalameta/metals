@@ -71,11 +71,27 @@ class MbtImporterDiscoverySuite extends BaseSuite {
     assertEquals(importers.head.name, "gen-sh")
   }
 
+  test("discover-mbt-bat-script") {
+    val workspace = AbsolutePath(Files.createTempDirectory("mbt-disco"))
+    write(workspace.resolve("gen.mbt.bat"), "@echo off")
+
+    val importers = buildTools(workspace).mbtImporters(
+      shellRunner = null,
+      userConfig = () => UserConfiguration(),
+      languageClient = None,
+      tables = None,
+    )
+    assertEquals(importers.length, 1)
+    assert(importers.head.isInstanceOf[ScriptMbtImporter])
+    assertEquals(importers.head.name, "gen-bat")
+  }
+
   test("discover-multiple-scripts") {
     val workspace = AbsolutePath(Files.createTempDirectory("mbt-disco"))
     write(workspace.resolve("a.mbt.scala"))
     write(workspace.resolve("b.mbt.sh"))
     write(workspace.resolve("c.mbt.java"))
+    write(workspace.resolve("d.mbt.bat"))
 
     val importers = buildTools(workspace).mbtImporters(
       shellRunner = null,
@@ -84,10 +100,10 @@ class MbtImporterDiscoverySuite extends BaseSuite {
       tables = None,
     )
     val scriptImporters = importers.collect { case s: ScriptMbtImporter => s }
-    assertEquals(scriptImporters.length, 3)
+    assertEquals(scriptImporters.length, 4)
     assertEquals(
       scriptImporters.map(_.name).toSet,
-      Set("a-scala", "b-sh", "c-java"),
+      Set("a-scala", "b-sh", "c-java", "d-bat"),
     )
   }
 
@@ -96,6 +112,7 @@ class MbtImporterDiscoverySuite extends BaseSuite {
     write(workspace.resolve("exporter.scala"))
     write(workspace.resolve("exporter.sh"))
     write(workspace.resolve("exporter.java"))
+    write(workspace.resolve("exporter.bat"))
 
     val importers = buildTools(workspace).mbtImporters(
       shellRunner = null,

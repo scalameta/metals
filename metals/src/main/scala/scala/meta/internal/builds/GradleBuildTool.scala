@@ -187,21 +187,30 @@ case class GradleBuildTool(
   )(taskCode: String => String): Path = {
     val projectBlock = target.projectPath match {
       case Some(path) =>
-        val gradlePath =
-          if (path == ":" || path.isEmpty) ":"
-          else if (path.startsWith(":")) path
-          else s":$path"
+        val (buildNameOpt, internalPath) =
+          GradleBuildTool.decomposeProjectPath(path)
+
+        // For included builds the same init script runs in every build's
+        // context.  Guard so we only configure the intended build.
+        val guardBlock = buildNameOpt
+          .map { name =>
+            s"""|  if (gradle.rootProject.name != ${GradleBuildTool.groovyString(name)}) {
+                |    return
+                |  }""".stripMargin
+          }
+          .getOrElse("")
 
         val projectLookup =
-          if (gradlePath == ":") "gradle.rootProject"
+          if (internalPath == ":") "gradle.rootProject"
           else
-            s"gradle.rootProject.findProject(${GradleBuildTool.groovyString(gradlePath)})"
+            s"gradle.rootProject.findProject(${GradleBuildTool.groovyString(internalPath)})"
 
-        s"""|  def project = $projectLookup
+        s"""|$guardBlock
+            |  def project = $projectLookup
             |  if (project == null) {
             |    return
             |  }
-            |${taskCode(gradlePath)}""".stripMargin
+            |${taskCode(internalPath)}""".stripMargin
       case None =>
         s"""|  throw new GradleException("Missing Gradle project path for Metals $errorContext")
             |""".stripMargin
@@ -297,9 +306,7 @@ case class GradleBuildTool(
         testSuites.getJvmOptions
       )
     val initScriptArgs =
-      if (jvmOptions.isEmpty) Nil
-      else
-        List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
+      List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
 
     gradleBaseCommand() ::: List(
       "--console=plain"
@@ -326,8 +333,18 @@ case class GradleBuildTool(
       jvmOptions: List[String],
   ): Path =
     gradleInitScript(target, GradleBuildTool.metalsTestTask, "test") { _ =>
+      val jvmArgsLine =
+        if (jvmOptions.isEmpty) ""
+        else s"    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})\n"
       s"""|  project.tasks.withType(Test).configureEach { task ->
-          |    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})
+          |$jvmArgsLine
+          |    task.testLogging {
+          |      events 'failed', 'skipped'
+          |      exceptionFormat = 'full'
+          |      showStackTraces = true
+          |      showCauses = true
+          |      showExceptions = true
+          |    }
           |  }""".stripMargin
     }
 
@@ -348,6 +365,28 @@ object GradleBuildTool {
       .replace("'", "\\'")
       .replace("\n", "\\n")
       .replace("\r", "\\r") + "'"
+
+  /**
+   * Decomposes a Metals project-path token into an optional included-build name
+   * and the Gradle project path within that build.
+   *
+   * Examples:
+   *   ":"                      -> (None,                         ":")
+   *   ":server"                -> (None,                         ":server")
+   *   "build-tools-internal:"  -> (Some("build-tools-internal"), ":")
+   *   "build-tools:reaper"     -> (Some("build-tools"),          ":reaper")
+   */
+  private[builds] def decomposeProjectPath(
+      path: String
+  ): (Option[String], String) =
+    if (path == ":" || path.isEmpty) (None, ":")
+    else if (path.startsWith(":")) (None, path)
+    else if (path.endsWith(":")) (Some(path.dropRight(1)), ":")
+    else {
+      val sep = path.indexOf(':')
+      if (sep < 0) (None, s":$path")
+      else (Some(path.take(sep)), path.drop(sep))
+    }
 
   def isGradleRelatedPath(
       workspace: AbsolutePath,

@@ -1,7 +1,5 @@
 package scala.meta.internal.metals.mbt
 
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
 import java.net.URI
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
@@ -15,31 +13,17 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.build.bsp.WrappedSourcesResult
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
-import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
 
-import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.BuildServerConnection
-import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ClosableOutputStream
-import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
-import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.QuietInputStream
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.SocketConnection
-import scala.meta.internal.metals.UserConfiguration
-import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -102,7 +86,6 @@ import ch.epfl.scala.bsp4j.TestParamsDataKind
 import ch.epfl.scala.bsp4j.TestProvider
 import ch.epfl.scala.bsp4j.TestResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
-import org.eclipse.lsp4j.jsonrpc.Launcher
 
 final class MbtBuildServer(
     workspace: AbsolutePath,
@@ -286,7 +269,12 @@ final class MbtBuildServer(
       .flatMap(_.uncheckedSources)
       .filter(_.endsWith(".srcjar"))
       .map(workspace.resolve)
-      .filter(p => p.exists && p.isFile)
+      .filter { p =>
+        val ok = p.exists && p.isFile
+        if (!ok)
+          scribe.warn(s"mbt-v2: uncheckedSources srcjar does not exist: $p")
+        ok
+      }
     if (srcJars.nonEmpty)
       GitVCS.lsFilesFromSrcJars(srcJars, workspace, extractOnly = true)
   }
@@ -738,84 +726,4 @@ object MbtBuildServer {
           )
       case _ => None
     }
-
-  def newServer(
-      workspace: AbsolutePath,
-      buildClient: MetalsBuildClient,
-      languageClient: ConfiguredLanguageClient,
-      config: MetalsServerConfig,
-      requestTimeOutNotification: DismissedNotifications#Notification,
-      reconnectNotification: DismissedNotifications#Notification,
-      bspStatusOpt: Option[ConnectionBspStatus],
-      mbtBuild: () => MbtBuild,
-      workDoneProgress: WorkDoneProgress,
-      scalaVersionSelector: ScalaVersionSelector,
-      userConfig: () => UserConfiguration,
-      debugStarter: Option[MbtDebugSessionStarter] = None,
-  )(implicit
-      ec: ExecutionContextExecutorService
-  ): Future[BuildServerConnection] = {
-    def connect(): Future[SocketConnection] = Future.successful {
-      val clientInput = new PipedInputStream()
-      val serverOutput = new PipedOutputStream(clientInput)
-      val serverInput = new PipedInputStream()
-      val clientOutput = new PipedOutputStream(serverInput)
-      val finished = Promise[Unit]()
-      def eagerBuild() = {
-        val updatedBuild = mbtBuild()
-        if (updatedBuild.isEmpty) MbtBuild.fromWorkspace(workspace)
-        else updatedBuild
-      }
-      val server =
-        new MbtBuildServer(
-          workspace,
-          eagerBuild,
-          scalaVersionSelector,
-          debugStarter,
-        )
-      val serverLauncher = new Launcher.Builder[BuildClient]()
-        .setInput(serverInput)
-        .setOutput(serverOutput)
-        .setLocalService(server)
-        .setRemoteInterface(classOf[BuildClient])
-        .setExecutorService(ec)
-        .create()
-      server.onConnectWithClient(serverLauncher.getRemoteProxy)
-      val listening = serverLauncher.startListening()
-      Future {
-        listening.get()
-        ()
-      }.onComplete(finished.tryComplete)
-      val cancel = Cancelable { () =>
-        listening.cancel(false)
-        clientOutput.close()
-        clientInput.close()
-        serverInput.close()
-        serverOutput.close()
-        finished.trySuccess(())
-      }
-      SocketConnection(
-        name,
-        new ClosableOutputStream(clientOutput, s"$name output stream"),
-        new QuietInputStream(clientInput, s"$name input stream"),
-        List(cancel),
-        finished,
-      )
-    }
-
-    BuildServerConnection.fromSockets(
-      workspace,
-      workspace,
-      buildClient,
-      languageClient,
-      connect,
-      requestTimeOutNotification,
-      reconnectNotification,
-      config,
-      userConfig(),
-      name,
-      bspStatusOpt,
-      workDoneProgress = workDoneProgress,
-    )
-  }
 }

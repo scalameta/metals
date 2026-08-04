@@ -1,5 +1,6 @@
 package pc
 
+import scala.meta.internal.proto.diag.ProtoError
 import scala.meta.internal.proto.diag.SourceFile
 import scala.meta.internal.proto.parse.Parser
 
@@ -17,6 +18,13 @@ class ParserEdgeCasesSuite extends FunSuite {
       val result = Parser.parse(source)
       // Just verify we can parse without exception
       assert(result != null, s"Parser returned null for: $name")
+    }
+  }
+
+  def parseError(name: String, code: String): Unit = {
+    test(name) {
+      val source = new SourceFile("test.proto", code)
+      intercept[ProtoError](Parser.parse(source))
     }
   }
 
@@ -117,6 +125,24 @@ class ParserEdgeCasesSuite extends FunSuite {
        |""".stripMargin,
   )
 
+  // Bracketed options on an extension range, as upstream `descriptor.proto` has.
+  // The message literal spans lines and separates fields with neither commas nor
+  // semicolons.
+  parseOk(
+    "extensions-range-with-declaration-options",
+    """|syntax = "proto2";
+       |message FileDescriptorSet {
+       |  optional string name = 1;
+       |  extensions 536000000 [declaration = {
+       |    number: 536000000
+       |    type: ".buf.descriptor.v1.FileDescriptorSetExtension"
+       |    full_name: ".buf.descriptor.v1.buf_file_descriptor_set_extension"
+       |  }];
+       |  extensions 1000 to max [verification = UNVERIFIED];
+       |}
+       |""".stripMargin,
+  )
+
   parseOk(
     "group-declaration",
     """|syntax = "proto2";
@@ -156,6 +182,25 @@ class ParserEdgeCasesSuite extends FunSuite {
        |      "[hc4q8] [2023-01-10 19:12:58 +0000] [2] [INFO] Using worker: sync\n"
        |  ];
        |}
+       |""".stripMargin,
+  )
+
+  parseOk(
+    "edition-2023-basic",
+    """|edition = "2023";
+       |package devtools.skyframe;
+       |message FileInvalidationData {
+       |  string overflow_key = 1;
+       |  int64 parent_mtsv = 2;
+       |}
+       |""".stripMargin,
+  )
+
+  parseError(
+    "edition-then-syntax-is-duplicate-declaration",
+    """|edition = "2023";
+       |syntax = "proto3";
+       |message Foo {}
        |""".stripMargin,
   )
 }

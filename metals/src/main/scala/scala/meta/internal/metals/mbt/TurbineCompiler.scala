@@ -19,6 +19,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
@@ -47,7 +48,7 @@ object TurbineCompiler {
 
   def compileClassfiles[T](
       toParse: ParArray[T],
-      toSourceFile: T => Option[SourceFile],
+      toSourceFile: T => Seq[SourceFile],
       classpath: Seq[Path],
       progressBars: ProgressBars,
   )(implicit rc: ReportContext): TurbineCompileResult = {
@@ -68,16 +69,14 @@ object TurbineCompiler {
 
   private def parseInputs[T](
       inputs: ParArray[T],
-      toSourceFile: T => Option[SourceFile],
+      toSourceFile: T => Seq[SourceFile],
   ): ImmutableList[Tree.CompUnit] = {
     val result = new ConcurrentLinkedQueue[Tree.CompUnit]()
     inputs.foreach { input =>
       try {
-        toSourceFile(input) match {
-          case None =>
-          // Silently ignore entries that may not exist
-          case Some(source) =>
-            result.add(Parser.parse(source))
+        // An empty result means the entry doesn't exist or isn't Java-related.
+        toSourceFile(input).foreach { source =>
+          result.add(Parser.parse(source))
         }
       } catch {
         case NonFatal(_) =>
@@ -127,10 +126,10 @@ private case class SourcepathJavaFileObject(
 
 class TurbineCompiler[T](
     allCompilationUnits: () => ParArray[T],
-    parseUnit: T => Option[SourceFile],
+    parseUnit: T => Seq[SourceFile],
     classpath: () => Seq[Path],
     progressBars: ProgressBars,
-    debounceDelay: FiniteDuration,
+    turbineRecompileDelay: () => TurbineRecompileDelayConfig,
     listProtoJavaOutlinesForPackage: String => Iterator[JavaFileObject],
     sleeper: Sleeper,
     onIndexingDone: () => Unit,
@@ -152,9 +151,10 @@ class TurbineCompiler[T](
       sourcepathJavaFileObject <- deque.asScala.iterator
     } yield sourcepathJavaFileObject
   }.toSeq
+  private def debounceDelay: FiniteDuration = turbineRecompileDelay().duration
   // When delay is >= 1 hour, consider turbine recompilation effectively disabled.
   // In this mode, we rely entirely on SOURCE_PATH fallback for updated sources.
-  private val isRecompilationDisabled: Boolean =
+  private def isRecompilationDisabled: Boolean =
     debounceDelay.toMillis >= 3600000
 
   private val doCompile =

@@ -975,18 +975,16 @@ object Messages {
     ): String = {
       val using = usingString(usingNow)
       val recommended = recommendationString(usingNow)
-      val canUpgradeTo211 = usingNow.exists(version =>
-        ScalaVersions.scalaBinaryVersionFromFullVersion(version) == "2.11" &&
-          SemVer.isLaterVersion(version, BuildInfo.scala211)
+      val uses211 = usingNow.exists(
+        ScalaVersions.scalaBinaryVersionFromFullVersion(_) == "2.11"
       )
-      val deprecatedAleternative =
-        if (canUpgradeTo211)
-          s" or alternatively to legacy Scala ${BuildInfo.scala211}"
+      val deprecatedAlternative =
+        if (uses211) " or alternatively to legacy Scala 2.11.12"
         else ""
       val isAre = if (usingNow.size == 1) "is" else "are"
       val descriptionString = description.map(s => s"$s ").getOrElse("")
       s"You are using $descriptionString$using, which $isAre not supported in this version of Metals. " +
-        s"Please upgrade to $recommended$deprecatedAleternative."
+        s"Please upgrade to $recommended$deprecatedAlternative."
     }
   }
 

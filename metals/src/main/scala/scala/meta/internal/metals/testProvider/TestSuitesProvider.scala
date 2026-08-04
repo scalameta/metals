@@ -372,7 +372,11 @@ final class TestSuitesProvider(
       doc: Option[TextDocument],
   ): Seq[AddTestCases] = {
     doc
-      .orElse(semanticdbs().textDocument(path).documentIncludingStale)
+      .orElse(
+        semanticdbs()
+          .textDocument(path, requestInteractive = true)
+          .documentIncludingStale
+      )
       .map { semanticdb =>
         suites.flatMap { suite =>
           val testCases = suite.framework match {
@@ -529,9 +533,7 @@ final class TestSuitesProvider(
       // index will be updated later
       val currentlyCached = index.getSuiteNames(currentTarget.target)
       val cachedSuites = mutable.Set.from(currentlyCached)
-      currentTarget.testSymbols
-        .readOnlySnapshot()
-        .toList
+      currentTarget.testSymbols.toList
         // sort the symbols lexically so that symbols with the same fullyQualifiedName
         // will be grouped, and the class will come before companion object (i.e.
         // `a.b.WordSpec#` < `a.b.WordSpec.`). This ensures that the class is put into the cache
