@@ -323,6 +323,44 @@ class DocumentLinksProviderSuite extends BaseSuite {
       "target should remain null without definition provider",
     )
   }
+
+  // Javadoc separates a nested class from its outer one with a dot, the same
+  // character that separates packages, so a dotted reference has two readings
+  // and the nested one has to come first.
+  test("dotted-class-ref-candidates") {
+    val expected = Map(
+      // Every part but the last reads as a package.
+      "java.util.List" -> List("java/util/List#"),
+      // `Entry` is nested in `Map`, not a class in package `java.util.Map`.
+      "java.util.Map.Entry" -> List(
+        "java/util/Map#Entry#",
+        "java/util/Map/Entry#",
+      ),
+      // Nesting keeps going for as many capitalized parts as follow.
+      "a.b.Outer.Inner.Leaf" -> List(
+        "a/b/Outer#Inner#Leaf#",
+        "a/b/Outer/Inner/Leaf#",
+      ),
+      // No package to strip, so the first part is already the outer class.
+      "Outer.Inner" -> List("Outer#Inner#", "Outer/Inner#"),
+      // A reference that ignores the naming convention has no nested reading,
+      // so only the all-packages one is offered.
+      "com.example.util.helpers" -> List("com/example/util/helpers#"),
+      // A capitalized package leads the guess astray, which is why the
+      // all-packages reading stays as the fallback.
+      "com.Example.util.Thing" -> List(
+        "com/Example#util#Thing#",
+        "com/Example/util/Thing#",
+      ),
+    )
+    for ((classRef, candidates) <- expected) {
+      assertEquals(
+        DocumentLinksProvider.dottedClassRefToSymbols(classRef),
+        candidates,
+        s"unexpected candidates for '$classRef'",
+      )
+    }
+  }
 }
 
 object DocumentLinksProviderSuite {
