@@ -3,29 +3,14 @@ import sbt.Keys._
 import sbt._
 
 object InputProperties extends AutoPlugin {
-  var files: Option[Seq[File]] = None
   def resourceGenerator(
       input: Reference,
       input3: Reference,
   ): Def.Initialize[Task[Seq[File]]] =
     Def.taskDyn {
-      files.synchronized {
-        files match {
-          case Some(value) if value.forall(_.isFile) =>
-            Def.task(value)
-          case _ =>
-            val baseInput = resourceGeneratorImpl(input, "metals-input")
-            val scala3Input = resourceGeneratorImpl(input3, "metals-input3")
-            baseInput.zipWith(scala3Input)((a, b) =>
-              Seq(a, b).join
-                .map { generated =>
-                  val out = generated.flatten
-                  files = Some(out)
-                  out
-                }
-            )
-        }
-      }
+      val baseInput = resourceGeneratorImpl(input, "metals-input")
+      val scala3Input = resourceGeneratorImpl(input3, "metals-input3")
+      baseInput.zipWith(scala3Input)((a, b) => Seq(a, b).join.map(_.flatten))
     }
   def resourceGeneratorImpl(
       input: Reference,
