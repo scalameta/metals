@@ -296,6 +296,61 @@ class DocumentLinkLspSuite extends BaseLspSuite("document-link") {
     }
   }
 
+  // `Outer.Inner` is dotted but names no package, so for a file in `package a`
+  // it means `a/Outer#Inner#`.
+  test("java-link-to-nested-class-same-package") {
+    val file = "a/src/main/java/a/Main.java"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a":{}}
+           |/a/src/main/java/a/Outer.java
+           |package a;
+           |
+           |public class Outer {
+           |  public static class Inner {
+           |    public static void doSomething() {}
+           |  }
+           |}
+           |/a/src/main/java/a/Main.java
+           |package a;
+           |
+           |/**
+           | * Uses {@link Outer.Inner} and {@link Outer.Inner#doSomething}.
+           | */
+           |public class Main {
+           |  public static void main(String[] args) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      _ <- server.didOpen("a/src/main/java/a/Outer.java")
+      links <- server.documentLinks(file)
+      _ = assertEquals(links.length, 2)
+      classLink = links.find(_.getTooltip == "Outer.Inner").get
+      memberLink = links.find(_.getTooltip == "Outer.Inner#doSomething").get
+      resolvedClass <- server.documentLinkResolve(classLink)
+      resolvedMember <- server.documentLinkResolve(memberLink)
+    } yield {
+      assert(
+        resolvedClass.getTarget != null,
+        "same-package nested class link should resolve",
+      )
+      assert(
+        resolvedClass.getTarget.contains("Outer.java"),
+        s"same-package nested class link should resolve to Outer.java but got: ${resolvedClass.getTarget}",
+      )
+      assert(
+        resolvedMember.getTarget != null,
+        "same-package nested class member link should resolve",
+      )
+      assert(
+        resolvedMember.getTarget.contains("Outer.java"),
+        s"same-package nested class member link should resolve to Outer.java but got: ${resolvedMember.getTarget}",
+      )
+    }
+  }
+
   // Javadoc separates a nested class from its outer one with a dot, the same
   // character that separates packages, so `a.Outer.Inner` has to be tried as
   // `a/Outer#Inner#` and not only as `a/Outer/Inner#`.

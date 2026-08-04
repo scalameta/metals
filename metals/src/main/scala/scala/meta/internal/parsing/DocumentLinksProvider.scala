@@ -283,7 +283,8 @@ final class DocumentLinksProvider(
    * Converts a class reference to candidate SemanticDB symbols.
    * For simple names (no dots), tries same-package first.
    * For dotted names, tries the nested-class reading first, see
-   * [[nestedClassSymbol]].
+   * [[nestedClassSymbol]], prefixed with the current package when the reference
+   * names none.
    */
   private def classRefToSymbols(
       classRef: String,
@@ -291,8 +292,7 @@ final class DocumentLinksProvider(
   ): List[String] = {
     val isSimpleName = !classRef.contains('.')
     if (isSimpleName) {
-      val path = fileUri.toAbsolutePath
-      val packagePrefix = buffers.get(path).map(findPackageName).getOrElse("")
+      val packagePrefix = currentPackage(fileUri)
       val samePackageSymbol =
         if (packagePrefix.nonEmpty) s"$packagePrefix/$classRef#"
         else s"$classRef#"
@@ -303,12 +303,26 @@ final class DocumentLinksProvider(
         List(simpleSymbol)
     } else {
       val toplevelSymbol = Symbol.fromToplevelClassName(classRef).value
-      nestedClassSymbol(classRef) match {
+      val unqualifiedSymbols = nestedClassSymbol(classRef) match {
         case Some(nested) => List(nested, toplevelSymbol)
         case None => List(toplevelSymbol)
       }
+      // A reference starting with a type names a class of the current package:
+      // `Outer.Inner` inside `package a` is `a/Outer#Inner#`, which no
+      // unqualified reading covers. First, as for a simple name.
+      val startsWithTypeName = classRef.headOption.exists(_.isUpper)
+      val packagePrefix =
+        if (startsWithTypeName) currentPackage(fileUri) else ""
+      if (packagePrefix.nonEmpty)
+        unqualifiedSymbols.map(symbol => s"$packagePrefix/$symbol") ++
+          unqualifiedSymbols
+      else
+        unqualifiedSymbols
     }
   }
+
+  private def currentPackage(fileUri: String): String =
+    buffers.get(fileUri.toAbsolutePath).map(findPackageName).getOrElse("")
 
   /**
    * Reads a dotted reference as a nested class, since the dots don't say which
