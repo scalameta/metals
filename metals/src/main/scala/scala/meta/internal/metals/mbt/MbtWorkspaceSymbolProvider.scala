@@ -38,6 +38,7 @@ import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
+import scala.meta.internal.metals.Configs.TurbineCacheConfig
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
@@ -106,6 +107,8 @@ class MbtWorkspaceSymbolProvider(
     sleeper: Sleeper = Sleeper.TestingSleeper,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
       TurbineRecompileDelayConfig.fromConfig(None),
+    turbineCacheConfig: () => TurbineCacheConfig = () =>
+      TurbineCacheConfig.default,
     indexFilters: List[MbtIndexFilter] = MbtIndexFilter.allFilters,
     protobufLspConfig: () => ProtobufLspConfig = () =>
       ProtobufLspConfig.default,
@@ -140,6 +143,12 @@ class MbtWorkspaceSymbolProvider(
   def protoJavaOutlines(file: AbsolutePath): Seq[VirtualTextDocument] =
     documents.get(file).toSeq.flatMap(protobufWorkspace.allJavaOutlines)
 
+  private val turbineCache = new TurbineCache(
+    workspace.resolve(Directories.turbineCache).toNIO,
+    turbineCacheConfig,
+    turbineRecompileDelay,
+    time,
+  )
   private val turbineCompiler: TurbineCompiler[AbsolutePath] =
     new TurbineCompiler[AbsolutePath](
       () => documentsKeys,
@@ -180,6 +189,7 @@ class MbtWorkspaceSymbolProvider(
       onIndexingDone = onIndexingDone,
       onNewProjectClasspath = classpath =>
         protobufWorkspace.onNewProjectClasspath(classpath),
+      turbineCache = Some(turbineCache),
     )
 
   // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
