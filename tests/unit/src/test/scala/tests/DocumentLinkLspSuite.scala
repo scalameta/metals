@@ -295,4 +295,60 @@ class DocumentLinkLspSuite extends BaseLspSuite("document-link") {
       )
     }
   }
+
+  // Javadoc separates a nested class from its outer one with a dot, the same
+  // character that separates packages, so `a.Outer.Inner` has to be tried as
+  // `a/Outer#Inner#` and not only as `a/Outer/Inner#`.
+  test("java-link-to-nested-class") {
+    val file = "a/src/main/java/a/Main.java"
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a":{}}
+           |/a/src/main/java/a/Outer.java
+           |package a;
+           |
+           |public class Outer {
+           |  public static class Inner {
+           |    public static void doSomething() {}
+           |  }
+           |}
+           |/a/src/main/java/a/Main.java
+           |package a;
+           |
+           |/**
+           | * Uses {@link a.Outer.Inner} and {@link a.Outer.Inner#doSomething}.
+           | */
+           |public class Main {
+           |  public static void main(String[] args) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      _ <- server.didOpen("a/src/main/java/a/Outer.java")
+      links <- server.documentLinks(file)
+      _ = assertEquals(links.length, 2)
+      classLink = links.find(_.getTooltip == "a.Outer.Inner").get
+      memberLink = links.find(_.getTooltip == "a.Outer.Inner#doSomething").get
+      resolvedClass <- server.documentLinkResolve(classLink)
+      resolvedMember <- server.documentLinkResolve(memberLink)
+    } yield {
+      assert(
+        resolvedClass.getTarget != null,
+        "nested class link should resolve",
+      )
+      assert(
+        resolvedClass.getTarget.contains("Outer.java"),
+        s"nested class link should resolve to Outer.java but got: ${resolvedClass.getTarget}",
+      )
+      assert(
+        resolvedMember.getTarget != null,
+        "nested class member link should resolve",
+      )
+      assert(
+        resolvedMember.getTarget.contains("Outer.java"),
+        s"nested class member link should resolve to Outer.java but got: ${resolvedMember.getTarget}",
+      )
+    }
+  }
 }

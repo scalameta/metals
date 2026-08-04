@@ -253,6 +253,10 @@ final class DocumentLinksProvider(
    *
    * For fully qualified "java.util.List":
    *   - Returns only "java/util/List#"
+   *
+   * For fully qualified "java.util.Map.Entry":
+   *   - First tries "java/util/Map#Entry#" (Entry nested in Map)
+   *   - Then falls back to "java/util/Map/Entry#" (Entry in package java.util.Map)
    */
   private def javadocRefToSemanticdbSymbols(
       ref: String,
@@ -278,6 +282,8 @@ final class DocumentLinksProvider(
   /**
    * Converts a class reference to candidate SemanticDB symbols.
    * For simple names (no dots), tries same-package first.
+   * For dotted names, tries the nested-class reading first, see
+   * [[nestedClassSymbol]].
    */
   private def classRefToSymbols(
       classRef: String,
@@ -296,7 +302,34 @@ final class DocumentLinksProvider(
       else
         List(simpleSymbol)
     } else {
-      List(Symbol.fromToplevelClassName(classRef).value)
+      val toplevelSymbol = Symbol.fromToplevelClassName(classRef).value
+      nestedClassSymbol(classRef) match {
+        case Some(nested) => List(nested, toplevelSymbol)
+        case None => List(toplevelSymbol)
+      }
+    }
+  }
+
+  /**
+   * Reads a dotted reference as a nested class, since the dots don't say which
+   * of them separate packages: Javadoc writes `java.util.Map.Entry`, which is
+   * `java/util/Map#Entry#` in SemanticDB rather than `java/util/Map/Entry#`.
+   *
+   * Where the packages end is guessed from Java's naming convention, lowercase
+   * packages and capitalized types, so the caller keeps the all-packages
+   * reading as a fallback. Empty for a reference that names no nested class,
+   * which is every reference whose last part is its only capitalized one.
+   */
+  private def nestedClassSymbol(classRef: String): Option[String] = {
+    val parts = classRef.split('.')
+    val firstTypeIndex = parts.indexWhere(_.headOption.exists(_.isUpper))
+    if (firstTypeIndex >= 0 && firstTypeIndex < parts.length - 1) {
+      val packages = parts.take(firstTypeIndex)
+      val packagePrefix =
+        if (packages.isEmpty) "" else packages.mkString("", "/", "/")
+      Some(packagePrefix + parts.drop(firstTypeIndex).mkString("#") + "#")
+    } else {
+      None
     }
   }
 
