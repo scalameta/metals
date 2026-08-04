@@ -10,11 +10,6 @@ import com.sun.tools.javac.util.Context
 import org.eclipse.{lsp4j => l}
 object Positions {
 
-  private val ScannerFactoryThreadLocal = new ThreadLocal[ScannerFactory] {
-    override def initialValue(): ScannerFactory =
-      ScannerFactory.instance(new Context())
-  }
-
   def findNameOffset(
       text: String,
       start: Int,
@@ -124,8 +119,8 @@ object Positions {
     val sourceEnd = end.min(text.length())
     if (sourceStart >= sourceEnd) initial
     else {
-      val scanner = ScannerFactoryThreadLocal
-        .get()
+      val scanner = ScannerFactory
+        .instance(new Context())
         .newScanner(text.substring(sourceStart, sourceEnd), false)
       var result = initial
       scanner.nextToken()

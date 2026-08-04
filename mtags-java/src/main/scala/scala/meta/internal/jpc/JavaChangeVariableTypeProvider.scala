@@ -2,6 +2,9 @@ package scala.meta.internal.jpc
 
 import javax.lang.model.`type`.TypeKind
 import javax.lang.model.`type`.TypeMirror
+import javax.lang.model.element.Element
+import javax.lang.model.element.ExecutableElement
+import javax.lang.model.element.TypeElement
 
 import scala.jdk.CollectionConverters._
 
@@ -14,7 +17,9 @@ import com.sun.source.tree.CaseTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.ForLoopTree
 import com.sun.source.tree.LineMap
+import com.sun.source.tree.MethodInvocationTree
 import com.sun.source.tree.NewClassTree
+import com.sun.source.tree.ParameterizedTypeTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
 import com.sun.source.util.TreePath
@@ -88,7 +93,8 @@ final class JavaChangeVariableTypeProvider(
     diagnosticRange.forall { range =>
       source.rangeOf(initializer).exists { initializerRange =>
         initializerRange.range.encloses(range) &&
-        initializerRange.range.getEnd() == range.getEnd()
+        (initializer.getKind() == Tree.Kind.SWITCH_EXPRESSION ||
+          initializerRange.range.getEnd() == range.getEnd())
       }
     }
 
@@ -101,7 +107,8 @@ final class JavaChangeVariableTypeProvider(
     // ill-typed. Replace the declared type and analyze the source again.
     val typeRange = target.declaredTypeRange
     val placeholder = target.variable.getInitializer().getKind() match {
-      case Tree.Kind.CONDITIONAL_EXPRESSION => "var"
+      case Tree.Kind.CONDITIONAL_EXPRESSION | Tree.Kind.SWITCH_EXPRESSION =>
+        "var"
       case _ => "Object"
     }
     val typeLength = typeRange.endOffset - typeRange.startOffset
@@ -130,28 +137,32 @@ final class JavaChangeVariableTypeProvider(
           variablePath <- enclosingVariablePath(cursorPath)
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
           initializer <- Option(variable.getInitializer())
-          initializerType <- inferredInitializerType(
+          replacementType <- inferredInitializerTypes(
             variablePath,
             initializer,
             patchedSource
-          )
-          replacementType <- renderInferredType(initializerType, shortener)
+          ).flatMap(renderInferredType(_, shortener)).headOption
         } yield replacementType
     }
   }
 
-  private def inferredInitializerType(
+  private def inferredInitializerTypes(
       variablePath: TreePath,
       initializer: Tree,
       source: SourceContext
-  ): Option[TypeMirror] = {
+  ): Seq[TypeMirror] = {
     val initializerPath = new TreePath(variablePath, initializer)
     val inferredTypePath = initializer match {
       case newClass: NewClassTree if newClass.getClassBody() != null =>
         new TreePath(initializerPath, newClass.getIdentifier())
       case _ => initializerPath
     }
-    source.typeOf(inferredTypePath)
+    val declaredReturnType = initializer match {
+      case _: MethodInvocationTree =>
+        source.declaredReturnType(initializerPath).toSeq
+      case _ => Nil
+    }
+    source.typeOf(inferredTypePath).toSeq ++ declaredReturnType
   }
 
   private def declaredTypeRange(
@@ -183,11 +194,14 @@ final class JavaChangeVariableTypeProvider(
       initializerType: TypeMirror,
       shortener: JavaTypeShortener
   ): Option[String] =
-    if (initializerType.getKind() == TypeKind.INTERSECTION) None
-    else {
-      val renderedType =
-        TypeAnnotation.replaceAllIn(shortener.shorten(initializerType), "")
-      Option.when(isRenderableType(renderedType))(renderedType)
+    initializerType.getKind() match {
+      case TypeKind.ERROR | TypeKind.INTERSECTION | TypeKind.NONE |
+          TypeKind.VOID =>
+        None
+      case _ =>
+        val renderedType =
+          TypeAnnotation.replaceAllIn(shortener.shorten(initializerType), "")
+        Option.when(isRenderableType(renderedType))(renderedType)
     }
 
   private def hasSingleDeclarator(
@@ -222,12 +236,20 @@ final class JavaChangeVariableTypeProvider(
   }
 
   private def usesDiamondOperator(initializer: Tree): Boolean =
-    initializer.toString().contains("<>")
+    initializer match {
+      case newClass: NewClassTree =>
+        newClass.getIdentifier() match {
+          case paramType: ParameterizedTypeTree =>
+            paramType.getTypeArguments().isEmpty
+          case _ => false
+        }
+      case _ => false
+    }
 }
 
 object JavaChangeVariableTypeProvider {
   private val TypeAnnotation =
-    """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
+    """@\w+(?:\.\w+)*(?:\((?:[^()]*|\([^()]*\))*\))?\s*""".r
 
   private class SourceContext(
       compilation: JavaSourceCompile,
@@ -249,6 +271,14 @@ object JavaChangeVariableTypeProvider {
 
     def typeOf(path: TreePath): Option[TypeMirror] =
       Option(trees.getTypeMirror(path))
+
+    def declaredReturnType(path: TreePath): Option[TypeMirror] =
+      Option(trees.getElement(path)).collect {
+        case method: ExecutableElement
+            if method.getTypeParameters().isEmpty &&
+              hasNoEnclosingTypeParameters(method.getEnclosingElement()) =>
+          method.getReturnType()
+      }
 
     def rangeOf(tree: Tree): Option[SourceRange] = {
       val start = startOf(tree)
@@ -290,6 +320,14 @@ object JavaChangeVariableTypeProvider {
       !tpe.contains("#") &&
       !tpe.contains("anonymous") &&
       !tpe.contains("captured wildcard")
+
+  private def hasNoEnclosingTypeParameters(element: Element): Boolean =
+    element match {
+      case tpe: TypeElement =>
+        tpe.getTypeParameters().isEmpty &&
+        hasNoEnclosingTypeParameters(tpe.getEnclosingElement())
+      case _ => true
+    }
 
   private def legacyArrayDimensionCount(
       variable: VariableTree,

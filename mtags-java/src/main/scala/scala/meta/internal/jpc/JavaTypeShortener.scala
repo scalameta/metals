@@ -3,6 +3,7 @@ package scala.meta.internal.jpc
 import javax.lang.model.`type`.DeclaredType
 import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.element.Element
+import javax.lang.model.element.Modifier
 import javax.lang.model.element.NestingKind
 import javax.lang.model.element.TypeElement
 import javax.lang.model.util.Elements
@@ -59,8 +60,20 @@ class JavaTypeShortener(
             typeArguments.asScala
               .map(arg => visit(arg))
               .mkString("<", ", ", ">")
-        s"${shortenName(element)}$args"
+        s"${shortenDeclaredName(t, element)}$args"
       case _ => super.visitDeclared(t, p)
+    }
+
+  private def shortenDeclaredName(
+      tpe: DeclaredType,
+      element: TypeElement
+  ): String =
+    tpe.getEnclosingType() match {
+      case enclosing: DeclaredType
+          if element.getNestingKind() == NestingKind.MEMBER &&
+            !element.getModifiers().contains(Modifier.STATIC) =>
+        s"${visit(enclosing)}.${element.getSimpleName()}"
+      case _ => shortenName(element)
     }
 
   private def shortenName(element: TypeElement): String =

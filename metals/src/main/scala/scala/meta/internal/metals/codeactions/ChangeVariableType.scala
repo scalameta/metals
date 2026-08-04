@@ -56,7 +56,7 @@ class ChangeVariableType(
             }
         }
       }
-      .map(_.flatten)
+      .map(_.flatten.distinctBy(_.getEdit()))
   }
 
   private def build(

@@ -102,6 +102,29 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "autoboxing-wrapper",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    Long x = <<42>>;
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = 42;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "field",
     """|package a;
        |
@@ -114,6 +137,52 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  private String count = "many";
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "interface-field",
+    """|package a;
+       |
+       |public interface Example {
+       |  int CONST = <<"hello">>;
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |public interface Example {
+       |  String CONST = "hello";
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "try-with-resources",
+    """|package a;
+       |
+       |import java.io.ByteArrayInputStream;
+       |
+       |public class Example {
+       |  public void run() throws Exception {
+       |    try (int stream = <<new ByteArrayInputStream(new byte[0])>>) {}
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |import java.io.ByteArrayInputStream;
+       |
+       |public class Example {
+       |  public void run() throws Exception {
+       |    try (ByteArrayInputStream stream = new ByteArrayInputStream(new byte[0])) {}
+       |  }
        |}
        |""".stripMargin,
     fileName = "Example.java",
@@ -226,6 +295,44 @@ class ChangeVariableTypeLspSuite
        |public class Example {
        |  public void run() {
        |    String[] x = new String[]{"a", "b"};
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "implicit-array-initializer",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<{"a", "b"}>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "multi-dimensional-array",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<new String[2][2]>>;
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String[][] x = new String[2][2];
        |  }
        |}
        |""".stripMargin,
@@ -390,6 +497,66 @@ class ChangeVariableTypeLspSuite
     filterAction = onlyChangeType,
   )
 
+  checkActionsOnly(
+    "void-return",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<doSomething()>>;
+       |  }
+       |
+       |  private void doSomething() {}
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "unresolved-symbol",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<doesNotExist()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "unresolved-generic-target",
+    """|package a;
+       |
+       |import java.util.Collections;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<Collections.emptyList()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |import java.util.Collections;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  public void run() {
+       |    List<Object> x = Collections.emptyList();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
   check(
     "ternary-operator",
     """|package a;
@@ -409,6 +576,65 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "switch-expression",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run(int y) {
+       |    int x = <<switch (y) {
+       |      case 1 -> "A";
+       |      default -> "B";
+       |    }>>;
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run(int y) {
+       |    String x = switch (y) {
+       |      case 1 -> "A";
+       |      default -> "B";
+       |    };
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "method-reference",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<String::length>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "lambda-expression",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<() -> {}>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
     fileName = "Example.java",
     filterAction = onlyChangeType,
   )
@@ -491,6 +717,41 @@ class ChangeVariableTypeLspSuite
        |  }
        |
        |  private Map<String, java.time.LocalDate> dates() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "bounded-wildcard-return",
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int values = <<getList()>>;
+       |  }
+       |
+       |  private List<? extends CharSequence> getList() {
+       |    return null;
+       |  }
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |public class Example {
+       |  public void run() {
+       |    List<? extends CharSequence> values = getList();
+       |  }
+       |
+       |  private List<? extends CharSequence> getList() {
        |    return null;
        |  }
        |}
@@ -846,6 +1107,37 @@ class ChangeVariableTypeLspSuite
        |
        |class Outer {
        |  static class Inner {}
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "generic-inner-class",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int inner = <<new Outer<String>().new Inner<Integer>()>>;
+       |  }
+       |}
+       |
+       |class Outer<T> {
+       |  class Inner<U> {}
+       |}
+       |""".stripMargin,
+    expectedAction,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    Outer<String>.Inner<Integer> inner = new Outer<String>().new Inner<Integer>();
+       |  }
+       |}
+       |
+       |class Outer<T> {
+       |  class Inner<U> {}
        |}
        |""".stripMargin,
     fileName = "Example.java",
