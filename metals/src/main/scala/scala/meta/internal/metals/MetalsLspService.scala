@@ -113,6 +113,8 @@ abstract class MetalsLspService(
     val workDoneProgress: WorkDoneProgress,
     maxScalaCliServers: Int,
     moduleStatus: ModuleStatus,
+    jarFileSystemCache: JarFileSystemCache,
+    val uriMapper: WorkspaceURIMapper,
 ) extends Folder(folder, folderVisibleName, isKnownMetalsProject = true)
     with Cancelable
     with TextDocumentService
@@ -166,6 +168,13 @@ abstract class MetalsLspService(
 
   val buildTargets: BuildTargets =
     BuildTargets.from(folder, mainBuildTargetsData, tables)
+
+  val folderUriMapper: FolderURIMapper =
+    new FolderURIMapper(
+      buildTargets,
+      () => userConfig.javaHome,
+      jarFileSystemCache,
+    )
 
   implicit val reports: StdReportContext = new StdReportContext(
     folder.toNIO,
@@ -602,6 +611,13 @@ abstract class MetalsLspService(
   def optFileSystemSemanticdbs(): Option[FileSystemSemanticdbs] = None
 
   protected def fileDecoderProvider: FileDecoderProvider
+
+  override lazy val lspFileSystemProvider: LSPFileSystemProvider =
+    new LSPFileSystemProvider(
+      languageClient,
+      uriMapper,
+      fileDecoderProvider,
+    )
 
   def loadedPresentationCompilerCount(): Int =
     compilers.loadedPresentationCompilerCount()

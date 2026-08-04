@@ -41,6 +41,8 @@ class FallbackMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
     moduleStatus: ModuleStatus,
+    jarFileSystemCache: JarFileSystemCache,
+    uriMapper: WorkspaceURIMapper,
 ) extends MetalsLspService(
       ec,
       sh,
@@ -58,6 +60,8 @@ class FallbackMetalsLspService(
       workDoneProgress,
       maxScalaCliServers = 10,
       moduleStatus,
+      jarFileSystemCache,
+      uriMapper,
     ) {
 
   val buildServerPromise: Promise[Unit] = Promise.successful(())
@@ -68,6 +72,7 @@ class FallbackMetalsLspService(
       folder,
       compilers,
       buildTargets,
+      uriMapper,
       () => userConfig,
       shellRunner,
       optFileSystemSemanticdbs,

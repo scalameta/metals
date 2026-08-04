@@ -29,6 +29,9 @@ trait IndexProviders {
   def referencesProvider: ReferenceProvider
   def workspaceSymbols: WorkspaceSymbolProvider
   def buildTargets: BuildTargets
+  def uriMapper: WorkspaceURIMapper
+  def folderUriMapper: FolderURIMapper
+  def lspFileSystemProvider: LSPFileSystemProvider
   def semanticDBIndexer: SemanticdbIndexer
   def fileWatcher: FileWatcher
   def focusedDocument: Option[AbsolutePath]

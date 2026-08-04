@@ -711,6 +711,10 @@ object MetalsEnrichments
 
   implicit class XtensionString(value: String) {
 
+    /** Case-insensitive on Windows where e.g. `Coursier/Cache` and `Coursier/cache` are equivalent. */
+    def isUriEqual(other: String): Boolean =
+      if (Properties.isWin) value.equalsIgnoreCase(other) else value == other
+
     /**
      * Returns true if this is a Scala.js or Scala Native target
      *

@@ -12,7 +12,6 @@ import scala.collection.mutable.{Map => MMap}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.util.Properties
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -220,18 +219,10 @@ final class TargetData() {
       case Some(id) => buildTargetDependencyModules.get(id).iterator.flatten
     }
 
-    /**
-     * For windows file:///C:/Users/runneradmin/AppData/Local/Coursier/Cache and
-     * file:///C:/Users/runneradmin/AppData/Local/Coursier/cache is equivalent
-     */
-    def isUriEqual(uri: String, otherUri: String) = {
-      Properties.isWin && uri.toLowerCase() == otherUri
-        .toLowerCase() || uri == otherUri
-    }
     val allFound = for {
       module <- depModules
       artifacts = module.getArtifacts().asScala
-      if artifacts.exists(artifact => isUriEqual(artifact.getUri(), jarUri))
+      if artifacts.exists(_.getUri().isUriEqual(jarUri))
       foundJar <- artifacts.find(_.getClassifier() == classifier)
       foundJarPath = foundJar.getUri().toAbsolutePath
       if foundJarPath.exists
