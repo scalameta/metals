@@ -1,9 +1,10 @@
 package scala.meta.internal.jpc
 
+import javax.lang.model.`type`.TypeKind
 import javax.lang.model.`type`.TypeMirror
+import javax.lang.model.util.Elements
 
 import scala.jdk.CollectionConverters._
-import scala.util.matching.Regex
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.mtags.CommonMtagsEnrichments._
@@ -14,6 +15,7 @@ import com.sun.source.tree.CaseTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.ForLoopTree
+import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.VariableTree
 import com.sun.source.util.TreePath
@@ -31,158 +33,205 @@ final class JavaChangeVariableTypeProvider(
   def textEdits(): Seq[l.TextEdit] = {
     params.checkCanceled()
     compiler.nodeAtPosition(params) match {
-      case Some((compile, cursorPath)) =>
+      case Some((compilation, cursorPath)) =>
         params.checkCanceled()
-        val context = Context(
-          Trees.instance(compile.task),
-          compile.cu,
-          params.text()
+        val source = SourceContext(
+          Trees.instance(compilation.task),
+          compilation.cu,
+          params.text(),
+          compilation.task.getElements()
         )
+        findTargetVariable(cursorPath, source)
+          .map(createEdits(_, source))
+          .getOrElse(Nil)
+      case None => Nil
+    }
+  }
 
-        (for {
-          variablePath <- enclosingVariable(cursorPath).toSeq
-          variable = variablePath.getLeaf().asInstanceOf[VariableTree]
-          typeRange <- typeRange(variable, context).toSeq
-          if isSingleDeclaration(variablePath, context)
-          initializer <- Option(variable.getInitializer()).toSeq
-          if diagnosticMatchesInitializer(initializer, context)
-          if !initializer.toString().contains("<>")
-          shortener = JavaTypeShortener.forPath(
-            context.cu,
-            variablePath
+  private def findTargetVariable(
+      cursorPath: TreePath,
+      source: SourceContext
+  ): Option[TargetVariable] =
+    for {
+      variablePath <- enclosingVariablePath(cursorPath)
+      variable = variablePath.getLeaf().asInstanceOf[VariableTree]
+      typeRange <- declaredTypeRange(variable, source)
+      if hasSingleDeclarator(variablePath, source)
+      initializer <- Option(variable.getInitializer())
+      if diagnosticMatchesInitializer(initializer, source)
+      if !usesDiamondOperator(initializer)
+    } yield TargetVariable(variablePath, variable, typeRange)
+
+  private def createEdits(
+      target: TargetVariable,
+      source: SourceContext
+  ): Seq[l.TextEdit] = {
+    val shortener = JavaTypeShortener.forPath(
+      source.compilationUnit,
+      target.path,
+      source.elements
+    )
+    inferReplacementType(target, source, shortener) match {
+      case Some(replacementType) =>
+        val legacyArrayDimensions =
+          legacyArrayDimensionCount(
+            target.variable,
+            target.declaredTypeRange,
+            source
           )
-          replacement <- inferInitializerType(
-            typeRange,
-            context,
-            shortener
-          ).toSeq
-          legacyDimensions = legacyArrayDimensions(variable, typeRange, context)
-          if arrayDimensions(replacement) >= legacyDimensions
-          typeEdit = new l.TextEdit(
-            typeRange.range,
-            replacement.stripSuffix("[]" * legacyDimensions)
+        if (arrayDimensionCount(replacementType) >= legacyArrayDimensions) {
+          val typeEdit = new l.TextEdit(
+            target.declaredTypeRange.range,
+            replacementType.stripSuffix("[]" * legacyArrayDimensions)
           )
-          importEdit = JavaAutoImportEditor.imports(
-            context.text,
+          val importEdit = JavaAutoImportEditor.imports(
+            source.text,
             shortener.newImports
           )
-        } yield importEdit.toSeq :+ typeEdit).flatten
+          importEdit.toSeq :+ typeEdit
+        } else Nil
       case None => Nil
     }
   }
 
   private def diagnosticMatchesInitializer(
       initializer: Tree,
-      context: Context
+      source: SourceContext
   ): Boolean =
     diagnosticRange match {
       case Some(range) =>
-        context.rangeOf(initializer).exists { initializerRange =>
+        source.rangeOf(initializer).exists { initializerRange =>
           initializerRange.range.encloses(range) &&
           initializerRange.range.getEnd() == range.getEnd()
         }
       case None => true
     }
 
-  private def inferInitializerType(
-      originalTypeRange: SourceRange,
-      originalContext: Context,
+  private def inferReplacementType(
+      target: TargetVariable,
+      source: SourceContext,
       shortener: JavaTypeShortener
   ): Option[String] = {
-    val placeholder = "Object"
-    val originalTypeLength =
-      originalTypeRange.endOffset - originalTypeRange.startOffset
-    val adjustedText =
-      originalContext.text.patch(
-        originalTypeRange.startOffset,
+    val typeRange = target.declaredTypeRange
+    val placeholder = target.variable.getInitializer().getKind() match {
+      case Tree.Kind.CONDITIONAL_EXPRESSION => "var"
+      case _ => "Object"
+    }
+    val typeLength = typeRange.endOffset - typeRange.startOffset
+    val patchedText =
+      source.text.patch(
+        typeRange.startOffset,
         placeholder,
-        originalTypeLength
+        typeLength
       )
-    val adjustedOffset =
-      if (params.offset() >= originalTypeRange.endOffset)
-        params.offset() + placeholder.length() - originalTypeLength
+    val patchedOffset =
+      if (params.offset() >= typeRange.endOffset)
+        params.offset() + placeholder.length() - typeLength
       else params.offset()
-    val adjustedParams = CompilerOffsetParams(
+    val patchedParams = CompilerOffsetParams(
       params.uri(),
-      adjustedText,
-      adjustedOffset,
+      patchedText,
+      patchedOffset,
       params.token(),
       params.outlineFiles()
     )
 
-    adjustedParams.checkCanceled()
-    compiler.nodeAtPosition(adjustedParams).flatMap {
-      case (compile, cursorPath) =>
-        val context = Context(
-          Trees.instance(compile.task),
-          compile.cu,
-          adjustedText
+    patchedParams.checkCanceled()
+    compiler.nodeAtPosition(patchedParams).flatMap {
+      case (compilation, cursorPath) =>
+        val patchedSource = SourceContext(
+          Trees.instance(compilation.task),
+          compilation.cu,
+          patchedText,
+          compilation.task.getElements()
         )
         for {
-          variablePath <- enclosingVariable(cursorPath)
+          variablePath <- enclosingVariablePath(cursorPath)
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
           initializer <- Option(variable.getInitializer())
-          initializerType <- Option(
-            context.trees.getTypeMirror(new TreePath(variablePath, initializer))
+          initializerType <- inferredInitializerType(
+            variablePath,
+            initializer,
+            patchedSource
           )
-          replacement <- inferredTypeText(
+          replacementType <- renderInferredType(
             initializerType,
-            originalContext,
             shortener
           )
-        } yield replacement
+        } yield replacementType
     }
   }
 
-  private def typeRange(
+  private def inferredInitializerType(
+      variablePath: TreePath,
+      initializer: Tree,
+      source: SourceContext
+  ): Option[TypeMirror] = {
+    val initializerPath = new TreePath(variablePath, initializer)
+    val inferredTypePath = initializer match {
+      case newClass: NewClassTree if newClass.getClassBody() != null =>
+        new TreePath(initializerPath, newClass.getIdentifier())
+      case _ => initializerPath
+    }
+    Option(source.trees.getTypeMirror(inferredTypePath))
+  }
+
+  private def declaredTypeRange(
       variable: VariableTree,
-      context: Context
+      source: SourceContext
   ): Option[SourceRange] = {
-    val name = variable.getName().toString()
+    val variableName = variable.getName().toString()
     for {
       typeTree <- Option(variable.getType())
       nameStart <- Positions.findNameOffset(
-        context.text,
-        context.startOf(variable),
-        context.endOf(variable),
-        name
+        source.text,
+        source.startOf(variable),
+        source.endOf(variable),
+        variableName
       )
-      sourceRange <- context.rangeOf(typeTree)
+      sourceRange <- source.rangeOf(typeTree)
       (range, endOffset) <- Positions.trimLegacyArraySuffix(
         sourceRange.startOffset,
         sourceRange.endOffset,
         nameStart,
-        nameStart + name.length(),
-        context.cu.getLineMap(),
-        context.text
+        nameStart + variableName.length(),
+        source.compilationUnit.getLineMap(),
+        source.text
       )
     } yield sourceRange.copy(range = range, endOffset = endOffset)
   }
 
-  private def inferredTypeText(
-      tpe: TypeMirror,
-      context: Context,
+  private def renderInferredType(
+      initializerType: TypeMirror,
       shortener: JavaTypeShortener
-  ): Option[String] = {
-    val shortenedType = shortener.shorten(tpe)
-    val renderedType =
-      if (shortener.newImports.isEmpty)
-        renderType(
-          new JavaTypeVisitor().visit(tpe),
-          SourceVisibility.from(context.cu)
-        )
-      else annotation.replaceAllIn(shortenedType, "")
-    Option.when(isRenderableType(renderedType))(renderedType)
-  }
+  ): Option[String] =
+    if (initializerType.getKind() == TypeKind.INTERSECTION) None
+    else {
+      val renderedType =
+        TypeAnnotation.replaceAllIn(shortener.shorten(initializerType), "")
+      Option.when(isRenderableType(renderedType))(renderedType)
+    }
 
-  private def isSingleDeclaration(
+  private def hasSingleDeclarator(
       variablePath: TreePath,
-      context: Context
+      source: SourceContext
   ): Boolean = {
     val variable = variablePath.getLeaf().asInstanceOf[VariableTree]
     val typeStart =
-      Option(variable.getType()).map(context.startOf).filter(_ >= 0)
-    val siblingTrees: Iterable[Tree] =
+      Option(variable.getType()).map(source.startOf).filter(_ >= 0)
+    // Javac creates one VariableTree per declarator. Trees originating from
+    // the same declaration share the start of their type source range.
+    !siblingVariables(variablePath).exists { sibling =>
+      (sibling ne variable) && typeStart.exists { start =>
+        Option(sibling.getType()).exists(source.startOf(_) == start)
+      }
+    }
+  }
+
+  private def siblingVariables(
+      variablePath: TreePath
+  ): Iterable[VariableTree] = {
+    val siblings: Iterable[Tree] =
       variablePath.getParentPath().getLeaf() match {
         case block: BlockTree => block.getStatements().asScala
         case caseTree: CaseTree =>
@@ -191,40 +240,46 @@ final class JavaChangeVariableTypeProvider(
         case forLoop: ForLoopTree => forLoop.getInitializer().asScala
         case _ => Nil
       }
-    !siblingTrees.exists {
-      case sibling: VariableTree =>
-        (sibling ne variable) && typeStart.exists { start =>
-          Option(sibling.getType()).exists(context.startOf(_) == start)
-        }
-      case _ => false
-    }
+    siblings.collect { case variable: VariableTree => variable }
   }
+
+  private def usesDiamondOperator(initializer: Tree): Boolean =
+    initializer.toString().contains("<>")
 }
 
 object JavaChangeVariableTypeProvider {
-  private val qualifiedName: Regex =
-    """[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+""".r
-  private val annotation =
+  private val TypeAnnotation =
     """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
 
-  private case class Context(
+  private case class SourceContext(
       trees: Trees,
-      cu: CompilationUnitTree,
-      text: String
+      compilationUnit: CompilationUnitTree,
+      text: String,
+      elements: Elements
   ) {
     def startOf(tree: Tree): Int =
-      trees.getSourcePositions().getStartPosition(cu, tree).toInt
+      trees.getSourcePositions().getStartPosition(compilationUnit, tree).toInt
     def endOf(tree: Tree): Int =
-      trees.getSourcePositions().getEndPosition(cu, tree).toInt
+      trees.getSourcePositions().getEndPosition(compilationUnit, tree).toInt
 
     def rangeOf(tree: Tree): Option[SourceRange] = {
       val start = startOf(tree)
       val end = endOf(tree)
       Option.when(start >= 0 && end >= 0)(
-        SourceRange(Positions.toLspRange(trees, cu, tree), start, end)
+        SourceRange(
+          Positions.toLspRange(trees, compilationUnit, tree),
+          start,
+          end
+        )
       )
     }
   }
+
+  private case class TargetVariable(
+      path: TreePath,
+      variable: VariableTree,
+      declaredTypeRange: SourceRange
+  )
 
   private case class SourceRange(
       range: l.Range,
@@ -232,12 +287,12 @@ object JavaChangeVariableTypeProvider {
       endOffset: Int
   )
 
-  private def enclosingVariable(path: TreePath): Option[TreePath] =
+  private def enclosingVariablePath(path: TreePath): Option[TreePath] =
     if (path == null) None
     else
       path.getLeaf() match {
         case _: VariableTree => Some(path)
-        case _ => enclosingVariable(path.getParentPath())
+        case _ => enclosingVariablePath(path.getParentPath())
       }
 
   private def isRenderableType(tpe: String): Boolean =
@@ -248,60 +303,19 @@ object JavaChangeVariableTypeProvider {
       !tpe.contains("anonymous") &&
       !tpe.contains("captured wildcard")
 
-  private def renderType(
-      tpe: String,
-      sourceVisibility: SourceVisibility
-  ): String =
-    qualifiedName.replaceAllIn(
-      annotation.replaceAllIn(tpe, ""),
-      matched =>
-        Regex.quoteReplacement(sourceVisibility.visibleName(matched.matched))
-    )
-
-  private def legacyArrayDimensions(
+  private def legacyArrayDimensionCount(
       variable: VariableTree,
       typeRange: SourceRange,
-      context: Context
+      source: SourceContext
   ): Int = {
     val sourceType =
-      context.text.substring(typeRange.startOffset, typeRange.endOffset)
-    (arrayDimensions(variable.getType().toString()) -
-      arrayDimensions(sourceType)).max(0)
+      source.text.substring(typeRange.startOffset, typeRange.endOffset)
+    (arrayDimensionCount(variable.getType().toString()) -
+      arrayDimensionCount(sourceType)).max(0)
   }
 
-  private def arrayDimensions(tpe: String): Int =
-    if (tpe.endsWith("[]")) 1 + arrayDimensions(tpe.stripSuffix("[]"))
+  private def arrayDimensionCount(tpe: String): Int =
+    if (tpe.endsWith("[]"))
+      1 + arrayDimensionCount(tpe.stripSuffix("[]"))
     else 0
-
-  private case class SourceVisibility(
-      currentPackage: Option[String],
-      imports: Set[String]
-  ) {
-    def visibleName(fqn: String): String = {
-      val packageName = fqn.substring(0, fqn.lastIndexOf('.'))
-      val simpleName = fqn.substring(fqn.lastIndexOf('.') + 1)
-      if (isVisible(fqn, packageName)) simpleName else fqn
-    }
-
-    private def isVisible(fqn: String, packageName: String): Boolean =
-      packageName == "java.lang" ||
-        currentPackage.contains(packageName) ||
-        imports.contains(fqn) ||
-        imports.contains(s"$packageName.*")
-  }
-
-  private object SourceVisibility {
-    def from(compilationUnit: CompilationUnitTree): SourceVisibility = {
-      val currentPackage = Option(compilationUnit.getPackageName()).map(
-        _.toString()
-      )
-      val imports = compilationUnit
-        .getImports()
-        .asScala
-        .map(_.getQualifiedIdentifier().toString())
-        .toSet
-      SourceVisibility(currentPackage, imports)
-    }
-  }
-
 }

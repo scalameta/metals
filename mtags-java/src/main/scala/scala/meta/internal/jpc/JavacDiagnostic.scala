@@ -52,6 +52,8 @@ object JavacDiagnostic {
     private val Code = "compiler.err.prob.found.req"
     private val CannotBeConverted =
       """incompatible types: (.+) cannot be converted to (.+)""".r
+    private val BadTypeInConditionalExpression =
+      """(?s)incompatible types: bad type in conditional expression\s+(.+?) cannot be converted to (.+)""".r
     private val PossibleLossyConversion =
       """incompatible types: possible lossy conversion from (.+) to (.+)""".r
     def unapply(d: l.Diagnostic): Option[IncompatibleTypes] = {
@@ -59,6 +61,8 @@ object JavacDiagnostic {
       else
         d.getMessageAsString.trim() match {
           case CannotBeConverted(found, required) =>
+            Some(new IncompatibleTypes(found, required))
+          case BadTypeInConditionalExpression(found, required) =>
             Some(new IncompatibleTypes(found, required))
           case PossibleLossyConversion(found, required) =>
             Some(new IncompatibleTypes(found, required))

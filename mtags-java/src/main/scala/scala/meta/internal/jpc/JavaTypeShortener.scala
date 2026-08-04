@@ -5,6 +5,7 @@ import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.element.Element
 import javax.lang.model.element.NestingKind
 import javax.lang.model.element.TypeElement
+import javax.lang.model.util.Elements
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -36,7 +37,8 @@ class JavaTypeShortener(
     currentPackage: String,
     existingImports: Map[String, String],
     declaredTypeNames: Set[String],
-    wildcardImports: Set[String] = Set.empty
+    wildcardImports: Set[String],
+    elements: Elements
 ) extends JavaTypeVisitor {
   // simpleName -> fully qualified name that the simple name currently resolves to
   private val claimed = mutable.Map.empty[String, String] ++ existingImports
@@ -90,7 +92,7 @@ class JavaTypeShortener(
         case Some(claimedFqn) =>
           if (claimedFqn == fqn) simpleName else fqn
         case None
-            if wildcardImports.contains(pkg) &&
+            if hasUnambiguousWildcardImport(pkg, simpleName) &&
               !declaredTypeNames.contains(simpleName) =>
           claimed(simpleName) = fqn
           simpleName
@@ -103,6 +105,15 @@ class JavaTypeShortener(
           }
       }
   }
+
+  private def hasUnambiguousWildcardImport(
+      pkg: String,
+      simpleName: String
+  ): Boolean =
+    wildcardImports.contains(pkg) &&
+      wildcardImports.count { importedPackage =>
+        elements.getTypeElement(s"$importedPackage.$simpleName") != null
+      } == 1
 
   @tailrec
   private def enclosingTopLevel(
@@ -140,7 +151,8 @@ object JavaTypeShortener {
 
   def forPath(
       compilationUnit: CompilationUnitTree,
-      path: TreePath
+      path: TreePath,
+      elements: Elements
   ): JavaTypeShortener = {
     val currentPackage =
       Option(compilationUnit.getPackageName()).map(_.toString()).getOrElse("")
@@ -159,14 +171,13 @@ object JavaTypeShortener {
       .asScala
       .collect { case cls: ClassTree => cls.getSimpleName().toString() }
       .toSet
-    val memberTypeNames = enclosingClass(path)
-      .map(collectMemberTypeNames)
-      .getOrElse(Set.empty)
+    val memberTypeNames = collectEnclosingMemberTypeNames(path)
     new JavaTypeShortener(
       currentPackage,
       existingImports,
       topLevelTypeNames ++ memberTypeNames,
-      wildcardImports
+      wildcardImports,
+      elements
     )
   }
 
@@ -177,11 +188,17 @@ object JavaTypeShortener {
       .collect { case cls: ClassTree => cls.getSimpleName().toString() }
       .toSet
 
-  private def enclosingClass(path: TreePath): Option[ClassTree] =
-    if (path == null) None
-    else
-      path.getLeaf() match {
-        case classTree: ClassTree => Some(classTree)
-        case _ => enclosingClass(path.getParentPath())
+  @tailrec
+  private def collectEnclosingMemberTypeNames(
+      path: TreePath,
+      names: Set[String] = Set.empty
+  ): Set[String] =
+    if (path == null) names
+    else {
+      val updatedNames = path.getLeaf() match {
+        case classTree: ClassTree => names ++ collectMemberTypeNames(classTree)
+        case _ => names
       }
+      collectEnclosingMemberTypeNames(path.getParentPath(), updatedNames)
+    }
 }

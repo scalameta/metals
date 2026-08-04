@@ -4,10 +4,16 @@ import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.Tree
 import com.sun.source.util.Trees
+import com.sun.tools.javac.parser.ScannerFactory
+import com.sun.tools.javac.parser.Tokens.TokenKind
+import com.sun.tools.javac.util.Context
 import org.eclipse.{lsp4j => l}
 object Positions {
 
-  private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
+  private val ScannerFactoryThreadLocal = new ThreadLocal[ScannerFactory] {
+    override def initialValue(): ScannerFactory =
+      ScannerFactory.instance(new Context())
+  }
 
   def findNameOffset(
       text: String,
@@ -15,17 +21,15 @@ object Positions {
       end: Int,
       name: String
   ): Option[Int] = {
-    val searchEnd = Math.min(end, text.length())
     if (start < 0 || end < 0 || name.isEmpty) None
     else
-      (start until searchEnd).find { offset =>
-        val nameEnd = offset + name.length()
-        Character.isJavaIdentifierStart(text.charAt(offset)) &&
-        text.startsWith(name, offset) &&
-        (offset == 0 ||
-          !Character.isJavaIdentifierPart(text.charAt(offset - 1))) &&
-        (nameEnd >= text.length() ||
-          !Character.isJavaIdentifierPart(text.charAt(nameEnd)))
+      foldTokens(text, start, end, Option.empty[Int]) {
+        case (result @ Some(_), _, _) => result
+        case (None, tokenStart, tokenEnd) =>
+          Option.when(
+            tokenEnd - tokenStart == name.length() &&
+              text.startsWith(name, tokenStart)
+          )(tokenStart)
       }
   }
 
@@ -37,13 +41,9 @@ object Positions {
       lineMap: LineMap,
       text: String
   ): Option[(l.Range, Int)] = {
-    val hasLegacyArraySuffix =
-      typeEnd > nameEnd &&
-        LegacyArrayDimensions.pattern
-          .matcher(text.substring(nameEnd, typeEnd))
-          .matches()
+    val hasLegacyArraySuffix = typeEnd > nameEnd
     if (hasLegacyArraySuffix) {
-      val end = lastNonWhitespaceBefore(text, nameStart) + 1
+      val end = lastCodeTokenEnd(text, typeStart, nameStart)
       Option.when(end > typeStart)(
         (toLspRange(lineMap, typeStart, end, text), end)
       )
@@ -107,9 +107,38 @@ object Positions {
     tabCount * 7
   }
 
-  private def lastNonWhitespaceBefore(text: String, offset: Int): Int = {
-    var index = offset - 1
-    while (index >= 0 && text.charAt(index).isWhitespace) index -= 1
-    index
+  private def lastCodeTokenEnd(
+      text: String,
+      start: Int,
+      end: Int
+  ): Int =
+    foldTokens(text, start, end, start) { (_, _, tokenEnd) => tokenEnd }
+
+  private def foldTokens[A](
+      text: String,
+      start: Int,
+      end: Int,
+      initial: A
+  )(f: (A, Int, Int) => A): A = {
+    val sourceStart = start.max(0)
+    val sourceEnd = end.min(text.length())
+    if (sourceStart >= sourceEnd) initial
+    else {
+      val scanner = ScannerFactoryThreadLocal
+        .get()
+        .newScanner(text.substring(sourceStart, sourceEnd), false)
+      var result = initial
+      scanner.nextToken()
+      while (scanner.token().kind != TokenKind.EOF) {
+        val token = scanner.token()
+        result = f(
+          result,
+          sourceStart + token.pos,
+          sourceStart + token.endPos
+        )
+        scanner.nextToken()
+      }
+      result
+    }
   }
 }

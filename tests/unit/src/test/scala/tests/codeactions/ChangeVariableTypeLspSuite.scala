@@ -172,6 +172,52 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "multiple-modifiers-and-annotations",
+    """|package a;
+       |
+       |public class Example {
+       |  @Deprecated
+       |  public static final int x = <<"hello">>;
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  @Deprecated
+       |  public static final String x = "hello";
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "comments-in-declaration",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int /* comment */ x = <<"hello">>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String /* comment */ x = "hello";
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "array",
     """|package a;
        |
@@ -216,6 +262,50 @@ class ChangeVariableTypeLspSuite
        |}
        |""".stripMargin,
     fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "null-to-primitive",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<null>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "anonymous-class",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<new Runnable() {
+       |      public void run() {}
+       |    }>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    Runnable x = new Runnable() {
+       |      public void run() {}
+       |    };
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    expectNoDiagnostics = false,
     filterAction = onlyChangeType,
   )
 
@@ -307,6 +397,47 @@ class ChangeVariableTypeLspSuite
        |  }
        |}
        |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "ternary-operator",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x = <<true ? "hello" : "world">>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String x = true ? "hello" : "world";
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "intersection-type",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int value = <<(Runnable & Marker) () -> {}>>;
+       |  }
+       |}
+       |
+       |interface Marker {}
+       |""".stripMargin,
+    "",
     fileName = "Example.java",
     filterAction = onlyChangeType,
   )
@@ -500,6 +631,69 @@ class ChangeVariableTypeLspSuite
   )
 
   check(
+    "conflicting-wildcard-imports",
+    """|package a;
+       |
+       |import java.sql.*;
+       |import java.util.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int date = <<new java.util.Date()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.sql.*;
+       |import java.util.*;
+       |import java.util.Date;
+       |
+       |public class Example {
+       |  public void run() {
+       |    Date date = new java.util.Date();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    expectNoDiagnostics = false,
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "multiple-unambiguous-wildcard-imports",
+    """|package a;
+       |
+       |import java.time.*;
+       |import java.util.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int today = <<LocalDate.now()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.time.*;
+       |import java.util.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    LocalDate today = LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    expectNoDiagnostics = false,
+    filterAction = onlyChangeType,
+  )
+
+  check(
     "static-wildcard-import",
     """|package a;
        |
@@ -525,6 +719,7 @@ class ChangeVariableTypeLspSuite
        |}
        |""".stripMargin,
     fileName = "Example.java",
+    expectNoDiagnostics = false,
     filterAction = onlyChangeType,
   )
 
@@ -553,6 +748,43 @@ class ChangeVariableTypeLspSuite
        |}
        |""".stripMargin,
     fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "outer-member-name-clash",
+    """|package a;
+       |
+       |import java.time.*;
+       |
+       |public class Example {
+       |  static class LocalDate {}
+       |
+       |  static class Nested {
+       |    public void run() {
+       |      int today = <<java.time.LocalDate.now()>>;
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.time.*;
+       |
+       |public class Example {
+       |  static class LocalDate {}
+       |
+       |  static class Nested {
+       |    public void run() {
+       |      java.time.LocalDate today = java.time.LocalDate.now();
+       |    }
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    expectNoDiagnostics = false,
     filterAction = onlyChangeType,
   )
 
@@ -634,7 +866,7 @@ class ChangeVariableTypeLspSuite
        |
        |public class Example {
        |  public void run() {
-       |    a.Outer.Inner inner = new a.Outer.Inner();
+       |    Outer.Inner inner = new a.Outer.Inner();
        |  }
        |}
        |
@@ -665,6 +897,60 @@ class ChangeVariableTypeLspSuite
        |    String values[] = new String[]{"a", "b"};
        |  }
        |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "legacy-array-comment-before-name",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int /* values */ values[] = <<new String[]{"a", "b"}>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String /* values */ values[] = new String[]{"a", "b"};
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "legacy-array-comment-and-annotation",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int values /* comment */ @Dimension [] = <<new String[]{"a", "b"}>>;
+       |  }
+       |}
+       |
+       |@java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE_USE)
+       |@interface Dimension {}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    String values /* comment */ @Dimension [] = new String[]{"a", "b"};
+       |  }
+       |}
+       |
+       |@java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE_USE)
+       |@interface Dimension {}
        |""".stripMargin,
     fileName = "Example.java",
     filterAction = onlyChangeType,
@@ -724,6 +1010,22 @@ class ChangeVariableTypeLspSuite
        |
        |  private int twice(int i) {
        |    return i * 2;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
+    "reassignment",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int x;
+       |    x = <<"hello">>;
        |  }
        |}
        |""".stripMargin,

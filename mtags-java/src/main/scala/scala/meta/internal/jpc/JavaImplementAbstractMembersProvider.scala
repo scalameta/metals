@@ -58,7 +58,8 @@ class JavaImplementAbstractMembersProvider(
             val classTree = classPath.getLeaf().asInstanceOf[ClassTree]
             val shortener = JavaTypeShortener.forPath(
               cu,
-              classPath
+              classPath,
+              task.getElements()
             )
             val bodyEdit = bodyEditFor(
               trees,
