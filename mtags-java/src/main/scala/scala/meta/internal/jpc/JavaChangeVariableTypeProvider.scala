@@ -43,7 +43,7 @@ final class JavaChangeVariableTypeProvider(
           variablePath <- enclosingVariable(cursorPath).toSeq
           variable = variablePath.getLeaf().asInstanceOf[VariableTree]
           typeRange <- typeRange(variable, context).toSeq
-          if isSingleDeclaration(variablePath)
+          if isSingleDeclaration(variablePath, context)
           initializer <- Option(variable.getInitializer()).toSeq
           if diagnosticMatchesInitializer(initializer, context)
           if !initializer.toString().contains("<>")
@@ -147,45 +147,16 @@ final class JavaChangeVariableTypeProvider(
         context.endOf(variable),
         name
       )
-      range <- context.rangeOf(typeTree)
-      adjusted <- trimLegacyArraySuffix(
-        range,
+      sourceRange <- context.rangeOf(typeTree)
+      (range, endOffset) <- Positions.trimLegacyArraySuffix(
+        sourceRange.startOffset,
+        sourceRange.endOffset,
         nameStart,
         nameStart + name.length(),
-        context
+        context.cu.getLineMap(),
+        context.text
       )
-    } yield adjusted
-  }
-
-  private def trimLegacyArraySuffix(
-      range: SourceRange,
-      nameStart: Int,
-      nameEnd: Int,
-      context: Context
-  ): Option[SourceRange] = {
-    val legacyArraySuffix =
-      range.endOffset > nameEnd &&
-        LegacyArrayDimensions.pattern
-          .matcher(context.text.substring(nameEnd, range.endOffset))
-          .matches()
-    if (legacyArraySuffix) {
-      val endOffset = context.lastNonWhitespaceBefore(nameStart)
-      if (endOffset <= range.startOffset) None
-      else {
-        val end = endOffset + 1
-        Some(
-          range.copy(
-            range = Positions.toLspRange(
-              context.cu.getLineMap(),
-              range.startOffset,
-              end,
-              context.text
-            ),
-            endOffset = end
-          )
-        )
-      }
-    } else Some(range)
+    } yield sourceRange.copy(range = range, endOffset = endOffset)
   }
 
   private def inferredTypeText(
@@ -204,8 +175,13 @@ final class JavaChangeVariableTypeProvider(
     Option.when(isRenderableType(renderedType))(renderedType)
   }
 
-  private def isSingleDeclaration(variablePath: TreePath): Boolean = {
+  private def isSingleDeclaration(
+      variablePath: TreePath,
+      context: Context
+  ): Boolean = {
     val variable = variablePath.getLeaf().asInstanceOf[VariableTree]
+    val typeStart =
+      Option(variable.getType()).map(context.startOf).filter(_ >= 0)
     val siblingTrees: Iterable[Tree] =
       variablePath.getParentPath().getLeaf() match {
         case block: BlockTree => block.getStatements().asScala
@@ -217,7 +193,9 @@ final class JavaChangeVariableTypeProvider(
       }
     !siblingTrees.exists {
       case sibling: VariableTree =>
-        (sibling ne variable) && (sibling.getType() eq variable.getType())
+        (sibling ne variable) && typeStart.exists { start =>
+          Option(sibling.getType()).exists(context.startOf(_) == start)
+        }
       case _ => false
     }
   }
@@ -228,7 +206,6 @@ object JavaChangeVariableTypeProvider {
     """[A-Za-z_$][A-Za-z0-9_$]*(?:\.[A-Za-z_$][A-Za-z0-9_$]*)+""".r
   private val annotation =
     """@\w+(?:\.\w+)*(?:\([^)]*\))?\s*""".r
-  private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
 
   private case class Context(
       trees: Trees,
@@ -246,12 +223,6 @@ object JavaChangeVariableTypeProvider {
       Option.when(start >= 0 && end >= 0)(
         SourceRange(Positions.toLspRange(trees, cu, tree), start, end)
       )
-    }
-
-    def lastNonWhitespaceBefore(offset: Int): Int = {
-      var index = offset - 1
-      while (index >= 0 && text.charAt(index).isWhitespace) index -= 1
-      index
     }
   }
 

@@ -35,7 +35,8 @@ import com.sun.source.util.TreePath
 class JavaTypeShortener(
     currentPackage: String,
     existingImports: Map[String, String],
-    declaredTypeNames: Set[String]
+    declaredTypeNames: Set[String],
+    wildcardImports: Set[String] = Set.empty
 ) extends JavaTypeVisitor {
   // simpleName -> fully qualified name that the simple name currently resolves to
   private val claimed = mutable.Map.empty[String, String] ++ existingImports
@@ -88,6 +89,11 @@ class JavaTypeShortener(
       claimed.get(simpleName) match {
         case Some(claimedFqn) =>
           if (claimedFqn == fqn) simpleName else fqn
+        case None
+            if wildcardImports.contains(pkg) &&
+              !declaredTypeNames.contains(simpleName) =>
+          claimed(simpleName) = fqn
+          simpleName
         case None =>
           if (declaredTypeNames.contains(simpleName)) fqn
           else {
@@ -144,6 +150,10 @@ object JavaTypeShortener {
         val fqn = imp.getQualifiedIdentifier().toString()
         fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
     }.toMap
+    val wildcardImports = imports.collect {
+      case imp if imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        imp.getQualifiedIdentifier().toString().stripSuffix(".*")
+    }.toSet
     val topLevelTypeNames = compilationUnit
       .getTypeDecls()
       .asScala
@@ -155,7 +165,8 @@ object JavaTypeShortener {
     new JavaTypeShortener(
       currentPackage,
       existingImports,
-      topLevelTypeNames ++ memberTypeNames
+      topLevelTypeNames ++ memberTypeNames,
+      wildcardImports
     )
   }
 

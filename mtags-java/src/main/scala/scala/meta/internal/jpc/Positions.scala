@@ -7,6 +7,8 @@ import com.sun.source.util.Trees
 import org.eclipse.{lsp4j => l}
 object Positions {
 
+  private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
+
   def findNameOffset(
       text: String,
       start: Int,
@@ -25,6 +27,28 @@ object Positions {
         (nameEnd >= text.length() ||
           !Character.isJavaIdentifierPart(text.charAt(nameEnd)))
       }
+  }
+
+  def trimLegacyArraySuffix(
+      typeStart: Int,
+      typeEnd: Int,
+      nameStart: Int,
+      nameEnd: Int,
+      lineMap: LineMap,
+      text: String
+  ): Option[(l.Range, Int)] = {
+    val hasLegacyArraySuffix =
+      typeEnd > nameEnd &&
+        LegacyArrayDimensions.pattern
+          .matcher(text.substring(nameEnd, typeEnd))
+          .matches()
+    if (hasLegacyArraySuffix) {
+      val end = lastNonWhitespaceBefore(text, nameStart) + 1
+      Option.when(end > typeStart)(
+        (toLspRange(lineMap, typeStart, end, text), end)
+      )
+    } else
+      Some((toLspRange(lineMap, typeStart, typeEnd, text), typeEnd))
   }
 
   def toLspRange(
@@ -81,5 +105,11 @@ object Positions {
     }
     val tabCount = offset - startPos
     tabCount * 7
+  }
+
+  private def lastNonWhitespaceBefore(text: String, offset: Int): Int = {
+    var index = offset - 1
+    while (index >= 0 && text.charAt(index).isWhitespace) index -= 1
+    index
   }
 }

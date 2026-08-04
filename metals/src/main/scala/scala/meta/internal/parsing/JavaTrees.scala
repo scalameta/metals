@@ -251,6 +251,20 @@ class JavaTrees(buffers: Buffers) {
           variableName,
         ).getOrElse(range)
         val typeTree = Option(node.getType())
+        val typeRange = typeTree.flatMap(treeRange).flatMap { range =>
+          Positions
+            .trimLegacyArraySuffix(
+              range.startOffset,
+              range.endOffset,
+              nameRange.startOffset,
+              nameRange.endOffset,
+              lineMap,
+              text,
+            )
+            .map { case (lspRange, endOffset) =>
+              range.copy(range = lspRange, endOffset = endOffset)
+            }
+        }
         JavaVariable(
           tree = node,
           name = variableName,
@@ -263,56 +277,13 @@ class JavaTrees(buffers: Buffers) {
               // This is going to change in Java 27, see https://bugs.openjdk.org/browse/JDK-8268850
               "var"
           },
-          typeRange = typeTree.flatMap(typeRange(_, nameRange)),
+          typeRange = typeRange,
           initializerRange = Option(node.getInitializer()).flatMap(treeRange),
           modifiers = node.getModifiers().getFlags().asScala.toSet,
         )
       }
     }
 
-    private val LegacyArrayDimensions = """\s*(?:\[\s*\]\s*)+""".r
-
-    private def typeRange(
-        typeTree: Tree,
-        nameRange: JavaRange,
-    ): Option[JavaRange] =
-      treeRange(typeTree).flatMap { range =>
-        val legacyArraySuffix =
-          range.endOffset > nameRange.endOffset &&
-            onlyLegacyArrayDimensions(
-              text.substring(nameRange.endOffset, range.endOffset)
-            )
-        if (legacyArraySuffix) {
-          val endOffset = lastNonWhitespaceBefore(nameRange.startOffset)
-          if (endOffset <= range.startOffset) None
-          else {
-            val end = endOffset + 1
-            Some(
-              range.copy(
-                range = Positions.toLspRange(
-                  lineMap,
-                  range.startOffset,
-                  end,
-                  text,
-                ),
-                endOffset = end,
-              )
-            )
-          }
-        } else Some(range)
-      }
-
-    private def onlyLegacyArrayDimensions(suffix: String): Boolean =
-      suffix match {
-        case LegacyArrayDimensions() => true
-        case _ => false
-      }
-
-    private def lastNonWhitespaceBefore(offset: Int): Int = {
-      var i = offset - 1
-      while (i >= 0 && text.charAt(i).isWhitespace) i -= 1
-      i
-    }
   }
 
   private class EnclosingMethodFinder(

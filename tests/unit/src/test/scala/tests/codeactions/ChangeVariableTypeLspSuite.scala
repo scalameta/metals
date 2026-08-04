@@ -250,6 +250,21 @@ class ChangeVariableTypeLspSuite
   )
 
   checkActionsOnly(
+    "mixed-array-declarator",
+    """|package a;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int a, b[] = <<new String[]{"test"}>>;
+       |  }
+       |}
+       |""".stripMargin,
+    "",
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  checkActionsOnly(
     "diamond-operator",
     """|package a;
        |
@@ -444,6 +459,63 @@ class ChangeVariableTypeLspSuite
         |""".stripMargin,
     """|package a;
        |
+       |import java.time.LocalDate;
+       |
+       |public class Example {
+       |  public void run() {
+       |    LocalDate today = java.time.LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "wildcard-import",
+    """|package a;
+       |
+       |import java.time.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int today = <<LocalDate.now()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import java.time.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    LocalDate today = LocalDate.now();
+       |  }
+       |}
+       |""".stripMargin,
+    fileName = "Example.java",
+    filterAction = onlyChangeType,
+  )
+
+  check(
+    "static-wildcard-import",
+    """|package a;
+       |
+       |import static java.time.DayOfWeek.*;
+       |
+       |public class Example {
+       |  public void run() {
+       |    int today = <<java.time.LocalDate.now()>>;
+       |  }
+       |}
+       |""".stripMargin,
+    s"""|${ChangeVariableType.title}
+        |""".stripMargin,
+    """|package a;
+       |
+       |import static java.time.DayOfWeek.*;
        |import java.time.LocalDate;
        |
        |public class Example {
