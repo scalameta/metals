@@ -94,10 +94,7 @@ class JavaAutoImportEditor(path: TreePath, trees: Trees, fqn: String) {
         val start = positions.getStartPosition(compUnit, candidate)
         val end = positions.getEndPosition(compUnit, candidate)
         val length = end - start
-        var line = lineMap.getLineNumber(start).toInt
-        if (line > 0) {
-          line -= 1
-        }
+        val line = (lineMap.getLineNumber(start).toInt - 1).max(0)
         val (character, insertText) =
           if (isGreater(importFqn, fqn)) {
             (0, s"import $fqn;\n")
