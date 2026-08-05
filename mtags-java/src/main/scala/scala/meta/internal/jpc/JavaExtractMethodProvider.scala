@@ -53,12 +53,14 @@ import com.sun.source.util.TreePathScanner
 import com.sun.source.util.TreeScanner
 import com.sun.source.util.Trees
 import org.eclipse.{lsp4j => l}
+import org.slf4j.LoggerFactory
 
 final class JavaExtractMethodProvider(
     compiler: JavaMetalsCompiler,
     rangeParams: RangeParams,
     extractionPos: OffsetParams
 ) extends ExtractMethodUtils {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def extractMethod: List[l.TextEdit] = {
     rangeParams.checkCanceled()
@@ -734,9 +736,9 @@ final class JavaExtractMethodProvider(
     def importEditsFor(types: Seq[TypeMirror]): List[l.TextEdit] = {
       types.foreach(collectImportCandidates)
       if (importsNeeded.isEmpty) Nil
-      else
-        {
-          ctx.node.map { path =>
+      else {
+        ctx.node match {
+          case Some(path) =>
             val lines = importsNeeded.toList.sorted.map(fqn => s"import $fqn;")
             val firstFqn = lines.head.stripPrefix("import ").stripSuffix(";")
             val anchor =
@@ -749,8 +751,12 @@ final class JavaExtractMethodProvider(
                   anchor.getNewText() + lines.tail.mkString("\n", "\n", "\n")
                 )
               )
-          }
-        }.getOrElse(Nil)
+
+          case None =>
+            logger.warn("Node is empty/null, cannot generate import edits.")
+            Nil
+        }
+      }
     }
 
     private def collectImportCandidates(tpe: TypeMirror): Unit =
