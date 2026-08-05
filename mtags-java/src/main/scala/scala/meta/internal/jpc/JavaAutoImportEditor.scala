@@ -116,7 +116,7 @@ class JavaAutoImportEditor(path: TreePath, trees: Trees, fqn: String) {
   }
 
   private def isGreater(importFqn: String, fqn: String): Boolean = {
-    s"$fqn".compareTo(importFqn) < 0
+    fqn.compareTo(importFqn) < 0
   }
 
   private def importPrefixMatchLength(importFqn: String, fqn: String): Int = {
