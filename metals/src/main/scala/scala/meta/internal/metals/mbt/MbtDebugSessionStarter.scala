@@ -1,7 +1,6 @@
 package scala.meta.internal.metals.mbt
 
 import java.net.URI
-import java.nio.file.Paths
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.ExecutionContext
@@ -10,6 +9,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.BaseWorkDoneProgress
+import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
@@ -280,16 +280,13 @@ class MbtDebugSessionStarter(
     }
   }
 
+  /**
+   * Built by [[JdkSources.envVariables]] so that `JAVA_HOME` is spelled the way
+   * the importer's own commands spell it: `/jdk/Home/` against `/jdk/Home` is
+   * enough to restart a build tool's daemon.
+   */
   private def javaHomeEnv(target: MbtTarget): Map[String, String] =
-    target.javaHome
-      .orElse(userJavaHome())
-      .map { raw =>
-        val path =
-          if (raw.startsWith("file:")) Paths.get(URI.create(raw)).toString
-          else raw
-        Map("JAVA_HOME" -> path)
-      }
-      .getOrElse(Map.empty)
+    JdkSources.envVariables(target.javaHome.orElse(userJavaHome()))
 
   private def redactedCommand(command: List[String]): String =
     command.headOption.getOrElse("<empty>")
