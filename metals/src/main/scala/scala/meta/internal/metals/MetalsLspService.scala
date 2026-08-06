@@ -732,7 +732,10 @@ abstract class MetalsLspService(
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
-      userConfig.javaHome != old.javaHome
+      userConfig.javaHome != old.javaHome ||
+      // the presentation compilers exclude these packages from the
+      // package-object member search
+      userConfig.excludedPackages != old.excludedPackages
     ) {
       compilers.restartAll()
     }

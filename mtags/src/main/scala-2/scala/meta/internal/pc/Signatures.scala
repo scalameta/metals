@@ -44,7 +44,8 @@ trait Signatures { compiler: MetalsGlobal =>
         tpe: Type,
         pos: Position,
         scope: Context,
-        importPosition: AutoImportPosition
+        importPosition: AutoImportPosition,
+        importOwnerOverride: collection.Map[Symbol, Symbol] = Map.empty
     )(implicit queryInfo: PcQueryContext): (String, List[l.TextEdit]) = {
       val history = new ShortenedNames(
         lookupSymbol = name => {
@@ -55,7 +56,8 @@ trait Signatures { compiler: MetalsGlobal =>
             scope.lookupSymbol(companion, _ => true) :: Nil
         },
         renames = renamedSymbols(scope),
-        config = renameConfig
+        config = renameConfig,
+        importOwnerOverride = importOwnerOverride
       )
       val tpeString = shortType(tpe, history).toString()
       val edits = history.autoImports(pos, importPosition)
@@ -104,10 +106,19 @@ trait Signatures { compiler: MetalsGlobal =>
       val lookupSymbol: Name => List[NameLookup] = _ => Nil,
       val config: collection.Map[Symbol, Name] = Map.empty,
       renames: collection.Map[Symbol, Name] = Map.empty,
-      val owners: collection.Set[Symbol] = Set.empty
+      val owners: collection.Set[Symbol] = Set.empty,
+      // Symbols that should be imported through an owner other than their
+      // declared one, e.g. a type alias inherited into a package object is
+      // declared in a mixin trait but is only importable through the package
+      // (issue #2583).
+      val importOwnerOverride: collection.Map[Symbol, Symbol] = Map.empty
   ) {
 
     private val lookedUpRenames = mutable.Set[Symbol]()
+
+    /** The owner to import `sym` through, honoring [[importOwnerOverride]]. */
+    def importOwner(sym: Symbol): Symbol =
+      importOwnerOverride.getOrElse(sym, sym.owner)
 
     def rename(sym: Symbol): Option[Name] = {
       lookedUpRenames.add(sym)
@@ -190,7 +201,7 @@ trait Signatures { compiler: MetalsGlobal =>
               // https://lptk.github.io/programming/2019/09/13/type-projection.html
               if (
                 sym.isStaticMember || // Java static
-                sym.owner.ownerChain.forall { s =>
+                importOwner(sym).ownerChain.forall { s =>
                   // ensure the symbol can be referenced in a static manner, without any instance
                   s.isPackageClass || s.isPackageObjectClass || s.isModule || s.isModuleClass
                 }
@@ -242,7 +253,7 @@ trait Signatures { compiler: MetalsGlobal =>
       )
       for {
         (name, sym) <- history.iterator
-        owner = sym.owner
+        owner = importOwner(sym.symbol)
         if !isRootSymbol(owner) && owner != NoSymbol
         if !context.lookupSymbol(name, _ => true).isSuccess
       } {
