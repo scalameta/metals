@@ -54,7 +54,7 @@ object JavaLintOptions {
     "this-escape", "try", "unchecked", "varargs",
   )
 
-  val default: JavaLintOptions = JavaLintOptions(allValues)
+  val default: JavaLintOptions = JavaLintOptions(Nil)
 
   private val allowed: Set[String] =
     (allValues :+ "preview").toSet

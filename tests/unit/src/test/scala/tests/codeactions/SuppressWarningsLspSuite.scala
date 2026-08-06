@@ -1,10 +1,12 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.JavaLintOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.SuppressWarnings
 
 import munit.Location
+import org.eclipse.{lsp4j => l}
 import tests.MbtTestInitializer
 
 class SuppressWarningsLspSuite
@@ -17,7 +19,7 @@ class SuppressWarningsLspSuite
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       presentationCompilerDiagnostics = true,
-      javaLintOptions = JavaLintOptions.default,
+      javaLintOptions = JavaLintOptions(JavaLintOptions.allValues),
     )
 
   override protected def toPath(

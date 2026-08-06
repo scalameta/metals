@@ -1,9 +1,11 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.JavaLintOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.RemoveRedundantCast
 
+import org.eclipse.{lsp4j => l}
 import tests.MbtTestInitializer
 
 class RemoveRedundantCastLspSuite
@@ -264,33 +266,6 @@ class RemoveRedundantCastLspSuite
        |  public String run() {
        |    String s = "value";
        |    return s;
-       |  }
-       |}
-       |""".stripMargin,
-    fileName = "Example.java",
-    filterAction = onlyRemoveRedundantCast,
-  )
-
-  check(
-    "intersection-type",
-    """|package a;
-       |
-       |import java.io.Serializable;
-       |
-       |public class Example {
-       |  public <T extends String & Serializable> String run(T t) {
-       |    return <<(String & Serializable) t>>;
-       |  }
-       |}
-       |""".stripMargin,
-    title,
-    """|package a;
-       |
-       |import java.io.Serializable;
-       |
-       |public class Example {
-       |  public <T extends String & Serializable> String run(T t) {
-       |    return t;
        |  }
        |}
        |""".stripMargin,

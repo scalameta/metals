@@ -591,7 +591,7 @@ class UserConfigurationSuite extends BaseSuite {
           |shim-globs                                   string                         `{}`.           Shim file globs
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
           |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
-          |java-lint-options                            array                          [cast,deprecation,dep-ann,divzero,empty,fallthrough,finally,lossy-conversions,overloads,overrides,rawtypes,removal,serial,static,strictfp,synchronization,text-blocks,this-escape,try,unchecked,varargs] Java lint diagnostics
+          |java-lint-options                            array                          []              Java lint diagnostics
           |excluded-packages                            array                          []              Excluded Packages
           |bloop-sbt-already-installed                  boolean                        false           Don't generate Bloop plugin file for sbt
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
