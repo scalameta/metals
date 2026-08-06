@@ -14,6 +14,7 @@ import java.util.ServiceLoader
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration.DurationInt
 import scala.util.Properties
 import scala.util.control.NonFatal
 
@@ -821,6 +822,7 @@ object Embedded {
           AbsolutePath(userHome),
           redirectErrorOutput = false,
           additionalEnv = withJavaHomeAndProps,
+          timeout = 10.minutes,
         ) match {
           case Some(out) =>
             val lines = out.linesIterator.toList
