@@ -229,11 +229,15 @@ class MbtWorkspaceSymbolProvider(
       doc: IndexedDocument,
   ): Unit = {
     if (javaSymbolLoader().isTurbineClasspath) {
-      val binaryNames = doc.cachedJavaOutlines
-        .flatMap(_.toplevelSymbols().asScala)
-        .map(_.stripSuffix("#").stripSuffix("."))
-      if (binaryNames.nonEmpty) {
-        turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+      // Turbine compiled the outlines, not the proto file, so their classes are
+      // what has to be invalidated - including the `OrBuilder` interface, which
+      // isn't named after the outline that declares it.
+      val toplevelBinaryNames = for {
+        outline <- doc.cachedJavaOutlines
+        symbol <- outline.toplevelSymbols().asScala
+      } yield Symbol(symbol).toplevelBinaryName
+      if (toplevelBinaryNames.nonEmpty) {
+        turbineCompiler.onDidDelete(toplevelBinaryNames, file.toURI.toString())
         turbineCompiler.scheduleCompile().ignoreValue
       }
     }
@@ -454,13 +458,17 @@ class MbtWorkspaceSymbolProvider(
         // This adds an empty source to SOURCE_PATH so javac won't find the class.
         // We also track deleted binary names to exclude from CLASS_PATH.
         if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
-          val binaryNames = doc.symbols
-            .map(_.getSymbol())
-            .filter(sym => Symbol(sym).isToplevel)
-            .map(sym => sym.stripSuffix("#").stripSuffix("."))
-            .toSeq
-          // Track deleted binary names for CLASS_PATH exclusion
-          turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
+          // The index has every top-level class the file declares, not only the
+          // one it is named after; nested classes follow from those.
+          val toplevelBinaryNames = for {
+            info <- doc.symbols.toSeq
+            symbol = Symbol(info.getSymbol())
+            if symbol.isToplevel
+          } yield symbol.toplevelBinaryName
+          turbineCompiler.onDidDelete(
+            toplevelBinaryNames,
+            file.toURI.toString(),
+          )
           // Add empty file to SOURCE_PATH so javac parses it and doesn't find the class
           doc.semanticdbPackages.headOption match {
             case Some(pkg) =>

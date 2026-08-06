@@ -1199,8 +1199,20 @@ abstract class MetalsLspService(
           }
         ) // de-duplicate didSave events.
         .toSeq
-    val (deleteEvents, changeAndCreateEvents) =
+    val (allDeleteEvents, changeAndCreateEvents) =
       importantEvents.partition(_.getType().equals(FileChangeType.Deleted))
+    // Restoring a file, or rewriting it outside the editor, can report a
+    // delete and a create for the same path in the same batch. The file is
+    // back on disk, so the create is what describes the final state; handling
+    // the delete too would remove the freshly indexed document again, since
+    // the two are processed concurrently. Re-indexing already invalidates
+    // whatever the previous version of the file contributed.
+    val changedOrCreatedPaths =
+      changeAndCreateEvents.flatMap(_.getUri().toAbsolutePathSafe).toSet
+    val deleteEvents =
+      allDeleteEvents.filterNot(
+        _.getUri().toAbsolutePathSafe.exists(changedOrCreatedPaths)
+      )
     val (bloopReportDelete, otherDeleteEvents) =
       deleteEvents.partition(
         _.getUri().toAbsolutePath.toNIO
@@ -1208,8 +1220,13 @@ abstract class MetalsLspService(
       )
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
 
+    val (protoDeleteEvents, nonProtoDeleteEvents) =
+      otherDeleteEvents.partition(
+        _.getUri().toAbsolutePath.isProtoFilename
+      )
+
     val futures = List.newBuilder[Future[Unit]]
-    futures ++= otherDeleteEvents.map(event =>
+    futures ++= nonProtoDeleteEvents.map(event =>
       onDelete(event.getUri().toAbsolutePath)
     )
     val paths = changeAndCreateEvents.map(_.getUri().toAbsolutePath)
@@ -1222,14 +1239,31 @@ abstract class MetalsLspService(
       case None =>
         Future.successful(())
     })
-    // A proto file can change on disk without ever going through didSave,
-    // for example when a rename's workspace edit is applied to a file that
-    // isn't open in an editor. Without this, the synthesized outline and
-    // the Java presentation compiler's cached symbols go stale until the
-    // next full restart.
-    if (paths.exists(_.isProtoFilename)) {
-      paths.filter(_.isProtoFilename).foreach(mbt2.didSave)
-      compilers.restartJavaCompilers()
+    // A proto file can be created, changed, or deleted on disk without ever
+    // going through didSave, for example when a rename's workspace edit is
+    // applied to a file that isn't open in an editor, or when it's
+    // created/deleted outside the editor entirely. A path that was never
+    // indexed before (a brand new file, or the new side of a rename) isn't
+    // in mbt's index yet, so it needs to be indexed via onDidChange, not
+    // just have its outline cache cleared. Without this, the synthesized
+    // outline and the Java presentation compiler's cached symbols go stale
+    // until the next full restart.
+    val changedProtoPaths = paths.filter(_.isProtoFilename)
+    if (changedProtoPaths.nonEmpty || protoDeleteEvents.nonEmpty) {
+      val protoChangeInvalidation =
+        Future.sequence(changedProtoPaths.map(mbt2.onDidChange))
+      val protoDeleteInvalidation = Future.sequence(
+        protoDeleteEvents.map(event => onDelete(event.getUri().toAbsolutePath))
+      )
+      futures += Future
+        .sequence(List(protoChangeInvalidation, protoDeleteInvalidation))
+        .flatMap { _ =>
+          compilers.restartJavaCompilers()
+          // The restarted compilers only report the classes the proto file
+          // now declares once they run again, so re-run them right away
+          // instead of waiting for the next edit or focus change.
+          refreshDiagnostics(_.isJavaFilename)
+        }
     }
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue

@@ -19,6 +19,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BatchedFunction
+import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
@@ -109,6 +110,7 @@ object TurbineCompiler {
     )
     TurbineCompileResult(boundClasspath, lowered)
   }
+
   private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
     classpath.filter(isJarFile)
   }
@@ -139,12 +141,9 @@ class TurbineCompiler[T](
     TrieMap.empty[String, ju.concurrent.ConcurrentLinkedDeque[
       SourcepathJavaFileObject
     ]]
-  // Binary names of classes that have been deleted but not yet recompiled.
-  // These are excluded from CLASS_PATH listing until the next turbine compile
-  // removes them from the compiled output.
-  private val deletedBinaryNames = ju.Collections.newSetFromMap(
-    new ju.concurrent.ConcurrentHashMap[String, java.lang.Boolean]()
-  )
+  // Top-level classes deleted but not yet recompiled. They and their nested
+  // classes are hidden from CLASS_PATH until the next Turbine compile.
+  private val deletedToplevelNames = ConcurrentHashSet.empty[String]
   private def sourcepathSources(): Seq[SourcepathJavaFileObject] = {
     for {
       (_, deque) <- sourcepathByPackageName.iterator
@@ -185,6 +184,11 @@ class TurbineCompiler[T](
 
   var result = TurbineCompiler.emptyResult
   def doCompileNow(): TurbineCompileResult = {
+    // Snapshot before compiling: only these names are answered for by the
+    // output we are about to produce. A file deleted while the compile runs
+    // may still be in it, so its names have to stay hidden until the compile
+    // after this one.
+    val hiddenFromThisCompile = deletedToplevelNames.asScala.toSet
     result = TurbineCompiler.compileClassfiles(
       allCompilationUnits(),
       parseUnit,
@@ -192,22 +196,24 @@ class TurbineCompiler[T](
       progressBars,
     )
     cleanup()
-    // Clear deleted binary names after recompile - they are no longer in the compiled output
-    deletedBinaryNames.clear()
+    hiddenFromThisCompile.foreach(deletedToplevelNames.remove)
     onIndexingDone()
     result
   }
 
   /**
-   * Called when a file is deleted. Tracks the binary names of the deleted classes
-   * so they can be excluded from CLASS_PATH listing until the next turbine recompile.
-   * Also soft-deletes the file from the sourcepath so it's not returned via SOURCE_PATH.
+   * Called when a file is deleted. Hides the classes it declared from CLASS_PATH
+   * until the next Turbine recompile, and soft-deletes it from the sourcepath so
+   * it's not returned via SOURCE_PATH.
    *
-   * @param binaryNames The binary names of classes defined in the deleted file
+   * @param toplevelBinaryNames The top-level classes Turbine compiled for the
+   *                            file; for a `.proto`, the ones its synthesized
+   *                            outlines declare. Nested classes follow from
+   *                            these, see [[isDeleted]].
    * @param fileUri The URI of the deleted file (used to soft-delete from sourcepath)
    */
-  def onDidDelete(binaryNames: Seq[String], fileUri: String): Unit = {
-    binaryNames.foreach(deletedBinaryNames.add)
+  def onDidDelete(toplevelBinaryNames: Seq[String], fileUri: String): Unit = {
+    toplevelBinaryNames.foreach(deletedToplevelNames.add)
     // Soft-delete from sourcepath so the deleted file isn't returned via SOURCE_PATH
     sourcepathByPackageName.valuesIterator.foreach { deque =>
       deque.asScala.foreach { obj =>
@@ -220,9 +226,21 @@ class TurbineCompiler[T](
 
   /**
    * Check if a binary name has been deleted but not yet recompiled.
+   *
+   * Nested classes are matched by their `Outer$Inner` name, so nothing has to
+   * remember which classes each source contributed.
    */
   def isDeleted(binaryName: String): Boolean = {
-    deletedBinaryNames.contains(binaryName)
+    !deletedToplevelNames.isEmpty && (
+      deletedToplevelNames.contains(binaryName) ||
+        deletedToplevelNames.asScala.exists(isNestedIn(binaryName, _))
+    )
+  }
+
+  private def isNestedIn(binaryName: String, toplevel: String): Boolean = {
+    binaryName.length() > toplevel.length() &&
+    binaryName.charAt(toplevel.length()) == '$' &&
+    binaryName.startsWith(toplevel)
   }
 
   def compileNow(): Future[TurbineCompileResult] = Future {

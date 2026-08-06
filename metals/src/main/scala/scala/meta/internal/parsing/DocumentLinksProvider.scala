@@ -6,6 +6,7 @@ import java.util
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonElement
@@ -252,6 +253,10 @@ final class DocumentLinksProvider(
    *
    * For fully qualified "java.util.List":
    *   - Returns only "java/util/List#"
+   *
+   * For fully qualified "java.util.Map.Entry":
+   *   - First tries "java/util/Map#Entry#" (Entry nested in Map)
+   *   - Then falls back to "java/util/Map/Entry#" (Entry in package java.util.Map)
    */
   private def javadocRefToSemanticdbSymbols(
       ref: String,
@@ -277,6 +282,7 @@ final class DocumentLinksProvider(
   /**
    * Converts a class reference to candidate SemanticDB symbols.
    * For simple names (no dots), tries same-package first.
+   * For dotted names, see [[DocumentLinksProvider.dottedClassRefToSymbols]].
    */
   private def classRefToSymbols(
       classRef: String,
@@ -295,7 +301,7 @@ final class DocumentLinksProvider(
       else
         List(simpleSymbol)
     } else {
-      List(classRef.replace('.', '/') + "#")
+      DocumentLinksProvider.dottedClassRefToSymbols(classRef)
     }
   }
 
@@ -327,4 +333,41 @@ final class DocumentLinksProvider(
       .findFirstMatchIn(content)
       .map(_.group(1).replace('.', '/'))
       .getOrElse("")
+}
+
+object DocumentLinksProvider {
+
+  /**
+   * Candidate SemanticDB symbols for a dotted Javadoc class reference, the most
+   * likely reading first. The dots don't say which of them separate packages:
+   * Javadoc writes `java.util.Map.Entry`, which is `java/util/Map#Entry#` in
+   * SemanticDB rather than `java/util/Map/Entry#`, so both readings are offered
+   * and the caller takes the first that resolves.
+   */
+  def dottedClassRefToSymbols(classRef: String): List[String] = {
+    val toplevelSymbol = Symbol.fromToplevelClassName(classRef).value
+    nestedClassSymbol(classRef) match {
+      case Some(nested) => List(nested, toplevelSymbol)
+      case None => List(toplevelSymbol)
+    }
+  }
+
+  /**
+   * Reads a dotted reference as a nested class, guessing where the packages end
+   * from Java's naming convention: lowercase packages, capitalized types. Empty
+   * for a reference that names no nested class, which is every reference whose
+   * last part is its only capitalized one.
+   */
+  private def nestedClassSymbol(classRef: String): Option[String] = {
+    val parts = classRef.split('.')
+    val firstTypeIndex = parts.indexWhere(_.headOption.exists(_.isUpper))
+    if (firstTypeIndex >= 0 && firstTypeIndex < parts.length - 1) {
+      val packages = parts.take(firstTypeIndex)
+      val packagePrefix =
+        if (packages.isEmpty) "" else packages.mkString("", "/", "/")
+      Some(packagePrefix + parts.drop(firstTypeIndex).mkString("#") + "#")
+    } else {
+      None
+    }
+  }
 }
