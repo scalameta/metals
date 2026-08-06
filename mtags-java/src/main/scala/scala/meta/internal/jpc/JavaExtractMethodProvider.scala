@@ -53,12 +53,14 @@ import com.sun.source.util.TreePathScanner
 import com.sun.source.util.TreeScanner
 import com.sun.source.util.Trees
 import org.eclipse.{lsp4j => l}
+import org.slf4j.LoggerFactory
 
 final class JavaExtractMethodProvider(
     compiler: JavaMetalsCompiler,
     rangeParams: RangeParams,
     extractionPos: OffsetParams
 ) extends ExtractMethodUtils {
+  private val logger = LoggerFactory.getLogger(getClass)
 
   def extractMethod: List[l.TextEdit] = {
     rangeParams.checkCanceled()
@@ -67,14 +69,25 @@ final class JavaExtractMethodProvider(
 
     val javacTrees = Trees.instance(compile.task)
     val cu = compile.cu
+    val task = compile.task
     val text = cu.getSourceFile().getCharContent(true).toString()
     val originalStart = rangeParams.offset()
     val originalEnd = rangeParams.endOffset()
     val insertOffset = extractionPos.offset()
     if (originalStart >= originalEnd || insertOffset < 0) Nil
     else {
+      val scanner = new JavaTreeScanner(compiler.logger, task, cu)
+      val position =
+        CursorPosition(
+          rangeParams.offset(),
+          rangeParams.offset(),
+          rangeParams.offset()
+        )
+      val node = compiler.compilerTreeNode(scanner, position)
+
       val ctx = Context(
         javacTrees,
+        node,
         compile.task.getTypes(),
         cu,
         text,
@@ -91,6 +104,7 @@ final class JavaExtractMethodProvider(
 
   private case class Context(
       trees: Trees,
+      node: Option[TreePath],
       types: Types,
       cu: CompilationUnitTree,
       text: String,
@@ -723,17 +737,25 @@ final class JavaExtractMethodProvider(
       types.foreach(collectImportCandidates)
       if (importsNeeded.isEmpty) Nil
       else {
-        val lines = importsNeeded.toList.sorted.map(fqn => s"import $fqn;")
-        val firstFqn = lines.head.stripPrefix("import ").stripSuffix(";")
-        val anchor = new JavaAutoImportEditor(ctx.text, firstFqn).textEdit()
-        if (lines.size == 1) List(anchor)
-        else
-          List(
-            new l.TextEdit(
-              anchor.getRange(),
-              anchor.getNewText() + lines.tail.mkString("\n", "\n", "\n")
-            )
-          )
+        ctx.node match {
+          case Some(path) =>
+            val lines = importsNeeded.toList.sorted.map(fqn => s"import $fqn;")
+            val firstFqn = lines.head.stripPrefix("import ").stripSuffix(";")
+            val anchor =
+              new JavaAutoImportEditor(path, ctx.trees, firstFqn).textEdit()
+            if (lines.size == 1) List(anchor)
+            else
+              List(
+                new l.TextEdit(
+                  anchor.getRange(),
+                  anchor.getNewText() + lines.tail.mkString("\n", "\n", "\n")
+                )
+              )
+
+          case None =>
+            logger.warn("Node is empty/null, cannot generate import edits.")
+            Nil
+        }
       }
     }
 

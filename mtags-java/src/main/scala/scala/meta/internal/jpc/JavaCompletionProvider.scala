@@ -211,6 +211,7 @@ class JavaCompletionProvider(
       identifier,
       inScope,
       path,
+      trees,
       (elem, item) => {
         if (!inScope.contains(elem) && isAccessible(task, trees, scope, elem)) {
           items += item
@@ -256,6 +257,7 @@ class JavaCompletionProvider(
       query: String,
       inScope: Set[String],
       path: TreePath,
+      trees: Trees,
       onMatch: (String, CompletionItem) => Unit
   ): Unit = {
     val simpleNamesInScope = inScope.map(_.split('.').last)
@@ -296,7 +298,7 @@ class JavaCompletionProvider(
         // don't compute this eagerly for all items here.
         if (!isSimpleNameInScope && !isSamePackage(path, fqn)) {
           val additionalEdit =
-            new JavaAutoImportEditor(params.text(), fqn).textEdit()
+            new JavaAutoImportEditor(path, trees, fqn).textEdit()
           item.setAdditionalTextEdits(List(additionalEdit).asJava)
         }
         onMatch(fqn, item)
