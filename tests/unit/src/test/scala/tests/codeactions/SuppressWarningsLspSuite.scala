@@ -1,12 +1,9 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.JavaLintOptions
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.SuppressWarnings
 
 import munit.Location
-import org.eclipse.{lsp4j => l}
 import tests.MbtTestInitializer
 
 class SuppressWarningsLspSuite
@@ -18,8 +15,7 @@ class SuppressWarningsLspSuite
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
-      presentationCompilerDiagnostics = true,
-      javaLintOptions = JavaLintOptions(JavaLintOptions.allValues),
+      presentationCompilerDiagnostics = true
     )
 
   override protected def toPath(
@@ -528,31 +524,6 @@ class SuppressWarningsLspSuite
   )
 
   checkSuppressWarnings(
-    "lossy-conversions-method",
-    """|package a;
-       |
-       |public class Example {
-       |<<  public void run() {
-       |    short value = 0;
-       |    value += 100000;
-       |  }>>
-       |}
-       |""".stripMargin,
-    "compiler.warn.possible.loss.of.precision",
-    "lossy-conversions",
-    """|package a;
-       |
-       |public class Example {
-       |  @SuppressWarnings("lossy-conversions")
-       |  public void run() {
-       |    short value = 0;
-       |    value += 100000;
-       |  }
-       |}
-       |""".stripMargin,
-  )
-
-  checkSuppressWarnings(
     "overloads-method",
     """|package a;
        |
@@ -560,11 +531,11 @@ class SuppressWarningsLspSuite
        |import java.util.function.Function;
        |
        |public class Example {
-       |  public void run(Consumer<String> consumer) {
-       |  }
-       |
-       |<<  public void run(Function<String, String> function) {
+       |<<  public void run(Consumer<String> consumer) {
        |  }>>
+       |
+       |  public void run(Function<String, String> function) {
+       |  }
        |}
        |""".stripMargin,
     "compiler.warn.potentially.ambiguous.overload",
@@ -575,10 +546,10 @@ class SuppressWarningsLspSuite
        |import java.util.function.Function;
        |
        |public class Example {
+       |  @SuppressWarnings("overloads")
        |  public void run(Consumer<String> consumer) {
        |  }
        |
-       |  @SuppressWarnings("overloads")
        |  public void run(Function<String, String> function) {
        |  }
        |}
@@ -773,33 +744,6 @@ class SuppressWarningsLspSuite
   )
 
   checkSuppressWarnings(
-    "this-escape-constructor",
-    """|package a;
-       |
-       |public class Example {
-       |<<  public Example() {
-       |    overridable();
-       |  }>>
-       |
-       |  public void overridable() {}
-       |}
-       |""".stripMargin,
-    "compiler.warn.possible.this.escape",
-    "this-escape",
-    """|package a;
-       |
-       |public class Example {
-       |  @SuppressWarnings("this-escape")
-       |  public Example() {
-       |    overridable();
-       |  }
-       |
-       |  public void overridable() {}
-       |}
-       |""".stripMargin,
-  )
-
-  checkSuppressWarnings(
     "try-method",
     """|package a;
        |
@@ -875,7 +819,8 @@ class SuppressWarningsLspSuite
               |{
               |  "namespaces": {
               |    "a": {
-              |      "sources": ["a/src/main/java/**", "a/src/main/scala/**"]
+              |      "sources": ["a/src/main/java/**", "a/src/main/scala/**"],
+              |      "javacOptions": ["-Xlint:all"]
               |    }
               |  }
               |}

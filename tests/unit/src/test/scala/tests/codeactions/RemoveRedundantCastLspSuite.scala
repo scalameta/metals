@@ -1,7 +1,5 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.JavaLintOptions
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.RemoveRedundantCast
 
@@ -17,9 +15,10 @@ class RemoveRedundantCastLspSuite
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
-      presentationCompilerDiagnostics = true,
-      javaLintOptions = JavaLintOptions(List("cast")),
+      presentationCompilerDiagnostics = true
     )
+
+  override protected def javacOptions: List[String] = List("-Xlint:cast")
 
   override protected def toPath(
       fileName: String,

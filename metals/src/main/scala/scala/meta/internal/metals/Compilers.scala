@@ -1795,23 +1795,20 @@ class Compilers(
   private def loadJavaCompiler(
       targetId: BuildTargetIdentifier
   ): Option[PresentationCompiler] = {
-    buildTargets
-      .javaTarget(targetId)
-      .orElse(buildTargets.jvmTarget(targetId))
-      .map { javaTarget =>
-        jcache
-          .computeIfAbsent(
-            PresentationCompilerKey.JavaBuildTarget(targetId),
-            { _ =>
-              workDoneProgress.trackBlocking(
-                s"${config.icons().sync}Loading presentation compiler"
-              ) {
-                JavaLazyCompiler(javaTarget, search, completionItemPriority())
-              }
-            },
-          )
-          .await
-      }
+    buildTargets.jvmTarget(targetId, scalaPreferred = false).map { javaTarget =>
+      jcache
+        .computeIfAbsent(
+          PresentationCompilerKey.JavaBuildTarget(targetId),
+          { _ =>
+            workDoneProgress.trackBlocking(
+              s"${config.icons().sync}Loading presentation compiler"
+            ) {
+              JavaLazyCompiler(javaTarget, search, completionItemPriority())
+            }
+          },
+        )
+        .await
+    }
   }
 
   private def protoCompiler: PresentationCompiler = {

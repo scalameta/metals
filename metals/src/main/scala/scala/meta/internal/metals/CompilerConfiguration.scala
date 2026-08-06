@@ -439,12 +439,12 @@ class CompilerConfiguration(
   }
 
   case class JavaLazyCompiler(
-      target: JvmTarget,
+      javaTarget: JvmTarget,
       search: SymbolSearch,
       completionItemPriority: CompletionItemPriority,
   ) extends LazyCompiler {
 
-    def buildTargetId: BuildTargetIdentifier = target.id
+    def buildTargetId: BuildTargetIdentifier = javaTarget.id
 
     protected def newCompiler(
         classpath: Seq[Path],
@@ -454,13 +454,11 @@ class CompilerConfiguration(
       val shouldUseOpts = featureFlags
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
-      val buildOptions = target match {
-        case j: JavaTarget if shouldUseOpts => j.options
+      val options = javaTarget match {
+        case j: JavaTarget =>
+          CompilerConfiguration.javaPcOptions(j.options, shouldUseOpts)
         case _ => Nil
       }
-      val lintOptions =
-        userConfig().javaLintOptions.values.map(option => s"-Xlint:$option")
-      val options = buildOptions ++ lintOptions
       configure(pc, search, completionItemPriority)
         .newInstance(
           buildTargetId.getUri(),
@@ -680,4 +678,16 @@ class CompilerConfiguration(
     } else {
       Nil
     }
+}
+
+object CompilerConfiguration {
+  private[metals] def javaPcOptions(
+      options: List[String],
+      includeAll: Boolean,
+  ): List[String] =
+    if (includeAll) options
+    else
+      options.filter(option =>
+        option == "-Xlint" || option.startsWith("-Xlint:")
+      )
 }

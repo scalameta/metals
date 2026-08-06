@@ -17,8 +17,6 @@ object TestingInfra {
   val events: mutable.ArrayBuffer[Event] = mutable.ArrayBuffer[Event]()
   val testFlags: mutable.ArrayBuffer[FeatureFlag] =
     mutable.ArrayBuffer[FeatureFlag]()
-
-  val enabledFlags: mutable.Set[FeatureFlag] = mutable.Set[FeatureFlag]()
 }
 class TestingMonitoringClient extends MonitoringClient {
   override def recordUsage(metric: Metric): Unit =
@@ -31,8 +29,7 @@ class TestingMonitoringClient extends MonitoringClient {
 class TestingFeatureFlagProvider extends FeatureFlagProvider {
   override def readBoolean(flag: FeatureFlag): Optional[java.lang.Boolean] = {
     TestingInfra.testFlags.append(flag)
-    if (TestingInfra.enabledFlags.contains(flag)) Optional.of(true)
-    else Optional.empty()
+    Optional.empty()
   }
 
   override def readInt(flag: FeatureFlag, default: Integer): Optional[Integer] =
