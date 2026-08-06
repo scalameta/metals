@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Files
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.atomic.AtomicReference
 
@@ -14,6 +15,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.scalacli.ScalaCliAutoStart
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.Semanticdbs
@@ -22,6 +24,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DidChangeBuildTarget
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
 
 class FallbackMetalsLspService(
@@ -41,6 +44,7 @@ class FallbackMetalsLspService(
     override val workDoneProgress: WorkDoneProgress,
     bspStatus: BspStatus,
     moduleStatus: ModuleStatus,
+    workspaceFolders: () => Seq[AbsolutePath],
 ) extends MetalsLspService(
       ec,
       sh,
@@ -100,20 +104,47 @@ class FallbackMetalsLspService(
     scalaCli.stop(path).map(_ => diagnostics.didDelete(path))
   }
 
+  override def didOpen(
+      params: DidOpenTextDocumentParams
+  ): CompletableFuture[Unit] = {
+    val path = params.getTextDocument.getUri.toAbsolutePath
+    if (ScalaCliAutoStart.isOutsideWorkspace(path, workspaceFolders())) {
+      if (path.isScala) {
+        scribe.debug(s"Ignoring didOpen for out-of-workspace file: $path")
+      }
+      diagnostics.didDelete(path)
+      CompletableFuture.completedFuture(())
+    } else {
+      super.didOpen(params)
+    }
+  }
+
   override def maybeImportFileAndLoad(
       path: AbsolutePath,
       load: () => Future[Unit],
-  ): Future[Unit] =
-    for {
-      _ <-
-        if (!path.isScala) Future.unit
-        else {
-          val prev = files.getAndUpdate(_ + path)
-          if (prev.contains(path)) Future.unit
-          else scalaCli.start(path)
-        }
-      _ <- load()
-    } yield ()
+  ): Future[Unit] = {
+    val folders = workspaceFolders()
+    if (ScalaCliAutoStart.isOutsideWorkspace(path, folders)) {
+      if (path.isScala) {
+        scribe.debug(
+          s"Skipping fallback import/load for out-of-workspace file: $path"
+        )
+      }
+      diagnostics.didDelete(path)
+      Future.unit
+    } else {
+      for {
+        _ <-
+          if (!ScalaCliAutoStart.shouldAutoStart(path, folders)) Future.unit
+          else {
+            val prev = files.getAndUpdate(_ + path)
+            if (prev.contains(path)) Future.unit
+            else scalaCli.start(path)
+          }
+        _ <- load()
+      } yield ()
+    }
+  }
 
   override protected def onBuildTargetChanges(
       params: DidChangeBuildTarget
