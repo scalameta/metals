@@ -3,23 +3,28 @@ package scala.meta.internal.metals.newScalaFile
 import java.net.URI
 import java.nio.file.FileAlreadyExistsException
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.NewProjectProvider
+import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.NewFilesBracelessSyntax
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.newScalaFile.NewFileTypes._
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath
 
@@ -33,6 +38,9 @@ class NewFileProvider(
     selector: ScalaVersionSelector,
     icons: Icons,
     isReadClipboardProvider: Boolean,
+    buildTargets: BuildTargets,
+    trees: Trees,
+    userConfig: () => UserConfiguration,
     onCreate: AbsolutePath => Future[Unit],
 )(implicit
     ec: ExecutionContext
@@ -241,11 +249,13 @@ class NewFileProvider(
     val path = directory.resolve(fileName)
     // name can be "foo/Name" or "Foo.scala"; use path filename without ext for template
     val className = Identifier.backtickWrap(path.filename.stripSuffix(ext))
+    val useBraceless = useBracelessSyntax(path)
     val template = kind match {
       case CaseClass => caseClassTemplate(className)
-      case Enum => enumTemplate(className)
+      case Enum => enumTemplate(className, useBraceless)
       case JavaRecord => javaRecordTemplate(className)
-      case _ => classTemplate(kind.syntax.getOrElse(""), className)
+      case _ =>
+        classTemplate(kind.syntax.getOrElse(""), className, useBraceless)
     }
     val editText = template.map { s =>
       packageProvider
@@ -277,10 +287,114 @@ class NewFileProvider(
     createFileAndWriteText(
       path,
       packageProvider
-        .packageStatement(path)
+        .packageStatement(path, braceless = useBracelessSyntax(path))
         .getOrElse(NewFileTemplate.empty),
     )
   }
+
+  /**
+   * Whether generated code for `path` should use Scala 3's optional-braces
+   * (significant-indentation) syntax instead of curly braces.
+   *
+   * Only Scala 3 supports braceless syntax, and the compiler can still forbid
+   * it (`-no-indent`, `-old-syntax`, migration mode) — those cases always use
+   * braces, overriding the user's preference. Otherwise the
+   * `new-files-braceless-syntax` setting decides: `always`/`never` force the
+   * choice, while `auto` (the default) matches the style of nearby existing
+   * sources — the target package directory and its enclosing directories up to
+   * the source root — then the `-indent` scalac option, and finally braces.
+   */
+  private def useBracelessSyntax(path: AbsolutePath): Boolean =
+    path.isScalaFilename &&
+      ScalaVersions.isScala3Version(selector.scalaVersionForPath(path)) && {
+        val options = scalacOptions(path)
+        significantIndentationAllowed(options) && {
+          userConfig().newFilesBracelessSyntax match {
+            case NewFilesBracelessSyntax.Always => true
+            case NewFilesBracelessSyntax.Never => false
+            case NewFilesBracelessSyntax.Auto =>
+              styleFromExistingSources(path)
+                .orElse(indentationPreferredByScalac(options))
+                .getOrElse(false)
+          }
+        }
+      }
+
+  /**
+   * Braceless preference inferred from an existing source file, if any.
+   *
+   * Directories are searched nearest-first (the file's own package directory,
+   * then each enclosing directory up to the source root), and each directory's
+   * own `.scala` files are inspected in a stable, filename-sorted order. The
+   * search is lazy and stops at the first file that yields a determinate style,
+   * so it neither depends on filesystem ordering nor walks the whole tree.
+   */
+  private def styleFromExistingSources(
+      path: AbsolutePath
+  ): Option[Boolean] =
+    directoriesNearestFirst(
+      path.parent,
+      buildTargets.inverseSourceItem(path),
+    ).iterator
+      .flatMap(styleInDirectory(_, exclude = path))
+      .nextOption()
+
+  private def styleInDirectory(
+      directory: AbsolutePath,
+      exclude: AbsolutePath,
+  ): Option[Boolean] =
+    directory.list.toList
+      .filter(file => file.isScalaFilename && file != exclude)
+      .sortBy(_.filename)
+      .iterator
+      .flatMap(trees.get)
+      .flatMap(BracelessSyntax.prefersBraceless)
+      .nextOption()
+
+  /** `directory` followed by its ancestors up to and including `sourceRoot`. */
+  private def directoriesNearestFirst(
+      directory: AbsolutePath,
+      sourceRoot: Option[AbsolutePath],
+  ): List[AbsolutePath] =
+    sourceRoot match {
+      case Some(root) if directory.toNIO.startsWith(root.toNIO) =>
+        @tailrec
+        def loop(
+            current: AbsolutePath,
+            acc: List[AbsolutePath],
+        ): List[AbsolutePath] = {
+          val next = current :: acc
+          if (current == root) next.reverse
+          else loop(current.parent, next)
+        }
+        loop(directory, Nil)
+      case _ => List(directory)
+    }
+
+  private def scalacOptions(path: AbsolutePath): List[String] =
+    buildTargets
+      .inverseSources(path)
+      .flatMap(buildTargets.scalaTarget)
+      .map(_.options)
+      .getOrElse(Nil)
+
+  /**
+   * Whether the compiler allows significant indentation. `-no-indent`,
+   * `-old-syntax` and `-source:<v>-migration` all require classical braces.
+   */
+  private def significantIndentationAllowed(
+      options: List[String]
+  ): Boolean =
+    !options.exists { option =>
+      option == "-no-indent" || option == "-old-syntax" ||
+      option.endsWith("-migration")
+    }
+
+  /** Braceless preference from an explicit `-indent` scalac option, if any. */
+  private def indentationPreferredByScalac(
+      options: List[String]
+  ): Option[Boolean] =
+    if (options.contains("-indent")) Some(true) else None
 
   private def createEmptyFile(
       directory: AbsolutePath,
@@ -326,20 +440,39 @@ class NewFileProvider(
     )
   }
 
-  private def classTemplate(kind: String, name: String): NewFileTemplate = {
+  private def classTemplate(
+      kind: String,
+      name: String,
+      braceless: Boolean,
+  ): NewFileTemplate = {
     val indent = "  "
-    NewFileTemplate(s"""|$kind $name {
-                        |$indent@@
-                        |}
-                        |""".stripMargin)
+    // A bodyless declaration is the braceless equivalent of an empty class/trait/
+    // object: `class Foo:` with an empty indented region is a parse error, whereas
+    // `class Foo` compiles. The cursor lands after the name, ready for a body.
+    if (braceless)
+      NewFileTemplate(s"""|$kind $name@@
+                          |""".stripMargin)
+    else
+      NewFileTemplate(s"""|$kind $name {
+                          |$indent@@
+                          |}
+                          |""".stripMargin)
   }
 
-  private def enumTemplate(name: String): NewFileTemplate = {
+  private def enumTemplate(
+      name: String,
+      braceless: Boolean,
+  ): NewFileTemplate = {
     val indent = "  "
-    NewFileTemplate(s"""|enum $name {
-                        |${indent}case@@
-                        |}
-                        |""".stripMargin)
+    if (braceless)
+      NewFileTemplate(s"""|enum $name:
+                          |${indent}case@@
+                          |""".stripMargin)
+    else
+      NewFileTemplate(s"""|enum $name {
+                          |${indent}case@@
+                          |}
+                          |""".stripMargin)
   }
 
   private def javaRecordTemplate(name: String): NewFileTemplate = {
