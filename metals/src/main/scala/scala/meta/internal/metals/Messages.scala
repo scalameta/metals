@@ -546,6 +546,20 @@ object Messages {
     }
   }
 
+  object UnresponsiveBloopServer {
+    def message: String =
+      "Bloop is running but unresponsive and could not be stopped " +
+        "automatically. Please run the 'build-restart' command or stop the " +
+        "Bloop process manually."
+
+    def params(): MessageParams = {
+      val params = new MessageParams()
+      params.setMessage(message)
+      params.setType(MessageType.Error)
+      params
+    }
+  }
+
   object BloopVersionChange {
     def reconnect: MessageActionItem =
       new MessageActionItem("Restart Bloop")
