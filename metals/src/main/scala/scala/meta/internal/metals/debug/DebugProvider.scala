@@ -106,6 +106,14 @@ class DebugProvider(
   private val currentRunner =
     new ju.concurrent.atomic.AtomicReference[DebugRunner](null)
 
+  private case class OriginCallbacks(
+      onInfo: String => Unit,
+      onError: String => Unit,
+  )
+
+  private val originListeners =
+    new ju.concurrent.ConcurrentHashMap[String, OriginCallbacks]()
+
   override def info(message: String): Unit = {
     val runner = currentRunner.get()
     if (runner != null) runner.stdout(message)
@@ -114,6 +122,81 @@ class DebugProvider(
   override def error(message: String): Unit = {
     val runner = currentRunner.get()
     if (runner != null) runner.error(message)
+  }
+
+  override def infoWithOrigin(originId: String, message: String): Unit = {
+    val runner = currentRunner.get()
+    if (runner != null) runner.stdout(message)
+    Option(originListeners.get(originId)).foreach(_.onInfo(message))
+  }
+
+  override def errorWithOrigin(originId: String, message: String): Unit = {
+    val runner = currentRunner.get()
+    if (runner != null) runner.error(message)
+    Option(originListeners.get(originId)).foreach(_.onError(message))
+  }
+
+  /**
+   * Whether tests for this target should be run via BSP `buildTarget/test`
+   * (same path as non-debug editor test runs for MBT).
+   */
+  def usesBuildTargetTest(id: BuildTargetIdentifier): Boolean =
+    buildTargets.buildServerOf(id).exists(_.isMbt)
+
+  /**
+   * Run tests through BSP `buildTarget/test`, capturing process output.
+   * Used by MCP and mirrors [[runMbtTestLocally]] without a DAP session.
+   * Uses request-specific origin ID routing to isolate output from concurrent requests.
+   */
+  def runBuildTargetTest(
+      id: BuildTargetIdentifier,
+      testSuites: b.ScalaTestSuites,
+      cancelPromise: Promise[Unit],
+      verbose: Boolean,
+  )(implicit ec: ExecutionContext): Either[String, Future[String]] = {
+    buildTargets
+      .buildServerOf(id)
+      .toRight(s"No build server connection for $id")
+      .map { buildServer =>
+        val buffer = new StringBuffer()
+        val originId = ju.UUID.randomUUID().toString()
+        val onInfo: String => Unit = msg => if (verbose) buffer.append(msg)
+        val onError: String => Unit = msg => buffer.append(msg)
+        originListeners.put(originId, OriginCallbacks(onInfo, onError))
+        val testParams = scalaTestParams(id, testSuites, originId)
+        buildServer
+          .buildTargetTest(testParams, cancelPromise)
+          .map { result =>
+            val suites = testSuites.getSuites.asScala.map(_.getClassName)
+            val status =
+              if (result.getStatusCode == b.StatusCode.OK) "passed"
+              else "failed"
+            val summary =
+              s"""|
+                  |${suites.map(name => s"$name: $status").mkString("\n")}
+                  |Status: ${result.getStatusCode}
+                  |""".stripMargin
+            buffer.append(summary)
+            buffer.toString
+          }
+          .andThen { case _ => originListeners.remove(originId) }
+          .recoverWith { case NonFatal(e) =>
+            originListeners.remove(originId)
+            Future.failed(e)
+          }
+      }
+  }
+
+  private def scalaTestParams(
+      id: BuildTargetIdentifier,
+      testSuites: b.ScalaTestSuites,
+      originId: String,
+  ): b.TestParams = {
+    val testParams = new b.TestParams(singletonList(id))
+    testParams.setOriginId(originId)
+    testParams.setDataKind(b.TestParamsDataKind.SCALA_TEST_SUITES_SELECTION)
+    testParams.setData(testSuites.toJson)
+    testParams
   }
 
   override def cancel(): Unit = {

@@ -49,6 +49,57 @@ class McpTestRunner(
         .inverseSources(path)
         .toRight(s"Could not find build target for $path")
       jvmTestEnv = debugProvider.jvmTestEnvironment(id)
+      result <-
+        if (debugProvider.usesBuildTargetTest(id)) {
+          // Same path as non-debug editor runs for MBT: BSP buildTarget/test.
+          Right {
+            jvmTestEnv.flatMap { env =>
+              val testSuites = createTestSuites(testSelection, env)
+              debugProvider.runBuildTargetTest(
+                id,
+                testSuites,
+                cancelPromise,
+                verbose,
+              ) match {
+                case Right(future) => future.map(output => AnsiFilter()(output))
+                case Left(error) => Future.successful(error)
+              }
+            }
+          }
+        } else {
+          runLocally(
+            id,
+            path,
+            testSelection,
+            jvmTestEnv,
+            cancelPromise,
+            verbose,
+          )
+        }
+    } yield result
+  }
+
+  private def createTestSuites(
+      testSelection: b.ScalaTestSuiteSelection,
+      env: Option[b.JvmEnvironmentItem],
+  ): b.ScalaTestSuites = {
+    val settings = DebugProvider.scalaTestLocalRunSettings(workspace, env)
+    new b.ScalaTestSuites(
+      List(testSelection).asJava,
+      settings.jvmOptions.asJava,
+      settings.environmentVariablesAsStrings.asJava,
+    )
+  }
+
+  private def runLocally(
+      id: b.BuildTargetIdentifier,
+      path: AbsolutePath,
+      testSelection: b.ScalaTestSuiteSelection,
+      jvmTestEnv: Future[Option[b.JvmEnvironmentItem]],
+      cancelPromise: Promise[Unit],
+      verbose: Boolean,
+  ): Either[String, Future[String]] = {
+    for {
       projectFut <- debugProvider.createDebugeeProjectForTests(
         id,
         cancelPromise,
@@ -58,12 +109,7 @@ class McpTestRunner(
       for {
         _ <- compilations.compileFile(path)
         env <- jvmTestEnv
-        settings = DebugProvider.scalaTestLocalRunSettings(workspace, env)
-        testSuites = new b.ScalaTestSuites(
-          List(testSelection).asJava,
-          settings.jvmOptions.asJava,
-          settings.environmentVariablesAsStrings.asJava,
-        )
+        testSuites = createTestSuites(testSelection, env)
         discovered <- debugProvider.discoverTests(id, testSuites)
         project <- projectFut
         listener = new McpDebuggeeListener(verbose)
