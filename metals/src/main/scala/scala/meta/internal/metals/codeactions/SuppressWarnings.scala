@@ -237,8 +237,24 @@ object SuppressWarnings {
     if (inside.contains(s""""$warningName"""")) None
     else {
       val trimmed = inside.trim()
+      val (namedValuePrefix, value) = trimmed match {
+        case NamedValueArgument(prefix, value) => (prefix, value.trim())
+        case _ => ("", trimmed)
+      }
+      val isArray = value.startsWith("{") && value.endsWith("}")
       val (range, newText) =
-        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+        if (
+          isArray &&
+          value.substring(1, value.length() - 1).trim().isEmpty()
+        ) {
+          (
+            new l.Range(
+              text.indexToLspPosition(insideStart),
+              text.indexToLspPosition(insideEnd),
+            ),
+            s"""$namedValuePrefix{"$warningName"}""",
+          )
+        } else if (isArray) {
           val closeBrace = insideEnd - inside.reverse.indexOf('}') - 1
           (
             new l.Range(
@@ -253,12 +269,14 @@ object SuppressWarnings {
               text.indexToLspPosition(insideStart),
               text.indexToLspPosition(insideEnd),
             ),
-            s"""{$trimmed, "$warningName"}""",
+            s"""$namedValuePrefix{$value, "$warningName"}""",
           )
         }
       Some(new l.TextEdit(range, newText))
     }
   }
+
+  private val NamedValueArgument = """(?s)(value\s*=\s*)(.*)""".r
 
   private case class SuppressTarget(
       member: JavaMember,

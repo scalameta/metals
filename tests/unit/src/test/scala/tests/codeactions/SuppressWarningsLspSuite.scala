@@ -29,6 +29,16 @@ class SuppressWarningsLspSuite
     if (isSource) s"a/src/main/java/a/$fileName"
     else s"a/$fileName"
 
+  private val deprecatedApiLayout =
+    """|/a/src/main/java/a/DeprecatedApi.java
+       |package a;
+       |
+       |class DeprecatedApi {
+       |  @Deprecated
+       |  static void old() {}
+       |}
+       |""".stripMargin
+
   checkSuppressWarnings(
     "rawtypes-method",
     """|package a;
@@ -79,14 +89,7 @@ class SuppressWarningsLspSuite
        |  }
        |}
        |""".stripMargin,
-    extraLayout = """|/a/src/main/java/a/DeprecatedApi.java
-                     |package a;
-                     |
-                     |class DeprecatedApi {
-                     |  @Deprecated
-                     |  static void old() {}
-                     |}
-                     |""".stripMargin,
+    extraLayout = deprecatedApiLayout,
   )
 
   checkSuppressWarnings(
@@ -215,14 +218,7 @@ class SuppressWarningsLspSuite
        |  }
        |}
        |""".stripMargin,
-    extraLayout = """|/a/src/main/java/a/DeprecatedApi.java
-                     |package a;
-                     |
-                     |class DeprecatedApi {
-                     |  @Deprecated
-                     |  static void old() {}
-                     |}
-                     |""".stripMargin,
+    extraLayout = deprecatedApiLayout,
   )
 
   checkSuppressWarnings(
@@ -256,6 +252,96 @@ class SuppressWarningsLspSuite
   )
 
   checkSuppressWarnings(
+    "append-existing-empty-array",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings({})
+       |<<  public List names() {
+       |    return new ArrayList();
+       |  }>>
+       |}
+       |""".stripMargin,
+    "compiler.warn.raw.class.use",
+    "rawtypes",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings({"rawtypes"})
+       |  public List names() {
+       |    return new ArrayList();
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkSuppressWarnings(
+    "append-existing-named-scalar",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings(value = "unchecked")
+       |<<  public List names() {
+       |    return new ArrayList();
+       |  }>>
+       |}
+       |""".stripMargin,
+    "compiler.warn.raw.class.use",
+    "rawtypes",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings(value = {"unchecked", "rawtypes"})
+       |  public List names() {
+       |    return new ArrayList();
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkSuppressWarnings(
+    "append-existing-named-array",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings(value = {"unchecked", "serial"})
+       |<<  public List names() {
+       |    return new ArrayList();
+       |  }>>
+       |}
+       |""".stripMargin,
+    "compiler.warn.raw.class.use",
+    "rawtypes",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings(value = {"unchecked", "serial", "rawtypes"})
+       |  public List names() {
+       |    return new ArrayList();
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkSuppressWarnings(
     "multiple-annotations",
     """|package a;
        |
@@ -278,14 +364,7 @@ class SuppressWarningsLspSuite
        |  }
        |}
        |""".stripMargin,
-    extraLayout = """|/a/src/main/java/a/DeprecatedApi.java
-                     |package a;
-                     |
-                     |class DeprecatedApi {
-                     |  @Deprecated
-                     |  static void old() {}
-                     |}
-                     |""".stripMargin,
+    extraLayout = deprecatedApiLayout,
   )
 
   checkSuppressWarnings(

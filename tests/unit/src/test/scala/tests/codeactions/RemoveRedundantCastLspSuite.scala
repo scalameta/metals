@@ -28,7 +28,7 @@ class RemoveRedundantCastLspSuite
     if (isSource) s"a/src/main/java/a/$fileName"
     else s"a/$fileName"
 
-  private val onlyRemoveRedundantCast: org.eclipse.lsp4j.CodeAction => Boolean =
+  private val onlyRemoveRedundantCast: l.CodeAction => Boolean =
     _.getTitle() == RemoveRedundantCast.title
 
   private def title: String =
