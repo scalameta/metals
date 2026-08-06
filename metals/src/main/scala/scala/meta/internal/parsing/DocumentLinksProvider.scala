@@ -6,6 +6,7 @@ import java.util
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.JsonElement
@@ -252,6 +253,10 @@ final class DocumentLinksProvider(
    *
    * For fully qualified "java.util.List":
    *   - Returns only "java/util/List#"
+   *
+   * For fully qualified "java.util.Map.Entry":
+   *   - First tries "java/util/Map#Entry#" (Entry nested in Map)
+   *   - Then falls back to "java/util/Map/Entry#" (Entry in package java.util.Map)
    */
   private def javadocRefToSemanticdbSymbols(
       ref: String,
@@ -277,6 +282,9 @@ final class DocumentLinksProvider(
   /**
    * Converts a class reference to candidate SemanticDB symbols.
    * For simple names (no dots), tries same-package first.
+   * For dotted names, tries the nested-class reading first, see
+   * [[nestedClassSymbol]], prefixed with the current package when the reference
+   * names none.
    */
   private def classRefToSymbols(
       classRef: String,
@@ -284,8 +292,7 @@ final class DocumentLinksProvider(
   ): List[String] = {
     val isSimpleName = !classRef.contains('.')
     if (isSimpleName) {
-      val path = fileUri.toAbsolutePath
-      val packagePrefix = buffers.get(path).map(findPackageName).getOrElse("")
+      val packagePrefix = currentPackage(fileUri)
       val samePackageSymbol =
         if (packagePrefix.nonEmpty) s"$packagePrefix/$classRef#"
         else s"$classRef#"
@@ -295,7 +302,48 @@ final class DocumentLinksProvider(
       else
         List(simpleSymbol)
     } else {
-      List(classRef.replace('.', '/') + "#")
+      val toplevelSymbol = Symbol.fromToplevelClassName(classRef).value
+      val unqualifiedSymbols = nestedClassSymbol(classRef) match {
+        case Some(nested) => List(nested, toplevelSymbol)
+        case None => List(toplevelSymbol)
+      }
+      // A reference starting with a type names a class of the current package:
+      // `Outer.Inner` inside `package a` is `a/Outer#Inner#`, which no
+      // unqualified reading covers. First, as for a simple name.
+      val startsWithTypeName = classRef.headOption.exists(_.isUpper)
+      val packagePrefix =
+        if (startsWithTypeName) currentPackage(fileUri) else ""
+      if (packagePrefix.nonEmpty)
+        unqualifiedSymbols.map(symbol => s"$packagePrefix/$symbol") ++
+          unqualifiedSymbols
+      else
+        unqualifiedSymbols
+    }
+  }
+
+  private def currentPackage(fileUri: String): String =
+    buffers.get(fileUri.toAbsolutePath).map(findPackageName).getOrElse("")
+
+  /**
+   * Reads a dotted reference as a nested class, since the dots don't say which
+   * of them separate packages: Javadoc writes `java.util.Map.Entry`, which is
+   * `java/util/Map#Entry#` in SemanticDB rather than `java/util/Map/Entry#`.
+   *
+   * Where the packages end is guessed from Java's naming convention, lowercase
+   * packages and capitalized types, so the caller keeps the all-packages
+   * reading as a fallback. Empty for a reference that names no nested class,
+   * which is every reference whose last part is its only capitalized one.
+   */
+  private def nestedClassSymbol(classRef: String): Option[String] = {
+    val parts = classRef.split('.')
+    val firstTypeIndex = parts.indexWhere(_.headOption.exists(_.isUpper))
+    if (firstTypeIndex >= 0 && firstTypeIndex < parts.length - 1) {
+      val packages = parts.take(firstTypeIndex)
+      val packagePrefix =
+        if (packages.isEmpty) "" else packages.mkString("", "/", "/")
+      Some(packagePrefix + parts.drop(firstTypeIndex).mkString("#") + "#")
+    } else {
+      None
     }
   }
 

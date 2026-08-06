@@ -117,8 +117,7 @@ class ClasspathDefinitionIndex(mtags: () => Mtags, dialect: Dialect) {
       symbol: Symbol
   ): Option[String] = {
     val jar = new JarFile(module.jar.toFile)
-    val classfileName =
-      s"${symbol.toplevel.value.stripSuffix("#").stripSuffix(".")}.class"
+    val classfileName = s"${symbol.toplevelBinaryName}.class"
     try {
       val entry = jar.getEntry(classfileName)
       if (entry != null) {
