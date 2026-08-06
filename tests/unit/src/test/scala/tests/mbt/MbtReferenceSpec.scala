@@ -1,7 +1,10 @@
 package tests.mbt
 
 import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.Configs.MbtConfig
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
@@ -18,6 +21,70 @@ class MbtReferenceSuite extends MbtReferenceSpec {
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
     )
+}
+
+class MbtReferenceCacheSuite
+    extends BaseMbtReferenceSuite("mbt-reference-cache") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+      mbtConfig = MbtConfig(
+        importGeneratedSources = false,
+        semanticdbCacheEnabled = true,
+        semanticdbCacheMaxSize = 1000,
+      ),
+    )
+
+  testLSP("semanticdb-cache-files-created") {
+    cleanWorkspace()
+    val a = "a/src/main/scala/a/Upstream.java"
+    val b = "a/src/main/scala/a/Downstream.java"
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |{}
+            |/$a
+            |package a;
+            |public class Upstream {
+            |  public static String greeting = "Hello, World!";
+            |}
+            |/$b
+            |package a;
+            |public class Downstream {
+            |  public static void main(String[] args) {
+            |    System.out.println(Upstream.greeting);
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpenAndFocus(a)
+      _ <- server.assertReferencesSubquery(
+        a,
+        "String greeti@@ng",
+        """|a/src/main/scala/a/Downstream.java:4:33: reference
+           |    System.out.println(Upstream.greeting);
+           |                                ^^^^^^^^
+           |a/src/main/scala/a/Upstream.java:3:24: reference
+           |  public static String greeting = "Hello, World!";
+           |                       ^^^^^^^^
+           |""".stripMargin,
+      )
+      cacheDir = workspace.resolve(Directories.semanticdbCache)
+      _ = assert(cacheDir.exists, s"Cache directory should exist: $cacheDir")
+      cacheFiles = cacheDir.listRecursive.filter(_.isFile).toList
+      _ = println(s"Cache files: ${cacheFiles.mkString("\n")}")
+      _ = assertNoDiff(
+        cacheFiles.sortBy(_.toString).mkString("\n"),
+        s"""
+           |${cacheDir}/a/src/main/scala/a/Downstream.java.semanticdb
+           |${cacheDir}/a/src/main/scala/a/Upstream.java.semanticdb
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 }
 
 class BspReferenceSuite extends MbtReferenceSpec {
