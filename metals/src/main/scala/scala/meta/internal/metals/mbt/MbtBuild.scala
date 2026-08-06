@@ -16,6 +16,7 @@ case class MbtBuild(
     @Nullable dependencyModules: ju.List[MbtDependencyModule],
     @Nullable namespaces: ju.Map[String, MbtNamespace],
     @Nullable uncheckedSources: ju.List[String],
+    @Nullable watchedFiles: ju.List[String] = null,
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
@@ -34,10 +35,14 @@ case class MbtBuild(
     (topLevel ++ fromNamespaces).distinct.asJava
   }
 
+  def getWatchedFiles: ju.List[String] =
+    Option(this.watchedFiles).getOrElse(ju.Collections.emptyList())
+
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
       Option(this.namespaces).forall(_.isEmpty) &&
-      Option(this.uncheckedSources).forall(_.isEmpty)
+      Option(this.uncheckedSources).forall(_.isEmpty) &&
+      Option(this.watchedFiles).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(
@@ -86,7 +91,8 @@ case class MbtBuild(
               None
             }
           }
-        val globPatterns = namespace.getSources.asScala.toSeq.filter(isGlob)
+        val globPatterns = namespace.getSources.asScala.toSeq
+          .filter(MbtGlobMatcher.isPatternGlob)
         val nsModules = for {
           moduleId <- namespace.getDependencyModuleIds.asScala.toSeq
           module <- modulesById.get(moduleId).orElse {
@@ -101,7 +107,7 @@ case class MbtBuild(
           id =
             new bsp4j.BuildTargetIdentifier(MbtBuild.namespaceTargetId(name)),
           sources = namespace.getSources.asScala.toSeq
-            .filterNot(isGlob),
+            .filterNot(MbtGlobMatcher.isPatternGlob),
           globMatchers = globPatterns.map(pattern =>
             MbtGlobMatcher(
               pattern = pattern,
@@ -127,17 +133,9 @@ case class MbtBuild(
       }
     }
 
-  private def isGlob(pattern: String): Boolean = {
-    val n = normalizeSlashes(pattern)
-    n.exists(c => c == '*' || c == '?' || c == '[' || c == '{')
-  }
-
-  private def normalizeSlashes(s: String): String =
-    s.trim.replace('\\', '/')
-
   /** Leading `./` is stripped so matchers align with workspace-relative paths. */
   private def globPatternForMatcher(pattern: String): String = {
-    val n = normalizeSlashes(pattern)
+    val n = MbtGlobMatcher.normalizeSlashes(pattern)
     if (n.startsWith("./")) n.substring(2) else n
   }
 
@@ -146,7 +144,7 @@ case class MbtBuild(
       .split('/')
       .toSeq
       .filter(_.nonEmpty)
-      .takeWhile(segment => !isGlob(segment))
+      .takeWhile(segment => !MbtGlobMatcher.isPatternGlob(segment))
     literalSegments match {
       case head +: tail => Some(Paths.get(head, tail: _*))
       case _ => None
@@ -230,7 +228,18 @@ object MbtBuild {
           .getOrElse(ju.Collections.emptyList())
           .asScala).distinct.asJava
 
-    MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
+    val mergedWatchedFiles = {
+      val combined =
+        (a.getWatchedFiles.asScala ++ b.getWatchedFiles.asScala).distinct
+      if (combined.isEmpty) null else combined.asJava
+    }
+
+    MbtBuild(
+      mergedModules,
+      mergedNamespaces,
+      mergedUncheckedSources,
+      mergedWatchedFiles,
+    )
   }
 
 }

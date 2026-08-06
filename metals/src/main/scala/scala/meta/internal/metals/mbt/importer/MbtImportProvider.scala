@@ -35,10 +35,9 @@ trait MbtImportProvider {
     workspace.resolve(s".metals/mbt-$name.json")
 
   /**
-   * Returns `true` when the given path is a build file that, if modified,
-   * should trigger a re-import (e.g. `pom.xml` for Maven).
+   * Returns `true` when the given path, if modified, should trigger a re-import.
    */
-  def isBuildRelated(path: AbsolutePath): Boolean
+  def isWatchedFile(path: AbsolutePath): Boolean
 
   /**
    * Stable digest of all build files owned by this importer.

@@ -67,17 +67,17 @@ class ScriptMbtImporterSuite extends FunSuite {
     )
   }
 
-  test("isBuildRelated-true-for-own-script") {
+  test("isWatchedFile-true-for-own-script") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
     val script = makeScript(dir, "export.mbt.sh")
-    assert(importer(script).isBuildRelated(script))
+    assert(importer(script).isWatchedFile(script))
   }
 
-  test("isBuildRelated-false-for-other-file") {
+  test("isWatchedFile-false-for-other-file-with-no-cache") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-related"))
     val script = makeScript(dir, "export.mbt.sh")
     val other = makeScript(dir, "other.mbt.sh")
-    assert(!importer(script).isBuildRelated(other))
+    assert(!importer(script).isWatchedFile(other))
   }
 
   test("buildCommand-sh-uses-sh") {

@@ -45,8 +45,15 @@ import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.Registration
+import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.Unregistration
+import org.eclipse.lsp4j.UnregistrationParams
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
 
 class ConnectionProvider(
     buildToolProvider: BuildToolProvider,
@@ -141,6 +148,9 @@ class ConnectionProvider(
   )
 
   private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
+  private val mbtWatchedFilesRegistered: AtomicBoolean = new AtomicBoolean(
+    false
+  )
   private val buildServerPromptShown: AtomicBoolean = new AtomicBoolean(false)
 
   val cancelables = new MutableCancelable
@@ -223,6 +233,7 @@ class ConnectionProvider(
             .runUnconditionally(mbtImporters, isMbtImportInProcess)
             .flatMap { importStatus =>
               if (importStatus.isInstalled) {
+                updateMbtWatchedFiles(mbtImporters)
                 tables.buildServers.chooseServer(MbtBuildServer.name)
                 connect(CreateSession(), progress).ignoreValue
               } else Future.unit
@@ -242,11 +253,96 @@ class ConnectionProvider(
     userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
 
+  private def unregisterMbtWatchedFiles(): Unit =
+    if (mbtWatchedFilesRegistered.getAndSet(false)) {
+      languageClient.unregisterCapability(
+        new UnregistrationParams(
+          List(
+            new Unregistration(
+              "mbt-watched-files",
+              "workspace/didChangeWatchedFiles",
+            )
+          ).asJava
+        )
+      )
+    }
+
+  private def registerMbtWatchedFiles(
+      watchers: List[FileSystemWatcher]
+  ): Unit = {
+    if (watchers.nonEmpty) {
+      languageClient.registerCapability(
+        new RegistrationParams(
+          List(
+            new Registration(
+              "mbt-watched-files",
+              "workspace/didChangeWatchedFiles",
+              new DidChangeWatchedFilesRegistrationOptions(watchers.asJava),
+            )
+          ).asJava
+        )
+      )
+      mbtWatchedFilesRegistered.set(true)
+    }
+  }
+
+  private def refreshMbtWatchedFiles(build: MbtBuild): Unit = {
+    unregisterMbtWatchedFiles()
+    val explicitPaths = build.getWatchedFiles.asScala.toList
+      .filterNot(mbt.MbtGlobMatcher.isPatternGlob)
+    if (explicitPaths.nonEmpty) {
+      val root = folder.toString().replace('\\', '/')
+      val watchers = explicitPaths.map { p =>
+        val normalized = mbt.MbtGlobMatcher.normalizeSlashes(p)
+        val withoutLeading =
+          if (normalized.startsWith("./")) normalized.substring(2)
+          else normalized
+        new FileSystemWatcher(JEither.forLeft(s"$root/$withoutLeading"))
+      }
+      registerMbtWatchedFiles(watchers)
+    }
+  }
+
+  private def updateMbtWatchedFiles(
+      importers: List[MbtImportProvider]
+  ): Unit = {
+    val build = mbtBuild()
+    importers.foreach {
+      case script: mbt.importer.ScriptMbtImporter =>
+        mbt.importer.ScriptMbtImporter
+          .updateWatchedFiles(script.scriptPath, build)
+      case _ =>
+    }
+    refreshMbtWatchedFiles(build)
+  }
+
+  private def withWatchedFilesUpdate(
+      run: Future[WorkspaceLoadedStatus],
+      importers: List[MbtImportProvider],
+  ): Future[Unit] =
+    run.map { status =>
+      if (status.isInstalled) updateMbtWatchedFiles(importers)
+    }.ignoreValue
+
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
-    mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue
+    withWatchedFilesUpdate(
+      mbtImport.runIfApproved(importers, isMbtImportInProcess),
+      importers,
+    )
+
+  def runMbtReimportIgnoringDigest(
+      importers: List[MbtImportProvider]
+  ): Future[Unit] =
+    withWatchedFilesUpdate(
+      mbtImport.runIgnoringDigest(importers, isMbtImportInProcess),
+      importers,
+    )
 
   def forceMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
-    mbtImport.runUnconditionally(importers, isMbtImportInProcess).ignoreValue
+    withWatchedFilesUpdate(
+      mbtImport.runUnconditionally(importers, isMbtImportInProcess),
+      importers,
+    )
 
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
@@ -1049,17 +1145,22 @@ class ConnectionProvider(
                   for {
                     importStatus <-
                       if (isMbtPreferred) {
-                        mbtImport
-                          .runUnconditionally(
-                            buildTools
-                              .mbtImporters(
-                                shellRunner,
-                                () => userConfig,
-                                Some(languageClient),
-                                Some(tables),
-                              ),
-                            isMbtImportInProcess,
+                        val importers = buildTools
+                          .mbtImporters(
+                            shellRunner,
+                            () => userConfig,
+                            Some(languageClient),
+                            Some(tables),
                           )
+                        mbtImport
+                          .runUnconditionally(importers, isMbtImportInProcess)
+                          .map { status =>
+                            if (status.isInstalled)
+                              updateMbtWatchedFiles(
+                                importers
+                              )
+                            status
+                          }
                       } else Future.successful(WorkspaceLoadedStatus.Installed)
                     change <-
                       if (importStatus.isInstalled) connect(request, progress)

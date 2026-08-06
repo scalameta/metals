@@ -55,7 +55,7 @@ case class MavenBuildTool(
   override def mavenBaseCommand(): List[String] =
     mbtMavenBaseCommand(projectRoot)
 
-  override def isBuildRelated(path: AbsolutePath): Boolean =
+  override def isWatchedFile(path: AbsolutePath): Boolean =
     MavenBuildTool.isMavenRelatedPath(projectRoot, path)
 
   override def digest(workspace: AbsolutePath): Option[String] =
