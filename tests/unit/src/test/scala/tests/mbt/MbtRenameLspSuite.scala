@@ -88,7 +88,7 @@ class MbtRenameLspSuite extends BaseRenameLspSuite("mbt-rename") {
        |  public <<Other>>(int x){
        |    this.x = x;
        |  }
-       |  
+       |
        |  public <<Other>>(int x, String type)
        |  {
        |    this();

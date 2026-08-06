@@ -221,5 +221,6 @@ class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
         )
       )
       .formatMessage("info", "result", noPos = true)
+      .stripLineEnd
   }
 }

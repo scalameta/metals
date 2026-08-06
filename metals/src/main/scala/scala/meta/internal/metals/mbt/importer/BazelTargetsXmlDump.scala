@@ -90,14 +90,43 @@ class BazelTargetsXmlDump(xmlDump: String) {
     } yield name).toSet
   }
 
-  def externalDepsByTarget(targets: List[String]): Map[String, List[String]] = {
-    reachableLabels(targets).map { case (target, deps) =>
+  def externalDepsByTarget(
+      reachableLabelsByTarget: Map[String, List[String]]
+  ): Map[String, List[String]] =
+    reachableLabelsByTarget.map { case (target, deps) =>
       target -> deps.filter(isExternalDep)
     }
+
+  lazy val jarLabelsByImportTarget: Map[String, List[String]] = {
+    val targetLabels = for {
+      rule <- root \\ "rule"
+      target = (rule \ "@name").text
+      if target.nonEmpty && isImportRule(rule)
+    } yield target -> labelsFromRuleAttribute(rule, Some("jars")).toList
+    targetLabels.toMap
+  }
+
+  // These are -sources.jar entries meant for IDEs, not the .srcjar files used for compilation,
+  // even though rules_scala calls them "srcjar"
+  lazy val sourcesJarByImportTarget: Map[String, Option[String]] = {
+    val targetLabels = for {
+      rule <- root \\ "rule"
+      target = (rule \ "@name").text
+      if target.nonEmpty && isScalaImportRule(rule)
+    } yield target -> labelsFromRuleAttribute(rule, Some("srcjar")).headOption
+    targetLabels.toMap
   }
 
   private def isExternalDep(label: String): Boolean =
     label.startsWith("@") && !label.startsWith("@@")
+
+  private def isImportRule(rule: scala.xml.Node): Boolean = {
+    val cls = (rule \ "@class").text
+    cls == "java_import" || cls == "scala_import"
+  }
+
+  private def isScalaImportRule(rule: scala.xml.Node): Boolean =
+    (rule \ "@class").text == "scala_import"
 
   private def isFilegroupRule(rule: scala.xml.Node): Boolean =
     (rule \ "@class").text == "filegroup"
@@ -114,7 +143,7 @@ class BazelTargetsXmlDump(xmlDump: String) {
     labels.flatMap(label => expand(label, Set.empty)).distinct
   }
 
-  private def reachableLabels(
+  def reachableLabels(
       rootLabels: List[String]
   ): Map[String, List[String]] =
     rootLabels.map { root =>

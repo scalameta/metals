@@ -344,6 +344,21 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
     libraryDependencies = List("org.tpolecat::doobie-core:1.0.0-RC2"),
   )
 
+  check(
+    "into-soft-keyword",
+    """|<<import>>/*keyword*/ <<scala>>/*namespace*/.<<language>>/*class*/.<<experimental>>/*class*/.<<into>>/*class,deprecated*/
+       |
+       |<<into>>/*keyword*/ <<trait>>/*keyword*/ <<Modifier>>/*interface,abstract*/
+       |
+       |<<given>>/*keyword*/ <<Conversion>>/*class,abstract*/[<<String>>/*type*/, <<Modifier>>/*interface,abstract*/] = <<_>>/*variable,readonly*/ <<match>>/*keyword*/ { <<case>>/*keyword*/ <<_>>/*variable,readonly*/ <<=>>>/*operator*/ <<new>>/*keyword*/ <<Modifier>>/*interface,abstract*/ {} }
+       |
+       |<<def>>/*keyword*/ <<process>>/*method,definition*/(<<m>>/*parameter,declaration,readonly*/: <<Modifier>>/*interface,abstract*/): <<Unit>>/*class,abstract*/ = ()
+       |
+       |<<val>>/*keyword*/ <<_>>/*variable,readonly*/ = <<process>>/*method*/(<<"test">>/*string*/)
+       |""".stripMargin,
+    scalaVersion = Some("3.9.0-RC1"),
+  )
+
   test("new-changes") {
     val expected =
       """|<<package>>/*keyword*/ <<a>>/*namespace*/
@@ -400,12 +415,15 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
       expected: String,
       fileName: String = "Main.scala",
       libraryDependencies: List[String] = Nil,
+      scalaVersion: Option[String] = None,
   )(implicit loc: munit.Location): Unit = {
     val fileContent =
       TestSemanticTokens.removeSemanticHighlightDecorations(expected)
 
     val filePath = "a/src/main/scala/a/" + fileName
     val absFilePath = "/" + filePath
+    val scalaVersionJson =
+      scalaVersion.map(v => s""""scalaVersion": "$v",""").getOrElse("")
 
     test(name) {
       for {
@@ -414,6 +432,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
           s"""/metals.json
              |{
              |  "a": {
+             |    $scalaVersionJson
              |    "libraryDependencies": ${libraryDependencies.map("\"" + _ + "\"").mkString("[", ",", "]")}
              |  }
              |}

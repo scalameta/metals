@@ -27,7 +27,7 @@ object BazelMavenJsonImporter {
   private val gson = new Gson()
 
   /** Pre-scanned snapshot of an external directory listing. */
-  private[importer] case class ScannedExtDir(
+  case class ScannedExtDir(
       dir: AbsolutePath,
       entries: List[AbsolutePath],
   )
@@ -199,7 +199,11 @@ object BazelMavenJsonImporter {
    * project hub, but it holds the ruleset's dependencies — not the project's —
    * so it must never be reported as the project's Maven repository.
    */
-  private val internalHubNames = Set(HubName("rules_jvm_external_deps"))
+  private val internalHubNames = Set(
+    HubName("rules_jvm_external_deps"),
+    HubName("contrib_rules_jvm_deps"),
+    HubName("rules_jvm_external"),
+  )
 
   /**
    * A rules_jvm_external hub's apparent repository name, already canonicalized

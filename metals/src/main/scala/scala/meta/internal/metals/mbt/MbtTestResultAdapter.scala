@@ -9,6 +9,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.CancelableFuture
+import ch.epfl.scala.debugadapter.ClassEntry
 import ch.epfl.scala.debugadapter.Debuggee
 import ch.epfl.scala.debugadapter.DebuggeeListener
 import ch.epfl.scala.debugadapter.JavaRuntime
@@ -41,6 +42,7 @@ class MbtTestResultAdapter(
   override def libraries: Seq[Library] = inner.libraries
   override def unmanagedEntries: Seq[UnmanagedEntry] = inner.unmanagedEntries
   override def javaRuntime: Option[JavaRuntime] = inner.javaRuntime
+  override def classEntries: Seq[ClassEntry] = inner.classEntries
   override def observeClassUpdates(
       onClassUpdate: Seq[String] => Unit
   ): Closeable = inner.observeClassUpdates(onClassUpdate)

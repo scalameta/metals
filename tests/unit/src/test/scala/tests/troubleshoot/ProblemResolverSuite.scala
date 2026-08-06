@@ -12,7 +12,6 @@ import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion
 import scala.meta.internal.metals.doctor.DeprecatedRemovedScalaVersion
-import scala.meta.internal.metals.doctor.DeprecatedSbtVersion
 import scala.meta.internal.metals.doctor.FutureSbtVersion
 import scala.meta.internal.metals.doctor.FutureScalaVersion
 import scala.meta.internal.metals.doctor.OutdatedJunitInterfaceVersion
@@ -67,16 +66,6 @@ class ProblemResolverSuite extends FunSuite {
     scalaVersion = "2.12.7",
     UnsupportedSbtVersion.message,
     sbtVersion = Some("1.2.0"),
-  )
-
-  checkRecommendation(
-    // we don't have any depracate versions for sbt
-    "deprecated-sbt-version",
-    scalaVersion = "2.12.14",
-    DeprecatedSbtVersion("1.3.0", "2.12.14").message,
-    sbtVersion = Some("1.3.0"),
-    assume = () =>
-      assume(BuildInfo.deprecatedScalaVersions.exists(_.startsWith("2.12"))),
   )
 
   checkRecommendation(

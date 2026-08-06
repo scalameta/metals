@@ -35,26 +35,57 @@ final class TypeHierarchyProvider(
       .textDocument(source, requestInteractive = true)
       .documentIncludingStale match {
       case Some(doc) =>
-        val results = definitionProvider
+        val occurrences = definitionProvider
           .positionOccurrences(source, params.getPosition, doc)
-          .flatMap { rso =>
-            for {
-              occ <- rso.occurrence
-              if doc.symbols.find(_.symbol == occ.symbol).exists { info =>
-                info.isClass || info.isTrait || info.isObject || info.isType || info.isInterface
+          .flatMap(_.occurrence)
+        val (localItems, externalSymbols) = occurrences.partitionMap { occ =>
+          doc.symbols.find(_.symbol == occ.symbol) match {
+            case Some(info)
+                if info.isClass || info.isTrait || info.isObject || info.isType || info.isInterface =>
+              occ.range match {
+                case Some(range) =>
+                  Left(
+                    itemBuilder.build(
+                      symbol = occ.symbol,
+                      info = Some(info),
+                      source = source,
+                      range = range.toLsp,
+                      selectionRange = range.toLsp,
+                    )
+                  )
+                case None => Right(occ.symbol)
               }
-              range <- occ.range
-            } yield {
-              itemBuilder.build(
-                symbol = occ.symbol,
-                info = doc.symbols.find(_.symbol == occ.symbol),
-                source = source,
-                range = range.toLsp,
-                selectionRange = range.toLsp,
-              )
-            }
+            case _ => Right(occ.symbol)
           }
-        Future.successful(results.toList)
+        }
+        val externalLocations = externalSymbols.flatMap { symbol =>
+          definitionProvider
+            .fromSymbol(symbol, Some(source))
+            .asScala
+            .headOption
+            .map(loc => (symbol, loc))
+        }
+        val externalItems = externalLocations
+          .groupBy { case (_, loc) => loc.getUri.toAbsolutePath }
+          .toList
+          .flatMap { case (locPath, symbolsWithLocs) =>
+            for {
+              locDoc <- semanticdbs()
+                .textDocument(locPath, requestInteractive = true)
+                .documentIncludingStale
+                .toList
+              (symbol, location) <- symbolsWithLocs
+              info <- locDoc.symbols.find(_.symbol == symbol)
+              if info.isClass || info.isTrait || info.isObject || info.isType || info.isInterface
+            } yield itemBuilder.build(
+              symbol = symbol,
+              info = Some(info),
+              source = locPath,
+              range = location.getRange,
+              selectionRange = location.getRange,
+            )
+          }
+        Future.successful(localItems ++ externalItems)
       case None =>
         Future.successful(Nil)
     }

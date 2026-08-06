@@ -15,10 +15,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.ServerParameters
 import io.modelcontextprotocol.client.transport.StdioClientTransport
-import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
+import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
 import io.modelcontextprotocol.spec.McpSchema.TextContent
+import tools.jackson.databind.json.JsonMapper
 
 /** Spawns metals-mcp server as a subprocess and communicates via stdin/stdout. */
 class TestMcpStdioClient(
@@ -28,7 +29,9 @@ class TestMcpStdioClient(
 )(implicit ec: ExecutionContext)
     extends TestMcpBaseClient {
 
-  private val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
+  private val jsonMapper = new JacksonMcpJsonMapper(
+    JsonMapper.builder().build()
+  )
 
   private val javaExecutable: String = {
     val javaHome = System.getProperty("java.home")
@@ -60,7 +63,7 @@ class TestMcpStdioClient(
 
   override protected def callTool(
       toolName: String,
-      params: com.fasterxml.jackson.databind.node.ObjectNode,
+      params: tools.jackson.databind.node.ObjectNode,
   ): Future[List[String]] = {
     val callToolRequest =
       new CallToolRequest(

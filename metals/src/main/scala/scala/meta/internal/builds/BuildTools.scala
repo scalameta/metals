@@ -11,13 +11,13 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
@@ -62,10 +62,15 @@ final class BuildTools(
   def isAutoConnectable(
       maybeProjectRoot: Option[AbsolutePath] = None
   ): Boolean = {
-    maybeProjectRoot.map(isBloop).getOrElse(isBloop) ||
+    val bloopAvailable = maybeProjectRoot.map(isBloop).getOrElse(isBloop)
+    // A custom `.bsp/<name>.json` is an explicit directive to use that build
+    // server. Don't auto-connect to Bloop just because a (possibly stale)
+    // `.bloop` directory is also present — fall through to the normal selection
+    // flow so the custom server is used (or the user is asked when a supported
+    // build tool is also detected). See https://github.com/scalameta/metals/issues/2420
+    (bloopAvailable && !(hasCustomBsp && !explicitChoiceMade())) ||
     isMbt ||
-    (isBsp && all.isEmpty) ||
-    (isBsp && explicitChoiceMade()) ||
+    (isBsp && all.isEmpty) || (isBsp && explicitChoiceMade()) ||
     (isBsp && userConfig().preferredBuildServer.isDefined)
   }
   def isBloop(root: AbsolutePath): Boolean = hasJsonFile(root.resolve(".bloop"))
@@ -167,6 +172,9 @@ final class BuildTools(
   def isInBsp(path: AbsolutePath): Boolean =
     path.isFile && path.parent.filename == ".bsp" &&
       path.filename.endsWith(".json")
+
+  /** True if a `.bsp/<name>.json` for a server we don't recognize is present. */
+  def hasCustomBsp: Boolean = customBsps.nonEmpty
 
   private def customBsps: List[BspOnly] = {
     val bspFolders =

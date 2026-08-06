@@ -12,7 +12,6 @@ import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
 import tests.BaseBazelServerSuite
@@ -87,7 +86,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -148,7 +147,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -210,7 +209,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )
@@ -269,7 +268,7 @@ class BazelTestDiscoverySuite
       _ <- initialize(
         BazelModuleLayout(
           testLayout,
-          V.scala3,
+          "3.3.7",
           bazelVersion,
           enableToolChainRegistration = true,
         )

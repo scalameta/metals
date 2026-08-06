@@ -59,10 +59,10 @@ final class DocumentSymbolProvider(
     val doc = mtags().index(input, dialects.Scala213)
     val occurrences =
       doc.occurrences.iterator.map(occ => occ.symbol -> occ).toMap
-    def lineContent(pos: Position): String = {
-      val lines = pos.input.text.split('\n')
-      if (pos.startLine >= 0 && pos.startLine < lines.length)
-        lines(pos.startLine)
+    val lines = input.text.split('\n')
+    def lineContent(startLine: Int): String = {
+      if (startLine >= 0 && startLine < lines.length)
+        lines(startLine)
       else ""
     }
     val symbols = (for {
@@ -76,7 +76,7 @@ final class DocumentSymbolProvider(
         None
       }
     } yield {
-      val detail = lineContent(pos)
+      val detail = lineContent(pos.startLine)
       val name =
         if (info.kind.isConstructor) Symbol(info.symbol).owner.displayName
         else info.displayName

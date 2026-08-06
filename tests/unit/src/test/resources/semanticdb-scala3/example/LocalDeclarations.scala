@@ -26,8 +26,8 @@
 
        val x = new:
 //         ^ definition local4
+//             ^ definition local2
          val x = 2
-//       ^ definition local2
 //           ^ definition local1
 
        val y = new Foo {}
@@ -41,7 +41,7 @@
 //                ^ reference example/nested/Foo#y.
 
        new LocalDeclarations with Foo:
-//         ^ definition local10
+//     ^ definition local10
 //         ^^^^^^^^^^^^^^^^^ reference example/nested/LocalDeclarations#
 //                                ^^^ reference example/nested/Foo#
          override def foo(): Unit = bar()

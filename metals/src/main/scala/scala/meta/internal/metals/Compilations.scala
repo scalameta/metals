@@ -12,6 +12,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.mbt.MbtBuildServer

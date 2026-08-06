@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.Duration
 
 import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.scalacli.ScalaCli
 
 import ch.epfl.scala.bsp4j.CompileParams

@@ -373,7 +373,6 @@ class PCDiagnosticsWithSourcePath
            |a/src/main/scala/a/Service.scala:8:1: error: class ConcreteService needs to be abstract.
            |Missing implementation for member of trait Service:
            |  def execute(in: String): String = ???
-           |
            |> class ConcreteService extends Service {
            |>   def foo() {
            |>     val unused = 1

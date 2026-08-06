@@ -44,6 +44,12 @@ class ScriptMbtImporterSuite extends FunSuite {
     assertEquals(importer(script).name, "exporter-sh")
   }
 
+  test("name-strips-mbt-bat") {
+    val dir = AbsolutePath(Files.createTempDirectory("mbt-script-name"))
+    val script = makeScript(dir, "exporter.mbt.bat")
+    assertEquals(importer(script).name, "exporter-bat")
+  }
+
   test("name-unknown-extension-unchanged") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-script-name"))
     val script = makeScript(dir, "weird.txt")
@@ -82,6 +88,13 @@ class ScriptMbtImporterSuite extends FunSuite {
     assertEquals(cmd(1), script.toString)
   }
 
+  test("buildCommand-bat-uses-script-directly") {
+    val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
+    val script = makeScript(dir, "run.mbt.bat")
+    val cmd = importer(script).buildCommand(dir)
+    assertEquals(cmd, List(script.toString))
+  }
+
   test("buildCommand-scala-uses-scala-cli") {
     val dir = AbsolutePath(Files.createTempDirectory("mbt-cmd"))
     val workspace = AbsolutePath(Files.createTempDirectory("mbt-cmd-ws"))
@@ -118,12 +131,20 @@ class ScriptMbtImporterSuite extends FunSuite {
     val ws = AbsolutePath(Files.createTempDirectory("mbt-collision-ws"))
     val scalaScript = makeScript(dir, "foo.mbt.scala")
     val shScript = makeScript(dir, "foo.mbt.sh")
+    val batScript = makeScript(dir, "foo.mbt.bat")
     val nameScala = importer(scalaScript).name
     val nameSh = importer(shScript).name
+    val nameBat = importer(batScript).name
     assertNotEquals(nameScala, nameSh)
+    assertNotEquals(nameScala, nameBat)
+    assertNotEquals(nameSh, nameBat)
     assertNotEquals(
       importer(scalaScript).outputPath(ws),
       importer(shScript).outputPath(ws),
+    )
+    assertNotEquals(
+      importer(scalaScript).outputPath(ws),
+      importer(batScript).outputPath(ws),
     )
   }
 
