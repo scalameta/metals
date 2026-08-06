@@ -11,6 +11,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtGlobMatcher
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
@@ -76,18 +77,15 @@ final class ScriptMbtImporter(
       }
   }
 
-  override def isWatchedFile(path: AbsolutePath): Boolean = {
-    if (path == scriptPath) return true
-
-    val patterns =
-      ScriptMbtImporter.watchedFilesCache.getOrElse(scriptPath, Nil)
-    if (patterns.isEmpty) return false
-
-    path.toRelativeInside(projectRoot).exists { relative =>
-      val relativeStr = relative.toString.replace('\\', '/')
-      patterns.exists(_ == relativeStr)
+  override def isWatchedFile(path: AbsolutePath): Boolean =
+    path == scriptPath || {
+      val patterns =
+        ScriptMbtImporter.watchedFilesCache.getOrElse(scriptPath, Nil)
+      patterns.nonEmpty && path.toRelativeInside(projectRoot).exists {
+        relative =>
+          patterns.contains(MbtGlobMatcher.normalizeSlashes(relative.toString))
+      }
     }
-  }
 
   override def digest(workspace: AbsolutePath): Option[String] =
     scala.util.Try(MD5.compute(scriptPath.toNIO)).toOption
@@ -129,9 +127,7 @@ object ScriptMbtImporter {
       scriptPath: AbsolutePath,
       mbtBuild: MbtBuild,
   ): Unit = {
-    import scala.meta.internal.metals.mbt.MbtGlobMatcher
-    val allPatterns = mbtBuild.getWatchedFiles.asScala.toList
-    val explicitPaths = allPatterns
+    val explicitPaths = mbtBuild.getWatchedFiles.asScala.toList
       .filterNot(MbtGlobMatcher.isPatternGlob)
       .map { pattern =>
         val normalized = MbtGlobMatcher.normalizeSlashes(pattern)

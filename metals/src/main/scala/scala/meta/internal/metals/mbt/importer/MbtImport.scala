@@ -103,7 +103,9 @@ final class MbtImport(
       providers: List[MbtImportProvider],
       isImportInProcess: AtomicBoolean,
   ): Future[WorkspaceLoadedStatus] = {
-    val digest = computeDigest(providers).getOrElse("watched-file-changed")
+    val digest = computeDigest(providers).getOrElse(
+      s"watched-file-changed:${providers.map(_.name).mkString(",")}"
+    )
     val run =
       if (userConfig().shouldAutoImportNewProject) {
         runUnconditionally(providers, isImportInProcess)

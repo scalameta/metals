@@ -147,7 +147,9 @@ class ConnectionProvider(
   )
 
   private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
-  @volatile private var mbtWatchedFilesRegistered: Boolean = false
+  private val mbtWatchedFilesRegistered: AtomicBoolean = new AtomicBoolean(
+    false
+  )
   private val buildServerPromptShown: AtomicBoolean = new AtomicBoolean(false)
 
   val cancelables = new MutableCancelable
@@ -251,7 +253,7 @@ class ConnectionProvider(
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
 
   private def unregisterMbtWatchedFiles(): Unit =
-    Option.when(mbtWatchedFilesRegistered) {
+    if (mbtWatchedFilesRegistered.getAndSet(false)) {
       languageClient.unregisterCapability(
         new UnregistrationParams(
           List(
@@ -262,7 +264,6 @@ class ConnectionProvider(
           ).asJava
         )
       )
-      mbtWatchedFilesRegistered = false
     }
 
   private def registerMbtWatchedFiles(
@@ -280,17 +281,17 @@ class ConnectionProvider(
           ).asJava
         )
       )
-      mbtWatchedFilesRegistered = true
+      mbtWatchedFilesRegistered.set(true)
     }
   }
 
-  private def refreshMbtWatchedFiles(): Unit = {
+  private def refreshMbtWatchedFiles(build: MbtBuild): Unit = {
     unregisterMbtWatchedFiles()
-    val build = mbtBuild()
-    val patterns = build.getWatchedFiles.asScala.toList
-    if (patterns.nonEmpty) {
+    val explicitPaths = build.getWatchedFiles.asScala.toList
+      .filterNot(mbt.MbtGlobMatcher.isPatternGlob)
+    if (explicitPaths.nonEmpty) {
       val root = folder.toString().replace('\\', '/')
-      val watchers = patterns.map { p =>
+      val watchers = explicitPaths.map { p =>
         val normalized = mbt.MbtGlobMatcher.normalizeSlashes(p)
         val withoutLeading =
           if (normalized.startsWith("./")) normalized.substring(2)
@@ -307,40 +308,40 @@ class ConnectionProvider(
     val build = mbtBuild()
     importers.foreach {
       case script: mbt.importer.ScriptMbtImporter =>
-        mbt.importer.ScriptMbtImporter.updateWatchedFiles(
-          script.scriptPath,
-          build,
-        )
-      case _ => // Only script importers use watched files
+        mbt.importer.ScriptMbtImporter
+          .updateWatchedFiles(script.scriptPath, build)
+      case _ =>
     }
-    refreshMbtWatchedFiles()
+    refreshMbtWatchedFiles(build)
   }
 
+  private def withWatchedFilesUpdate(
+      run: Future[WorkspaceLoadedStatus],
+      importers: List[MbtImportProvider],
+  ): Future[Unit] =
+    run.map { status =>
+      if (status.isInstalled) updateMbtWatchedFiles(importers)
+    }.ignoreValue
+
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
-    mbtImport
-      .runIfApproved(importers, isMbtImportInProcess)
-      .map { status =>
-        if (status.isInstalled) updateMbtWatchedFiles(importers)
-      }
-      .ignoreValue
+    withWatchedFilesUpdate(
+      mbtImport.runIfApproved(importers, isMbtImportInProcess),
+      importers,
+    )
 
   def runMbtReimportIgnoringDigest(
       importers: List[MbtImportProvider]
   ): Future[Unit] =
-    mbtImport
-      .runIgnoringDigest(importers, isMbtImportInProcess)
-      .map { status =>
-        if (status.isInstalled) updateMbtWatchedFiles(importers)
-      }
-      .ignoreValue
+    withWatchedFilesUpdate(
+      mbtImport.runIgnoringDigest(importers, isMbtImportInProcess),
+      importers,
+    )
 
   def forceMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
-    mbtImport
-      .runUnconditionally(importers, isMbtImportInProcess)
-      .map { status =>
-        if (status.isInstalled) updateMbtWatchedFiles(importers)
-      }
-      .ignoreValue
+    withWatchedFilesUpdate(
+      mbtImport.runUnconditionally(importers, isMbtImportInProcess),
+      importers,
+    )
 
   def reloadCurrentSession(): Future[Unit] =
     bspSession match {
