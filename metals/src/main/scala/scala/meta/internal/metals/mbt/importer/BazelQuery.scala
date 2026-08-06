@@ -54,11 +54,7 @@ object BazelQuery {
     val ps =
       if (patterns.isEmpty) BazelProjectViewTargets.defaultPatterns
       else patterns
-    val parts = for {
-      k <- ruleKinds
-      p <- ps
-    } yield s"kind($k, $p)"
-    val query = parts.mkString(" union ")
+    val query = s"kind('${ruleKinds mkString "|"}', set(${ps mkString " "}))"
     BazelQuery(query, outputMode = Label)
   }
 
