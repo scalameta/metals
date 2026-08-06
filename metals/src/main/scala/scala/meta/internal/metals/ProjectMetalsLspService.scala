@@ -254,6 +254,7 @@ class ProjectMetalsLspService(
       scalaVersionSelector,
       mcpSearch,
       folder,
+      initialServerConfig.maxMcpSearchResults,
     )
 
   lazy val mcpTestRunner =

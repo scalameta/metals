@@ -467,11 +467,7 @@ trait MetalsMcpTools extends Cancelable {
         "properties": {
           "query": {
             "type": "string",
-            "description": "Substring of the symbol to search for"
-          },
-          "fileInFocus": {
-            "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "A single unqualified name, e.g. `Probe`, not `com.example.Probe`. Wildcards match literally."
           }
         },
         "required": ["query"]
@@ -481,10 +477,10 @@ trait MetalsMcpTools extends Cancelable {
       .builder()
       .name("glob-search")
       .description(
-        """|Search for symbols using glob pattern. Find packages, classes, objects, methods, traits,
-           |and other Scala symbols by partial name matching. Returns symbol locations
-           |and signatures from the entire project workspace.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+        """|Search symbols by name across all modules and their dependency classpaths.
+           |Matches the last part of a fully qualified name at name boundaries, ignoring
+           |case, so `idWordProbe` does not find `MidWordProbe`.
+           |Use `inspect` for details of a result.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -492,14 +488,13 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
-        val path = arguments.getFileInFocus
         indexingPromise.future.flatMap { _ =>
           queryEngine
-            .globSearch(query, Set.empty, path)
+            .globSearch(query, Set.empty)
             .map(result =>
               CallToolResult
                 .builder()
-                .content(createContent(result.map(_.show).mkString("\n")))
+                .content(createContent(result.show))
                 .isError(false)
                 .build()
             )
@@ -515,7 +510,7 @@ trait MetalsMcpTools extends Cancelable {
         "properties": {
           "query": {
             "type": "string",
-            "description": "Substring of the symbol to search for"
+            "description": "A single unqualified name, e.g. `Probe`, not `com.example.Probe`. Wildcards match literally."
           },
           "symbolType": {
             "type": "array",
@@ -523,11 +518,7 @@ trait MetalsMcpTools extends Cancelable {
               "type": "string",
               "enum": ["package", "class", "object", "function", "method", "trait"]
             },
-            "description": "The type of symbol to search for"
-          },
-          "fileInFocus": {
-            "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "Symbol kinds to include in the results."
           }
         },
         "required": ["query", "symbolType"]
@@ -537,10 +528,8 @@ trait MetalsMcpTools extends Cancelable {
       .builder()
       .name("typed-glob-search")
       .description(
-        """|Search for symbols by type using glob pattern. Filter symbol search results
-           |by specific symbol types (package, class, object, function, method, trait).
-           |More precise than glob-search when you know the symbol type you're looking for.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+        """|Same as `glob-search`, restricted to the given symbol kinds. Note that packages are
+           |returned only when `package` is among them.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -548,7 +537,6 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
-        val path = arguments.getFileInFocus
         val symbolTypes = arguments.getAsList[String]("symbolType")
 
         val invalidSymbols =
@@ -563,11 +551,11 @@ trait MetalsMcpTools extends Cancelable {
 
         indexingPromise.future.flatMap { _ =>
           queryEngine
-            .globSearch(query, symbolTypesSet, path)
+            .globSearch(query, symbolTypesSet)
             .map(result =>
               CallToolResult
                 .builder()
-                .content(createContent(result.map(_.show).mkString("\n")))
+                .content(createContent(result.show))
                 .isError(false)
                 .build()
             )
