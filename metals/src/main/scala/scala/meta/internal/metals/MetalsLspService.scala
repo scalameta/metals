@@ -849,7 +849,8 @@ abstract class MetalsLspService(
               List[Future[Unit]](
                 onInitialized(),
                 Future {
-                  val stats = mbtSymbolSearch.onReindex()
+                  mbtSymbolSearch.onReindex()
+                }.flatMap { stats =>
                   if (Testing.isEnabled) {
                     stats.backgroundJobs
                   } else {
