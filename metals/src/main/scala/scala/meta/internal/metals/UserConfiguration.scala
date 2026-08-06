@@ -303,6 +303,12 @@ case class UserConfiguration(
         ),
         Some(
           (
+            "javaTurbineCache",
+            javaTurbineCache.enabled,
+          )
+        ),
+        Some(
+          (
             "javacServicesOverrides",
             javacServicesOverrides,
           )

@@ -144,7 +144,7 @@ class MbtWorkspaceSymbolProvider(
     documents.get(file).toSeq.flatMap(protobufWorkspace.allJavaOutlines)
 
   private val turbineCache = new TurbineCache(
-    workspace.resolve(Directories.turbineCache).toNIO,
+    workspace,
     turbineCacheConfig,
     turbineRecompileDelay,
     time,

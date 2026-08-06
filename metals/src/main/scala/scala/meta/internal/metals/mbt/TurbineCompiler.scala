@@ -193,10 +193,10 @@ class TurbineCompiler[T](
    *
    * @return true if cache was loaded successfully, false otherwise
    */
-  def loadFromCache(classpath: Seq[Path]): Option[TurbineCompileResult] = {
+  def loadFromCache(classpathPaths: Seq[Path]): Option[TurbineCompileResult] = {
     turbineCache match {
       case Some(cache) =>
-        cache.readCache(classpath) match {
+        cache.readCache(classpathPaths) match {
           case Some(cachedResult) =>
             scribe.info(
               s"Loaded turbine cache with ${cachedResult.lowered.symbols().size()} symbols"
