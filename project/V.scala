@@ -55,7 +55,7 @@ object V {
 
   val mavenBloop = "2.0.5"
 
-  val mill = "1.1.7"
+  val mill = "1.1.8"
 
   // use from project/plugins.sbt
   val mdoc = _root_.mdoc.BuildInfo.version
