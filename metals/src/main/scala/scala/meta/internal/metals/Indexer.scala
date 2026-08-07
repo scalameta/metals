@@ -248,7 +248,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         )
         progress.message =
           s"indexing ${buildTool.importedBuild.dependencyModules.getItems().size()} dependencies"
-        if (indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+        if (indexProviders.clientConfig.definitionIndexStrategy().isClasspath) {
           usedJars ++= indexDependencyModules(
             buildTool.importedBuild.dependencyModules,
             progress,
@@ -546,7 +546,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       if (!path.exists) {
         scribe.warn(s"dependency missing at absolute path: $path")
       } else if (path.isJar) {
-        if (!indexProviders.userConfig.definitionIndexStrategy.isClasspath) {
+        if (
+          !indexProviders.clientConfig.definitionIndexStrategy().isClasspath
+        ) {
           usedJars += path
           if (addSourceJarSymbols(path)) cacheHits += 1
           else cacheMisses += 1

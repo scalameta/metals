@@ -8,6 +8,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.util.control.NonFatal
 
+import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsServerConfig
@@ -329,7 +330,8 @@ object McpMain {
         json.addProperty(k, v)
       }
     }
-    val clientConfiguration = ClientConfiguration(MetalsServerConfig.default)
+    val clientConfiguration =
+      ClientConfiguration(MetalsServerConfig.default, NoopFeatureFlagProvider)
     UserConfiguration.fromJson(json, clientConfiguration)
   }
 }
