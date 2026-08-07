@@ -146,7 +146,12 @@ class MbtWorkspaceSymbolProvider(
       file =>
         if (file.toLanguage.isJava) {
           toInput(file)
-            .map(input => new SourceFile(file.toString(), input.text))
+            .map(input =>
+              new SourceFile(
+                file.toNIO.toAbsolutePath.normalize().toString,
+                input.text,
+              )
+            )
             .toList
         } else if (
           file.isProtoFilename &&
@@ -161,7 +166,12 @@ class MbtWorkspaceSymbolProvider(
           for {
             doc <- documents.get(file).toList
             outline <- protobufWorkspace.allJavaOutlines(doc)
-          } yield new SourceFile(outline.getName(), outline.text)
+          } yield {
+            val name = outline.uri()
+            val path = java.nio.file.Path.of(name)
+            val cleanOutlinePath = path.toAbsolutePath().normalize().toString()
+            new SourceFile(cleanOutlinePath, outline.text)
+          }
         } else {
           Nil
         },

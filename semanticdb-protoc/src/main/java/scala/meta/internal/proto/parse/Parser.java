@@ -699,6 +699,7 @@ public final class Parser {
     int startPos = currentPos();
     expectIdentifier("extensions");
     ImmutableList<Proto.Range> ranges = parseRanges();
+    parseFieldOptions();
     expectSymbol(';');
     return new ExtensionsDecl(startPos, currentPos(), ranges);
   }

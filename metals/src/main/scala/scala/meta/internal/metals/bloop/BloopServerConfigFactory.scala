@@ -1,4 +1,4 @@
-package scala.meta.internal.metals
+package scala.meta.internal.metals.bloop
 
 import java.lang.management.ManagementFactory
 import java.nio.file.Files
@@ -8,6 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.Properties
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifleConfig
@@ -67,7 +68,7 @@ class BloopServerConfigFactory(
                 scribe
                   .debug("Unexpected error while deleting the BSP socket", e)
             }
-          BspConnectionAddress.UnixDomainSocket(socketPath.toFile)
+          BspConnectionAddress.UnixDomainSocket(socketPath)
         },
         bspStdout = bloopLogger.bloopBspStdout,
         bspStderr = bloopLogger.bloopBspStderr,

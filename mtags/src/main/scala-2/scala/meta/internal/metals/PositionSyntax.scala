@@ -160,7 +160,7 @@ object PositionSyntax {
           end.getLine,
           end.getCharacter
         )
-        pos.formatMessage(severity, message)
+        pos.formatMessage(severity, message).stripLineEnd
       } catch {
         case e: IllegalArgumentException =>
           val result =

@@ -29,9 +29,11 @@ import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.PcQueryContext
+import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.SimpleTimer
 import scala.meta.internal.mtags.BuildInfo
+import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc.AutoImportsResult
@@ -60,6 +62,7 @@ import com.google.common.base.Stopwatch
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.Diagnostic
+import org.eclipse.lsp4j.DiagnosticSeverity
 import org.eclipse.lsp4j.DocumentHighlight
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.Range
@@ -293,14 +296,59 @@ case class ScalaPresentationCompiler(
           val sourceFile = new MetalsSourceFile(params)
           metalsAsk[Unit](askReload(List(sourceFile), _))
 
-          if (config.emitDiagnostics)
-            // MetalsGlobalThreadNoBackgroundCompilation: safe to compile directly
-            mGlobal.diagnosticsOf(sourceFile).asJava
-          else
-            // MetalsGlobalThread: delegate to the PC thread via askLoadedTyped to avoid race conditions
-            mGlobal.onDemandDiagnostics(sourceFile).asJava
+          val diagnostics =
+            if (config.emitDiagnostics)
+              // MetalsGlobalThreadNoBackgroundCompilation: safe to compile directly
+              mGlobal.diagnosticsOf(sourceFile)
+            else
+              // MetalsGlobalThread: delegate to the PC thread via askLoadedTyped to avoid race conditions
+              mGlobal.onDemandDiagnostics(sourceFile)
+
+          reportCompileErrorsForMbtIfAny(params.uri(), diagnostics, mGlobal)
+          diagnostics.asJava
       }(emptyQueryContext)
     } else { CompletableFuture.completedFuture(noDiags) }
+  }
+
+  private def reportCompileErrorsForMbtIfAny(
+      uri: URI,
+      diags: Seq[Diagnostic],
+      mGlobal: MetalsGlobal
+  ): Unit = {
+    val errors = diags.filter(_.getSeverity == DiagnosticSeverity.Error)
+    if (reportsLevel.isVerbose && errors.nonEmpty) {
+      val candidatePool = sourcePath.get().asScala.map(_.toString)
+      val loadedFromSourcePath =
+        try
+          mGlobal.PruneLateSourcesComponent.loadedFromSource.toList
+            .flatMap(f => Option(f.path))
+        catch {
+          case NonFatal(_) => Nil
+        }
+      val errorLines = errors.map { d =>
+        val start = d.getRange.getStart
+        s"[${start.getLine + 1}:${start.getCharacter + 1}] ${d.getMessageAsString}"
+      }
+      val errorsStr = errorLines.mkString("\n\n")
+      // Deduplicate on the error position, its content and the failing file's path.
+      val contentId = MD5.compute(errorLines.mkString("\n"))
+      reportContext
+        .unsanitized()
+        .create(() =>
+          Report(
+            name = "scala-pc-compile-error",
+            text =
+              s"""|Errors in $uri:
+                  |$errorsStr
+                  |
+                  |Classpath:${classpath.mkString("\n  ", "\n  ", "")}
+                  |Sourcepath (candidate pool):${candidatePool.mkString("\n  ", "\n  ", "")}
+                  |Sourcepath (actually loaded):${loadedFromSourcePath.mkString("\n  ", "\n  ", "")}""".stripMargin,
+            shortSummary = s"Presentation compiler error for $uri",
+            id = Some(s"$uri#$contentId").asJava
+          )
+        )
+    }
   }
 
   def didClose(uri: URI): Unit = {

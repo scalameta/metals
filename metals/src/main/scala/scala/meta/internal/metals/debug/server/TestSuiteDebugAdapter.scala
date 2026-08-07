@@ -107,7 +107,8 @@ class TestSuiteDebugAdapter(
       TestInternals.loadFramework(loader, framework.names)
     }
     val handler = new LoggingEventHandler(listener)
-    val jvmOptions = testClasses.getJvmOptions.asScala.toList
+    val jvmOptions =
+      project.jvmOptionsWith(testClasses.getJvmOptions.asScala.toList)
     val testClassesEnvVariables =
       testClasses.getEnvironmentVariables().asScala.toList
     val buildServerEnvVariables = project.environmentVariablesAsStrings.toList

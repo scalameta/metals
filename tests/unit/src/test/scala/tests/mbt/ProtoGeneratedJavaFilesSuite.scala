@@ -45,7 +45,7 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
     )
 
     assert(file.exists, "expected the outline to be regenerated")
-    assertEquals(file.text, content)
+    assertNoDiff(file.text, content)
   }
 
   test("no-op-when-present") {
@@ -61,7 +61,7 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       fail("outlines should not be evaluated when the file exists"),
     )
 
-    assertEquals(file.text, content)
+    assertNoDiff(file.text, content)
   }
 
   test("matches-outline-by-class-name") {
@@ -80,6 +80,6 @@ class ProtoGeneratedJavaFilesSuite extends munit.FunSuite {
       ),
     )
 
-    assertEquals(file.text, content)
+    assertNoDiff(file.text, content)
   }
 }
