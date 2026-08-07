@@ -54,7 +54,7 @@ class ModuleStatus(
           case Some(buildTarget) =>
             handler.diagnostics
               .upstreamTargetsWithCompilationErrors(buildTarget.id)
-              .flatMap(handler.buildTargets.jvmTarget)
+              .flatMap(handler.buildTargets.jvmTarget(_))
               .headOption match {
               case Some(buildTargetWithError) =>
                 client.metalsStatus(

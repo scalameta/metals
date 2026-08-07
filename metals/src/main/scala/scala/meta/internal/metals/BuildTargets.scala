@@ -156,8 +156,11 @@ final class BuildTargets private (
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
     data.fromOptions(_.javaTarget(id))
 
-  def jvmTarget(id: BuildTargetIdentifier): Option[JvmTarget] =
-    data.fromOptions(_.jvmTarget(id))
+  def jvmTarget(
+      id: BuildTargetIdentifier,
+      scalaPreferred: Boolean = true,
+  ): Option[JvmTarget] =
+    data.fromOptions(_.jvmTarget(id, scalaPreferred))
 
   def fullClasspath(
       id: BuildTargetIdentifier,
