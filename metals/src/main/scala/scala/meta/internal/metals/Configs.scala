@@ -1036,4 +1036,25 @@ object Configs {
       }
     }
   }
+
+  /**
+   * Configuration for turbine cache. When enabled, turbine compilation results
+   * are persisted to disk and restored on startup to avoid recompiling unchanged
+   * sources.
+   *
+   * @param enabled Whether caching is enabled
+   */
+  final case class TurbineCacheConfig(enabled: Boolean)
+
+  object TurbineCacheConfig {
+    val default: TurbineCacheConfig = TurbineCacheConfig(enabled = false)
+    val enabled: TurbineCacheConfig = TurbineCacheConfig(enabled = true)
+
+    def fromConfig(value: Option[Boolean]): TurbineCacheConfig = {
+      value match {
+        case Some(enabled) => TurbineCacheConfig(enabled)
+        case None => default
+      }
+    }
+  }
 }

@@ -22,6 +22,30 @@ import scala.meta.io.AbsolutePath
 object GitVCS {
 
   /**
+   * Gets the current git HEAD hash for the given workspace.
+   * Returns None if git is not available or the workspace is not a git repo.
+   */
+  def getHeadHash(workspace: AbsolutePath): Option[String] = {
+    try {
+      var result: Option[String] = None
+      val logger = ProcessLogger { line =>
+        if (result.isEmpty && line.trim.nonEmpty) {
+          result = Some(line.trim)
+        }
+      }
+      val exitCode = Process(
+        List("git", "rev-parse", "HEAD"),
+        cwd = workspace.toFile,
+      ).!(logger)
+      if (exitCode == 0) result else None
+    } catch {
+      case NonFatal(e) =>
+        scribe.debug(s"GitVCS.getHeadHash failed: ${e.getMessage}")
+        None
+    }
+  }
+
+  /**
    * Runs `git status --porcelain --untracked-files=all` and returns a list of
    * absolute paths to the relevant files.
    */

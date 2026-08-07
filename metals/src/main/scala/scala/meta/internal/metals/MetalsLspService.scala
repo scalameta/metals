@@ -360,6 +360,7 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
+    turbineCacheConfig = () => userConfig.javaTurbineCache,
     indexFilters = MbtIndexFilter.allFilters,
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
