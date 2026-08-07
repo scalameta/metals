@@ -7,6 +7,7 @@ import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicLong
 import java.{util => ju}
 
 import scala.annotation.nowarn
@@ -313,6 +314,7 @@ class Compilers(
   override def cancel(): Unit = {
     presentationCompilerCache.invalidateAll()
     presentationCompilerWorksheetsCache.invalidateAll()
+    presentationCompilerGeneration.incrementAndGet()
     worksheetsDigests.clear()
     outlineFilesProvider.clear()
   }
@@ -353,7 +355,11 @@ class Compilers(
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
-  def didFocus(path: AbsolutePath): Future[List[Diagnostic]] = {
+  def didFocus(
+      path: AbsolutePath,
+      retryStale: Boolean = true,
+  ): Future[List[Diagnostic]] = {
+    val generation = presentationCompilerGeneration.get()
     val maybeDiagnostics =
       for (pc <- loadCompiler(path); contents <- buffers.get(path))
         yield {
@@ -385,24 +391,37 @@ class Compilers(
               )
               result
             }
+            .flatMap { result =>
+              if (generation == presentationCompilerGeneration.get())
+                Future.successful(result)
+              else if (retryStale) didFocus(path, retryStale = false)
+              else Future.successful(Nil)
+            }
         }
 
     maybeDiagnostics.getOrElse(Future.successful(List.empty))
   }
 
+  private val presentationCompilerGeneration = new AtomicLong(0)
   private val inFlightDidChange =
     TrieMap.empty[AbsolutePath, CompletableCancelToken]
+  private case class DidChangeRequest(
+      path: AbsolutePath,
+      generation: Long,
+  )
   private val diagnosticsDebouncerDelay: FiniteDuration =
     if (Testing.isEnabled) 0.millis
     else sys.Prop[Int]("metals.errors-delay").option.getOrElse(500).millis
-  private val fileDidChange: BatchedFunction[AbsolutePath, Unit] =
-    BatchedFunction.fromFuture[AbsolutePath, Unit](
-      changedFiles => {
+  private val fileDidChange: BatchedFunction[DidChangeRequest, Unit] =
+    BatchedFunction.fromFuture[DidChangeRequest, Unit](
+      requests => {
         for {
           _ <- sh.sleep(diagnosticsDebouncerDelay)
+          files = requests
+            .groupMapReduce(_.path)(_.generation)(math.max)
           futures =
             for {
-              file <- changedFiles.distinct
+              (file, generation) <- files
               pc <- this.loadCompiler(file).toList
               contents <- buffers.get(file).toList
             } yield {
@@ -426,15 +445,20 @@ class Compilers(
                   pc.didChange(params).asScala
                 }
                 .map { case (timer, reportedDiagnostics) =>
-                  diagnostics.publishDiagnosticsNotAdjusted(
-                    file,
-                    reportedDiagnostics.asScala.toList,
-                  )
-                  metrics.recordEvent(
-                    Event
-                      .duration("diagnostics", timer.elapsed)
-                      .withLanguage(file.toJLanguage)
-                  )
+                  if (generation == presentationCompilerGeneration.get()) {
+                    diagnostics.publishDiagnosticsNotAdjusted(
+                      file,
+                      reportedDiagnostics.asScala.toList,
+                    )
+                    metrics.recordEvent(
+                      Event
+                        .duration("diagnostics", timer.elapsed)
+                        .withLanguage(file.toJLanguage)
+                    )
+                  }
+                }
+                .andThen { case _ =>
+                  inFlightDidChange.remove(file, token)
                 }
             }
           _ <- Future.sequence(futures)
@@ -553,7 +577,9 @@ class Compilers(
   def didChange(path: AbsolutePath): Future[Unit] = {
     if (userConfig().presentationCompilerDiagnostics)
       // Batch/debounce these requests since they can arrive in bursts
-      fileDidChange(Seq(path))
+      fileDidChange(
+        Seq(DidChangeRequest(path, presentationCompilerGeneration.get()))
+      )
     else
       didChangeBSPDiagnostics(path, shouldReturnDiagnostics = false).ignoreValue
   }
@@ -653,7 +679,11 @@ class Compilers(
     // Restart PC for all build targets that depend on this target
     for {
       target <- buildTargets.allInverseDependencies(target)
-      compiler <- buildTargetPCFromCache(target)
+      key <- List(
+        PresentationCompilerKey.ScalaBuildTarget(target),
+        PresentationCompilerKey.JavaBuildTarget(target),
+      )
+      compiler <- cache.get(key).map(_.await)
     } {
       scribe.debug(s"Restarting PC for target ${target.getUri}")
       compiler.restart()

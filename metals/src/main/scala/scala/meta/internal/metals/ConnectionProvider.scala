@@ -70,6 +70,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
+    refreshMbtStateAfterIndex: () => Future[Unit],
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -253,16 +254,21 @@ class ConnectionProvider(
       case Some(session) if session.canReloadWorkspace =>
         workDoneProgress.trackProgressFuture(
           "Sync",
-          progress =>
-            for {
-              _ <- session.workspaceReload()
-              _ <- connect(new ImportBuildAndIndex(session), progress)
-            } yield (),
+          progress => reloadAndImport(session, progress).ignoreValue,
           metricName = Some("reload_build_server"),
         )
       case _ =>
         fullConnect()
     }
+
+  private def reloadAndImport(
+      session: BspSession,
+      progress: TaskProgress,
+  ): Future[BuildChange] =
+    for {
+      _ <- session.workspaceReload()
+      buildChange <- connect(new ImportBuildAndIndex(session), progress)
+    } yield buildChange
 
   private def isBspAvailable(buildTool: BuildTool) =
     buildTool.isBspGenerated(folder) || bspGlobalDirectories.exists(
@@ -285,6 +291,10 @@ class ConnectionProvider(
         else runMbtReimport(mbtImporters)
       runImport.flatMap { _ =>
         bspSession match {
+          case Some(session)
+              if MbtBuildServer.isMbtServer(session.main.name) &&
+                session.canReloadWorkspace =>
+            reloadAndImport(session, progress)
           case Some(session) =>
             connect(new ImportBuildAndIndex(session), progress)
           case None =>
@@ -680,32 +690,27 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        // When testing we need to make sure the classpath is refreshed after mbt.json is generated
-        _ <- {
-          if (MetalsServerConfig.isTesting)
-            refreshMbtTurbineClasspath(session).withInterrupt
-          else
-            Future {
-              refreshMbtTurbineClasspath(session)
-            }.withInterrupt
-        }
+        _ <- refreshMbtStateAfterIndexIfNeeded(session)
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
       }
     }
 
-    private def refreshMbtTurbineClasspath(
+    private def refreshMbtStateAfterIndexIfNeeded(
         session: BspSession
-    ): Future[Unit] =
-      if (
-        MbtBuildServer.isMbtServer(session.main.name) &&
-        userConfig.javaSymbolLoader.isTurbineClasspath
-      ) {
-        mbtSymbolSearch.scheduleRecompileTurbineClasspath()
-      } else {
-        Future.unit
-      }
+    ): Interruptable[Unit] = {
+      val refresh =
+        if (MbtBuildServer.isMbtServer(session.main.name))
+          refreshMbtStateAfterIndex()
+        else Future.unit
+
+      if (MetalsServerConfig.isTesting) refresh.withInterrupt
+      else
+        refresh.recover { case error =>
+          scribe.warn("failed to refresh MBT diagnostics", error)
+        }.withInterrupt
+    }
 
     private def saveProjectReferencesInfo(
         bspBuilds: List[BspSession.BspBuild]
