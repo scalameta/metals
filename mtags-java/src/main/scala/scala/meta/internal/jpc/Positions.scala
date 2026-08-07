@@ -4,8 +4,47 @@ import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.Tree
 import com.sun.source.util.Trees
+import com.sun.tools.javac.parser.ScannerFactory
+import com.sun.tools.javac.parser.Tokens.TokenKind
+import com.sun.tools.javac.util.Context
 import org.eclipse.{lsp4j => l}
 object Positions {
+
+  def findNameOffset(
+      text: String,
+      start: Int,
+      end: Int,
+      name: String
+  ): Option[Int] = {
+    if (start < 0 || end < 0 || name.isEmpty) None
+    else
+      foldTokens(text, start, end, Option.empty[Int]) {
+        case (result @ Some(_), _, _) => result
+        case (None, tokenStart, tokenEnd) =>
+          Option.when(
+            tokenEnd - tokenStart == name.length() &&
+              text.startsWith(name, tokenStart)
+          )(tokenStart)
+      }
+  }
+
+  def trimLegacyArraySuffix(
+      typeStart: Int,
+      typeEnd: Int,
+      nameStart: Int,
+      nameEnd: Int,
+      lineMap: LineMap,
+      text: String
+  ): Option[(l.Range, Int)] = {
+    val hasLegacyArraySuffix = typeEnd > nameEnd
+    if (hasLegacyArraySuffix) {
+      val end = lastCodeTokenEnd(text, typeStart, nameStart)
+      Option.when(end > typeStart)(
+        (toLspRange(lineMap, typeStart, end, text), end)
+      )
+    } else
+      Some((toLspRange(lineMap, typeStart, typeEnd, text), typeEnd))
+  }
 
   def toLspRange(
       trees: Trees,
@@ -61,5 +100,40 @@ object Positions {
     }
     val tabCount = offset - startPos
     tabCount * 7
+  }
+
+  private def lastCodeTokenEnd(
+      text: String,
+      start: Int,
+      end: Int
+  ): Int =
+    foldTokens(text, start, end, start) { (_, _, tokenEnd) => tokenEnd }
+
+  private def foldTokens[A](
+      text: String,
+      start: Int,
+      end: Int,
+      initial: A
+  )(f: (A, Int, Int) => A): A = {
+    val sourceStart = start.max(0)
+    val sourceEnd = end.min(text.length())
+    if (sourceStart >= sourceEnd) initial
+    else {
+      val scanner = ScannerFactory
+        .instance(new Context())
+        .newScanner(text.substring(sourceStart, sourceEnd), false)
+      var result = initial
+      scanner.nextToken()
+      while (scanner.token().kind != TokenKind.EOF) {
+        val token = scanner.token()
+        result = f(
+          result,
+          sourceStart + token.pos,
+          sourceStart + token.endPos
+        )
+        scanner.nextToken()
+      }
+      result
+    }
   }
 }
