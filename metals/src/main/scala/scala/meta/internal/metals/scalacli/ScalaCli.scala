@@ -10,10 +10,8 @@ import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
-import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Properties
 import scala.util.Success
@@ -21,9 +19,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.BuildServerConnection
 import scala.meta.internal.metals.Cancelable
-import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Diagnostics
@@ -32,14 +28,13 @@ import scala.meta.internal.metals.ImportedBuild
 import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.SocketConnection
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TargetData
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli.ScalaCliCommand
-import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import coursier.core.Version
@@ -188,22 +183,20 @@ class ScalaCli(
 
     val nextSt = ConnectionState.Connecting(path)
     if (state.compareAndSet(ConnectionState.Empty, nextSt)) {
-      val futureConn = BuildServerConnection.fromSockets(
-        connDir,
+      val connectionFactory = new ScalaCliConnectionFactory(
         connDir,
         buildClient(),
         languageClient,
-        () => ScalaCli.socketConn(command, connDir),
         tables.dismissedNotifications.RequestTimeout,
         tables.dismissedNotifications.ReconnectScalaCli,
         config(),
-        userConfig(),
-        "Scala CLI",
-        supportsWrappedSources = Some(true),
         workDoneProgress = workDoneProgress,
-      )
+        command,
+      ) {
+        override protected def userConfiguration() = userConfig()
+      }
 
-      val f = futureConn.flatMap { conn =>
+      val f = connectionFactory.fromSockets().flatMap { conn =>
         state.set(ConnectionState.Connected(path, conn, ImportedBuild.empty))
         scribe.info(s"Connected to Scala CLI server v${conn.version}")
         importBuild()
@@ -233,35 +226,6 @@ class ScalaCli(
 object ScalaCli {
   val minVersion = "0.1.3"
   val minSourceRootVersion = "1.3.2"
-
-  private def socketConn(
-      command: Seq[String],
-      workspace: AbsolutePath,
-  )(implicit ec: ExecutionContext): Future[SocketConnection] =
-    Future {
-      scribe.info(s"Running $command")
-      val proc = SystemProcess.run(
-        command.toList,
-        workspace,
-        redirectErrorOutput = false,
-        env = Map("SCALA_CLI_POWER" -> "true"),
-        processOut = None,
-        processErr = Some(line => scribe.info("Scala CLI: " + line)),
-        discardInput = false,
-        threadNamePrefix = "scala-cli",
-      )
-      val finished = Promise[Unit]()
-      proc.complete.ignoreValue.onComplete { res =>
-        finished.tryComplete(res)
-      }
-      SocketConnection(
-        ScalaCli.names.head,
-        new ClosableOutputStream(proc.outputStream, "Scala CLI error stream"),
-        proc.inputStream,
-        List(Cancelable { () => proc.cancel }),
-        finished,
-      )
-    }
 
   lazy val javaCommand: String = {
 

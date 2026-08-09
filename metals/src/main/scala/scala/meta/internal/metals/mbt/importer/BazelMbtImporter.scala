@@ -18,6 +18,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.process.ExitCodes
+import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
 
 /**
@@ -178,7 +179,7 @@ abstract class BazelMbtImporter(
         output <- ruleOutputsByTarget
           .getOrElse(target, Nil)
           .find(isClassJarOutput)
-        relative <- BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(
+        relative <- BazelLabels.fileLabelToWorkspaceRelativePath(
           output
         )
       } yield target -> bin.resolve(relative).toString
@@ -313,37 +314,35 @@ abstract class BazelMbtImporter(
     }
 
   private def moduleIdFromJarLabel(label: String): Option[String] =
-    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).map {
-      relative =>
-        val lastSlash = relative.lastIndexOf('/')
-        if (lastSlash >= 0) {
-          val pkg = relative.substring(0, lastSlash).replace('/', '.')
-          val fileName = relative.substring(lastSlash + 1)
-          s"$pkg:$fileName:local"
-        } else {
-          s"root:$relative:local"
-        }
+    BazelLabels.fileLabelToWorkspaceRelativePath(label).map { relative =>
+      val lastSlash = relative.lastIndexOf('/')
+      if (lastSlash >= 0) {
+        val pkg = relative.substring(0, lastSlash).replace('/', '.')
+        val fileName = relative.substring(lastSlash + 1)
+        s"$pkg:$fileName:local"
+      } else {
+        s"root:$relative:local"
+      }
     }
 
   private def resolveJarUri(
       label: String,
       bazelBin: Option[Path],
   ): Option[String] = {
-    BazelMbtBuildSupport.fileLabelToWorkspaceRelativePath(label).flatMap {
-      relative =>
-        val candidate = projectRoot.resolve(relative)
-        if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
-        else {
-          val generatedCandidate = bazelBin.map(_.resolve(relative))
-          generatedCandidate.filter(Files.exists(_)) match {
-            case Some(path) => Some(path.toUri.toString)
-            case None =>
-              scribe.warn(
-                s"bazel-mbt: could not resolve jar for label $label"
-              )
-              None
-          }
+    BazelLabels.fileLabelToWorkspaceRelativePath(label).flatMap { relative =>
+      val candidate = projectRoot.resolve(relative)
+      if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
+      else {
+        val generatedCandidate = bazelBin.map(_.resolve(relative))
+        generatedCandidate.filter(Files.exists(_)) match {
+          case Some(path) => Some(path.toUri.toString)
+          case None =>
+            scribe.warn(
+              s"bazel-mbt: could not resolve jar for label $label"
+            )
+            None
         }
+      }
     }
   }
 
@@ -442,7 +441,26 @@ abstract class BazelMbtImporter(
       val genPaths = srcs
         .filter(ruleLabels)
         .flatMap(outputsByGenLabel.getOrElse(_, Nil))
+      genPaths.foreach { genPath =>
+        if (!Files.exists(projectRoot.resolve(genPath).toNIO))
+          scribe.warn(
+            s"bazel-mbt: generated source output for target $target does not exist on disk: $genPath"
+          )
+      }
       Option.when(genPaths.nonEmpty)(target -> genPaths)
+    }
+
+  /**
+   * Reanchor `bazel-out/<mnemonic>/bin/<file>` directory paths to `bazel-bin/<file>`.
+   * That current configuration mnemonic can differ after changes to bazel config.
+   * `bazel-bin` convenience symlink points to whichever configuration was
+   * most recently built.
+   */
+  private def anchorUnderBazelBin(path: String): String =
+    path.split("/").toList match {
+      case "bazel-out" :: _ :: "bin" :: rest =>
+        ("bazel-bin" :: rest).mkString("/")
+      case _ => path
     }
 
   /** bazel cquery that returns output file paths grouped by label. */
@@ -467,7 +485,7 @@ abstract class BazelMbtImporter(
                 val label =
                   if (rawLabel.startsWith("@@//")) rawLabel.substring(2)
                   else rawLabel
-                Some(label -> paths.toList)
+                Some(label -> paths.map(anchorUnderBazelBin).toList)
               case _ =>
                 scribe.warn(
                   s"bazel-mbt: unexpected cquery starlark line: $line"
@@ -496,7 +514,7 @@ abstract class BazelMbtImporter(
         projectRoot,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,
-        processOut = line => buf.append(line),
+        processOut = ProcessOutput.Lines(line => buf.append(line)),
         processErr = _ => (),
       )
       .future

@@ -83,7 +83,6 @@ object Docs {
           "BLOOP_MAVEN_VERSION" -> V.mavenBloopVersion,
           "SBT_BLOOP_VERSION" -> V.sbtBloopVersion,
           "SCALAMETA_VERSION" -> V.scalametaVersion,
-          "SCALA211_VERSION" -> V.scala211,
           "SCALA_VERSION" -> V.scala213,
         )
       )

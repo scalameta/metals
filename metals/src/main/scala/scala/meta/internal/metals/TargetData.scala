@@ -16,6 +16,7 @@ import scala.util.Properties
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget

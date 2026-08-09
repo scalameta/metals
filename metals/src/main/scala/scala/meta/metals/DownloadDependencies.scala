@@ -8,11 +8,11 @@ import java.nio.file.Paths
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BazelBuildTool
-import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersions
+import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.testing.TestInternals
 import scala.meta.internal.metals.logging.MetalsLogger

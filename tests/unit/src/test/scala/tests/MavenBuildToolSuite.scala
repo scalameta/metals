@@ -2,7 +2,9 @@ package tests
 
 import java.nio.file.Files
 
+import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.Duration
 import scala.util.Properties
 
 import scala.meta.internal.builds.MavenBuildTool
@@ -16,6 +18,8 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
+import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 class MavenBuildToolSuite extends BaseSuite {
 
@@ -103,6 +107,58 @@ class MavenBuildToolSuite extends BaseSuite {
         "-Dmaven.javadoc.skip=true", "-Dspring-javaformat.skip=true",
         "-Dspotless.check.skip=true", "-Djacoco.skip=true", "-Dsonar.skip=true",
         "-Ddependency-check.skip=true", "-Dgpg.skip=true"),
+    )
+  }
+
+  test("maven-mbt-test-command-filters-single-method") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt"))
+    val modulePom = workspace.resolve("app/pom.xml")
+    modulePom.parent.createDirectories()
+    modulePom.writeText("<project></project>")
+    val testSuites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection(
+          "com.example.MySuite",
+          List("testFoo").asJava,
+        )
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+
+    assertEquals(
+      Await.result(
+        mavenBuildTool(workspace).mbtTestCommand(
+          workspace,
+          mbtTarget(
+            "com.example:app:1.0.0",
+            "app/target/test-classes",
+            projectDir = Some(workspace.resolve("app")),
+          ),
+          testSuites,
+          Nil,
+        ),
+        Duration.Inf,
+      ),
+      List(
+        "mvn",
+        "-f",
+        modulePom.toString,
+        "test",
+        "-Dtest=com.example.MySuite#testFoo",
+        "-Denforcer.skip=true",
+        "-Dcheckstyle.skip=true",
+        "-Dspotbugs.skip=true",
+        "-Drat.skip=true",
+        "-Dpmd.skip=true",
+        "-Dmaven.javadoc.skip=true",
+        "-Dspring-javaformat.skip=true",
+        "-Dspotless.check.skip=true",
+        "-Djacoco.skip=true",
+        "-Dsonar.skip=true",
+        "-Ddependency-check.skip=true",
+        "-Dgpg.skip=true",
+      ),
     )
   }
 

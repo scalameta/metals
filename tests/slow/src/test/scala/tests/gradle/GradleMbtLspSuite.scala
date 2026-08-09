@@ -307,6 +307,193 @@ class GradleMbtLspSuite
     } yield ()
   }
 
+  test("composite-build") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/settings.gradle
+            |rootProject.name = 'main-project'
+            |includeBuild 'plugin-lib'
+            |/build.gradle
+            |plugins {
+            |    id 'java'
+            |}
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'com.example:plugin-lib:0.1'
+            |}
+            |/src/main/java/app/App.java
+            |package app;
+            |
+            |import lib.Parser;
+            |
+            |public class App {
+            |  public String run(String html) {
+            |    return new Parser().title(html);
+            |  }
+            |}
+            |/plugin-lib/settings.gradle
+            |rootProject.name = 'plugin-lib'
+            |/plugin-lib/build.gradle
+            |plugins {
+            |    id 'java'
+            |}
+            |group = 'com.example'
+            |version = '0.1'
+            |repositories {
+            |    mavenCentral()
+            |}
+            |dependencies {
+            |    implementation 'org.jsoup:jsoup:1.21.1'
+            |    testImplementation 'junit:junit:4.13.2'
+            |}
+            |/plugin-lib/src/main/java/lib/Parser.java
+            |package lib;
+            |
+            |import org.jsoup.Jsoup;
+            |import org.jsoup.nodes.Document;
+            |
+            |public class Parser {
+            |  public String title(String html) {
+            |    Document document = Jsoup.parse(html);
+            |    return document.title();
+            |  }
+            |}
+            |/plugin-lib/src/test/java/lib/ParserTest.java
+            |package lib;
+            |
+            |import org.junit.Test;
+            |import static org.junit.Assert.*;
+            |
+            |public class ParserTest {
+            |  @Test
+            |  public void parsesTitle() {
+            |    assertEquals("hello", new Parser().title("<title>hello</title>"));
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [
+            |    {
+            |      "id": "junit:junit:4.13.2",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.hamcrest:hamcrest-core:1.3",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.jsoup:jsoup:1.21.1",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    }
+            |  ],
+            |  "namespaces": {
+            |    "main-project": {
+            |      "sources": [
+            |        "src/main/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": ":"
+            |    },
+            |    "main-project:test": {
+            |      "sources": [
+            |        "src/test/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "main-project",
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": ":"
+            |    },
+            |    "plugin-lib": {
+            |      "sources": [
+            |        "plugin-lib/src/main/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": "plugin-lib:"
+            |    },
+            |    "plugin-lib:test": {
+            |      "sources": [
+            |        "plugin-lib/src/test/java"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [
+            |        "junit:junit:4.13.2",
+            |        "org.hamcrest:hamcrest-core:1.3",
+            |        "org.jsoup:jsoup:1.21.1"
+            |      ],
+            |      "javaHome": "<javaHome-path>",
+            |      "dependsOn": [
+            |        "plugin-lib"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "projectPath": "plugin-lib:"
+            |    }
+            |  },
+            |  "uncheckedSources": []
+            |}
+            |""".stripMargin,
+      )
+      _ <- server.didOpen("plugin-lib/src/main/java/lib/Parser.java")
+      _ <- server.didFocus("plugin-lib/src/main/java/lib/Parser.java")
+      _ <- server.assertHover(
+        "plugin-lib/src/main/java/lib/Parser.java",
+        s"""|package lib;
+            |
+            |import org.jsoup.Jsoup;
+            |import org.jsoup.nodes.Document;
+            |
+            |public class Parser {
+            |  public String title(String html) {
+            |    Document document = Jsoup.parse(html);
+            |    return document.tit@@le();
+            |  }
+            |}
+            |""".stripMargin,
+        """|```java
+           |public java.lang.String title()
+           |```
+           |Get the string contents of the document's `title` element.
+           |
+           |**Returns:** Trimmed title, or empty string if none set.
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("code-lens-java-main") {
     client.selectedServer = Messages.ChooseBuildServer.mbt
     cleanWorkspace()

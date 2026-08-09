@@ -18,6 +18,7 @@ import tests.BaseLspSuite
 import tests.BaseMbtSuite
 import tests.BazelBuildLayout
 import tests.MbtTestInitializer
+import tests.ScriptsAssertions
 import tests.TestHovers
 
 /**
@@ -27,6 +28,7 @@ import tests.TestHovers
 class BazelMbtLspSuite
     extends BaseLspSuite("bazel-mbt", MbtTestInitializer)
     with TestHovers
+    with ScriptsAssertions
     with BaseMbtSuite {
 
   private val bazelVersion = "8.2.1"
@@ -955,6 +957,142 @@ class BazelMbtLspSuite
             |  },
             |  "uncheckedSources": []
             |}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  // A source declared in the root BUILD file has the root-package label
+  // `//:Greeter.scala` (empty package). Its consumer lives in a sub-package so
+  // navigation must cross from `//app` into the root-package source.
+  private def rootPackageWorkspaceLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_library")
+       |
+       |scala_library(
+       |    name = "greeter",
+       |    srcs = ["Greeter.scala"],
+       |    visibility = ["//visibility:public"],
+       |)
+       |
+       |/Greeter.scala
+       |package greeter
+       |
+       |object Greeter {
+       |
+       |  /** Build a friendly greeting for the given name. */
+       |  def greet(name: String): String =
+       |    "Hello, " + name + "!"
+       |
+       |}
+       |
+       |/app/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_binary")
+       |
+       |scala_binary(
+       |    name = "app",
+       |    srcs = ["Main.scala"],
+       |    main_class = "app.Main",
+       |    deps = ["//:greeter"],
+       |)
+       |
+       |/app/Main.scala
+       |package app
+       |
+       |import greeter.Greeter
+       |
+       |object Main {
+       |
+       |  def main(args: Array[String]): Unit =
+       |    println(Greeter.greet("World"))
+       |
+       |}
+       |""".stripMargin
+
+  test("bazel-import-mbt-root-package-navigation") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        BazelBuildLayout(rootPackageWorkspaceLayout, V.scala213, bazelVersion)
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [],
+            |  "namespaces": {
+            |    "//": {
+            |      "sources": [
+            |        "Greeter.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": [],
+            |      "classDirectories": []
+            |    },
+            |    "//app": {
+            |      "sources": [
+            |        "app/Main.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": [
+            |        "//"
+            |      ],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "configurations": [
+            |        "//app:app"
+            |      ]
+            |    }
+            |  },
+            |  "uncheckedSources": []
+            |}""".stripMargin,
+      )
+      _ <- server.didOpen("app/Main.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.assertHover(
+        "app/Main.scala",
+        """|package app
+           |
+           |import greeter.Greeter
+           |
+           |object Main {
+           |
+           |  def main(args: Array[String]): Unit =
+           |    println(Greeter.gr@@eet("World"))
+           |
+           |}
+           |""".stripMargin,
+        """|```scala
+           |def greet(name: String): String
+           |```
+           |Build a friendly greeting for the given name.
+           |""".stripMargin.hover,
+      )
+      _ <- assertDefinitionAtLocation(
+        "app/Main.scala",
+        "Greeter.gr@@eet",
+        "Greeter.scala",
+      )
+      _ <- server.assertReferencesSubquery(
+        "Greeter.scala",
+        "def gr@@eet",
+        """|Greeter.scala:6:7: reference
+           |  def greet(name: String): String =
+           |      ^^^^^
+           |app/Main.scala:8:21: reference
+           |    println(Greeter.greet("World"))
+           |                    ^^^^^
+           |""".stripMargin,
       )
     } yield ()
   }

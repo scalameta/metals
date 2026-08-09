@@ -38,10 +38,10 @@ case class MbtTarget(
     workspace.resolve(".metals/mbt-out").createDirectories()
   }
 
-  private def classpathEntries: Seq[String] =
+  private lazy val classpathEntries: Seq[String] =
     dependencyModules.flatMap(_.jarUri.map(_.toString))
 
-  private def classpath: ju.List[String] =
+  private lazy val classpath: ju.List[String] =
     classpathEntries.asJava
 
   private def baseDirectory(workspace: AbsolutePath): AbsolutePath =

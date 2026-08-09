@@ -7,7 +7,7 @@ import scala.meta.internal.semver.SemVer
 import coursierapi.Complete
 import munit.IgnoreSuite
 
-class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite(V.scala211)
+class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite("2.11.12")
 
 @IgnoreSuite
 class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {

@@ -1,6 +1,7 @@
 package tests.mbt
 
 import java.nio.file.Files
+import java.nio.file.Paths
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
@@ -174,7 +175,7 @@ module com.example {
     assertEquals(stats, IndexingStats(totalFiles = 2, updatedFiles = 1))
     assertEquals(
       provider.allFiles().map(_.toRelative(workspace()).toString()),
-      List("com/Hello.java"),
+      List(Paths.get("com/Hello.java").toString()),
     )
   }
 

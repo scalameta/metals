@@ -7,12 +7,6 @@ import tests.BaseCompletionLspSuite
 class CompletionCrossLspSuite
     extends BaseCompletionLspSuite("completion-cross") {
 
-  if (super.isValidScalaVersionForEnv(V.scala211)) {
-    test("basic-211") {
-      basicTest(V.scala211)
-    }
-  }
-
   if (super.isValidScalaVersionForEnv(V.scala213)) {
     test("basic-213") {
       basicTest(V.scala213)
@@ -347,36 +341,7 @@ class CompletionCrossLspSuite
     } yield ()
   }
 
-  test("check-scala211") {
-    cleanWorkspace()
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": { "scalaVersion": "${V.scala211}" }
-           |}
-           |/a/src/main/scala/Main.scala
-           |object Main extends App {
-           |  println("Hello, World!")
-           |  println("Hello, World!")
-           |  println("Hello, World!")
-           |  // @@
-           |}
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/Main.scala")
-      _ = assertNoDiagnostics()
-      _ <- assertCompletion(
-        "println@@",
-        """|println(): Unit
-           |println(x: Any): Unit
-           |""".stripMargin,
-        filename = Some("a/src/main/scala/Main.scala"),
-      )
-    } yield ()
-  }
-
-  test("iskra-scala3".ignore) {
+  test("iskra-scala3") {
     cleanWorkspace()
     for {
       _ <- initialize(

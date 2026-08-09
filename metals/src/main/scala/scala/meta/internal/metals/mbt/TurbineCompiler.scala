@@ -48,7 +48,7 @@ object TurbineCompiler {
 
   def compileClassfiles[T](
       toParse: ParArray[T],
-      toSourceFile: T => Option[SourceFile],
+      toSourceFile: T => Seq[SourceFile],
       classpath: Seq[Path],
       progressBars: ProgressBars,
   )(implicit rc: ReportContext): TurbineCompileResult = {
@@ -69,16 +69,14 @@ object TurbineCompiler {
 
   private def parseInputs[T](
       inputs: ParArray[T],
-      toSourceFile: T => Option[SourceFile],
+      toSourceFile: T => Seq[SourceFile],
   ): ImmutableList[Tree.CompUnit] = {
     val result = new ConcurrentLinkedQueue[Tree.CompUnit]()
     inputs.foreach { input =>
       try {
-        toSourceFile(input) match {
-          case None =>
-          // Silently ignore entries that may not exist
-          case Some(source) =>
-            result.add(Parser.parse(source))
+        // An empty result means the entry doesn't exist or isn't Java-related.
+        toSourceFile(input).foreach { source =>
+          result.add(Parser.parse(source))
         }
       } catch {
         case NonFatal(_) =>
@@ -128,7 +126,7 @@ private case class SourcepathJavaFileObject(
 
 class TurbineCompiler[T](
     allCompilationUnits: () => ParArray[T],
-    parseUnit: T => Option[SourceFile],
+    parseUnit: T => Seq[SourceFile],
     classpath: () => Seq[Path],
     progressBars: ProgressBars,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig,
