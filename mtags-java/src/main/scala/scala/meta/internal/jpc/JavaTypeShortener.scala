@@ -3,12 +3,18 @@ package scala.meta.internal.jpc
 import javax.lang.model.`type`.DeclaredType
 import javax.lang.model.`type`.TypeMirror
 import javax.lang.model.element.Element
+import javax.lang.model.element.Modifier
 import javax.lang.model.element.NestingKind
 import javax.lang.model.element.TypeElement
+import javax.lang.model.util.Elements
 
 import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.jdk.CollectionConverters._
+
+import com.sun.source.tree.ClassTree
+import com.sun.source.tree.CompilationUnitTree
+import com.sun.source.util.TreePath
 
 /**
  * Renders Java types using simple names where it is safe to do so, collecting
@@ -31,7 +37,9 @@ import scala.jdk.CollectionConverters._
 class JavaTypeShortener(
     currentPackage: String,
     existingImports: Map[String, String],
-    declaredTypeNames: Set[String]
+    declaredTypeNames: Set[String],
+    wildcardImports: Set[String],
+    elements: Elements
 ) extends JavaTypeVisitor {
   // simpleName -> fully qualified name that the simple name currently resolves to
   private val claimed = mutable.Map.empty[String, String] ++ existingImports
@@ -52,8 +60,20 @@ class JavaTypeShortener(
             typeArguments.asScala
               .map(arg => visit(arg))
               .mkString("<", ", ", ">")
-        s"${shortenName(element)}$args"
+        s"${shortenDeclaredName(t, element)}$args"
       case _ => super.visitDeclared(t, p)
+    }
+
+  private def shortenDeclaredName(
+      tpe: DeclaredType,
+      element: TypeElement
+  ): String =
+    tpe.getEnclosingType() match {
+      case enclosing: DeclaredType
+          if element.getNestingKind() == NestingKind.MEMBER &&
+            !element.getModifiers().contains(Modifier.STATIC) =>
+        s"${visit(enclosing)}.${element.getSimpleName()}"
+      case _ => shortenName(element)
     }
 
   private def shortenName(element: TypeElement): String =
@@ -84,6 +104,11 @@ class JavaTypeShortener(
       claimed.get(simpleName) match {
         case Some(claimedFqn) =>
           if (claimedFqn == fqn) simpleName else fqn
+        case None
+            if hasUnambiguousWildcardImport(pkg, simpleName) &&
+              !declaredTypeNames.contains(simpleName) =>
+          claimed(simpleName) = fqn
+          simpleName
         case None =>
           if (declaredTypeNames.contains(simpleName)) fqn
           else {
@@ -93,6 +118,15 @@ class JavaTypeShortener(
           }
       }
   }
+
+  private def hasUnambiguousWildcardImport(
+      pkg: String,
+      simpleName: String
+  ): Boolean =
+    wildcardImports.contains(pkg) &&
+      wildcardImports.count { importedPackage =>
+        elements.getTypeElement(s"$importedPackage.$simpleName") != null
+      } == 1
 
   @tailrec
   private def enclosingTopLevel(
@@ -124,4 +158,60 @@ class JavaTypeShortener(
       case names => names.mkString(".", ".", "")
     }
   }
+}
+
+object JavaTypeShortener {
+
+  def forPath(
+      compilationUnit: CompilationUnitTree,
+      path: TreePath,
+      elements: Elements
+  ): JavaTypeShortener = {
+    val currentPackage =
+      Option(compilationUnit.getPackageName()).map(_.toString()).getOrElse("")
+    val imports = compilationUnit.getImports().asScala.filterNot(_.isStatic())
+    val existingImports = imports.collect {
+      case imp if !imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        val fqn = imp.getQualifiedIdentifier().toString()
+        fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
+    }.toMap
+    val wildcardImports = imports.collect {
+      case imp if imp.getQualifiedIdentifier().toString().endsWith(".*") =>
+        imp.getQualifiedIdentifier().toString().stripSuffix(".*")
+    }.toSet
+    val topLevelTypeNames = compilationUnit
+      .getTypeDecls()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
+    val memberTypeNames = collectEnclosingMemberTypeNames(path)
+    new JavaTypeShortener(
+      currentPackage,
+      existingImports,
+      topLevelTypeNames ++ memberTypeNames,
+      wildcardImports,
+      elements
+    )
+  }
+
+  private def collectMemberTypeNames(classTree: ClassTree): Set[String] =
+    classTree
+      .getMembers()
+      .asScala
+      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
+      .toSet
+
+  @tailrec
+  private def collectEnclosingMemberTypeNames(
+      path: TreePath,
+      names: Set[String] = Set.empty
+  ): Set[String] =
+    if (path == null) names
+    else {
+      val updatedNames = path.getLeaf() match {
+        case classTree: ClassTree => names ++ collectMemberTypeNames(classTree)
+        case _ => names
+      }
+      collectEnclosingMemberTypeNames(path.getParentPath(), updatedNames)
+    }
 }

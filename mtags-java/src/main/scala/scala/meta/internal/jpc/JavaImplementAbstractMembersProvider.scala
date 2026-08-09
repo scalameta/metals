@@ -56,7 +56,11 @@ class JavaImplementAbstractMembersProvider(
           if (abstractMethods.isEmpty) Nil
           else {
             val classTree = classPath.getLeaf().asInstanceOf[ClassTree]
-            val shortener = newShortener(cu, classTree)
+            val shortener = JavaTypeShortener.forPath(
+              cu,
+              classPath,
+              task.getElements()
+            )
             val bodyEdit = bodyEditFor(
               trees,
               cu,
@@ -126,40 +130,6 @@ class JavaImplementAbstractMembersProvider(
         .asScala
         .map(JavaLabels.typeLabel)
         .mkString("(", ",", ")")
-
-  private def newShortener(
-      cu: CompilationUnitTree,
-      targetClass: ClassTree
-  ): JavaTypeShortener = {
-    val currentPackage =
-      Option(cu.getPackageName()).map(_.toString()).getOrElse("")
-    val imports = cu.getImports().asScala.toList.filterNot(_.isStatic())
-    val existingImports = imports.collect {
-      case imp if !imp.getQualifiedIdentifier().toString().endsWith(".*") =>
-        val fqn = imp.getQualifiedIdentifier().toString()
-        fqn.substring(fqn.lastIndexOf('.') + 1) -> fqn
-    }.toMap
-    val topLevelTypeNames = cu
-      .getTypeDecls()
-      .asScala
-      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
-      .toSet
-    val memberTypeNames = collectMemberTypeNames(targetClass)
-    val declaredTypeNames = topLevelTypeNames ++ memberTypeNames
-    new JavaTypeShortener(
-      currentPackage,
-      existingImports,
-      declaredTypeNames
-    )
-  }
-
-  /** Collects simple names of member types declared inside the given class. */
-  private def collectMemberTypeNames(classTree: ClassTree): Set[String] =
-    classTree
-      .getMembers()
-      .asScala
-      .collect { case cls: ClassTree => cls.getSimpleName().toString() }
-      .toSet
 
   private def bodyEditFor(
       trees: Trees,
