@@ -791,6 +791,7 @@ lazy val `metals-mcp` = project
     sharedSettings,
     moduleName := "metals-mcp",
     Compile / mainClass := Some("scala.meta.metals.McpMain"),
+    Compile / run / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(metals)
 
