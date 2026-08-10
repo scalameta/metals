@@ -498,6 +498,7 @@ class UserConfigurationSuite extends BaseSuite {
   "protoOutlineProvider": "v1",
   "javaSymbolLoader": "turbine-classpath",
   "javaTurbineRecompileDelay": "100 milliseconds",
+  "javaTurbineCache": false,
   "javacServicesOverrides": {
     "names": false,
     "attr": true,
