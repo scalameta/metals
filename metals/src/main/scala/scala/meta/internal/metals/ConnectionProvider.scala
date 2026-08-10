@@ -306,7 +306,7 @@ class ConnectionProvider(
   private def updateMbtWatchedFiles(
       importers: List[MbtImportProvider]
   ): Unit = {
-    val build = mbtBuild()
+    val build = MbtBuild.fromWorkspace(folder)
     importers.foreach {
       case script: mbt.importer.ScriptMbtImporter =>
         mbt.importer.ScriptMbtImporter
