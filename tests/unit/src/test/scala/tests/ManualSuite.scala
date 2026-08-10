@@ -18,7 +18,6 @@ class ManualSuite extends BaseManualSuite {
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
       javaSymbolLoader = JavaSymbolLoaderConfig.turbineClasspath,
       presentationCompilerDiagnostics = true,
-      definitionIndexStrategy = DefinitionIndexStrategy.classpath,
       fallbackSourcepath = FallbackSourcepathConfig.allSources,
       compilerProgress = CompilerProgressConfig.enabled,
       referenceProvider = ReferenceProviderConfig.mbt,

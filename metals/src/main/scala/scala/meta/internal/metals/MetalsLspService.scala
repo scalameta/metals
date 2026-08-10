@@ -2405,7 +2405,7 @@ abstract class MetalsLspService(
       },
       toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
       isClasspathDefinitionIndexEnabled = () =>
-        userConfig.definitionIndexStrategy.isClasspath,
+        clientConfig.definitionIndexStrategy().isClasspath,
       mtags = () => mtags,
     )
   }
