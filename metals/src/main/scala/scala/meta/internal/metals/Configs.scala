@@ -371,6 +371,28 @@ object Configs {
     }
   }
 
+  final case class MbtConfig(
+      importGeneratedSources: Boolean,
+      semanticdbCacheEnabled: Boolean,
+      semanticdbCacheMaxSize: Int,
+  )
+
+  object MbtConfig {
+    val defaultMaxSize: Int = Int.MaxValue
+    def default: MbtConfig =
+      MbtConfig(false, false, defaultMaxSize)
+    def fromConfig(
+        importGeneratedSources: Option[Boolean],
+        semanticdbCacheEnabled: Option[Boolean],
+        semanticdbCacheMaxSize: Option[Int],
+    ): MbtConfig =
+      MbtConfig(
+        importGeneratedSources.getOrElse(false),
+        semanticdbCacheEnabled.getOrElse(false),
+        semanticdbCacheMaxSize.getOrElse(defaultMaxSize),
+      )
+  }
+
   final case class ProtoOutlineProviderConfig(val value: String) {
     require(List("v1", "v2").contains(value), value)
     def isV1: Boolean =

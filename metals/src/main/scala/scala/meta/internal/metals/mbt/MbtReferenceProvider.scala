@@ -1,11 +1,13 @@
 package scala.meta.internal.metals.mbt
 
+import java.nio.file.Files
 import java.time.Duration
+import java.util.Collections
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
+import java.util.{LinkedHashMap => JLinkedHashMap}
 
 import scala.annotation.tailrec
-import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
 import scala.concurrent.Await
@@ -20,6 +22,7 @@ import scala.meta.internal.metals.AdjustRange
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
@@ -28,6 +31,7 @@ import scala.meta.internal.metals.Synthetics
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.noAdjustRange
@@ -55,8 +59,14 @@ class MbtReferenceProvider(
     languageClient: MetalsLanguageClient,
     workDoneProgress: WorkDoneProgress,
     metrics: MonitoringClient,
+    workspace: AbsolutePath,
+    userConfig: () => UserConfiguration,
 )(implicit ec: ExecutionContext) {
-  private val cache = new TextDocumentCache()
+  private val cache = new TextDocumentCache(
+    workspace.resolve(Directories.semanticdbCache),
+    () => userConfig().mbtConfig.semanticdbCacheEnabled,
+    () => userConfig().mbtConfig.semanticdbCacheMaxSize,
+  )
 
   // When looking for usages of a method, we don't visit supermethods from these
   // types because it would result in a ton of noisy results. This list should
@@ -683,8 +693,68 @@ class MbtReferenceProvider(
   // presentation compilers when MBT is available and provides all sources and
   // dependencies through the fallback compiler. In BSP mode, SemanticDBs are
   // tried first and per-target presentation compilers are used as a fallback.
-  private class TextDocumentCache {
-    private val cache = TrieMap.empty[AbsolutePath, s.TextDocument]
+  private class TextDocumentCache(
+      cacheDir: AbsolutePath,
+      isPersistenceEnabled: () => Boolean,
+      maxCacheSize: () => Int,
+  ) {
+    private val cache: java.util.Map[AbsolutePath, s.TextDocument] =
+      Collections.synchronizedMap(
+        new JLinkedHashMap[AbsolutePath, s.TextDocument](
+          16, // initial capacity
+          0.75f, // load factor
+          true, // accessOrder - enables LRU ordering
+        ) {
+          override def removeEldestEntry(
+              eldest: java.util.Map.Entry[AbsolutePath, s.TextDocument]
+          ): Boolean = size() > maxCacheSize()
+        }
+      )
+
+    private def diskCachePath(path: AbsolutePath): AbsolutePath = {
+      val relativePath = path.parent.toRelative(workspace)
+      val semanticdbPath = cacheDir.resolve(relativePath)
+      val name = path.filename + ".semanticdb"
+      semanticdbPath.resolve(name)
+    }
+
+    private def loadFromDisk(
+        path: AbsolutePath,
+        md5: String,
+    ): Option[s.TextDocument] = {
+      if (!isPersistenceEnabled()) None
+      else {
+        val cachePath = diskCachePath(path)
+        if (cachePath.exists) {
+          try {
+            val bytes = Files.readAllBytes(cachePath.toNIO)
+            val doc = s.TextDocument.parseFrom(bytes)
+            if (doc.md5 == md5) Some(doc)
+            else None
+          } catch {
+            case e: Exception =>
+              scribe.debug(s"Failed to load cached document for $path", e)
+              None
+          }
+        } else None
+      }
+    }
+
+    private def saveToDisk(
+        path: AbsolutePath,
+        doc: s.TextDocument,
+    ): Unit = {
+      if (isPersistenceEnabled())
+        try {
+          val cachePath = diskCachePath(path)
+          cachePath.parent.createDirectories()
+          Files.write(cachePath.toNIO, doc.toByteArray)
+        } catch {
+          case e: Exception =>
+            scribe.debug(s"Failed to save cached document for $path", e)
+        }
+    }
+
     def indexSingle(path: AbsolutePath): s.TextDocument = {
       index(Seq(path)).documents.headOption.getOrElse {
         scribe.warn(s"references: no document found for $path")
@@ -700,12 +770,19 @@ class MbtReferenceProvider(
       }.toMap
 
       val toIndex = pathsWithMd5.filter { case (path, md5) =>
-        cache.get(path) match {
+        Option(cache.get(path)) match {
           case Some(doc) if doc.md5 == md5 =>
             docs += doc
             false
           case _ =>
-            true
+            loadFromDisk(path, md5) match {
+              case Some(doc) =>
+                docs += doc
+                cache.put(path, doc)
+                false
+              case None =>
+                true
+            }
         }
       }
       if (toIndex.isEmpty) {
@@ -719,6 +796,7 @@ class MbtReferenceProvider(
               val docAdjusted = doc.withUri(path.toURI.toString)
               docs += docAdjusted
               cache.put(path, docAdjusted)
+              saveToDisk(path, docAdjusted)
             case _ =>
               needCompiler += path
           }
@@ -753,13 +831,12 @@ class MbtReferenceProvider(
             }
           }
           val result = fetchDocs(maxRetries = 3)
-          result.foreach { doc =>
-            doc.uri.toAbsolutePathSafe match {
-              case Some(path) =>
-                cache.put(path, doc)
-              case None =>
-                scribe.warn(s"references: no path found for ${doc.uri}")
-            }
+          for {
+            doc <- result
+            path <- doc.uri.toAbsolutePathSafe
+          } {
+            cache.put(path, doc)
+            saveToDisk(path, doc)
           }
           docs ++= result
           s.TextDocuments(documents = docs.toSeq)
