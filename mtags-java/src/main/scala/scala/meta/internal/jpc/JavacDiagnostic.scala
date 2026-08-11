@@ -41,6 +41,37 @@ object JavacDiagnostic {
       }
   }
 
+  // Example errors:
+  // error: incompatible types: java.lang.String cannot be converted to int
+  // error: incompatible types: possible lossy conversion from double to int
+  object IncompatibleTypes {
+    private val Code = "compiler.err.prob.found.req"
+    private val CannotBeConverted =
+      """incompatible types: (.+) cannot be converted to (.+)""".r
+    private val BadTypeInPolyExpression =
+      """(?s)incompatible types: bad type in (?:conditional|switch) expression\s+(.+?) cannot be converted to (.+)""".r
+    private val NoConformingInstance =
+      """(?s)incompatible types: no instance\(s\) of type variable\(s\).+ exist so that .+ conforms to .+""".r
+    private val PossibleLossyConversion =
+      """incompatible types: possible lossy conversion from (.+) to (.+)""".r
+    def unapply(d: l.Diagnostic): Boolean = {
+      if (!matchesCode(d)) false
+      else
+        d.getMessageAsString.trim() match {
+          case CannotBeConverted(_, _) => true
+          case BadTypeInPolyExpression(_, _) => true
+          case NoConformingInstance() => true
+          case PossibleLossyConversion(_, _) => true
+          case _ => false
+        }
+    }
+
+    private def matchesCode(d: l.Diagnostic): Boolean =
+      Option(d.getCode()).exists(code =>
+        code.isLeft() && code.getLeft() == Code
+      )
+  }
+
   // Example error:
   // error: Foo is not abstract and does not override abstract method bar() in Baz
   object DoesNotOverrideAbstract {

@@ -40,6 +40,10 @@ object Directories {
     RelativePath(".metals").resolve("rules")
   def explainedDiagnostics: RelativePath =
     RelativePath(".metals").resolve("explained-diagnostics")
+  def turbineCache: RelativePath =
+    RelativePath(".metals").resolve("turbine-cache.jar")
+  def semanticdbCache: RelativePath =
+    RelativePath(".metals").resolve("semanticdb-cache")
 
   val stacktraceFilename = "stacktrace.scala"
   val dependenciesName = "dependencies"

@@ -150,7 +150,11 @@ object ShellRunner {
   )(implicit ec: ExecutionContext): Option[String] = {
 
     val sbOut = new StringBuilder()
-    val env = additionalEnv ++ maybeJavaHome.map("JAVA_HOME" -> _).toMap
+    // Through `envVariables`, as in `run`: without it the command inherits
+    // whatever `JAVA_HOME` Metals was started with, `/jdk/Home/` here against
+    // the `/jdk/Home` every other command sends. A build tool compares the two
+    // as text and restarts its daemon.
+    val env = additionalEnv ++ JdkSources.envVariables(maybeJavaHome)
     val ps = SystemProcess.run(
       args,
       directory,

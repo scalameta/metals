@@ -6,6 +6,7 @@ package scala.meta.pc;
  */
 public class CodeActionId {
   public static final String ConvertToNamedArguments = "ConvertToNamedArguments";
+  public static final String ChangeVariableType = "ChangeVariableType";
   public static final String ExtractMethod = "ExtractMethod";
   public static final String ImplementAbstractMembers = "ImplementAbstractMembers";
   public static final String ImportMissingSymbol = "ImportMissingSymbol";

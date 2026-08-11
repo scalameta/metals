@@ -1,6 +1,8 @@
 package scala.meta.internal.metals
 
+import java.net.URI
 import java.nio.file.Paths
+import java.util.Locale
 
 import scala.util.Failure
 import scala.util.Properties
@@ -33,9 +35,27 @@ object JdkSources {
     }
   }
 
+  /**
+   * Reads a java home written either way: `/jdk/Home` or `file:///jdk/Home`.
+   *
+   * The `file:` spelling reaches Metals two ways: from a build server, whose
+   * `javaHome` BSP types as a URI, and from the Gradle importer, which writes
+   * one into `MbtNamespace.javaHome`. `AbsolutePath` alone would read it as a
+   * relative path whose first element is the scheme, `file:`, so the JDK would
+   * go unnoticed.
+   */
   private def fromString(path: String): Option[AbsolutePath] = {
     Option(path).filter(_.nonEmpty).flatMap { str =>
-      Try(AbsolutePath(str)) match {
+      // Inside the `Try`, since `URI.create` rejects a `file:` URI that no path
+      // can hold: `file://host/jdk` names `/jdk` on a machine called `host`.
+      Try {
+        // `FILE:` as well: a URI scheme is case-insensitive, and `Paths.get`
+        // reads any case. `Locale.ROOT`, since a Turkish locale lowercases
+        // `FILE:` to `fıle:`.
+        if (str.toLowerCase(Locale.ROOT).startsWith("file:"))
+          AbsolutePath(Paths.get(URI.create(str)))
+        else AbsolutePath(str)
+      } match {
         case Failure(exception) =>
           logger.warn(
             s"Failed to parse java home path $str: ${exception.getMessage}"

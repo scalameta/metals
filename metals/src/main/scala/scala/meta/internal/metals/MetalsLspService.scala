@@ -360,6 +360,7 @@ abstract class MetalsLspService(
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
     turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
+    turbineCacheConfig = () => userConfig.javaTurbineCache,
     indexFilters = MbtIndexFilter.allFilters,
     protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
@@ -592,6 +593,8 @@ abstract class MetalsLspService(
     languageClient,
     workDoneProgress,
     metrics,
+    folder,
+    () => userConfig,
   )
 
   val referencesProvider: ReferenceProvider = new ReferenceProvider(
@@ -2405,7 +2408,7 @@ abstract class MetalsLspService(
       },
       toIndexSource = path => sourceMapper.mappedTo(path).getOrElse(path),
       isClasspathDefinitionIndexEnabled = () =>
-        userConfig.definitionIndexStrategy.isClasspath,
+        clientConfig.definitionIndexStrategy().isClasspath,
       mtags = () => mtags,
     )
   }

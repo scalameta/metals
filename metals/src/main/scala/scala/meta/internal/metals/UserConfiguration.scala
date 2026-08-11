@@ -14,17 +14,18 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
 import scala.meta.internal.metals.Configs.CompilerProgressConfig
-import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
 import scala.meta.internal.metals.Configs.DefinitionProviderConfig
 import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.JavacServicesOverrides
+import scala.meta.internal.metals.Configs.MbtConfig
 import scala.meta.internal.metals.Configs.ProtoOutlineProviderConfig
 import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.Configs.RangeFormattingProviders
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.ScalaImportsPlacementConfig
+import scala.meta.internal.metals.Configs.TurbineCacheConfig
 import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
@@ -99,13 +100,12 @@ case class UserConfiguration(
       WorkspaceSymbolProviderConfig.default,
     definitionProviders: DefinitionProviderConfig =
       DefinitionProviderConfig.default,
-    definitionIndexStrategy: DefinitionIndexStrategy =
-      DefinitionIndexStrategy.default,
     protoOutlineProvider: ProtoOutlineProviderConfig =
       ProtoOutlineProviderConfig.default,
     javaSymbolLoader: JavaSymbolLoaderConfig = JavaSymbolLoaderConfig.default,
     javaTurbineRecompileDelay: TurbineRecompileDelayConfig =
       TurbineRecompileDelayConfig.default,
+    javaTurbineCache: TurbineCacheConfig = TurbineCacheConfig.default,
     javacServicesOverrides: JavacServicesOverrides =
       JavacServicesOverrides.default,
     compilerProgress: CompilerProgressConfig = CompilerProgressConfig.default,
@@ -123,7 +123,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
-    importGeneratedSourcesMbt: Boolean = false,
+    mbtConfig: MbtConfig = MbtConfig.default,
 ) {
 
   def isMbtDefinitionProviderEnabled: Boolean =
@@ -277,12 +277,6 @@ case class UserConfiguration(
         ),
         Some(
           (
-            "definitionIndexStrategy",
-            definitionIndexStrategy.value,
-          )
-        ),
-        Some(
-          (
             "protoOutlineProvider",
             protoOutlineProvider.value,
           )
@@ -297,6 +291,12 @@ case class UserConfiguration(
           (
             "javaTurbineRecompileDelay",
             javaTurbineRecompileDelay.duration.toString(),
+          )
+        ),
+        Some(
+          (
+            "javaTurbineCache",
+            javaTurbineCache.enabled,
           )
         ),
         Some(
@@ -368,8 +368,12 @@ case class UserConfiguration(
         optStringField("mcpClient", mcpClient),
         Some(
           (
-            "importGeneratedSourcesMbt",
-            importGeneratedSourcesMbt,
+            "mbt",
+            Map(
+              "importGeneratedSources" -> mbtConfig.importGeneratedSources,
+              "semanticdbCacheEnabled" -> mbtConfig.semanticdbCacheEnabled,
+              "semanticdbCacheMaxSize" -> mbtConfig.semanticdbCacheMaxSize,
+            ).asJava,
           )
         ),
         Some(
@@ -931,7 +935,7 @@ object UserConfiguration {
            |""".stripMargin,
       ),
       UserConfigurationOption(
-        "import-generated-sources-mbt",
+        "mbt.import-generated-sources",
         "false",
         "true",
         "Import Generated Sources In MBT Builds",
@@ -939,6 +943,28 @@ object UserConfiguration {
            |during MBT import and include them as unchecked sources.
            |""".stripMargin,
         isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "mbt.semanticdb-cache-enabled",
+        "false",
+        "true",
+        "Enable MBT Semanticdb Cache",
+        """|If enabled, Metals will persist semanticdb documents to disk in the
+           |`.metals/semanticdb-cache` directory. This can improve performance for
+           |find references and implementations operations in MBT mode by avoiding
+           |recalculating semanticdb when files haven't changed.
+           |""".stripMargin,
+        isBoolean = true,
+      ),
+      UserConfigurationOption(
+        "mbt.semanticdb-cache-max-size",
+        Int.MaxValue.toString(),
+        "2000",
+        "MBT Semanticdb In-Memory Cache Size Limit",
+        """|Maximum number of semanticdb documents to keep in the in-memory cache.
+           |When this limit is exceeded, the least recently used documents are evicted.
+           |A higher value uses more memory but can improve performance for large projects.
+           |""".stripMargin,
       ),
     )
 
@@ -1029,9 +1055,15 @@ object UserConfiguration {
       )
 
     def getBooleanKey(key: String): Option[Boolean] =
+      getBooleanKeyOnObj(key, json)
+
+    def getBooleanKeyOnObj(
+        key: String,
+        currentObject: JsonObject,
+    ): Option[Boolean] =
       getKey(
         key,
-        json,
+        currentObject,
         { value =>
           Try(value.getAsBoolean())
             .fold(
@@ -1043,8 +1075,12 @@ object UserConfiguration {
             )
         },
       )
+
     def getIntKey(key: String): Option[Int] =
-      getStringKey(key).flatMap { value =>
+      getIntKeyOnObj(key, json)
+
+    def getIntKeyOnObj(key: String, currentObject: JsonObject): Option[Int] =
+      getStringKeyOnObj(key, currentObject).flatMap { value =>
         Try(value.toInt) match {
           case Failure(_) =>
             errors += s"Not a number: '$value'"
@@ -1358,14 +1394,6 @@ object UserConfiguration {
           featureFlags,
         ),
     ).getOrElse(WorkspaceSymbolProviderConfig.default)
-    val definitionIndexStrategy = getParsedKey(
-      "definition-index-strategy",
-      value =>
-        DefinitionIndexStrategy.fromConfigOrFeatureFlag(
-          value,
-          featureFlags,
-        ),
-    ).getOrElse(DefinitionIndexStrategy.default)
     val definitionProviders = getParsedArrayKey(
       "definition-providers",
       values =>
@@ -1378,8 +1406,7 @@ object UserConfiguration {
       "proto-outline-provider",
       value =>
         ProtoOutlineProviderConfig.fromConfigOrFeatureFlag(
-          value,
-          featureFlags,
+          value
         ),
     ).getOrElse(ProtoOutlineProviderConfig.default)
     val javaSymbolLoader = getParsedKey(
@@ -1392,6 +1419,9 @@ object UserConfiguration {
     ).getOrElse(JavaSymbolLoaderConfig.default)
     val javaTurbineRecompileDelay = TurbineRecompileDelayConfig.fromConfig(
       getStringKey("java-turbine-recompile-delay")
+    )
+    val javaTurbineCache = TurbineCacheConfig.fromConfig(
+      getBooleanKey("java-turbine-cache")
     )
     val javacServicesOverrides =
       getKey(
@@ -1470,8 +1500,18 @@ object UserConfiguration {
 
     val mcpClient = getStringKey("mcp-client")
 
-    val importGeneratedSourcesMbt =
-      getBooleanKey("import-generated-sources-mbt").getOrElse(false)
+    val mbtSubKey = getSubKey("mbt")
+    val mbtConfig = MbtConfig.fromConfig(
+      mbtSubKey
+        .flatMap(getBooleanKeyOnObj("import-generated-sources", _))
+        .orElse(getBooleanKey("import-generated-sources-mbt")),
+      mbtSubKey
+        .flatMap(getBooleanKeyOnObj("semanticdb-cache-enabled", _))
+        .orElse(getBooleanKey("mbt-semanticdb-cache")),
+      mbtSubKey
+        .flatMap(getIntKeyOnObj("semanticdb-cache-max-size", _))
+        .orElse(getIntKey("mbt-semanticdb-cache-max-size")),
+    )
 
     if (errors.isEmpty) {
       Right(
@@ -1521,10 +1561,10 @@ object UserConfiguration {
           useSourcePath,
           workspaceSymbolProvider,
           definitionProviders,
-          definitionIndexStrategy,
           protoOutlineProvider,
           javaSymbolLoader,
           javaTurbineRecompileDelay,
+          javaTurbineCache,
           javacServicesOverrides,
           compilerProgress,
           referenceProvider,
@@ -1537,7 +1577,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
-          importGeneratedSourcesMbt,
+          mbtConfig,
         )
       )
     } else {

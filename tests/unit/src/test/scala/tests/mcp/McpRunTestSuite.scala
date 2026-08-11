@@ -296,6 +296,97 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
+  test("concurrent-requests-output-isolation", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/a/src/test/scala/a/ConcurrentTestSuiteA.scala
+           |package a
+           |
+           |class ConcurrentTestSuiteA extends munit.FunSuite {
+           |  test("suite-a-test") {
+           |    println("OUTPUT_FROM_SUITE_A_UNIQUE_MARKER")
+           |    assert(true)
+           |  }
+           |}
+           |
+           |/a/src/test/scala/a/ConcurrentTestSuiteB.scala
+           |package a
+           |
+           |class ConcurrentTestSuiteB extends munit.FunSuite {
+           |  test("suite-b-test") {
+           |    println("OUTPUT_FROM_SUITE_B_UNIQUE_MARKER")
+           |    assert(true)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/test/scala/a/ConcurrentTestSuiteA.scala")
+      _ <- server.didOpen("a/src/test/scala/a/ConcurrentTestSuiteB.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      pathA = server.toPath("a/src/test/scala/a/ConcurrentTestSuiteA.scala")
+      pathB = server.toPath("a/src/test/scala/a/ConcurrentTestSuiteB.scala")
+
+      futureA = server.headServer.mcpTestRunner
+        .runTests(
+          "a.ConcurrentTestSuiteA",
+          Some(pathA),
+          None,
+          verbose = true,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      futureB = server.headServer.mcpTestRunner
+        .runTests(
+          "a.ConcurrentTestSuiteB",
+          Some(pathB),
+          None,
+          verbose = true,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+
+      resultA <- futureA
+      resultB <- futureB
+
+      _ = assert(
+        resultA.contains("OUTPUT_FROM_SUITE_A_UNIQUE_MARKER"),
+        s"Suite A result should contain its own output: $resultA",
+      )
+      _ = assert(
+        !resultA.contains("OUTPUT_FROM_SUITE_B_UNIQUE_MARKER"),
+        s"Suite A result should NOT contain Suite B's output: $resultA",
+      )
+      _ = assert(
+        resultB.contains("OUTPUT_FROM_SUITE_B_UNIQUE_MARKER"),
+        s"Suite B result should contain its own output: $resultB",
+      )
+      _ = assert(
+        !resultB.contains("OUTPUT_FROM_SUITE_A_UNIQUE_MARKER"),
+        s"Suite B result should NOT contain Suite A's output: $resultB",
+      )
+      _ = assert(
+        resultA.contains("ConcurrentTestSuiteA"),
+        s"Suite A result should reference Suite A: $resultA",
+      )
+      _ = assert(
+        resultB.contains("ConcurrentTestSuiteB"),
+        s"Suite B result should reference Suite B: $resultB",
+      )
+    } yield ()
+  }
+
   test("individual-test-execution", maxRetry = 3) {
     cleanWorkspace()
     for {
