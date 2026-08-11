@@ -17,9 +17,6 @@ import scala.meta.Position
  */
 object ScaladocParser {
 
-  // Used in link() and for converting Javadoc @see to links
-  private val LinkPattern = """(.+?#?.+?(\([^\)]*\)?)?)((?:\s+)(.*))?""".r
-
   /* Creates comments with necessary arguments */
   def createComment(
       body0: Option[Body] = None,
@@ -56,16 +53,13 @@ object ScaladocParser {
             case Summary(inline) =>
               // Make sure Javadoc text is converted into links
               Summary(inline match {
+                // A quoted `@see "..."` string is plain text per the Javadoc
+                // spec, not a link (scalameta/metals#3383).
+                case Text(text) if text.trim.startsWith("\"") =>
+                  Text(text)
                 case Text(text) =>
-                  text match {
-                    case LinkPattern(link, _, _, title) =>
-                      Link(
-                        link,
-                        Option(title) map (Text.apply) getOrElse Text(link)
-                      )
-                    case text =>
-                      Link(text, Text(text))
-                  }
+                  val (target, title) = WikiLink.splitTargetTitle(text)
+                  Link(target, Text(title.getOrElse(target)))
                 case x => x
               })
             case x => x
@@ -1282,12 +1276,8 @@ object ScaladocParser {
       val link = readUntil { check(stop) }
       jump(stop)
 
-      link match {
-        case LinkPattern(link, _, _, title) =>
-          Link(link, Option(title) map (Text.apply) getOrElse Text(link))
-        case text =>
-          Link(text, Text(text))
-      }
+      val (target, title) = WikiLink.splitTargetTitle(link)
+      Link(target, Text(title.getOrElse(target)))
     }
 
     /* UTILITY */

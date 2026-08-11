@@ -6,7 +6,7 @@ import scala.meta.internal.semver.SemVer
 
 import coursierapi.Complete
 
-class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite(V.scala211)
+class Worksheet211LspSuite extends tests.BaseWorksheetLspSuite("2.11.12")
 
 class Worksheet3LspSuite extends tests.BaseWorksheetLspSuite(V.scala3) {
   override def versionSpecificCodeToValidate: String =

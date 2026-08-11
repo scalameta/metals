@@ -6,6 +6,7 @@ import java.nio.file.Files
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mcp.Claude
 import scala.meta.internal.metals.mcp.Client
+import scala.meta.internal.metals.mcp.Codex
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.OpenCode
@@ -208,6 +209,44 @@ class McpConfigSuite extends BaseSuite {
         |  }
         |}""".stripMargin,
     )
+  }
+
+  test("codex-generate-config-file") {
+    val workspace = Files.createTempDirectory("metals-mcp-test")
+    val projectPath = AbsolutePath(workspace)
+    val port = 1234
+    val projectName = "test-project"
+
+    McpConfig.writeConfig(
+      port,
+      projectName,
+      projectPath,
+      client = Codex,
+      activeClientExtensionIds = Set.empty,
+    )
+
+    val configFile = projectPath.resolve(".codex/config.toml")
+    assert(configFile.exists)
+
+    val content = new String(
+      Files.readAllBytes(configFile.toNIO),
+      StandardCharsets.UTF_8,
+    )
+
+    assertNoDiff(
+      content,
+      """[mcp_servers.metals]
+        |url = "http://localhost:1234/mcp"""".stripMargin,
+    )
+
+    assertEquals(
+      McpConfig.readPort(projectPath, projectName, Codex),
+      Some(port),
+    )
+
+    McpConfig.deleteConfig(projectPath, projectName, Codex)
+
+    assert(!configFile.exists)
   }
 
   test("opencode-generate-config-file") {

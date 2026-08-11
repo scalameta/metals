@@ -42,6 +42,8 @@ object Synthetics {
         case MacroExpansionTree(_, _) =>
           false
         case OriginalTree(_) => false
+        case AnnotationTree(_, _) => false
+        case AssignTree(_, _) => false
         case Tree.Empty => false
       }
     if (isStop(synthetic.tree)) Stop

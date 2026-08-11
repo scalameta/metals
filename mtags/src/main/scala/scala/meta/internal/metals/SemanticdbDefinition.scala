@@ -99,6 +99,7 @@ object SemanticdbDefinition {
         try mtags.indexRoot()
         catch {
           case NonFatal(_) =>
+          case _: LinkageError =>
         }
         Some(mtags)
       case _ => None

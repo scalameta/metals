@@ -34,9 +34,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import coursierapi.error.DownloadingArtifactsError
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
 import org.eclipse.{lsp4j => l}
-import org.scalafmt.dynamic.Dependency
 import org.scalafmt.dynamic.ScalafmtDynamicError
-import org.scalafmt.dynamic.ScalafmtVersion
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt
 import org.scalafmt.interfaces.ScalafmtReporter
@@ -115,16 +113,20 @@ final class FormattingProvider(
 
   private def downloadScalafmtDependencies(conf: AbsolutePath): Unit = {
     val scalafmtVersion = currentScalafmtVersion(conf)
-    val semVer = SemVer.Version.fromString(scalafmtVersion)
-    val dependencies = Dependency.dependencies(
-      ScalafmtVersion(semVer.major, semVer.minor, semVer.patch)
+    val dependencies = List(
+      Embedded.dependencyOf(
+        "org.scalameta",
+        "scalafmt-core_2.13",
+        scalafmtVersion,
+      ),
+      Embedded.dependencyOf(
+        "org.scala-lang",
+        "scala-reflect",
+        BuildInfo.scala213,
+      ),
     )
     dependencies.foreach { dep =>
-      Embedded.downloadDependency(
-        dep.group,
-        dep.artifact,
-        dep.version,
-      )
+      Embedded.downloadDependency(dep)
     }
   }
 

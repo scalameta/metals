@@ -1,6 +1,5 @@
 package tests.feature
 
-import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
 
 import tests.codeactions.BaseCodeActionLspSuite
@@ -8,7 +7,10 @@ import tests.codeactions.BaseCodeActionLspSuite
 class Scala211ActionsLspSuite
     extends BaseCodeActionLspSuite("cross-code-actions") {
 
-  override protected val scalaVersion: String = BuildInfo.scala211
+  /**
+   * Should work with Metals 1.6.7, we no longer publish Scala 2.11.12 artifacts.
+   */
+  override protected val scalaVersion: String = "2.11.12"
 
   check(
     "basic",
