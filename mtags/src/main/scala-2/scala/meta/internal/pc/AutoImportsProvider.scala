@@ -19,6 +19,12 @@ final class AutoImportsProvider(
 )(implicit queryInfo: PcQueryContext) {
   import compiler._
 
+  private case class RenderedResult(
+      result: AutoImportsResult,
+      symbol: Symbol,
+      isPackageObjectImport: Boolean
+  )
+
   def autoImports(): List[AutoImportsResult] = {
     val unit = addCompilationUnit(
       code = params.text(),
@@ -110,7 +116,7 @@ final class AutoImportsProvider(
     def renderResult(
         sym: Symbol,
         throughPackageObject: Option[Symbol]
-    ): (AutoImportsResult, Symbol, Boolean) = {
+    ): RenderedResult = {
       val importOwner = throughPackageObject.getOrElse(sym.owner)
       val pkg = importOwner.fullName
       val importOwnerOverride =
@@ -154,7 +160,7 @@ final class AutoImportsProvider(
           s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
         )
       }
-      (
+      RenderedResult(
         AutoImportsResultImpl(
           pkg,
           edits.asJava,
@@ -216,32 +222,27 @@ final class AutoImportsProvider(
     // doobie inherits `type Transactor` and `val Transactor`); both render
     // the same import statement, so offer only one code action for them
     def dedupPackageObjectResults(
-        results: List[(AutoImportsResult, Boolean)]
+        results: List[RenderedResult]
     ): List[AutoImportsResult] = {
       val seen = mutable.Set.empty[(String, ju.List[l.TextEdit])]
       results.collect {
-        case (result, true)
-            if seen.add((result.packageName(), result.edits())) =>
-          result
-        case (result, false) => result
+        case rendered if !rendered.isPackageObjectImport => rendered.result
+        case rendered
+            if seen.add(
+              (rendered.result.packageName(), rendered.result.edits())
+            ) =>
+          rendered.result
       }
     }
 
     all match {
-      case (onlyResult, _, _) :: Nil => List(onlyResult)
+      case onlyResult :: Nil => List(onlyResult.result)
       case Nil => Nil
       case moreResults =>
-        val moreExact = moreResults.filter { case (_, sym, _) =>
-          correctInTreeContext(sym)
+        val moreExact = moreResults.filter { rendered =>
+          correctInTreeContext(rendered.symbol)
         }
-        val results =
-          if (moreExact.nonEmpty) moreExact.map { case (result, _, isPackage) =>
-            (result, isPackage)
-          }
-          else
-            moreResults.map { case (result, _, isPackage) =>
-              (result, isPackage)
-            }
+        val results = if (moreExact.nonEmpty) moreExact else moreResults
         dedupPackageObjectResults(results)
     }
   }
