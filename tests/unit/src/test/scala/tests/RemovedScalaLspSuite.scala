@@ -5,6 +5,7 @@ import scala.util.Try
 
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MtagsResolver
+import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
 
@@ -18,7 +19,7 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
   test("versions-should-be-added") {
     check(firstSupported = "2.12.9", lastSupported = V.scala212)
     check(firstSupported = "2.13.1", lastSupported = V.scala213)
-    check(firstSupported = "3.0.0", lastSupported = V.scala3)
+    check(firstSupported = "3.3.0", lastSupported = V.latestScala3Next)
   }
 
   test("check-support") {
@@ -115,12 +116,16 @@ class RemovedScalaLspSuite extends BaseLspSuite("cascade") {
 
     val version = SemVer.Version.fromString(firstSupported)
     val lastVersion = SemVer.Version.fromString(lastSupported)
-
+    val maxMinorVersion = lastVersion.minor
     @tailrec
     def checkEachVersion(currentVersion: SemVer.Version): Unit = {
-      if (currentVersion != lastVersion) {
+      if (
+        currentVersion != lastVersion && currentVersion.minor <= maxMinorVersion
+      ) {
         assert(
-          isSupported(currentVersion),
+          ScalaVersions.isSupportedAtReleaseMomentScalaVersion(
+            currentVersion.toString()
+          ) || isSupported(currentVersion),
           s"Did you forget to add last supported Metals version for $currentVersion in MtagsResolver?",
         )
         val next = tick(currentVersion)

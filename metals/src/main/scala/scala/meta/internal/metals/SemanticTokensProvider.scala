@@ -403,6 +403,8 @@ object SemanticTokensProvider {
         getTypeId(SemanticTokenTypes.Keyword)
       case SoftKeywordsUnapply.KwUsing() =>
         getTypeId(SemanticTokenTypes.Keyword)
+      case SoftKeywordsUnapply.KwInto() =>
+        getTypeId(SemanticTokenTypes.Keyword)
       case _ => -1
     }
 

@@ -11,6 +11,6 @@ case class SymbolReference(
     location: l.Location,
     pos: m.Position,
 ) {
-  def format: String = pos.formatMessage(symbol, "")
+  def format: String = pos.formatMessage(symbol, "").stripLineEnd
   override def toString: String = format
 }

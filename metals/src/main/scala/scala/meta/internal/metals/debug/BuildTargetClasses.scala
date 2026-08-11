@@ -542,11 +542,12 @@ object TestFrameworkSymbolRegistry {
   private lazy val junitSymbols: Map[String, TestFramework] = Set(
     JunitTestFinder.junitBaseClassSymbol,
     JunitTestFinder.junitAnnotationSymbol,
+    JunitTestFinder.junit5AnnotationSymbol,
   ).map(_ -> TestFramework.JUnit).toMap
 
   private lazy val testngSymbols: Map[String, TestFramework] = {
     val testngFinder = new TestNGTestFinder()
-    Set(testngFinder.expectedAnnotationSymbol)
+    testngFinder.expectedAnnotationSymbols
       .map(_ -> TestFramework.TestNG)
       .toMap
   }
@@ -584,7 +585,7 @@ object TestFrameworkUtils {
 
   def from(framework: Option[String]): TestFramework = framework
     .map {
-      case "JUnit" => TestFramework.JUnit
+      case "JUnit" | "Jupiter" => TestFramework.JUnit
       case "munit" => TestFramework.munit
       case "ScalaTest" => TestFramework.ScalaTest
       case "weaver-cats-effect" => WeaverTestFramework

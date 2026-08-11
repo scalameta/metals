@@ -5,93 +5,6 @@ import scala.meta.internal.metals.{BuildInfo => V}
 
 class WarningsLspSuite extends BaseLspSuite("warnings") {
 
-  test("deprecated-scala-212") {
-    cleanWorkspace()
-    val deprecatedScala212Versions =
-      V.deprecatedScalaVersions.filter(_.startsWith("2.12"))
-    assume(
-      deprecatedScala212Versions.size > 0,
-      "No deprecated Scala 2.12 versions to test.",
-    )
-    val using = deprecatedScala212Versions.head
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "${using}"
-           |  }
-           |}
-           |/a/src/main/scala/a/Main.scala
-           |package a
-           |object Main
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(
-          Set(using)
-        ),
-      )
-    } yield ()
-  }
-
-  test("multiple-problems-scala") {
-    cleanWorkspace()
-    val deprecatedScala212Versions =
-      V.deprecatedScalaVersions.filter(_.startsWith("2.12"))
-    assume(
-      deprecatedScala212Versions.size > 0,
-      "No deprecated Scala 2.12 versions to test.",
-    )
-    val using = deprecatedScala212Versions.head
-    val older = "2.12.4"
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "${using}"
-           |  },
-           |  "b": {
-           |    "scalaVersion" : "$older"
-           |  }
-           |}
-           |/a/src/main/scala/a/Main.scala
-           |package a
-           |object Main
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        "Your build definition contains multiple unsupported and deprecated Scala versions.",
-      )
-    } yield ()
-  }
-
-  test("deprecated-scala-211") {
-    cleanWorkspace()
-    val using = V.scala211
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "${using}"
-           |  }
-           |}
-           |/a/src/main/scala/a/Main.scala
-           |package a
-           |object Main
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using)),
-      )
-    } yield ()
-  }
-
   test("unsupported-scala-212") {
     cleanWorkspace()
     val using = "2.12.4"
@@ -111,35 +24,6 @@ class WarningsLspSuite extends BaseLspSuite("warnings") {
       _ = assertNoDiff(
         client.workspaceMessageRequests,
         Messages.UnsupportedScalaVersion.message(Set(using)),
-      )
-    } yield ()
-  }
-
-  test("deprecated-scala-213") {
-    val deprecatedScala213Versions =
-      V.deprecatedScalaVersions.filter(_.startsWith("2.13"))
-    assume(
-      deprecatedScala213Versions.size > 0,
-      "No deprecated Scala 2.13 versionsto test.",
-    )
-    cleanWorkspace()
-    val using = deprecatedScala213Versions.head
-    for {
-      _ <- initialize(
-        s"""/metals.json
-           |{
-           |  "a": {
-           |    "scalaVersion": "${using}"
-           |  }
-           |}
-           |/a/src/main/scala/a/Main.scala
-           |package a
-           |object Main
-           |""".stripMargin
-      )
-      _ = assertNoDiff(
-        client.workspaceMessageRequests,
-        Messages.DeprecatedScalaVersion.message(Set(using)),
       )
     } yield ()
   }

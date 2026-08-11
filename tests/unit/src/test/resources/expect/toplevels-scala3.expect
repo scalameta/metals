@@ -40,6 +40,11 @@ example/Ord.scala -> example/Ord$package.
 example/PatternMatching.scala -> example/PatternMatching#
 example/SQLQueries.scala -> example/SQLQueries#
 example/Scalalib.scala -> example/Scalalib#
+example/SoftKeywords.scala -> example/InfixExample#
+example/SoftKeywords.scala -> example/OpenClass#
+example/SoftKeywords.scala -> example/Point#
+example/SoftKeywords.scala -> example/SoftKeywords$package.
+example/SoftKeywords.scala -> example/TransparentTrait#
 example/StructuralTypes.scala -> example/StructuralTypes.
 example/ToplevelDefVal.scala -> example/ToplevelDefVal$package.
 example/ToplevelImplicit.scala -> example/ToplevelImplicit$package.

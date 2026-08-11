@@ -223,12 +223,6 @@ class ProblemResolver(
             .isScala3Version(scalaTarget.scalaVersion) && !isBazelBsp =>
         Some(MissingSourceRoot(workspace.scalaSourcerootOption))
       case version
-          if ScalaVersions.isDeprecatedScalaVersion(version) &&
-            scalaTarget.sbtVersion.isDefined =>
-        Some(DeprecatedSbtVersion(scalaTarget.sbtVersion.get, version))
-      case version if ScalaVersions.isDeprecatedScalaVersion(version) =>
-        Some(DeprecatedScalaVersion(version))
-      case version
           if mtagsResolver.isSupportedInOlderVersion(version) &&
             scalaTarget.sbtVersion.isDefined =>
         Some(DeprecatedRemovedSbtVersion(scalaTarget.sbtVersion.get, version))

@@ -129,10 +129,12 @@ abstract class DefinitionSuiteBase(
                           if (shouldHaveDefinition(symbol.value)) {
                             if (!hasKnownIssues(file)) {
                               scribe.error(
-                                token.pos.formatMessage(
-                                  "error",
-                                  s"missing definition for $symbol",
-                                )
+                                token.pos
+                                  .formatMessage(
+                                    "error",
+                                    s"missing definition for $symbol",
+                                  )
+                                  .stripLineEnd
                               )
                             }
                             "<no file>"

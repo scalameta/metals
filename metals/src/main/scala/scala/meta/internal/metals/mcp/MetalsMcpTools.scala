@@ -32,8 +32,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.StatusCode
-import com.fasterxml.jackson.databind.ObjectMapper
-import io.modelcontextprotocol.json.jackson2.JacksonMcpJsonMapper
+import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper
 import io.modelcontextprotocol.server.McpAsyncServerExchange
 import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
@@ -45,6 +44,7 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+import tools.jackson.databind.json.JsonMapper
 
 /**
  * Shared trait for MCP server implementations.
@@ -78,7 +78,7 @@ trait MetalsMcpTools extends Cancelable {
   protected lazy val client: Client =
     Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
 
-  protected val objectMapper = new ObjectMapper()
+  protected val objectMapper: JsonMapper = JsonMapper.builder().build()
 
   protected val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
 
