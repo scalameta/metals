@@ -30,10 +30,6 @@ class RemoveRedundantCastLspSuite
   private val onlyRemoveRedundantCast: l.CodeAction => Boolean =
     _.getTitle() == RemoveRedundantCast.title
 
-  private def title: String =
-    s"""|${RemoveRedundantCast.title}
-        |""".stripMargin
-
   check(
     "basic",
     """|package a;
@@ -44,7 +40,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -67,7 +64,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -90,7 +88,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -115,7 +114,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |import java.util.List;
@@ -140,7 +140,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -163,7 +164,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -186,7 +188,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -209,7 +212,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -233,7 +237,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -258,7 +263,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -282,7 +288,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |public class Example {
@@ -308,7 +315,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |import java.util.List;
@@ -339,7 +347,8 @@ class RemoveRedundantCastLspSuite
        |  }
        |}
        |""".stripMargin,
-    title,
+    s"""|${RemoveRedundantCast.title}
+        |""".stripMargin,
     """|package a;
        |
        |import java.util.List;

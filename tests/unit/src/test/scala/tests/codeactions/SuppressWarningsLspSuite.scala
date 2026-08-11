@@ -524,39 +524,6 @@ class SuppressWarningsLspSuite
   )
 
   checkSuppressWarnings(
-    "overloads-method",
-    """|package a;
-       |
-       |import java.util.function.Consumer;
-       |import java.util.function.Function;
-       |
-       |public class Example {
-       |<<  public void run(Consumer<String> consumer) {
-       |  }>>
-       |
-       |  public void run(Function<String, String> function) {
-       |  }
-       |}
-       |""".stripMargin,
-    "compiler.warn.potentially.ambiguous.overload",
-    "overloads",
-    """|package a;
-       |
-       |import java.util.function.Consumer;
-       |import java.util.function.Function;
-       |
-       |public class Example {
-       |  @SuppressWarnings("overloads")
-       |  public void run(Consumer<String> consumer) {
-       |  }
-       |
-       |  public void run(Function<String, String> function) {
-       |  }
-       |}
-       |""".stripMargin,
-  )
-
-  checkSuppressWarnings(
     "overrides-class",
     """|package a;
        |
@@ -786,13 +753,13 @@ class SuppressWarningsLspSuite
        |}
        |""".stripMargin,
     "compiler.warn.unchecked.varargs.non.reifiable.type",
-    "varargs",
+    "unchecked",
     """|package a;
        |
        |import java.util.List;
        |
        |public class Example {
-       |  @SuppressWarnings("varargs")
+       |  @SuppressWarnings("unchecked")
        |  public void run(List<String>... lists) {
        |  }
        |}

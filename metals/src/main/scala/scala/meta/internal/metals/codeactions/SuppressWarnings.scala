@@ -3,6 +3,7 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
+import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.JavaAnnotation
@@ -12,6 +13,7 @@ import scala.meta.internal.parsing.JavaTrees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
+import com.google.gson.JsonPrimitive
 import org.eclipse.{lsp4j => l}
 
 class SuppressWarnings(
@@ -56,26 +58,26 @@ class SuppressWarnings(
       text: String,
       path: AbsolutePath,
       position: l.Position,
-  ): Option[SuppressTarget] = {
-    val positionOffset = text.lspPositionToIndex(position)
-    javaTrees
-      .findEnclosingJavaVariable(path, position, onNameOnly = false)
-      .filter(variable =>
-        variable.isStandaloneDeclaration &&
-          positionOffset <= variable.nameRange.endOffset
-      )
-      .map(variable => SuppressTarget(variable, variable.nameRange))
-      .orElse(
-        javaTrees
-          .findEnclosingJavaMethod(path, position)
-          .map(method => SuppressTarget(method, method.nameRange))
-      )
-      .orElse(
-        javaTrees
-          .findEnclosingJavaClass(path, position)
-          .map(cls => SuppressTarget(cls, cls.nameRange))
-      )
-  }
+  ): Option[SuppressTarget] =
+    position.toMeta(Input.String(text)).map(_.start).flatMap { positionOffset =>
+      javaTrees
+        .findEnclosingJavaVariable(path, position, onNameOnly = false)
+        .filter(variable =>
+          variable.isStandaloneDeclaration &&
+            positionOffset <= variable.nameRange.endOffset
+        )
+        .map(variable => SuppressTarget(variable, variable.nameRange))
+        .orElse(
+          javaTrees
+            .findEnclosingJavaMethod(path, position)
+            .map(method => SuppressTarget(method, method.nameRange))
+        )
+        .orElse(
+          javaTrees
+            .findEnclosingJavaClass(path, position)
+            .map(cls => SuppressTarget(cls, cls.nameRange))
+        )
+    }
 
   private def suppressEdit(
       text: String,
@@ -135,77 +137,15 @@ object SuppressWarnings {
   def title(warningName: String): String =
     s"""Add @SuppressWarnings("$warningName")"""
 
-  private val DiagnosticSubstrings: List[(String, String)] = List(
-    "missing.deprecated.annotation" -> "dep-ann",
-    "deprecated.for.removal" -> "removal",
-    "requires-transitive-automatic" -> "requires-transitive-automatic",
-    "requires-automatic" -> "requires-automatic",
-    "output-file-clash" -> "output-file-clash",
-    "missing-explicit-ctor" -> "missing-explicit-ctor",
-    "loss.of.precision" -> "lossy-conversions",
-    "fall-through" -> "fallthrough",
-    "ambiguous.overload" -> "overloads",
-    "override.equals" -> "overrides",
-    "trailing.white.space" -> "text-blocks",
-    "this.escape" -> "this-escape",
-    "synchronize" -> "synchronization",
-    "auxiliaryclass" -> "auxiliaryclass",
-    "raw.class" -> "rawtypes",
-    "div.zero" -> "divzero",
-    "serialversionuid" -> "serial",
-    "svuid" -> "serial",
-    "classfile" -> "classfile",
-    "varargs" -> "varargs",
-    "unchecked" -> "unchecked",
-    "deprecated" -> "deprecation",
-    "cast" -> "cast",
-    "divzero" -> "divzero",
-    "empty" -> "empty",
-    "exports" -> "exports",
-    "fallthrough" -> "fallthrough",
-    "finally" -> "finally",
-    "lossy-conversions" -> "lossy-conversions",
-    "module" -> "module",
-    "opens" -> "opens",
-    "options" -> "options",
-    "overloads" -> "overloads",
-    "overrides" -> "overrides",
-    "path" -> "path",
-    "preview" -> "preview",
-    "processing" -> "processing",
-    "rawtypes" -> "rawtypes",
-    "removal" -> "removal",
-    "serial" -> "serial",
-    "static" -> "static",
-    "strictfp" -> "strictfp",
-    "synchronization" -> "synchronization",
-    "text-blocks" -> "text-blocks",
-    "this-escape" -> "this-escape",
-    "try" -> "try",
-  )
-
   private def warningName(diagnostic: l.Diagnostic): Option[String] =
-    if (diagnostic.getSource() == "javac") {
-      val code = Option(diagnostic.getCode())
-        .collect { case code if code.isLeft() => code.getLeft() }
-        .getOrElse("")
-        .toLowerCase()
-      val isWarning = code.startsWith("compiler.warn.") ||
-        diagnostic.getSeverity() == l.DiagnosticSeverity.Warning
-      if (isWarning) {
-        val message =
-          Option(diagnostic.getMessage())
-            .map(_.toString())
-            .getOrElse("")
-            .toLowerCase()
-        warningNameFrom(code).orElse(warningNameFrom(message))
-      } else None
-    } else None
-
-  private def warningNameFrom(text: String): Option[String] =
-    DiagnosticSubstrings.collectFirst {
-      case (substr, name) if text.contains(substr) => name
-    }
+    Option
+      .when(diagnostic.getSource() == "javac")(diagnostic.getData())
+      .flatMap {
+        case value: String => Some(value)
+        case value: JsonPrimitive if value.isString() =>
+          Some(value.getAsString())
+        case _ => None
+      }
 
   private def isZeroRange(range: l.Range): Boolean =
     range.getStart().getLine() == 0 &&

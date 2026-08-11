@@ -455,8 +455,11 @@ class CompilerConfiguration(
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
         .orElse(false)
       val options = javaTarget match {
+        case j: JavaTarget if shouldUseOpts => j.options
         case j: JavaTarget =>
-          CompilerConfiguration.javaPcOptions(j.options, shouldUseOpts)
+          j.options.filter(option =>
+            option == "-Xlint" || option.startsWith("-Xlint:")
+          )
         case _ => Nil
       }
       configure(pc, search, completionItemPriority)
@@ -678,16 +681,4 @@ class CompilerConfiguration(
     } else {
       Nil
     }
-}
-
-object CompilerConfiguration {
-  private[metals] def javaPcOptions(
-      options: List[String],
-      includeAll: Boolean,
-  ): List[String] =
-    if (includeAll) options
-    else
-      options.filter(option =>
-        option == "-Xlint" || option.startsWith("-Xlint:")
-      )
 }

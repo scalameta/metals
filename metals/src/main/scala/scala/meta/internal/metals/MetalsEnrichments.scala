@@ -847,25 +847,6 @@ object MetalsEnrichments
       new l.Position(lineCount, index - lineStartIdx)
     }
 
-    def lspPositionToIndex(position: l.Position): Int = {
-      var line = 0
-      var character = 0
-      var offset = 0
-      while (
-        offset < value.length &&
-        (line < position.getLine() || character < position.getCharacter())
-      ) {
-        if (value.charAt(offset) == '\n') {
-          line += 1
-          character = 0
-        } else {
-          character += 1
-        }
-        offset += 1
-      }
-      offset
-    }
-
     def replaceAllBetween(start: String, end: String)(
         replacement: String
     ): String =
