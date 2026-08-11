@@ -41,6 +41,9 @@ trait LogForwarder {
   def warn(message: String): Unit = ()
   def info(message: String): Unit = ()
   def log(message: String): Unit = ()
+
+  def infoWithOrigin(originId: String, message: String): Unit = info(message)
+  def errorWithOrigin(originId: String, message: String): Unit = error(message)
 }
 
 /**
@@ -292,13 +295,15 @@ final class ForwardingMetalsBuildClient(
 
   @JsonNotification("run/printStdout")
   def runPrintStdout(params: b.PrintParams): Unit = {
-    forwarders.get().foreach(_.info(params.getMessage()))
+    val originId = Option(params.getOriginId).getOrElse("")
+    forwarders.get().foreach(_.infoWithOrigin(originId, params.getMessage()))
     runPrintOutput(params)
   }
 
   @JsonNotification("run/printStderr")
   def runPrintStderr(params: b.PrintParams): Unit = {
-    forwarders.get().foreach(_.error(params.getMessage()))
+    val originId = Option(params.getOriginId).getOrElse("")
+    forwarders.get().foreach(_.errorWithOrigin(originId, params.getMessage()))
     runPrintOutput(params)
   }
 
