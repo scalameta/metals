@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.8-SNAPSHOT"
-def latestReleaseVersion = "1.6.7"
+def localSnapshotVersion = "1.6.9-SNAPSHOT"
+def latestReleaseVersion = "1.6.8"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -25,12 +25,12 @@ def crossSetting[A](
     if211: List[A] = Nil,
     if213: List[A] = Nil,
     if3: List[A] = Nil,
-    if2: List[A] = Nil,
+    if212: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case partialVersion if isScala211(partialVersion) => if211 ::: if2
-    case partialVersion if isScala212(partialVersion) => if2
-    case partialVersion if isScala213(partialVersion) => if2 ::: if213
+    case partialVersion if isScala211(partialVersion) => if211 ::: if212
+    case partialVersion if isScala212(partialVersion) => if212
+    case partialVersion if isScala213(partialVersion) => if212 ::: if213
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -141,14 +141,8 @@ commands ++= Seq(
       "mtags-java/publishLocal" ::
       publishMtags
   },
-  Command.command("cross-test-2-11") { s =>
-    crossTestDyn(s, V.scala211)
-  },
   Command.single("test-mtags-dyn") { (s, scalaV) =>
     crossTestDyn(s, scalaV)
-  },
-  Command.single("cross-test-only-2-11") { (s, testName) =>
-    crossTestDynOnly(s, V.scala211, " " + testName)
   },
 )
 
@@ -232,11 +226,11 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
-    if2 = List(
+    if212 = List(
       compilerPlugin(
-        "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+        ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
           scalaVersion.value
-        ) cross CrossVersion.full
+        )).cross(CrossVersion.full)
       )
     ),
   ),
@@ -261,6 +255,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
       "org.scalameta" % "mtags-interfaces" % "1.5.2",
+      "org.scalameta" % "mtags-interfaces" % "1.6.7",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -294,7 +289,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.1",
-      "com.google.protobuf" % "protobuf-java" % "4.35.0",
+      "com.google.protobuf" % "protobuf-java" % "4.35.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -362,12 +357,12 @@ val mtagsSettings = List(
   libraryDependencies ++= {
     crossSetting(
       scalaVersion.value,
-      if2 = List(
+      if212 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
-        "org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
+        ("org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
           scalaVersion.value
-        ) cross CrossVersion.full,
+        )).cross(CrossVersion.full),
       ),
       if3 = List(
         "org.scala-lang" %% "scala3-compiler" % scalaVersion.value,
@@ -425,7 +420,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.18.2",
+      "org.scalameta" %% "metaconfig-core" % "0.18.7",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -434,10 +429,10 @@ lazy val metals = project
       "io.undertow" % "undertow-core" % "2.2.20.Final",
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
-      "org.flywaydb" % "flyway-core" % "12.8.1",
+      "org.flywaydb" % "flyway-core" % "12.10.0",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.6.3",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.8.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-rifle" % V.bloop,
       // for LSP
@@ -470,9 +465,9 @@ lazy val metals = project
       "com.lihaoyi" %% "requests" % "0.9.3",
       // for producing SemanticDB from Scala source files, to be sure we want the same version of scalameta
       "org.scalameta" %% "scalameta" % V.semanticdb(scalaVersion.value),
-      "org.scalameta" %% "semanticdb-metap" % V.semanticdb(
+      ("org.scalameta" %% "semanticdb-metap" % V.semanticdb(
         scalaVersion.value
-      ) cross CrossVersion.full,
+      )).cross(CrossVersion.full),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
       "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
@@ -481,12 +476,14 @@ lazy val metals = project
       "ch.epfl.scala" %% "bloop-config" % V.bloopConfig,
       // For MCP
       "io.modelcontextprotocol.sdk" % "mcp" % V.modelContextProtocol,
-      "io.modelcontextprotocol.sdk" % "mcp-json-jackson2" % V.modelContextProtocol,
-      "com.fasterxml.jackson.core" % "jackson-databind" % "2.22.0",
+      // "io.modelcontextprotocol.sdk" % "mcp-json-jackson3" % V.modelContextProtocol,
+      // "com.fasterxml.jackson.core" % "jackson-databind" % "2.22.0",
       "io.undertow" % "undertow-servlet" % "2.3.12.Final",
       // For Twirl
       "org.playframework.twirl" %% "twirl-compiler" % "2.0.9",
     ),
+    // Force correct version of json-schema-validator for MCP SDK 2.0
+    // dependencyOverrides += "com.networknt" % "json-schema-validator" % "2.0.0",
     buildInfoPackage := "scala.meta.internal.metals",
     buildInfoKeys := Seq[BuildInfoKey](
       "localSnapshotVersion" -> localSnapshotVersion,
@@ -515,9 +512,7 @@ lazy val metals = project
       "supportedScala2Versions" -> V.scala2Versions,
       "minimumSupportedSbtVersion" -> V.minimumSupportedSbtVersion,
       "supportedScalaBinaryVersions" -> V.supportedScalaBinaryVersions,
-      "deprecatedScalaVersions" -> V.deprecatedScalaVersions,
       "nonDeprecatedScalaVersions" -> V.nonDeprecatedScalaVersions,
-      "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "bazelScalaVersion" -> V.bazelScalaVersion,
       "scala213" -> V.scala213,
@@ -541,6 +536,7 @@ lazy val `metals-mcp` = project
     sharedSettings,
     moduleName := "metals-mcp",
     Compile / mainClass := Some("scala.meta.metals.McpMain"),
+    Compile / run / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(metals)
 
@@ -555,7 +551,10 @@ lazy val `sbt-metals` = project
     ),
     scalaVersion := V.scala212,
     crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
-    scalacOptions := Seq("-release", "8"),
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if212 = List("-release", "8"),
+    ),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
@@ -695,7 +694,6 @@ lazy val mtest = project
     buildInfoPackage := "tests",
     buildInfoObject := "BuildInfoVersions",
     buildInfoKeys := Seq[BuildInfoKey](
-      "scala211" -> V.scala211,
       "scala212" -> V.scala212,
       "scala213" -> V.scala213,
       "scala3" -> V.scala3,
@@ -769,13 +767,13 @@ lazy val metalsDependencies = project
       "com.olegpy" %% "better-monadic-for" % V.betterMonadicFor,
       ("com.lihaoyi" % "mill-contrib-testng" % V.mill)
         .exclude("com.lihaoyi", "unroll-annotation_3"),
-      "org.virtuslab.scala-cli" % "cli_3" % V.scalaCli intransitive (),
+      ("org.virtuslab.scala-cli" % "cli_3" % V.scalaCli).intransitive(),
       ("ch.epfl.scala" % "bloop-maven-plugin" % V.mavenBloop)
         .exclude("com.lihaoyi", "unroll-annotation_2.13"),
       ("ch.epfl.scala" %% "gradle-bloop" % V.gradleBloop)
         .exclude("com.lihaoyi", "unroll-annotation_2.13"),
       "com.sourcegraph" % "semanticdb-java" % V.javaSemanticdb,
-      "org.foundweekends.giter8" %% "giter8" % V.gitter8Version intransitive (),
+      ("org.foundweekends.giter8" %% "giter8" % V.gitter8Version).intransitive(),
     ),
   )
   .disablePlugins(ScalafixPlugin)
@@ -851,9 +849,9 @@ lazy val bench = project
     moduleName := "metals-bench",
     buildInfoKeys := Seq[BuildInfoKey](scalaVersion),
     libraryDependencies ++= List(
-      "org.scalameta" % "semanticdb-scalac" % V.semanticdb(
+      ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
         scalaVersion.value
-      ) cross CrossVersion.full
+      )).cross(CrossVersion.full)
     ),
     buildInfoPackage := "bench",
     Jmh / bspEnabled := false,
@@ -870,7 +868,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.2",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.7",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion

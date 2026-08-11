@@ -12,7 +12,6 @@ import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
 class ScalaVersions(
-    deprecatedScalaVersions: Seq[String],
     supportedScalaVersions: Seq[String],
     supportedScalaBinaryVersions: Seq[String],
     scala212: String,
@@ -31,8 +30,6 @@ class ScalaVersions(
   def dropVendorSuffix(version: String): String =
     version.replaceAll("-bin-.*", "")
 
-  private val _isDeprecatedScalaVersion: Set[String] =
-    deprecatedScalaVersions.toSet
   private val _isSupportedScalaVersion: Set[String] =
     supportedScalaVersions.toSet
 
@@ -41,9 +38,6 @@ class ScalaVersions(
     SemVer.isLaterVersion("3.3.3", versionWithoutVendorSuffix) ||
     _isSupportedScalaVersion(versionWithoutVendorSuffix)
   }
-
-  def isDeprecatedScalaVersion(version: String): Boolean =
-    _isDeprecatedScalaVersion(dropVendorSuffix(version))
 
   def isSupportedScalaBinaryVersion(scalaVersion: String): Boolean =
     supportedScalaBinaryVersions.exists { binaryVersion =>
@@ -144,6 +138,18 @@ class ScalaVersions(
     }
   }
 
+  /** Scalameta dialect for `*.sbt` from an sbt version string. */
+  def dialectForSbtVersion(sbtVersion: Option[String]): Dialect =
+    sbtVersion match {
+      case Some(version) if isSbt2Version(version) =>
+        Scala3.withAllowToplevelTerms(true)
+      case _ =>
+        Sbt
+    }
+
+  def isSbt2Version(sbtVersion: String): Boolean =
+    sbtVersion.startsWith("2.")
+
   def fmtDialectForScalaVersion(
       scalaVersion: String,
       includeSource3: Boolean,
@@ -236,7 +242,6 @@ class ScalaVersions(
 
 object ScalaVersions
     extends ScalaVersions(
-      BuildInfo.deprecatedScalaVersions,
       BuildInfo.supportedScalaVersions,
       BuildInfo.supportedScalaBinaryVersions,
       BuildInfo.scala212,

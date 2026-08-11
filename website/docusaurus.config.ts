@@ -82,8 +82,9 @@ export default {
         },
         {
           "href": "https://github.com/scalameta/metals",
-          "label": "GitHub",
-          "position": "left"
+          "position": "right",
+          "className": "header-github-link",
+          "aria-label": "GitHub repository"
         }
       ]
     },

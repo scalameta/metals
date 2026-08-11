@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import scala.meta._
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.io.AbsolutePath
 
@@ -55,7 +56,12 @@ class ScalaVersionSelector(
         dialectFromBuildTarget(path).getOrElse(
           fallbackDialect()
         )
-      case Some("sbt") => dialects.Sbt
+      case Some("sbt") =>
+        dialectFromBuildTarget(path).getOrElse(
+          ScalaVersions.dialectForSbtVersion(
+            SbtBuildTool.loadVersionForPath(path)
+          )
+        )
       case Some("sc") =>
         val dialect = dialectFromBuildTarget(path).getOrElse(
           fallbackDialect()

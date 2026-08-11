@@ -26,7 +26,9 @@ class WorkspaceSymbolExpectSuite
           val unknownSymbols = mtags.occurrences.collect {
             case occ if fileSymtab.info(occ.symbol).isEmpty =>
               val pos = input.toPosition(occ)
-              pos.formatMessage("error", s"unknown symbol: ${occ.symbol}")
+              pos
+                .formatMessage("error", s"unknown symbol: ${occ.symbol}")
+                .stripLineEnd
           }
           if (unknownSymbols.nonEmpty) {
             fail(unknownSymbols.mkString("\n"))

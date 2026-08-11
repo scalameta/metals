@@ -2,22 +2,22 @@
   "scripts": {
     "start": "docusaurus start",
     "build": "docusaurus build",
-    "publish-gh-pages": "docusaurus deploy",
+    "deploy": "docusaurus deploy",
     "swizzle": "docusaurus swizzle",
     "docusaurus": "docusaurus",
     "serve": "docusaurus serve"
   },
   "devDependencies": {
-    "@types/node": "^25.9.1"
+    "@types/node": "^26.1.2"
   },
   "dependencies": {
-    "@docusaurus/core": "3.10.1",
-    "@docusaurus/faster": "3.10.1",
-    "@docusaurus/plugin-client-redirects": "3.10.1",
-    "@docusaurus/preset-classic": "3.10.1",
+    "@docusaurus/core": "3.10.2",
+    "@docusaurus/faster": "3.10.2",
+    "@docusaurus/plugin-client-redirects": "3.10.2",
+    "@docusaurus/preset-classic": "3.10.2",
     "@easyops-cn/docusaurus-search-local": "0.55.2",
     "clsx": "^2.1.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   }
 }

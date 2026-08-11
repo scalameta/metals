@@ -23,7 +23,6 @@ import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.SemanticdbClasspath
 import scala.meta.internal.semanticdb.TextDocuments
 import scala.meta.io.AbsolutePath
@@ -827,7 +826,7 @@ case class ScalafixProvider(
     val jars = ScalafixCoursier.scalafixCliJars(
       Embedded.apiRepositories.asJava,
       latestSupporting,
-      V.scala211,
+      "2.11.12",
     )
     val parent = new ScalafixInterfacesClassloader(
       classOf[Scalafix].getClassLoader()

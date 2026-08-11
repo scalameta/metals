@@ -542,10 +542,12 @@ object Bill {
         val input = path.toInput
         params.getDiagnostics.asScala.foreach { diag =>
           diag.getRange.toMeta(input).foreach { pos =>
-            val message = pos.formatMessage(
-              diag.getSeverity.toString.toLowerCase(),
-              diag.getMessage,
-            )
+            val message = pos
+              .formatMessage(
+                diag.getSeverity.toString.toLowerCase(),
+                diag.getMessage,
+              )
+              .stripLineEnd
             println(message)
           }
         }

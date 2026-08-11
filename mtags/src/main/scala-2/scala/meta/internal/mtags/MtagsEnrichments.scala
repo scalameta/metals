@@ -198,6 +198,18 @@ trait MtagsEnrichments extends ScalametaCommonEnrichments {
             .create(URIEncoderDecoder.encode(value))
             .toAbsolutePath(followSymlink)
         catch {
+          // A double-encoded jar URI (e.g. "%2520" for the space in
+          // "Program Files", as produced by the debug adapter on some Windows
+          // JDKs, see #3266) has every '%' escaped as "%25". Undo exactly that
+          // one layer ("%2520" -> "%20") so the jar file system receives a
+          // normally-encoded URI. We must not URL-decode the whole string here:
+          // that uses form semantics and would turn a literal '+' (e.g. in
+          // "jdk-21.0.3+9") into a space, breaking those paths.
+          case _: NoSuchFileException | _: FileSystemNotFoundException
+              if value.contains("%25") =>
+            URI
+              .create(value.replace("%25", "%"))
+              .toAbsolutePath(followSymlink)
           case _: NoSuchFileException | _: FileSystemNotFoundException =>
             withTryDecode(value.stripPrefix("jar:"))(
               new URI("jar", _, null).toAbsolutePath(followSymlink)
