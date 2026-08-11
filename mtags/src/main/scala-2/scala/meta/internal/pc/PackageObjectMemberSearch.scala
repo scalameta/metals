@@ -81,7 +81,7 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
         if (!isCancelled()) {
           discoveredPackageObjects = Some(symbols)
           val durationMs = (System.nanoTime() - start) / 1000000
-          logger.debug(
+          logger.fine(
             s"discovered ${symbols.size} packages with package objects on the classpath in ${durationMs}ms"
           )
         }
