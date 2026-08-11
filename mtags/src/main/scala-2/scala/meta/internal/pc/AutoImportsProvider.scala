@@ -43,12 +43,7 @@ final class AutoImportsProvider(
     val symbols = List.newBuilder[Symbol]
 
     def visit(sym: Symbol): Boolean = {
-      // the namespace is part of the key so that a `type X`/`val X` pair
-      // (e.g. declared by a package object) yields two candidates and the
-      // tree-context filtering below can pick the namespace that actually
-      // fixes the error; identical rendered imports are deduplicated at the
-      // end
-      val id = if (sym.isType) s"${sym.fullName}#" else sym.fullName
+      val id = sym.fullName
       if (!isSeen(id)) {
         isSeen += id
         symbols += sym
@@ -59,6 +54,15 @@ final class AutoImportsProvider(
 
     compiler.searchOutline(visit, name)
 
+    val seenPackageObjectMembers = mutable.Set.empty[(String, Boolean)]
+    def visitPackageObjectMember(sym: Symbol): Boolean = {
+      val id = (sym.fullName, sym.isType)
+      if (seenPackageObjectMembers.add(id)) {
+        symbols += sym
+        true
+      } else false
+    }
+
     // symbols importable only through a package object (issue #2583), mapped
     // to the package classes the import can go through; searched before the
     // classfile-based sources so that the import a library curates through
@@ -66,7 +70,7 @@ final class AutoImportsProvider(
     val visitedThroughPackageObject = compiler.searchPackageObjectMembers(
       name,
       context,
-      visit,
+      visitPackageObjectMember,
       () => params.token().isCanceled()
     )
 
@@ -106,7 +110,7 @@ final class AutoImportsProvider(
     def renderResult(
         sym: Symbol,
         throughPackageObject: Option[Symbol]
-    ): (AutoImportsResult, Symbol) = {
+    ): (AutoImportsResult, Symbol, Boolean) = {
       val importOwner = throughPackageObject.getOrElse(sym.owner)
       val pkg = importOwner.fullName
       val importOwnerOverride =
@@ -156,7 +160,8 @@ final class AutoImportsProvider(
           edits.asJava,
           Optional.of(semanticdbSymbol(sym))
         ),
-        sym
+        sym,
+        throughPackageObject.isDefined
       )
     }
 
@@ -210,24 +215,34 @@ final class AutoImportsProvider(
     // a package object can expose the same name in both namespaces (e.g.
     // doobie inherits `type Transactor` and `val Transactor`); both render
     // the same import statement, so offer only one code action for them
-    def dedupIdenticalEdits(
-        results: List[AutoImportsResult]
+    def dedupPackageObjectResults(
+        results: List[(AutoImportsResult, Boolean)]
     ): List[AutoImportsResult] = {
       val seen = mutable.Set.empty[(String, ju.List[l.TextEdit])]
-      results.filter(result => seen.add((result.packageName(), result.edits())))
+      results.collect {
+        case (result, true)
+            if seen.add((result.packageName(), result.edits())) =>
+          result
+        case (result, false) => result
+      }
     }
 
     all match {
-      case (onlyResult, _) :: Nil => List(onlyResult)
+      case (onlyResult, _, _) :: Nil => List(onlyResult)
       case Nil => Nil
       case moreResults =>
-        val moreExact = moreResults.filter { case (_, sym) =>
+        val moreExact = moreResults.filter { case (_, sym, _) =>
           correctInTreeContext(sym)
         }
         val results =
-          if (moreExact.nonEmpty) moreExact.map(_._1)
-          else moreResults.map(_._1)
-        dedupIdenticalEdits(results)
+          if (moreExact.nonEmpty) moreExact.map { case (result, _, isPackage) =>
+            (result, isPackage)
+          }
+          else
+            moreResults.map { case (result, _, isPackage) =>
+              (result, isPackage)
+            }
+        dedupPackageObjectResults(results)
     }
   }
 

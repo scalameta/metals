@@ -14,12 +14,6 @@ import tests.BaseAutoImportsSuite
  * — so the members are inherited transitively and exist in both namespaces.
  */
 class AutoImportsPackageObjectSuite extends BaseAutoImportsSuite {
-
-  // doobie is not published for 2.11; the Scala 3 presentation compiler
-  // lives in the dotty repository and does not implement this search yet
-  override protected def ignoreScalaVersion: Option[IgnoreScalaVersion] =
-    Some(IgnoreScala211.and(IgnoreScala3))
-
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion = createBinaryVersion(scalaVersion)
     Seq(

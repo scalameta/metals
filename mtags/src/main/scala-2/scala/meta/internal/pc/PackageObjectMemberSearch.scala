@@ -12,43 +12,12 @@ import scala.meta.pc.SymbolSearchVisitor
 import org.eclipse.{lsp4j => l}
 
 /**
- * Searches members of package objects on the classpath, both declared in the
- * package object and inherited from its mixin parents (issue #2583).
+ * Finds type and term members exposed by Scala 2 package objects, including
+ * members inherited from mixin parents (issue #2583).
  *
- * Libraries commonly expose their public API through a package object that
- * mixes in "aliases" traits, e.g. `package object doobie extends Aliases`
- * where a parent trait declares `type Transactor[M[_]] = ...` and
- * `val Transactor = ...`. Such members produce no classfiles, so
- * classfile-based search cannot discover them; the only authority on what a
- * package object exposes is the compiler itself, which unpickles the package
- * object's signature and enters its own and its parents' members into the
- * package scope (see the forced `openPackageModule` in `Compat`). This trait
- * asks exactly that question: for each package with a package object, does
- * `pkg.info.member(name)` resolve?
- *
- * Packages that have a package object are discovered through the injected
- * `SymbolSearch`: a package object always compiles to a `package.class`
- * classfile, so an exact search for the name `package` returns one classfile
- * hit per package object from the server's existing classpath index (which
- * also applies the user's excluded packages), plus one workspace-symbol hit
- * per package object defined in a workspace module. No classpath is scanned
- * here.
- *
- * The caches below are valid for a single edit/compilation generation. A
- * fresh compiler instance is constructed after every successful compilation
- * of this build target or one of its dependencies (`Compilers.didCompile`
- * restarts the presentation compiler, which discards the underlying global)
- * as well as on classpath changes. Within an instance's lifetime, outlined
- * workspace sources are typechecked into the same symbol table before a
- * request is served (`ScalaCompilerWrapper.compiler`), so member lookups can
- * observe not-yet-compiled source changes; [[resetPackageObjectMemberSearch]]
- * is therefore called from `didChange` to drop cached answers whenever a
- * source changes. Caching happens at three levels:
- *   - the discovered package symbols are cached once discovery completes
- *     without cancellation,
- *   - member lookups force `Symbol.info`, which the compiler itself memoizes,
- *   - resolved candidates are cached by name in [[packageObjectMemberCache]],
- *     so repeated requests for the same name skip the probe entirely.
+ * Package objects are discovered through the existing classpath and workspace
+ * symbol indexes. Scalac resolves their members, and the results are cached for
+ * the lifetime of the compiler generation.
  */
 trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
 
@@ -112,7 +81,7 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
         if (!isCancelled()) {
           discoveredPackageObjects = Some(symbols)
           val durationMs = (System.nanoTime() - start) / 1000000
-          logger.info(
+          logger.debug(
             s"discovered ${symbols.size} packages with package objects on the classpath in ${durationMs}ms"
           )
         }
