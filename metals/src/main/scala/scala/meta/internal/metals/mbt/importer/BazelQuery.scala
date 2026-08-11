@@ -58,6 +58,20 @@ object BazelQuery {
     BazelQuery(query, outputMode = Label)
   }
 
+  def sourceFilesLocationQuery(
+      targets: List[String],
+      extensions: List[String],
+  ): BazelQuery = {
+    val innerQuery = fullInformationQuery(targets).query
+    val query =
+      s"filter('.*\\.(${extensions mkString "|"})', kind('source file', $innerQuery))"
+    BazelQuery(
+      query,
+      outputMode = Xml,
+      extraArgs = List("--noxml:line_numbers"),
+    )
+  }
+
   private val reservedKeywords: Set[String] =
     Set("except", "in", "intersect", "let", "set", "union")
 
@@ -103,7 +117,8 @@ object BazelQuery {
   private val ruleKinds: List[String] =
     List(
       "scala_library", "java_library", "scala_binary", "java_binary",
-      "scala_test", "java_test", "scala_import", "java_import",
+      "scala_test", "java_test", "scala_import", "java_import", "proto_library",
+      "proto_java_library",
     )
 
 }
