@@ -248,6 +248,73 @@ class SuppressWarningsLspSuite
   )
 
   checkSuppressWarnings(
+    "append-existing-array-trailing-comma",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings({"unchecked",})
+       |<<  public List names() {
+       |    return new ArrayList();
+       |  }>>
+       |}
+       |""".stripMargin,
+    "compiler.warn.raw.class.use",
+    "rawtypes",
+    """|package a;
+       |
+       |import java.util.ArrayList;
+       |import java.util.List;
+       |
+       |public class Example {
+       |  @SuppressWarnings({"unchecked", "rawtypes"})
+       |  public List names() {
+       |    return new ArrayList();
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkSuppressWarnings(
+    "same-warning-multiple-declarations",
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |public class Example {
+       |<<  public List first() {
+       |    return List.of();
+       |  }
+       |
+       |  public List second() {
+       |    return List.of();
+       |  }>>
+       |}
+       |""".stripMargin,
+    "compiler.warn.raw.class.use",
+    "rawtypes",
+    """|package a;
+       |
+       |import java.util.List;
+       |
+       |public class Example {
+       |  public List first() {
+       |    return List.of();
+       |  }
+       |
+       |  @SuppressWarnings("rawtypes")
+       |  public List second() {
+       |    return List.of();
+       |  }
+       |}
+       |""".stripMargin,
+    expectedActionCount = 2,
+    selectedActionIndex = 1,
+  )
+
+  checkSuppressWarnings(
     "append-existing-empty-array",
     """|package a;
        |
@@ -773,6 +840,8 @@ class SuppressWarningsLspSuite
       warningName: String,
       expected: String,
       extraLayout: String = "",
+      expectedActionCount: Int = 1,
+      selectedActionIndex: Int = 0,
   )(implicit loc: Location): Unit =
     test(name) {
       val fileName = "Example.java"
@@ -810,12 +879,13 @@ class SuppressWarningsLspSuite
         codeActions <- server.assertCodeAction(
           path,
           original,
-          s"""|${SuppressWarnings.title(warningName)}
-              |""".stripMargin,
+          List
+            .fill(expectedActionCount)(SuppressWarnings.title(warningName))
+            .mkString("\n"),
           kind = Nil,
           filterAction = _.getTitle() == SuppressWarnings.title(warningName),
         )
-        _ <- client.applyCodeAction(0, codeActions, server)
+        _ <- client.applyCodeAction(selectedActionIndex, codeActions, server)
         _ <- server.didChange(path) { _ =>
           server.bufferContents(path)
         }

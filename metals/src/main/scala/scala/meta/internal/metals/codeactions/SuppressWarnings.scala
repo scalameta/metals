@@ -33,7 +33,7 @@ class SuppressWarnings(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val actions = for {
+    val actionsWithKeys = for {
       text <- buffers.get(path).orElse(path.readTextOpt).toSeq
       diagnostic <- params.getContext().getDiagnostics().asScala.toSeq
       warningName <- warningName(diagnostic).toSeq
@@ -45,13 +45,16 @@ class SuppressWarnings(
         else range.getStart()
       member <- enclosingMember(text, path, position).toSeq
       edit <- suppressEdit(text, path, member, warningName).toSeq
-    } yield CodeActionBuilder.build(
-      title(warningName),
-      kind,
-      diagnostics = List(diagnostic),
-      changes = Seq(path -> Seq(edit)),
+    } yield (
+      (member.nameRange.startOffset, warningName),
+      CodeActionBuilder.build(
+        title(warningName),
+        kind,
+        diagnostics = List(diagnostic),
+        changes = Seq(path -> Seq(edit)),
+      ),
     )
-    actions.distinctBy(_.getTitle())
+    actionsWithKeys.distinctBy(_._1).map(_._2)
   }
 
   private def enclosingMember(
@@ -182,11 +185,11 @@ object SuppressWarnings {
         case _ => ("", trimmed)
       }
       val isArray = value.startsWith("{") && value.endsWith("}")
+      val arrayContents =
+        if (isArray) value.substring(1, value.length() - 1).trim()
+        else ""
       val (range, newText) =
-        if (
-          isArray &&
-          value.substring(1, value.length() - 1).trim().isEmpty()
-        ) {
+        if (isArray && arrayContents.isEmpty()) {
           (
             new l.Range(
               text.indexToLspPosition(insideStart),
@@ -196,12 +199,13 @@ object SuppressWarnings {
           )
         } else if (isArray) {
           val closeBrace = insideEnd - inside.reverse.indexOf('}') - 1
+          val separator = if (arrayContents.endsWith(",")) " " else ", "
           (
             new l.Range(
               text.indexToLspPosition(closeBrace),
               text.indexToLspPosition(closeBrace),
             ),
-            s""", "$warningName"""",
+            s"""$separator"$warningName"""",
           )
         } else {
           (
