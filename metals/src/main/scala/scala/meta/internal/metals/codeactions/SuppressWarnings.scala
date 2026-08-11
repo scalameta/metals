@@ -3,7 +3,6 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.parsing.JavaAnnotation
@@ -33,7 +32,7 @@ class SuppressWarnings(
     val path = params.getTextDocument().getUri().toAbsolutePath
     val range = params.getRange()
 
-    val actionsWithKeys = for {
+    val actions = for {
       text <- buffers.get(path).orElse(path.readTextOpt).toSeq
       diagnostic <- params.getContext().getDiagnostics().asScala.toSeq
       warningName <- warningName(diagnostic).toSeq
@@ -43,44 +42,38 @@ class SuppressWarnings(
         if (range.overlapsWith(diagnostic.getRange()))
           diagnostic.getRange().getStart()
         else range.getStart()
-      member <- enclosingMember(text, path, position).toSeq
+      member <- enclosingMember(path, position).toSeq
       edit <- suppressEdit(text, path, member, warningName).toSeq
-    } yield (
-      (member.nameRange.startOffset, warningName),
-      CodeActionBuilder.build(
-        title(warningName),
-        kind,
-        diagnostics = List(diagnostic),
-        changes = Seq(path -> Seq(edit)),
-      ),
+    } yield CodeActionBuilder.build(
+      title(warningName),
+      kind,
+      diagnostics = List(diagnostic),
+      changes = Seq(path -> Seq(edit)),
     )
-    actionsWithKeys.distinctBy(_._1).map(_._2)
+    actions.distinctBy(_.getEdit())
   }
 
   private def enclosingMember(
-      text: String,
       path: AbsolutePath,
       position: l.Position,
   ): Option[SuppressTarget] =
-    position.toMeta(Input.String(text)).map(_.start).flatMap { positionOffset =>
-      javaTrees
-        .findEnclosingJavaVariable(path, position, onNameOnly = false)
-        .filter(variable =>
-          variable.isStandaloneDeclaration &&
-            positionOffset <= variable.nameRange.endOffset
-        )
-        .map(variable => SuppressTarget(variable, variable.nameRange))
-        .orElse(
-          javaTrees
-            .findEnclosingJavaMethod(path, position)
-            .map(method => SuppressTarget(method, method.nameRange))
-        )
-        .orElse(
-          javaTrees
-            .findEnclosingJavaClass(path, position)
-            .map(cls => SuppressTarget(cls, cls.nameRange))
-        )
-    }
+    javaTrees
+      .findEnclosingJavaVariable(path, position, onNameOnly = false)
+      .filter(variable =>
+        variable.isStandaloneDeclaration &&
+          position <= variable.nameRange.getEnd()
+      )
+      .map(variable => SuppressTarget(variable, variable.nameRange))
+      .orElse(
+        javaTrees
+          .findEnclosingJavaMethod(path, position)
+          .map(method => SuppressTarget(method, method.nameRange))
+      )
+      .orElse(
+        javaTrees
+          .findEnclosingJavaClass(path, position)
+          .map(cls => SuppressTarget(cls, cls.nameRange))
+      )
 
   private def suppressEdit(
       text: String,
@@ -151,10 +144,9 @@ object SuppressWarnings {
       }
 
   private def isZeroRange(range: l.Range): Boolean =
-    range.getStart().getLine() == 0 &&
-      range.getStart().getCharacter() == 0 &&
-      range.getEnd().getLine() == 0 &&
-      range.getEnd().getCharacter() == 0
+    range.isOffset &&
+      range.getStart().getLine() == 0 &&
+      range.getStart().getCharacter() == 0
 
   private def existingSuppressWarnings(
       annotations: List[JavaAnnotation]
@@ -198,7 +190,7 @@ object SuppressWarnings {
             s"""$namedValuePrefix{"$warningName"}""",
           )
         } else if (isArray) {
-          val closeBrace = insideEnd - inside.reverse.indexOf('}') - 1
+          val closeBrace = insideStart + inside.lastIndexOf('}')
           val separator = if (arrayContents.endsWith(",")) " " else ", "
           (
             new l.Range(
