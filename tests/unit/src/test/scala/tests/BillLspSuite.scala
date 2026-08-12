@@ -313,4 +313,75 @@ class BillLspSuite extends BaseLspSuite("bill") {
       _ = assertEquals(compileReport.getStatusCode(), StatusCode.OK)
     } yield ()
   }
+
+  test("definition-without-dependency-modules") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {
+           |  val list: List[Int] = List(1, 2, 3)
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("src/com/App.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      locations <- server.definition(
+        "src/com/App.scala",
+        """|object App {
+           |  val list: Li@@st[Int] = List(1, 2, 3)
+           |}
+           |""".stripMargin,
+        workspace,
+      )
+      _ = assert(
+        locations.nonEmpty,
+        "Expected definition location for List but got none. " +
+          "This tests the fallback to classpath jars when dependency modules are empty.",
+      )
+      uri = locations.head.getUri()
+      _ = assert(
+        uri.contains("scala-library"),
+        s"Expected definition to be in scala-library, but got: $uri",
+      )
+    } yield ()
+  }
+
+  test("definition-with-empty-dependency-module-lists") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {
+           |  val list: List[Int] = List(1, 2, 3)
+           |}
+           |/bill-empty-dependency-module-lists
+           |true
+           |""".stripMargin
+      )
+      _ <- server.didOpen("src/com/App.scala")
+      _ = assertNoDiff(client.workspaceDiagnostics, "")
+      locations <- server.definition(
+        "src/com/App.scala",
+        """|object App {
+           |  val list: Li@@st[Int] = List(1, 2, 3)
+           |}
+           |""".stripMargin,
+        workspace,
+      )
+      _ = assert(
+        locations.nonEmpty,
+        "Expected definition location for List but got none. " +
+          "This tests classpath jar fallback when DependencyModulesResult " +
+          "has items but empty module lists.",
+      )
+      uri = locations.head.getUri()
+      _ = assert(
+        uri.contains("scala-library"),
+        s"Expected definition to be in scala-library, but got: $uri",
+      )
+    } yield ()
+  }
 }
