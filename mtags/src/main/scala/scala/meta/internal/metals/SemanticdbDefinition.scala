@@ -106,6 +106,7 @@ object SemanticdbDefinition {
         try indexer.indexRoot()
         catch {
           case NonFatal(_) =>
+          case _: LinkageError =>
         }
         Some(indexer)
       case Semanticdb.Language.PROTOBUF =>
