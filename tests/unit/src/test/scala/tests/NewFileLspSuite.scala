@@ -3,7 +3,6 @@ package tests
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 
-import scala.concurrent.Future
 import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
@@ -499,22 +498,8 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     scalacOptions = List("-indent"),
   )
 
-  // `always` forces braceless regardless of surrounding sources.
-  checkScala("braceless-syntax-always")(
-    directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(Class),
-    fileName = Right("Foo"),
-    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
-    expectedContent = """|package foo
-                         |
-                         |class Foo
-                         |""".stripMargin,
-    scalaVersion = Some(V.scala3),
-    bracelessSyntax = Some("always"),
-  )
-
-  // `never` forces braces even next to a braceless sibling.
-  checkScala("braceless-syntax-never")(
+  // Existing sources take precedence over the `-indent` scalac option.
+  checkScala("braces-sibling-overrides-scalac-indent")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
     fileName = Right("Foo"),
@@ -526,18 +511,19 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |}
                           |""".stripMargin,
     scalaVersion = Some(V.scala3),
+    scalacOptions = List("-indent"),
     existingFiles = """|/a/src/main/scala/foo/Existing.scala
                        |package foo
                        |
-                       |object Existing:
+                       |object Existing {
                        |  def value = 1
+                       |}
                        |""".stripMargin,
-    bracelessSyntax = Some("never"),
   )
 
-  // The compiler capability overrides the preference: `-no-indent` forbids
-  // significant indentation, so even `always` must use braces.
-  checkScala("no-indent-overrides-always")(
+  // The compiler capability overrides the inferred style: `-no-indent` forbids
+  // significant indentation, so even a braceless sibling yields braces.
+  checkScala("no-indent-overrides-sibling")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
     fileName = Right("Foo"),
@@ -550,25 +536,15 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                           |""".stripMargin,
     scalaVersion = Some(V.scala3),
     scalacOptions = List("-no-indent"),
-    bracelessSyntax = Some("always"),
+    existingFiles = """|/a/src/main/scala/foo/Existing.scala
+                       |package foo
+                       |
+                       |object Existing:
+                       |  def value = 1
+                       |""".stripMargin,
   )
 
-  // `always` still has no effect on Scala 2 (braceless syntax is Scala 3 only).
-  checkScala("braceless-syntax-always-ignored-on-scala2")(
-    directory = Some("a/src/main/scala/foo/"),
-    fileType = Right(Class),
-    fileName = Right("Foo"),
-    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
-    expectedContent = s"""|package foo
-                          |
-                          |class Foo {
-                          |$indent
-                          |}
-                          |""".stripMargin,
-    bracelessSyntax = Some("always"),
-  )
-
-  // Scala 2 never uses braceless, even with `always` and a braceless sibling.
+  // Scala 2 never uses braceless, even next to a braceless-looking sibling.
   checkScala("scala2-always-braces")(
     directory = Some("a/src/main/scala/foo/"),
     fileType = Right(Class),
@@ -586,7 +562,6 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |object Existing:
                        |  def value = 1
                        |""".stripMargin,
-    bracelessSyntax = Some("always"),
   )
 
   checkScala("empty-file-with-package")(
@@ -867,7 +842,6 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       scalaVersion: Option[String] = None,
       expectedSnippet: Option[String] = None,
       scalacOptions: List[String] = Nil,
-      bracelessSyntax: Option[String] = None,
   )(implicit loc: Location): Unit = check(testName)(
     directory,
     fileType,
@@ -880,7 +854,6 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
     scalaVersion,
     expectedSnippet,
     scalacOptions,
-    bracelessSyntax,
   )
 
   /**
@@ -899,7 +872,6 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       scalaVersion: Option[String],
       expectedSnippet: Option[String] = None,
       scalacOptions: List[String] = Nil,
-      bracelessSyntax: Option[String] = None,
   )(implicit loc: Location): Unit =
     test(testName) {
       val localScalaVersion = scalaVersion.getOrElse(V.scala213)
@@ -988,16 +960,6 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
           """.stripMargin
         )
         _ <- server.didFocus("focusedDoc.txt")
-        _ <- bracelessSyntax match {
-          case Some(mode) =>
-            server.didChangeConfiguration(
-              s"""|{
-                  |  "new-files-braceless-syntax": "$mode"
-                  |}
-                  |""".stripMargin
-            )
-          case None => Future.unit
-        }
         _ <- server.executeCommand(command, args: _*)
         _ = {
           assertNoDiff(

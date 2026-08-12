@@ -15,11 +15,9 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages.NewScalaFile
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.NewFilesBracelessSyntax
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -40,7 +38,6 @@ class NewFileProvider(
     isReadClipboardProvider: Boolean,
     buildTargets: BuildTargets,
     trees: Trees,
-    userConfig: () => UserConfiguration,
     onCreate: AbsolutePath => Future[Unit],
 )(implicit
     ec: ExecutionContext
@@ -298,25 +295,18 @@ class NewFileProvider(
    *
    * Only Scala 3 supports braceless syntax, and the compiler can still forbid
    * it (`-no-indent`, `-old-syntax`, migration mode) — those cases always use
-   * braces, overriding the user's preference. Otherwise the
-   * `new-files-braceless-syntax` setting decides: `always`/`never` force the
-   * choice, while `auto` (the default) matches the style of nearby existing
-   * sources — the target package directory and its enclosing directories up to
-   * the source root — then the `-indent` scalac option, and finally braces.
+   * braces. Otherwise the style matches nearby existing sources — the target
+   * package directory and its enclosing directories up to the source root —
+   * then the `-indent` scalac option, and finally defaults to braces.
    */
   private def useBracelessSyntax(path: AbsolutePath): Boolean =
     path.isScalaFilename &&
       ScalaVersions.isScala3Version(selector.scalaVersionForPath(path)) && {
         val options = scalacOptions(path)
         significantIndentationAllowed(options) && {
-          userConfig().newFilesBracelessSyntax match {
-            case NewFilesBracelessSyntax.Always => true
-            case NewFilesBracelessSyntax.Never => false
-            case NewFilesBracelessSyntax.Auto =>
-              styleFromExistingSources(path)
-                .orElse(indentationPreferredByScalac(options))
-                .getOrElse(false)
-          }
+          styleFromExistingSources(path)
+            .orElse(indentationPreferredByScalac(options))
+            .getOrElse(false)
         }
       }
 

@@ -479,7 +479,6 @@ abstract class MetalsLspService(
     clientConfig.isReadClipboardProvider(),
     buildTargets,
     trees,
-    () => userConfig,
     onCreate = path => {
       onCreate(path)
       onChange(List(path))
