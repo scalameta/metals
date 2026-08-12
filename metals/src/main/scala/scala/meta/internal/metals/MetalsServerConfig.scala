@@ -147,7 +147,7 @@ final case class MetalsServerConfig(
     ),
     maxMcpSearchResults: Int = MetalsServerConfig.intProperty(
       "metals.max-mcp-search-results",
-      default = McpQueryEngine.MaxMcpSearchResults,
+      default = 100,
     ),
 ) {
   override def toString: String =

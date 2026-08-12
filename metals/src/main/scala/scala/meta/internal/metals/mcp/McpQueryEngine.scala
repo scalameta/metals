@@ -580,12 +580,6 @@ object SymbolType {
 object McpQueryEngine {
 
   /**
-   * Default result cap of a single MCP symbol search, a budget that keeps tool
-   * output within an LLM context window.
-   */
-  val MaxMcpSearchResults = 100
-
-  /**
    * Deduplicate, rank, cap and finally display-sort search results.
    *
    * Capping raw order would be nondeterministic, as the indexes below are
