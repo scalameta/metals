@@ -544,6 +544,50 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
                        |""".stripMargin,
   )
 
+  // `-old-syntax` also forbids significant indentation.
+  checkScala("old-syntax-overrides-sibling")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    scalacOptions = List("-old-syntax"),
+    existingFiles = """|/a/src/main/scala/foo/Existing.scala
+                       |package foo
+                       |
+                       |object Existing:
+                       |  def value = 1
+                       |""".stripMargin,
+  )
+
+  // A `-source:*-migration` mode also forbids significant indentation.
+  checkScala("migration-mode-overrides-sibling")(
+    directory = Some("a/src/main/scala/foo/"),
+    fileType = Right(Class),
+    fileName = Right("Foo"),
+    expectedFilePath = "a/src/main/scala/foo/Foo.scala",
+    expectedContent = s"""|package foo
+                          |
+                          |class Foo {
+                          |$indent
+                          |}
+                          |""".stripMargin,
+    scalaVersion = Some(V.scala3),
+    scalacOptions = List("-source:3.0-migration"),
+    existingFiles = """|/a/src/main/scala/foo/Existing.scala
+                       |package foo
+                       |
+                       |object Existing:
+                       |  def value = 1
+                       |""".stripMargin,
+  )
+
   // Scala 2 never uses braceless, even next to a braceless-looking sibling.
   checkScala("scala2-always-braces")(
     directory = Some("a/src/main/scala/foo/"),
