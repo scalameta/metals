@@ -248,12 +248,16 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         )
         progress.message =
           s"indexing ${buildTool.importedBuild.dependencyModules.getItems().size()} dependencies"
-        if (indexProviders.clientConfig.definitionIndexStrategy().isClasspath) {
-          usedJars ++= indexDependencyModules(
-            buildTool.importedBuild.dependencyModules,
-            progress,
-          )
-        }
+        val isClasspathIndexing =
+          indexProviders.clientConfig.definitionIndexStrategy().isClasspath
+        val indexedDependencyModules =
+          if (isClasspathIndexing)
+            indexDependencyModules(
+              buildTool.importedBuild.dependencyModules,
+              progress,
+            )
+          else Set.empty[AbsolutePath]
+        usedJars ++= indexedDependencyModules
         if (shouldFallbackToFileMbt) {
           val build = MbtBuild.fromWorkspace(indexProviders.folder)
           indexDependencyModules(build.asBspModules, progress)
@@ -263,6 +267,13 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           buildTool.importedBuild.dependencySources,
           progress,
         )
+        // If no dependency modules are found, index normal classpath jars
+        if (indexedDependencyModules.isEmpty && isClasspathIndexing) {
+          usedJars ++= indexClasspathJarsFallback(
+            buildTool.data,
+            progress,
+          )
+        }
         scribe.debug(s"indexed ${usedJars.size} dependency source jars")
       }
 
@@ -522,6 +533,52 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       val dependencyModule = DependencyModule(coordinates, jar, sources)
       val dialect = buildTargets
         .scalaTarget(item.getTarget)
+        .map(scalaTarget =>
+          ScalaVersions.dialectForScalaVersion(
+            scalaTarget.scalaVersion,
+            includeSource3 = true,
+          )
+        )
+        .getOrElse(Scala213)
+      definitionIndex.addDependencyModule(dependencyModule, dialect)
+    }
+    usedJars.toSet
+  }
+
+  /**
+   * Index classpath jars if none are included in the dependency modules
+   */
+  private def indexClasspathJarsFallback(
+      data: TargetData,
+      progress: TaskProgress,
+  ): Set[AbsolutePath] = {
+    val usedJars = mutable.HashSet.empty[AbsolutePath]
+    val isVisited = new ju.HashSet[AbsolutePath]()
+    scribe.info("Dependency modules empty, falling back to classpath jars")
+    for {
+      targetId <- data.allBuildTargetIds
+      jars <- data.targetJarClasspath(targetId).toList
+      jar <- jars
+      if jar.isJar && !isVisited.contains(jar)
+    } {
+      progress.progress = progress.progress + 1
+      isVisited.add(jar)
+      usedJars += jar
+
+      val sourcesJarName = jar.filename.stripSuffix(".jar") + "-sources.jar"
+      val sources = data.sourceJarNameToJarFile.get(sourcesJarName)
+
+      if (sources.isEmpty) {
+        scribe.warn(s"sources jar not found for $jar")
+      }
+
+      val jarName = jar.filename.stripSuffix(".jar")
+      // coordinates are not used anywhere currently in definitionIndex
+      val coordinates = MavenCoordinates("unknown", jarName, "unknown")
+
+      val dependencyModule = DependencyModule(coordinates, jar, sources)
+      val dialect = buildTargets
+        .scalaTarget(targetId)
         .map(scalaTarget =>
           ScalaVersions.dialectForScalaVersion(
             scalaTarget.scalaVersion,
