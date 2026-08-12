@@ -124,19 +124,33 @@ private case class SourcepathJavaFileObject(
     isDeleted: AtomicBoolean = new AtomicBoolean(false),
 )
 
-class TurbineCompiler[T](
-    allCompilationUnits: () => ParArray[T],
-    parseUnit: T => Seq[SourceFile],
+abstract class TurbineCompiler[T](
     classpath: () => Seq[Path],
     progressBars: ProgressBars,
     turbineRecompileDelay: () => TurbineRecompileDelayConfig,
-    listProtoJavaOutlinesForPackage: String => Iterator[JavaFileObject],
     sleeper: Sleeper,
-    onIndexingDone: () => Unit,
-    onNewProjectClasspath: ClassPath => Unit,
     turbineCache: Option[TurbineCache] = None,
-    getDirtyJavaFiles: () => Seq[(String, JavaFileObject)] = () => Seq.empty,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
+
+  protected def allCompilationUnits(): ParArray[T]
+
+  protected def parseUnit(unit: T): Seq[SourceFile]
+
+  protected def listProtoJavaOutlinesForPackage(
+      pkg: String
+  ): Iterator[JavaFileObject]
+
+  protected def onIndexingDone(): Unit
+
+  protected def onNewProjectClasspath(classpath: ClassPath): Unit
+
+  /**
+   * Returns dirty Java files (uncommitted changes) with their package names.
+   * Used to populate the sourcepath when loading from cache so that
+   * changed files take precedence over cached compiled classes.
+   */
+  protected def getDirtyJavaFiles(): Seq[(String, JavaFileObject)]
+
   private val sourcepathByPackageName =
     TrieMap.empty[String, ju.concurrent.ConcurrentLinkedDeque[
       SourcepathJavaFileObject

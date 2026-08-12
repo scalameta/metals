@@ -65,6 +65,7 @@ import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import com.google.turbine.binder.ClassPath
 import com.google.turbine.diag.SourceFile
 import org.eclipse.{lsp4j => l}
 
@@ -151,48 +152,21 @@ class MbtWorkspaceSymbolProvider(
     time,
   )
 
-  /**
-   * Returns dirty Java files (uncommitted changes) with their package names.
-   * Used to populate the sourcepath when loading from cache so that
-   * changed files take precedence over cached compiled classes.
-   */
-  private def getDirtyJavaFiles(): Seq[(String, JavaFileObject)] = {
-    val result = for {
-      status <- GitVCS.status(workspace)
-      if !status.isDeleted && status.file.isJava
-    } yield {
-      try {
-        // Derive IndexedDocument from current source to handle:
-        // 1. Untracked Java files (not yet in documents map)
-        // 2. Package relocations (stale metadata in existing document)
-        val doc = IndexedDocument.fromFile(
-          status.file,
-          mtags(),
-          buffers,
-          dialects.Scala3,
-        )
-        for {
-          input <- toInput(status.file)
-          pkg <- doc.semanticdbPackages.headOption
-        } yield {
-          val packageName = normalizePackageName(pkg)
-          val compilationUnit: JavaFileObject =
-            doc.toSemanticdbCompilationUnit(input)
-          (packageName, compilationUnit)
-        }
-      } catch {
-        case NonFatal(e) =>
-          scribe.debug(s"mbt-v2: error indexing dirty file ${status.file}: $e")
-          None
-      }
-    }
-    result.flatten.toSeq
-  }
-
-  private val turbineCompiler: TurbineCompiler[AbsolutePath] =
+  private val turbineCompiler: TurbineCompiler[AbsolutePath] = {
+    val onIndexingDoneCallback = onIndexingDone
     new TurbineCompiler[AbsolutePath](
-      () => documentsKeys,
-      file =>
+      () => fallbackClasspaths().javaCompilerClasspath(),
+      progress,
+      // We don't need to re-compile the workspace super regularly because we can
+      // load recently changed files from the sourcepath.
+      () => turbineRecompileDelay(),
+      sleeper = sleeper,
+      turbineCache = Some(turbineCache),
+    ) {
+      override protected def allCompilationUnits(): ParArray[AbsolutePath] =
+        documentsKeys
+
+      override protected def parseUnit(file: AbsolutePath): Seq[SourceFile] =
         if (file.toLanguage.isJava) {
           toInput(file)
             .map(input =>
@@ -223,25 +197,60 @@ class MbtWorkspaceSymbolProvider(
           }
         } else {
           Nil
-        },
-      () => fallbackClasspaths().javaCompilerClasspath(),
-      progress,
-      // We don't need to re-compile the workspace super regularly because we can
-      // load recently changed files from the sourcepath.
-      () => turbineRecompileDelay(),
-      listProtoJavaOutlinesForPackage = pkg =>
+        }
+
+      override protected def listProtoJavaOutlinesForPackage(
+          pkg: String
+      ): Iterator[JavaFileObject] =
         protobufWorkspace.listProtoJavaOutlinesForPackage(
           pkg,
           documentsByPackage,
           documents,
-        ),
-      sleeper = sleeper,
-      onIndexingDone = onIndexingDone,
-      onNewProjectClasspath = classpath =>
-        protobufWorkspace.onNewProjectClasspath(classpath),
-      turbineCache = Some(turbineCache),
-      getDirtyJavaFiles = getDirtyJavaFiles,
-    )
+        )
+
+      override protected def onIndexingDone(): Unit = onIndexingDoneCallback()
+
+      override protected def onNewProjectClasspath(classpath: ClassPath): Unit =
+        protobufWorkspace.onNewProjectClasspath(classpath)
+
+      override protected def getDirtyJavaFiles()
+          : Seq[(String, JavaFileObject)] = {
+        val result = for {
+          status <- GitVCS.status(workspace)
+          if !status.isDeleted && status.file.isJava
+        } yield {
+          try {
+            // Derive IndexedDocument from current source to handle:
+            // 1. Untracked Java files (not yet in documents map)
+            // 2. Package relocations (stale metadata in existing document)
+            val doc = IndexedDocument.fromFile(
+              status.file,
+              mtags(),
+              buffers,
+              dialects.Scala3,
+            )
+            for {
+              input <- toInput(status.file)
+              pkg <- doc.semanticdbPackages.headOption
+            } yield {
+              val packageName = normalizePackageName(pkg)
+              val compilationUnit: JavaFileObject =
+                doc.toSemanticdbCompilationUnit(input)
+              (packageName, compilationUnit)
+            }
+          } catch {
+            case NonFatal(e) =>
+              scribe.debug(
+                s"mbt-v2: error indexing dirty file ${status.file}: $e"
+              )
+              None
+          }
+        }
+        result.flatten.toSeq
+      }
+
+    }
+  }
 
   // NOTE: runs unconditionally even if the user config is not mbt-v2 for usage
   // in MetalsLspService.onUserConfigUpdate
