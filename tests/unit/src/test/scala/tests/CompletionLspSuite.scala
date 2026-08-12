@@ -385,6 +385,118 @@ class CompletionLspSuite extends BaseCompletionLspSuite("completion") {
     } yield ()
   }
 
+  // Override completions for Java raw types, see
+  // https://github.com/scalameta/metals/issues/2554
+  private def rawTypeLayout(naivetyBody: String): String =
+    s"""/metals.json
+       |{
+       |  "a": { "scalaVersion": "${V.scala213}" }
+       |}
+       |/a/src/main/java/example/Recursive.java
+       |package example;
+       |public interface Recursive<T extends Recursive> {}
+       |/a/src/main/java/example/Bounded.java
+       |package example;
+       |public interface Bounded<T extends Number> {}
+       |/a/src/main/java/example/Box.java
+       |package example;
+       |public interface Box<T> {}
+       |/a/src/main/java/example/Pair.java
+       |package example;
+       |public interface Pair<A, B> {}
+       |/a/src/main/java/example/IllConceived.java
+       |package example;
+       |public interface IllConceived {
+       |  public void impossible(Recursive iDontEven);
+       |  public void bounded(Bounded usesRaw);
+       |  public void box(Box b);
+       |  public void pair(Pair p);
+       |  public Box makeBox();
+       |}
+       |/a/src/main/scala/example/Naivety.scala
+       |package example
+       |class Naivety extends IllConceived {
+       |$naivetyBody
+       |}
+       |""".stripMargin
+
+  private val naivetyFile = "a/src/main/scala/example/Naivety.scala"
+
+  test("java-raw-type-override") {
+    cleanWorkspace()
+    def assertStub(query: String, member: String, stub: String) =
+      assertCompletionEdit(
+        query,
+        s"""|package example
+            |class Naivety extends IllConceived {
+            |  $stub
+            |}
+            |""".stripMargin,
+        filenameOpt = Some(naivetyFile),
+        filter = _.contains(member),
+      )
+    for {
+      _ <- initialize(rawTypeLayout("  // @@"))
+      _ <- server.didOpen(naivetyFile)
+      // a recursive (F-bounded) raw type renders as `Recursive[_ <: AnyRef]`
+      _ <- assertStub(
+        "def impossible@@",
+        "impossible",
+        "def impossible(iDontEven: Recursive[_ <: AnyRef]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def bounded@@",
+        "bounded",
+        "def bounded(usesRaw: Bounded[_ <: Number]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def box@@",
+        "box",
+        "def box(b: Box[_]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def pair@@",
+        "pair",
+        "def pair(p: Pair[_, _]): Unit = ${0:???}",
+      )
+      _ <- assertStub(
+        "def makeBox@@",
+        "makeBox",
+        "def makeBox(): Box[_] = ${0:???}",
+      )
+    } yield ()
+  }
+
+  test("java-raw-type-implement-all") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(rawTypeLayout("  // @@"))
+      _ <- server.didOpen(naivetyFile)
+      // "Implement all members" renders every raw type. (Members after the first
+      // are flush-left because the harness applies the edit without
+      // auto-indentation.)
+      _ <- assertCompletionEdit(
+        "def@@",
+        """|package example
+           |class Naivety extends IllConceived {
+           |  def impossible(iDontEven: Recursive[_ <: AnyRef]): Unit = ${0:???}
+           |
+           |def bounded(usesRaw: Bounded[_ <: Number]): Unit = ${0:???}
+           |
+           |def box(b: Box[_]): Unit = ${0:???}
+           |
+           |def pair(p: Pair[_, _]): Unit = ${0:???}
+           |
+           |def makeBox(): Box[_] = ${0:???}
+           |
+           |}
+           |""".stripMargin,
+        filenameOpt = Some(naivetyFile),
+        filter = _.contains("Implement"),
+      )
+    } yield ()
+  }
+
   test("scope") {
     cleanWorkspace()
     for {

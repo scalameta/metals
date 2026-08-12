@@ -1186,7 +1186,9 @@ object ScalaDocLink {
     }
     if (cut < 0) link else link.substring(0, cut)
   }
-
+  // Extraction is shared with the renderer (`WikiLink`), so source
+  // go-to-definition navigates exactly the links the renderer renders —
+  // including `[[[ ... ]]]` and a link's title (scalameta/metals#3383).
   def atOffset(
       text: String,
       offset: Int,

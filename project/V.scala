@@ -9,7 +9,7 @@ object V {
 
   val scala3 = "3.3.8"
 
-  val scala3ForSBT2 = "3.7.4"
+  val scala3ForSBT2 = "3.8.4"
 
   val latestScala3Next = "3.8.4"
 
@@ -35,7 +35,7 @@ object V {
 
   val coursierInterfaces = "1.0.29-M2"
 
-  val debugAdapter = "4.2.9"
+  val debugAdapter = "4.2.13"
 
   val genyVersion = "1.1.1"
 
@@ -47,7 +47,7 @@ object V {
 
   val javaSemanticdb = "0.12.3"
 
-  val jsoup = "1.22.2"
+  val jsoup = "1.23.1"
 
   val kindProjector = "0.13.4"
 
@@ -55,13 +55,14 @@ object V {
 
   val mavenBloop = "2.0.5"
 
-  val mill = "1.1.7"
+  val mill = "1.1.8"
 
-  val mdoc = "2.9.0"
+  // use from project/plugins.sbt
+  val mdoc = _root_.mdoc.BuildInfo.version
 
   val modelContextProtocol = "2.0.0"
 
-  val munit = "1.3.3"
+  val munit = "1.3.5"
 
   val pprint = "0.9.6"
 
@@ -73,13 +74,13 @@ object V {
 
   val scalafix = "0.14.7"
 
-  val scalafmt = "3.11.1"
+  val scalafmt = "3.11.5"
 
-  val scalameta = "4.17.0"
+  val scalameta = "4.17.3"
 
   val scribe = "3.19.0"
 
-  val sbt2Version = "2.0.0-RC8"
+  val sbt2Version = "2.0.3"
 
   val guava = "com.google.guava" % "guava" % "33.6.0-jre"
 

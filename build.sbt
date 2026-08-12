@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.8-SNAPSHOT"
-def latestReleaseVersion = "1.6.7"
+def localSnapshotVersion = "1.6.9-SNAPSHOT"
+def latestReleaseVersion = "1.6.8"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -25,12 +25,12 @@ def crossSetting[A](
     if211: List[A] = Nil,
     if213: List[A] = Nil,
     if3: List[A] = Nil,
-    if2: List[A] = Nil,
+    if212: List[A] = Nil,
 ): List[A] =
   CrossVersion.partialVersion(scalaVersion) match {
-    case partialVersion if isScala211(partialVersion) => if211 ::: if2
-    case partialVersion if isScala212(partialVersion) => if2
-    case partialVersion if isScala213(partialVersion) => if2 ::: if213
+    case partialVersion if isScala211(partialVersion) => if211 ::: if212
+    case partialVersion if isScala212(partialVersion) => if212
+    case partialVersion if isScala213(partialVersion) => if212 ::: if213
     case partialVersion if isScala3(partialVersion) => if3
     case _ => Nil
   }
@@ -226,7 +226,7 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
   libraryDependencies ++= crossSetting(
     scalaVersion.value,
-    if2 = List(
+    if212 = List(
       compilerPlugin(
         ("org.scalameta" % "semanticdb-scalac" % V.semanticdb(
           scalaVersion.value
@@ -255,6 +255,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
       "org.scalameta" % "mtags-interfaces" % "1.5.2",
+      "org.scalameta" % "mtags-interfaces" % "1.6.7",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -356,7 +357,7 @@ val mtagsSettings = List(
   libraryDependencies ++= {
     crossSetting(
       scalaVersion.value,
-      if2 = List(
+      if212 = List(
         // for token edit-distance used by goto definition
         "com.googlecode.java-diff-utils" % "diffutils" % "1.3.0",
         ("org.scalameta" % "semanticdb-scalac-core" % V.semanticdb(
@@ -419,7 +420,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.18.6",
+      "org.scalameta" %% "metaconfig-core" % "0.18.7",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -431,7 +432,7 @@ lazy val metals = project
       "org.flywaydb" % "flyway-core" % "12.10.0",
       "com.h2database" % "h2" % "2.4.240",
       // for BSP
-      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.7.0",
+      "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.8.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
       "ch.epfl.scala" %% "bloop-rifle" % V.bloop,
       // for LSP
@@ -535,6 +536,7 @@ lazy val `metals-mcp` = project
     sharedSettings,
     moduleName := "metals-mcp",
     Compile / mainClass := Some("scala.meta.metals.McpMain"),
+    Compile / run / javaOptions ++= sharedJavaOptions,
   )
   .dependsOn(metals)
 
@@ -549,7 +551,10 @@ lazy val `sbt-metals` = project
     ),
     scalaVersion := V.scala212,
     crossScalaVersions := Seq(V.scala212, V.scala3ForSBT2),
-    scalacOptions := Seq("-release", "8"),
+    scalacOptions ++= crossSetting(
+      scalaVersion.value,
+      if212 = List("-release", "8"),
+    ),
     scriptedLaunchOpts ++= Seq(s"-Dplugin.version=${version.value}"),
     (pluginCrossBuild / sbtVersion) := {
       scalaBinaryVersion.value match {
@@ -863,7 +868,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.6",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.7",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion

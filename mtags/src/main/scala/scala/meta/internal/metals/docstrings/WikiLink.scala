@@ -1,16 +1,20 @@
 package scala.meta.internal.docstrings
 
 /**
- * Shared parsing of scaladoc/javadoc entity (wiki) links `[[ ... ]]` so the
- * renderer, go-to-definition and resolver agree on a link's boundaries and its
- * target/title split (scalameta/metals#3383).
+ * Shared parsing of scaladoc/javadoc entity links, so the renderer and
+ * source-position extraction (go-to-definition) agree on link boundaries and
+ * target/title splitting instead of using separate, inconsistent parsers
+ * (scalameta/metals#3383).
  */
 object WikiLink {
 
   /**
-   * Splits a link's inner content into target and optional title at the first
-   * whitespace that lies outside a backtick-escaped name and outside a
-   * parenthesised signature or type-argument list (scalameta/metals#3383).
+   * Splits a link's inner content into its target and optional title. The split
+   * is the first run of whitespace that lies OUTSIDE a backtick-escaped name and
+   * outside a parenthesised signature or type-argument list, so a backticked
+   * target containing a space (`` `my type` ``), a member signature with spaces
+   * (`foo(a: Int)`) and a type application (`foo[A, B](a: A)`) stay part of the
+   * target rather than being cut off as a title (scalameta/metals#3383).
    */
   def splitTargetTitle(content: String): (String, Option[String]) = {
     val n = content.length
@@ -38,12 +42,6 @@ object WikiLink {
     }
   }
 
-  /**
-   * The target of the entity link whose brackets (`[[ ... ]]`, or any `n >= 2`
-   * matching brackets, mirroring the renderer) enclose `offset`, so source
-   * go-to-definition navigates exactly the links the renderer makes clickable
-   * (scalameta/metals#3383).
-   */
   /**
    * The target of the Javadoc inline link (`{@link ... }` / `{@linkplain ... }`)
    * whose braces enclose `offset`, matching what the renderer extracts so source
@@ -154,6 +152,13 @@ object WikiLink {
     ok
   }
 
+  /**
+   * The target of the entity link whose brackets (`[[ ... ]]`, or any `n >= 2`
+   * matching brackets, mirroring the renderer's grammar) enclose `offset`, so
+   * source go-to-definition navigates exactly the links the renderer renders,
+   * including the triple-bracket form the old regex truncated
+   * (scalameta/metals#3383).
+   */
   def atOffset(text: String, offset: Int): Option[String] = {
     val n = text.length
     var i = 0
@@ -167,9 +172,10 @@ object WikiLink {
           val end = text.indexOf("]" * open, contentStart)
           if (end < 0) i += open
           else {
-            // The link spans the half-open range `[i, end + open)`; an inclusive
-            // upper bound would let the char right after the closing brackets
-            // resolve to this link (scalameta/metals#3383).
+            // The link occupies the half-open range `[i, end + open)`; an
+            // inclusive upper bound would let the char right after the closing
+            // brackets (e.g. the opening `[` of an adjacent `[[A]][[B]]`) resolve
+            // to this link (scalameta/metals#3383).
             if (offset >= i && offset < end + open)
               result = Some(
                 splitTargetTitle(text.substring(contentStart, end))._1
