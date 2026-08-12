@@ -518,8 +518,13 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
             |expected the classpath search to report incompleteness, but got:
             |${result.show}""".stripMargin,
       )
-      _ = assert(
-        result.show.contains("additional matches may exist"),
+      _ = assertEquals(result.cappedByResultLimit, false)
+      _ = assertEquals(
+        result.show.linesIterator.toList.lastOption,
+        Some(
+          "[The search stopped early, matches may exist beyond it. " +
+            "Use a longer or more specific query.]"
+        ),
         s"""|query: globSearch("String", Set.empty)
             |expected an incompleteness notice, but got:
             |${result.show}""".stripMargin,

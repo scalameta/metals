@@ -50,14 +50,13 @@ object McpPrinter {
       val body =
         if (result.results.isEmpty) "No symbols found."
         else result.results.map(_.show).mkString("\n")
-      // both flags mean the same to the caller: the answer is partial
-      if (!result.isPartial) body
-      else if (result.results.isEmpty)
-        body + "\n\n[The search stopped early, matches may exist beyond it. " +
-          "Use a longer or more specific query.]"
-      else
+      if (result.cappedByResultLimit)
         body + s"\n\n[Showing ${result.results.size} results; " +
           "additional matches may exist. Narrow the query.]"
+      else if (result.searchBudgetExhausted)
+        body + "\n\n[The search stopped early, matches may exist beyond it. " +
+          "Use a longer or more specific query.]"
+      else body
     }
   }
 

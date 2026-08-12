@@ -469,9 +469,7 @@ case class GlobSearchResult(
     results: Seq[SymbolSearchResult],
     searchBudgetExhausted: Boolean,
     cappedByResultLimit: Boolean,
-) {
-  def isPartial: Boolean = searchBudgetExhausted || cappedByResultLimit
-}
+)
 
 case class MethodSignature(
     name: String
