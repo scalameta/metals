@@ -413,8 +413,9 @@ final class BuildTargetClasses(
       // Only Scala files depend on inheritance for test frameworks
       if (path.isJava)
         None
-      else
+      else if (!symbolInfo.isAbstract)
         processTestClassHierarchy(symbolInfo, doc, path, testClasses)
+      else None
     }
 
     Future.sequence(futures).map(_ => testClasses.toList)
