@@ -174,6 +174,48 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
       }
   }
 
+  executionContext.test(
+    "hash-colliding keys on different compilers compile concurrently"
+  ) { implicit ec =>
+    val cache =
+      new InteractiveSemanticdbCache[
+        InteractiveSemanticdbCollisionKey,
+        String,
+      ]()
+    val compileEntered = new CountDownLatch(2)
+    val releaseCompile = new CountDownLatch(1)
+
+    def lookup(
+        key: InteractiveSemanticdbCollisionKey,
+        lane: InteractiveSemanticdbCompilationLane,
+    ) = Future {
+      val compilation = new InteractiveSemanticdbCompilation(
+        lane,
+        InteractiveSemanticdbCompilationContext.Scala(lane),
+        () => null,
+      )
+      cache.compute(key, () => Success(compilation), _ => false) { (_, _) =>
+        compileEntered.countDown()
+        await(releaseCompile, "release of hash-colliding compilations")
+        key.value
+      }
+    }
+
+    val first = lookup(InteractiveSemanticdbCollisionKey("A.scala"), laneA)
+    val second = lookup(InteractiveSemanticdbCollisionKey("B.scala"), laneB)
+    withRelease(releaseCompile) {
+      await(compileEntered, "both hash-colliding compilations")
+    }
+
+    for {
+      firstResult <- first
+      secondResult <- second
+    } yield {
+      assertEquals(firstResult, "A.scala")
+      assertEquals(secondResult, "B.scala")
+    }
+  }
+
   checkSerialized(
     "nominal targets sharing the fallback compiler serialize access",
     InteractiveSemanticdbCompilationLane(fallbackCompiler),
@@ -283,6 +325,43 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
       assertEquals(secondResult, "B.scala")
       assertEquals(maximumActiveCompilations.get(), 1)
     }
+  }
+
+  executionContext.test("remove waits for compilation and removes its result") {
+    implicit ec =>
+      val cache = new InteractiveSemanticdbCache[String, String]()
+      val compileEntered = new CountDownLatch(1)
+      val releaseCompile = new CountDownLatch(1)
+      val removeStarted = new CountDownLatch(1)
+
+      val lookup = Future {
+        compute(cache, "A.scala", laneA, _ => false) { _ =>
+          compileEntered.countDown()
+          await(releaseCompile, "release of compilation before removal")
+          "compiled"
+        }
+      }
+      await(compileEntered, "compilation before removal")
+      val remove = Future {
+        removeStarted.countDown()
+        cache.remove("A.scala")
+      }
+
+      withRelease(releaseCompile) {
+        await(removeStarted, "removal during compilation")
+        assert(!remove.isCompleted, "remove completed during compilation")
+      }
+
+      for {
+        lookupResult <- lookup
+        _ <- remove
+      } yield {
+        assertEquals(lookupResult, "compiled")
+        val afterRemove = compute(cache, "A.scala", laneA, _ => true) { _ =>
+          "recompiled"
+        }
+        assertEquals(afterRemove, "recompiled")
+      }
   }
 
   executionContext.test("clear waits for compiler selection before clearing") {
@@ -461,4 +540,8 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
         assertEquals(maximumActiveCompilations.get(), 1)
       }
     }
+}
+
+private final case class InteractiveSemanticdbCollisionKey(value: String) {
+  override def hashCode(): Int = 0
 }

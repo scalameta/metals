@@ -4,6 +4,7 @@ import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
+import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
@@ -111,7 +112,13 @@ final class InteractiveSemanticdbs(
                 if (!source.isDependencySource(workspace))
                   semanticdbIndexer().onChange(source, doc)
                 doc
-              case _ => null
+              case Failure(exception) =>
+                scribe.debug(
+                  s"Interactive SemanticDB compilation failed for $source",
+                  exception,
+                )
+                null
+              case Success(_) => null
             }
           }
       }
@@ -182,6 +189,8 @@ private[metals] final class InteractiveSemanticdbCompilation(
 private[metals] final class InteractiveSemanticdbCache[K, V <: AnyRef] {
   private val values =
     new ConcurrentHashMap[K, InteractiveSemanticdbCacheEntry[V]]()
+  private val keyLocks =
+    new MapMaker().weakValues().makeMap[K, Object]()
   private val lifecycleLock = new ReentrantReadWriteLock()
 
   def clear(): Unit = {
@@ -189,13 +198,14 @@ private[metals] final class InteractiveSemanticdbCache[K, V <: AnyRef] {
     lock.lock()
     try {
       values.clear()
+      keyLocks.clear()
     } finally lock.unlock()
   }
 
   def remove(key: K): Unit = {
     val lock = lifecycleLock.readLock()
     lock.lock()
-    try values.remove(key)
+    try keyLock(key).synchronized(values.remove(key))
     finally lock.unlock()
   }
 
@@ -209,32 +219,44 @@ private[metals] final class InteractiveSemanticdbCache[K, V <: AnyRef] {
     try {
       prepare() match {
         case Success(compilation) =>
-          val entry = values.compute(
-            key,
-            (path, existing) =>
-              if (
-                existing != null &&
-                existing.context == compilation.context &&
-                isCurrent(existing.value)
-              ) existing
+          def current(entry: InteractiveSemanticdbCacheEntry[V]): Boolean =
+            entry != null &&
+              entry.context == compilation.context &&
+              isCurrent(entry.value)
+
+          val existing = values.get(key)
+          if (current(existing)) existing.value
+          else
+            keyLock(key).synchronized {
+              val refreshed = values.get(key)
+              if (current(refreshed)) refreshed.value
               else {
                 val value = compilation.lane.serialized(
-                  compile(path, compilation)
+                  compile(key, compilation)
                 )
-                if (value == null) null
-                else
-                  new InteractiveSemanticdbCacheEntry(
+                if (value == null) values.remove(key)
+                else {
+                  val entry = new InteractiveSemanticdbCacheEntry(
                     compilation.context,
                     value,
                   )
-              },
+                  values.put(key, entry)
+                }
+                value
+              }
+            }
+        case Failure(exception) =>
+          scribe.debug(
+            s"Interactive SemanticDB compiler selection failed for $key",
+            exception,
           )
-          if (entry == null) null.asInstanceOf[V]
-          else entry.value
-        case _ => null.asInstanceOf[V]
+          null.asInstanceOf[V]
       }
     } finally lock.unlock()
   }
+
+  private def keyLock(key: K): Object =
+    keyLocks.computeIfAbsent(key, _ => new Object())
 }
 
 private final class InteractiveSemanticdbCacheEntry[V](
