@@ -132,12 +132,27 @@ Metals provides a comprehensive set of tools through MCP:
 
 | Tool                | Description                                                                                                                            |
 | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `glob-search`       | Search for symbols by partial name matching. Find packages, classes, objects, methods, traits, and other symbols across the workspace. |
-| `typed-glob-search` | Search for symbols filtered by type (package, class, object, function, method, trait).                                                 |
+| `glob-search`       | Search symbols by one unqualified name. Returns each symbol's kind and fully qualified name, see the notes below.                      |
+| `typed-glob-search` | Same as `glob-search`, restricted to the given symbol kinds (package, class, object, function, method, trait).                         |
 | `inspect`           | Inspect a Scala symbol. Returns members for packages/objects/traits, members and constructors for classes, and signatures for methods. |
 | `get-docs`          | Get documentation (ScalaDoc) for a symbol.                                                                                             |
 | `get-usages`        | Find all references and usages of a symbol across the project.                                                                         |
 | `get-source`        | Get the source file contents for a symbol. Useful for understanding library code.                                                      |
+
+Notes on symbol search:
+
+- The query matches the last part of a fully qualified name, ignoring case:
+  `Probe` finds `com.example.MidWordProbe`, `com.example` does not.
+- Matching starts at name boundaries, so `idWordProbe` does not find
+  `MidWordProbe`.
+- Wildcards are not supported, `*` and `?` match literally.
+- `typed-glob-search` returns packages only when `package` is among the
+  requested kinds.
+- All modules are searched, together with every dependency on the workspace
+  classpath. Dependency matches are additionally limited to a handful of
+  non-exact hits per query.
+- Results are capped, see `metals.max-mcp-search-results` below. Whenever
+  matches were dropped, the response says so.
 
 ### Build and Dependencies
 
@@ -204,6 +219,13 @@ When using MCP with Metals in an editor:
 | ----------------------- | --------------------- | ------- |
 | `metals.startMcpServer` | Enable the MCP server | `false` |
 
+### Server Properties
+
+The result cap of `glob-search` and `typed-glob-search` is configurable through
+the `-Dmetals.max-mcp-search-results`
+[server property](../integrations/new-editor.md#metals-server-properties), which
+defaults to `100`.
+
 ## Tips for AI Agents
 
 When working with Metals MCP, AI agents should:
@@ -260,3 +282,6 @@ MCP support was introduced in Metals v1.5.3 and has been continuously improved:
 - **v1.6.5**: Switched to streamable HTTP transport (`/mcp` endpoint)
 - **v1.6.6**: Added standalone MCP server (`metals-mcp`)
 - **v1.6.7**: Added stdio transport support, `get-source` tool
+- **v1.6.9**: `glob-search` and `typed-glob-search` search every module instead
+  of the one owning the file in focus, dropped their `fileInFocus` parameter and
+  capped their results
