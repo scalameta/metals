@@ -1754,12 +1754,16 @@ class Compilers(
     debugItem
   }
 
+  private[metals] def semanticdbCompiler(
+      source: AbsolutePath
+  ): PresentationCompiler =
+    loadCompiler(source).getOrElse(fallbackCompiler)
+
   def semanticdbTextDocument(
       source: AbsolutePath,
       text: String,
+      pc: PresentationCompiler,
   ): s.TextDocument = {
-    val pc = loadCompiler(source).getOrElse(fallbackCompiler)
-
     val (prependedLinesSize, modifiedText) =
       Option
         .when(source.isSbt)(

@@ -21,6 +21,7 @@ object TestGroups {
     "tests.WindowStateDidChangeLspSuite", "tests.DocumentSymbolLspSuite",
     "tests.WorkspaceSymbolExpectSuite", "tests.digest.DigestsSuite",
     "tests.MtagsSuite", "tests.ChosenBuildServerSuite", "tests.SemanticdbSuite",
+    "scala.meta.internal.metals.InteractiveSemanticdbCacheSuite",
     "tests.digest.MillDigestSuite", "tests.DocumentSymbolSuite",
     "tests.FoldingRangeSuite", "tests.JavadocSuite",
     "tests.MtagsEnrichmentsSuite", "tests.MtagsResolverSuite",

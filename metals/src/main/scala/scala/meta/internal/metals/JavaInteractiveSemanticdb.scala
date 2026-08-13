@@ -21,8 +21,16 @@ import scala.meta.internal.pc.JavaMetalsGlobal
 import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+
 trait JavaInteractiveSemanticdb {
   def textDocument(source: AbsolutePath, text: String): s.TextDocument
+
+  def textDocument(
+      source: AbsolutePath,
+      text: String,
+      buildTarget: Option[BuildTargetIdentifier],
+  ): s.TextDocument
 }
 
 class NoopJavaInteractiveSemanticdb extends JavaInteractiveSemanticdb {
@@ -31,6 +39,12 @@ class NoopJavaInteractiveSemanticdb extends JavaInteractiveSemanticdb {
       text: String,
   ): s.TextDocument =
     s.TextDocument()
+
+  override def textDocument(
+      source: AbsolutePath,
+      text: String,
+      buildTarget: Option[BuildTargetIdentifier],
+  ): s.TextDocument = textDocument(source, text)
 }
 
 class DownloadedJavaInteractiveSemanticdb(
@@ -41,7 +55,17 @@ class DownloadedJavaInteractiveSemanticdb(
 
   private val readonly = workspace.resolve(Directories.readonly)
 
-  def textDocument(source: AbsolutePath, text: String): s.TextDocument = {
+  override def textDocument(
+      source: AbsolutePath,
+      text: String,
+  ): s.TextDocument =
+    textDocument(source, text, buildTargets.inferBuildTarget(source))
+
+  override def textDocument(
+      source: AbsolutePath,
+      text: String,
+      buildTarget: Option[BuildTargetIdentifier],
+  ): s.TextDocument = {
     val workDir = AbsolutePath(
       Files.createTempDirectory("metals-javac-semanticdb")
     )
@@ -60,8 +84,7 @@ class DownloadedJavaInteractiveSemanticdb(
       }
 
     val sourceRoot = localSource.parent
-    val targetClasspath = buildTargets
-      .inferBuildTarget(source)
+    val targetClasspath = buildTarget
       .flatMap(buildTargets.targetJarClasspath)
       .getOrElse(Nil)
       .map(_.toString)
