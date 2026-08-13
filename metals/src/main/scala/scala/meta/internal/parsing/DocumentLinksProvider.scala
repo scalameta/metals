@@ -212,8 +212,9 @@ final class DocumentLinksProvider(
       val allCandidates = symbolCandidates ++ importedSymbols
       val locationsFromDefinition = for {
         provider <- definitionProvider
-        locs <- allCandidates
-          .map(sym => provider.fromSymbol(sym, Some(path)))
+        // Lazily, so a candidate after the first one to resolve costs no lookup.
+        locs <- allCandidates.view
+          .map(candidate => provider.fromSymbol(candidate, Some(path)))
           .find(!_.isEmpty)
       } yield locs
 
@@ -243,15 +244,16 @@ final class DocumentLinksProvider(
   }
 
   /**
-   * Converts a Javadoc-style reference to candidate SemanticDB symbols.
-   * Returns multiple candidates for simple class names to handle same-package references.
+   * Converts a Javadoc-style reference to candidate SemanticDB symbols, the
+   * most likely first, see [[classRefToSymbols]].
    *
-   * For "ConnectorPageSourceProvider" in package "com.example":
-   *   - First tries "com/example/ConnectorPageSourceProvider#" (same package)
-   *   - Then falls back to "ConnectorPageSourceProvider#" (unqualified)
+   * For "PageSourceProvider" in package "com.example":
+   *   - First tries "com/example/PageSourceProvider#" (same package)
+   *   - Then falls back to "PageSourceProvider#" (unqualified)
    *
-   * For fully qualified "java.util.List":
-   *   - Returns only "java/util/List#"
+   * For fully qualified "java.util.Map.Entry":
+   *   - First tries "java/util/Map#Entry#" (Entry nested in Map)
+   *   - Then "java/util/Map/Entry#" (Entry in package java.util.Map)
    */
   private def javadocRefToSemanticdbSymbols(
       ref: String,
@@ -261,63 +263,124 @@ final class DocumentLinksProvider(
     cleanRef.split("#", 2) match {
       case Array(classRef, memberRef) if classRef.nonEmpty =>
         val classSymbols = classRefToSymbols(classRef, fileUri)
-        if (memberRef.nonEmpty)
+        if (memberRef.isEmpty) classSymbols
+        else if (isJavaIdentifier(memberRef))
           classSymbols.map(_ + memberRef + "().")
-        else
-          classSymbols
+        else Nil
       case Array(classRef) =>
         classRefToSymbols(classRef, fileUri)
       case Array("", memberRef) =>
-        List(resolveLocalMemberSymbol(memberRef, fileUri))
+        resolveLocalMemberSymbol(memberRef, fileUri)
       case _ =>
-        List(ref)
+        Nil
     }
   }
 
   /**
-   * Converts a class reference to candidate SemanticDB symbols.
-   * For simple names (no dots), tries same-package first.
+   * Whether every `.` or `/` separated part of the reference is a Java
+   * identifier. The limit of -1 keeps the empty part left by a trailing
+   * separator, so `com/other/Outer.` fails.
+   */
+  private def isJavaIdentifier(reference: String): Boolean =
+    reference
+      .split("[./]", -1)
+      .forall(part =>
+        part.headOption.exists(Character.isJavaIdentifierStart) &&
+          part.forall(Character.isJavaIdentifierPart)
+      )
+
+  /**
+   * Converts a class reference to candidate SemanticDB symbols. It takes the
+   * readings of [[classReferenceReadings]] as written and prefixed with the
+   * current package, so `Outer.Inner` in `package a` gives `a/Outer#Inner#`.
+   *
+   * A lowercase first part is usually a package. `foo.Inner` therefore tries
+   * the prefixed readings last, and keeps them, as a class can be lowercase.
    */
   private def classRefToSymbols(
       classRef: String,
       fileUri: String,
   ): List[String] = {
-    val isSimpleName = !classRef.contains('.')
-    if (isSimpleName) {
-      val path = fileUri.toAbsolutePath
-      val packagePrefix = buffers.get(path).map(findPackageName).getOrElse("")
-      val samePackageSymbol =
-        if (packagePrefix.nonEmpty) s"$packagePrefix/$classRef#"
-        else s"$classRef#"
-      val simpleSymbol = s"$classRef#"
-      if (samePackageSymbol != simpleSymbol)
-        List(samePackageSymbol, simpleSymbol)
-      else
-        List(simpleSymbol)
-    } else {
-      List(classRef.replace('.', '/') + "#")
+    if (!isJavaIdentifier(classRef)) Nil
+    else {
+      val unqualifiedSymbols = classReferenceReadings(classRef)
+      val packagePrefix = currentPackage(fileUri)
+      val samePackageSymbols =
+        if (packagePrefix.nonEmpty)
+          unqualifiedSymbols.map(symbol => s"$packagePrefix/$symbol")
+        else Nil
+      val startsWithPackageName =
+        classRef.contains('.') && !classRef.headOption.exists(_.isUpper)
+      if (startsWithPackageName) unqualifiedSymbols ++ samePackageSymbols
+      else samePackageSymbols ++ unqualifiedSymbols
+    }
+  }
+
+  private def currentPackage(fileUri: String): String =
+    buffers.get(fileUri.toAbsolutePath).map(findPackageName).getOrElse("")
+
+  /**
+   * The readings of a class reference, since its dots don't say which of them
+   * separate packages. A reading takes some leading parts for the package and
+   * reads the rest as nested classes, the most likely reading first.
+   *
+   *   - "Outer" gives
+   *     - "Outer#"
+   *   - "outer.inner" gives
+   *     - "outer/inner#"
+   *     - "outer#inner#"
+   *   - "java.util.Map.Entry" gives
+   *     - "java/util/Map#Entry#"
+   *     - "java/util/Map/Entry#"
+   *     - "java#util#Map#Entry#"
+   *     - "java/util#Map#Entry#"
+   *
+   * By convention a package name is all lowercase and a type name starts with
+   * a capital, `java.util` and `Map` (Java Language Specification 6.1, Naming
+   * Conventions). The compiler does not enforce it, so the convention orders
+   * the readings and rules none out: a lowercase class, `outer.inner`, or a
+   * capitalized package just reads later.
+   */
+  private def classReferenceReadings(classReference: String): List[String] = {
+    val parts = classReference.split('.')
+    // The last part has to name a class, so it never belongs to the package.
+    val allButLast = parts.length - 1
+    val conventionalPackagePartCount =
+      parts.indexWhere(_.headOption.exists(_.isUpper)) match {
+        case -1 => allButLast
+        case firstCapitalized => firstCapitalized
+      }
+    val preferred = List(conventionalPackagePartCount, allButLast).distinct
+    val packagePartCounts =
+      preferred ++ (0 to allButLast).filterNot(count =>
+        preferred.contains(count)
+      )
+    for (packagePartCount <- packagePartCounts) yield {
+      val (packageParts, types) = parts.splitAt(packagePartCount)
+      (packageParts :+ types.mkString("#")).mkString("", "/", "#")
     }
   }
 
   /**
    * Resolves a local member reference (e.g., "#myMethod") against the
-   * containing class. Uses the file name to derive the class name.
+   * containing class. Uses the file name to derive the class name. Empty when
+   * the file is not in the buffers or the member is no name.
    */
   private def resolveLocalMemberSymbol(
       memberRef: String,
       fileUri: String,
-  ): String = {
+  ): List[String] = {
     val path = fileUri.toAbsolutePath
     val className = path.filename.stripSuffix(".java")
-    buffers.get(path) match {
-      case Some(content) =>
+    if (!isJavaIdentifier(memberRef)) Nil
+    else
+      buffers.get(path).toList.map { content =>
         val packageName = findPackageName(content)
         val fullClass =
           if (packageName.nonEmpty) s"$packageName/$className"
           else className
         s"$fullClass#$memberRef()."
-      case None => memberRef
-    }
+      }
   }
 
   private val packageNameRegex = raw"package\s+([\w.]+)".r
