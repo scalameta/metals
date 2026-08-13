@@ -57,6 +57,22 @@ final class Symbol private (val value: String) {
     !value.isPackage &&
     value.owner.isPackage
   }
+
+  /**
+   * The JVMS 4.2.1 binary name of the toplevel class this symbol belongs to,
+   * for example `scala/Option#get().` becomes `scala/Option`. Toplevel, because
+   * a nested class is `Outer$Inner` in a binary name but `Outer#Inner#` here.
+   */
+  def toplevelBinaryName: String =
+    toplevel.value.stripSuffix("#").stripSuffix(".")
+
+  /**
+   * [[toplevelBinaryName]] with `.` between package parts, the form
+   * `Class.forName` expects: `scala/Option#get().` becomes `scala.Option`.
+   */
+  def toplevelClassName: String =
+    toplevelBinaryName.replace('/', '.')
+
   def asNonEmpty: Option[Symbol] =
     if (isNone) None
     else Some(this)
@@ -85,6 +101,15 @@ object Symbol {
     if (sym.isEmpty) Symbol.None
     else new Symbol(sym)
   }
+
+  /**
+   * The symbol of a toplevel class named the way `Class.forName` names it, the
+   * inverse of [[Symbol.toplevelClassName]]: `scala.Option` becomes
+   * `scala/Option#`. Toplevel, since a nested class is `Outer.Inner` there but
+   * `Outer#Inner#` here.
+   */
+  def fromToplevelClassName(className: String): Symbol =
+    Symbol(className.replace('.', '/') + "#")
 
   def validated(sym: String): Either[String, Symbol] = {
     // NOTE(olafur): this validation method is hacky, we should write a proper
