@@ -40,9 +40,8 @@ class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
         typedGlobResult <- client.typedGlobSearch(
           "Hello",
           List("class", "object"),
-          Some(filePath),
         )
-        globSearchResult <- client.globSearch("Hello", Some(filePath))
+        globSearchResult <- client.globSearch("Hello")
         inspectResult <- client.inspect("com.example.Hello")
         docsResult <- client.getDocs("com.example.Hello")
         usagesResult <- client.getUsages("com.example.Hello.add")
