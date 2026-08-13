@@ -158,6 +158,41 @@ class DocumentLinksProviderSuite extends BaseSuite {
     assertEquals(links.head.getTooltip, "#myLocalMethod")
   }
 
+  test("java-empty-link-tag-ignored") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.java")
+    val content =
+      """|/**
+         | * Empty {@link }, {@link} and {@linkplain }, but a real {@link Foo}.
+         | */
+         |class App {}
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(obtained = links.length, expected = 1)
+    assertEquals(obtained = links.head.getTooltip, expected = "Foo")
+  }
+
+  test("java-empty-see-tag-ignored") {
+    val buffers = new Buffers()
+    val path = workspace.resolve("App.java")
+    val content =
+      """|/**
+         | * @see
+         | * @see java.util.List
+         | */
+         |class App {}
+         |""".stripMargin
+    buffers.put(path, content)
+    val provider = new DocumentLinksProvider(buffers, None)
+    val links = provider.getLinks(path).asScala.toList
+
+    assertEquals(obtained = links.length, expected = 1)
+    assertEquals(obtained = links.head.getTooltip, expected = "java.util.List")
+  }
+
   test("java-see-tag-captures-full-method-ref") {
     val buffers = new Buffers()
     val path = workspace.resolve("App.java")
