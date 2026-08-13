@@ -34,19 +34,56 @@ class ScaladocDefinitionProvider(
       buffer <- buffers.get(path)
       position <- params.getPosition().toMeta(Input.String(buffer))
       symbol <- extractScalaDocLinkAtPos(buffer, position, isScala3)
-      contextSymbols = getContext(path, position)
-      scalaMetaSymbols = symbol.toScalaMetaSymbols(contextSymbols)
+      contextSymbols = getContext(path, position, isScala3)
+      symbolGroups = symbol.toScalaMetaSymbolGroups(contextSymbols)
       _ = scribe.debug(
-        s"looking for definition for scaladoc symbol: $symbol considering alternatives: ${scalaMetaSymbols
+        s"looking for definition for scaladoc symbol: $symbol considering alternatives: ${symbolGroups.flatten
             .map(_.showSymbol)
             .mkString(", ")}"
       )
-      definitionResult <- scalaMetaSymbols.collectFirst { sym =>
+      definitionResult <- symbolGroups.view
+        .flatMap(resolveGroup(_, path, isScala3))
+        .headOption
+    } yield definitionResult
+  }
+
+  // Scala 2 binds an ambiguous `[[Name]]` type-before-value (first match);
+  // Scala 3 first-in-source-order among same-file candidates (scalameta/metals#3383).
+  private def resolveGroup(
+      group: List[ScalaDocLinkSymbol],
+      path: AbsolutePath,
+      isScala3: Boolean,
+  ): Option[DefinitionResult] = {
+    def firstMatch: Option[DefinitionResult] =
+      group.collectFirst { sym =>
         search(sym, path) match {
           case Some(value) => value
         }
       }
-    } yield definitionResult
+    if (!isScala3) firstMatch
+    else {
+      val resolved = group
+        .flatMap(sym => search(sym, path))
+        .filter(_.locations.asScala.nonEmpty)
+      resolved match {
+        case Nil => None
+        case single :: Nil => Some(single)
+        case many =>
+          val sameFile =
+            many
+              .map(_.locations.asScala.head.getUri)
+              .distinct
+              .lengthCompare(1) == 0
+          if (sameFile)
+            // minBy keeps the FIRST minimum, so equal positions (synthetic
+            // companions) fall back to descriptor precedence.
+            Some(many.minBy { result =>
+              val start = result.locations.asScala.head.getRange.getStart
+              (start.getLine, start.getCharacter)
+            })
+          else firstMatch
+      }
+    }
   }
 
   private def search(symbol: ScalaDocLinkSymbol, path: AbsolutePath) =
@@ -107,19 +144,126 @@ class ScaladocDefinitionProvider(
   private def getContext(
       path: AbsolutePath,
       pos: Position,
+      isScala3: Boolean,
   ): ContextSymbols = {
+    // Encode a name as its SemanticDB descriptor: backticked by its CHARACTERS
+    // (dots/spaces), never for keywords (scalameta/metals#3383).
+    def descName(value: String): String = {
+      def plain(c: Char) = c.isLetterOrDigit || c == '_' || c == '$'
+      def operator(c: Char) = "!#%&*+-/:<=>?@\\^|~".contains(c)
+      if (value.nonEmpty && (value.forall(plain) || value.forall(operator)))
+        value
+      else s"`$value`"
+    }
     def extractName(ref: Term): String =
       ref match {
-        case Term.Select(qual, name) => s"${extractName(qual)}/${name.value}"
-        case Term.Name(name) => name
+        case Term.Select(qual, name) =>
+          s"${extractName(qual)}/${descName(name.value)}"
+        case name: Term.Name => descName(name.value)
         case _ => ""
       }
+
+    // The Scala 3 synthetic object owning this file's top-level members
+    // (`Main.scala` → `Main$package`) (scalameta/metals#3383).
+    val filePackageObject: String = {
+      val filename = path.filename
+      val dot = filename.lastIndexOf('.')
+      val stem = if (dot > 0) filename.substring(0, dot) else filename
+      descName(s"$stem$$package")
+    }
 
     def enclosedChild(tree: Tree): Option[Tree] =
       tree.children
         .find { child =>
           child.pos.start <= pos.start && pos.start <= child.pos.end
         }
+
+    // The owner context of ONE tree node; non-owner nodes are transparent
+    // (scalameta/metals#3383).
+    def contextOf(
+        tree: Tree,
+        enclosingPackagePath: String,
+        enclosingSymbol: String,
+        alternativeEnclosingSymbol: Option[String],
+    ): (String, String, Option[String]) =
+      tree match {
+        case Pkg(name, _) =>
+          (
+            s"$enclosingPackagePath${extractName(name)}/",
+            enclosingSymbol,
+            None,
+          )
+        case d: Pkg.Object =>
+          // A package object extends the package and owns a `package.`
+          // template (scalameta/metals#3383).
+          (
+            s"$enclosingPackagePath${descName(d.name.value)}/",
+            s"${enclosingSymbol}package.",
+            None,
+          )
+        case d: Defn.Object =>
+          (
+            enclosingPackagePath,
+            s"$enclosingSymbol${descName(d.name.value)}.",
+            None,
+          )
+        case d: Defn.Class =>
+          (
+            enclosingPackagePath,
+            s"$enclosingSymbol${descName(d.name.value)}#",
+            None,
+          )
+        case d: Defn.Trait =>
+          (
+            enclosingPackagePath,
+            s"$enclosingSymbol${descName(d.name.value)}#",
+            None,
+          )
+        case d: Defn.Enum =>
+          (
+            enclosingPackagePath,
+            s"$enclosingSymbol${descName(d.name.value)}#",
+            Some(s"$enclosingSymbol${descName(d.name.value)}."),
+          )
+        case d: Defn.EnumCase =>
+          // Enum cases live in the enum's COMPANION; a parameterized case is
+          // a case class (`Case#`) (scalameta/metals#3383).
+          val base = alternativeEnclosingSymbol.getOrElse(enclosingSymbol)
+          val name = descName(d.name.value)
+          if (d.ctor.paramss.flatten.nonEmpty)
+            (
+              enclosingPackagePath,
+              s"$base$name#",
+              Some(s"$base$name."),
+            )
+          else
+            (
+              enclosingPackagePath,
+              s"$base$name.",
+              Some(s"$base$name#"),
+            )
+        case d: Defn.Given if d.name.value.nonEmpty =>
+          // A named given owns members under `name#` but is itself the value
+          // `name.`; offer both (scalameta/metals#3383).
+          (
+            enclosingPackagePath,
+            s"$enclosingSymbol${descName(d.name.value)}#",
+            Some(s"$enclosingSymbol${descName(d.name.value)}."),
+          )
+        case (_: Defn.Def | _: Defn.Val | _: Defn.Var | _: Defn.Type)
+            if isScala3 && enclosingSymbol.isEmpty =>
+          // A Scala 3 top-level member's owner is the file's synthetic
+          // `<file>$package` object (scalameta/metals#3383).
+          (
+            enclosingPackagePath,
+            s"$filePackageObject.",
+            None,
+          )
+        // Includes an anonymous given (`given_<type>` can't be rebuilt from
+        // syntax) — a safe miss (scalameta/metals#3383).
+        case _ =>
+          (enclosingPackagePath, enclosingSymbol, alternativeEnclosingSymbol)
+      }
 
     def loop(
         tree: Tree,
@@ -132,31 +276,12 @@ class ScaladocDefinitionProvider(
         enclosingSymbol1,
         alternativeEnclosingSymbol1,
       ) =
-        tree match {
-          case Pkg(name, _) =>
-            (
-              s"$enclosingPackagePath${extractName(name)}/",
-              enclosingSymbol,
-              None,
-            )
-          case d: Defn.Object =>
-            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}.", None)
-          case d: Defn.Class =>
-            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
-          case d: Defn.Trait =>
-            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
-          case d: Defn.Enum =>
-            (
-              enclosingPackagePath,
-              s"$enclosingSymbol${d.name.value}#",
-              Some(s"$enclosingSymbol${d.name.value}."),
-            )
-          case d: Defn.Given =>
-            (enclosingPackagePath, s"$enclosingSymbol${d.name.value}#", None)
-          case _ =>
-            (enclosingPackagePath, enclosingSymbol, alternativeEnclosingSymbol)
-        }
-
+        contextOf(
+          tree,
+          enclosingPackagePath,
+          enclosingSymbol,
+          alternativeEnclosingSymbol,
+        )
       enclosedChild(tree)
         .map(
           loop(
@@ -167,7 +292,32 @@ class ScaladocDefinitionProvider(
           )
         )
         .getOrElse {
-          (enclosingPackagePath1, enclosingSymbol1, alternativeEnclosingSymbol1)
+          // A leading doc comment encloses no child; resolve against the
+          // member FOLLOWING it, not the enclosing owner (scalameta/metals#3383).
+          tree.children.find(_.pos.start >= pos.start) match {
+            case Some(member0) =>
+              // scalameta wraps package statements in a `Pkg.Body`; descend
+              // through the wrapper (scalameta/metals#3383).
+              val member = member0 match {
+                case body: Pkg.Body =>
+                  body.children
+                    .find(_.pos.start >= pos.start)
+                    .getOrElse(member0)
+                case other => other
+              }
+              contextOf(
+                member,
+                enclosingPackagePath1,
+                enclosingSymbol1,
+                alternativeEnclosingSymbol1,
+              )
+            case None =>
+              (
+                enclosingPackagePath1,
+                enclosingSymbol1,
+                alternativeEnclosingSymbol1,
+              )
+          }
         }
     }
 
@@ -197,6 +347,13 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
   def toScalaMetaSymbols(
       contextSymbols: => ContextSymbols
   ): List[ScalaDocLinkSymbol] =
+    toScalaMetaSymbolGroups(contextSymbols).flatten
+
+  // One precedence-ordered candidate group per link interpretation
+  // (`this.`-relative, package-relative, fully-qualified) (scalameta/metals#3383).
+  def toScalaMetaSymbolGroups(
+      contextSymbols: => ContextSymbols
+  ): List[List[ScalaDocLinkSymbol]] =
     if (rawSymbol.isEmpty()) List.empty
     else {
       val (symbol0, symbolType) = symbolWithType
@@ -225,23 +382,21 @@ case class ScalaDocLink(rawSymbol: String, isScala3: Boolean) {
               contextSymbols.withPackage(symbol)
         }
 
-      symbolType match {
-        case ScalaDocLink.SymbolType.Method =>
-          withPrefixes.flatMap(sym => List(MethodSymbol(sym)))
-        case ScalaDocLink.SymbolType.Value =>
-          withPrefixes.flatMap(sym =>
+      withPrefixes.map { sym =>
+        symbolType match {
+          case ScalaDocLink.SymbolType.Method =>
+            List(MethodSymbol(sym))
+          case ScalaDocLink.SymbolType.Value =>
             List(StringSymbol(s"$sym."), MethodSymbol(sym))
-          )
-        case ScalaDocLink.SymbolType.Type =>
-          withPrefixes.flatMap(sym => List(StringSymbol(s"$sym#")))
-        case ScalaDocLink.SymbolType.Any =>
-          withPrefixes.flatMap(sym =>
+          case ScalaDocLink.SymbolType.Type =>
+            List(StringSymbol(s"$sym#"))
+          case ScalaDocLink.SymbolType.Any =>
             List(
               StringSymbol(s"$sym#"),
               StringSymbol(s"$sym."),
               MethodSymbol(sym),
             )
-          )
+        }
       }
     }
 
