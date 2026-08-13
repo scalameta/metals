@@ -4,7 +4,6 @@ import scala.concurrent.duration.Duration
 import scala.util.Try
 
 import scala.meta.internal.metals.Configs._
-import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
