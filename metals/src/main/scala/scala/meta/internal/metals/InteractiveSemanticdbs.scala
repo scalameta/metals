@@ -2,6 +2,9 @@ package scala.meta.internal.metals
 
 import java.nio.charset.Charset
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.locks.ReentrantReadWriteLock
 
 import scala.util.Failure
@@ -43,9 +46,13 @@ final class InteractiveSemanticdbs(
 
   private val textDocumentCache =
     new InteractiveSemanticdbCache[AbsolutePath, s.TextDocument]()
+  private val compilationMetrics = new InteractiveSemanticdbCompilationMetrics()
+  private val nextCompilerLaneId = new AtomicLong()
   // Weak keys avoid extending the lifetime of evicted presentation compilers.
   private val compilerLanes =
-    new MapMaker().weakKeys().makeMap[AnyRef, Object]()
+    new MapMaker()
+      .weakKeys()
+      .makeMap[AnyRef, InteractiveSemanticdbCompilationLaneIdentity]()
 
   def reset(): Unit = {
     textDocumentCache.clear()
@@ -53,6 +60,7 @@ final class InteractiveSemanticdbs(
 
   override def cancel(): Unit = {
     reset()
+    compilationMetrics.logSummary()
   }
 
   override def textDocument(
@@ -151,8 +159,14 @@ final class InteractiveSemanticdbs(
   ): InteractiveSemanticdbCompilation =
     if (source.isJavaFilename) {
       val buildTarget = buildTargets.inferBuildTarget(source)
+      compilationMetrics.recordSelection(
+        InteractiveSemanticdbCompilationLaneKind.Java
+      )
       new InteractiveSemanticdbCompilation(
-        compilationLane(javaInteractiveSemanticdb),
+        compilationLane(
+          javaInteractiveSemanticdb,
+          InteractiveSemanticdbCompilationLaneKind.Java,
+        ),
         InteractiveSemanticdbCompilationContext.Java(
           buildTarget.map(_.getUri())
         ),
@@ -160,19 +174,42 @@ final class InteractiveSemanticdbs(
       )
     } else {
       val selectedCompilers = compilers()
-      val compiler = selectedCompilers.semanticdbCompiler(source)
-      val lane = compilationLane(compiler)
+      val selection = selectedCompilers.semanticdbCompiler(source)
+      val kind =
+        if (selection.isFallback)
+          InteractiveSemanticdbCompilationLaneKind.ScalaFallback
+        else InteractiveSemanticdbCompilationLaneKind.ScalaTarget
+      compilationMetrics.recordSelection(kind)
+      val lane = compilationLane(selection.compiler, kind)
       new InteractiveSemanticdbCompilation(
         lane,
         InteractiveSemanticdbCompilationContext.Scala(lane),
-        () => selectedCompilers.semanticdbTextDocument(source, text, compiler),
+        () =>
+          selectedCompilers.semanticdbTextDocument(
+            source,
+            text,
+            selection.compiler,
+          ),
       )
     }
 
   private def compilationLane(
-      compiler: AnyRef
+      compiler: AnyRef,
+      kind: InteractiveSemanticdbCompilationLaneKind,
   ): InteractiveSemanticdbCompilationLane = {
-    val identity = compilerLanes.computeIfAbsent(compiler, _ => new Object())
+    val identity = compilerLanes.computeIfAbsent(
+      compiler,
+      _ => {
+        val laneId = nextCompilerLaneId.incrementAndGet()
+        compilationMetrics.recordLaneCreated(kind)
+        new InteractiveSemanticdbCompilationLaneIdentity(
+          new Object(),
+          laneId,
+          kind,
+          compilationMetrics,
+        )
+      },
+    )
     InteractiveSemanticdbCompilationLane(identity)
   }
 
@@ -185,6 +222,11 @@ private[metals] final class InteractiveSemanticdbCompilation(
 ) {
   def run(): Try[s.TextDocument] = Try(compile())
 }
+
+private[metals] final class InteractiveSemanticdbCompilerSelection(
+    val compiler: scala.meta.pc.PresentationCompiler,
+    val isFallback: Boolean,
+)
 
 private[metals] final class InteractiveSemanticdbCache[K, V <: AnyRef] {
   private val values =
@@ -273,21 +315,191 @@ private[metals] object InteractiveSemanticdbCompilationContext {
       extends InteractiveSemanticdbCompilationContext
 }
 
+private[metals] sealed abstract class InteractiveSemanticdbCompilationLaneKind(
+    val label: String
+)
+
+private[metals] object InteractiveSemanticdbCompilationLaneKind {
+  case object ScalaTarget
+      extends InteractiveSemanticdbCompilationLaneKind("scala-target")
+  case object ScalaFallback
+      extends InteractiveSemanticdbCompilationLaneKind("scala-fallback")
+  case object Java extends InteractiveSemanticdbCompilationLaneKind("java")
+}
+
+private[metals] final class InteractiveSemanticdbCompilationLaneIdentity(
+    val monitor: Object,
+    val id: Long,
+    val kind: InteractiveSemanticdbCompilationLaneKind,
+    val metrics: InteractiveSemanticdbCompilationMetrics,
+)
+
 private[metals] final class InteractiveSemanticdbCompilationLane private (
-    private val compiler: AnyRef
+    private val identity: InteractiveSemanticdbCompilationLaneIdentity
 ) {
   override def equals(other: Any): Boolean = other match {
     case that: InteractiveSemanticdbCompilationLane =>
-      compiler eq that.compiler
+      identity.monitor eq that.identity.monitor
     case _ => false
   }
 
-  override def hashCode(): Int = System.identityHashCode(compiler)
+  override def hashCode(): Int = System.identityHashCode(identity.monitor)
 
-  def serialized[A](action: => A): A = compiler.synchronized(action)
+  def serialized[A](action: => A): A =
+    identity.metrics.measure(
+      identity.id,
+      identity.kind,
+      identity.monitor,
+    )(action)
 }
 
 private[metals] object InteractiveSemanticdbCompilationLane {
   def apply(compiler: AnyRef): InteractiveSemanticdbCompilationLane =
-    new InteractiveSemanticdbCompilationLane(compiler)
+    create(
+      compiler,
+      id = 1L,
+      InteractiveSemanticdbCompilationLaneKind.ScalaTarget,
+      new InteractiveSemanticdbCompilationMetrics(),
+    )
+
+  private[metals] def create(
+      monitor: AnyRef,
+      id: Long,
+      kind: InteractiveSemanticdbCompilationLaneKind,
+      metrics: InteractiveSemanticdbCompilationMetrics,
+  ): InteractiveSemanticdbCompilationLane =
+    new InteractiveSemanticdbCompilationLane(
+      new InteractiveSemanticdbCompilationLaneIdentity(
+        monitor,
+        id,
+        kind,
+        metrics,
+      )
+    )
 }
+
+private[metals] final class InteractiveSemanticdbCompilationMetrics(
+    nanoTime: () => Long = () => System.nanoTime()
+) {
+  private val scalaTargetSelections = new LongAdder()
+  private val scalaFallbackSelections = new LongAdder()
+  private val javaSelections = new LongAdder()
+  private val scalaTargetLanes = new LongAdder()
+  private val scalaFallbackLanes = new LongAdder()
+  private val javaLanes = new LongAdder()
+  private val scalaTargetCompilations = new LongAdder()
+  private val scalaFallbackCompilations = new LongAdder()
+  private val javaCompilations = new LongAdder()
+  private val totalQueueNanos = new LongAdder()
+  private val maximumQueueNanos = new AtomicLong()
+  private val totalCompilationNanos = new LongAdder()
+  private val maximumCompilationNanos = new AtomicLong()
+  private val activeLanes = new AtomicInteger()
+  private val maximumActiveLanes = new AtomicInteger()
+
+  def recordSelection(kind: InteractiveSemanticdbCompilationLaneKind): Unit =
+    kind match {
+      case InteractiveSemanticdbCompilationLaneKind.ScalaTarget =>
+        scalaTargetSelections.increment()
+      case InteractiveSemanticdbCompilationLaneKind.ScalaFallback =>
+        scalaFallbackSelections.increment()
+      case InteractiveSemanticdbCompilationLaneKind.Java =>
+        javaSelections.increment()
+    }
+
+  def recordLaneCreated(
+      kind: InteractiveSemanticdbCompilationLaneKind
+  ): Unit = counterForKind(
+    kind,
+    scalaTargetLanes,
+    scalaFallbackLanes,
+    javaLanes,
+  ).increment()
+
+  def measure[A](
+      laneId: Long,
+      kind: InteractiveSemanticdbCompilationLaneKind,
+      monitor: Object,
+  )(action: => A): A = {
+    val queuedAt = nanoTime()
+    monitor.synchronized {
+      val compilationStartedAt = nanoTime()
+      val queueNanos = compilationStartedAt - queuedAt
+      val active = activeLanes.incrementAndGet()
+      maximumActiveLanes.accumulateAndGet(active, Math.max)
+      counterForKind(
+        kind,
+        scalaTargetCompilations,
+        scalaFallbackCompilations,
+        javaCompilations,
+      ).increment()
+      try action
+      finally {
+        val compilationNanos = nanoTime() - compilationStartedAt
+        activeLanes.decrementAndGet()
+        totalQueueNanos.add(queueNanos)
+        maximumQueueNanos.accumulateAndGet(queueNanos, Math.max)
+        totalCompilationNanos.add(compilationNanos)
+        maximumCompilationNanos.accumulateAndGet(compilationNanos, Math.max)
+        scribe.debug(
+          s"Interactive SemanticDB compiler lane completed: lane_id=$laneId lane_kind=${kind.label} queue_ms=${nanosToMillis(queueNanos)} compilation_ms=${nanosToMillis(compilationNanos)} active_lanes=$active maximum_active_lanes=${maximumActiveLanes.get()}"
+        )
+      }
+    }
+  }
+
+  def snapshot: InteractiveSemanticdbCompilationMetricsSnapshot =
+    new InteractiveSemanticdbCompilationMetricsSnapshot(
+      scalaTargetSelections.sum(),
+      scalaFallbackSelections.sum(),
+      javaSelections.sum(),
+      scalaTargetLanes.sum(),
+      scalaFallbackLanes.sum(),
+      javaLanes.sum(),
+      scalaTargetCompilations.sum(),
+      scalaFallbackCompilations.sum(),
+      javaCompilations.sum(),
+      totalQueueNanos.sum(),
+      maximumQueueNanos.get(),
+      totalCompilationNanos.sum(),
+      maximumCompilationNanos.get(),
+      maximumActiveLanes.get(),
+    )
+
+  def logSummary(): Unit = {
+    val current = snapshot
+    scribe.debug(
+      s"Interactive SemanticDB compiler lane summary: scala_target_selections=${current.scalaTargetSelections} scala_fallback_selections=${current.scalaFallbackSelections} java_selections=${current.javaSelections} scala_target_lanes=${current.scalaTargetLanes} scala_fallback_lanes=${current.scalaFallbackLanes} java_lanes=${current.javaLanes} scala_target_compilations=${current.scalaTargetCompilations} scala_fallback_compilations=${current.scalaFallbackCompilations} java_compilations=${current.javaCompilations} total_queue_ms=${nanosToMillis(current.totalQueueNanos)} maximum_queue_ms=${nanosToMillis(current.maximumQueueNanos)} total_compilation_ms=${nanosToMillis(current.totalCompilationNanos)} maximum_compilation_ms=${nanosToMillis(current.maximumCompilationNanos)} maximum_active_lanes=${current.maximumActiveLanes}"
+    )
+  }
+
+  private def counterForKind(
+      kind: InteractiveSemanticdbCompilationLaneKind,
+      scalaTarget: LongAdder,
+      scalaFallback: LongAdder,
+      java: LongAdder,
+  ): LongAdder = kind match {
+    case InteractiveSemanticdbCompilationLaneKind.ScalaTarget => scalaTarget
+    case InteractiveSemanticdbCompilationLaneKind.ScalaFallback => scalaFallback
+    case InteractiveSemanticdbCompilationLaneKind.Java => java
+  }
+
+  private def nanosToMillis(nanos: Long): Long = nanos / 1000000L
+}
+
+private[metals] final class InteractiveSemanticdbCompilationMetricsSnapshot(
+    val scalaTargetSelections: Long,
+    val scalaFallbackSelections: Long,
+    val javaSelections: Long,
+    val scalaTargetLanes: Long,
+    val scalaFallbackLanes: Long,
+    val javaLanes: Long,
+    val scalaTargetCompilations: Long,
+    val scalaFallbackCompilations: Long,
+    val javaCompilations: Long,
+    val totalQueueNanos: Long,
+    val maximumQueueNanos: Long,
+    val totalCompilationNanos: Long,
+    val maximumCompilationNanos: Long,
+    val maximumActiveLanes: Int,
+)

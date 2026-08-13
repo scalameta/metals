@@ -45,6 +45,7 @@ import ch.epfl.scala.bsp4j.CompileReport
 import com.google.common.cache.CacheBuilder
 import com.google.common.cache.RemovalListener
 import com.google.common.cache.RemovalNotification
+import com.google.common.collect.MapMaker
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionList
@@ -162,6 +163,10 @@ class Compilers(
     presentationCompilerWorksheetsCache.asMap()
 
   private val worksheetsDigests = new TrieMap[AbsolutePath, String]()
+  private val fallbackCompilerIdentities =
+    new MapMaker()
+      .weakKeys()
+      .makeMap[PresentationCompiler, java.lang.Boolean]()
 
   private val cache = jcache.asScala
   private def buildTargetPCFromCache(
@@ -175,7 +180,7 @@ class Compilers(
 
   // The "fallback" compiler is used for source files that don't belong to a build target.
   private def fallbackCompiler: PresentationCompiler = {
-    jcache
+    val compiler = jcache
       .compute(
         PresentationCompilerKey.DefaultScala,
         (_, value) => {
@@ -206,6 +211,8 @@ class Compilers(
         },
       )
       .await
+    fallbackCompilerIdentities.put(compiler, java.lang.Boolean.TRUE)
+    compiler
   }
 
   private def javaFallbackCompiler: PresentationCompiler = {
@@ -1756,8 +1763,13 @@ class Compilers(
 
   private[metals] def semanticdbCompiler(
       source: AbsolutePath
-  ): PresentationCompiler =
-    loadCompiler(source).getOrElse(fallbackCompiler)
+  ): InteractiveSemanticdbCompilerSelection = {
+    val compiler = loadCompiler(source).getOrElse(fallbackCompiler)
+    new InteractiveSemanticdbCompilerSelection(
+      compiler,
+      isFallback = fallbackCompilerIdentities.containsKey(compiler),
+    )
+  }
 
   def semanticdbTextDocument(
       source: AbsolutePath,

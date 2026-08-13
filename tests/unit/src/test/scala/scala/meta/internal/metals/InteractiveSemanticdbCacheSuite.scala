@@ -138,7 +138,7 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
     laneA,
   )
 
-  executionContext.test("different-target misses compile concurrently") {
+  executionContext.test("different-compiler misses compile concurrently") {
     implicit ec =>
       val cache = new InteractiveSemanticdbCache[String, String]()
       val workersReady = new CountDownLatch(2)
@@ -172,6 +172,85 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
         assertEquals(firstResult, "A.scala")
         assertEquals(secondResult, "B.scala")
       }
+  }
+
+  executionContext.test("metrics observe concurrent compiler lanes") {
+    implicit ec =>
+      val cache = new InteractiveSemanticdbCache[String, String]()
+      val metrics = new InteractiveSemanticdbCompilationMetrics()
+      val firstLane = InteractiveSemanticdbCompilationLane.create(
+        new Object(),
+        id = 1L,
+        InteractiveSemanticdbCompilationLaneKind.ScalaTarget,
+        metrics,
+      )
+      val secondLane = InteractiveSemanticdbCompilationLane.create(
+        new Object(),
+        id = 2L,
+        InteractiveSemanticdbCompilationLaneKind.ScalaTarget,
+        metrics,
+      )
+      val compileEntered = new CountDownLatch(2)
+      val releaseCompile = new CountDownLatch(1)
+
+      def lookup(path: String, lane: InteractiveSemanticdbCompilationLane) =
+        Future {
+          compute(cache, path, lane, _ => false) { _ =>
+            compileEntered.countDown()
+            await(releaseCompile, "release of measured compilations")
+            path
+          }
+        }
+
+      val first = lookup("A.scala", firstLane)
+      val second = lookup("B.scala", secondLane)
+      withRelease(releaseCompile) {
+        await(compileEntered, "both measured compiler lanes")
+      }
+
+      for {
+        _ <- first
+        _ <- second
+      } yield {
+        val snapshot = metrics.snapshot
+        assertEquals(snapshot.scalaTargetCompilations, 2L)
+        assertEquals(snapshot.scalaFallbackCompilations, 0L)
+        assertEquals(snapshot.maximumActiveLanes, 2)
+      }
+  }
+
+  test("metrics retain lane classes and timing") {
+    val millisecond = 1000000L
+    val timestamps = Iterator(0L, 5L * millisecond, 15L * millisecond)
+    val metrics =
+      new InteractiveSemanticdbCompilationMetrics(() => timestamps.next())
+    val lane = InteractiveSemanticdbCompilationLane.create(
+      new Object(),
+      id = 7L,
+      InteractiveSemanticdbCompilationLaneKind.ScalaFallback,
+      metrics,
+    )
+    metrics.recordSelection(
+      InteractiveSemanticdbCompilationLaneKind.ScalaFallback
+    )
+    metrics.recordLaneCreated(
+      InteractiveSemanticdbCompilationLaneKind.ScalaFallback
+    )
+
+    assertEquals(lane.serialized("compiled"), "compiled")
+
+    val snapshot = metrics.snapshot
+    assertEquals(snapshot.scalaTargetSelections, 0L)
+    assertEquals(snapshot.scalaFallbackSelections, 1L)
+    assertEquals(snapshot.javaSelections, 0L)
+    assertEquals(snapshot.scalaTargetLanes, 0L)
+    assertEquals(snapshot.scalaFallbackLanes, 1L)
+    assertEquals(snapshot.scalaFallbackCompilations, 1L)
+    assertEquals(snapshot.totalQueueNanos, 5L * millisecond)
+    assertEquals(snapshot.maximumQueueNanos, 5L * millisecond)
+    assertEquals(snapshot.totalCompilationNanos, 10L * millisecond)
+    assertEquals(snapshot.maximumCompilationNanos, 10L * millisecond)
+    assertEquals(snapshot.maximumActiveLanes, 1)
   }
 
   executionContext.test(
