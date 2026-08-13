@@ -210,7 +210,7 @@ final class InteractiveSemanticdbs(
         )
       },
     )
-    InteractiveSemanticdbCompilationLane(identity)
+    InteractiveSemanticdbCompilationLane.fromIdentity(identity)
   }
 
 }
@@ -376,6 +376,11 @@ private[metals] object InteractiveSemanticdbCompilationLane {
         metrics,
       )
     )
+
+  private[metals] def fromIdentity(
+      identity: InteractiveSemanticdbCompilationLaneIdentity
+  ): InteractiveSemanticdbCompilationLane =
+    new InteractiveSemanticdbCompilationLane(identity)
 }
 
 private[metals] final class InteractiveSemanticdbCompilationMetrics(

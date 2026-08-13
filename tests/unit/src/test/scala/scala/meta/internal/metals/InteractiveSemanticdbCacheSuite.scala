@@ -253,6 +253,25 @@ class InteractiveSemanticdbCacheSuite extends FunSuite {
     assertEquals(snapshot.maximumActiveLanes, 1)
   }
 
+  test("lane wrapper preserves registered identity metrics") {
+    val metrics = new InteractiveSemanticdbCompilationMetrics()
+    val identity = new InteractiveSemanticdbCompilationLaneIdentity(
+      new Object(),
+      id = 7L,
+      InteractiveSemanticdbCompilationLaneKind.Java,
+      metrics,
+    )
+    val lane = InteractiveSemanticdbCompilationLane.fromIdentity(identity)
+
+    assertEquals(lane.serialized("compiled"), "compiled")
+
+    val snapshot = metrics.snapshot
+    assertEquals(snapshot.scalaTargetCompilations, 0L)
+    assertEquals(snapshot.scalaFallbackCompilations, 0L)
+    assertEquals(snapshot.javaCompilations, 1L)
+    assertEquals(snapshot.maximumActiveLanes, 1)
+  }
+
   executionContext.test(
     "hash-colliding keys on different compilers compile concurrently"
   ) { implicit ec =>
