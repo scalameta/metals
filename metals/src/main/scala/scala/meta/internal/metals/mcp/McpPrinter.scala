@@ -44,6 +44,22 @@ object McpPrinter {
     def show: String = result.map(_.show).sorted.mkString("\n")
   }
 
+  implicit class XtensionGlobSearchResult(result: GlobSearchResult) {
+    def show: String = {
+      // `McpQueryEngine.normalize` guarantees dedupe, cap and display order
+      val body =
+        if (result.results.isEmpty) "No symbols found."
+        else result.results.map(_.show).mkString("\n")
+      if (result.cappedByResultLimit)
+        body + s"\n\n[Showing ${result.results.size} results; " +
+          "additional matches may exist. Narrow the query.]"
+      else if (result.searchBudgetExhausted)
+        body + "\n\n[The search stopped early, matches may exist beyond it. " +
+          "Use a longer or more specific query.]"
+      else body
+    }
+  }
+
   implicit class XtensionSymbolDocumentation(
       result: SymbolDocumentationSearchResult
   ) {
