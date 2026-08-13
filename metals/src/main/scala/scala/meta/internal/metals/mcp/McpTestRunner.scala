@@ -48,7 +48,9 @@ class McpTestRunner(
       }
       id <- buildTargets
         .inverseSources(path)
-        .toRight(s"Could not find build target for $path")
+        .toRight(
+          s"Could not find build target for $path, try running `import-build`."
+        )
       jvmTestEnv = debugProvider.jvmTestEnvironment(id)
       projectFut <- debugProvider.createDebugeeProjectForTests(
         id,
