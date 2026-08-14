@@ -350,6 +350,7 @@ class DebugProvider(
         .getOrElse(Seq.empty)
 
     openLocalDebugServer(sessionName, cancelPromise) { () =>
+      val startTime = System.currentTimeMillis()
       val testParams = new b.TestParams(parameters.getTargets())
       testParams.setOriginId(ju.UUID.randomUUID().toString())
       testParams.setDataKind(parameters.getDataKind)
@@ -360,14 +361,12 @@ class DebugProvider(
         val runner = currentRunner.get()
         if (runner != null && testSuites.nonEmpty) {
           val passed = result.getStatusCode == b.StatusCode.OK
-          // 0 is an obviously untrue value - a real duration will show up in the logs.
-          // Parsing the bazel xml output is an option, but might be hard to maintain.
-          val duration = 0L
           val targetIdOpt = parameters.getTargets().asScala.headOption
           val knownTestCaseNamesFor: String => List[String] = className =>
             targetIdOpt
               .map(id => testProvider.knownTestCaseNames(id, className))
               .getOrElse(Nil)
+          val duration = System.currentTimeMillis() - startTime
           MbtTestResultAdapter
             .testSuiteSummaries(
               testSuites.toList,
