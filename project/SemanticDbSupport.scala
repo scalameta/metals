@@ -19,50 +19,54 @@ object SemanticDbSupport {
   // to have semanticdb-scalac published for those versions. This is especially important
   // when SBT updates its meta-build Scala version (e.g., 2.12.21 in SBT 1.12.0).
   val last: Map[String, String] = {
-    val result = AllScalaVersions.flatMap { scalaVersion =>
-      val available = coursierapi.Complete
-        .create()
-        .withScalaVersion(scalaVersion)
-        .withScalaBinaryVersion(scalaVersion.split('.').take(2).mkString("."))
-        .withInput(s"org.scalameta:semanticdb-scalac_$scalaVersion:")
-        .complete()
-        .getCompletions()
-        .asScala
-        .toList
+    if (manualSuiteEnabled) {
+      AllScalaVersions.map(_ -> V.scalameta).toMap
+    } else {
+      val result = AllScalaVersions.flatMap { scalaVersion =>
+        val available = coursierapi.Complete
+          .create()
+          .withScalaVersion(scalaVersion)
+          .withScalaBinaryVersion(scalaVersion.split('.').take(2).mkString("."))
+          .withInput(s"org.scalameta:semanticdb-scalac_$scalaVersion:")
+          .complete()
+          .getCompletions()
+          .asScala
+          .toList
 
-      available.reverse
-        .collectFirst {
-          case version if Version.parse(version).exists(latestVersion >= _) =>
-            version
-        }
-        .orElse {
-          // Fallback: if no version <= latestVersion exists, use the earliest available
-          if (available.nonEmpty) {
-            System.err.println(
-              s"WARNING: No semanticdb-scalac version <= ${V.scalameta} found for Scala $scalaVersion. " +
-                s"Using earliest available: ${available.head}. Consider updating V.scalameta."
-            )
-            Some(available.head)
-          } else {
-            System.err.println(
-              s"ERROR: No semanticdb-scalac versions found for Scala $scalaVersion!"
-            )
-            None
+        available.reverse
+          .collectFirst {
+            case version if Version.parse(version).exists(latestVersion >= _) =>
+              version
           }
-        }
-        .map(scalaVersion -> _)
-    }.toMap
+          .orElse {
+            // Fallback: if no version <= latestVersion exists, use the earliest available
+            if (available.nonEmpty) {
+              System.err.println(
+                s"WARNING: No semanticdb-scalac version <= ${V.scalameta} found for Scala $scalaVersion. " +
+                  s"Using earliest available: ${available.head}. Consider updating V.scalameta."
+              )
+              Some(available.head)
+            } else {
+              System.err.println(
+                s"ERROR: No semanticdb-scalac versions found for Scala $scalaVersion!"
+              )
+              None
+            }
+          }
+          .map(scalaVersion -> _)
+      }.toMap
 
-    // Validate that all Scala versions have a mapping
-    val missing = AllScalaVersions.filterNot(result.contains)
-    if (missing.nonEmpty) {
-      sys.error(
-        s"Failed to find semanticdb-scalac versions for: ${missing.mkString(", ")}. " +
-          s"This may happen if V.scalameta (${V.scalameta}) is too old."
-      )
+      // Validate that all Scala versions have a mapping
+      val missing = AllScalaVersions.filterNot(result.contains)
+      if (missing.nonEmpty) {
+        sys.error(
+          s"Failed to find semanticdb-scalac versions for: ${missing.mkString(", ")}. " +
+            s"This may happen if V.scalameta (${V.scalameta}) is too old."
+        )
+      }
+
+      result
     }
-
-    result
   }
 
   // returns versions from newest to oldest
@@ -70,4 +74,8 @@ object SemanticDbSupport {
     val desc = if (range.step > 0) range.reverse else range
     desc.map { x => s"$major.$minor.$x" }
   }
+
+  private def manualSuiteEnabled: Boolean =
+    sys.props.get("metals.manual.enabled").contains("true") ||
+      sys.env.get("METALS_MANUAL_ENABLED").contains("true")
 }
