@@ -17,12 +17,14 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 
+import com.sun.source.tree.AnnotationTree
 import com.sun.source.tree.ClassTree
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.IdentifierTree
 import com.sun.source.tree.LineMap
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
+import com.sun.source.tree.TypeCastTree
 import com.sun.source.tree.VariableTree
 import com.sun.source.util.TreePathScanner
 import com.sun.tools.javac.file.JavacFileManager
@@ -90,19 +92,115 @@ class JavaTrees(buffers: Buffers) {
       }
     } yield result
 
+  /**
+   * Finds the variable declaration enclosing `pos`.
+   *
+   * @param onNameOnly when true, `pos` must be on the variable's name
+   *   identifier; when false, anywhere within the declaration counts.
+   */
   def findEnclosingJavaVariable(
       source: AbsolutePath,
       pos: l.Position,
+      onNameOnly: Boolean = true,
   ): Option[JavaVariable] =
     for {
       text <- text(source)
       tree <- get(source)
       result <- {
-        val visitor = new EnclosingVariableFinder(tree, text, pos)
+        val visitor = new EnclosingVariableFinder(tree, text, pos, onNameOnly)
         visitor.scan(tree, ())
         visitor.result
       }
     } yield result
+
+  def findTypeCast(
+      source: AbsolutePath,
+      pos: l.Position,
+  ): Option[JavaTypeCast] =
+    for {
+      text <- text(source)
+      cu <- get(source)
+      castTree <- {
+        val visitor = new TypeCastFinder(cu, text, pos)
+        visitor.scan(cu, ())
+        visitor.result
+      }
+    } yield {
+      val treePos = new TreePositions(cu)
+      val lineMap =
+        JavacPosition.makeLineMap(text.toCharArray(), text.length(), false)
+      val castStart = treePos.startPos(castTree)
+      val castEnd = treePos.endPos(castTree)
+      val typeEnd = treePos.endPos(castTree.getType())
+      val exprStart = treePos.startPos(castTree.getExpression())
+      val exprEnd = treePos.endPos(castTree.getExpression())
+      var closeParenPos = typeEnd
+      while (closeParenPos < exprStart && text.charAt(closeParenPos) != ')')
+        closeParenPos += 1
+      val typeRangeEnd = closeParenPos + 1
+      JavaTypeCast(
+        range = JavaRange(
+          Positions.toLspRange(lineMap, castStart, castEnd, text),
+          castStart,
+          castEnd,
+        ),
+        typeRange = JavaRange(
+          Positions.toLspRange(lineMap, castStart, typeRangeEnd, text),
+          castStart,
+          typeRangeEnd,
+        ),
+        exprRange = JavaRange(
+          Positions.toLspRange(lineMap, exprStart, exprEnd, text),
+          exprStart,
+          exprEnd,
+        ),
+      )
+    }
+
+  def memberAnnotations(
+      source: AbsolutePath,
+      member: JavaMember,
+  ): List[JavaAnnotation] =
+    (for {
+      text <- text(source)
+      cu <- get(source)
+    } yield {
+      val treePos = new TreePositions(cu)
+      val lineMap =
+        JavacPosition.makeLineMap(text.toCharArray(), text.length(), false)
+      val rawAnnotations: Iterable[AnnotationTree] = member.tree match {
+        case m: MethodTree => m.getModifiers().getAnnotations().asScala
+        case v: VariableTree => v.getModifiers().getAnnotations().asScala
+        case c: ClassTree => c.getModifiers().getAnnotations().asScala
+        case _ => Iterable.empty
+      }
+      rawAnnotations.flatMap { ann =>
+        val start = treePos.startPos(ann)
+        val end = treePos.endPos(ann)
+        if (start < 0 || end < 0) None
+        else {
+          val range = JavaRange(
+            Positions.toLspRange(lineMap, start, end, text),
+            startOffset = start,
+            endOffset = end,
+          )
+          val nameStr = ann.getAnnotationType().toString()
+          val argsRange =
+            if (ann.getArguments().isEmpty()) None
+            else {
+              var openParen = start + 1
+              while (openParen < end && text.charAt(openParen) != '(')
+                openParen += 1
+              var closeParen = end - 1
+              while (closeParen > openParen && text.charAt(closeParen) != ')')
+                closeParen -= 1
+              if (openParen < closeParen) Some((openParen, closeParen))
+              else None
+            }
+          Some(JavaAnnotation(nameStr, range, argsRange))
+        }
+      }.toList
+    }).getOrElse(Nil)
 
   private def text(source: AbsolutePath): Option[String] =
     buffers.get(source).orElse(source.readTextOpt)
@@ -240,7 +338,10 @@ class JavaTrees(buffers: Buffers) {
         }
         .toList
 
-    protected def javaVariable(node: VariableTree): Option[JavaVariable] = {
+    protected def javaVariable(
+        node: VariableTree,
+        ownerKind: Tree.Kind,
+    ): Option[JavaVariable] = {
       val variableName = node.getName().toString()
       treeRange(node).map { range =>
         JavaVariable(
@@ -262,6 +363,7 @@ class JavaTrees(buffers: Buffers) {
               "var"
           },
           modifiers = node.getModifiers().getFlags().asScala.toSet,
+          ownerKind = ownerKind,
         )
       }
     }
@@ -327,6 +429,7 @@ class JavaTrees(buffers: Buffers) {
       cu: CompilationUnitTree,
       text: String,
       targetPos: l.Position,
+      onNameOnly: Boolean,
   ) extends EnclosingFinder[JavaVariable](cu, text, targetPos) {
 
     override def visitVariable(
@@ -342,8 +445,15 @@ class JavaTrees(buffers: Buffers) {
             .findNameOffset(text, nodeStart, nodeEnd, name)
             .getOrElse(nodeStart)
         val actualNodeEnd = actualNodeStart + name.length()
-        if (positionContains(targetOffset, actualNodeStart, actualNodeEnd)) {
-          _result = javaVariable(node)
+        if (
+          !onNameOnly ||
+          positionContains(targetOffset, actualNodeStart, actualNodeEnd)
+        ) {
+          val parentPath = getCurrentPath().getParentPath()
+          val ownerKind =
+            if (parentPath == null) Tree.Kind.COMPILATION_UNIT
+            else parentPath.getLeaf().getKind()
+          _result = javaVariable(node, ownerKind)
         }
       }
       super.visitVariable(node, p)
@@ -434,7 +544,7 @@ class JavaTrees(buffers: Buffers) {
                         )
                       }
                     case field: VariableTree =>
-                      javaVariable(field)
+                      javaVariable(field, Tree.Kind.CLASS)
                   }
                   .flatten
                   .toList
@@ -459,6 +569,20 @@ class JavaTrees(buffers: Buffers) {
         }
         super.visitClass(node, p)
       }
+    }
+  }
+
+  private class TypeCastFinder(
+      cu: CompilationUnitTree,
+      text: String,
+      targetPos: l.Position,
+  ) extends EnclosingFinder[TypeCastTree](cu, text, targetPos) {
+    override def visitTypeCast(node: TypeCastTree, p: Unit): Unit = {
+      val nodeStart = pos.startPos(node)
+      val nodeEnd = pos.endPos(node)
+      if (positionContains(targetOffset, nodeStart, nodeEnd))
+        _result = Some(node)
+      super.visitTypeCast(node, p)
     }
   }
 
@@ -748,7 +872,22 @@ case class JavaVariable(
     nameRange: JavaRange,
     typ: String,
     modifiers: Set[Modifier],
+    ownerKind: Tree.Kind,
 ) extends JavaMember
     with HasModifiers {
   def hasInitializer: Boolean = tree.getInitializer() != null
+  def isStandaloneDeclaration: Boolean =
+    ownerKind != Tree.Kind.METHOD && ownerKind != Tree.Kind.TRY
 }
+
+case class JavaTypeCast(
+    range: JavaRange,
+    typeRange: JavaRange,
+    exprRange: JavaRange,
+)
+
+case class JavaAnnotation(
+    name: String,
+    range: JavaRange,
+    argsRange: Option[(Int, Int)],
+)

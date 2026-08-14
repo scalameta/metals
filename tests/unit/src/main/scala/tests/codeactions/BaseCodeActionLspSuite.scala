@@ -22,6 +22,7 @@ abstract class BaseCodeActionLspSuite(
 ) extends BaseLspSuite(suiteName, initializer) {
 
   protected val scalaVersion: String = V.scala213
+  protected def javacOptions: List[String] = Nil
 
   /**
    * When set, `check` waits for a matching diagnostics publication before
@@ -121,7 +122,11 @@ abstract class BaseCodeActionLspSuite(
     val layout = overrideLayout.getOrElse {
       if (useMbtLayout) {
         val mbtJson = new MbtJsonBuilder(scalaVersion)
-          .addNamespace("a", List("a/src/main/java/**", "a/src/main/scala/**"))
+          .addNamespace(
+            "a",
+            List("a/src/main/java/**", "a/src/main/scala/**"),
+            javacOptions = javacOptions,
+          )
           .build()
         s"""/.metals/mbt.json
            |$mbtJson

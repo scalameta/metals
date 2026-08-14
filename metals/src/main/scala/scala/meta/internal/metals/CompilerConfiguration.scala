@@ -453,9 +453,10 @@ class CompilerConfiguration(
       val pc = JavaPresentationCompiler()
       val shouldUseOpts = featureFlags
         .readBoolean(FeatureFlag.JAVAC_OPTIONS)
-        .orElse(false)
+        .orElse(true)
       val options = javaTarget match {
-        case j: JavaTarget if shouldUseOpts => j.options
+        case j: JavaTarget if shouldUseOpts =>
+          CompilerConfiguration.filterJavaPcOptions(j.options)
         case _ => Nil
       }
       configure(pc, search, completionItemPriority)
@@ -677,4 +678,18 @@ class CompilerConfiguration(
     } else {
       Nil
     }
+}
+
+object CompilerConfiguration {
+  private val excludedJavaPcOptionPrefixes = List(
+    "-J",
+    "@",
+    "-Xplugin:",
+    "-proc:",
+  )
+
+  private[metals] def filterJavaPcOptions(options: List[String]): List[String] =
+    options.filterNot(option =>
+      excludedJavaPcOptionPrefixes.exists(option.startsWith)
+    )
 }
