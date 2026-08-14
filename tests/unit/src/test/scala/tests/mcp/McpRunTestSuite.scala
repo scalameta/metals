@@ -147,6 +147,85 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
     } yield ()
   }
 
+  // Regression: without testFile, resolve must work across modules — symbol
+  // search used to scope to the first build target only and miss suites in others.
+  test("resolve-test-class-without-path-multi-module", maxRetry = 3) {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/b/src/test/scala/b/MultiModuleMcpSuite.scala
+           |package b
+           |
+           |class MultiModuleMcpSuite extends munit.FunSuite {
+           |  test("works") {
+           |    assert(true)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("b/src/test/scala/b/MultiModuleMcpSuite.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      result <- server.headServer.mcpTestRunner
+        .runTests(
+          "b.MultiModuleMcpSuite",
+          None,
+          None,
+          verbose = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        result.contains("1 tests, 1 passed"),
+        s"Expected multi-module suite to resolve from testClass alone; got:\n$result",
+      )
+    } yield ()
+  }
+
+  test("reject-ambiguous-test-class-without-path") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {}
+           |}
+           |/a/src/main/scala/duplicate/A.scala
+           |package duplicate
+           |class McpSuite
+           |
+           |/b/src/main/scala/duplicate/B.scala
+           |package duplicate
+           |class McpSuite
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      result = server.headServer.mcpTestRunner.runTests(
+        "duplicate.McpSuite",
+        None,
+        None,
+        verbose = false,
+      )
+      _ = result match {
+        case Left(error) => assert(error.contains("Provide testFile"), error)
+        case Right(_) =>
+          throw new RuntimeException("Expected an ambiguous suite error")
+      }
+    } yield ()
+  }
+
   test("zio-test", maxRetry = 3) {
     cleanWorkspace()
     for {
