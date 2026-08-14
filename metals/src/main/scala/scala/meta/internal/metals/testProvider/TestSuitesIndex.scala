@@ -75,6 +75,29 @@ private[testProvider] final class TestSuitesIndex {
     ]()
   private val fileToMetadata = TrieMap[AbsolutePath, TestFileMetadata]()
 
+  /**
+   * Last known test case names per suite,
+   * as reported to the client via `AddTestCases`.
+   */
+  private val cachedTestCaseNames =
+    TrieMap[(BuildTarget, FullyQualifiedName), List[String]]()
+
+  def putTestCases(
+      buildTarget: BuildTarget,
+      fullyQualifiedName: FullyQualifiedName,
+      testCases: List[TestCaseEntry],
+  ): Unit =
+    cachedTestCaseNames.put(
+      (buildTarget, fullyQualifiedName),
+      testCases.map(_.name),
+    )
+
+  def getTestCaseNames(
+      buildTarget: BuildTarget,
+      fullyQualifiedName: FullyQualifiedName,
+  ): List[String] =
+    cachedTestCaseNames.getOrElse((buildTarget, fullyQualifiedName), Nil)
+
   def allSuites: Vector[(BuildTarget, Iterable[TestEntry])] =
     cachedTestSuites.mapValues(_.values).toVector
 
@@ -139,6 +162,7 @@ private[testProvider] final class TestSuitesIndex {
       suites <- cachedTestSuites.get(buildTarget)
       entry <- suites.remove(suiteName)
     } yield {
+      cachedTestCaseNames.remove((buildTarget, suiteName))
       fileToMetadata.get(entry.path).foreach { metadata =>
         val filtered =
           metadata.entries

@@ -363,27 +363,19 @@ class DebugProvider(
           // 0 is an obviously untrue value - a real duration will show up in the logs.
           // Parsing the bazel xml output is an option, but might be hard to maintain.
           val duration = 0L
-          testSuites.foreach { suite =>
-            val entry: dap.testing.SingleTestSummary =
-              if (passed)
-                dap.testing.SingleTestResult
-                  .Passed(suite.getClassName, duration)
-              else
-                dap.testing.SingleTestResult.Failed(
-                  suite.getClassName,
-                  duration,
-                  "Test suite failed",
-                  null,
-                  null,
-                )
-            runner.testResult(
-              dap.testing.TestSuiteSummary(
-                suite.getClassName,
-                duration,
-                ju.Collections.singletonList(entry),
-              )
+          val targetIdOpt = parameters.getTargets().asScala.headOption
+          val knownTestCaseNamesFor: String => List[String] = className =>
+            targetIdOpt
+              .map(id => testProvider.knownTestCaseNames(id, className))
+              .getOrElse(Nil)
+          MbtTestResultAdapter
+            .testSuiteSummaries(
+              testSuites.toList,
+              knownTestCaseNamesFor,
+              passed,
+              duration,
             )
-          }
+            .foreach(runner.testResult)
         }
         result
       }

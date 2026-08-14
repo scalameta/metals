@@ -212,6 +212,7 @@ class ProjectMetalsLspService(
         workDoneProgress = workDoneProgress,
         classToSourceFile = buildTargetClasses.sourceFileForMbtTestClass,
         classToFramework = buildTargetClasses.frameworkForMbtTestClass,
+        knownTestCaseNames = testProvider.knownTestCaseNames,
       )(ec)
     }
 

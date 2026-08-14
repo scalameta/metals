@@ -39,6 +39,10 @@ class MbtDebugSessionStarter(
         String,
         ch.epfl.scala.bsp4j.BuildTargetIdentifier,
     ) => Option[TestFramework] = (_, _) => None,
+    knownTestCaseNames: (
+        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
+        String,
+    ) => List[String] = (_, _) => Nil,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -123,6 +127,11 @@ class MbtDebugSessionStarter(
       target: MbtTarget
   ): String => Option[TestFramework] =
     className => classToFramework(className, target.id)
+
+  private def testCaseNamesOf(
+      target: MbtTarget
+  ): String => List[String] =
+    className => knownTestCaseNames(target.id, className)
 
   def test(
       target: MbtTarget,
@@ -283,7 +292,12 @@ class MbtDebugSessionStarter(
                   userJavaHome(),
                 )
               }
-            val debuggee = MbtTestResultAdapter(innerDebuggee, testSuites)
+            val debuggee =
+              MbtTestResultAdapter(
+                innerDebuggee,
+                testSuites,
+                testCaseNamesOf(target),
+              )
             val handler = dap.DebugServer.run(
               debuggee,
               new MetalsDebugToolsResolver(),
