@@ -58,6 +58,16 @@ class McpSymbolSearch(
   def exactSearch(
       query: String,
       path: Option[AbsolutePath],
+  ): Seq[SearchResult] =
+    exactSearchInTarget(query, singleBuildTarget(path))
+
+  /** Search every workspace build target for an exact FQCN match. */
+  def exactSearchAllTargets(query: String): Seq[SearchResult] =
+    exactSearchInTarget(query, None)
+
+  private def exactSearchInTarget(
+      query: String,
+      target: Option[BuildTargetIdentifier],
   ): Seq[SearchResult] = {
     val matches: String => Boolean = { symbol =>
       symbol.fqcn == query
@@ -66,7 +76,7 @@ class McpSymbolSearch(
       WorkspaceSymbolQuery.exact(query),
       matches,
       Set.empty,
-      target = singleBuildTarget(path),
+      target,
     ).results
   }
 
