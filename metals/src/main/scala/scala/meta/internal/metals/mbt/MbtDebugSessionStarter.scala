@@ -20,6 +20,7 @@ import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.MultiOutputModule
@@ -34,6 +35,10 @@ class MbtDebugSessionStarter(
         String,
         ch.epfl.scala.bsp4j.BuildTargetIdentifier,
     ) => Option[AbsolutePath] = (_, _) => None,
+    classToFramework: (
+        String,
+        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
+    ) => Option[TestFramework] = (_, _) => None,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -114,6 +119,11 @@ class MbtDebugSessionStarter(
       .listOrNil(testSuites.getSuites)
       .flatMap(s => classToSourceFile(s.getClassName, target.id))
 
+  private def frameworkOf(
+      target: MbtTarget
+  ): String => Option[TestFramework] =
+    className => classToFramework(className, target.id)
+
   def test(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
@@ -122,8 +132,13 @@ class MbtDebugSessionStarter(
       err: String => Unit,
   ): Future[Int] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
-    val command =
-      buildTool.mbtTestCommand(workspace, target, testSuites, sourceFiles)
+    val command = buildTool.mbtTestCommand(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      frameworkOf(target),
+    )
     val toolName = buildTool.executableName
     val artifactId = {
       val parts = target.name.split(':')
@@ -231,6 +246,7 @@ class MbtDebugSessionStarter(
                     target,
                     testSuites,
                     sourceFiles,
+                    frameworkOf(target),
                   )
                 commandWithPort(0).foreach { command =>
                   scribe.info(
@@ -252,6 +268,7 @@ class MbtDebugSessionStarter(
                   testSuites,
                   debugAgentFlag,
                   sourceFiles,
+                  frameworkOf(target),
                 )
                 commandFuture.foreach { command =>
                   scribe.info(

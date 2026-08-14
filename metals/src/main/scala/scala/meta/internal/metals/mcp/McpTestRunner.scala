@@ -53,16 +53,19 @@ class McpTestRunner(
         if (debugProvider.usesBuildTargetTest(id)) {
           // Same path as non-debug editor runs for MBT: BSP buildTarget/test.
           Right {
-            jvmTestEnv.flatMap { env =>
-              val testSuites = createTestSuites(testSelection, env)
-              debugProvider.runBuildTargetTest(
-                id,
-                testSuites,
-                cancelPromise,
-                verbose,
-              ) match {
-                case Right(future) => future.map(output => AnsiFilter()(output))
-                case Left(error) => Future.successful(error)
+            debugProvider.confirmMbtTestClassCandidates(path, id).flatMap { _ =>
+              jvmTestEnv.flatMap { env =>
+                val testSuites = createTestSuites(testSelection, env)
+                debugProvider.runBuildTargetTest(
+                  id,
+                  testSuites,
+                  cancelPromise,
+                  verbose,
+                ) match {
+                  case Right(future) =>
+                    future.map(output => AnsiFilter()(output))
+                  case Left(error) => Future.successful(error)
+                }
               }
             }
           }

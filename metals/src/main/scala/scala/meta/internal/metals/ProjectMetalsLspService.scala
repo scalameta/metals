@@ -211,6 +211,7 @@ class ProjectMetalsLspService(
         userJavaHome = () => userConfig.javaHome,
         workDoneProgress = workDoneProgress,
         classToSourceFile = buildTargetClasses.sourceFileForMbtTestClass,
+        classToFramework = buildTargetClasses.frameworkForMbtTestClass,
       )(ec)
     }
 

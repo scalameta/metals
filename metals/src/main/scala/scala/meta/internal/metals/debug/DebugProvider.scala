@@ -57,6 +57,7 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtTestResultAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
@@ -142,6 +143,12 @@ class DebugProvider(
    */
   def usesBuildTargetTest(id: BuildTargetIdentifier): Boolean =
     buildTargets.buildServerOf(id).exists(_.isMbt)
+
+  def confirmMbtTestClassCandidates(
+      path: AbsolutePath,
+      id: BuildTargetIdentifier,
+  ): Future[Unit] =
+    buildTargetClasses.confirmMbtTestClassCandidates(path, id)
 
   /**
    * Run tests through BSP `buildTarget/test`, capturing process output.

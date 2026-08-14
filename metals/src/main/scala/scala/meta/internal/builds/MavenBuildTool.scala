@@ -16,6 +16,7 @@ import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 
@@ -171,6 +172,7 @@ case class MavenBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      frameworkOf: String => Option[TestFramework] = _ => None,
   ): Future[List[String]] =
     Future.successful(
       mbtTestExecCommand(
@@ -186,6 +188,7 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
+      frameworkOf: String => Option[TestFramework] = _ => None,
   ): Future[List[String]] =
     mbtTestDebugCommandWithPort(workspace, target, testSuites, sourceFiles)(
       5005
@@ -198,6 +201,7 @@ case class MavenBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      frameworkOf: String => Option[TestFramework] = _ => None,
   ): Int => Future[List[String]] = { port =>
     // Use Surefire's forked JVM with a pre-assigned debug port.
     // This allows proper source mapping since tests run in a separate JVM.
