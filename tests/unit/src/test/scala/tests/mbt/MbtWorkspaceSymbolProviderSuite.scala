@@ -2,16 +2,30 @@ package tests.mbt
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.EnumSet
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import javax.tools.JavaFileObject
+import javax.tools.StandardLocation
+import javax.tools.ToolProvider
 
+import scala.collection.JavaConverters._
+import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 import scala.meta.internal.metals.Configs
+import scala.meta.internal.metals.EmptyWorkDoneProgress
+import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.TurbineClasspathFileManager
+import scala.meta.internal.metals.mbt.TurbineCompileResult
+import scala.meta.internal.metals.mbt.TurbineCompiler
 import scala.meta.io.AbsolutePath
 
+import com.google.turbine.diag.SourceFile
 import munit.AnyFixture
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
@@ -226,4 +240,62 @@ module com.example {
     assertResultIncludes = "Object TestProjectEnum ",
   )
 
+}
+
+class TurbineClasspathFileManagerSuite extends munit.FunSuite {
+  implicit val reportContext: LoggerReportContext.type = LoggerReportContext
+
+  private def compile(source: String): TurbineCompileResult =
+    TurbineCompiler.compileClassfiles(
+      ParArray(source),
+      (text: String) => Seq(new SourceFile("Dependency.java", text)),
+      Nil,
+      EmptyWorkDoneProgress,
+    )
+
+  test("target-classpath-before-workspace-headers") {
+    val workspaceResult = compile(
+      "package example; public class Dependency { public static void workspace() {} }"
+    )
+    val projectResult = compile(
+      "package example; public class Dependency { public static void project() {} }"
+    )
+    val jar = Files.createTempFile("metals-project-classpath", ".jar")
+    val output = new ZipOutputStream(Files.newOutputStream(jar))
+    try {
+      for ((name, bytes) <- projectResult.lowered.bytes().asScala) {
+        output.putNextEntry(new ZipEntry(s"$name.class"))
+        output.write(bytes)
+        output.closeEntry()
+      }
+    } finally output.close()
+
+    val standardFileManager = ToolProvider
+      .getSystemJavaCompiler()
+      .getStandardFileManager(null, null, null)
+    standardFileManager.setLocationFromPaths(
+      StandardLocation.CLASS_PATH,
+      List(jar).asJava,
+    )
+    val fileManager = new TurbineClasspathFileManager(
+      standardFileManager,
+      () => workspaceResult,
+      _ => java.util.Collections.emptyList(),
+      _ => false,
+    )
+    val classfiles = fileManager
+      .list(
+        StandardLocation.CLASS_PATH,
+        "example",
+        EnumSet.of(JavaFileObject.Kind.CLASS),
+        false,
+      )
+      .asScala
+      .toList
+    assertEquals(classfiles.size, 1)
+    assertEquals(
+      classfiles.head.openInputStream().readAllBytes().toSeq,
+      projectResult.lowered.bytes().get("example/Dependency").toSeq,
+    )
+  }
 }

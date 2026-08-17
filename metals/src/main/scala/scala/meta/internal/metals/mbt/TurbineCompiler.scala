@@ -328,20 +328,17 @@ class TurbineCompiler[T](
       underlying: StandardJavaFileManager,
       projectClasspathJars: ju.List[Path],
   ): JavaFileManager = {
-    val isGlobalClasspathEntry = this.classpath().toSet
-    val filteredProjectClasspath =
-      projectClasspathJars.asScala.filter(file =>
-        !isGlobalClasspathEntry(file) && TurbineCompiler.isJarFile(file)
-      )
+    val projectClasspathEntries = projectClasspathJars.asScala.filter(
+      TurbineCompiler.isJarFile
+    )
     val projectClasspath =
-      ClassPathBinder.bindClasspath(filteredProjectClasspath.asJava)
+      ClassPathBinder.bindClasspath(projectClasspathEntries.asJava)
     onNewProjectClasspath(projectClasspath)
     new TurbineClasspathFileManager(
       underlying,
       () => result,
       listSourcepath = listCombinedSourcepath,
       isDeleted,
-      projectClasspath,
     )
   }
 

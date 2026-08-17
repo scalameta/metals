@@ -22,7 +22,6 @@ class TurbineClasspathFileManager(
     workspaceClasspath: () => TurbineCompileResult,
     listSourcepath: String => java.lang.Iterable[JavaFileObject],
     isDeleted: String => Boolean,
-    projectClasspath: ClassPath,
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
 
   override def contains(
@@ -83,6 +82,13 @@ class TurbineClasspathFileManager(
         val turbinePackageName = packageNames.mkString("/")
         val objects = new ju.ArrayList[JavaFileObject]()
         val cp = workspaceClasspath()
+        val isAddedBinaryName = new ju.HashSet[String]()
+        super.list(location, packageName, kinds, recurse).forEach { obj =>
+          val binaryName = inferBinaryName(location, obj).replace('.', '/')
+          if (isAddedBinaryName.add(binaryName)) {
+            objects.add(obj)
+          }
+        }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>
           case Some(values) =>
@@ -92,7 +98,9 @@ class TurbineClasspathFileManager(
               val binaryName = sym.binaryName()
               // Skip classes that have been deleted but not yet recompiled,
               // or have a pending source on SOURCE_PATH (so javac uses the updated source)
-              if (!isDeleted(binaryName)) {
+              if (
+                !isDeleted(binaryName) && isAddedBinaryName.add(binaryName)
+              ) {
                 val bytes = cp.lowered.bytes().get(binaryName)
                 if (bytes != null) {
                   val obj = new TurbineClassfileObject(
@@ -104,14 +112,11 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        val isAddedBinaryName = new ju.HashSet[String]()
-        for {
-          cp <- List(
-            // Prioritize the project classpath over the fallback classpath
-            projectClasspath,
-            cp.classpath,
-          )
-        } listPackageClasspath(cp, packageNames, isAddedBinaryName) { obj =>
+        listPackageClasspath(
+          cp.classpath,
+          packageNames,
+          isAddedBinaryName,
+        ) { obj =>
           objects.add(obj)
         }
         objects
