@@ -98,9 +98,7 @@ class TurbineClasspathFileManager(
               val binaryName = sym.binaryName()
               // Skip classes that have been deleted but not yet recompiled,
               // or have a pending source on SOURCE_PATH (so javac uses the updated source)
-              if (
-                !isDeleted(binaryName) && isAddedBinaryName.add(binaryName)
-              ) {
+              if (!isDeleted(binaryName) && isAddedBinaryName.add(binaryName)) {
                 val bytes = cp.lowered.bytes().get(binaryName)
                 if (bytes != null) {
                   val obj = new TurbineClassfileObject(
