@@ -79,7 +79,7 @@ object TestGroups {
     "tests.digest.GradleDigestSuite", "tests.DetectionSuite",
     "tests.NewFileTemplateSuite", "tests.ScalaVersionsSuite",
     "tests.HttpServerSuite", "tests.BatchedFunctionSuite",
-    "tests.SbtVersionSuite", "tests.MessagesSuite",
+    "tests.SbtVersionSuite", "tests.SbtDialectSuite", "tests.MessagesSuite",
     "tests.TrigramSubstringsSuite", "tests.SelectBspServerSuite",
     "tests.InverseDependenciesSuite", "tests.TimerSuite",
     "tests.FoldingRangesSuite", "tests.SelectionRangeLspSuite",
@@ -140,6 +140,8 @@ object TestGroups {
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
     "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
+    "tests.mcp.McpGlobSearchCapLspSuite",
+    "scala.meta.internal.metals.mcp.tests.McpGlobSearchNormalizeSuite",
   )
 
   val numberOfShards = 4

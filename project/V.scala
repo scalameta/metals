@@ -47,7 +47,7 @@ object V {
 
   val javaSemanticdb = "0.12.3"
 
-  val jsoup = "1.22.2"
+  val jsoup = "1.23.1"
 
   val kindProjector = "0.13.4"
 
@@ -55,14 +55,14 @@ object V {
 
   val mavenBloop = "2.0.5"
 
-  val mill = "1.1.7"
+  val mill = "1.1.8"
 
   // use from project/plugins.sbt
   val mdoc = _root_.mdoc.BuildInfo.version
 
   val modelContextProtocol = "2.0.0"
 
-  val munit = "1.3.3"
+  val munit = "1.3.5"
 
   val pprint = "0.9.6"
 
