@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.utils
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicReference
 import munit.FunSuite
 
 class VolSuite extends FunSuite {
@@ -59,6 +60,41 @@ class VolSuite extends FunSuite {
     Thread.sleep(1000)
 
     assertNotEquals(snapshot1 - snapshot2, 0L)
+  }
+
+  // Exposes: ThreadLocal cache is never cleared, so a top-level Vol is
+  // frozen forever on a thread after the first snapshot() — contradicting
+  // "the value may change more than once".
+  test("atomic-ref-should-see-updates-across-separate-snapshots") {
+    val ref = new AtomicReference(1)
+    val vol = Vol.AtomicRef(ref)
+    assertEquals(vol.snapshot(), 1)
+    ref.set(2)
+    assertEquals(vol.snapshot(), 2)
+  }
+
+  // Exposes: FlatMapped.eval calls result.eval() instead of result.snapshot(),
+  // so a leaf Vol returned from flatMap is not entered into the snapshot cache
+  // and is re-evaluated when read again in the same comprehension.
+  test("flatmap-to-leaf-vol-should-be-cached-in-enclosing-comprehension") {
+    val b = new ReferenceCountingVol()
+    val a = Vol.Function(() => 0)
+    val result = for {
+      x <- a.flatMap(_ => b)
+      y <- b
+    } yield (x, y)
+    assertEquals(result.snapshot(), (1, 1))
+  }
+
+  // Exposes: Function/AtomicRef are case classes, so structurally equal Vols
+  // share a single cache entry even when they are distinct instances.
+  test("distinct-function-vols-sharing-lambda-should-not-share-cache") {
+    val counter = new AtomicInteger(0)
+    val f = () => counter.incrementAndGet()
+    val v1 = Vol.Function(f)
+    val v2 = Vol.Function(f)
+    assertEquals(v1.snapshot(), 1)
+    assertEquals(v2.snapshot(), 2)
   }
 
 }
