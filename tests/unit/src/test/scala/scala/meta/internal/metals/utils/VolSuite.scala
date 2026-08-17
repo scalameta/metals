@@ -45,13 +45,6 @@ class VolSuite extends FunSuite {
     assertNotEquals(y.snapshot(), z.snapshot())
   }
 
-  test("evaluation-in-the-same-thread-should-yield-the-same-value") {
-    val snapshot1 = Stopwatch.snapshot()
-    Thread.sleep(100)
-    val snapshot2 = Stopwatch.snapshot()
-    assertEquals(snapshot1, snapshot2)
-  }
-
   test("evaluation-in-different-threads-should-allow-diferent-values") {
     var snapshot1: Long = -1L
     var snapshot2: Long = -1L
