@@ -1,15 +1,50 @@
 package tests
 
+import scala.concurrent.Future
+
 import scala.meta.internal.metals.{BuildInfo => V}
+
+import org.eclipse.lsp4j.InitializeResult
 
 /**
  * Regression coverage for out-of-workspace fallback Scala CLI auto-start.
+ *
+ * `initialize(Map(folder -> layout))` registers only `workspace/<folder>` as
+ * an LSP workspace folder. `writeLayout` without a folder name writes into
+ * the test workspace root, which is the parent of that folder, so a path like
+ * `/outsider/Foo.scala` is a sibling of the workspace folder, not inside it.
  *
  * `TestingServer.didOpen` awaits fallback `maybeImportFileAndLoad`, so
  * assertions after `didOpen` run after auto-start has been decided.
  */
 class OutOfWorkspaceScalaCliLspSuite
     extends BaseLspSuite("out-of-workspace-scala-cli") {
+
+  private def projectLayout: String =
+    s"""|/metals.json
+        |{
+        |  "a": { "scalaVersion": "${V.scala213}" }
+        |}
+        |/a/src/main/scala/a/A.scala
+        |package a
+        |object A
+        |""".stripMargin
+
+  private def initializeFolder(
+      folderName: String
+  ): Future[InitializeResult] = {
+    initialize(Map(folderName -> projectLayout), expectError = false)
+  }
+
+  private def assertWorkspaceFolder(
+      folderName: String
+  )(implicit loc: munit.Location): Unit = {
+    assertEquals(
+      server.fullServer.folderServices.map(_.path).toList,
+      List(workspace.resolve(folderName)),
+      s"LSP workspace folder should be workspace/$folderName, not the test root",
+    )
+  }
 
   private def assertNoScalaCli(
       clue: String
@@ -29,20 +64,9 @@ class OutOfWorkspaceScalaCliLspSuite
   test("didOpen-outside-workspace-does-not-start-scala-cli") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        Map(
-          "project" ->
-            s"""|/metals.json
-                |{
-                |  "a": { "scalaVersion": "${V.scala213}" }
-                |}
-                |/a/src/main/scala/a/A.scala
-                |package a
-                |object A
-                |""".stripMargin
-        ),
-        expectError = false,
-      )
+      _ <- initializeFolder("project")
+      _ = assertWorkspaceFolder("project")
+      // workspace/outsider is a sibling of workspace/project, the only LSP folder.
       _ = writeLayout(
         """|/outsider/Foo.scala
            |object Foo {
@@ -67,20 +91,9 @@ class OutOfWorkspaceScalaCliLspSuite
   test("sibling-under-common-parent-still-outside-workspace-folder") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        Map(
-          "zipx" ->
-            s"""|/metals.json
-                |{
-                |  "a": { "scalaVersion": "${V.scala213}" }
-                |}
-                |/a/src/main/scala/a/A.scala
-                |package a
-                |object A
-                |""".stripMargin
-        ),
-        expectError = false,
-      )
+      _ <- initializeFolder("zipx")
+      _ = assertWorkspaceFolder("zipx")
+      // workspace/anode is a sibling of workspace/zipx (Cursor-style extra repo).
       _ = writeLayout(
         """|/anode/src/Main.scala
            |object Main
@@ -125,20 +138,7 @@ class OutOfWorkspaceScalaCliLspSuite
   test("outside-scala-script-does-not-start-scala-cli") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        Map(
-          "project" ->
-            s"""|/metals.json
-                |{
-                |  "a": { "scalaVersion": "${V.scala213}" }
-                |}
-                |/a/src/main/scala/a/A.scala
-                |package a
-                |object A
-                |""".stripMargin
-        ),
-        expectError = false,
-      )
+      _ <- initializeFolder("project")
       _ = writeLayout(
         """|/outsider/script.sc
            |println(1)
@@ -151,23 +151,26 @@ class OutOfWorkspaceScalaCliLspSuite
     } yield ()
   }
 
+  test("outside-java-does-not-start-scala-cli") {
+    cleanWorkspace()
+    for {
+      _ <- initializeFolder("project")
+      _ = writeLayout(
+        """|/outsider/Main.java
+           |class Main {}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("outsider/Main.java")
+      _ = assertNoScalaCli(
+        "Out-of-workspace Java files must not auto-start Scala CLI"
+      )
+    } yield ()
+  }
+
   test("multiple-outside-files-do-not-start-scala-cli") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        Map(
-          "project" ->
-            s"""|/metals.json
-                |{
-                |  "a": { "scalaVersion": "${V.scala213}" }
-                |}
-                |/a/src/main/scala/a/A.scala
-                |package a
-                |object A
-                |""".stripMargin
-        ),
-        expectError = false,
-      )
+      _ <- initializeFolder("project")
       _ = writeLayout(
         """|/outsider/Foo.scala
            |object Foo
@@ -189,20 +192,7 @@ class OutOfWorkspaceScalaCliLspSuite
   test("outside-non-scala-didOpen-is-ignored") {
     cleanWorkspace()
     for {
-      _ <- initialize(
-        Map(
-          "project" ->
-            s"""|/metals.json
-                |{
-                |  "a": { "scalaVersion": "${V.scala213}" }
-                |}
-                |/a/src/main/scala/a/A.scala
-                |package a
-                |object A
-                |""".stripMargin
-        ),
-        expectError = false,
-      )
+      _ <- initializeFolder("project")
       _ = writeLayout(
         """|/outsider/README.md
            |# docs

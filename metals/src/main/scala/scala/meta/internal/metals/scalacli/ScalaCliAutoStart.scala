@@ -22,7 +22,7 @@ object ScalaCliAutoStart {
 
   /**
    * Whether FallbackMetalsLspService should automatically start Scala CLI when
-   * `path` is opened.
+   * `path` is opened. Scala CLI can import Scala or Java sources.
    *
    * @param path
    *   document path that would be imported via Scala CLI
@@ -34,7 +34,7 @@ object ScalaCliAutoStart {
       path: AbsolutePath,
       workspaceFolders: Seq[AbsolutePath],
   ): Boolean = {
-    if (!path.isScala) false
+    if (!path.isScalaOrJava) false
     else if (workspaceFolders.isEmpty) true
     else !isOutsideWorkspace(path, workspaceFolders)
   }

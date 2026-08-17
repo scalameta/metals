@@ -109,10 +109,11 @@ class FallbackMetalsLspService(
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     if (ScalaCliAutoStart.isOutsideWorkspace(path, workspaceFolders())) {
-      if (path.isScala) {
-        scribe.debug(s"Ignoring didOpen for out-of-workspace file: $path")
+      if (path.isScalaOrJava) {
+        scribe.warn(
+          s"Not starting Scala CLI for out-of-workspace file (it can be started manually): $path"
+        )
       }
-      diagnostics.didDelete(path)
       CompletableFuture.completedFuture(())
     } else {
       super.didOpen(params)
@@ -125,12 +126,11 @@ class FallbackMetalsLspService(
   ): Future[Unit] = {
     val folders = workspaceFolders()
     if (ScalaCliAutoStart.isOutsideWorkspace(path, folders)) {
-      if (path.isScala) {
-        scribe.debug(
-          s"Skipping fallback import/load for out-of-workspace file: $path"
+      if (path.isScalaOrJava) {
+        scribe.warn(
+          s"Not starting Scala CLI for out-of-workspace file (it can be started manually): $path"
         )
       }
-      diagnostics.didDelete(path)
       Future.unit
     } else {
       for {
