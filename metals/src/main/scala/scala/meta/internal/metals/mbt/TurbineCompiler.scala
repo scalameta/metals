@@ -339,6 +339,7 @@ class TurbineCompiler[T](
       () => result,
       listSourcepath = listCombinedSourcepath,
       isDeleted,
+      projectClasspath,
     )
   }
 

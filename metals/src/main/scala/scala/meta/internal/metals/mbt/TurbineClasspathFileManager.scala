@@ -22,6 +22,7 @@ class TurbineClasspathFileManager(
     workspaceClasspath: () => TurbineCompileResult,
     listSourcepath: String => java.lang.Iterable[JavaFileObject],
     isDeleted: String => Boolean,
+    projectClasspath: ClassPath,
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
 
   override def contains(
@@ -83,11 +84,12 @@ class TurbineClasspathFileManager(
         val objects = new ju.ArrayList[JavaFileObject]()
         val cp = workspaceClasspath()
         val isAddedBinaryName = new ju.HashSet[String]()
-        super.list(location, packageName, kinds, recurse).forEach { obj =>
-          val binaryName = inferBinaryName(location, obj).replace('.', '/')
-          if (isAddedBinaryName.add(binaryName)) {
-            objects.add(obj)
-          }
+        listPackageClasspath(
+          projectClasspath,
+          packageNames,
+          isAddedBinaryName,
+        ) { obj =>
+          objects.add(obj)
         }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>

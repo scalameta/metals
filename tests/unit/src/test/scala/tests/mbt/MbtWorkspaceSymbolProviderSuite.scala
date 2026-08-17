@@ -25,6 +25,7 @@ import scala.meta.internal.metals.mbt.TurbineCompileResult
 import scala.meta.internal.metals.mbt.TurbineCompiler
 import scala.meta.io.AbsolutePath
 
+import com.google.turbine.binder.ClassPathBinder
 import com.google.turbine.diag.SourceFile
 import munit.AnyFixture
 import munit.TestOptions
@@ -273,15 +274,12 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
     val standardFileManager = ToolProvider
       .getSystemJavaCompiler()
       .getStandardFileManager(null, null, null)
-    standardFileManager.setLocationFromPaths(
-      StandardLocation.CLASS_PATH,
-      List(jar).asJava,
-    )
     val fileManager = new TurbineClasspathFileManager(
       standardFileManager,
       () => workspaceResult,
       _ => java.util.Collections.emptyList(),
       _ => false,
+      ClassPathBinder.bindClasspath(List(jar).asJava),
     )
     val classfiles = fileManager
       .list(
