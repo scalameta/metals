@@ -151,4 +151,86 @@ class PCDiagnosticsSuite
     } yield ()
   }
 
+  test("keep-build-tool-warnings") {
+    cleanWorkspace()
+    val file = "a/src/main/scala/a/Mixed.scala"
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {
+           |     "scalacOptions": [
+           |       "-Ywarn-unused"
+           |     ]
+           |   }
+           |}
+           |/a/src/main/scala/a/Mixed.scala
+           |package a
+           |import scala.util.Failure // unused
+           |object Mixed {
+           |  val text: String = "hello"
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      _ <- server.server.compilations.compileFile(server.toPath(file))
+      _ <- server.didFocus(file)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Mixed.scala:2:19: warning: Unused import
+           |import scala.util.Failure // unused
+           |                  ^^^^^^^
+           |""".stripMargin,
+      )
+      _ <- server.didChange(file)(
+        _.replace("val text: String = \"hello\"", "val text: String = 123")
+      )
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/Mixed.scala:2:19: warning: Unused import
+           |import scala.util.Failure // unused
+           |                  ^^^^^^^
+           |a/src/main/scala/a/Mixed.scala:4:22: error: type mismatch;
+           | found   : Int(123)
+           | required: String
+           |  val text: String = 123
+           |                     ^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("dedup-overlapping-type-error") {
+    cleanWorkspace()
+    val file = "a/src/main/scala/a/DuplicateError.scala"
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {}
+           |}
+           |/a/src/main/scala/a/DuplicateError.scala
+           |package a
+           |object DuplicateError {
+           |  val text: String = 42
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(file)
+      _ <- server.server.compilations.compileFile(server.toPath(file))
+      _ <- server.didFocus(file)
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/scala/a/DuplicateError.scala:3:22: error: type mismatch;
+           | found   : Int(42)
+           | required: String
+           |  val text: String = 42
+           |                     ^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
 }
