@@ -33,9 +33,6 @@ object ScalaCliAutoStart {
   def shouldAutoStart(
       path: AbsolutePath,
       workspaceFolders: Seq[AbsolutePath],
-  ): Boolean = {
-    if (!path.isScalaOrJava) false
-    else if (workspaceFolders.isEmpty) true
-    else !isOutsideWorkspace(path, workspaceFolders)
-  }
+  ): Boolean =
+    path.isScalaOrJava && !isOutsideWorkspace(path, workspaceFolders)
 }

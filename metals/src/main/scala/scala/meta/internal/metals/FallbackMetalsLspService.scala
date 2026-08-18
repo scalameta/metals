@@ -108,34 +108,20 @@ class FallbackMetalsLspService(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    if (ScalaCliAutoStart.isOutsideWorkspace(path, workspaceFolders())) {
-      if (path.isScalaOrJava) {
-        scribe.warn(
-          s"Not starting Scala CLI for out-of-workspace file (it can be started manually): $path"
-        )
-      }
-      CompletableFuture.completedFuture(())
-    } else {
-      super.didOpen(params)
-    }
+    if (skipOutOfWorkspace(path)) CompletableFuture.completedFuture(())
+    else super.didOpen(params)
   }
 
   override def maybeImportFileAndLoad(
       path: AbsolutePath,
       load: () => Future[Unit],
   ): Future[Unit] = {
-    val folders = workspaceFolders()
-    if (ScalaCliAutoStart.isOutsideWorkspace(path, folders)) {
-      if (path.isScalaOrJava) {
-        scribe.warn(
-          s"Not starting Scala CLI for out-of-workspace file (it can be started manually): $path"
-        )
-      }
-      Future.unit
-    } else {
+    if (skipOutOfWorkspace(path)) Future.unit
+    else {
       for {
         _ <-
-          if (!ScalaCliAutoStart.shouldAutoStart(path, folders)) Future.unit
+          if (!ScalaCliAutoStart.shouldAutoStart(path, workspaceFolders()))
+            Future.unit
           else {
             val prev = files.getAndUpdate(_ + path)
             if (prev.contains(path)) Future.unit
@@ -144,6 +130,17 @@ class FallbackMetalsLspService(
         _ <- load()
       } yield ()
     }
+  }
+
+  private def skipOutOfWorkspace(path: AbsolutePath): Boolean = {
+    val skip =
+      ScalaCliAutoStart.isOutsideWorkspace(path, workspaceFolders())
+    if (skip && path.isScalaOrJava) {
+      scribe.warn(
+        s"Not starting Scala CLI for out-of-workspace file (it can be started manually): $path"
+      )
+    }
+    skip
   }
 
   override protected def onBuildTargetChanges(
