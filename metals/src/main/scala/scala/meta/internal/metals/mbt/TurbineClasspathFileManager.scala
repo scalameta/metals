@@ -21,6 +21,7 @@ class TurbineClasspathFileManager(
     delegate: JavaFileManager,
     workspaceClasspath: () => TurbineCompileResult,
     listSourcepath: String => java.lang.Iterable[JavaFileObject],
+    listProtoBinaryNames: String => Set[String],
     isDeleted: String => Boolean,
     projectClasspath: ClassPath,
 ) extends ForwardingJavaFileManager[JavaFileManager](delegate) {
@@ -84,12 +85,18 @@ class TurbineClasspathFileManager(
         val objects = new ju.ArrayList[JavaFileObject]()
         val cp = workspaceClasspath()
         val isAddedBinaryName = new ju.HashSet[String]()
-        listPackageClasspath(
-          projectClasspath,
-          packageNames,
-          isAddedBinaryName,
-        ) { obj =>
-          objects.add(obj)
+        val protoBinaryNames = listProtoBinaryNames(packageName)
+        if (protoBinaryNames.nonEmpty) {
+          super.list(location, packageName, kinds, recurse).forEach { obj =>
+            val binaryName = inferBinaryName(location, obj).replace('.', '/')
+            val topLevelBinaryName = binaryName.takeWhile(_ != '$')
+            if (
+              protoBinaryNames.contains(topLevelBinaryName) &&
+              isAddedBinaryName.add(binaryName)
+            ) {
+              objects.add(obj)
+            }
+          }
         }
         cp.symbolsByPackage.get(turbinePackageName) match {
           case None =>
@@ -100,9 +107,9 @@ class TurbineClasspathFileManager(
               val binaryName = sym.binaryName()
               // Skip classes that have been deleted but not yet recompiled,
               // or have a pending source on SOURCE_PATH (so javac uses the updated source)
-              if (!isDeleted(binaryName) && isAddedBinaryName.add(binaryName)) {
+              if (!isDeleted(binaryName)) {
                 val bytes = cp.lowered.bytes().get(binaryName)
-                if (bytes != null) {
+                if (bytes != null && isAddedBinaryName.add(binaryName)) {
                   val obj = new TurbineClassfileObject(
                     binaryName,
                     () => bytes,
@@ -112,8 +119,10 @@ class TurbineClasspathFileManager(
               }
             }
         }
-        listPackageClasspath(
-          cp.classpath,
+        for {
+          classpath <- List(projectClasspath, cp.classpath)
+        } listPackageClasspath(
+          classpath,
           packageNames,
           isAddedBinaryName,
         ) { obj =>

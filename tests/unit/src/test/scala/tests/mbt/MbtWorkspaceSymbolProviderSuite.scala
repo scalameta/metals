@@ -1,5 +1,6 @@
 package tests.mbt
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.EnumSet
@@ -14,18 +15,20 @@ import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.Using
 
 import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.LoggerReportContext
+import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
-import scala.meta.internal.metals.mbt.TurbineClasspathFileManager
 import scala.meta.internal.metals.mbt.TurbineCompileResult
 import scala.meta.internal.metals.mbt.TurbineCompiler
+import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 
-import com.google.turbine.binder.ClassPathBinder
 import com.google.turbine.diag.SourceFile
 import munit.AnyFixture
 import munit.TestOptions
@@ -245,6 +248,12 @@ module com.example {
 
 class TurbineClasspathFileManagerSuite extends munit.FunSuite {
   implicit val reportContext: LoggerReportContext.type = LoggerReportContext
+  implicit val executionContext: ExecutionContext = ExecutionContext.global
+
+  private val workspaceSource =
+    "package example; public class Dependency { public static class Builder { public void workspace() {} } }"
+  private val projectSource =
+    "package example; public class Dependency { public static class Builder { public void project() {} } }"
 
   private def compile(source: String): TurbineCompileResult =
     TurbineCompiler.compileClassfiles(
@@ -254,13 +263,8 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
       EmptyWorkDoneProgress,
     )
 
-  test("target-classpath-before-workspace-headers") {
-    val workspaceResult = compile(
-      "package example; public class Dependency { public static void workspace() {} }"
-    )
-    val projectResult = compile(
-      "package example; public class Dependency { public static void project() {} }"
-    )
+  private def checkTargetClasspathPrecedence(isProtobuf: Boolean): Unit = {
+    val projectResult = compile(projectSource)
     val jar = Files.createTempFile("metals-project-classpath", ".jar")
     val output = new ZipOutputStream(Files.newOutputStream(jar))
     try {
@@ -271,29 +275,82 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
       }
     } finally output.close()
 
+    var fallbackClasspath = Seq.empty[java.nio.file.Path]
+    val protoOutline = VirtualTextDocument(
+      URI.create("file:///Dependency.java"),
+      pc.Language.JAVA,
+      workspaceSource,
+      Seq("example"),
+      Seq("example/Dependency#"),
+    )
+    val compiler = new TurbineCompiler[String](
+      () => ParArray(workspaceSource),
+      text => Seq(new SourceFile("Dependency.java", text)),
+      () => fallbackClasspath,
+      EmptyWorkDoneProgress,
+      () => Configs.TurbineRecompileDelayConfig.testing,
+      packageName =>
+        if (isProtobuf && packageName == "example/") Iterator(protoOutline)
+        else Iterator.empty,
+      Sleeper.TestingSleeper,
+      () => (),
+      _ => (),
+    )
+    compiler.doCompileNow()
+    val workspaceResult = compiler.result
+    fallbackClasspath = Seq(jar)
+
     val standardFileManager = ToolProvider
       .getSystemJavaCompiler()
       .getStandardFileManager(null, null, null)
-    val fileManager = new TurbineClasspathFileManager(
+    standardFileManager.setLocationFromPaths(
+      StandardLocation.CLASS_PATH,
+      List(jar).asJava,
+    )
+    val fileManager = compiler.createFileManager(
       standardFileManager,
-      () => workspaceResult,
-      _ => java.util.Collections.emptyList(),
-      _ => false,
-      ClassPathBinder.bindClasspath(List(jar).asJava),
+      List(jar).asJava,
     )
-    val classfiles = fileManager
-      .list(
-        StandardLocation.CLASS_PATH,
-        "example",
-        EnumSet.of(JavaFileObject.Kind.CLASS),
-        false,
-      )
-      .asScala
-      .toList
-    assertEquals(classfiles.size, 1)
-    assertEquals(
-      classfiles.head.openInputStream().readAllBytes().toSeq,
-      projectResult.lowered.bytes().get("example/Dependency").toSeq,
-    )
+    try {
+      val classfiles = fileManager
+        .list(
+          StandardLocation.CLASS_PATH,
+          "example",
+          EnumSet.of(JavaFileObject.Kind.CLASS),
+          false,
+        )
+        .asScala
+        .toList
+      val obtained = classfiles.map { classfile =>
+        val binaryName = fileManager
+          .inferBinaryName(StandardLocation.CLASS_PATH, classfile)
+          .replace('.', '/')
+        binaryName -> Using.resource(classfile.openInputStream())(
+          _.readAllBytes().toSeq
+        )
+      }.toMap
+      val expectedResult =
+        if (isProtobuf) projectResult
+        else workspaceResult
+      val expected = expectedResult.lowered
+        .bytes()
+        .asScala
+        .map { case (name, bytes) =>
+          name -> bytes.toSeq
+        }
+        .toMap
+      assertEquals(obtained, expected)
+    } finally {
+      fileManager.close()
+      Files.deleteIfExists(jar)
+    }
+  }
+
+  test("target-protobuf-classpath-before-workspace-headers") {
+    checkTargetClasspathPrecedence(isProtobuf = true)
+  }
+
+  test("workspace-headers-before-non-protobuf-target-classpath") {
+    checkTargetClasspathPrecedence(isProtobuf = false)
   }
 }
