@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.utils
 
+import java.util.IdentityHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 /**
@@ -22,15 +23,17 @@ trait Vol[+T <: Any] {
   protected def eval(): T
 
   def snapshot(): T = {
-    val previousContext = Vol.context.get()
-    val cached = previousContext.get(this)
-    cached match {
-      case Some(x) => x.asInstanceOf[T]
-      case None =>
-        val value = eval()
-        val kvp: (Vol[Any], Any) = (this, value)
-        Vol.context.set(previousContext + kvp)
-        value
+    val existing = Vol.context.get()
+    if (existing eq null) {
+      Vol.context.set(new IdentityHashMap[Vol[Any], Any]())
+      try snapshot()
+      finally Vol.context.remove()
+    } else if (existing.containsKey(this)) {
+      existing.get(this).asInstanceOf[T]
+    } else {
+      val value = eval()
+      existing.put(this, value)
+      value
     }
   }
 
@@ -42,8 +45,8 @@ trait Vol[+T <: Any] {
 
 object Vol {
 
-  private val context: ThreadLocal[Map[Vol[Any], Any]] =
-    ThreadLocal.withInitial(() => Map.empty)
+  private val context: ThreadLocal[IdentityHashMap[Vol[Any], Any]] =
+    new ThreadLocal()
 
   case class AtomicRef[T](value: AtomicReference[T]) extends Vol[T] {
     override protected def eval(): T = value.get()
@@ -60,6 +63,6 @@ object Vol {
   private case class FlatMapped[T, U](source: Vol[T], f: T => Vol[U])
       extends Vol[U] {
 
-    override protected def eval(): U = f(source.snapshot()).eval()
+    override protected def eval(): U = f(source.snapshot()).snapshot()
   }
 }

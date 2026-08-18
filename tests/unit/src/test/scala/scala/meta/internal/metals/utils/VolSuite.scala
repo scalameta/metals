@@ -45,6 +45,13 @@ class VolSuite extends FunSuite {
     assertNotEquals(y.snapshot(), z.snapshot())
   }
 
+  test("evaluation-in-the-same-thread-should-allow-different-values") {
+    val snapshot1 = Stopwatch.snapshot()
+    Thread.sleep(100)
+    val snapshot2 = Stopwatch.snapshot()
+    assertNotEquals(snapshot1, snapshot2)
+  }
+
   test("evaluation-in-different-threads-should-allow-diferent-values") {
     var snapshot1: Long = -1L
     var snapshot2: Long = -1L
@@ -55,9 +62,6 @@ class VolSuite extends FunSuite {
     assertNotEquals(snapshot1 - snapshot2, 0L)
   }
 
-  // Exposes: ThreadLocal cache is never cleared, so a top-level Vol is
-  // frozen forever on a thread after the first snapshot() — contradicting
-  // "the value may change more than once".
   test("atomic-ref-should-see-updates-across-separate-snapshots") {
     val ref = new AtomicReference(1)
     val vol = Vol.AtomicRef(ref)
@@ -66,9 +70,6 @@ class VolSuite extends FunSuite {
     assertEquals(vol.snapshot(), 2)
   }
 
-  // Exposes: FlatMapped.eval calls result.eval() instead of result.snapshot(),
-  // so a leaf Vol returned from flatMap is not entered into the snapshot cache
-  // and is re-evaluated when read again in the same comprehension.
   test("flatmap-to-leaf-vol-should-be-cached-in-enclosing-comprehension") {
     val b = new ReferenceCountingVol()
     val a = Vol.Function(() => 0)
@@ -79,8 +80,6 @@ class VolSuite extends FunSuite {
     assertEquals(result.snapshot(), (1, 1))
   }
 
-  // Exposes: Function/AtomicRef are case classes, so structurally equal Vols
-  // share a single cache entry even when they are distinct instances.
   test("distinct-function-vols-sharing-lambda-should-not-share-cache") {
     val counter = new AtomicInteger(0)
     val f = () => counter.incrementAndGet()
