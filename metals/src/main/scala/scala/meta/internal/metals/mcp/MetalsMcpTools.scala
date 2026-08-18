@@ -158,26 +158,42 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withErrorHandling { (exchange, _) =>
-        compilations
-          .cascadeCompile(buildTargets.allBuildTargetIds)
-          .map { _ =>
-            val allDiagnostics = diagnostics.allDiagnostics
-            val diagnosticsOutput = allDiagnostics.show(projectPath)
-            val content =
-              if (diagnosticsOutput.isEmpty) {
-                "Compilation successful."
-              } else if (allDiagnostics.hasErrors) {
-                s"Compilation failed with errors:\n$diagnosticsOutput"
-              } else {
-                s"Compilation successful with warnings:\n$diagnosticsOutput"
-              }
-            CallToolResult
-              .builder()
-              .content(createContent(content))
-              .isError(false)
-              .build()
-          }
-          .toMono
+        val allTargets = buildTargets.allBuildTargetIds
+        if (allTargets.isEmpty)
+          Future
+            .successful(
+              CallToolResult
+                .builder()
+                .content(
+                  createContent(
+                    "Error: no modules found, try running `import-build`."
+                  )
+                )
+                .isError(true)
+                .build()
+            )
+            .toMono
+        else
+          compilations
+            .cascadeCompile(allTargets)
+            .map { _ =>
+              val allDiagnostics = diagnostics.allDiagnostics
+              val diagnosticsOutput = allDiagnostics.show(projectPath)
+              val content =
+                if (diagnosticsOutput.isEmpty) {
+                  "Compilation successful."
+                } else if (allDiagnostics.hasErrors) {
+                  s"Compilation failed with errors:\n$diagnosticsOutput"
+                } else {
+                  s"Compilation successful with warnings:\n$diagnosticsOutput"
+                }
+              CallToolResult
+                .builder()
+                .content(createContent(content))
+                .isError(false)
+                .build()
+            }
+            .toMono
       },
     )
   }
@@ -251,10 +267,12 @@ trait MetalsMcpTools extends Cancelable {
                 .orElse(inUpstreamModulesErrors)
 
               val content =
-                if (compileResult.getStatusCode == StatusCode.CANCELLED) {
-                  diagnosticsContent.getOrElse(
-                    "Compilation cancelled."
-                  )
+                if (buildTarget.isEmpty) {
+                  s"Error: no build target for $path, try running `import-build`."
+                } else if (
+                  compileResult.getStatusCode == StatusCode.CANCELLED
+                ) {
+                  diagnosticsContent.getOrElse("Compilation cancelled.")
                 } else {
                   diagnosticsContent.getOrElse("Compilation successful.")
                 }
@@ -262,7 +280,7 @@ trait MetalsMcpTools extends Cancelable {
               CallToolResult
                 .builder()
                 .content(createContent(content))
-                .isError(false)
+                .isError(buildTarget.isEmpty)
                 .build()
             }
             .toMono
@@ -303,9 +321,8 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val module = arguments.getAs[String]("module")
-        (buildTargets.allScala ++ buildTargets.allJava).find(
-          _.displayName == module
-        ) match {
+        val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
+        targets.find(_.displayName == module) match {
           case Some(target) =>
             compilations
               .compileTarget(target.id)
@@ -344,7 +361,14 @@ trait MetalsMcpTools extends Cancelable {
               .successful(
                 CallToolResult
                   .builder()
-                  .content(createContent(s"Error: Module not found: $module"))
+                  .content(
+                    createContent(
+                      if (targets.isEmpty)
+                        "Error: no modules found, try running `import-build`."
+                      else
+                        s"Error: Module not found: $module, see `list-modules`."
+                    )
+                  )
                   .isError(true)
                   .build()
               )
@@ -880,7 +904,10 @@ trait MetalsMcpTools extends Cancelable {
             .builder()
             .content(
               createContent(
-                s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
+                if (modules.isEmpty)
+                  "No modules (build targets) found, try running `import-build`."
+                else
+                  s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
               )
             )
             .isError(false)
