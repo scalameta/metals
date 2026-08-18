@@ -30,12 +30,11 @@ class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
 
       for {
         _ <- client.initialize()
+        _ <- client.waitForIndexing("a")
 
         modules <- client.listModules()
         findDepResult <- client.findDep("org.scala-lang")
         scalafixRules <- client.listScalafixRules()
-
-        _ <- client.waitForIndexing("a")
 
         typedGlobResult <- client.typedGlobSearch(
           "Hello",
