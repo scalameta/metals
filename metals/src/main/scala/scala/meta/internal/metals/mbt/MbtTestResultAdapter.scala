@@ -6,7 +6,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.CancelableFuture
@@ -34,7 +36,8 @@ import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
 class MbtTestResultAdapter(
     inner: Debuggee,
     testSuites: ScalaTestSuites,
-    knownTestCaseNames: String => List[String] = _ => Nil,
+    testProvider: TestSuitesProvider,
+    targetId: BuildTargetIdentifier,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -85,7 +88,8 @@ class MbtTestResultAdapter(
     MbtTestResultAdapter
       .testSuiteSummaries(
         testSuites.getSuites.asScala.toList,
-        knownTestCaseNames,
+        testProvider,
+        targetId,
         passed,
         duration,
       )
@@ -100,9 +104,10 @@ object MbtTestResultAdapter {
   def apply(
       inner: Debuggee,
       testSuites: ScalaTestSuites,
-      knownTestCaseNames: String => List[String] = _ => Nil,
+      testProvider: TestSuitesProvider,
+      targetId: BuildTargetIdentifier,
   )(implicit ec: ExecutionContext): MbtTestResultAdapter =
-    new MbtTestResultAdapter(inner, testSuites, knownTestCaseNames)
+    new MbtTestResultAdapter(inner, testSuites, testProvider, targetId)
 
   /**
    * Builds one [[TestSuiteSummary]] per requested suite. Every
@@ -110,7 +115,8 @@ object MbtTestResultAdapter {
    */
   def testSuiteSummaries(
       suites: List[ScalaTestSuiteSelection],
-      knownTestCaseNames: String => List[String],
+      testProvider: TestSuitesProvider,
+      targetId: BuildTargetIdentifier,
       passed: Boolean,
       duration: Long,
   ): List[TestSuiteSummary] =
@@ -122,7 +128,7 @@ object MbtTestResultAdapter {
         else
           // If the whole suit is selected, we still need to send data about all test cases
           // added to the client via `AddTestCases` for the results to show up correctly
-          knownTestCaseNames(className)
+          testProvider.knownTestCaseNames(targetId, className)
 
       val testResults: java.util.List[SingleTestSummary] =
         if (testNames.isEmpty) {

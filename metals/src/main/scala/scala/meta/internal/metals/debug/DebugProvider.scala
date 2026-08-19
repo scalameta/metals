@@ -361,16 +361,14 @@ class DebugProvider(
         val runner = currentRunner.get()
         if (runner != null && testSuites.nonEmpty) {
           val passed = result.getStatusCode == b.StatusCode.OK
-          val targetIdOpt = parameters.getTargets().asScala.headOption
-          val knownTestCaseNamesFor: String => List[String] = className =>
-            targetIdOpt
-              .map(id => testProvider.knownTestCaseNames(id, className))
-              .getOrElse(Nil)
           val duration = System.currentTimeMillis() - startTime
+          // Targets cannot be empty
+          val targetId = parameters.getTargets().asScala.head
           MbtTestResultAdapter
             .testSuiteSummaries(
               testSuites.toList,
-              knownTestCaseNamesFor,
+              testProvider,
+              targetId,
               passed,
               duration,
             )

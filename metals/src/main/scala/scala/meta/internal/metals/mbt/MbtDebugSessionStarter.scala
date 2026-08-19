@@ -17,6 +17,7 @@ import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -33,10 +34,7 @@ class MbtDebugSessionStarter(
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
     buildTargetClasses: BuildTargetClasses,
-    knownTestCaseNames: (
-        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
-        String,
-    ) => List[String] = (_, _) => Nil,
+    testProvider: TestSuitesProvider,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -129,11 +127,6 @@ class MbtDebugSessionStarter(
       .flatMap(s =>
         buildTargetClasses.frameworkForMbtTestClass(s.getClassName, target.id)
       )
-
-  private def testCaseNamesOf(
-      target: MbtTarget
-  ): String => List[String] =
-    className => knownTestCaseNames(target.id, className)
 
   def test(
       target: MbtTarget,
@@ -298,7 +291,8 @@ class MbtDebugSessionStarter(
               MbtTestResultAdapter(
                 innerDebuggee,
                 testSuites,
-                testCaseNamesOf(target),
+                testProvider,
+                target.id,
               )
             val handler = dap.DebugServer.run(
               debuggee,

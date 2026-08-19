@@ -211,7 +211,7 @@ class ProjectMetalsLspService(
         userJavaHome = () => userConfig.javaHome,
         workDoneProgress = workDoneProgress,
         buildTargetClasses = buildTargetClasses,
-        knownTestCaseNames = testProvider.knownTestCaseNames,
+        testProvider = testProvider,
       )(ec)
     }
 
