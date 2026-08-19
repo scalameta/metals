@@ -6,7 +6,10 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.CancelableFuture
 import ch.epfl.scala.debugadapter.ClassEntry
@@ -33,6 +36,8 @@ import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
 class MbtTestResultAdapter(
     inner: Debuggee,
     testSuites: ScalaTestSuites,
+    testProvider: TestSuitesProvider,
+    targetId: BuildTargetIdentifier,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -79,52 +84,16 @@ class MbtTestResultAdapter(
       listener: DebuggeeListener,
       passed: Boolean,
       duration: Long,
-  ): Unit = {
-    val suites = testSuites.getSuites.asScala.toList
-
-    for (suite <- suites) {
-      val className = suite.getClassName
-      val selectedTests = suite.getTests.asScala.toList
-
-      val testResults: java.util.List[SingleTestSummary] =
-        if (selectedTests.isEmpty) {
-          if (passed)
-            java.util.Collections.singletonList(
-              SingleTestResult.Passed(className, duration)
-            )
-          else
-            java.util.Collections.singletonList(
-              SingleTestResult.Failed(
-                className,
-                duration,
-                "Test suite failed",
-                null,
-                null,
-              )
-            )
-        } else {
-          val results = selectedTests.map { testName =>
-            val fullTestName = s"$className.$testName"
-            val result: SingleTestSummary =
-              if (passed)
-                SingleTestResult.Passed(fullTestName, duration)
-              else
-                SingleTestResult.Failed(
-                  fullTestName,
-                  duration,
-                  "Test failed",
-                  null,
-                  null,
-                )
-            result
-          }
-          results.asJava
-        }
-
-      val summary = TestSuiteSummary(className, duration, testResults)
-      listener.testResult(summary)
-    }
-  }
+  ): Unit =
+    MbtTestResultAdapter
+      .testSuiteSummaries(
+        testSuites.getSuites.asScala.toList,
+        testProvider,
+        targetId,
+        passed,
+        duration,
+      )
+      .foreach(listener.testResult)
 }
 
 object MbtTestResultAdapter {
@@ -135,6 +104,66 @@ object MbtTestResultAdapter {
   def apply(
       inner: Debuggee,
       testSuites: ScalaTestSuites,
+      testProvider: TestSuitesProvider,
+      targetId: BuildTargetIdentifier,
   )(implicit ec: ExecutionContext): MbtTestResultAdapter =
-    new MbtTestResultAdapter(inner, testSuites)
+    new MbtTestResultAdapter(inner, testSuites, testProvider, targetId)
+
+  /**
+   * Builds one [[TestSuiteSummary]] per requested suite. Every
+   * name we can attribute to this run gets the same pass/fail verdict.
+   */
+  def testSuiteSummaries(
+      suites: List[ScalaTestSuiteSelection],
+      testProvider: TestSuitesProvider,
+      targetId: BuildTargetIdentifier,
+      passed: Boolean,
+      duration: Long,
+  ): List[TestSuiteSummary] =
+    suites.map { suite =>
+      val className = suite.getClassName
+      val selectedTests = suite.getTests.asScala.toList
+      val testNames =
+        if (selectedTests.nonEmpty) selectedTests
+        else
+          // If the whole suit is selected, we still need to send data about all test cases
+          // added to the client via `AddTestCases` for the results to show up correctly
+          testProvider.knownTestCaseNames(targetId, className)
+
+      val testResults: java.util.List[SingleTestSummary] =
+        if (testNames.isEmpty) {
+          java.util.Collections.singletonList(
+            singleTestResult(className, passed, "Test suite failed", duration)
+          )
+        } else {
+          testNames
+            .map(testName =>
+              singleTestResult(
+                s"$className.$testName",
+                passed,
+                "Test failed",
+                duration,
+              )
+            )
+            .asJava
+        }
+
+      TestSuiteSummary(className, duration, testResults)
+    }
+
+  private def singleTestResult(
+      testName: String,
+      passed: Boolean,
+      message: String,
+      duration: Long,
+  ): SingleTestSummary =
+    if (passed) SingleTestResult.Passed(testName, duration)
+    else
+      SingleTestResult.Failed(
+        testName,
+        duration,
+        message,
+        null,
+        null,
+      )
 }

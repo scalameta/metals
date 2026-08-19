@@ -17,6 +17,7 @@ import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import coursier.MavenRepository
@@ -265,6 +266,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
       gradleTestCommand(target, testSuites, debugAgentFlag = None)
@@ -276,6 +278,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
       gradleTestCommand(target, testSuites, Some(debugAgentFlag))
@@ -288,6 +291,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = { port =>
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"

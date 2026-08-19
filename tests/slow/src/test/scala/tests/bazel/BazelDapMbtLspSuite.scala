@@ -14,6 +14,8 @@ import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ScalaTestSuiteSelection
+import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -22,6 +24,7 @@ import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.TestParamsDataKind
 import tests.BaseDapSuite
 import tests.BazelBuildLayout
 import tests.MbtTestInitializer
@@ -121,6 +124,53 @@ class BazelDapMbtLspSuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertContains(output, "OK (1 test)")
+  }
+
+  test("bazel-mbt-scalatest-test-selection", maxRetry = 3) {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          scalatestSelectionLayout,
+          V.scala213,
+          bazelVersion,
+          List("org.scalatest:scalatest_2.13:3.2.19"),
+          includeScalatest = true,
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      _ <- server.didOpen("test/FooSpec.scala")
+      _ <- awaitMbtTestClassDiscovery("test/FooSpec.scala")
+      // Confirms the candidate test class via semanticdb, which populates
+      // its test framework, that we need to know to run `bazel` with the right args
+      _ <- server.discoverTestSuites(
+        List("test/FooSpec.scala"),
+        uri = Some(server.toPath("test/FooSpec.scala").toURI.toString),
+      )
+      debugger <- server.startDebugging(
+        "//test",
+        TestParamsDataKind.SCALA_TEST_SUITES_SELECTION,
+        ScalaTestSuites(
+          List(
+            ScalaTestSuiteSelection("test.FooSpec", List("foo test").asJava)
+          ).asJava,
+          Nil.asJava,
+          Nil.asJava,
+          Nil.asJava,
+        ),
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield {
+      assertContains(output, "foo test")
+      assert(!output.contains("bar test"), "unselected test must not have run")
+    }
   }
 
   test("bazel-mbt-test-breakpoint") {
@@ -334,6 +384,31 @@ class BazelDapMbtLspSuite
        |  public void testAddition() {
        |    assertEquals(4, 2 + 2);
        |  }
+       |}
+       |""".stripMargin
+
+  private def scalatestSelectionLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/test/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_test")
+       |
+       |scala_test(
+       |    name = "FooSpec",
+       |    srcs = ["FooSpec.scala"],
+       |    deps = ["@maven//:org_scalatest_scalatest_2_13"],
+       |)
+       |
+       |/test/FooSpec.scala
+       |package test
+       |
+       |import org.scalatest.funsuite.AnyFunSuite
+       |
+       |class FooSpec extends AnyFunSuite {
+       |  test("foo test") { assert(true) }
+       |  test("bar test") { fail("bar test must not run") }
        |}
        |""".stripMargin
 

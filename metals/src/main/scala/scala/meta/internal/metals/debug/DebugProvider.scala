@@ -57,6 +57,7 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtTestResultAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
 
@@ -142,6 +143,12 @@ class DebugProvider(
    */
   def usesBuildTargetTest(id: BuildTargetIdentifier): Boolean =
     buildTargets.buildServerOf(id).exists(_.isMbt)
+
+  def confirmMbtTestClassCandidates(
+      path: AbsolutePath,
+      id: BuildTargetIdentifier,
+  ): Future[Unit] =
+    buildTargetClasses.confirmMbtTestClassCandidates(path, id)
 
   /**
    * Run tests through BSP `buildTarget/test`, capturing process output.
@@ -343,6 +350,7 @@ class DebugProvider(
         .getOrElse(Seq.empty)
 
     openLocalDebugServer(sessionName, cancelPromise) { () =>
+      val startTime = System.currentTimeMillis()
       val testParams = new b.TestParams(parameters.getTargets())
       testParams.setOriginId(ju.UUID.randomUUID().toString())
       testParams.setDataKind(parameters.getDataKind)
@@ -353,30 +361,18 @@ class DebugProvider(
         val runner = currentRunner.get()
         if (runner != null && testSuites.nonEmpty) {
           val passed = result.getStatusCode == b.StatusCode.OK
-          // 0 is an obviously untrue value - a real duration will show up in the logs.
-          // Parsing the bazel xml output is an option, but might be hard to maintain.
-          val duration = 0L
-          testSuites.foreach { suite =>
-            val entry: dap.testing.SingleTestSummary =
-              if (passed)
-                dap.testing.SingleTestResult
-                  .Passed(suite.getClassName, duration)
-              else
-                dap.testing.SingleTestResult.Failed(
-                  suite.getClassName,
-                  duration,
-                  "Test suite failed",
-                  null,
-                  null,
-                )
-            runner.testResult(
-              dap.testing.TestSuiteSummary(
-                suite.getClassName,
-                duration,
-                ju.Collections.singletonList(entry),
-              )
+          val duration = System.currentTimeMillis() - startTime
+          // Targets cannot be empty
+          val targetId = parameters.getTargets().asScala.head
+          MbtTestResultAdapter
+            .testSuiteSummaries(
+              testSuites.toList,
+              testProvider,
+              targetId,
+              passed,
+              duration,
             )
-          }
+            .foreach(runner.testResult)
         }
         result
       }

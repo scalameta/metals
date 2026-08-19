@@ -135,6 +135,7 @@ object BazelBuildLayout extends BuildToolLayout {
       bazelVersion: String,
       mavenDeps: List[String],
       mavenHubName: Option[String] = None,
+      includeScalatest: Boolean = false,
   ): String =
     bazelLayout(
       sourceLayout,
@@ -142,6 +143,7 @@ object BazelBuildLayout extends BuildToolLayout {
       bazelVersion,
       mavenDeps,
       mavenHubName,
+      includeScalatest,
     )
 
   private def bazelLayout(
@@ -150,13 +152,14 @@ object BazelBuildLayout extends BuildToolLayout {
       bazelVersion: String,
       mavenDeps: List[String],
       mavenHubName: Option[String],
+      includeScalatest: Boolean,
   ): String =
     s"""|/.metals/txt.txt
         |initialize the project for metals
         |/.bazelversion
         |$bazelVersion
         |/MODULE.bazel
-        |${moduleFileLayout(scalaVersion, mavenDeps, mavenHubName)}
+        |${moduleFileLayout(scalaVersion, mavenDeps, mavenHubName, includeScalatest)}
         |/BUILD
         |
         |/WORKSPACE
@@ -168,6 +171,7 @@ object BazelBuildLayout extends BuildToolLayout {
       scalaVersion: String,
       mavenDeps: List[String] = Nil,
       mavenHubName: Option[String] = None,
+      includeScalatest: Boolean = false,
   ): String = {
     val hubName = mavenHubName.getOrElse("maven")
     val nameLine = mavenHubName.fold("")(n => s"""    name = "$n",\n""")
@@ -189,7 +193,7 @@ object BazelBuildLayout extends BuildToolLayout {
             |use_repo(maven, "$hubName")
             |""".stripMargin
       }
-    s"""|${scalaModulePrefix(scalaVersion)}
+    s"""|${scalaModulePrefix(scalaVersion, includeScalatest)}
         |
         |$mavenSection""".stripMargin
   }
@@ -249,7 +253,10 @@ object BazelBuildLayout extends BuildToolLayout {
         |""".stripMargin
   }
 
-  private def scalaModulePrefix(scalaVersion: String): String =
+  private def scalaModulePrefix(
+      scalaVersion: String,
+      includeScalatest: Boolean = false,
+  ): String =
     s"""|bazel_dep(name = "rules_scala", version = "7.2.4")
         |
         |scala_config = use_extension("@rules_scala//scala/extensions:config.bzl", "scala_config")
@@ -258,6 +265,7 @@ object BazelBuildLayout extends BuildToolLayout {
         |scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
         |scala_deps.settings(fetch_sources = True)
         |scala_deps.scala()
+        |${if (includeScalatest) "scala_deps.scalatest()" else ""}
         |use_repo(scala_deps, "rules_scala_toolchains")
         |
         |register_toolchains("@rules_scala_toolchains//...:all")""".stripMargin

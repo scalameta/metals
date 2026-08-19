@@ -10,16 +10,19 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
 import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 import ch.epfl.scala.debugadapter.MultiOutputModule
@@ -30,10 +33,8 @@ class MbtDebugSessionStarter(
     buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
-    classToSourceFile: (
-        String,
-        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
-    ) => Option[AbsolutePath] = (_, _) => None,
+    buildTargetClasses: BuildTargetClasses,
+    testProvider: TestSuitesProvider,
     debuggeeGracePeriodSeconds: Long = 60L,
 )(implicit ec: ExecutionContext) {
 
@@ -112,7 +113,20 @@ class MbtDebugSessionStarter(
   ): Seq[AbsolutePath] =
     MbtDebugLauncher
       .listOrNil(testSuites.getSuites)
-      .flatMap(s => classToSourceFile(s.getClassName, target.id))
+      .flatMap(s =>
+        buildTargetClasses.sourceFileForMbtTestClass(s.getClassName, target.id)
+      )
+
+  private def frameworkOf(
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Option[TestFramework] =
+    MbtDebugLauncher
+      .listOrNil(testSuites.getSuites)
+      .headOption
+      .flatMap(s =>
+        buildTargetClasses.frameworkForMbtTestClass(s.getClassName, target.id)
+      )
 
   def test(
       target: MbtTarget,
@@ -122,8 +136,13 @@ class MbtDebugSessionStarter(
       err: String => Unit,
   ): Future[Int] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
-    val command =
-      buildTool.mbtTestCommand(workspace, target, testSuites, sourceFiles)
+    val command = buildTool.mbtTestCommand(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      frameworkOf(target, testSuites),
+    )
     val toolName = buildTool.executableName
     val artifactId = {
       val parts = target.name.split(':')
@@ -231,6 +250,7 @@ class MbtDebugSessionStarter(
                     target,
                     testSuites,
                     sourceFiles,
+                    frameworkOf(target, testSuites),
                   )
                 commandWithPort(0).foreach { command =>
                   scribe.info(
@@ -252,6 +272,7 @@ class MbtDebugSessionStarter(
                   testSuites,
                   debugAgentFlag,
                   sourceFiles,
+                  frameworkOf(target, testSuites),
                 )
                 commandFuture.foreach { command =>
                   scribe.info(
@@ -266,7 +287,13 @@ class MbtDebugSessionStarter(
                   userJavaHome(),
                 )
               }
-            val debuggee = MbtTestResultAdapter(innerDebuggee, testSuites)
+            val debuggee =
+              MbtTestResultAdapter(
+                innerDebuggee,
+                testSuites,
+                testProvider,
+                target.id,
+              )
             val handler = dap.DebugServer.run(
               debuggee,
               new MetalsDebugToolsResolver(),

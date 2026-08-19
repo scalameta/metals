@@ -6,6 +6,7 @@ import scala.jdk.CollectionConverters.ListHasAsScala
 import scala.meta.internal.builds.BuildTool
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 
@@ -36,6 +37,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Future[List[String]]
 
   def mbtTestDebugCommand(
@@ -44,6 +46,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Future[List[String]]
 
   /**
@@ -61,6 +64,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = { _ =>
     mbtTestDebugCommand(
       workspace,
@@ -68,6 +72,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites,
       MbtDebugLauncher.DebugAgentFlag,
       sourceFiles,
+      framework,
     )
   }
 }

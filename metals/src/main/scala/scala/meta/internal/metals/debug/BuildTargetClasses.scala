@@ -133,6 +133,12 @@ final class BuildTargetClasses(
   ): Option[AbsolutePath] =
     index.get(targetId).flatMap(_.confirmedMbtTestClassFile.get(className))
 
+  def frameworkForMbtTestClass(
+      className: String,
+      targetId: b.BuildTargetIdentifier,
+  ): Option[TestFramework] =
+    getTestClasses(className, targetId).headOption.map(_._2.framework)
+
   def resolveCandidateTestClass(
       name: String,
       target: Option[String],

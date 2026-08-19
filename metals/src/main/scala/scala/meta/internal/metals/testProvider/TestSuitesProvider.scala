@@ -343,16 +343,18 @@ final class TestSuitesProvider(
     val buildTargetUpdates =
       for {
         metadata <- index.getMetadata(path).toList
-        events = {
-          val suites = metadata.entries.map(_.suiteDetails).distinct
-          val canResolve = suites.exists(suite =>
-            TestFrameworkUtils.canResolveTests(suite.framework)
-          )
-          if (canResolve) getTestCasesForSuites(path, suites, textDocument)
-          else Seq.empty
-        }
-        buildTarget <- metadata.entries.map(_.buildTarget).distinct
+        (buildTarget, entriesForTarget) <- metadata.entries
+          .groupBy(_.buildTarget)
+          .toList
       } yield {
+        val suites = entriesForTarget.map(_.suiteDetails).distinct
+        val canResolve = suites.exists(suite =>
+          TestFrameworkUtils.canResolveTests(suite.framework)
+        )
+        val events =
+          if (canResolve)
+            getTestCasesForSuites(path, buildTarget, suites, textDocument)
+          else Seq.empty
         buildTargetUpdate(buildTarget, events)
       }
     buildTargetUpdates
@@ -368,6 +370,7 @@ final class TestSuitesProvider(
    */
   private def getTestCasesForSuites(
       path: AbsolutePath,
+      buildTarget: BuildTarget,
       suites: Seq[TestSuiteDetails],
       doc: Option[TextDocument],
   ): Seq[AddTestCases] = {
@@ -423,6 +426,11 @@ final class TestSuitesProvider(
 
           if (testCases.nonEmpty) {
             index.updateFileMetadata(path, semanticdb.md5)
+            index.putTestCases(
+              buildTarget,
+              suite.fullyQualifiedName,
+              testCases.toList,
+            )
             val event = AddTestCases(
               fullyQualifiedClassName = suite.fullyQualifiedName.value,
               className = suite.className.value,
@@ -470,7 +478,12 @@ final class TestSuitesProvider(
           val canResolve =
             TestFrameworkUtils.canResolveTests(entry.suiteDetails.framework)
           if (canResolve && buffers.contains(entry.path))
-            getTestCasesForSuites(entry.path, Vector(entry.suiteDetails), None)
+            getTestCasesForSuites(
+              entry.path,
+              entry.buildTarget,
+              Vector(entry.suiteDetails),
+              None,
+            )
           else Nil
         }
       }.toMap
@@ -652,5 +665,16 @@ final class TestSuitesProvider(
   ): Option[TestEntry] = {
     index.get(target, FullyQualifiedName(className))
   }
+
+  def knownTestCaseNames(
+      id: b.BuildTargetIdentifier,
+      className: String,
+  ): List[String] =
+    buildTargets
+      .info(id)
+      .map(target =>
+        index.getTestCaseNames(target, FullyQualifiedName(className))
+      )
+      .getOrElse(Nil)
 
 }
