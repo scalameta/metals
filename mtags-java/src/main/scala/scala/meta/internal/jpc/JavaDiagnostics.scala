@@ -9,6 +9,8 @@ import javax.tools.Diagnostic.Kind.WARNING
 import javax.tools.JavaFileObject
 
 import com.sun.source.tree.LineMap
+import com.sun.tools.javac.api.ClientCodeWrapper
+import com.sun.tools.javac.util.JCDiagnostic
 import org.eclipse.{lsp4j => l}
 
 object JavaDiagnostics {
@@ -28,7 +30,7 @@ object JavaDiagnostics {
           d.getEndPosition(),
           text
         )
-    new l.Diagnostic(
+    val diagnostic = new l.Diagnostic(
       range,
       d.getMessage(null),
       d.getKind() match {
@@ -45,5 +47,14 @@ object JavaDiagnostics {
       "javac",
       d.getCode()
     )
+    val javacDiagnostic = d match {
+      case value: JCDiagnostic => Some(value)
+      case value: ClientCodeWrapper#DiagnosticSourceUnwrapper => Some(value.d)
+      case _ => None
+    }
+    javacDiagnostic
+      .filter(_.hasLintCategory())
+      .foreach(value => diagnostic.setData(value.getLintCategory().option))
+    diagnostic
   }
 }

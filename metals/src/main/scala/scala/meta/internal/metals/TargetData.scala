@@ -147,8 +147,12 @@ final class TargetData() {
     scalaTargetInfo.get(id)
   def javaTarget(id: BuildTargetIdentifier): Option[JavaTarget] =
     javaTargetInfo.get(id)
-  def jvmTarget(id: BuildTargetIdentifier): Option[JvmTarget] =
-    scalaTarget(id).orElse(javaTarget(id))
+  def jvmTarget(
+      id: BuildTargetIdentifier,
+      scalaPreferred: Boolean = true,
+  ): Option[JvmTarget] =
+    if (scalaPreferred) scalaTarget(id).orElse(javaTarget(id))
+    else javaTarget(id).orElse(scalaTarget(id))
   def jvmTargets(id: BuildTargetIdentifier): List[JvmTarget] =
     List(scalaTarget(id), javaTarget(id)).flatten
 

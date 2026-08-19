@@ -63,7 +63,8 @@ class StandaloneMcpService(
   private val time: Time = Time.system
 
   private val clientConfig: ClientConfiguration = ClientConfiguration(
-    MetalsServerConfig.default
+    MetalsServerConfig.default,
+    NoopFeatureFlagProvider,
   )
 
   private val mcpClient = new ConfiguredLanguageClient(

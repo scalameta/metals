@@ -140,6 +140,7 @@ class WorkspaceLspService(
     ClientConfiguration(
       serverInputs.initialServerConfig,
       initializeParams,
+      featureFlags,
     )
 
   private val languageClient = {

@@ -80,12 +80,13 @@ case class MbtJsonBuilder(
       sources: List[String],
       dependsOn: List[String] = Nil,
       customScalaVersion: Option[String] = None,
+      javacOptions: List[String] = Nil,
   ): MbtJsonBuilder = {
     val distinctDeps = dependencyModules.distinctBy(_.id).reverse
     val namespace = MbtNamespace(
       sources = sources.asJava,
       scalacOptions = null,
-      javacOptions = null,
+      javacOptions = if (javacOptions.isEmpty) null else javacOptions.asJava,
       dependencyModules = distinctDeps.map(_.id).asJava,
       scalaVersion = customScalaVersion.getOrElse(scalaVersion),
       javaHome = null,

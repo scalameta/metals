@@ -378,7 +378,7 @@ trait MetalsMcpTools extends Cancelable {
       .upstreamTargetsWithCompilationErrors(buildTarget)
     if (upstreamModules.nonEmpty) {
       val modules = upstreamModules
-        .flatMap(buildTargets.jvmTarget)
+        .flatMap(buildTargets.jvmTarget(_))
         .map(_.displayName)
         .mkString("\n", "\n", "")
       Some(

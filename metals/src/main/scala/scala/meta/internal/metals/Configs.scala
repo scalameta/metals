@@ -371,6 +371,28 @@ object Configs {
     }
   }
 
+  final case class MbtConfig(
+      importGeneratedSources: Boolean,
+      semanticdbCacheEnabled: Boolean,
+      semanticdbCacheMaxSize: Int,
+  )
+
+  object MbtConfig {
+    val defaultMaxSize: Int = Int.MaxValue
+    def default: MbtConfig =
+      MbtConfig(false, false, defaultMaxSize)
+    def fromConfig(
+        importGeneratedSources: Option[Boolean],
+        semanticdbCacheEnabled: Option[Boolean],
+        semanticdbCacheMaxSize: Option[Int],
+    ): MbtConfig =
+      MbtConfig(
+        importGeneratedSources.getOrElse(false),
+        semanticdbCacheEnabled.getOrElse(false),
+        semanticdbCacheMaxSize.getOrElse(defaultMaxSize),
+      )
+  }
+
   final case class ProtoOutlineProviderConfig(val value: String) {
     require(List("v1", "v2").contains(value), value)
     def isV1: Boolean =
@@ -389,8 +411,7 @@ object Configs {
     // which fails on syntax errors. See plans/protopc.md for details.
     def default: ProtoOutlineProviderConfig = v1
     def fromConfigOrFeatureFlag(
-        value: Option[String],
-        featureFlags: FeatureFlagProvider,
+        value: Option[String]
     ): Either[String, ProtoOutlineProviderConfig] = {
       value match {
         case Some(ok @ ("v1" | "v2")) =>
@@ -1033,6 +1054,27 @@ object Configs {
           } else {
             Right(default)
           }
+      }
+    }
+  }
+
+  /**
+   * Configuration for turbine cache. When enabled, turbine compilation results
+   * are persisted to disk and restored on startup to avoid recompiling unchanged
+   * sources.
+   *
+   * @param enabled Whether caching is enabled
+   */
+  final case class TurbineCacheConfig(enabled: Boolean)
+
+  object TurbineCacheConfig {
+    val default: TurbineCacheConfig = TurbineCacheConfig(enabled = false)
+    val enabled: TurbineCacheConfig = TurbineCacheConfig(enabled = true)
+
+    def fromConfig(value: Option[Boolean]): TurbineCacheConfig = {
+      value match {
+        case Some(enabled) => TurbineCacheConfig(enabled)
+        case None => default
       }
     }
   }

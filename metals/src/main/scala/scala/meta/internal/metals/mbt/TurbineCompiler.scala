@@ -109,10 +109,10 @@ object TurbineCompiler {
     )
     TurbineCompileResult(boundClasspath, lowered)
   }
-  private def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
+  private[mbt] def validClasspaths(classpath: Seq[Path]): Seq[Path] = {
     classpath.filter(isJarFile)
   }
-  private def isJarFile(path: Path): Boolean = {
+  private[mbt] def isJarFile(path: Path): Boolean = {
     Files.isRegularFile(path) &&
     path.getFileName().toString().endsWith(".jar")
   }
@@ -134,6 +134,8 @@ class TurbineCompiler[T](
     sleeper: Sleeper,
     onIndexingDone: () => Unit,
     onNewProjectClasspath: ClassPath => Unit,
+    turbineCache: Option[TurbineCache] = None,
+    getDirtyJavaFiles: () => Seq[(String, JavaFileObject)] = () => Seq.empty,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
   private val sourcepathByPackageName =
     TrieMap.empty[String, ju.concurrent.ConcurrentLinkedDeque[
@@ -157,6 +159,7 @@ class TurbineCompiler[T](
   private def isRecompilationDisabled: Boolean =
     debounceDelay.toMillis >= 3600000
 
+  private val isFirstCompile = new AtomicBoolean(true)
   private val doCompile =
     BatchedFunction.fromFuture[Unit, TurbineCompileResult](
       _ => {
@@ -184,16 +187,58 @@ class TurbineCompiler[T](
   }
 
   var result = TurbineCompiler.emptyResult
+
+  /**
+   * Attempts to load compilation results from cache.
+   * Should be called during initialization before any compilation.
+   *
+   * @return true if cache was loaded successfully, false otherwise
+   */
+  def loadFromCache(classpathPaths: Seq[Path]): Option[TurbineCompileResult] = {
+    turbineCache match {
+      case Some(cache) =>
+        cache.readCache(classpathPaths) match {
+          case Some(cachedResult) =>
+            scribe.info(
+              s"Loaded turbine cache with ${cachedResult.lowered.symbols().size()} symbols"
+            )
+            Some(cachedResult)
+          case None =>
+            None
+        }
+      case None =>
+        None
+    }
+  }
+
   def doCompileNow(): TurbineCompileResult = {
-    result = TurbineCompiler.compileClassfiles(
-      allCompilationUnits(),
-      parseUnit,
-      classpath(),
-      progressBars,
-    )
-    cleanup()
-    // Clear deleted binary names after recompile - they are no longer in the compiled output
-    deletedBinaryNames.clear()
+
+    def compile() = {
+      result = TurbineCompiler.compileClassfiles(
+        allCompilationUnits(),
+        parseUnit,
+        classpath(),
+        progressBars,
+      )
+      cleanup()
+      // Clear deleted binary names after recompile - they are no longer in the compiled output
+      deletedBinaryNames.clear()
+      // Write to cache after successful compilation
+      turbineCache.foreach(_.writeCache(result))
+    }
+
+    if (isFirstCompile.getAndSet(false)) {
+      loadFromCache(TurbineCompiler.validClasspaths(classpath())) match {
+        case Some(cachedResult) =>
+          result = cachedResult
+          // Add dirty files to sourcepath so they take precedence over cached classes
+          addDirtyFilesToSourcepath()
+        case None =>
+          compile()
+      }
+    } else {
+      compile()
+    }
     onIndexingDone()
     result
   }
@@ -237,6 +282,30 @@ class TurbineCompiler[T](
       packageName: String,
       javaFileObject: JavaFileObject,
   ): Future[TurbineCompileResult] = {
+    addToSourcepath(packageName, javaFileObject)
+    doCompile(())
+  }
+
+  /**
+   * Add dirty Java files to the sourcepath so they take precedence over cached classes.
+   * This is called after loading from cache to ensure uncommitted changes are properly handled.
+   */
+  private def addDirtyFilesToSourcepath(): Unit = {
+    val dirtyFiles = getDirtyJavaFiles()
+    if (dirtyFiles.nonEmpty) {
+      scribe.info(
+        s"turbine: adding ${dirtyFiles.size} dirty files to sourcepath"
+      )
+      for ((packageName, javaFileObject) <- dirtyFiles) {
+        addToSourcepath(packageName, javaFileObject)
+      }
+    }
+  }
+
+  private def addToSourcepath(
+      packageName: String,
+      javaFileObject: JavaFileObject,
+  ): Unit = {
     require(
       !packageName.endsWith("/"),
       s"package name '$packageName' cannot end with '/'. It should be a javac dot-separate package name like 'com.foo'",
@@ -253,8 +322,6 @@ class TurbineCompiler[T](
       item.ne(obj) &&
         item.javaFileObject.getName() == obj.javaFileObject.getName()
     )
-
-    doCompile(())
   }
 
   def createFileManager(

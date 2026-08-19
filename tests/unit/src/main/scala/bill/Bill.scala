@@ -169,6 +169,7 @@ object Bill {
         val capabilities = new BuildServerCapabilities
         capabilities.setCompileProvider(new CompileProvider(languages))
         capabilities.setCanReload(true)
+        capabilities.setDependencyModulesProvider(true)
         new InitializeBuildResult("Bill", "1.0", "2.0.0-M2", capabilities)
       }.logError("initialize").asJava
     }
@@ -401,9 +402,27 @@ object Bill {
       Future.successful(new ScalaMainClassesResult(List.empty.asJava)).asJava
     }
 
+    // Returns true when tests request a nonempty DependencyModulesResult
+    // whose per-target module lists are empty (classpath fallback path).
+    def hasEmptyDependencyModuleLists(): Boolean = {
+      Files.isRegularFile(
+        workspace.resolve("bill-empty-dependency-module-lists")
+      )
+    }
+
     override def buildTargetDependencyModules(
         params: DependencyModulesParams
-    ): CompletableFuture[DependencyModulesResult] = ???
+    ): CompletableFuture[DependencyModulesResult] = {
+      CompletableFuture.completedFuture {
+        if (hasEmptyDependencyModuleLists()) {
+          val item =
+            new DependencyModulesItem(target.getId, Collections.emptyList())
+          new DependencyModulesResult(Collections.singletonList(item))
+        } else {
+          new DependencyModulesResult(Collections.emptyList())
+        }
+      }
+    }
 
     override def debugSessionStart(
         params: DebugSessionParams
