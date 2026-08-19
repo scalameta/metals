@@ -136,14 +136,14 @@ case class BazelBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
       mbtTestExecCommand(
         runTargets,
         testSuites,
         debugAgentFlag = None,
-        frameworkOf = frameworkOf,
+        framework = framework,
       )
     }
 
@@ -153,14 +153,14 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
       mbtTestExecCommand(
         runTargets,
         testSuites,
         debugAgentFlag = Some(debugAgentFlag),
-        frameworkOf = frameworkOf,
+        framework = framework,
       )
     }
 
@@ -171,7 +171,7 @@ case class BazelBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = {
     val resolvedRunTargets =
       resolveTestRunTargets(workspace, target, sourceFiles)
@@ -181,7 +181,7 @@ case class BazelBuildTool(
           runTargets,
           testSuites,
           debugAgentFlag = None,
-          frameworkOf = frameworkOf,
+          framework = framework,
         ) ::: List(
           "--nocache_test_results",
           "--test_output=streamed",
@@ -241,41 +241,40 @@ case class BazelBuildTool(
       runTargets: List[String],
       testSuites: ScalaTestSuites,
       debugAgentFlag: Option[String],
-      frameworkOf: String => Option[TestFramework],
+      framework: Option[TestFramework],
   ): List[String] = {
     val jvmFlags =
       debugAgentFlag.toList ::: MbtDebugLauncher
         .listOrNil(testSuites.getJvmOptions)
     val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)
-    val (scalaTestSuites, otherSuites) = suites.partition { suite =>
-      MbtDebugLauncher.listOrNil(suite.getTests).nonEmpty &&
-      frameworkOf(suite.getClassName).contains(TestFramework.ScalaTest)
-    }
-    val testFilter = otherSuites.flatMap { suite =>
-      val className = suite.getClassName
-      val tests = MbtDebugLauncher.listOrNil(suite.getTests)
-      if (tests.isEmpty) List(className)
-      else tests.map(test => s"$className#$test")
-    }
     val testFilterArgs =
-      if (testFilter.isEmpty) Nil
-      else List(s"--test_filter=${testFilter.mkString(",")}")
-    // rules_scala's scala_test runner interprets Bazel's
-    // `--test_filter` as its own `-s <className>` flag, which doesn't work with
-    // individual test cases, so we special case it to use the ScalaTest
-    // settings directly.
-    val scalaTestArgs = scalaTestSuites.flatMap { suite =>
-      val className = suite.getClassName
-      val tests = MbtDebugLauncher.listOrNil(suite.getTests)
-      List("--test_arg=-s", s"--test_arg=$className") :::
-        tests.flatMap(test => List("--test_arg=-t", s"--test_arg=$test"))
-    }
+      if (framework.contains(TestFramework.ScalaTest)) {
+        // rules_scala's scala_test runner interprets Bazel's
+        // `--test_filter` as its own `-s <className>` flag, which doesn't work with
+        // individual test cases, so we special case it to use the ScalaTest
+        // settings directly.
+        suites.flatMap { suite =>
+          val className = suite.getClassName
+          val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+          List("--test_arg=-s", s"--test_arg=$className") :::
+            tests.flatMap(test => List("--test_arg=-t", s"--test_arg=$test"))
+        }
+      } else {
+        val testFilter = suites.flatMap { suite =>
+          val className = suite.getClassName
+          val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+          if (tests.isEmpty) List(className)
+          else tests.map(test => s"$className#$test")
+        }
+        if (testFilter.isEmpty) Nil
+        else List(s"--test_filter=${testFilter.mkString(",")}")
+      }
     val jvmFlagsArgs =
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
       "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
       "--noshow_progress", "--test_output=all", "--test_tag_filters=",
-    ) ::: runTargets ::: testFilterArgs ::: scalaTestArgs ::: jvmFlagsArgs
+    ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
   private def bazelBuildTargets(target: MbtTarget): List[String] =

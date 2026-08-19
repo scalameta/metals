@@ -10,6 +10,7 @@ import scala.concurrent.duration.Duration
 
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.JdkSources
+import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.server.BuildToolDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
@@ -31,14 +32,7 @@ class MbtDebugSessionStarter(
     buildTool: MbtDebugLauncher,
     userJavaHome: () => Option[String],
     workDoneProgress: BaseWorkDoneProgress,
-    classToSourceFile: (
-        String,
-        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
-    ) => Option[AbsolutePath] = (_, _) => None,
-    classToFramework: (
-        String,
-        ch.epfl.scala.bsp4j.BuildTargetIdentifier,
-    ) => Option[TestFramework] = (_, _) => None,
+    buildTargetClasses: BuildTargetClasses,
     knownTestCaseNames: (
         ch.epfl.scala.bsp4j.BuildTargetIdentifier,
         String,
@@ -121,12 +115,20 @@ class MbtDebugSessionStarter(
   ): Seq[AbsolutePath] =
     MbtDebugLauncher
       .listOrNil(testSuites.getSuites)
-      .flatMap(s => classToSourceFile(s.getClassName, target.id))
+      .flatMap(s =>
+        buildTargetClasses.sourceFileForMbtTestClass(s.getClassName, target.id)
+      )
 
   private def frameworkOf(
-      target: MbtTarget
-  ): String => Option[TestFramework] =
-    className => classToFramework(className, target.id)
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+  ): Option[TestFramework] =
+    MbtDebugLauncher
+      .listOrNil(testSuites.getSuites)
+      .headOption
+      .flatMap(s =>
+        buildTargetClasses.frameworkForMbtTestClass(s.getClassName, target.id)
+      )
 
   private def testCaseNamesOf(
       target: MbtTarget
@@ -146,7 +148,7 @@ class MbtDebugSessionStarter(
       target,
       testSuites,
       sourceFiles,
-      frameworkOf(target),
+      frameworkOf(target, testSuites),
     )
     val toolName = buildTool.executableName
     val artifactId = {
@@ -255,7 +257,7 @@ class MbtDebugSessionStarter(
                     target,
                     testSuites,
                     sourceFiles,
-                    frameworkOf(target),
+                    frameworkOf(target, testSuites),
                   )
                 commandWithPort(0).foreach { command =>
                   scribe.info(
@@ -277,7 +279,7 @@ class MbtDebugSessionStarter(
                   testSuites,
                   debugAgentFlag,
                   sourceFiles,
-                  frameworkOf(target),
+                  frameworkOf(target, testSuites),
                 )
                 commandFuture.foreach { command =>
                   scribe.info(

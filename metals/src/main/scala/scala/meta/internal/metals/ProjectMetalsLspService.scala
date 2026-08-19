@@ -210,8 +210,7 @@ class ProjectMetalsLspService(
         buildTool = buildTool,
         userJavaHome = () => userConfig.javaHome,
         workDoneProgress = workDoneProgress,
-        classToSourceFile = buildTargetClasses.sourceFileForMbtTestClass,
-        classToFramework = buildTargetClasses.frameworkForMbtTestClass,
+        buildTargetClasses = buildTargetClasses,
         knownTestCaseNames = testProvider.knownTestCaseNames,
       )(ec)
     }

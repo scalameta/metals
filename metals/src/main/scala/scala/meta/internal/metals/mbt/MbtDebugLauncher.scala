@@ -37,7 +37,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]]
 
   def mbtTestDebugCommand(
@@ -46,7 +46,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]]
 
   /**
@@ -64,7 +64,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = { _ =>
     mbtTestDebugCommand(
       workspace,
@@ -72,7 +72,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites,
       MbtDebugLauncher.DebugAgentFlag,
       sourceFiles,
-      frameworkOf,
+      framework,
     )
   }
 }

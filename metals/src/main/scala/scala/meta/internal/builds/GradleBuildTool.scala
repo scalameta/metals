@@ -266,7 +266,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
       gradleTestCommand(target, testSuites, debugAgentFlag = None)
@@ -278,7 +278,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
       gradleTestCommand(target, testSuites, Some(debugAgentFlag))
@@ -291,7 +291,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-      frameworkOf: String => Option[TestFramework] = _ => None,
+      framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = { port =>
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
