@@ -455,6 +455,12 @@ symbol references. If new symbol references are discovered after the background
 compilation completes, Metals sends a notification via `metals/status` and
 `window/logMessage` asking the user to run "find references" again.
 
+In MBT mode, find-references and implementations are also time-boxed (20 seconds
+by default, `mbt.references-timeout`). When the timeout is reached, Metals returns
+the matches found so far and reports incompleteness via `metals/status` (warning)
+and `window/logMessage`. Nearby files are searched first. Rename is aborted with
+an error `window/showMessage` if the underlying search timed out.
+
 ### `textDocument/documentSymbol`
 
 Returns `DocumentSymbol[]` if the client declares support for hierarchical
