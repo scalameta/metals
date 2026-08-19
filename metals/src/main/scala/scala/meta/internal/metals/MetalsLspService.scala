@@ -812,14 +812,23 @@ abstract class MetalsLspService(
       token: CancelToken,
   ): Future[Unit] = codeActionProvider.executeCommands(params, token)
 
-  protected def registerNiceToHaveFilePatterns(): Unit = {
-    for {
+  /**
+   * `true` when the client accepts `client/registerCapability` requests for
+   * `workspace/didChangeWatchedFiles`.
+   */
+  protected def supportsWatchedFilesRegistration: Boolean = {
+    val dynamicRegistration = for {
       params <- Option(initializeParams)
       capabilities <- Option(params.getCapabilities)
       workspace <- Option(capabilities.getWorkspace)
       didChangeWatchedFiles <- Option(workspace.getDidChangeWatchedFiles)
-      if didChangeWatchedFiles.getDynamicRegistration
-    } yield {
+      dynamic <- Option(didChangeWatchedFiles.getDynamicRegistration)
+    } yield dynamic.booleanValue()
+    dynamicRegistration.getOrElse(false)
+  }
+
+  protected def registerNiceToHaveFilePatterns(): Unit = {
+    if (supportsWatchedFilesRegistration) {
       languageClient.registerCapability(
         new RegistrationParams(
           List(

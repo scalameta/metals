@@ -224,7 +224,7 @@ abstract class BazelMbtImporter(
       tables.bazelMbtNamespaceModes.chooseMode(projectRoot, mode.name)
     }
 
-  override def isWatchedFile(path: AbsolutePath): Boolean =
+  override def isBuildRelated(path: AbsolutePath): Boolean =
     BazelBuildTool.isBazelRelatedPath(projectRoot, path)
 
   override def digest(workspace: AbsolutePath): Option[String] =

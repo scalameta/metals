@@ -45,7 +45,7 @@ class GradleMbtImporter(
     scribe.info(s"time: gradle-extractor extract in $timer")
   }
 
-  override def isWatchedFile(path: AbsolutePath): Boolean =
+  override def isBuildRelated(path: AbsolutePath): Boolean =
     GradleBuildTool.isGradleRelatedPath(projectRoot, path)
 
   override def digest(workspace: AbsolutePath): Option[String] =

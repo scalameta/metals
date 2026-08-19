@@ -38,11 +38,31 @@ case class MbtBuild(
   def getWatchedFiles: ju.List[String] =
     Option(this.watchedFiles).getOrElse(ju.Collections.emptyList())
 
+  /**
+   * Workspace-relative paths declared under `watchedFiles`, normalized to
+   * forward slashes with a leading `./` stripped.
+   *
+   * Only plain paths are supported here, since each one is registered with the
+   * client individually; glob patterns are dropped with a warning.
+   */
+  def explicitWatchedFiles: List[String] = {
+    val (globs, plain) =
+      getWatchedFiles.asScala.toList.partition(MbtGlobMatcher.isPatternGlob)
+    for (glob <- globs) {
+      scribe.warn(
+        s"mbt-build: ignoring '$glob' in 'watchedFiles', glob patterns are not supported."
+      )
+    }
+    for (declared <- plain) yield {
+      val normalized = MbtGlobMatcher.normalizeSlashes(declared)
+      if (normalized.startsWith("./")) normalized.substring(2) else normalized
+    }
+  }
+
   def isEmpty: Boolean =
     Option(this.dependencyModules).forall(_.isEmpty) &&
       Option(this.namespaces).forall(_.isEmpty) &&
-      Option(this.uncheckedSources).forall(_.isEmpty) &&
-      Option(this.watchedFiles).forall(_.isEmpty)
+      Option(this.uncheckedSources).forall(_.isEmpty)
 
   def asBspModules: bsp4j.DependencyModulesResult =
     new bsp4j.DependencyModulesResult(

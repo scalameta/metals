@@ -30,6 +30,7 @@ import scala.meta.internal.metals.doctor.MetalsServiceInfo
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtDebugSessionStarter
+import scala.meta.internal.metals.mbt.MbtWatchedFiles
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
@@ -203,6 +204,13 @@ class ProjectMetalsLspService(
     sh,
   )
 
+  private val mbtWatchedFiles: MbtWatchedFiles = new MbtWatchedFiles(
+    folder,
+    languageClient,
+    () => clientConfig.globSyntax(),
+    () => supportsWatchedFilesRegistration,
+  )
+
   private def mbtDebugStarter(): Option[MbtDebugSessionStarter] =
     buildTools.current().collectFirst { case buildTool: MbtDebugLauncher =>
       new MbtDebugSessionStarter(
@@ -237,6 +245,7 @@ class ProjectMetalsLspService(
       this,
       syncStatusReporter,
       () => mbtBuild,
+      mbtWatchedFiles,
       mbtDebugStarter = () => mbtDebugStarter,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
@@ -463,8 +472,11 @@ class ProjectMetalsLspService(
         Some(languageClient),
         Some(tables),
       )
-      if (paths.exists(path => mbtImporters.exists(_.isWatchedFile(path))))
-        connectionProvider.runMbtReimportIgnoringDigest(mbtImporters)
+      val isRelated = (path: AbsolutePath) =>
+        mbtImporters.exists(_.isBuildRelated(path)) ||
+          connectionProvider.isMbtWatchedFile(path)
+      if (paths.exists(isRelated))
+        connectionProvider.runMbtReimport(mbtImporters)
       else
         Future.unit
     } else if (userConfig.buildChangedAction.isNone) {
