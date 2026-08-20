@@ -30,6 +30,13 @@ object BazelMbtBuildSupport {
 
   private val workspaceNamespaceName: String = "bazel-workspace"
 
+  private val SourceKinds: Set[String] =
+    Set("main", "test", "it", "e2e", "jmh")
+
+  private def isJvmLangDir(name: String): Boolean =
+    name == "scala" || name == "java" ||
+      name.startsWith("scala-") || name.startsWith("java-")
+
   def fromDiscovery(
       granularity: BazelMbtNamespaceMode,
       targetLabels: List[String],
@@ -410,14 +417,39 @@ object BazelMbtBuildSupport {
     val stem = stripJvmSourceSuffix(file)
     if (stem == file) None
     else {
+      val (packageDir, strippedSourceRoot) = stripJvmSourceRoot(dir)
       val fromPath =
-        if (dir.isEmpty) stem else s"${dir.replace('/', '.')}.$stem"
-      if (fromPath.contains('.')) Some(fromPath)
+        if (packageDir.isEmpty) stem
+        else s"${packageDir.replace('/', '.')}.$stem"
+      if (fromPath.contains('.') || strippedSourceRoot) Some(fromPath)
       else
         BazelLabels.splitLabel(targetLabel).map { case (pkg, _) =>
           if (pkg.isEmpty) fromPath
           else s"${pkg.replace('/', '.')}.$fromPath"
         }
+    }
+  }
+
+  /**
+   * Drop Maven/sbt-style source roots (`src/{main,test,it}/scala`,
+   * `src/test/java`, `src/test/scala-2.13`, ...) so the remaining path is
+   * the Java package. Without this, a file such as
+   * `modules/play/foo/src/test/scala/system/backend/FooSpec.scala` would be
+   * exported as `modules.play.foo.src.test.scala.system.backend.FooSpec`.
+   */
+  private def stripJvmSourceRoot(dir: String): (String, Boolean) = {
+    if (dir.isEmpty) ("", false)
+    else {
+      val parts = dir.split('/')
+      val last = (0 to parts.length - 3).reverse.find { i =>
+        parts(i) == "src" &&
+        SourceKinds(parts(i + 1)) &&
+        isJvmLangDir(parts(i + 2))
+      }
+      last match {
+        case Some(i) => (parts.drop(i + 3).mkString("/"), true)
+        case None => (dir, false)
+      }
     }
   }
 

@@ -1175,11 +1175,6 @@ class WorkspaceLspService(
           .getOrElse(fallbackService)
           .decodeFile(uri)
           .asJavaObject
-      case ServerCommands.DiscoverTestSuites(params) if params.forceAll =>
-        Future
-          .sequence(folderServices.map(_.discoverAllTestSuites()))
-          .map(_.flatten.asJava)
-          .asJavaObject
       case ServerCommands.DiscoverTestSuites(params) =>
         Option(params.uri) match {
           case None =>

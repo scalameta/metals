@@ -52,7 +52,12 @@ case class MbtBuild(
         .asJava
     )
 
-  def mbtTargets: Seq[MbtTarget] =
+  /**
+   * Derived BSP targets for this build. Cached because construction logs
+   * missing-module warnings and is invoked from hot paths (test class
+   * lookup, BSP requests).
+   */
+  lazy val mbtTargets: Seq[MbtTarget] =
     if (getNamespaces.isEmpty) {
       Option
         .when(!getDependencyModules().isEmpty) {
