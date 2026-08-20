@@ -327,4 +327,54 @@ class MbtBuildSuite extends tests.BaseSuite {
     assertEquals(sourcesByUri(helper).getKind, SourceItemKind.FILE)
   }
 
+  test("namespaces-preserve-test-classes") {
+    val dir = Files.createTempDirectory("mbt-test-classes")
+    val f = dir.resolve("mbt.json")
+    Files.writeString(
+      f,
+      """|{
+         |  "namespaces": {
+         |    "//test": {
+         |      "sources": [
+         |        "test/FooTest.java",
+         |        "test/BarTest.java"
+         |      ],
+         |      "configurations": [
+         |        "//test:BarTest",
+         |        "//test:FooTest"
+         |      ],
+         |      "testClasses": [
+         |        {
+         |          "className": "test.BarTest",
+         |          "configuration": "//test:BarTest",
+         |          "framework": "JUnit"
+         |        },
+         |        {
+         |          "className": "test.FooTest",
+         |          "configuration": "//test:FooTest",
+         |          "framework": "JUnit"
+         |        }
+         |      ]
+         |    }
+         |  }
+         |}
+         |""".stripMargin,
+    )
+    val target = MbtBuild
+      .fromFile(f)
+      .mbtTargets
+      .find(_.name == "//test")
+      .getOrElse(fail("missing //test target"))
+
+    assertEquals(
+      target.testClasses.map(tc =>
+        (tc.className, tc.configuration, tc.framework)
+      ),
+      Seq(
+        ("test.BarTest", "//test:BarTest", "JUnit"),
+        ("test.FooTest", "//test:FooTest", "JUnit"),
+      ),
+    )
+  }
+
 }

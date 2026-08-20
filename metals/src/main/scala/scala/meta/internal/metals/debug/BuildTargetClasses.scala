@@ -218,20 +218,20 @@ final class BuildTargetClasses(
                 .map(cacheTestClasses(classes, _))
             }
 
-          val populateMbtClasses =
-            if (MbtBuildServer.isMbtServer(connection.name)) {
-              populateMbtMainClasses(classes, targets0).flatMap { _ =>
-                populateMbtTestClasses(classes, targets0)
-              }
-            } else Future.unit
+          // val populateMbtClasses =
+          //   if (MbtBuildServer.isMbtServer(connection.name) ) {
+          //     populateMbtMainClasses(classes, targets0).flatMap { _ =>
+          //       populateMbtTestClasses(classes, targets0)
+          //     }
+          //   } else Future.unit
 
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
-            _ <- workDoneProgress.trackFuture(
-              "Discovering main classes and tests",
-              populateMbtClasses,
-            )
+            // _ <- workDoneProgress.trackFuture(
+            //   "Discovering main classes and tests",
+            //   populateMbtClasses,
+            // )
           } yield {
             targetsList.forEach(invalidate)
             classes.foreach { case (id, classes) =>

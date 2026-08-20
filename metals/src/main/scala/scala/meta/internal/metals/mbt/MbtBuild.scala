@@ -123,6 +123,7 @@ case class MbtBuild(
           projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
           uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
+          testClasses = namespace.getTestClasses,
         )
       }
     }

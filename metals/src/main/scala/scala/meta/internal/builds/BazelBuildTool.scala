@@ -138,13 +138,14 @@ case class BazelBuildTool(
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
-    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = None,
-        framework = framework,
-      )
+    resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
+      runTargets =>
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = None,
+          framework = framework,
+        )
     }
 
   override def mbtTestDebugCommand(
@@ -155,13 +156,14 @@ case class BazelBuildTool(
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
-    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = Some(debugAgentFlag),
-        framework = framework,
-      )
+    resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
+      runTargets =>
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = Some(debugAgentFlag),
+          framework = framework,
+        )
     }
 
   override def supportsForkedTestDebug: Boolean = true
@@ -174,7 +176,7 @@ case class BazelBuildTool(
       framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = {
     val resolvedRunTargets =
-      resolveTestRunTargets(workspace, target, sourceFiles)
+      resolveTestRunTargets(workspace, target, testSuites, sourceFiles)
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
         mbtTestExecCommand(
@@ -194,48 +196,59 @@ case class BazelBuildTool(
   private def resolveTestRunTargets(
       workspace: AbsolutePath,
       target: MbtTarget,
+      testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): Future[List[String]] =
-    target.configurations.toList match {
-      case Nil => Future.successful(List(target.name))
-      case single :: Nil => Future.successful(List(single))
-      case multiple =>
-        val packagePath = target.name.stripPrefix("//").split(":", 2).head
-        val packageDir = workspace.resolve(packagePath)
-        val filenames = sourceFiles
-          .flatMap(_.toRelativeInside(packageDir))
-          .map(_.toNIO.toString.replace('\\', '/'))
-          .distinct
-        if (filenames.isEmpty) Future.successful(List(multiple.head))
-        else {
-          val setExpr =
-            s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
-          val queryStr = filenames
-            .map { filename =>
-              val pattern = java.util.regex.Pattern.quote(filename)
-              // "srcs" attribute will appear as [//pkg:sub/dir/File.scala]
-              // or as list [//pkg:a.scala, //pkg:sub/b.scala].
-              // We try to match the file path relative to BUILD.bazel directory
-              val quoted = s"\"[:]$pattern[,\\]]\""
-              s"attr(srcs, $quoted, $setExpr)"
-            }
-            .mkString(" union ")
-          val env =
-            BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
-          BazelQuery(queryStr, BazelQuery.OutputMode.Label)
-            .run(env, target.javaHome)(ec)
-            .recover { case e =>
-              scribe.warn(
-                s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
-              )
-              ""
-            }
-            .map { result =>
-              val resolved = result.linesIterator.filter(_.nonEmpty).toList
-              if (resolved.nonEmpty) resolved else List(multiple.head)
-            }
-        }
-    }
+  ): Future[List[String]] = {
+    val classNames =
+      MbtDebugLauncher.listOrNil(testSuites.getSuites).map(_.getClassName)
+    val fromDeclared = classNames.flatMap { className =>
+      target.testClasses
+        .find(_.className == className)
+        .flatMap(tc => Option(tc.configuration))
+    }.distinct
+    if (fromDeclared.nonEmpty) Future.successful(fromDeclared)
+    else
+      target.configurations.toList match {
+        case Nil => Future.successful(List(target.name))
+        case single :: Nil => Future.successful(List(single))
+        case multiple =>
+          val packagePath = target.name.stripPrefix("//").split(":", 2).head
+          val packageDir = workspace.resolve(packagePath)
+          val filenames = sourceFiles
+            .flatMap(_.toRelativeInside(packageDir))
+            .map(_.toNIO.toString.replace('\\', '/'))
+            .distinct
+          if (filenames.isEmpty) Future.successful(List(multiple.head))
+          else {
+            val setExpr =
+              s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
+            val queryStr = filenames
+              .map { filename =>
+                val pattern = java.util.regex.Pattern.quote(filename)
+                // "srcs" attribute will appear as [//pkg:sub/dir/File.scala]
+                // or as list [//pkg:a.scala, //pkg:sub/b.scala].
+                // We try to match the file path relative to BUILD.bazel directory
+                val quoted = s"\"[:]$pattern[,\\]]\""
+                s"attr(srcs, $quoted, $setExpr)"
+              }
+              .mkString(" union ")
+            val env =
+              BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
+            BazelQuery(queryStr, BazelQuery.OutputMode.Label)
+              .run(env, target.javaHome)(ec)
+              .recover { case e =>
+                scribe.warn(
+                  s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
+                )
+                ""
+              }
+              .map { result =>
+                val resolved = result.linesIterator.filter(_.nonEmpty).toList
+                if (resolved.nonEmpty) resolved else List(multiple.head)
+              }
+          }
+      }
+  }
 
   private def mbtTestExecCommand(
       runTargets: List[String],

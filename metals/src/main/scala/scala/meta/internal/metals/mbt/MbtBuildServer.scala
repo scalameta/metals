@@ -71,6 +71,7 @@ import ch.epfl.scala.bsp4j.RunResult
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult
+import ch.epfl.scala.bsp4j.ScalaTestClassesItem
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams
 import ch.epfl.scala.bsp4j.ScalaTestClassesResult
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
@@ -580,10 +581,26 @@ final class MbtBuildServer(
 
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams
-  ): CompletableFuture[ScalaTestClassesResult] =
-    CompletableFuture.completedFuture(
-      new ScalaTestClassesResult(List.empty.asJava)
-    )
+  ): CompletableFuture[ScalaTestClassesResult] = {
+    val requestedTargets = params.getTargets.asScala.toSet
+    val items = importedBuildTargets
+      .filter(t => requestedTargets(t.id) && t.testClasses.nonEmpty)
+      .flatMap { target =>
+        target.testClasses
+          .groupBy(tc => Option(tc.framework))
+          .toSeq
+          .sortBy { case (framework, _) => framework.getOrElse("") }
+          .map { case (framework, classes) =>
+            val item = new ScalaTestClassesItem(
+              target.id,
+              classes.map(_.className).distinct.asJava,
+            )
+            framework.foreach(item.setFramework)
+            item
+          }
+      }
+    CompletableFuture.completedFuture(new ScalaTestClassesResult(items.asJava))
+  }
 
   override def buildTargetDependencyModules(
       params: DependencyModulesParams

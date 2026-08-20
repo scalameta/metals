@@ -98,6 +98,14 @@ abstract class BazelMbtImporter(
             .exists(isRunnableRule)
         )
         .toSet
+      testTargets = targets
+        .filter(target =>
+          targetsXmlDump.ruleClassesByTarget
+            .get(target)
+            .exists(isTestRule)
+        )
+        .toSet
+      testClassAttr = targetsXmlDump.getStrings("test_class")
       classDirectories = classDirectoriesForRunTargets(
         bazelBin,
         runTargets,
@@ -156,6 +164,8 @@ abstract class BazelMbtImporter(
         allDependencyModules,
         effectiveScalaVersion,
         genSrcOutputsByTarget,
+        testTargets,
+        testClassAttr,
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()
@@ -165,8 +175,12 @@ abstract class BazelMbtImporter(
     output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
 
   private def isRunnableRule(ruleClass: String): Boolean =
-    ruleClass == "scala_binary" || ruleClass == "java_binary" ||
-      ruleClass == "scala_test" || ruleClass == "java_test"
+    ruleClass == "scala_binary" || ruleClass == "java_binary" || isTestRule(
+      ruleClass
+    )
+
+  private def isTestRule(ruleClass: String): Boolean =
+    ruleClass == "scala_test" || ruleClass == "java_test"
 
   private def classDirectoriesForRunTargets(
       bazelBin: Option[Path],
