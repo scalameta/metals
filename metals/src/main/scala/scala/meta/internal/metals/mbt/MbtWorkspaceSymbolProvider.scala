@@ -136,6 +136,10 @@ class MbtWorkspaceSymbolProvider(
     clearAllProtobufCaches,
   )
 
+  private def isProtoJavaPackageIndexingEnabled: Boolean =
+    protobufWorkspace.isJavaPackageIndexingEnabled ||
+      javaSymbolLoader().isTurbineClasspath
+
   /**
    * The Java outlines synthesized from the given `.proto` file (one per
    * generated top-level class). Empty when the file isn't an indexed proto or
@@ -202,10 +206,7 @@ class MbtWorkspaceSymbolProvider(
               )
             )
             .toList
-        } else if (
-          file.isProtoFilename &&
-          protobufWorkspace.isJavaPackageIndexingEnabled
-        ) {
+        } else if (file.isProtoFilename && isProtoJavaPackageIndexingEnabled) {
           // Include the Java outlines generated from proto files so that
           // turbine can resolve references to proto-generated classes when it
           // header-compiles the workspace. Without these, a Java method
@@ -547,7 +548,7 @@ class MbtWorkspaceSymbolProvider(
   ): Future[Unit] = try {
     if (MbtIndexFilter.included(indexFilters, MbtFileCandidate(file))) {
       val enableProtoJavaPackage =
-        file.isProtoFilename && protobufWorkspace.isJavaPackageIndexingEnabled
+        file.isProtoFilename && isProtoJavaPackageIndexingEnabled
       val mdoc =
         IndexedDocument.fromFile(
           file,

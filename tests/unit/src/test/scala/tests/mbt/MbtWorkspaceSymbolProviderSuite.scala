@@ -172,6 +172,27 @@ object Hello2 {
     )
   }
 
+  test("turbine-indexes-proto-java-package-with-protobuf-lsp-disabled") {
+    FileLayout.fromString(
+      """
+/example/Dependency.proto
+syntax = "proto3";
+package example;
+option java_package = "generated.example";
+message Dependency {}
+""",
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    assertEquals(
+      provider.onReindex().awaitBackgroundJobs(),
+      IndexingStats(totalFiles = 1, updatedFiles = 1),
+    )
+    assert(provider.listAllPackages().containsKey("generated/example/"))
+  }
+
   test("exclude-module-info-java") {
     FileLayout.fromString(
       """
