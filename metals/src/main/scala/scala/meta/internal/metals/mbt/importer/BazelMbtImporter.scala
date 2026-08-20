@@ -14,6 +14,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
@@ -29,6 +30,7 @@ abstract class BazelMbtImporter(
     userConfig: () => UserConfiguration,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
+    mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
 )(implicit ec: ExecutionContext)
     extends MbtImportProvider {
 
@@ -95,6 +97,13 @@ abstract class BazelMbtImporter(
             .exists(isRunnableRule)
         )
         .toSet
+      testTargets = targets
+        .filter(target =>
+          targetsXmlDump.ruleClassesByTarget
+            .get(target)
+            .exists(isTestRule)
+        )
+        .toSet
       classDirectories = classDirectoriesForRunTargets(
         bazelBin,
         runTargets,
@@ -153,6 +162,9 @@ abstract class BazelMbtImporter(
         allDependencyModules,
         effectiveScalaVersion,
         genSrcOutputsByTarget,
+        testTargets,
+        mbtWorkspaceSymbolProvider,
+        mainClassAttrByTarget = targetsXmlDump.getStrings("main_class"),
       )
       _ <- Future(out.writeText(MbtBuild.toJson(build)))
     } yield ()
@@ -162,8 +174,13 @@ abstract class BazelMbtImporter(
     output.linesIterator.map(_.trim).filter(_.nonEmpty).toList
 
   private def isRunnableRule(ruleClass: String): Boolean =
-    ruleClass == "scala_binary" || ruleClass == "java_binary" ||
-      ruleClass == "scala_test" || ruleClass == "java_test"
+    ruleClass == "scala_binary" || ruleClass == "java_binary" || isTestRule(
+      ruleClass
+    )
+
+  // Try to include all the rules seen in the wild.
+  private def isTestRule(ruleClass: String): Boolean =
+    ruleClass == "scala_test" || ruleClass == "java_test" || ruleClass == "scala_integration_test"
 
   private def classDirectoriesForRunTargets(
       bazelBin: Option[AbsolutePath],

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.debug
 
+import java.nio.file.Paths
 import java.time.Duration
 
 import scala.collection.concurrent.TrieMap
@@ -17,7 +18,9 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbFeatureProvider
 import scala.meta.internal.metals.debug.BuildTargetClasses.Classes
 import scala.meta.internal.metals.debug.BuildTargetClasses.TestSymbolInfo
+import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtTestClass
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.semanticdb.ClassSignature
@@ -33,6 +36,7 @@ import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.ValueSignature
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.{bsp4j => b}
@@ -46,6 +50,7 @@ final class BuildTargetClasses(
     symbolIndex: OnDemandSymbolIndex,
     mbt: () => Option[MbtWorkspaceSymbolProvider] = () => None,
     workDoneProgress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
+    mbtBuild: () => Option[MbtBuild] = () => None,
 )(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
@@ -217,7 +222,6 @@ final class BuildTargetClasses(
                 .testClasses(new b.ScalaTestClassesParams(targetsList))
                 .map(cacheTestClasses(classes, _))
             }
-
           val populateMbtClasses =
             if (MbtBuildServer.isMbtServer(connection.name)) {
               populateMbtMainClasses(classes, targets0).flatMap { _ =>
@@ -415,11 +419,12 @@ final class BuildTargetClasses(
       scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)]()
 
     val futures = doc.symbols.flatMap { symbolInfo =>
-      processTestAnnotations(symbolInfo, testClasses)
-      // Only Scala files depend on inheritance for test frameworks
+      processTestAnnotations(symbolInfo, doc, testClasses)
+      // Only Scala files depend on inheritance for test frameworks.
+      // SemanticDB does not set ABSTRACT on traits, so isTrait is required.
       if (path.isJava)
         None
-      else if (!symbolInfo.isAbstract)
+      else if (!symbolInfo.isAbstract && !symbolInfo.isTrait)
         processTestClassHierarchy(symbolInfo, doc, path, testClasses)
       else None
     }
@@ -429,6 +434,7 @@ final class BuildTargetClasses(
 
   private def processTestAnnotations(
       symbolInfo: SymbolInformation,
+      doc: TextDocument,
       testClasses: scala.collection.mutable.ListBuffer[(String, TestSymbolInfo)],
   ): Unit = {
     symbolInfo.annotations.foreach { annotation =>
@@ -436,21 +442,28 @@ final class BuildTargetClasses(
         case TypeRef(_, annotationSymbol, _) =>
           TestFrameworkDetector.fromSymbol(annotationSymbol) match {
             case Some(framework) =>
-              val classSymbol = symbolInfo.symbol
-              val className = symbolToClassName(classSymbol)
-              val testInfo = TestSymbolInfo(className, framework)
-              val classSymbolWithoutFunctionName =
-                classSymbol.indexOf('#') match {
-                  case -1 => classSymbol
-                  case index => classSymbol.substring(0, index + 1)
-                }
-              testClasses += ((classSymbolWithoutFunctionName, testInfo))
+              val classSymbol = enclosingTypeSymbol(symbolInfo.symbol)
+              val ownerIsTrait =
+                symbolInfo.isTrait || doc.symbols
+                  .find(_.symbol == classSymbol)
+                  .exists(_.isTrait)
+              if (!ownerIsTrait) {
+                val className = symbolToClassName(classSymbol)
+                val testInfo = TestSymbolInfo(className, framework)
+                testClasses += ((classSymbol, testInfo))
+              }
             case None =>
           }
         case _ =>
       }
     }
   }
+
+  private def enclosingTypeSymbol(symbol: String): String =
+    symbol.indexOf('#') match {
+      case -1 => symbol
+      case index => symbol.substring(0, index + 1)
+    }
 
   private def processTestClassHierarchy(
       symbolInfo: SymbolInformation,
@@ -865,8 +878,10 @@ final class BuildTargetClasses(
    * Confirms candidate test classes for specific targets.
    * This is useful when the user opens the test explorer and wants to discover all tests.
    *
-   * Java candidates are confirmed from Turbine class info. Scala candidates still
-   * go through semanticdb.
+   * Java candidates are confirmed from Turbine class info. Scala candidates are
+   * accepted only when they match `testClasses` declared for the target in
+   * [[MbtBuild]]. Targets with no declared test classes still go through
+   * semanticdb.
    *
    * @param targetIds The build targets to confirm candidates for
    * @return Future that completes when confirmation is done
@@ -908,8 +923,33 @@ final class BuildTargetClasses(
     }
     val otherConfirmation =
       if (otherPaths.isEmpty) Future.unit
+      else confirmScalaTestClassCandidates(otherPaths, targetsForPath)
+    javaConfirmation.flatMap(_ => otherConfirmation)
+  }
+
+  /**
+   * Confirms Scala test candidates from [[MbtBuild]] when the target declares
+   * test classes. A candidate is accepted when its class name (and source
+   * path, when the build recorded one) matches a declared test class.
+   * Candidates that are not included are dropped. Targets with no declared
+   * test classes fall back to semanticdb.
+   */
+  private def confirmScalaTestClassCandidates(
+      paths: Seq[AbsolutePath],
+      targetsForPath: AbsolutePath => Seq[b.BuildTargetIdentifier],
+  ): Future[Unit] = {
+    val (declaredPaths, semanticdbPaths) = paths.partition { path =>
+      targetsForPath(path).exists(testClassesForTarget(_).nonEmpty)
+    }
+    val fromBuild = Future {
+      for (path <- declaredPaths)
+        confirmTestClassesFromMbtBuild(path, targetsForPath(path))
+    }
+    // declaredPaths non empty means that we declare test classes in the build file
+    val fromSemanticdb =
+      if (semanticdbPaths.isEmpty || declaredPaths.nonEmpty) Future.unit
       else
-        foreachMbtSemanticdbDocument(otherPaths) { doc =>
+        foreachMbtSemanticdbDocument(semanticdbPaths) { doc =>
           val docPath = doc.uri.toAbsolutePath
           processMbtTestSemanticdb(
             docPath,
@@ -917,8 +957,79 @@ final class BuildTargetClasses(
             targetsForPath(docPath),
           )
         }
-    javaConfirmation.flatMap(_ => otherConfirmation)
+    fromBuild.flatMap(_ => fromSemanticdb)
   }
+
+  private def confirmTestClassesFromMbtBuild(
+      path: AbsolutePath,
+      targetIds: Seq[b.BuildTargetIdentifier],
+  ): Unit = {
+    for (targetId <- targetIds) {
+      val declared = testClassesForTarget(targetId)
+      index.get(targetId).foreach { classes =>
+        if (declared.isEmpty) classes.clearCandidateTestClasses(path)
+        else {
+          val candidates =
+            classes.candidateTestClasses.getOrElse(path, Nil)
+          val accepted = for {
+            candidate <- candidates
+            testClass <- declared.find(candidateFits(candidate, _))
+          } yield {
+            candidate.candidateSymbol -> TestSymbolInfo(
+              testClass.className,
+              TestFrameworkUtils.from(Option(testClass.framework)),
+            )
+          }
+          storeConfirmedTestClasses(path, accepted.toList, Seq(targetId))
+        }
+      }
+    }
+  }
+
+  private def testClassesForTarget(
+      targetId: b.BuildTargetIdentifier
+  ): Seq[MbtTestClass] = {
+    val uri = targetId.getUri.stripPrefix(MbtBuild.namespaceTargetPrefix)
+    mbtBuild().toSeq
+      .flatMap { build =>
+        Option(build.namespaces)
+          .flatMap(namespaces => Option(namespaces.get(uri)))
+          .map(_.getTestClasses)
+          .getOrElse(Nil)
+      }
+  }
+
+  private def candidateFits(
+      candidate: BuildTargetClasses.TestClassCandidate,
+      testClass: MbtTestClass,
+  ): Boolean = {
+    val nameMatches =
+      normalizedClassName(candidateClassName(candidate.candidateSymbol)) ==
+        normalizedClassName(testClass.className)
+    val sourceMatches =
+      Option(testClass.sourcePath).forall(
+        declaredSourceMatches(candidate.path, _)
+      )
+    nameMatches && sourceMatches
+  }
+
+  private def declaredSourceMatches(
+      candidate: AbsolutePath,
+      declared: String,
+  ): Boolean = {
+    val path = Paths.get(declared).normalize()
+    if (path.toString.isEmpty) false
+    else if (path.isAbsolute) candidate == AbsolutePath(path)(candidate)
+    else candidate.toNIO.endsWith(RelativePath(path).toNIO)
+  }
+
+  private def candidateClassName(symbol: String): String = {
+    val suffix = if (symbol.indexOf('#') >= 0) '#' else '.'
+    symbolToClassName(symbol, suffix)
+  }
+
+  private def normalizedClassName(name: String): String =
+    name.stripSuffix("$")
 
   /**
    * Processes semanticdb to extract and store confirmed test classes.

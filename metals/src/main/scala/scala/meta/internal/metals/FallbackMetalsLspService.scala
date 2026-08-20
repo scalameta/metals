@@ -16,7 +16,6 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
-import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.metals.watcher.NoopFileWatcher
 import scala.meta.internal.mtags.Semanticdbs
@@ -91,7 +90,7 @@ class FallbackMetalsLspService(
   override val projectInfo: MetalsServiceInfo =
     MetalsServiceInfo.FallbackService
 
-  override val indexer: Indexer = Indexer(this, () => MbtBuild.empty)
+  override val indexer: Indexer = Indexer(this)
 
   def buildData(): Seq[BuildTool] =
     if (userConfig.scalaCliEnabled)

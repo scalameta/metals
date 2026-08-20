@@ -245,6 +245,56 @@ class MbtBuildServerLspSuite
     }
   }
 
+  test("mbt-trait-not-test-suite") {
+    cleanWorkspace()
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addScalaLibrary()
+      .addDependency("org.scalameta", "munit", "0.7.29")
+      .addNamespace("test", List("src/**"))
+      .build()
+    val testFile = "src/ConcreteSuite.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/$testFile
+            |package example
+            |
+            |trait BaseSuite extends munit.FunSuite {
+            |  test("from-trait") {}
+            |}
+            |
+            |class ConcreteSuite extends BaseSuite {
+            |  test("ok") {}
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpen(testFile)
+      testSuites <- server.discoverTestSuites(List(testFile))
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.asScala.toList)
+      assertNoDiff(
+        testEvents.mkString("\n"),
+        s"""|AddTestSuite(example.ConcreteSuite,ConcreteSuite,example/ConcreteSuite#,Location [
+            |  uri = "${workspace.toURI}src/ConcreteSuite.scala"
+            |  range = Range [
+            |    start = Position [
+            |      line = 6
+            |      character = 6
+            |    ]
+            |    end = Position [
+            |      line = 6
+            |      character = 19
+            |    ]
+            |  ]
+            |],true)
+            |""".stripMargin,
+      )
+    }
+  }
+
   test("mbt-junit-test-discovery") {
     cleanWorkspace()
     val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)

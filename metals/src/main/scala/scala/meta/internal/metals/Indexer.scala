@@ -44,8 +44,8 @@ import org.eclipse.{lsp4j => l}
  * Coordinates build target data fetching and caching, and the re-computation of various
  * indexes based on it.
  */
-case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
-    implicit rc: ReportContext
+case class Indexer(indexProviders: IndexProviders)(implicit
+    rc: ReportContext
 ) {
   import indexProviders._
 

@@ -122,7 +122,9 @@ case class MbtBuild(
             .getOrElse(Nil),
           projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
+          mainClasses = namespace.getMainClasses,
           uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
+          testClasses = namespace.getTestClasses,
         )
       }
     }
@@ -194,9 +196,9 @@ object MbtBuild {
       scribe.warn(s"Failed to parse MBT build from JSON file '$file'", e)
       MbtBuild.empty
   }
-
+  val namespaceTargetPrefix = "mbt://namespace/"
   def namespaceTargetId(name: String): String = {
-    s"mbt://namespace/$name"
+    s"$namespaceTargetPrefix$name"
   }
 
   /**

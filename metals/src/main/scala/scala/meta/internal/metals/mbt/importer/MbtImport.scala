@@ -28,6 +28,7 @@ final class MbtImport(
     languageClient: MetalsLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
+    onImported: MbtBuild => Unit = _ => (),
 )(implicit ec: ExecutionContext) {
 
   private lazy val notification = tables.dismissedNotifications.MbtImportChanges
@@ -92,6 +93,7 @@ final class MbtImport(
     Files.createDirectories(metalsDir.toNIO)
     val outputFile = metalsDir.resolve("mbt.json")
     Files.writeString(outputFile.toNIO, MbtBuild.toJson(build))
+    onImported(build)
     scribe.info("mbt-import: wrote .metals/mbt.json")
   }
 

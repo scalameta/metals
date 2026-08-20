@@ -112,6 +112,7 @@ class ProjectMetalsLspService(
     charset,
     shellRunner,
     ec,
+    Some(mbt2),
   )
 
   override def indexer: Indexer = connectionProvider
@@ -239,6 +240,7 @@ class ProjectMetalsLspService(
       syncStatusReporter,
       () => mbtBuild,
       mbtDebugStarter = () => mbtDebugStarter,
+      updateMbtBuild = build => mbtBuild = build,
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider
