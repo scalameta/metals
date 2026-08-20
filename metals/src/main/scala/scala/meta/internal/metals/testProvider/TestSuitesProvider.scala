@@ -29,6 +29,7 @@ import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.SemanticdbsWithMbtFallback
 import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
@@ -66,14 +67,20 @@ final class TestSuitesProvider(
     with CodeLens {
 
   private val index = new TestSuitesIndex
+  private val semanticdbsWithMbtFallback =
+    new SemanticdbsWithMbtFallback(semanticdbs, buildTargets, compilers)
   private val junitTestFinder = new JunitTestFinder
   private val testNGTestFinder = new TestNGTestFinder
   private val munitTestFinder =
-    new MunitTestFinder(trees, symbolIndex, semanticdbs)
+    new MunitTestFinder(trees, symbolIndex, semanticdbsWithMbtFallback)
   private val scalatestTestFinder =
-    new ScalatestTestFinder(trees, symbolIndex, semanticdbs, compilers)
+    new ScalatestTestFinder(trees, symbolIndex, semanticdbsWithMbtFallback)
   private val weaverCatsEffect =
-    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
+    new WeaverCatsEffectTestFinder(
+      trees,
+      symbolIndex,
+      semanticdbsWithMbtFallback,
+    )
   private val zioTestFinder = new ZioTestFinder(trees)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
