@@ -1,5 +1,6 @@
 package tests.mbt
 
+import scala.meta.internal.metals.mbt.importer.BazelLabels
 import scala.meta.internal.metals.mbt.importer.BazelMbtBuildSupport
 import scala.meta.internal.metals.mbt.importer.BazelMbtNamespaceMode
 import scala.meta.internal.metals.mbt.importer.BazelTargetsXmlDump
@@ -119,6 +120,68 @@ class BazelMbtBuildSupportSuite extends tests.BaseSuite {
     val namespace = build.getNamespaces.get("//test")
     assert(namespace != null, "expected //test namespace")
     assertEquals(namespace.getTestClasses, Nil)
+  }
+
+  test("infers-class-name-stripping-maven-source-root") {
+    assertEquals(
+      inferredClassNames(
+        "//modules/play/identityconsistencyservice-it:IdentityConsistencyServiceSystemSpec",
+        "//modules/play/identityconsistencyservice-it:src/test/scala/system/backend/IdentityConsistencyServiceSystemSpec.scala",
+      ),
+      Seq("system.backend.IdentityConsistencyServiceSystemSpec"),
+    )
+  }
+
+  test("infers-class-name-stripping-java-and-cross-version-source-roots") {
+    assertEquals(
+      inferredClassNames(
+        "//module:FooTest",
+        "//module:src/test/java/com/example/FooTest.java",
+      ),
+      Seq("com.example.FooTest"),
+    )
+    assertEquals(
+      inferredClassNames(
+        "//module:BarSpec",
+        "//module:src/test/scala-2.13/com/example/BarSpec.scala",
+      ),
+      Seq("com.example.BarSpec"),
+    )
+  }
+
+  test("infers-default-package-class-name-after-stripping-source-root") {
+    assertEquals(
+      inferredClassNames(
+        "//foo:FooTest",
+        "//foo:src/test/scala/FooTest.scala",
+      ),
+      Seq("FooTest"),
+    )
+  }
+
+  private def inferredClassNames(
+      target: String,
+      src: String,
+  ): Seq[String] = {
+    val build = BazelMbtBuildSupport.fromDiscovery(
+      granularity = BazelMbtNamespaceMode.BuildFile,
+      targetLabels = List(target),
+      srcsByTarget = Map(target -> List(src)),
+      scalacOptionsByTarget = Map.empty,
+      javacOptionsByTarget = Map.empty,
+      directDepRules = Map.empty,
+      externalDepsByTarget = Map.empty,
+      runTargets = Set(target),
+      classDirectoriesByTarget = Map.empty,
+      dependencyModules = Nil,
+      scalaVersion = None,
+      testTargets = Set(target),
+    )
+    val namespaceKey = BazelLabels.packageKey(target).getOrElse(target)
+    Option(build.getNamespaces.get(namespaceKey))
+      .getOrElse(fail(s"missing namespace for $target"))
+      .getTestClasses
+      .map(_.className)
   }
 
   private val sampleQueryXml: String =
