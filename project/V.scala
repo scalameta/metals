@@ -60,7 +60,7 @@ object V {
   // use from project/plugins.sbt
   val mdoc = _root_.mdoc.BuildInfo.version
 
-  val modelContextProtocol = "2.0.0"
+  val modelContextProtocol = "2.0.1"
 
   val munit = "1.3.5"
 
