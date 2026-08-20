@@ -1,10 +1,16 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.util.control.NonFatal
+
 import scala.meta.Lit
 import scala.meta.Stat
 import scala.meta.Template
 import scala.meta.Term
 import scala.meta.Tree
+import scala.meta.internal.metals.Compilers
+import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.testProvider.FullyQualifiedName
 import scala.meta.internal.metals.testProvider.TestCaseEntry
@@ -26,7 +32,35 @@ class ScalatestTestFinder(
     trees: Trees,
     symbolIndex: mtags.GlobalSymbolIndex,
     semanticdbs: () => mtags.Semanticdbs,
+    compilers: () => Compilers,
 ) {
+
+  /**
+   * Temporary, blocking fallback: `semanticdbs().textDocument(...)` only
+   * ever reads whatever semanticdb already happens to exist on disk, which
+   * is never the case for a base class belonging to a different MBT
+   * namespace/target that nothing has asked about yet. This forces
+   * generation via the PC, the same way MBT test-class confirmation does,
+   * so the cross-namespace inheritance chain can actually be followed.
+   */
+  private def generateSemanticdbSync(path: AbsolutePath): Option[TextDocument] =
+    try {
+      val documents = Await.result(
+        compilers().batchSemanticdbTextDocuments(
+          Seq(path),
+          EmptyCancelToken,
+          timeout = java.time.Duration.ofSeconds(20),
+          useFallbackCompiler = true,
+          shouldPruneSemanticdb = true,
+        ),
+        20.seconds,
+      )
+      documents.documents.find(_.uri.toAbsolutePath == path)
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(s"Failed to generate semanticdb on demand for $path", e)
+        None
+    }
 
   def findTests(
       doc: TextDocument,
@@ -68,6 +102,7 @@ class ScalatestTestFinder(
           doc <- semanticdbs()
             .textDocument(definition.path)
             .documentIncludingStale
+            .orElse(generateSemanticdbSync(definition.path))
           style <- inferScalatestStyle(doc, mtags.Symbol(parentSymbol))
         } yield style
     }

@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
@@ -59,6 +60,7 @@ final class TestSuitesProvider(
     folderName: String,
     folderUri: AbsolutePath,
     workDoneProgress: WorkDoneProgress,
+    compilers: () => Compilers,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CodeLens {
@@ -69,7 +71,7 @@ final class TestSuitesProvider(
   private val munitTestFinder =
     new MunitTestFinder(trees, symbolIndex, semanticdbs)
   private val scalatestTestFinder =
-    new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
+    new ScalatestTestFinder(trees, symbolIndex, semanticdbs, compilers)
   private val weaverCatsEffect =
     new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
   private val zioTestFinder = new ZioTestFinder(trees)
