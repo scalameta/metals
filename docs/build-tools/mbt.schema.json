@@ -143,6 +143,54 @@
                 "bazel-out/k8-fastbuild/bin/src/gen/generated_sources"
               ]
             }
+          },
+          "configurations": {
+            "type": "array",
+            "description": "Build-system identifiers of runnable targets belonging to this namespace. For Bazel these are `java_binary` / `scala_binary` / `java_test` / `scala_test` labels.",
+            "items": {
+              "type": "string",
+              "examples": [
+                "//app:main",
+                "//test:FooTest"
+              ]
+            },
+            "uniqueItems": true
+          },
+          "testClasses": {
+            "type": "array",
+            "description": "Test suites belonging to this namespace. For Bazel, each entry maps a fully-qualified test class to the runnable test target in \"configurations\".",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "className"
+              ],
+              "properties": {
+                "className": {
+                  "type": "string",
+                  "description": "Fully-qualified test class name.",
+                  "examples": [
+                    "com.example.FooTest"
+                  ]
+                },
+                "configuration": {
+                  "type": "string",
+                  "description": "Build-system identifier of the runnable test that executes this class. For Bazel this is the test target label, matching an entry in \"configurations\".",
+                  "examples": [
+                    "//test:FooTest"
+                  ]
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Optional test framework name, matching BSP ScalaTestClassesItem framework values.",
+                  "examples": [
+                    "JUnit",
+                    "ScalaTest",
+                    "munit"
+                  ]
+                }
+              }
+            }
           }
         }
       }
