@@ -115,6 +115,9 @@ class ProjectMetalsLspService(
     Some(mbt2),
   )
 
+  override protected def discoverMbtClassesFromIndex: Boolean =
+    !buildTools.isBazel
+
   override def indexer: Indexer = connectionProvider
   def buildServerPromise = connectionProvider.buildServerPromise
 

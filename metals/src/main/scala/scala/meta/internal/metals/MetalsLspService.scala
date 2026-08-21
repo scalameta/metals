@@ -230,7 +230,15 @@ abstract class MetalsLspService(
       definitionIndex,
       () => Some(mbtSymbolSearch),
       workDoneProgress,
+      shouldDiscoverMbtClasses = () => discoverMbtClassesFromIndex,
     )
+
+  /**
+   * Whether MBT should discover main/test classes from the symbol index.
+   * Bazel already declares them in `mbt.json`; Maven and Gradle still need
+   * index discovery until those importers populate the same fields.
+   */
+  protected def discoverMbtClassesFromIndex: Boolean = true
 
   val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -1779,7 +1787,6 @@ abstract class MetalsLspService(
   def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
     testProvider.discoverTests(uri.map(_.toAbsolutePath))
 
-  // Remove if GRadle and Maven are also supported
   def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
     testProvider.discoverAllTestSuites()
 

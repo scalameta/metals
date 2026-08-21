@@ -180,9 +180,10 @@ abstract class BazelMbtImporter(
     ruleClass == "scala_binary" || ruleClass == "java_binary" || isTestRule(
       ruleClass
     )
-
+  
+  // Try to include all the rules seen in the wild.
   private def isTestRule(ruleClass: String): Boolean =
-    ruleClass == "scala_test" || ruleClass == "java_test"
+    ruleClass == "scala_test" || ruleClass == "java_test" || ruleClass == "scala_integration_test"
 
   private def classDirectoriesForRunTargets(
       bazelBin: Option[Path],
