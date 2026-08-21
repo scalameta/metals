@@ -1,9 +1,11 @@
 package tests.p
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 
 import scala.concurrent.Future
 
+import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.Location
 import tests.BuildInfoVersions
 
@@ -1317,6 +1319,421 @@ class ProtoPCJavaSuite extends BaseProtoPCSuite("proto-pc-java") {
   // ========================================================================
   // Interactive update tests - proto changes should trigger Java re-diagnosis
   // ========================================================================
+
+  /**
+   * `java_multiple_files` puts `User` and `UserOrBuilder` in one generated file,
+   * and `Builder` inside `User`. An outline names only the type its file is named
+   * after, so the other two used to stay resolvable from stale classfiles after
+   * the message they came from was gone.
+   *
+   * `UserOrBuilder` is the one that shows it, being a second toplevel type rather
+   * than a nested one: `User.Builder` fails anyway once `User` does, since Java
+   * resolves a nested type through its outer.
+   *
+   * Turns on the compiler restart as well: without it the compiler answers from
+   * the symbols it already resolved and nothing is reported at all.
+   *
+   * The Java file shares the generated package, since a second toplevel type in a
+   * file cannot be public and would otherwise fail on access rather than on being
+   * absent.
+   */
+  test("proto-save-invalidates-every-generated-type") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |/a/src/main/java/com/example/api/jproto/Service.java
+           |package com.example.api.jproto;
+           |public class Service {
+           |  public void user(User user) {}
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |  public void builder(User.Builder builder) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/model.proto")
+      _ <- server.didOpen(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      // All three resolve from the outlines Turbine compiled.
+      _ = assertNoDiagnostics()
+
+      // Rename the message, so every type it generated is gone.
+      _ <- server.didChange("a/src/main/proto/model.proto") { _ =>
+        """|syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message Customer {
+           |  string name = 1;
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("a/src/main/proto/model.proto")
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/api/jproto/Service.java:3:20: error: cannot find symbol
+           |  symbol:   class User
+           |  location: class com.example.api.jproto.Service
+           |  public void user(User user) {}
+           |                   ^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:4:25: error: cannot find symbol
+           |  symbol:   class UserOrBuilder
+           |  location: class com.example.api.jproto.Service
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |                        ^^^^^^^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:5:27: error: package User does not exist
+           |  public void builder(User.Builder builder) {}
+           |                          ^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  /**
+   * A nested message removed while its outer stays. `ProtoOutlineTypesSuite` has
+   * the types this proto compiles to.
+   *
+   * A regression guard rather than a case for indexing the outlines: it passes on
+   * one name per outline too, because Java reaches a nested type through its
+   * outer and `User` comes from a fresh outline that no longer declares
+   * `Address`. The two cases either side of it are the ones that turn on it.
+   *
+   * It does turn on the compiler restart, though. Without it nothing is
+   * reported.
+   */
+  test("proto-save-invalidates-a-nested-message") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |  message Address {
+           |    string city = 1;
+           |  }
+           |}
+           |/a/src/main/java/com/example/api/jproto/Service.java
+           |package com.example.api.jproto;
+           |public class Service {
+           |  public void user(User user) {}
+           |  public void address(User.Address address) {}
+           |  public void builder(User.Address.Builder builder) {}
+           |  public void orBuilder(User.AddressOrBuilder orBuilder) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/model.proto")
+      _ <- server.didOpen(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ = assertNoDiagnostics()
+
+      // Drop the nested message, keep the one around it.
+      _ <- server.didChange("a/src/main/proto/model.proto") { _ =>
+        """|syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("a/src/main/proto/model.proto")
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+
+      // `User` still resolves; only what the nested message generated is gone.
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/api/jproto/Service.java:4:27: error: cannot find symbol
+           |  symbol:   class Address
+           |  location: class com.example.api.jproto.User
+           |  public void address(User.Address address) {}
+           |                          ^^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:5:27: error: cannot find symbol
+           |  symbol:   class Address
+           |  location: class com.example.api.jproto.User
+           |  public void builder(User.Address.Builder builder) {}
+           |                          ^^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:6:29: error: cannot find symbol
+           |  symbol:   class AddressOrBuilder
+           |  location: class com.example.api.jproto.User
+           |  public void orBuilder(User.AddressOrBuilder orBuilder) {}
+           |                            ^^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  /**
+   * One of two toplevel messages removed. The other one's types have to come
+   * back: the invalidation hides everything the old outlines declared, this one
+   * included, so this is the guard against hiding too much.
+   *
+   * `AccountOrBuilder` is what it turns on. One name per outline leaves it
+   * resolvable from a stale classfile, since it is a second toplevel type in
+   * `Account.java` and nothing shadows it.
+   *
+   * Removing the compiler restart fails it too, on the half that expects
+   * `Account` to be gone. The half that expects `User` to survive passes either
+   * way, since a compiler that reports nothing satisfies it.
+   */
+  test("proto-save-keeps-the-messages-that-remain") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |message Account {
+           |  string owner = 1;
+           |}
+           |/a/src/main/java/com/example/api/jproto/Service.java
+           |package com.example.api.jproto;
+           |public class Service {
+           |  public void user(User user) {}
+           |  public void userOrBuilder(UserOrBuilder orBuilder) {}
+           |  public void userBuilder(User.Builder builder) {}
+           |  public void account(Account account) {}
+           |  public void accountOrBuilder(AccountOrBuilder orBuilder) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/model.proto")
+      _ <- server.didOpen(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ = assertNoDiagnostics()
+
+      // Drop Account, keep User.
+      _ <- server.didChange("a/src/main/proto/model.proto") { _ =>
+        """|syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |""".stripMargin
+      }
+      _ <- server.didSave("a/src/main/proto/model.proto")
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+
+      // Nothing about `User` is reported, so the three references to it still
+      // resolve. Only `Account` and the type generated beside it are gone.
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/api/jproto/Service.java:6:23: error: cannot find symbol
+           |  symbol:   class Account
+           |  location: class com.example.api.jproto.Service
+           |  public void account(Account account) {}
+           |                      ^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:7:32: error: cannot find symbol
+           |  symbol:   class AccountOrBuilder
+           |  location: class com.example.api.jproto.Service
+           |  public void accountOrBuilder(AccountOrBuilder orBuilder) {}
+           |                               ^^^^^^^^^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  /**
+   * The whole proto gone, rather than a message dropped from it. Nothing serves
+   * the outlines on SOURCE_PATH any more, so every type it compiled to has to be
+   * off CLASS_PATH, and the Java compilers have to be restarted to ask again.
+   *
+   * There is deliberately no refocus after the event. The caller is already
+   * open, and focusing it again hides whether anything published diagnostics on
+   * its own.
+   *
+   * Three things are load-bearing, each failing it alone: naming one type per
+   * outline, not restarting the compilers for a deletion, and restarting them
+   * without running them again.
+   */
+  test("proto-delete-invalidates-every-generated-type") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |  message Address {
+           |    string city = 1;
+           |  }
+           |}
+           |/a/src/main/java/com/example/api/jproto/Service.java
+           |package com.example.api.jproto;
+           |public class Service {
+           |  public void user(User user) {}
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |  public void address(User.Address address) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/proto/model.proto")
+      _ <- server.didOpen(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ = assertNoDiagnostics()
+
+      // Delete on disk, as a file watcher would report it. The event carries a
+      // URI, since a relative name is resolved against files that still exist.
+      protoFile = workspace.resolve("a/src/main/proto/model.proto")
+      _ = Files.delete(protoFile.toNIO)
+      _ <- server.didChangeWatchedFiles(
+        protoFile.toURI.toString(),
+        FileChangeType.Deleted,
+      )
+
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/api/jproto/Service.java:3:20: error: cannot find symbol
+           |  symbol:   class User
+           |  location: class com.example.api.jproto.Service
+           |  public void user(User user) {}
+           |                   ^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:4:25: error: cannot find symbol
+           |  symbol:   class UserOrBuilder
+           |  location: class com.example.api.jproto.Service
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |                        ^^^^^^^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:5:27: error: package User does not exist
+           |  public void address(User.Address address) {}
+           |                          ^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  /**
+   * A proto changed on disk without going through the editor, as a workspace
+   * edit applied to a file nobody has open does. The proto is deliberately not
+   * opened, so the reindex reads the file rather than a buffer, and there is no
+   * didSave to carry the invalidation.
+   *
+   * There is deliberately no refocus after the event, as in the deletion case.
+   *
+   * `UserOrBuilder` is what it turns on, as in the cases above: one name per
+   * outline leaves it resolvable from a stale classfile. So do the restart and
+   * the refresh on this path, both separate from a save's own.
+   */
+  test("proto-change-on-disk-invalidates-java") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|/metals.json
+           |{"a": {}}
+           |/a/src/main/proto/model.proto
+           |syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message User {
+           |  string name = 1;
+           |}
+           |/a/src/main/java/com/example/api/jproto/Service.java
+           |package com.example.api.jproto;
+           |public class Service {
+           |  public void user(User user) {}
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |  public void builder(User.Builder builder) {}
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ <- server.didFocus(
+        "a/src/main/java/com/example/api/jproto/Service.java"
+      )
+      _ = assertNoDiagnostics()
+
+      // Rewrite the file itself, then report it the way a watcher would.
+      _ = Files.write(
+        workspace.resolve("a/src/main/proto/model.proto").toNIO,
+        """|syntax = "proto3";
+           |package com.example.api;
+           |option java_package = "com.example.api.jproto";
+           |option java_multiple_files = true;
+           |message Customer {
+           |  string name = 1;
+           |}
+           |""".stripMargin.getBytes(StandardCharsets.UTF_8),
+      )
+      _ <- server.didChangeWatchedFiles(
+        "a/src/main/proto/model.proto",
+        FileChangeType.Changed,
+      )
+
+      _ = assertNoDiff(
+        client.workspaceDiagnostics,
+        """|a/src/main/java/com/example/api/jproto/Service.java:3:20: error: cannot find symbol
+           |  symbol:   class User
+           |  location: class com.example.api.jproto.Service
+           |  public void user(User user) {}
+           |                   ^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:4:25: error: cannot find symbol
+           |  symbol:   class UserOrBuilder
+           |  location: class com.example.api.jproto.Service
+           |  public void orBuilder(UserOrBuilder orBuilder) {}
+           |                        ^^^^^^^^^^^^^
+           |a/src/main/java/com/example/api/jproto/Service.java:5:27: error: package User does not exist
+           |  public void builder(User.Builder builder) {}
+           |                          ^^^^^^^^
+           |""".stripMargin,
+      )
+    } yield ()
+  }
 
   test("proto-rename-invalidates-java") {
     // Test: When a proto message is renamed and saved, then we focus on the Java file,
