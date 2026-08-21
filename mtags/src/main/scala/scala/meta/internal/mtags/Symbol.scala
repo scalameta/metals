@@ -78,8 +78,10 @@ final class Symbol private (val value: String) {
    * `a/B#` becomes `a/B`, `a/B#C#` becomes `a/B$C` and `a/B#C#D#` becomes
    * `a/B$C$D`.
    *
-   * Only classes have one. A member such as `a/B#m().` names its owner instead
-   * of anything the JVM would load, so callers pass type symbols.
+   * Pass a type symbol. A member takes the same nesting rule, so `a/B#m().`
+   * comes out as `a/B$m`, which names no class the JVM loads. A class declared
+   * inside a method reads the same way: `a/B#m().C#` as `a/B$m$C`, where the
+   * JVM writes `a/B$1C`.
    */
   def binaryName: String =
     if (isNone || value.isPackage || isToplevel) toplevelBinaryName
