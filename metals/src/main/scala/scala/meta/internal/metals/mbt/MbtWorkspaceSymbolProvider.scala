@@ -280,15 +280,15 @@ class MbtWorkspaceSymbolProvider(
       doc: IndexedDocument,
   ): Unit = {
     if (javaSymbolLoader().isTurbineClasspath) {
-      val binaryNames = doc.cachedJavaOutlines
-        .flatMap(_.toplevelSymbols().asScala)
-        .map(_.stripSuffix("#").stripSuffix("."))
+      val binaryNames =
+        ProtoOutlineTypes.declaredBy(doc.cachedJavaOutlines, mtags())
       if (binaryNames.nonEmpty) {
         turbineCompiler.onDidDelete(binaryNames, file.toURI.toString())
         turbineCompiler.scheduleCompile().ignoreValue
       }
     }
   }
+
   private def clearAllProtobufCaches(): Unit = {
     documentsKeys.foreach { path =>
       if (path.isProtoFilename) {

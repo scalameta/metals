@@ -73,6 +73,18 @@ final class Symbol private (val value: String) {
   def toplevelClassName: String =
     toplevelBinaryName.replace('/', '.')
 
+  /**
+   * The JVMS 4.2.1 binary name of this class, `$` between the nesting levels:
+   * `a/B#` becomes `a/B`, `a/B#C#` becomes `a/B$C` and `a/B#C#D#` becomes
+   * `a/B$C$D`.
+   *
+   * Only classes have one. A member such as `a/B#m().` names its owner instead
+   * of anything the JVM would load, so callers pass type symbols.
+   */
+  def binaryName: String =
+    if (isNone || value.isPackage || isToplevel) toplevelBinaryName
+    else s"${owner.binaryName}$$$displayName"
+
   def asNonEmpty: Option[Symbol] =
     if (isNone) None
     else Some(this)
