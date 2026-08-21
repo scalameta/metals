@@ -7,6 +7,7 @@ import java.util.Properties
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import scala.meta.internal.bsp.BspServers
 import scala.meta.internal.bsp.ScalaCliBspScope
@@ -46,6 +47,7 @@ final class BuildTools(
     charset: Charset,
     shellRunner: ShellRunner,
     ec: ExecutionContext,
+    mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
 ) {
   private val lastDetectedBuildTools = new AtomicReference(
     Map.empty[String, BuildTool]
@@ -236,7 +238,13 @@ final class BuildTools(
       GradleBuildTool(userConfig, workspace)(ec),
       MillBuildTool(userConfig, workspace),
       ScalaCliBuildTool(workspace, workspace, userConfig),
-      BazelBuildTool(userConfig, workspace, shellRunner, ec),
+      BazelBuildTool(
+        userConfig,
+        workspace,
+        shellRunner,
+        ec,
+        mbtWorkspaceSymbolProvider,
+      ),
       DederBuildTool(userConfig, workspace),
     )
   }
@@ -274,6 +282,7 @@ final class BuildTools(
         root,
         shellRunner,
         ec,
+        mbtWorkspaceSymbolProvider,
         languageClient,
         tables,
       )
@@ -381,6 +390,7 @@ object BuildTools {
         () => UserConfiguration(),
       )(ExecutionContext.global),
       ec = ExecutionContext.global,
+      mbtWorkspaceSymbolProvider = None,
     )
 
   /** All known build tool executable names for configuration validation */

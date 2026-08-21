@@ -49,10 +49,6 @@ class BazelMbtBuildSupportSuite extends tests.BaseSuite {
       dependencyModules = Nil,
       scalaVersion = Some("2.13.16"),
       testTargets = Set("//test:FooTest", "//test:BarTest", "//test:FooSpec"),
-      testClassAttrByTarget = Map(
-        "//test:FooTest" -> List("test.FooTest"),
-        "//test:BarTest" -> List("test.BarTest"),
-      ),
     )
 
     val namespace = build.getNamespaces.get("//test")
@@ -88,7 +84,6 @@ class BazelMbtBuildSupportSuite extends tests.BaseSuite {
       dependencyModules = Nil,
       scalaVersion = None,
       testTargets = Set("//test:FooTest"),
-      testClassAttrByTarget = Map("//test:FooTest" -> List("test.FooTest")),
     )
 
     val namespace = build.getNamespaces.get("bazel-workspace")

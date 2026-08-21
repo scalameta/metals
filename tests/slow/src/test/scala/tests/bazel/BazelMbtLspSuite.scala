@@ -7,8 +7,10 @@ import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -20,6 +22,7 @@ import tests.BazelBuildLayout
 import tests.MbtTestInitializer
 import tests.ScriptsAssertions
 import tests.TestHovers
+import tests.TestingServer
 
 /**
  * End-to-end: Bazel workspace → MBT import (`bazel query` + `.metals/mbt.json`)
@@ -32,6 +35,9 @@ class BazelMbtLspSuite
     with BaseMbtSuite {
 
   private val bazelVersion = "8.2.1"
+
+  override protected def initializationOptions: Option[InitializationOptions] =
+    Some(TestingServer.TestDefault.copy(testExplorerProvider = Some(true)))
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
@@ -46,6 +52,7 @@ class BazelMbtLspSuite
       referenceProvider = ReferenceProviderConfig.mbt,
       preferredBuildServer = Some(MbtBuildServer.name),
       automaticImportBuild = AutoImportBuildKind.All,
+      testUserInterface = TestUserInterfaceKind.TestExplorer,
     )
 
   override def initializeGitRepo: Boolean = true
@@ -520,6 +527,12 @@ class BazelMbtLspSuite
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [
             |        "//app:hello"
+            |      ],
+            |      "mainClasses": [
+            |        {
+            |          "className": "main",
+            |          "configuration": "//app:hello"
+            |        }
             |      ]
             |    }
             |  },
@@ -741,6 +754,12 @@ class BazelMbtLspSuite
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [
             |        "//app:main"
+            |      ],
+            |      "mainClasses": [
+            |        {
+            |          "className": "app.Main",
+            |          "configuration": "//app:main"
+            |        }
             |      ]
             |    }
             |  },
@@ -952,6 +971,12 @@ class BazelMbtLspSuite
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [
             |        "//app:hello"
+            |      ],
+            |      "mainClasses": [
+            |        {
+            |          "className": "main",
+            |          "configuration": "//app:hello"
+            |        }
             |      ]
             |    }
             |  },
@@ -1051,6 +1076,12 @@ class BazelMbtLspSuite
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [
             |        "//app:app"
+            |      ],
+            |      "mainClasses": [
+            |        {
+            |          "className": "app.Main",
+            |          "configuration": "//app:app"
+            |        }
             |      ]
             |    }
             |  },
@@ -1095,6 +1126,75 @@ class BazelMbtLspSuite
            |""".stripMargin,
       )
     } yield ()
+  }
+
+  /**
+   * A `scala_test` whose sources live under `src/test/scala/...` while the
+   * declared package is `example`. Path-as-package would export
+   * `src.test.scala.example.FooSpec`; import must strip the source root and
+   * expose `example.FooSpec`.
+   */
+  private def srcTestPackageMismatchLayout: String =
+    """|/.bazelproject
+       |targets:
+       |    //...
+       |
+       |/src/test/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_test")
+       |
+       |scala_test(
+       |    name = "FooSpec",
+       |    srcs = ["scala/example/inner/FooSpec.scala"],
+       |    deps = ["@maven//:org_scalatest_scalatest_2_13"],
+       |)
+       |
+       |/src/test/scala/example/inner/FooSpec.scala
+       |package example
+       |
+       |import org.scalatest.funsuite.AnyFunSuite
+       |
+       |class FooSpec extends AnyFunSuite {
+       |  test("ok") { assert(true) }
+       |}
+       |""".stripMargin
+
+  test("bazel-import-mbt-src-test-package-mismatch") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    val testFile = "src/test/scala/example/inner/FooSpec.scala"
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          srcTestPackageMismatchLayout,
+          V.scala213,
+          bazelVersion,
+          List("org.scalatest:scalatest_2.13:3.2.19"),
+          includeScalatest = true,
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      escaped = escapeMbtFile(mbtFile)
+      _ = {
+        assert(
+          escaped.contains(""""className": "example.FooSpec""""),
+          s"expected test class from declared package, got:\n$escaped",
+        )
+        assert(
+          !escaped.contains("src.test.scala"),
+          s"test class name must not include src/test/scala path segments:\n$escaped",
+        )
+      }
+      _ <- server.didOpen(testFile)
+      testSuites <- server.discoverTestSuites(List(testFile))
+    } yield {
+      val testEvents = testSuites.flatMap(_.events.toArray.toSeq)
+      assert(
+        testEvents.exists(_.toString.contains("example.FooSpec")),
+        s"Expected to expose example.FooSpec from src/test, got: ${testEvents.mkString(", ")}",
+      )
+    }
   }
 
   test("bazel-import-mbt-custom-maven-hub") {

@@ -3,10 +3,12 @@ package scala.meta.internal.metals.mbt.importer
 import java.{util => ju}
 
 import scala.collection.mutable
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
+import scala.meta.internal.metals.mbt.MbtMainClass
 import scala.meta.internal.metals.mbt.MbtNamespace
 import scala.meta.internal.metals.mbt.MbtTestClass
 
@@ -30,13 +32,6 @@ object BazelMbtBuildSupport {
 
   private val workspaceNamespaceName: String = "bazel-workspace"
 
-  private val SourceKinds: Set[String] =
-    Set("main", "test", "it", "e2e", "jmh")
-
-  private def isJvmLangDir(name: String): Boolean =
-    name == "scala" || name == "java" ||
-      name.startsWith("scala-") || name.startsWith("java-")
-
   def fromDiscovery(
       granularity: BazelMbtNamespaceMode,
       targetLabels: List[String],
@@ -51,7 +46,8 @@ object BazelMbtBuildSupport {
       scalaVersion: Option[String],
       genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
       testTargets: Set[String] = Set.empty,
-      testClassAttrByTarget: Map[String, List[String]] = Map.empty,
+      mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
+      mainClassAttrByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
@@ -90,9 +86,18 @@ object BazelMbtBuildSupport {
           granularity,
           targetLabels,
           testTargets,
-          testClassAttrByTarget,
           srcsByTarget,
           externalDepsByTarget,
+          keys,
+          mbtWorkspaceSymbolProvider,
+        )
+      val mainClassesByNs =
+        computeMainClasses(
+          granularity,
+          targetLabels,
+          runTargets,
+          testTargets,
+          mainClassAttrByTarget,
           keys,
         )
       val classDirectoriesByNs =
@@ -173,6 +178,7 @@ object BazelMbtBuildSupport {
               .getOrElse(namespace, mutable.Buffer.empty)
               .toSeq,
             testClassesByNs.getOrElse(namespace, Nil),
+            mainClassesByNs.getOrElse(namespace, Nil),
           )
         }
       } else {
@@ -193,6 +199,7 @@ object BazelMbtBuildSupport {
           scalaVersion,
           allGenSrcOutputs,
           testClassesByNs.getOrElse(workspaceNamespaceName, Nil),
+          mainClassesByNs.getOrElse(workspaceNamespaceName, Nil),
         )
       }
       MbtBuild(
@@ -312,6 +319,7 @@ object BazelMbtBuildSupport {
       scalaVersion: Option[String],
       uncheckedSources: Seq[String] = Nil,
       testClasses: Seq[MbtTestClass] = Nil,
+      mainClasses: Seq[MbtMainClass] = Nil,
   ): Unit = {
     val sortedRunTargets =
       if (runTargets.isEmpty) null else runTargets.toSeq.sorted.asJava
@@ -320,6 +328,12 @@ object BazelMbtBuildSupport {
       else
         testClasses
           .sortBy(tc => (tc.className, Option(tc.configuration).getOrElse("")))
+          .asJava
+    val sortedMainClasses =
+      if (mainClasses.isEmpty) null
+      else
+        mainClasses
+          .sortBy(mc => (mc.className, Option(mc.configuration).getOrElse("")))
           .asJava
     namespaces.put(
       name,
@@ -333,6 +347,7 @@ object BazelMbtBuildSupport {
         dependsOn = dependsOn.toSeq.sorted.asJava,
         classDirectories = classDirectories.asJava,
         configurations = sortedRunTargets,
+        mainClasses = sortedMainClasses,
         uncheckedSources =
           if (uncheckedSources.isEmpty) null
           else uncheckedSources.distinct.sorted.asJava,
@@ -345,18 +360,34 @@ object BazelMbtBuildSupport {
       granularity: BazelMbtNamespaceMode,
       targetLabels: List[String],
       testTargets: Set[String],
-      testClassAttrByTarget: Map[String, List[String]],
       srcsByTarget: Map[String, List[String]],
       externalDepsByTarget: Map[String, List[String]],
       keys: Map[String, String],
+      mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
   ): Map[String, Seq[MbtTestClass]] = {
+    def testClassesForTarget(
+        target: String,
+        srcLabels: List[String],
+        moduleIds: List[String],
+    ): List[MbtTestClass] = {
+      val classNames =
+        inferredClassNames(srcLabels, mbtWorkspaceSymbolProvider)
+      val framework = frameworkFromModuleIds(moduleIds).orNull
+      classNames.distinct.map { className =>
+        MbtTestClass(
+          className = className,
+          configuration = target,
+          framework = framework,
+        )
+      }
+    }
+
     val outgoing = mutable.Map.empty[String, mutable.Buffer[MbtTestClass]]
     for {
       target <- targetLabels
       if testTargets(target)
       testClass <- testClassesForTarget(
         target,
-        testClassAttrByTarget.getOrElse(target, Nil),
         srcsByTarget.getOrElse(target, Nil),
         externalDepsByTarget.getOrElse(target, Nil),
       )
@@ -370,98 +401,70 @@ object BazelMbtBuildSupport {
     outgoing.map { case (k, v) => k -> v.toSeq }.toMap
   }
 
-  private def testClassesForTarget(
-      target: String,
-      testClassAttr: List[String],
-      srcLabels: List[String],
-      moduleIds: List[String],
-  ): List[MbtTestClass] = {
-    val explicit = testClassAttr.map(_.trim).filter(_.nonEmpty)
-    val classNames =
-      if (explicit.nonEmpty) explicit
-      else inferredClassNames(target, srcLabels)
-    val framework = frameworkFromModuleIds(moduleIds).orNull
-    classNames.distinct.map { className =>
-      MbtTestClass(
-        className = className,
-        configuration = target,
-        framework = framework,
-      )
+  private def computeMainClasses(
+      granularity: BazelMbtNamespaceMode,
+      targetLabels: List[String],
+      runTargets: Set[String],
+      testTargets: Set[String],
+      mainClassAttrByTarget: Map[String, List[String]],
+      keys: Map[String, String],
+  ): Map[String, Seq[MbtMainClass]] = {
+    val binaryTargets = runTargets -- testTargets
+
+    def mainClassesForTarget(
+        target: String
+    ): List[MbtMainClass] = {
+      val classNames =
+        mainClassAttrByTarget
+          .getOrElse(target, Nil)
+          .map(_.trim)
+          .filter(_.nonEmpty)
+      classNames.distinct.map { className =>
+        MbtMainClass(
+          className = className,
+          configuration = target,
+        )
+      }
     }
+
+    val outgoing = mutable.Map.empty[String, mutable.Buffer[MbtMainClass]]
+    for {
+      target <- targetLabels
+      if binaryTargets(target)
+      mainClass <- mainClassesForTarget(
+        target
+      )
+    } {
+      val nsKey =
+        if (granularity == BazelMbtNamespaceMode.Workspace)
+          workspaceNamespaceName
+        else keys(target)
+      outgoing.getOrElseUpdate(nsKey, mutable.Buffer.empty) += mainClass
+    }
+    outgoing.map { case (k, v) => k -> v.toSeq }.toMap
   }
 
   private def inferredClassNames(
-      target: String,
       srcLabels: List[String],
+      mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
   ): List[String] = {
     val jvmSources = srcLabels.flatMap { label =>
       BazelLabels.fileLabelToWorkspaceRelativePath(label).filter(isJvmSource)
     }
     jvmSources match {
       case List(relativePath) =>
-        classNameFromSourcePath(relativePath, target).toList
+        mbtWorkspaceSymbolProvider
+          .map(provider => provider.classesForPath(relativePath))
+          .getOrElse(Nil)
+          .map(_.symbolToFullyQualifiedName)
       case _ =>
         Nil
-    }
-  }
-
-  private def classNameFromSourcePath(
-      relativePath: String,
-      targetLabel: String,
-  ): Option[String] = {
-    val slash = relativePath.lastIndexOf('/')
-    val (dir, file) =
-      if (slash < 0) ("", relativePath)
-      else
-        (relativePath.substring(0, slash), relativePath.substring(slash + 1))
-    val stem = stripJvmSourceSuffix(file)
-    if (stem == file) None
-    else {
-      val (packageDir, strippedSourceRoot) = stripJvmSourceRoot(dir)
-      val fromPath =
-        if (packageDir.isEmpty) stem
-        else s"${packageDir.replace('/', '.')}.$stem"
-      if (fromPath.contains('.') || strippedSourceRoot) Some(fromPath)
-      else
-        BazelLabels.splitLabel(targetLabel).map { case (pkg, _) =>
-          if (pkg.isEmpty) fromPath
-          else s"${pkg.replace('/', '.')}.$fromPath"
-        }
-    }
-  }
-
-  /**
-   * Drop Maven/sbt-style source roots (`src/{main,test,it}/scala`,
-   * `src/test/java`, `src/test/scala-2.13`, ...) so the remaining path is
-   * the Java package. Without this, a file such as
-   * `modules/play/foo/src/test/scala/system/backend/FooSpec.scala` would be
-   * exported as `modules.play.foo.src.test.scala.system.backend.FooSpec`.
-   */
-  private def stripJvmSourceRoot(dir: String): (String, Boolean) = {
-    if (dir.isEmpty) ("", false)
-    else {
-      val parts = dir.split('/')
-      val last = (0 to parts.length - 3).reverse.find { i =>
-        parts(i) == "src" &&
-        SourceKinds(parts(i + 1)) &&
-        isJvmLangDir(parts(i + 2))
-      }
-      last match {
-        case Some(i) => (parts.drop(i + 3).mkString("/"), true)
-        case None => (dir, false)
-      }
     }
   }
 
   private def isJvmSource(relativePath: String): Boolean =
     relativePath.endsWith(".java") ||
       relativePath.endsWith(".scala")
-
-  private def stripJvmSourceSuffix(fileName: String): String =
-    if (fileName.endsWith(".java")) fileName.stripSuffix(".java")
-    else if (fileName.endsWith(".scala")) fileName.stripSuffix(".scala")
-    else if (fileName.endsWith(".sc")) fileName.stripSuffix(".sc")
-    else fileName
 
   private def frameworkFromModuleIds(
       moduleIds: Seq[String]

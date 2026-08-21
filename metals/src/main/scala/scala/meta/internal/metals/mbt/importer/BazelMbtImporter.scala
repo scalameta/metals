@@ -5,6 +5,7 @@ import java.nio.file.Path
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
@@ -32,6 +33,7 @@ abstract class BazelMbtImporter(
     userConfig: () => UserConfiguration,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
+    mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
 )(implicit ec: ExecutionContext)
     extends MbtImportProvider {
 
@@ -105,7 +107,6 @@ abstract class BazelMbtImporter(
             .exists(isTestRule)
         )
         .toSet
-      testClassAttr = targetsXmlDump.getStrings("test_class")
       classDirectories = classDirectoriesForRunTargets(
         bazelBin,
         runTargets,
@@ -165,7 +166,8 @@ abstract class BazelMbtImporter(
         effectiveScalaVersion,
         genSrcOutputsByTarget,
         testTargets,
-        testClassAttr,
+        mbtWorkspaceSymbolProvider,
+        mainClassAttrByTarget = targetsXmlDump.getStrings("main_class"),
       )
       _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
     } yield ()

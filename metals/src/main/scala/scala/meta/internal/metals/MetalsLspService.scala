@@ -347,7 +347,7 @@ abstract class MetalsLspService(
   private val sleeper: Sleeper =
     new Sleeper.ScheduledExecutorServiceSleeper(sh)
 
-  private val mbt2 = new MbtWorkspaceSymbolProvider(
+  protected val mbt2 = new MbtWorkspaceSymbolProvider(
     workspace = folder,
     config = () => userConfig.workspaceSymbolProvider,
     buffers = buffers,
@@ -1779,6 +1779,7 @@ abstract class MetalsLspService(
   def discoverTestSuites(uri: Option[String]): Future[List[BuildTargetUpdate]] =
     testProvider.discoverTests(uri.map(_.toAbsolutePath))
 
+  // Remove if GRadle and Maven are also supported
   def discoverAllTestSuites(): Future[List[BuildTargetUpdate]] =
     testProvider.discoverAllTestSuites()
 

@@ -69,6 +69,7 @@ import ch.epfl.scala.bsp4j.RunParams
 import ch.epfl.scala.bsp4j.RunProvider
 import ch.epfl.scala.bsp4j.RunResult
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaMainClassesItem
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult
 import ch.epfl.scala.bsp4j.ScalaTestClassesItem
@@ -574,10 +575,24 @@ final class MbtBuildServer(
 
   override def buildTargetScalaMainClasses(
       params: ScalaMainClassesParams
-  ): CompletableFuture[ScalaMainClassesResult] =
-    CompletableFuture.completedFuture(
-      new ScalaMainClassesResult(List.empty.asJava)
-    )
+  ): CompletableFuture[ScalaMainClassesResult] = {
+    val requestedTargets = params.getTargets.asScala.toSet
+    val items = importedBuildTargets
+      .filter(t => requestedTargets(t.id) && t.mainClasses.nonEmpty)
+      .map { target =>
+        new ScalaMainClassesItem(
+          target.id,
+          target.mainClasses.map { mc =>
+            new ScalaMainClass(
+              mc.className,
+              Nil.asJava,
+              Nil.asJava,
+            )
+          }.asJava,
+        )
+      }
+    CompletableFuture.completedFuture(new ScalaMainClassesResult(items.asJava))
+  }
 
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams

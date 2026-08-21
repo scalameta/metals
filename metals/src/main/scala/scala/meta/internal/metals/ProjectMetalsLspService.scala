@@ -112,6 +112,7 @@ class ProjectMetalsLspService(
     charset,
     shellRunner,
     ec,
+    Some(mbt2),
   )
 
   override def indexer: Indexer = connectionProvider
