@@ -46,6 +46,7 @@ final class BuildTargetClasses(
     symbolIndex: OnDemandSymbolIndex,
     mbt: () => Option[MbtWorkspaceSymbolProvider] = () => None,
     workDoneProgress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
+    shouldDiscoverMbtClasses: () => Boolean = () => true,
 )(implicit
     val ec: ExecutionContext
 ) extends SemanticdbFeatureProvider {
@@ -218,20 +219,25 @@ final class BuildTargetClasses(
                 .map(cacheTestClasses(classes, _))
             }
 
-          // val populateMbtClasses =
-          //   if (MbtBuildServer.isMbtServer(connection.name) ) {
-          //     populateMbtMainClasses(classes, targets0).flatMap { _ =>
-          //       populateMbtTestClasses(classes, targets0)
-          //     }
-          //   } else Future.unit
+          // Bazel MBT already declares main/test classes in mbt.json, so skip
+          // index discovery. Maven and Gradle still rely on it.
+          val populateMbtClasses =
+            if (
+              MbtBuildServer.isMbtServer(connection.name) &&
+              shouldDiscoverMbtClasses()
+            ) {
+              populateMbtMainClasses(classes, targets0).flatMap { _ =>
+                populateMbtTestClasses(classes, targets0)
+              }
+            } else Future.unit
 
           for {
             _ <- updateMainClasses
             _ <- updateTestClasses
-            // _ <- workDoneProgress.trackFuture(
-            //   "Discovering main classes and tests",
-            //   populateMbtClasses,
-            // )
+            _ <- workDoneProgress.trackFuture(
+              "Discovering main classes and tests",
+              populateMbtClasses,
+            )
           } yield {
             targetsList.forEach(invalidate)
             classes.foreach { case (id, classes) =>
