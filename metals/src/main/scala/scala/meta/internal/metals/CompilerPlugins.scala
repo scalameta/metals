@@ -1,6 +1,7 @@
 package scala.meta.internal.metals
 
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 
 import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
@@ -72,6 +73,9 @@ class CompilerPlugins {
             }
           }
         } catch {
+          case _: NoSuchFileException =>
+            scribe.warn(s"Could not find compiler plugin: $path")
+            false
           case NonFatal(e) =>
             scribe.error(path.toString(), e)
             false
