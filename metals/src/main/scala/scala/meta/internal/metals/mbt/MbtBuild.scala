@@ -57,7 +57,7 @@ case class MbtBuild(
    * missing-module warnings and is invoked from hot paths (test class
    * lookup, BSP requests).
    */
-  lazy val mbtTargets: Seq[MbtTarget] =
+  def mbtTargets: Seq[MbtTarget] =
     if (getNamespaces.isEmpty) {
       Option
         .when(!getDependencyModules().isEmpty) {
@@ -127,6 +127,7 @@ case class MbtBuild(
             .getOrElse(Nil),
           projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
+          mainClasses = namespace.getMainClasses,
           uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
           testClasses = namespace.getTestClasses,
         )

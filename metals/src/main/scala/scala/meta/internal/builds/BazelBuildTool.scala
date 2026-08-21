@@ -20,6 +20,7 @@ import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
 import scala.meta.internal.metals.mbt.MbtTestReport
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
@@ -35,6 +36,7 @@ case class BazelBuildTool(
     override val projectRoot: AbsolutePath,
     shellRunner: ShellRunner,
     ec: ExecutionContext,
+    mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
 ) extends BazelMbtImporter(
@@ -43,6 +45,7 @@ case class BazelBuildTool(
       userConfig,
       languageClient,
       tables,
+      mbtWorkspaceSymbolProvider,
     )(ec)
     with BuildTool
     with BuildServerProvider
@@ -136,7 +139,7 @@ case class BazelBuildTool(
       "run",
       "--ui_event_filters=-info,-stderr",
       "--noshow_progress",
-      bazelRunTarget(target),
+      bazelRunTarget(target, mainClass.getClassName()),
       "--",
     ) ::: jvmFlags.map(flag => s"--jvm_flag=$flag") ::: appArgs
   }
@@ -358,8 +361,18 @@ case class BazelBuildTool(
       case targets => targets
     }
 
-  private def bazelRunTarget(target: MbtTarget): String =
-    target.configurations.headOption.getOrElse(target.name)
+  private def bazelRunTarget(target: MbtTarget, className: String): String = {
+    val fromClass = target.mainClasses
+      .find(_.className == className)
+      .flatMap(mc => Option(mc.configuration))
+    val fromAnyMain = target.mainClasses
+      .flatMap(mc => Option(mc.configuration))
+      .headOption
+    fromClass
+      .orElse(fromAnyMain)
+      .orElse(target.configurations.headOption)
+      .getOrElse(target.name)
+  }
 
 }
 

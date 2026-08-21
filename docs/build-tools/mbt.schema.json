@@ -156,6 +156,33 @@
             },
             "uniqueItems": true
           },
+          "mainClasses": {
+            "type": "array",
+            "description": "Runnable main classes belonging to this namespace. For Bazel, each entry maps a fully-qualified main class to the runnable binary target in \"configurations\".",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "className"
+              ],
+              "properties": {
+                "className": {
+                  "type": "string",
+                  "description": "Fully-qualified main class name.",
+                  "examples": [
+                    "com.example.Main"
+                  ]
+                },
+                "configuration": {
+                  "type": "string",
+                  "description": "Build-system identifier of the runnable that executes this class. For Bazel this is the binary target label, matching an entry in \"configurations\".",
+                  "examples": [
+                    "//app:main"
+                  ]
+                }
+              }
+            }
+          },
           "testClasses": {
             "type": "array",
             "description": "Test suites belonging to this namespace. For Bazel, each entry maps a fully-qualified test class to the runnable test target in \"configurations\".",

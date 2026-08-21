@@ -71,6 +71,41 @@ case class IndexedDocument(
   def cachedJavaOutlines: Seq[VirtualTextDocument] =
     Option(cachedProtobufJavaOutlines.get()).getOrElse(Seq.empty)
 
+  /**
+   * Fully-qualified name of the primary toplevel class/object in this file.
+   * Prefers indexed symbols (which include the declared package) so callers
+   * don't have to invent a package from the source path.
+   */
+  def fullyQualifiedClassName: Option[String] = {
+    val stem = {
+      val name = file.filename
+      if (name.endsWith(".scala")) name.stripSuffix(".scala")
+      else if (name.endsWith(".java")) name.stripSuffix(".java")
+      else if (name.endsWith(".sc")) name.stripSuffix(".sc")
+      else name
+    }
+    val toplevels = for {
+      info <- symbols
+      kind = info.getKind()
+      if kind == Semanticdb.SymbolInformation.Kind.CLASS ||
+        kind == Semanticdb.SymbolInformation.Kind.OBJECT
+      sym = Symbol(info.getSymbol())
+      if sym.isToplevel
+    } yield sym.toplevelClassName
+    val matching =
+      toplevels.find(name => name == stem || name.endsWith("." + stem))
+    matching.orElse(toplevels.headOption).orElse {
+      val pkg = semanticdbPackages.headOption
+        .map(_.stripSuffix("/").replace('/', '.'))
+        .filter(p => p.nonEmpty && p != "_empty_")
+      if (stem.isEmpty) None
+      else
+        pkg
+          .map(p => s"$p.$stem")
+          .orElse(Option.when(semanticdbPackages.nonEmpty)(stem))
+    }
+  }
+
   def toSemanticdbCompilationUnit(
       input: Input.VirtualFile
   ): SemanticdbCompilationUnit with JavaFileObject = {
