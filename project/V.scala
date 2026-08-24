@@ -90,7 +90,7 @@ object V {
     else if (scalaVersion == "2.13.17") "3.17.0"
     else scribe
 
-  val protobuf = "4.35.1"
+  val protobuf = "4.36.0"
 
   val sbt2Version = "2.0.3"
 
