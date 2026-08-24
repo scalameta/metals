@@ -1213,9 +1213,23 @@ abstract class MetalsLspService(
     if (bloopReportDelete.nonEmpty) connectionBspStatus.onReportsUpdate()
 
     val futures = List.newBuilder[Future[Unit]]
-    futures ++= otherDeleteEvents.map(event =>
-      onDelete(event.getUri().toAbsolutePath)
-    )
+    val deletions =
+      otherDeleteEvents.map(event => onDelete(event.getUri().toAbsolutePath))
+    futures ++= deletions
+    // A deleted .proto takes the types its outlines compiled to off CLASS_PATH,
+    // but the Java presentation compiler keeps the symbols it already resolved
+    // from those outlines and does not ask again until it restarts. The restart
+    // waits for the deletions, since one before them reads the outlines back.
+    if (otherDeleteEvents.exists(_.getUri().toAbsolutePath.isProtoFilename)) {
+      futures += Future
+        .sequence(deletions)
+        .flatMap { _ =>
+          compilers.restartJavaCompilers()
+          // A restarted compiler reports what the proto declares now only
+          // once it runs again, so run it rather than wait for the next edit.
+          refreshDiagnostics(_.isJavaFilename)
+        }
+    }
     val paths = changeAndCreateEvents.map(_.getUri().toAbsolutePath)
     futures += (paths.find(_.filename == "mbt.json") match {
       case Some(mbtJsonPath) =>
@@ -1234,6 +1248,7 @@ abstract class MetalsLspService(
     if (paths.exists(_.isProtoFilename)) {
       paths.filter(_.isProtoFilename).foreach(mbt2.didSave)
       compilers.restartJavaCompilers()
+      futures += refreshDiagnostics(_.isJavaFilename)
     }
     futures += onChange(paths)
     Future.sequence(futures.result()).ignoreValue
