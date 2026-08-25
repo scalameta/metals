@@ -183,6 +183,7 @@ message Dependency {}
 """,
       root = workspace(),
     )
+    val proto = workspace.resolve("example/Dependency.proto")
     val provider = newProvider()
     workspace.executeCommand("git init -b main")
     workspace.gitCommitAllChanges()
@@ -191,6 +192,8 @@ message Dependency {}
       IndexingStats(totalFiles = 1, updatedFiles = 1),
     )
     assert(provider.listAllPackages().containsKey("generated/example/"))
+    assert(provider.document(proto).exists(_.cachedJavaOutlines.isEmpty))
+    assert(provider.protoJavaOutlines(proto).nonEmpty)
   }
 
   test("exclude-module-info-java") {

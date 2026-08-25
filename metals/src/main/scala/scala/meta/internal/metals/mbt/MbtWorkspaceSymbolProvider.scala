@@ -206,7 +206,10 @@ class MbtWorkspaceSymbolProvider(
               )
             )
             .toList
-        } else if (file.isProtoFilename && isProtoJavaPackageIndexingEnabled) {
+        } else if (
+          file.isProtoFilename &&
+          protobufWorkspace.isJavaPackageIndexingEnabled
+        ) {
           // Include the Java outlines generated from proto files so that
           // turbine can resolve references to proto-generated classes when it
           // header-compiles the workspace. Without these, a Java method
