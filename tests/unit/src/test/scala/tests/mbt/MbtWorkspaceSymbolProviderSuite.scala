@@ -1,6 +1,5 @@
 package tests.mbt
 
-import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.EnumSet
@@ -25,9 +24,7 @@ import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.TurbineCompileResult
 import scala.meta.internal.metals.mbt.TurbineCompiler
-import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.io.AbsolutePath
-import scala.meta.pc
 
 import com.google.turbine.diag.SourceFile
 import munit.AnyFixture
@@ -287,7 +284,9 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
       EmptyWorkDoneProgress,
     )
 
-  private def checkTargetClasspathPrecedence(isProtobuf: Boolean): Unit = {
+  private def checkTargetClasspathPrecedence(
+      isGlobalClasspathEntry: Boolean
+  ): Unit = {
     val projectResult = compile(projectSource)
     val jar = Files.createTempFile("metals-project-classpath", ".jar")
     val output = new ZipOutputStream(Files.newOutputStream(jar))
@@ -300,29 +299,20 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
     } finally output.close()
 
     var fallbackClasspath = Seq.empty[java.nio.file.Path]
-    val protoOutline = VirtualTextDocument(
-      URI.create("file:///Dependency.java"),
-      pc.Language.JAVA,
-      workspaceSource,
-      Seq("example"),
-      Seq("example/Dependency#"),
-    )
     val compiler = new TurbineCompiler[String](
       () => ParArray(workspaceSource),
       text => Seq(new SourceFile("Dependency.java", text)),
       () => fallbackClasspath,
       EmptyWorkDoneProgress,
       () => Configs.TurbineRecompileDelayConfig.testing,
-      packageName =>
-        if (isProtobuf && packageName == "example/") Iterator(protoOutline)
-        else Iterator.empty,
+      _ => Iterator.empty,
       Sleeper.TestingSleeper,
       () => (),
       _ => (),
     )
     compiler.doCompileNow()
     val workspaceResult = compiler.result
-    fallbackClasspath = Seq(jar)
+    if (isGlobalClasspathEntry) fallbackClasspath = Seq(jar)
 
     val standardFileManager = ToolProvider
       .getSystemJavaCompiler()
@@ -354,8 +344,8 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
         )
       }.toMap
       val expectedResult =
-        if (isProtobuf) projectResult
-        else workspaceResult
+        if (isGlobalClasspathEntry) workspaceResult
+        else projectResult
       val expected = expectedResult.lowered
         .bytes()
         .asScala
@@ -370,11 +360,11 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
     }
   }
 
-  test("target-protobuf-classpath-before-workspace-headers") {
-    checkTargetClasspathPrecedence(isProtobuf = true)
+  test("target-classpath-before-workspace-headers") {
+    checkTargetClasspathPrecedence(isGlobalClasspathEntry = false)
   }
 
-  test("workspace-headers-before-non-protobuf-target-classpath") {
-    checkTargetClasspathPrecedence(isProtobuf = false)
+  test("workspace-headers-before-global-fallback-classpath") {
+    checkTargetClasspathPrecedence(isGlobalClasspathEntry = true)
   }
 }

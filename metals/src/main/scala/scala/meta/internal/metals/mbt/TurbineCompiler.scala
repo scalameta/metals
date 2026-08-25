@@ -24,7 +24,6 @@ import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
 import scala.meta.pc.ProgressBars
-import scala.meta.pc.SemanticdbCompilationUnit
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
@@ -341,7 +340,6 @@ class TurbineCompiler[T](
       underlying,
       () => result,
       listSourcepath = listCombinedSourcepath,
-      listProtoBinaryNames,
       isDeleted,
       projectClasspath,
     )
@@ -362,14 +360,6 @@ class TurbineCompiler[T](
       protoFiles.foreach(combined.add(_))
       combined
     }
-  }
-
-  private def listProtoBinaryNames(packageName: String): Set[String] = {
-    val protoPackage = packageName.replace('.', '/') + "/"
-    listProtoJavaOutlinesForPackage(protoPackage).collect {
-      case file: SemanticdbCompilationUnit =>
-        file.binaryName().replace('.', '/')
-    }.toSet
   }
 
   private[mbt] def listSourcepath(
