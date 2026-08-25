@@ -183,7 +183,7 @@ message Dependency {}
 """,
       root = workspace(),
     )
-    val proto = workspace.resolve("example/Dependency.proto")
+    val proto = workspace().resolve("example/Dependency.proto")
     val provider = newProvider()
     workspace.executeCommand("git init -b main")
     workspace.gitCommitAllChanges()
