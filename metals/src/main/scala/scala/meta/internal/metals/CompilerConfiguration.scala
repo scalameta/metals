@@ -679,10 +679,7 @@ class CompilerConfiguration(
 
 object CompilerConfiguration {
   private val excludedJavaPcOptionPrefixes = List(
-    "-J",
-    "@",
-    "-Xplugin:",
-    "-proc:",
+    "-J", "@", "-Xplugin:", "-Xep", "-proc:",
   )
 
   private val javaReleaseFlags =
