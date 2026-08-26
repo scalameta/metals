@@ -1011,7 +1011,7 @@ abstract class MetalsLspService(
         Future.successful(DidFocusResult.NoBuildTarget)
       } else {
         for {
-          _ <- initialBuildTargetsReady.future
+          _ <- initialBuildTargetsReadyForDiagnostics
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics.publishDiagnosticsNotAdjusted(
             path,
@@ -1034,6 +1034,21 @@ abstract class MetalsLspService(
       !path.isWorkspaceSource(folder) ||
       buildTargets.isDependencySource(path) ||
       buildTargets.checkIfGeneratedSource(path.toNIO)
+
+  private def initialBuildTargetsReadyForDiagnostics: Future[Unit] =
+    if (
+      userConfig.workspaceSymbolProvider.isMBT &&
+      userConfig.javaSymbolLoader.isTurbineClasspath
+    ) {
+      buildServerPromise.future.flatMap { _ =>
+        if (
+          bspSession.exists(session =>
+            MbtBuildServer.isMbtServer(session.main.name)
+          )
+        ) initialBuildTargetsReady.future
+        else Future.unit
+      }
+    } else Future.unit
 
   def sync(
       uri: String,
@@ -1184,7 +1199,7 @@ abstract class MetalsLspService(
 
   def restartFallbackCompilers(): Future[Unit] = {
     compilers.restartFallbackCompilers()
-    initialBuildTargetsReady.future.flatMap(_ =>
+    initialBuildTargetsReadyForDiagnostics.flatMap(_ =>
       refreshDiagnostics(path => buildTargets.inverseSources(path).isEmpty)
     )
   }
