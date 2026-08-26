@@ -269,7 +269,12 @@ case class GradleBuildTool(
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
-      gradleTestCommand(target, testSuites, debugAgentFlag = None, framework)
+      gradleTestCommand(
+        target,
+        testSuites,
+        debugAgentFlag = None,
+        framework = framework,
+      )
     )
 
   override def mbtTestDebugCommand(
