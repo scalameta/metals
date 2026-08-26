@@ -1,11 +1,15 @@
 package tests.mbt
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.EnumSet
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.tools.Diagnostic
+import javax.tools.DiagnosticCollector
 import javax.tools.JavaFileObject
+import javax.tools.SimpleJavaFileObject
 import javax.tools.StandardLocation
 import javax.tools.ToolProvider
 
@@ -24,9 +28,12 @@ import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.TurbineCompileResult
 import scala.meta.internal.metals.mbt.TurbineCompiler
+import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 
 import com.google.turbine.diag.SourceFile
+import com.sun.source.util.JavacTask
 import munit.AnyFixture
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
@@ -299,13 +306,22 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
     } finally output.close()
 
     var fallbackClasspath = Seq.empty[java.nio.file.Path]
+    val protoOutline = VirtualTextDocument(
+      URI.create("file:///Dependency.java"),
+      pc.Language.JAVA,
+      workspaceSource,
+      Seq("example/"),
+      Seq("example/Dependency#"),
+    )
     val compiler = new TurbineCompiler[String](
       () => ParArray(workspaceSource),
       text => Seq(new SourceFile("Dependency.java", text)),
       () => fallbackClasspath,
       EmptyWorkDoneProgress,
       () => Configs.TurbineRecompileDelayConfig.testing,
-      _ => Iterator.empty,
+      packageName =>
+        if (packageName == "example/") Iterator(protoOutline)
+        else Iterator.empty,
       Sleeper.TestingSleeper,
       () => (),
       _ => (),
@@ -354,6 +370,47 @@ class TurbineClasspathFileManagerSuite extends munit.FunSuite {
         }
         .toMap
       assertEquals(obtained, expected)
+      val sourcepath = fileManager
+        .list(
+          StandardLocation.SOURCE_PATH,
+          "example",
+          EnumSet.of(JavaFileObject.Kind.SOURCE),
+          false,
+        )
+        .asScala
+        .toList
+      assertEquals(
+        sourcepath.map(_.toUri()),
+        if (isGlobalClasspathEntry) List(protoOutline.toUri()) else Nil,
+      )
+      val diagnostics = new DiagnosticCollector[JavaFileObject]()
+      val method = if (isGlobalClasspathEntry) "workspace" else "project"
+      val source = new SimpleJavaFileObject(
+        URI.create("string:///example/Main.java"),
+        JavaFileObject.Kind.SOURCE,
+      ) {
+        override def getCharContent(
+            ignoreEncodingErrors: Boolean
+        ): CharSequence =
+          s"package example; public class Main { void test() { new Dependency.Builder().$method(); } }"
+      }
+      val task = ToolProvider
+        .getSystemJavaCompiler()
+        .getTask(
+          null,
+          fileManager,
+          diagnostics,
+          List("-Xprefer:source", "-proc:none", "-sourcepath", "").asJava,
+          null,
+          List(source).asJava,
+        )
+        .asInstanceOf[JavacTask]
+      task.parse()
+      task.analyze()
+      val errors = diagnostics.getDiagnostics().asScala.filter { diagnostic =>
+        diagnostic.getKind() == Diagnostic.Kind.ERROR
+      }
+      assertEquals(errors.map(_.toString()).toList, List.empty[String])
     } finally {
       fileManager.close()
       Files.deleteIfExists(jar)

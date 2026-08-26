@@ -24,6 +24,7 @@ import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
 import scala.meta.pc.ProgressBars
+import scala.meta.pc.SemanticdbCompilationUnit
 
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
@@ -33,6 +34,7 @@ import com.google.turbine.binder.ClassPath
 import com.google.turbine.binder.ClassPathBinder
 import com.google.turbine.binder.JimageClassBinder
 import com.google.turbine.binder.Processing
+import com.google.turbine.binder.sym.ClassSymbol
 import com.google.turbine.diag.SourceFile
 import com.google.turbine.diag.TurbineLog
 import com.google.turbine.lower.Lower
@@ -339,7 +341,8 @@ class TurbineCompiler[T](
     new TurbineClasspathFileManager(
       underlying,
       () => result,
-      listSourcepath = listCombinedSourcepath,
+      listSourcepath = packageName =>
+        listCombinedSourcepath(packageName, projectClasspath),
       isDeleted,
       projectClasspath,
     )
@@ -347,11 +350,17 @@ class TurbineCompiler[T](
 
   // Combines normal Scala/Java files with on-the-fly generated Protobuf outlines.
   private def listCombinedSourcepath(
-      packageName: String
+      packageName: String,
+      projectClasspath: ClassPath,
   ): java.lang.Iterable[JavaFileObject] = {
     val turbineFiles = listSourcepath(packageName)
     val protoPackage = packageName.replace('.', '/') + "/"
-    val protoFiles = listProtoJavaOutlinesForPackage(protoPackage)
+    val protoFiles = listProtoJavaOutlinesForPackage(protoPackage).filterNot {
+      case file: SemanticdbCompilationUnit =>
+        val symbol = new ClassSymbol(file.binaryName().replace('.', '/'))
+        projectClasspath.env().get(symbol) != null
+      case _ => false
+    }
     if (protoFiles.isEmpty) {
       turbineFiles
     } else {
