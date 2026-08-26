@@ -8,6 +8,7 @@ import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
 import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 trait MbtDebugLauncher { self: BuildTool =>
@@ -84,4 +85,23 @@ object MbtDebugLauncher {
 
   def listOrNil[A](l: java.util.List[A]): List[A] =
     if (l == null) Nil else l.asScala.toList
+
+  /**
+   * Test case names of a suite, ready to be put into a build tool's test filter.
+   *
+   * JUnit 5 cases are discovered as `method()`, because that is how
+   * jupiter-interface reports them and how the client identifies them. Build
+   * tool filters (bazel `--test_filter`, gradle `--tests`, maven `-Dtest`) all
+   * match the bare method name, so the parentheses have to be dropped. Only for
+   * JUnit, since test names of the other frameworks are free-form strings that
+   * may legitimately end with `()`.
+   */
+  def testFilterNames(
+      suite: ScalaTestSuiteSelection,
+      framework: Option[TestFramework],
+  ): List[String] = {
+    val tests = listOrNil(suite.getTests)
+    if (framework.contains(TestFramework.JUnit)) tests.map(_.stripSuffix("()"))
+    else tests
+  }
 }

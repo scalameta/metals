@@ -262,7 +262,7 @@ case class BazelBuildTool(
       } else {
         val testFilter = suites.flatMap { suite =>
           val className = suite.getClassName
-          val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+          val tests = MbtDebugLauncher.testFilterNames(suite, framework)
           if (tests.isEmpty) List(className)
           else tests.map(test => s"$className#$test")
         }
