@@ -70,8 +70,10 @@ final class Symbol private (val value: String) {
    * [[toplevelBinaryName]] with `.` between package parts, the form
    * `Class.forName` expects: `scala/Option#get().` becomes `scala.Option`.
    */
-  def toplevelClassName: String =
-    toplevelBinaryName.replace('/', '.')
+  def toplevelClassName: String = {
+    val suffix = if (toplevel.value.endsWith(".")) "$" else ""
+    toplevelBinaryName.replace('/', '.') + suffix
+  }
 
   /**
    * The JVMS 4.2.1 binary name of this class, `$` between the nesting levels:
@@ -122,8 +124,10 @@ object Symbol {
    * `scala/Option#`. Toplevel, since a nested class is `Outer.Inner` there but
    * `Outer#Inner#` here.
    */
-  def fromToplevelClassName(className: String): Symbol =
-    Symbol(className.replace('.', '/') + "#")
+  def fromToplevelClassName(className: String): Symbol = {
+    val suffix = if (className.endsWith("$")) "." else "#"
+    Symbol(className.replace('.', '/') + suffix)
+  }
 
   def validated(sym: String): Either[String, Symbol] = {
     // NOTE(olafur): this validation method is hacky, we should write a proper

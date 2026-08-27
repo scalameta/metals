@@ -200,6 +200,13 @@
                     "com.example.FooTest"
                   ]
                 },
+                "sourcePath": {
+                  "type": "string",
+                  "description": "Workspace-relative path to the test class source file.",
+                  "examples": [
+                    "/workspace/project/src/test/java/com/example/FooTest.java"
+                  ]
+                },
                 "configuration": {
                   "type": "string",
                   "description": "Build-system identifier of the runnable test that executes this class. For Bazel this is the test target label, matching an entry in \"configurations\".",

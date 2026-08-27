@@ -265,12 +265,14 @@ case class BazelBuildTool(
   ): Future[List[String]] = {
     val classNames =
       MbtDebugLauncher.listOrNil(testSuites.getSuites).map(_.getClassName)
-    val fromDeclared = classNames.flatMap { className =>
+    val declaredBySuite = classNames.map { className =>
       target.testClasses
-        .find(_.className == className)
+        .filter(_.className == className)
         .flatMap(tc => Option(tc.configuration))
-    }.distinct
-    if (fromDeclared.nonEmpty) Future.successful(fromDeclared)
+    }
+    val fromDeclared = declaredBySuite.flatten.distinct
+    if (classNames.nonEmpty && declaredBySuite.forall(_.nonEmpty))
+      Future.successful(fromDeclared)
     else
       target.configurations.toList match {
         case Nil => Future.successful(List(target.name))
