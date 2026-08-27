@@ -154,14 +154,15 @@ case class BazelBuildTool(
     val eventFile = AbsolutePath(
       Files.createTempFile("bazel-test-", ".json")
     )
-    resolveTestRunTargets(workspace, target,testSuites, sourceFiles).map { runTargets =>
-      val arguments = mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = None,
-        framework = framework,
-      ) :+ s"--build_event_json_file=$eventFile"
-      MbtTestCommand(arguments, () => bazelTestReport(eventFile))
+    resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
+      runTargets =>
+        val arguments = mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = None,
+          framework = framework,
+        ) :+ s"--build_event_json_file=$eventFile"
+        MbtTestCommand(arguments, () => bazelTestReport(eventFile))
     }
   }
 
@@ -214,11 +215,13 @@ case class BazelBuildTool(
   ): Future[MbtTestCommand] =
     resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
       runTargets =>
-        mbtTestExecCommand(
-          runTargets,
-          testSuites,
-          debugAgentFlag = Some(debugAgentFlag),
-          framework = framework,
+        MbtTestCommand(
+          mbtTestExecCommand(
+            runTargets,
+            testSuites,
+            debugAgentFlag = Some(debugAgentFlag),
+            framework = framework,
+          )
         )
     }
 
