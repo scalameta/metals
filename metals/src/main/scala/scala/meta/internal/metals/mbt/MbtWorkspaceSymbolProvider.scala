@@ -281,6 +281,7 @@ class MbtWorkspaceSymbolProvider(
           .toList
       )
       .getOrElse(Nil)
+      .filter(sym => Symbol(sym).isToplevel)
   }
 
   /**

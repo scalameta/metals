@@ -2,7 +2,6 @@ package scala.meta.internal.builds
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -12,6 +11,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
@@ -204,12 +204,14 @@ case class BazelBuildTool(
   ): Future[List[String]] = {
     val classNames =
       MbtDebugLauncher.listOrNil(testSuites.getSuites).map(_.getClassName)
-    val fromDeclared = classNames.flatMap { className =>
+    val declaredBySuite = classNames.map { className =>
       target.testClasses
-        .find(_.className == className)
+        .filter(_.className == className)
         .flatMap(tc => Option(tc.configuration))
-    }.distinct
-    if (fromDeclared.nonEmpty) Future.successful(fromDeclared)
+    }
+    val fromDeclared = declaredBySuite.flatten.distinct
+    if (classNames.nonEmpty && declaredBySuite.forall(_.nonEmpty))
+      Future.successful(fromDeclared)
     else
       target.configurations.toList match {
         case Nil => Future.successful(List(target.name))

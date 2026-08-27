@@ -3,7 +3,6 @@ package scala.meta.internal.metals.mbt.importer
 import java.{util => ju}
 
 import scala.collection.mutable
-import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtBuild
@@ -11,6 +10,7 @@ import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.MbtMainClass
 import scala.meta.internal.metals.mbt.MbtNamespace
 import scala.meta.internal.metals.mbt.MbtTestClass
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 sealed abstract class BazelMbtNamespaceMode(val name: String)
 
@@ -365,31 +365,18 @@ object BazelMbtBuildSupport {
       keys: Map[String, String],
       mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
   ): Map[String, Seq[MbtTestClass]] = {
-    def testClassesForTarget(
-        target: String,
-        srcLabels: List[String],
-        moduleIds: List[String],
-    ): List[MbtTestClass] = {
-      val classNames =
-        inferredClassNames(srcLabels, mbtWorkspaceSymbolProvider)
-      val framework = frameworkFromModuleIds(moduleIds).orNull
-      classNames.distinct.map { className =>
-        MbtTestClass(
-          className = className,
-          configuration = target,
-          framework = framework,
-        )
-      }
-    }
 
     val outgoing = mutable.Map.empty[String, mutable.Buffer[MbtTestClass]]
     for {
       target <- targetLabels
       if testTargets(target)
-      testClass <- testClassesForTarget(
-        target,
+      moduleIds = externalDepsByTarget.getOrElse(target, Nil)
+      framework = frameworkFromModuleIds(moduleIds).orNull
+      testClass <- inferredTestCandidates(
         srcsByTarget.getOrElse(target, Nil),
-        externalDepsByTarget.getOrElse(target, Nil),
+        mbtWorkspaceSymbolProvider,
+        framework,
+        target,
       )
     } {
       val nsKey =
@@ -444,19 +431,33 @@ object BazelMbtBuildSupport {
     outgoing.map { case (k, v) => k -> v.toSeq }.toMap
   }
 
-  private def inferredClassNames(
+  // sourcePath seem to be set to null TODO
+  private def inferredTestCandidates(
       srcLabels: List[String],
       mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
-  ): List[String] = {
+      framework: String,
+      configuration: String,
+  ): List[MbtTestClass] = {
     val jvmSources = srcLabels.flatMap { label =>
       BazelLabels.fileLabelToWorkspaceRelativePath(label).filter(isJvmSource)
     }
+
     jvmSources match {
       case List(relativePath) =>
         mbtWorkspaceSymbolProvider
-          .map(provider => provider.classesForPath(relativePath))
+          .map(provider =>
+            provider
+              .classesForPath(relativePath)
+              .map(c =>
+                MbtTestClass(
+                  className = c.symbolToFullyQualifiedName,
+                  framework = framework,
+                  sourcePath = relativePath,
+                  configuration = configuration,
+                )
+              )
+          )
           .getOrElse(Nil)
-          .map(_.symbolToFullyQualifiedName)
       case _ =>
         Nil
     }

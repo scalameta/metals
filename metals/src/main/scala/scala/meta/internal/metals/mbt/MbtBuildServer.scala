@@ -596,25 +596,44 @@ final class MbtBuildServer(
 
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams
-  ): CompletableFuture[ScalaTestClassesResult] = {
+  ): CompletableFuture[ScalaTestClassesResult] = try {
     val requestedTargets = params.getTargets.asScala.toSet
-    val items = importedBuildTargets
+    val targetsWithTests = importedBuildTargets
       .filter(t => requestedTargets(t.id) && t.testClasses.nonEmpty)
-      .flatMap { target =>
-        target.testClasses
-          .groupBy(tc => Option(tc.framework))
-          .toSeq
-          .sortBy { case (framework, _) => framework.getOrElse("") }
-          .map { case (framework, classes) =>
-            val item = new ScalaTestClassesItem(
-              target.id,
-              classes.map(_.className).distinct.asJava,
-            )
-            framework.foreach(item.setFramework)
-            item
-          }
-      }
-    CompletableFuture.completedFuture(new ScalaTestClassesResult(items.asJava))
+    if (targetsWithTests.isEmpty) {
+      return CompletableFuture.completedFuture(
+        new ScalaTestClassesResult(List.empty.asJava)
+      )
+    }
+
+    // Verify all candidates at once, grouped by target
+    val verificationItems = targetsWithTests.map { target =>
+      val verifiedClasses =
+        MbtTestClassVerifier.verify(target.testClasses, workspace)
+      verifiedClasses
+        .groupBy(tc => Option(tc.framework))
+        .toSeq
+        .sortBy { case (framework, _) => framework.getOrElse("") }
+        .map { case (framework, classes) =>
+          val item = new ScalaTestClassesItem(
+            target.id,
+            classes.map(_.className).distinct.asJava,
+          )
+          framework.foreach(item.setFramework)
+          item
+        }
+    }.flatten
+
+    CompletableFuture.completedFuture(
+      new ScalaTestClassesResult(verificationItems.asJava)
+    )
+
+  } catch {
+    case ex: Throwable =>
+      scribe.error("Error verifying test classes", ex)
+      CompletableFuture.completedFuture(
+        new ScalaTestClassesResult(List.empty.asJava)
+      )
   }
 
   override def buildTargetDependencyModules(
