@@ -854,15 +854,19 @@ final class BuildTargetClasses(
     if (!hasCandidates) {
       Future.unit
     } else {
-      foreachMbtSemanticdbDocument(Seq(path)) { doc =>
-        processMbtTestSemanticdb(doc.uri.toAbsolutePath, doc, targetIds)
-      }
+      confirmMbtTestClassCandidatePaths(
+        Seq(path),
+        _ => targetIds,
+      )
     }
   }
 
   /**
    * Confirms candidate test classes for specific targets.
    * This is useful when the user opens the test explorer and wants to discover all tests.
+   *
+   * Java candidates are confirmed from Turbine class info. Scala candidates still
+   * go through semanticdb.
    *
    * @param targetIds The build targets to confirm candidates for
    * @return Future that completes when confirmation is done
@@ -881,16 +885,39 @@ final class BuildTargetClasses(
     if (distinctPaths.isEmpty) {
       Future.unit
     } else {
-      foreachMbtSemanticdbDocument(distinctPaths) { doc =>
-        val docPath = doc.uri.toAbsolutePath
-        val docTargetIds = buildTargets.inverseSourcesAll(docPath)
-        processMbtTestSemanticdb(
-          docPath,
-          doc,
-          docTargetIds.filter(targetIds.contains),
+      confirmMbtTestClassCandidatePaths(
+        distinctPaths,
+        path => buildTargets.inverseSourcesAll(path).filter(targetIds.contains),
+      )
+    }
+  }
+
+  private def confirmMbtTestClassCandidatePaths(
+      paths: Seq[AbsolutePath],
+      targetsForPath: AbsolutePath => Seq[b.BuildTargetIdentifier],
+  ): Future[Unit] = {
+    val (javaPaths, otherPaths) = paths.partition(_.isJava)
+    val javaConfirmation = Future {
+      for (path <- javaPaths) {
+        storeConfirmedTestClasses(
+          path,
+          extractTestClassesFromTurbine(path),
+          targetsForPath(path),
         )
       }
     }
+    val otherConfirmation =
+      if (otherPaths.isEmpty) Future.unit
+      else
+        foreachMbtSemanticdbDocument(otherPaths) { doc =>
+          val docPath = doc.uri.toAbsolutePath
+          processMbtTestSemanticdb(
+            docPath,
+            doc,
+            targetsForPath(docPath),
+          )
+        }
+    javaConfirmation.flatMap(_ => otherConfirmation)
   }
 
   /**
@@ -903,17 +930,45 @@ final class BuildTargetClasses(
       targetIds: Seq[b.BuildTargetIdentifier],
   ): Future[Unit] = {
     extractTestClassesFromDocument(doc, docPath).map { testClasses =>
-      for {
-        tid <- targetIds
-        classes <- index.get(tid)
-      } {
-        // Remove candidates for this path
-        classes.clearCandidateTestClasses(docPath)
+      storeConfirmedTestClasses(docPath, testClasses, targetIds)
+    }
+  }
 
-        // Extract and store confirmed test classes
-        for ((symbol, testInfo) <- testClasses) {
-          classes.putTestClass(symbol, testInfo, docPath)
+  private def extractTestClassesFromTurbine(
+      path: AbsolutePath
+  ): List[(String, TestSymbolInfo)] =
+    mbt() match {
+      case None => Nil
+      case Some(mbtProvider) =>
+        val result = mutable.LinkedHashMap.empty[String, TestSymbolInfo]
+        for {
+          info <- mbtProvider.classInfo(path)
+          annotation <- info.memberDefsAnnotations
+          framework <- TestFrameworkDetector.fromSymbol(annotation)
+        } {
+          result.put(
+            info.symbol,
+            TestSymbolInfo(
+              symbolToClassName(info.symbol),
+              framework,
+            ),
+          )
         }
+        result.toList
+    }
+
+  private def storeConfirmedTestClasses(
+      path: AbsolutePath,
+      testClasses: List[(String, TestSymbolInfo)],
+      targetIds: Seq[b.BuildTargetIdentifier],
+  ): Unit = {
+    for {
+      tid <- targetIds
+      classes <- index.get(tid)
+    } {
+      classes.clearCandidateTestClasses(path)
+      for ((symbol, testInfo) <- testClasses) {
+        classes.putTestClass(symbol, testInfo, path)
       }
     }
   }
