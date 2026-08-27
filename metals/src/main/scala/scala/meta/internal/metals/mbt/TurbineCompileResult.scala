@@ -1,12 +1,9 @@
 package scala.meta.internal.metals.mbt
 
-import java.nio.file.Files
 import java.util.ArrayList
 import java.util.HashMap
 
 import scala.meta.internal.jdk.CollectionConverters._
-import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
-import scala.meta.io.AbsolutePath
 
 import com.google.turbine.binder.ClassPath
 import com.google.turbine.binder.sym.ClassSymbol
@@ -27,27 +24,5 @@ case class TurbineCompileResult(
       buf.add(sym)
     }
     x.asScala
-  }
-
-  def javap(className: String): String = {
-    import scala.sys.process._
-    val tmp = Files.createTempDirectory("javap")
-    try {
-      for {
-        (pkg, symbols) <- symbolsByPackage
-        _ = Files.createDirectories(tmp.resolve(pkg))
-        sym <- symbols.asScala
-        bytes <- Option(lowered.bytes().get(sym.binaryName()))
-      } {
-        Files.write(
-          tmp.resolve(sym.binaryName() + ".class"),
-          bytes,
-        )
-      }
-      val javapOutput = s"javap -cp $tmp $className".!!
-      javapOutput
-    } finally {
-      AbsolutePath(tmp).deleteRecursively()
-    }
   }
 }
