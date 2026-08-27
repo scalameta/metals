@@ -235,8 +235,9 @@ abstract class MetalsLspService(
 
   /**
    * Whether MBT should discover main/test classes from the symbol index.
-   * Bazel already declares them in `mbt.json`; Maven and Gradle still need
-   * index discovery until those importers populate the same fields.
+   * Bazel already declares them in `mbt.json`; Maven, Gradle, and scripts
+   * still need index discovery until those importers populate the same fields.
+   * Mixed workspaces that also contain Bazel must keep discovery enabled.
    */
   protected def discoverMbtClassesFromIndex: Boolean = true
 

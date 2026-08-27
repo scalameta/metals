@@ -327,9 +327,25 @@ final class BuildTools(
    */
   def hasMbtImporters: Boolean =
     loadSupported().exists(_.isInstanceOf[MbtImportProvider]) ||
-      workspace.list.exists(f =>
-        ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
-      )
+      hasScriptMbtImporters
+
+  /**
+   * Whether MBT should discover main/test classes from the symbol index.
+   *
+   * Bazel already declares them in `mbt.json`, so skip discovery only when
+   * Bazel is the sole MBT importer. Maven, Gradle, and scripts still need
+   * index discovery, including in mixed workspaces that also contain Bazel.
+   */
+  def discoverMbtClassesFromIndex: Boolean = {
+    val importers = loadSupported().collect { case p: MbtImportProvider => p }
+    importers.exists(_.name != BazelBuildTool.name) || hasScriptMbtImporters ||
+    importers.isEmpty
+  }
+
+  private def hasScriptMbtImporters: Boolean =
+    workspace.list.exists(f =>
+      ScriptMbtImporter.scriptExtensions.exists(f.filename.endsWith(_))
+    )
 
   def mbtImporters(
       shellRunner: ShellRunner,
