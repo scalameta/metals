@@ -122,11 +122,77 @@ class ConnectionProvider(
   var buildServerPromise: Promise[Unit] = Promise[Unit]()
   val isConnecting = new AtomicBoolean(false)
 
+  // Sticky: set on service teardown, after which no session may be published.
+  // An in-flight connect could otherwise publish an acquired session after
+  // the owning collections were already drained (see scalameta/metals#3464).
+  private val publicationLock = new Object
+  private var providerClosed = false
+
+  /**
+   * Atomically publishes an acquired session unless the service or the
+   * session's own connection is shutting down: a publication either
+   * happens-before the respective teardown, which then also disposes of it,
+   * or not at all. An unpublished session has no owner and must be shut down
+   * by the caller.
+   */
+  private def publishSession(session: BspSession): Boolean =
+    publicationLock.synchronized {
+      !providerClosed &&
+      session.main.unlessShutdown { () =>
+        cancelables.add(session)
+        bspSession = Some(session)
+        isConnecting.set(false)
+      }
+    }
+
+  // graceful session shutdowns started by `detachAndShutdownSession`, guarded
+  // by `publicationLock`. Service teardown waits for them, bounded, before
+  // draining the transports.
+  private var inFlightSessionShutdowns: List[Future[Unit]] = Nil
+
+  /**
+   * Single owner of the detach-and-shutdown step for the published session,
+   * shared by `Connect.disconnect` and `cancel`. Tracks the in-flight
+   * shutdown so a concurrent service teardown drains the transports only
+   * after `build/shutdown` was delivered (see scalameta/metals#3464).
+   */
+  private def detachAndShutdownSession(): (Option[BspSession], Future[Unit]) =
+    publicationLock.synchronized {
+      bspSession match {
+        case None => (None, Future.successful(()))
+        case Some(session) =>
+          bspSession = None
+          val done = session.shutdown()
+          inFlightSessionShutdowns =
+            done :: inFlightSessionShutdowns.filterNot(_.isCompleted)
+          (Some(session), done)
+      }
+    }
+
   override def index(check: () => Unit): Future[Unit] =
     connect(Index(check)).ignoreValue
 
   override def cancel(): Unit = {
-    cancelables.cancel()
+    // The drain must wait for every in-flight graceful shutdown, or it would
+    // close launcher sockets while `build/shutdown` is still being delivered;
+    // the wait is bounded so a hanging shutdown cannot prevent the hard close
+    // (see scalameta/metals#3464).
+    val pendingShutdowns = publicationLock.synchronized {
+      providerClosed = true
+      detachAndShutdownSession()
+      inFlightSessionShutdowns
+    }
+    // terminal for the Connect subsystem: the ongoing request is cancelled,
+    // queued ones are drained, and new ones are rejected via `providerClosed`
+    Connect.cancelAll()
+    Future
+      .sequence(pendingShutdowns)
+      .withTimeout(
+        3,
+        TimeUnit.SECONDS,
+        Some("gracefully shutting down the build server"),
+      )
+      .onComplete(_ => cancelables.cancel())
   }
 
   def fullConnect(): Future[Unit] = {
@@ -323,22 +389,61 @@ class ConnectionProvider(
 
     @volatile private var currentRequest: Option[RequestInfo] = None
     private val queue = new ConcurrentLinkedQueue[RequestInfo]()
+    // sticky, guarded by this object's monitor together with the queue, so
+    // admission and the terminal drain cannot interleave (metals#3464)
+    private var closed = false
 
     def getOngoingRequest(): Option[RequestInfo] = currentRequest
 
-    def connect[T](request: ConnectRequest): Future[BuildChange] = {
-      scribe.debug(s"new connect request: ${request.toString}")
-      val info = addToQueue(request)
-      pollAndConnect()
-      info.promise.future.map { buildChange =>
-        scribe.debug(
-          s"connect request: ${request.show} finished with $buildChange"
-        )
-        buildChange
+    def connect[T](request: ConnectRequest): Future[BuildChange] =
+      addToQueue(request) match {
+        case None =>
+          scribe.debug(s"rejected after service shutdown: ${request.show}")
+          Future.successful(BuildChange.Cancelled)
+        case Some(info) =>
+          scribe.debug(s"new connect request: ${request.toString}")
+          pollAndConnect()
+          info.promise.future.map { buildChange =>
+            scribe.debug(
+              s"connect request: ${request.show} finished with $buildChange"
+            )
+            buildChange
+          }
       }
+
+    /**
+     * Terminal: rejects new requests, cancels the ongoing one and drains the
+     * queued ones, completing their callers rather than orphaning them.
+     */
+    def cancelAll(): Unit = {
+      val drained = synchronized {
+        closed = true
+        val entries = List.newBuilder[RequestInfo]
+        var queued = queue.poll()
+        while (queued != null) {
+          entries += queued
+          queued = queue.poll()
+        }
+        entries.result()
+      }
+      currentRequest.foreach(_.cancel())
+      drained.foreach { info =>
+        info.cancel()
+        // never polled, so complete the caller's future here
+        info.promise.trySuccess(BuildChange.Cancelled)
+      }
+      languageClient.cancelRequest(
+        ConnectionProvider.ConnectRequestCancelationGroup
+      )
     }
 
-    private def addToQueue(request: ConnectRequest): RequestInfo =
+    private def addToQueue(request: ConnectRequest): Option[RequestInfo] =
+      synchronized {
+        if (closed) None
+        else Some(addToOpenQueue(request))
+      }
+
+    private def addToOpenQueue(request: ConnectRequest): RequestInfo =
       synchronized {
         val info = new RequestInfo(request)
         val iter = queue.iterator()
@@ -351,13 +456,18 @@ class ConnectionProvider(
           }
         }
         queue.add(info)
-        // maybe cancel ongoing
+        // apply the same conflict contract to the ongoing request as to the
+        // queued ones, otherwise the outcome would depend on whether the
+        // competing request happens to be running or still queued
         currentRequest.foreach(ongoing =>
-          if (request.cancelCompare(ongoing.request) == TakeOver) {
-            ongoing.cancel()
-            languageClient.cancelRequest(
-              ConnectionProvider.ConnectRequestCancelationGroup
-            )
+          request.cancelCompare(ongoing.request) match {
+            case TakeOver =>
+              ongoing.cancel()
+              languageClient.cancelRequest(
+                ConnectionProvider.ConnectRequestCancelationGroup
+              )
+            case Yield => info.cancel()
+            case Queue =>
           }
         )
         info
@@ -432,16 +542,17 @@ class ConnectionProvider(
       bspSession.foreach(connection =>
         scribe.info(s"Disconnecting from ${connection.main.name} session...")
       )
+      // The session detaches and the target -> connection routing clears
+      // synchronously, before any interruptible step (including a possibly
+      // stalling Scala CLI stop), so no new work routes to a closing
+      // connection (see scalameta/metals#3464).
+      val (detached, mainShutdownDone) = detachAndShutdownSession()
+      detached.foreach(_ => mainBuildTargetsData.resetConnections(List.empty))
 
       for {
         _ <- scalaCli.stop(storeLast = true).withInterrupt
-        optMainBsp <- (bspSession match {
-          case None => Future.successful(None)
-          case Some(session) =>
-            bspSession = None
-            mainBuildTargetsData.resetConnections(List.empty)
-            session.shutdown().map(_ => Some(session.main.name))
-        }).withInterrupt
+        optMainBsp <-
+          mainShutdownDone.map(_ => detached.map(_.main.name)).withInterrupt
         _ <-
           if (shutdownBuildServer) shutdownBsp(optMainBsp)
           else Interruptable.successful(())
@@ -501,24 +612,33 @@ class ConnectionProvider(
     private def connectToSession(
         session: BspSession
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
-      scribe.info(
-        s"Connected to Build server: ${session.main.name} v${session.version}"
-      )
-      cancelables.add(session)
-      buildToolProvider.buildTool.foreach(
-        workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
-      )
-      bspSession = Some(session)
-      isConnecting.set(false)
-      for {
-        _ <- importBuildAndIndex(session)
-        _ = buildToolProvider.buildTool.foreach(
-          workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+      // Serialized with teardown that bypasses the connect queue, so a
+      // deliberately closed session cannot be resurrected here
+      // (see scalameta/metals#3464).
+      if (!publishSession(session)) {
+        scribe.info(
+          s"Skipping connection to ${session.main.name}, the session or service is already closing"
         )
-        _ = if (session.main.isBloop)
-          checkRunningBloopVersion(session.version)
-      } yield {
-        BuildChange.Reconnected
+        // the acquired session will never have an owner, release its resources
+        session.shutdown()
+        Interruptable.successful(BuildChange.Cancelled)
+      } else {
+        scribe.info(
+          s"Connected to Build server: ${session.main.name} v${session.version}"
+        )
+        buildToolProvider.buildTool.foreach(
+          workspaceReload.persistChecksumStatus(Digest.Status.Started, _)
+        )
+        for {
+          _ <- importBuildAndIndex(session)
+          _ = buildToolProvider.buildTool.foreach(
+            workspaceReload.persistChecksumStatus(Digest.Status.Installed, _)
+          )
+          _ = if (session.main.isBloop)
+            checkRunningBloopVersion(session.version)
+        } yield {
+          BuildChange.Reconnected
+        }
       }
     }
 
@@ -553,7 +673,9 @@ class ConnectionProvider(
         shutdownServer: Boolean
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
-        case change if !change.isFailed =>
+        // Cancelled means no session was published, e.g. the service is
+        // tearing down: starting compilations then would violate shutdown
+        case change if !change.isFailed && change != BuildChange.Cancelled =>
           Future
             .sequence(
               compilations
@@ -569,29 +691,53 @@ class ConnectionProvider(
       isConnecting.set(true)
       (for {
         _ <- disconnect(shutdownServer)
-        maybeSession <- timerProvider
-          .timed(
-            "Connected to build server",
-            true,
-          ) {
-            // If chosen build tool was removed at any point we want to readd it
-            val buildToolOpt: Future[Option[BuildTool]] =
-              buildToolProvider.buildTool match {
-                case Some(value) =>
-                  Future.successful(Some(value))
-                case None =>
-                  buildToolProvider.supportedBuildTool().map(_.map(_.buildTool))
+        maybeSession <- {
+          val acquire = timerProvider
+            .timed(
+              "Connected to build server",
+              true,
+            ) {
+              // If chosen build tool was removed at any point we want to readd it
+              val buildToolOpt: Future[Option[BuildTool]] =
+                buildToolProvider.buildTool match {
+                  case Some(value) =>
+                    Future.successful(Some(value))
+                  case None =>
+                    buildToolProvider
+                      .supportedBuildTool()
+                      .map(_.map(_.buildTool))
+                }
+              buildToolOpt.flatMap { toolOpt =>
+                bspConnector.connect(
+                  toolOpt,
+                  folder,
+                  () => userConfig,
+                  shellRunner,
+                )
               }
-            buildToolOpt.flatMap { toolOpt =>
-              bspConnector.connect(
-                toolOpt,
-                folder,
-                () => userConfig,
-                shellRunner,
-              )
             }
-          }
-          .withInterrupt
+          // A cancelled request would discard the acquired session at
+          // `.withInterrupt` below with no owner; dispose of it unless it was
+          // published, in which case `bspSession` teardown owns it. The
+          // ownership check and the disposal are one atomic decision under
+          // `publicationLock`, so a concurrent publication cannot slip in
+          // between them (see scalameta/metals#3464).
+          acquire.foreach(_.foreach { session =>
+            cancelSwitch.promise.future.foreach { _ =>
+              publicationLock.synchronized {
+                if (!bspSession.exists(_ eq session)) {
+                  scribe.info(
+                    "Shutting down a build session acquired by a cancelled connect request"
+                  )
+                  // starts the shutdown and returns, the lock is held only
+                  // for the transition that also blocks a later publication
+                  session.shutdown()
+                }
+              }
+            }
+          })
+          acquire.withInterrupt
+        }
         result <- maybeSession match {
           case Some(session) =>
             val result = connectToSession(session)
@@ -605,12 +751,18 @@ class ConnectionProvider(
           case None =>
             Interruptable.successful(BuildChange.None)
         }
-        _ <- scalaCli
-          .startForAllLastPaths(path =>
-            !buildTargets.belongsToBuildTarget(path.toNIO)
-          )
-          .withInterrupt
-        _ = initTreeView()
+        // a Cancelled result means the session was not published, e.g. the
+        // service is tearing down: starting servers or initializing views
+        // here would create ownerless resources after shutdown
+        _ <-
+          if (result == BuildChange.Cancelled) Interruptable.successful(())
+          else
+            scalaCli
+              .startForAllLastPaths(path =>
+                !buildTargets.belongsToBuildTarget(path.toNIO)
+              )
+              .withInterrupt
+        _ = if (result != BuildChange.Cancelled) initTreeView()
       } yield result)
         .recover { case NonFatal(e) =>
           disconnect(false)
@@ -803,10 +955,18 @@ sealed trait ConnectRequest extends ConnectKind {
 }
 
 case class Disconnect(shutdownBuildServer: Boolean) extends ConnectRequest {
+  // Terminal and asymmetric: a deliberate disconnect cancels every kind of
+  // connection-establishing work (a wedged acquisition must not block it,
+  // late acquisition results are shut down by their cancellation bracket),
+  // while acquisitions yield to it and never recreate the closed session
+  // (metals#3464).
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case _: Index => Queue
-      case _ => Yield
+      // a second disconnect is redundant
+      case _: Disconnect => Yield
+      // everything else, indexing included, yields: the user's recovery
+      // action must not wait behind work that may itself be wedged
+      case _ => TakeOver
     }
 
   def show: String = s"disconnect with shutdown=$shutdownBuildServer"
@@ -828,7 +988,10 @@ case class ImportBuildAndIndex(bspSession: BspSession) extends ConnectRequest {
 case class ConnectToSession(bspSession: BspSession) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) => TakeOver
+      case (_: Index) | (_: ConnectToSession) => TakeOver
+      // an automatic reconnect must never cancel a deliberate disconnect: the
+      // republished session would resurrect what the user just closed
+      case _: Disconnect => Yield
       case _ => Yield
     }
 
@@ -838,9 +1001,10 @@ case class CreateSession(shutdownBuildServer: Boolean = false)
     extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
-      case (_: Disconnect) | (_: Index) | (_: ConnectToSession) | CreateSession(
-            false
-          ) =>
+      // a deliberate disconnect is terminal, acquisitions yield to it and
+      // must not recreate the closed session (metals#3464)
+      case _: Disconnect => Yield
+      case (_: Index) | (_: ConnectToSession) | CreateSession(false) =>
         TakeOver
       case _ => Yield
     }
@@ -851,7 +1015,12 @@ case class GenerateBspConfigAndConnect(
     buildTool: BuildServerProvider,
     shutdownServer: Boolean = false,
 ) extends ConnectRequest {
-  def cancelCompare(other: ConnectRequest): ConflictBehaviour = TakeOver
+  def cancelCompare(other: ConnectRequest): ConflictBehaviour =
+    other match {
+      // a deliberate disconnect is terminal (metals#3464)
+      case _: Disconnect => Yield
+      case _ => TakeOver
+    }
 
   def show: String =
     s"generate bsp config and connect for ${buildTool.buildServerName} with shutdown=$shutdownServer"
@@ -861,6 +1030,8 @@ case class BloopInstallAndConnect(
 ) extends ConnectRequest {
   def cancelCompare(other: ConnectRequest): ConflictBehaviour =
     other match {
+      // a deliberate disconnect is terminal (metals#3464)
+      case _: Disconnect => Yield
       case GenerateBspConfigAndConnect(_, true) => Queue
       case _ => TakeOver
     }

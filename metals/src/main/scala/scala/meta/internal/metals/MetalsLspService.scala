@@ -229,6 +229,8 @@ abstract class MetalsLspService(
     () => Option(focusedDocumentBuildTarget.get()),
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
+    (originId, targets) =>
+      buildClient.onCompileRequestFinished(originId, targets),
     () => userConfig,
     downstreamTargets,
     fileChanges,
@@ -1531,6 +1533,9 @@ abstract class MetalsLspService(
       bspErrorHandler,
       workDoneProgress,
       moduleStatus,
+      // a main BSP session or any standalone Scala CLI server counts as an
+      // active build session, fallback mode has no main session (metals#3464)
+      hasBuildSession = () => bspSession.isDefined || scalaCli.servers.nonEmpty,
     )
 
   protected val buildTargetClassesFinder: BuildTargetClassesFinder =
@@ -1569,6 +1574,7 @@ abstract class MetalsLspService(
       sourceMapper,
       () => userConfig,
       testProvider,
+      sh,
     )
   )
   buildClient.registerLogForwarder(debugProvider)

@@ -6,6 +6,7 @@ import java.util.concurrent.TimeUnit
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
@@ -29,6 +30,7 @@ final class Compilations(
     buildtargetInFocus: () => Option[b.BuildTargetIdentifier],
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
+    onCompileRequestFinished: (String, Seq[b.BuildTargetIdentifier]) => Unit,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     fileChanges: FileChanges,
@@ -243,12 +245,58 @@ final class Compilations(
         CancelableFuture.sequence(futures).map(_.flatten.toMap)
     }
   }
-  private def compile(
+
+  /**
+   * A single-target compile with caller-owned cancellation, outside the
+   * shared batches, which cannot cancel one entry without cancelling the
+   * whole batch. Applies the same request policy and terminal cleanup as
+   * batched compiles; the batch queue state (`isCompiling`/`lastCompile`)
+   * is deliberately untouched.
+   */
+  def compileTargetCancelable(
+      target: b.BuildTargetIdentifier,
+      cancelPromise: Promise[Unit],
+  ): Compilations.CancelableCompile = {
+    def cancelled =
+      Future.successful(new b.CompileResult(b.StatusCode.CANCELLED))
+    buildTargets.buildServerOf(target) match {
+      case None => Compilations.CancelableCompile(None, cancelled)
+      case Some(_) if cancelPromise.isCompleted =>
+        Compilations.CancelableCompile(None, cancelled)
+      case Some(connection) =>
+        fileChanges.willCompile(List(target))
+        val (originId, params) = compileParams(connection, List(target))
+        val request = connection.compile(params, Some(compileTimeout))
+        // wired before the caller can observe the request, and re-checked
+        // after, so a terminate that lands around the send still cancels it
+        cancelPromise.future.foreach(_ => request.cancel(true))
+        if (cancelPromise.isCompleted) request.cancel(true)
+        val result = request.asScala.andThen { case result =>
+          try {
+            if (result.toOption.exists(_.getStatusCode == b.StatusCode.OK)) {
+              afterSuccessfulCompilation()
+              classes.rebuildIndex(
+                List(target),
+                () => {
+                  refreshTestSuites()
+                  if (buildtargetInFocus().contains(target)) {
+                    languageClient.refreshModel()
+                  }
+                },
+              )
+            }
+          } finally {
+            onCompileRequestFinished(originId, List(target))
+          }
+        }
+        Compilations.CancelableCompile(Some(originId), result)
+    }
+  }
+
+  private def compileParams(
       connection: BuildServerConnection,
       targets: Seq[b.BuildTargetIdentifier],
-      timeout: Option[Timeout],
-  ): CancelableFuture[b.CompileResult] = {
-    scribe.debug("Compiling " + targets.mkString(", "))
+  ): (String, b.CompileParams) = {
     val originId = "METALS-$" + UUID.randomUUID().toString
     val params = new b.CompileParams(targets.asJava)
     val addBestEffort =
@@ -261,6 +309,16 @@ final class Compilations(
     } else if (addBestEffort) {
       params.setArguments(List("--best-effort").asJava)
     } else params.setArguments(Nil.asJava)
+    (originId, params)
+  }
+
+  private def compile(
+      connection: BuildServerConnection,
+      targets: Seq[b.BuildTargetIdentifier],
+      timeout: Option[Timeout],
+  ): CancelableFuture[b.CompileResult] = {
+    scribe.debug("Compiling " + targets.mkString(", "))
+    val (originId, params) = compileParams(connection, targets)
     targets.foreach { target =>
       isCompiling(target) = true
     }
@@ -270,19 +328,25 @@ final class Compilations(
 
     val result = compilation.asScala
       .andThen { case result =>
-        updateCompiledTargetState(result)
-        afterSuccessfulCompilation()
+        // progress cleanup runs last and in `finally`, so a failure in either
+        // part cannot skip the primary bookkeeping or the cleanup
+        try {
+          updateCompiledTargetState(result)
+          afterSuccessfulCompilation()
 
-        // See https://github.com/scalacenter/bloop/issues/1067
-        classes.rebuildIndex(
-          targets,
-          () => {
-            refreshTestSuites()
-            if (targets.exists(buildtargetInFocus().contains)) {
-              languageClient.refreshModel()
-            }
-          },
-        )
+          // See https://github.com/scalacenter/bloop/issues/1067
+          classes.rebuildIndex(
+            targets,
+            () => {
+              refreshTestSuites()
+              if (targets.exists(buildtargetInFocus().contains)) {
+                languageClient.refreshModel()
+              }
+            },
+          )
+        } finally {
+          onCompileRequestFinished(originId, targets)
+        }
       }
 
     CancelableFuture(result, Cancelable(() => compilation.cancel(false)))
@@ -296,4 +360,17 @@ final class Compilations(
         lastCompile = isCompiling.keySet
         isCompiling.clear()
     }
+}
+
+object Compilations {
+
+  /**
+   * A compile request the caller can cancel. `originId` is empty when no
+   * request was sent; otherwise it identifies the compilations this request
+   * triggers, so the caller can bound their progress while it is pending.
+   */
+  case class CancelableCompile(
+      originId: Option[String],
+      result: Future[b.CompileResult],
+  )
 }
