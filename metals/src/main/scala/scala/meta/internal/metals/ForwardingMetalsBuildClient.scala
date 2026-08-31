@@ -254,6 +254,15 @@ final class ForwardingMetalsBuildClient(
         }
       case _ =>
     }
+    val key = (params.getOriginId, params.getTaskId.getId)
+    val terminal = terminals.synchronized {
+      Option(terminals.remove(key))
+    }
+    terminal.foreach { terminalId =>
+      languageClient.metalsEndTerminal(
+        MetalsEndTerminalParams(terminalId, params.getStatus.isOK)
+      )
+    }
   }
 
   @JsonNotification("build/taskProgress")
@@ -317,8 +326,9 @@ final class ForwardingMetalsBuildClient(
     val oid = params.getOriginId
     val tid = params.getTask().getId()
     val message = params.getMessage
-    val terminal =
+    val terminal = terminals.synchronized {
       terminals.computeIfAbsent((oid, tid), _ => createTerminal(tid))
+    }
     languageClient.metalsTerminalOutput(
       MetalsTerminalOutputParams(terminal, message)
     )

@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.mbt
 
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -8,6 +9,7 @@ import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.build.bsp.WrappedSourcesResult
@@ -17,6 +19,7 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JsonParser._
@@ -24,6 +27,7 @@ import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -80,6 +84,7 @@ import ch.epfl.scala.bsp4j.ScalacOptionsResult
 import ch.epfl.scala.bsp4j.SourcesParams
 import ch.epfl.scala.bsp4j.SourcesResult
 import ch.epfl.scala.bsp4j.StatusCode
+import ch.epfl.scala.bsp4j.TaskFinishParams
 import ch.epfl.scala.bsp4j.TaskId
 import ch.epfl.scala.bsp4j.TestParams
 import ch.epfl.scala.bsp4j.TestParamsDataKind
@@ -98,6 +103,8 @@ final class MbtBuildServer(
   private val buildClient = new AtomicReference[BuildClient]()
   private val importedBuild =
     new AtomicReference[Seq[MbtTarget]](build().mbtTargets)
+  private val runningProcesses =
+    new ConcurrentHashMap[(String, String), SystemProcess]()
 
   def onConnectWithClient(client: BuildClient): Unit =
     buildClient.set(client)
@@ -161,7 +168,29 @@ final class MbtBuildServer(
       matchedFiles.view.mapValues(_.toSeq).toMap
     }
   }
-  override def onRunReadStdin(params: ReadParams): Unit = ()
+  override def onRunReadStdin(params: ReadParams): Unit = {
+    for {
+      task <- Option(params.getTask)
+      process <- Option(
+        runningProcesses.get((params.getOriginId, task.getId))
+      )
+    } {
+      try {
+        process.outputStream.synchronized {
+          process.outputStream.write(
+            params.getMessage.getBytes(StandardCharsets.UTF_8)
+          )
+          process.outputStream.flush()
+        }
+      } catch {
+        case NonFatal(error) =>
+          scribe.warn(
+            s"Unable to send input to MBT task ${task.getId}",
+            error,
+          )
+      }
+    }
+  }
 
   override def workspaceSync(
       params: scala.meta.internal.bsp.sync.WorkspaceSyncParams
@@ -374,6 +403,8 @@ final class MbtBuildServer(
           )
         )
       case Some(starter) =>
+        val originId = testOriginId(params)
+        val taskId = "mbt-test"
         val outcome: Either[String, Future[Int]] = for {
           testSuites <- asScalaTestSuites(params)
           target <- importedBuildTargets
@@ -385,8 +416,9 @@ final class MbtBuildServer(
           target,
           testSuites,
           workspace,
-          line => testPrint(params, "mbt-test", line, isError = false),
-          line => testPrint(params, "mbt-test", line, isError = true),
+          line => testPrint(originId, taskId, line, isError = false),
+          line => testPrint(originId, taskId, line, isError = true),
+          process => runningProcesses.put((originId, taskId), process),
         )
 
         outcome match {
@@ -395,10 +427,13 @@ final class MbtBuildServer(
           case Right(future) =>
             future.onComplete {
               case Success(0) =>
+                finishTask(originId, taskId, StatusCode.OK)
                 result.complete(new TestResult(StatusCode.OK))
               case Success(_) =>
+                finishTask(originId, taskId, StatusCode.ERROR)
                 result.complete(new TestResult(StatusCode.ERROR))
               case Failure(ex) =>
+                finishTask(originId, taskId, StatusCode.ERROR)
                 result.completeExceptionally(ex)
             }
         }
@@ -446,15 +481,16 @@ final class MbtBuildServer(
         )
     }
 
+  private def testOriginId(params: TestParams): String =
+    Option(params.getOriginId).getOrElse("metals-mbt-test")
+
   private def testPrint(
-      params: TestParams,
+      originId: String,
       taskId: String,
       message: String,
       isError: Boolean,
   ): Unit = {
     Option(buildClient.get()).foreach { client =>
-      val originId =
-        Option(params.getOriginId).getOrElse("metals-mbt-test")
       val printParams = new PrintParams(originId, message + "\n")
       printParams.setTask(new TaskId(taskId))
       if (isError) client.onRunPrintStderr(printParams)
@@ -474,6 +510,8 @@ final class MbtBuildServer(
           )
         )
       case Some(starter) =>
+        val originId = runOriginId(params)
+        val taskId = "mbt-run"
         val outcome: Either[String, Future[Int]] = for {
           mainClass <- asScalaMainClass(params)
           target <- importedBuildTargets
@@ -483,8 +521,9 @@ final class MbtBuildServer(
           target,
           mainClass,
           workspace,
-          line => runPrint(params, "mbt-run", line, isError = false),
-          line => runPrint(params, "mbt-run", line, isError = true),
+          line => runPrint(originId, taskId, line, isError = false),
+          line => runPrint(originId, taskId, line, isError = true),
+          process => runningProcesses.put((originId, taskId), process),
         )
 
         outcome match {
@@ -493,10 +532,13 @@ final class MbtBuildServer(
           case Right(future) =>
             future.onComplete {
               case Success(0) =>
+                finishTask(originId, taskId, StatusCode.OK)
                 result.complete(new RunResult(StatusCode.OK))
               case Success(_) =>
+                finishTask(originId, taskId, StatusCode.ERROR)
                 result.complete(new RunResult(StatusCode.ERROR))
               case Failure(ex) =>
+                finishTask(originId, taskId, StatusCode.ERROR)
                 result.completeExceptionally(ex)
             }
         }
@@ -518,19 +560,33 @@ final class MbtBuildServer(
         Left("buildTarget/run: expected ScalaMainClass data")
     }
 
+  private def runOriginId(params: RunParams): String =
+    Option(params.getOriginId).getOrElse("metals-mbt-run")
+
   private def runPrint(
-      params: RunParams,
+      originId: String,
       taskId: String,
       message: String,
       isError: Boolean,
   ): Unit = {
     Option(buildClient.get()).foreach { client =>
-      val originId =
-        Option(params.getOriginId).getOrElse("metals-mbt-run")
       val printParams = new PrintParams(originId, message + "\n")
       printParams.setTask(new TaskId(taskId))
       if (isError) client.onRunPrintStderr(printParams)
       else client.onRunPrintStdout(printParams)
+    }
+  }
+
+  private def finishTask(
+      originId: String,
+      taskId: String,
+      status: StatusCode,
+  ): Unit = {
+    runningProcesses.remove((originId, taskId))
+    Option(buildClient.get()).foreach { client =>
+      val params = new TaskFinishParams(new TaskId(taskId), status)
+      params.setOriginId(originId)
+      client.onBuildTaskFinish(params)
     }
   }
 

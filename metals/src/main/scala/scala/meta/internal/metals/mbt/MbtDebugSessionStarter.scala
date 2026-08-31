@@ -89,21 +89,13 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
+      onStart: SystemProcess => Unit = _ => (),
   ): Future[Int] = {
     val command = buildTool.mbtRunCommand(workspace, target, mainClass)
     scribe.info(
       s"MBT run session via ${buildTool.executableName}: ${redactedCommand(command)}"
     )
-    SystemProcess
-      .run(
-        command,
-        workspace,
-        redirectErrorOutput = false,
-        env = javaHomeEnv(target),
-        processOut = Some(ProcessOutput.Lines(out)),
-        processErr = Some(err),
-      )
-      .complete
+    runInTerminal(command, target, workspace, out, err, onStart)
 
   }
 
@@ -134,6 +126,7 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
+      onStart: SystemProcess => Unit = _ => (),
   ): Future[Int] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
     val command = buildTool.mbtTestCommand(
@@ -154,18 +147,31 @@ class MbtDebugSessionStarter(
       )
       workDoneProgress.trackFuture(
         s"Testing $artifactId",
-        SystemProcess
-          .run(
-            command,
-            workspace,
-            redirectErrorOutput = false,
-            env = javaHomeEnv(target),
-            processOut = Some(ProcessOutput.Lines(out)),
-            processErr = Some(err),
-          )
-          .complete,
+        runInTerminal(command, target, workspace, out, err, onStart),
       )
     }
+  }
+
+  private def runInTerminal(
+      command: List[String],
+      target: MbtTarget,
+      workspace: AbsolutePath,
+      out: String => Unit,
+      err: String => Unit,
+      onStart: SystemProcess => Unit,
+  ): Future[Int] = {
+    out(s"> ${command.mkString(" ")}")
+    val process = SystemProcess.run(
+      command,
+      workspace,
+      redirectErrorOutput = false,
+      env = javaHomeEnv(target),
+      processOut = Some(ProcessOutput.Lines(out)),
+      processErr = Some(err),
+      discardInput = false,
+    )
+    onStart(process)
+    process.complete
   }
 
   private def launchVia(
