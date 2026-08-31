@@ -976,9 +976,7 @@ abstract class MetalsLspService(
                 compilations.compileFile(path, assumeDidNotChange = true),
                 compilers.load(List(path)),
                 parser,
-                buildTargetClassesReady.flatMap(_ =>
-                  testProvider.didOpen(path)
-                ),
+                buildTargetClassesReady.flatMap(_ => testProvider.didOpen(path)),
               )
             )
             .ignoreValue
