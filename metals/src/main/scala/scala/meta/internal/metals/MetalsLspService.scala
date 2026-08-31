@@ -1044,10 +1044,7 @@ abstract class MetalsLspService(
       userConfig.javaSymbolLoader.isTurbineClasspath
     ) {
       buildServerPromise.future.flatMap { _ =>
-        if (
-          bspSession
-            .exists(session => MbtBuildServer.isMbtServer(session.main.name))
-        ) initialBuildTargetsReady.future
+        if (bspSession.isDefined) initialBuildTargetsReady.future
         else Future.unit
       }
     } else Future.unit
