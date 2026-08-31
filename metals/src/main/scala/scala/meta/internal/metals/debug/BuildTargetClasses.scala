@@ -943,7 +943,7 @@ final class BuildTargetClasses(
         val result = mutable.LinkedHashMap.empty[String, TestSymbolInfo]
         for {
           info <- mbtProvider.classInfo(path)
-          annotation <- info.memberDefsAnnotations
+          annotation <- info.memberDefsAnnotations ++ info.annotations
           framework <- TestFrameworkDetector.fromSymbol(annotation)
         } {
           result.put(
