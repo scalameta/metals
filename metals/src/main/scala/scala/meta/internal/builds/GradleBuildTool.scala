@@ -269,7 +269,12 @@ case class GradleBuildTool(
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
-      gradleTestCommand(target, testSuites, debugAgentFlag = None)
+      gradleTestCommand(
+        target,
+        testSuites,
+        debugAgentFlag = None,
+        framework = framework,
+      )
     )
 
   override def mbtTestDebugCommand(
@@ -281,7 +286,7 @@ case class GradleBuildTool(
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
     Future.successful(
-      gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+      gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
     )
 
   override def supportsForkedTestDebug: Boolean = true
@@ -296,7 +301,7 @@ case class GradleBuildTool(
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
     Future.successful(
-      gradleTestCommand(target, testSuites, Some(debugAgentFlag))
+      gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
     )
   }
 
@@ -304,6 +309,7 @@ case class GradleBuildTool(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
       debugAgentFlag: Option[String],
+      framework: Option[TestFramework],
   ): List[String] = {
     val jvmOptions =
       debugAgentFlag.toList ::: MbtDebugLauncher.listOrNil(
@@ -316,16 +322,17 @@ case class GradleBuildTool(
       "--console=plain"
     ) ::: initScriptArgs ::: List(
       gradleTask(target, "test")
-    ) ::: gradleTestFilterArgs(testSuites)
+    ) ::: gradleTestFilterArgs(testSuites, framework)
   }
 
   private def gradleTestFilterArgs(
-      testSuites: ScalaTestSuites
+      testSuites: ScalaTestSuites,
+      framework: Option[TestFramework],
   ): List[String] = {
     val filters =
       MbtDebugLauncher.listOrNil(testSuites.getSuites).flatMap { suite =>
         val className = suite.getClassName
-        val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+        val tests = MbtDebugLauncher.testFilterNames(suite, framework)
         if (tests.isEmpty) List(className)
         else tests.map(test => s"$className.$test")
       }

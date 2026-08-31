@@ -805,14 +805,16 @@ class DebugProvider(
   )(implicit ec: ExecutionContext): Future[DebugSessionParams] = {
     def makeDebugSession() = {
       val jvmOpts = JvmOpts.fromWorkspaceOrEnvForTest(workspace).getOrElse(Nil)
+      val escapesTestNames =
+        !buildTargets.buildServerOf(request.target).exists(_.isMbt)
       val debugSession =
         if (supportsTestSelection(request.target)) {
           val testSuites =
             request.requestData.copy(
               suites = request.requestData.suites.map { suite =>
                 testProvider.getFramework(buildTarget, suite) match {
-                  case Config.TestFramework.JUnit |
-                      Config.TestFramework.munit =>
+                  case Config.TestFramework.JUnit | Config.TestFramework.munit
+                      if escapesTestNames =>
                     suite.copy(tests = suite.tests.map(escapeTestName))
                   case _ => suite
                 }

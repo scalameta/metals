@@ -179,6 +179,7 @@ case class MavenBuildTool(
         mbtMavenBaseCommand(workspace),
         target,
         testSuites,
+        framework,
       )
     )
 
@@ -190,9 +191,13 @@ case class MavenBuildTool(
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
-    mbtTestDebugCommandWithPort(workspace, target, testSuites, sourceFiles)(
-      5005
-    )
+    mbtTestDebugCommandWithPort(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      framework,
+    )(5005)
 
   override def supportsForkedTestDebug: Boolean = true
 
@@ -212,6 +217,7 @@ case class MavenBuildTool(
         mbtMavenBaseCommand(workspace),
         target,
         testSuites,
+        framework,
         forkedDebugAgentFlag = Some(debugAgentFlag),
       )
     )
@@ -221,6 +227,7 @@ case class MavenBuildTool(
       baseCommand: List[String],
       target: MbtTarget,
       testSuites: ScalaTestSuites,
+      framework: Option[TestFramework],
       forkedDebugAgentFlag: Option[String] = None,
   ): List[String] = {
     val moduleArgs =
@@ -234,7 +241,7 @@ case class MavenBuildTool(
     val suites = MbtDebugLauncher.listOrNil(testSuites.getSuites)
     val testFilter = suites.flatMap { suite =>
       val className = suite.getClassName
-      val tests = MbtDebugLauncher.listOrNil(suite.getTests)
+      val tests = MbtDebugLauncher.testFilterNames(suite, framework)
       if (tests.isEmpty) List(className)
       else tests.map(test => s"$className#$test")
     }
