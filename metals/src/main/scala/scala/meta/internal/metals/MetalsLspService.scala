@@ -980,7 +980,9 @@ abstract class MetalsLspService(
             )
             .ignoreValue
         }
-        maybeImportFileAndLoad(path, load)
+        initialBuildTargetsReadyForDiagnostics.flatMap(_ =>
+          maybeImportFileAndLoad(path, load)
+        )
       }.asJava
     }
   }
@@ -1042,9 +1044,8 @@ abstract class MetalsLspService(
     ) {
       buildServerPromise.future.flatMap { _ =>
         if (
-          bspSession.exists(session =>
-            MbtBuildServer.isMbtServer(session.main.name)
-          )
+          bspSession
+            .exists(session => MbtBuildServer.isMbtServer(session.main.name))
         ) initialBuildTargetsReady.future
         else Future.unit
       }
