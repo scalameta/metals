@@ -929,14 +929,15 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
-    buildTargets
+    val buildTargetClassesReady = buildTargets
       .inverseSources(path)
       .flatMap(buildTargets.activatePlatformForTarget)
-      .foreach { platform =>
+      .map { platform =>
         buildTargetClasses.rebuildIndex(
           buildTargets.targetsByPlatform(platform)
         )
       }
+      .getOrElse(Future.unit)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -975,7 +976,9 @@ abstract class MetalsLspService(
                 compilations.compileFile(path, assumeDidNotChange = true),
                 compilers.load(List(path)),
                 parser,
-                testProvider.didOpen(path),
+                buildTargetClassesReady.flatMap(_ =>
+                  testProvider.didOpen(path)
+                ),
               )
             )
             .ignoreValue
