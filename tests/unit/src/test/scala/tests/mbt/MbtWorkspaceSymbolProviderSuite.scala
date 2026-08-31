@@ -8,6 +8,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
 import scala.meta.internal.metals.Configs
+import scala.meta.internal.metals.debug.TestFrameworkSymbolRegistry
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
@@ -43,31 +44,30 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
 
   test("multi-language") {
     FileLayout.fromString(
-      """
-/com/Hello.scala
-package com;
-object Hello {
-  def main(args: Array[String]): Unit = {
-    println(Greeting.greet(User(name = "World", age = 20)))
-  }
-}
-/com/Greeting.java
-package com;
-public class Greeting {
-  enum Day { WORKDAY, WEEKEND }
-  public static String greet(User user) {
-    return "Hello, " + user.name + "!";
-  }
-}
-/com/User.proto
-package com;
-message User {
-  string name = 1;
-  int32 age = 2;
-}
-/README.md
-# Example Project
-""",
+      """|/com/Hello.scala
+         |package com;
+         |object Hello {
+         |  def main(args: Array[String]): Unit = {
+         |    println(Greeting.greet(User(name = "World", age = 20)))
+         |  }
+         |}
+         |/com/Greeting.java
+         |package com;
+         |public class Greeting {
+         |  enum Day { WORKDAY, WEEKEND }
+         |  public static String greet(User user) {
+         |    return "Hello, " + user.name + "!";
+         |  }
+         |}
+         |/com/User.proto
+         |package com;
+         |message User {
+         |  string name = 1;
+         |  int32 age = 2;
+         |}
+         |/README.md
+         |# Example Project
+         |""".stripMargin,
       root = workspace(),
     )
     val provider = newProvider()
@@ -98,25 +98,24 @@ message User {
         |""".stripMargin,
     )
     FileLayout.fromString(
-      """
-/com/Hello.scala
-package com;
-object Hello {
-  def main(args: Array[String]): Unit = {
-    println(Greeting.greet(User(name = "World", age = 20)))
-  }
-  def main2(): Unit = {
-    println(Greeting.greet(User(name = "World", age = 20)))
-  }
-}
-/com/Hello2.scala
-package com;
-object Hello2 {
-  def main2(args: Array[String]): Unit = {
-    println(Greeting.greet(User(name = "World", age = 20)))
-  }
-}
-""",
+      """|/com/Hello.scala
+         |package com;
+         |object Hello {
+         |  def main(args: Array[String]): Unit = {
+         |    println(Greeting.greet(User(name = "World", age = 20)))
+         |  }
+         |  def main2(): Unit = {
+         |    println(Greeting.greet(User(name = "World", age = 20)))
+         |  }
+         |}
+         |/com/Hello2.scala
+         |package com;
+         |object Hello2 {
+         |  def main2(args: Array[String]): Unit = {
+         |    println(Greeting.greet(User(name = "World", age = 20)))
+         |  }
+         |}
+         |""".stripMargin,
       root = workspace(),
     )
     workspace.gitCommitAllChanges()
@@ -156,16 +155,15 @@ object Hello2 {
 
   test("exclude-module-info-java") {
     FileLayout.fromString(
-      """
-/com/Hello.java
-package com;
-public class Hello {}
-/module-info.java
-module com.example {
-  requires java.base;
-  exports com;
-}
-""",
+      """|/com/Hello.java
+         |package com;
+         |public class Hello {}
+         |/module-info.java
+         |module com.example {
+         |  requires java.base;
+         |  exports com;
+         |}
+         |""".stripMargin,
       root = workspace(),
     )
     val provider = newProvider()
@@ -181,12 +179,11 @@ module com.example {
 
   test("exclude-module-info-java-on-did-change") {
     FileLayout.fromString(
-      """
-/module-info.java
-module com.example {
-  requires java.base;
-}
-""",
+      """|/module-info.java
+         |module com.example {
+         |  requires java.base;
+         |}
+         |""".stripMargin,
       root = workspace(),
     )
     val provider = newProvider()
@@ -195,6 +192,132 @@ module com.example {
       5.seconds,
     )
     assertEquals(provider.allFiles(), Nil)
+  }
+
+  test("candidate-test-classes-junit") {
+    FileLayout.fromString(
+      """|/com/MyTest.java
+         |package com;
+         |import org.junit.Test;
+         |public class MyTest {
+         |  @Test
+         |  public void runs() {}
+         |}
+         |/com/Helper.java
+         |package com;
+         |public class Helper {
+         |  public void runs() {}
+         |}
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(relative, List(Paths.get("com/MyTest.java").toString()))
+    assertEquals(
+      candidates.map(_.candidateSymbol).toSet,
+      Set("com/MyTest#"),
+    )
+  }
+
+  test("candidate-test-classes-custom-funsuite-base") {
+    FileLayout.fromString(
+      """|/example/MySuite.scala
+         |package example
+         |trait MySuite extends munit.FunSuite
+         |/example/FooTest.scala
+         |package example
+         |class FooTest extends MySuite
+         |/example/Unrelated.scala
+         |package example
+         |class Unrelated
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      annotationSymbols = Nil,
+      baseParentSymbols = Seq("munit/FunSuite#"),
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(
+      relative,
+      List(Paths.get("example/FooTest.scala").toString()),
+    )
+    assertEquals(
+      candidates.map(_.candidateSymbol).toSet,
+      Set("example/FooTest#"),
+    )
+  }
+
+  test("candidate-main-classes") {
+    FileLayout.fromString(
+      """|/com/Main.java
+         |package com;
+         |public class Main {
+         |  public static void main(String[] args) {}
+         |}
+         |/com/Hello.scala
+         |package com
+         |object Hello {
+         |  def main(args: Array[String]): Unit = ()
+         |}
+         |/com/Helper.java
+         |package com;
+         |public class Helper {
+         |  public void other() {}
+         |}
+         |/com/NotApp.scala
+         |package com
+         |object NotApp
+         |/com/MainApp.scala
+         |package com
+         |object MainApp extends App
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateMainClasses(_ => true)
+    val byFile = candidates
+      .groupBy(_.path.toRelative(workspace()).toString)
+      .view
+      .mapValues(_.map(_.candidateSymbol).toSet)
+      .toMap
+    assertEquals(
+      byFile.get(Paths.get("com/Main.java").toString()),
+      Some(Set("com/Main#")),
+    )
+    assertEquals(
+      byFile.get(Paths.get("com/Hello.scala").toString()),
+      Some(Set("com/Hello.")),
+    )
+    assertEquals(
+      byFile.get(Paths.get("com/MainApp.scala").toString()),
+      Some(Set("com/MainApp.")),
+    )
+    assert(!byFile.contains(Paths.get("com/Helper.java").toString()))
+    assert(!byFile.contains(Paths.get("com/NotApp.scala").toString()))
   }
 
   def manuallyTestWorkspace(
