@@ -319,6 +319,9 @@ object QuickBuild {
     "dev.zio::zio-test-sbt" -> Config.TestFramework(
       List("zio.test.sbt.ZTestFramework")
     ),
+    "io.getkyo::kyo-test-runner" -> Config.TestFramework(
+      List("kyo.test.runner.SbtFramework")
+    ),
   )
 
   /**

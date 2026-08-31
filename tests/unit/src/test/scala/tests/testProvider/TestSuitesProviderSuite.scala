@@ -2,6 +2,7 @@ package tests.testProvider
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -141,6 +142,47 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       )
     },
   )
+
+  // kyo-test ships JDK 25 bytecode, so the build server must run on JDK 25+.
+  if (isJava25)
+    testDiscover(
+      "single-kyo-test",
+      List(
+        "io.getkyo::kyo-test-api:1.0.0-RC6",
+        "io.getkyo::kyo-test-runner:1.0.0-RC6",
+        "io.getkyo::kyo-core:1.0.0-RC6",
+      ),
+      s"""|
+          |/app/src/main/scala/a/b/KyoTestSuite.scala
+          |package a.b
+          |
+          |import kyo.test.Test
+          |
+          |class KyoTestSuite extends Test[Any]
+          |""".stripMargin,
+      List("app/src/main/scala/a/b/KyoTestSuite.scala"),
+      () => {
+        List(
+          rootBuildTargetUpdate(
+            "app",
+            targetUri,
+            List[TestExplorerEvent](
+              AddTestSuite(
+                "a.b.KyoTestSuite",
+                "KyoTestSuite",
+                "a/b/KyoTestSuite#",
+                QuickLocation(
+                  classUriFor("app/src/main/scala/a/b/KyoTestSuite.scala"),
+                  (4, 6, 4, 18),
+                ).toLsp,
+                canResolveChildren = false,
+              )
+            ).asJava,
+          )
+        )
+      },
+      scalaVersion = V.latestScala3Next,
+    )
 
   testDiscover(
     "multiple-suites",
@@ -1230,6 +1272,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
       files: List[String],
       expected: () => List[BuildTargetUpdate],
       uri: () => Option[String] = () => None,
+      scalaVersion: String = BuildInfo.scalaVersion,
   )(implicit
       loc: munit.Location
   ): Unit = {
@@ -1238,7 +1281,7 @@ class TestSuitesProviderSuite extends BaseLspSuite("testSuitesFinderSuite") {
           |{
           |  "app": {
           |    "libraryDependencies" : ${getDependenciesArray(dependencies)},
-          |    "scalaVersion": "${BuildInfo.scalaVersion}"
+          |    "scalaVersion": "$scalaVersion"
           |  }
           |}
           |$layout
