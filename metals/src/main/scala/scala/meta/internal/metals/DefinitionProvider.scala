@@ -149,12 +149,20 @@ final class DefinitionProvider(
 
     for {
       // A doc-comment position can resolve to the enclosing package (`a/`, no
-      // location); that must not stop `fromScalaDoc` (scalameta/metals#3383).
+      // location); that must not stop `fromScalaDoc`, but a later empty result
+      // must not erase that package symbol either (it drives the fallback guard
+      // below) (scalameta/metals#3383).
       core <- coreStrategies.foldLeft(
         Future.successful(DefinitionResult.empty)
       ) { case (acc, next) =>
         acc.flatMap {
-          case res if res.isEmpty => next().map(_.getOrElse(res))
+          case res if res.isEmpty =>
+            next().map {
+              case Some(n)
+                  if n.isEmpty && n.symbol.isEmpty && res.symbol.nonEmpty =>
+                res
+              case other => other.getOrElse(res)
+            }
           case res => Future.successful(res)
         }
       }

@@ -185,7 +185,12 @@ class ScaladocDefinitionProvider(
         enclosingPackagePath: String,
         enclosingSymbol: String,
         alternativeEnclosingSymbol: Option[String],
-    ): (String, String, Option[String]) =
+    ): (String, String, Option[String]) = {
+      // A Scala 3 top-level member's owner is the file's synthetic `$package`
+      // object rather than the bare package (scalameta/metals#3383).
+      val ownerPrefix =
+        if (isScala3 && enclosingSymbol.isEmpty) s"$filePackageObject."
+        else enclosingSymbol
       tree match {
         case Pkg(name, _) =>
           (
@@ -225,32 +230,17 @@ class ScaladocDefinitionProvider(
             s"$enclosingSymbol${descName(d.name.value)}#",
             Some(s"$enclosingSymbol${descName(d.name.value)}."),
           )
-        case d: Defn.EnumCase =>
-          // Enum cases live in the enum's COMPANION; a parameterized case is
-          // a case class (`Case#`) (scalameta/metals#3383).
-          val base = alternativeEnclosingSymbol.getOrElse(enclosingSymbol)
-          val name = descName(d.name.value)
-          if (d.ctor.paramss.flatten.nonEmpty)
-            (
-              enclosingPackagePath,
-              s"$base$name#",
-              Some(s"$base$name."),
-            )
-          else
-            (
-              enclosingPackagePath,
-              s"$base$name.",
-              Some(s"$base$name#"),
-            )
         case d: Defn.Given if d.name.value.nonEmpty =>
           // A named given owns members under `name#` but is itself the value
-          // `name.`; offer both (scalameta/metals#3383).
+          // `name.`; offer both. At Scala 3 top level it lives in `$package`
+          // (scalameta/metals#3383).
           (
             enclosingPackagePath,
-            s"$enclosingSymbol${descName(d.name.value)}#",
-            Some(s"$enclosingSymbol${descName(d.name.value)}."),
+            s"$ownerPrefix${descName(d.name.value)}#",
+            Some(s"$ownerPrefix${descName(d.name.value)}."),
           )
-        case (_: Defn.Def | _: Defn.Val | _: Defn.Var | _: Defn.Type)
+        case (_: Defn.Def | _: Defn.Val | _: Defn.Var | _: Defn.Type |
+            _: Defn.Given | _: Defn.GivenAlias | _: Defn.ExtensionGroup)
             if isScala3 && enclosingSymbol.isEmpty =>
           // A Scala 3 top-level member's owner is the file's synthetic
           // `<file>$package` object (scalameta/metals#3383).
@@ -264,6 +254,7 @@ class ScaladocDefinitionProvider(
         case _ =>
           (enclosingPackagePath, enclosingSymbol, alternativeEnclosingSymbol)
       }
+    }
 
     def loop(
         tree: Tree,

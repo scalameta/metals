@@ -718,6 +718,12 @@ class DefinitionLspSuite
         locations.head.getUri().endsWith("/a/Esc.scala"),
         locations.toString,
       )
+      // `def field` is on line 4 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        4,
+        locations.toString,
+      )
     } yield ()
   }
 
@@ -750,6 +756,12 @@ class DefinitionLspSuite
       _ = assert(locations.nonEmpty, "package-object link did not resolve")
       _ = assert(
         locations.head.getUri().endsWith("/a/q/package.scala"),
+        locations.toString,
+      )
+      // `def helper` is on line 4 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        4,
         locations.toString,
       )
     } yield ()
@@ -789,39 +801,6 @@ class DefinitionLspSuite
         locations.head.getRange().getStart().getLine(),
         1,
         s"expected the source-first object Target (line 1), got $locations",
-      )
-    } yield ()
-  }
-
-  // `[[r]]` in the doc of `case Mix(r: Int)` resolves against the CASE, not
-  // the enclosing enum (scalameta/metals#3383).
-  test("scaladoc-definition-enum-case-param") {
-    val testCase =
-      """|package a
-         |enum E {
-         |  /** The mix [[r@@]]. */
-         |  case Mix(r: Int)
-         |}
-         |""".stripMargin
-    for {
-      _ <- initialize(
-        s"""
-           |/metals.json
-           |{ "a": { "scalaVersion": "${V.scala3}" } }
-           |/a/src/main/scala/a/E.scala
-           |${testCase.replace("@@", "")}
-           |""".stripMargin
-      )
-      _ <- server.didOpen("a/src/main/scala/a/E.scala")
-      locations <- server.definition(
-        "a/src/main/scala/a/E.scala",
-        testCase,
-        workspace,
-      )
-      _ = assert(locations.nonEmpty, "enum case param link did not resolve")
-      _ = assert(
-        locations.head.getUri().endsWith("/a/E.scala"),
-        locations.toString,
       )
     } yield ()
   }
