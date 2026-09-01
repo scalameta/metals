@@ -167,7 +167,9 @@ class TestMcpStdioClient(
         )
       } else {
         listModules().flatMap { modules =>
-          if (modules.contains(expectedModule)) {
+          if (
+            modules.linesIterator.map(_.trim).contains(s"- $expectedModule")
+          ) {
             Future.successful(())
           } else {
             Future {

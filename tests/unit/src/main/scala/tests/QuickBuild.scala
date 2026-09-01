@@ -319,13 +319,16 @@ object QuickBuild {
     "dev.zio::zio-test-sbt" -> Config.TestFramework(
       List("zio.test.sbt.ZTestFramework")
     ),
+    "io.getkyo::kyo-test-runner" -> Config.TestFramework(
+      List("kyo.test.runner.SbtFramework")
+    ),
   )
 
   /**
    * Bump up this version in case the JSON generation algorithm changes
    * A new version triggers re-generation of QuickBuild files.
    */
-  val version = "v3"
+  val version = "v4"
   def toDependency(
       module: String,
       scalaVersion: String,

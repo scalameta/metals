@@ -41,6 +41,7 @@ object TestGroups {
     "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
     "tests.DidFocusWhileCompilingLspSuite",
     "tests.testProvider.ScalatestFinderSuite", "tests.ScalaCliSuite",
+    "tests.OutOfWorkspaceScalaCliLspSuite",
     "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite",
     "tests.BspStatusSuite", "tests.ServerLivenessMonitorLspSuite",
     "tests.ToplevelWithInnerScala2Suite", "tests.ScaladocSymbolsSuite",
