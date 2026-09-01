@@ -56,6 +56,7 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.MetalsLanguageServer
@@ -814,6 +815,58 @@ class MbtWorkspaceSymbolProvider(
 
     allMatchedPaths.toSet
   }
+
+  /**
+   * Turbine-backed class information for Java types declared in `path`.
+   * Empty for non-Java files, files that are not in the index, or classes
+   * that have not been header-compiled yet.
+   *
+   * Returned [[PcSymbolInformation]] uses SemanticDB symbol strings for
+   * `annotations`, including both class-level and method-level annotations
+   * (e.g. `org/junit/Test#`).
+   */
+  def classInfo(path: AbsolutePath): Seq[PcSymbolInformation] = {
+    if (!path.isJava) {
+      scribe.warn(s"mbt-v2: classInfo not supported for non-Java files: $path")
+      Nil
+    } else {
+      documents.get(path) match {
+        case None =>
+          scribe.warn(s"mbt-v2: classInfo not found in index: $path")
+          Nil
+        case Some(doc) =>
+          val result = turbineCompiler.result
+          doc.symbols.flatMap { symbolInfo =>
+            if (!isClassLikeKind(symbolInfo.getKind())) Nil
+            else {
+              val symbol = symbolInfo.getSymbol()
+              try {
+                result
+                  .boundClass(Symbol(symbol).binaryName)
+                  .map { bound =>
+                    TurbineSymbolInfo.fromBoundClass(symbol, bound)
+                  }
+                  .toSeq
+              } catch {
+                case NonFatal(e) =>
+                  scribe.debug(
+                    s"turbine classInfo failed for $symbol in $path: ${e.getMessage}"
+                  )
+                  Nil
+              }
+            }
+          }.toSeq
+      }
+    }
+  }
+
+  private def isClassLikeKind(
+      kind: Semanticdb.SymbolInformation.Kind
+  ): Boolean =
+    kind == Semanticdb.SymbolInformation.Kind.CLASS ||
+      kind == Semanticdb.SymbolInformation.Kind.INTERFACE ||
+      kind == Semanticdb.SymbolInformation.Kind.OBJECT ||
+      kind == Semanticdb.SymbolInformation.Kind.TRAIT
 
   /**
    * Extracts potential test class candidates from the MBT index without loading semanticdb.
