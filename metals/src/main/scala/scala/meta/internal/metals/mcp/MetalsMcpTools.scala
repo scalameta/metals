@@ -460,6 +460,92 @@ trait MetalsMcpTools extends Cancelable {
     )
   }
 
+  protected def createTestRepeatedTool(): AsyncToolSpecification = {
+    val schema =
+      """|{
+         |  "type": "object",
+         |  "properties": {
+         |    "testFile": {
+         |      "type": "string",
+         |      "description": "The file containing the test suite, if empty we will try to detect it"
+         |    },
+         |    "testClass": {
+         |      "type": "string",
+         |      "description": "Fully qualified name of the test class to run"
+         |    },
+         |    "testName": {
+         |      "type": "string",
+         |      "description": "Name of the specific test to run within the test class, if empty runs all tests in the class"
+         |    },
+         |    "times": {
+         |      "type": "integer",
+         |      "description": "Number of times to run the tests, between 1 and 100",
+         |      "default": 10,
+         |      "minimum": 1,
+         |      "maximum": 100
+         |    },
+         |    "stopOnFirstFailure": {
+         |      "type": "boolean",
+         |      "description": "Stop as soon as a run fails instead of completing all runs",
+         |      "default": false
+         |    }
+         |  },
+         |  "required": ["testClass"]
+         |}""".stripMargin
+    val tool = Tool
+      .builder()
+      .name("test-repeated")
+      .description(
+        """|Run a Scala test suite repeatedly to detect or confirm flaky tests.
+           |Executes the tests the given number of times sequentially and reports
+           |an aggregate summary with details from failing runs.""".stripMargin
+      )
+      .inputSchema(jsonMapper, schema)
+      .build()
+    new AsyncToolSpecification(
+      tool,
+      withErrorHandling { (exchange, arguments) =>
+        val testClass = arguments.getAs[String]("testClass")
+        val optPath = arguments
+          .getOptAs[String]("testFile")
+          .map(path => AbsolutePath(Path.of(path))(projectPath))
+        val testName = arguments.getOptAs[String]("testName")
+        val times = arguments
+          .getOptAs[Number]("times")
+          .map(_.longValue)
+          .getOrElse(10L)
+        val stopOnFirstFailure = arguments
+          .getOptAs[Boolean]("stopOnFirstFailure")
+          .getOrElse(false)
+        val result = mcpTestRunner.runTestsRepeated(
+          testClass,
+          optPath,
+          testName,
+          times,
+          stopOnFirstFailure,
+        )
+        (result match {
+          case Right(value) =>
+            value.map(content =>
+              CallToolResult
+                .builder()
+                .content(createContent(content))
+                .isError(false)
+                .build()
+            )
+          case Left(error) =>
+            Future.successful(
+              CallToolResult
+                .builder()
+                .content(createContent(s"Error: $error"))
+                .isError(true)
+                .build()
+            )
+        }).toMono
+      },
+    )
+  }
+
   protected def createGlobSearchTool(): AsyncToolSpecification = {
     val schema = """
       {
@@ -1280,6 +1366,7 @@ trait MetalsMcpTools extends Cancelable {
     asyncServer.addTool(createCompileModuleTool()).subscribe()
     asyncServer.addTool(createCompileTool()).subscribe()
     asyncServer.addTool(createTestTool()).subscribe()
+    asyncServer.addTool(createTestRepeatedTool()).subscribe()
     asyncServer.addTool(createGlobSearchTool()).subscribe()
     asyncServer.addTool(createTypedGlobSearchTool()).subscribe()
     asyncServer.addTool(createInspectTool()).subscribe()

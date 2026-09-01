@@ -124,9 +124,10 @@ Metals provides a comprehensive set of tools through MCP:
 
 ### Testing
 
-| Tool   | Description                                                                                                                                            |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `test` | Run Scala test suites. Supports running specific test classes or individual test methods. Works with ScalaTest, MUnit, ZIO Test, and other frameworks. |
+| Tool            | Description                                                                                                                                            |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `test`          | Run Scala test suites. Supports running specific test classes or individual test methods. Works with ScalaTest, MUnit, ZIO Test, and other frameworks. |
+| `test-repeated` | Run a test suite (or a single test) repeatedly, up to 100 times, to detect or confirm flaky tests. Reports an aggregate summary with the failing run indices and details from the first failing run; can stop on the first failure. |
 
 ### Symbol Search and Inspection
 
@@ -195,6 +196,10 @@ Using MCP, show the documentation for scala.collection.immutable.List
 
 ```
 Using MCP, run the test class com.example.MyServiceSpec
+```
+
+```
+Using MCP, run com.example.MyServiceSpec 20 times to check whether it is flaky
 ```
 
 ### Finding Dependencies

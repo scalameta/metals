@@ -1,5 +1,7 @@
 package tests.mcp
 
+import java.nio.file.Files
+
 import scala.meta.internal.metals.MetalsServerConfig
 
 import tests.BaseLspSuite
@@ -412,6 +414,203 @@ class McpRunTestSuite extends BaseLspSuite("mcp-test") {
         nonExistentResult.contains("3 tests, 0 passed, 0 failed, 3 skipped"),
         s"Non-existent test should skip all tests: $nonExistentResult",
       )
+    } yield ()
+  }
+
+  test("repeated", maxRetry = 3) {
+    cleanWorkspace()
+    // Counter files let the forked test JVMs communicate how often they ran,
+    // which both makes flakiness deterministic (fail only on the first run)
+    // and proves stopOnFirstFailure runs the JVM exactly once.
+    val flakyCounter = workspace.resolve("flaky-counter.txt")
+    val failCounter = workspace.resolve("fail-counter.txt")
+    val crashCounter = workspace.resolve("crash-counter.txt")
+    // Interpolated into Scala string literals in the generated source, so the
+    // Windows path separator must be replaced to keep the literal valid.
+    val flakyCounterPath = flakyCounter.toString.replace('\\', '/')
+    val failCounterPath = failCounter.toString.replace('\\', '/')
+    val crashCounterPath = crashCounter.toString.replace('\\', '/')
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {
+           |    "libraryDependencies" : ["org.scalameta::munit:1.0.0-M4"]
+           |  }
+           |}
+           |/a/src/test/scala/a/RepeatedSuites.scala
+           |package a
+           |
+           |import java.nio.file.Files
+           |import java.nio.file.Paths
+           |import java.nio.file.StandardOpenOption
+           |
+           |object RunCounter {
+           |  def increment(path: String): Long = {
+           |    val counter = Paths.get(path)
+           |    Files.write(
+           |      counter,
+           |      "x".getBytes(),
+           |      StandardOpenOption.CREATE,
+           |      StandardOpenOption.APPEND,
+           |    )
+           |    Files.size(counter)
+           |  }
+           |}
+           |
+           |class FlakyOnFirstRunSuite extends munit.FunSuite {
+           |  test("flaky") {
+           |    val runs = RunCounter.increment("$flakyCounterPath")
+           |    assert(runs > 1, "fails on first run")
+           |  }
+           |}
+           |
+           |class GreenSuite extends munit.FunSuite {
+           |  test("green") {
+           |    assert(1 == 1)
+           |  }
+           |}
+           |
+           |class AlwaysFailingSuite extends munit.FunSuite {
+           |  test("always fails") {
+           |    RunCounter.increment("$failCounterPath")
+           |    assert(1 == 2)
+           |  }
+           |}
+           |
+           |class CrashingSuite extends munit.FunSuite {
+           |  test("crash") {
+           |    RunCounter.increment("$crashCounterPath")
+           |    sys.exit(1)
+           |  }
+           |}
+           |
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/test/scala/a/RepeatedSuites.scala")
+      _ = assertNoDiagnostics()
+      _ <- server.server.indexingPromise.future
+      path = server.toPath("a/src/test/scala/a/RepeatedSuites.scala")
+      _ = Files.deleteIfExists(flakyCounter.toNIO)
+      _ = Files.deleteIfExists(failCounter.toNIO)
+      _ = Files.deleteIfExists(crashCounter.toNIO)
+
+      // A suite failing only on the first run reports the split and details
+      flakyResult <- server.headServer.mcpTestRunner
+        .runTestsRepeated(
+          "a.FlakyOnFirstRunSuite",
+          Some(path),
+          None,
+          times = 3,
+          stopOnFirstFailure = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        flakyResult.contains(
+          "Ran a.FlakyOnFirstRunSuite 3 times: 2 runs passed, 1 run failed (run 1)"
+        ),
+        s"Flaky result: $flakyResult",
+      )
+      _ = assert(
+        flakyResult.contains("--- failing run 1 ---"),
+        s"Should contain the failing run's report: $flakyResult",
+      )
+      _ = assert(
+        flakyResult.contains("flaky failed"),
+        s"Should contain the failed test: $flakyResult",
+      )
+
+      // A stable suite reports all runs passed and no failure section
+      greenResult <- server.headServer.mcpTestRunner
+        .runTestsRepeated(
+          "a.GreenSuite",
+          Some(path),
+          None,
+          times = 2,
+          stopOnFirstFailure = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        greenResult.contains(
+          "Ran a.GreenSuite 2 times: 2 runs passed, 0 runs failed"
+        ),
+        s"Green result: $greenResult",
+      )
+      _ = assert(
+        !greenResult.contains("--- failing run"),
+        s"Green result should have no failure section: $greenResult",
+      )
+
+      // stopOnFirstFailure stops after the first failing run
+      stopResult <- server.headServer.mcpTestRunner
+        .runTestsRepeated(
+          "a.AlwaysFailingSuite",
+          Some(path),
+          None,
+          times = 5,
+          stopOnFirstFailure = true,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        stopResult.contains("0 runs passed, 1 run failed (run 1)"),
+        s"Stop result: $stopResult",
+      )
+      _ = assert(
+        stopResult.contains("Stopped after first failure (run 1 of 5)"),
+        s"Stop result should mention early stop: $stopResult",
+      )
+      _ = assert(
+        Files.size(failCounter.toNIO) == 1,
+        s"Expected exactly one run, got ${Files.size(failCounter.toNIO)}",
+      )
+
+      // A run whose JVM exits non-zero counts as a failed run instead of
+      // aborting the aggregate
+      crashResult <- server.headServer.mcpTestRunner
+        .runTestsRepeated(
+          "a.CrashingSuite",
+          Some(path),
+          None,
+          times = 2,
+          stopOnFirstFailure = false,
+        ) match {
+        case Right(value) => value
+        case Left(error) => throw new RuntimeException(error)
+      }
+      _ = assert(
+        crashResult.contains("0 runs passed, 2 runs failed (runs 1, 2)"),
+        s"Crash result: $crashResult",
+      )
+      _ = assert(
+        crashResult.contains("The test run crashed"),
+        s"Crash result should mention the crash: $crashResult",
+      )
+      _ = assert(
+        Files.size(crashCounter.toNIO) == 2,
+        s"Expected two runs, got ${Files.size(crashCounter.toNIO)}",
+      )
+
+      // times outside 1-100 is rejected without running anything
+      _ = List(0, 101).foreach { invalidTimes =>
+        server.headServer.mcpTestRunner.runTestsRepeated(
+          "a.GreenSuite",
+          Some(path),
+          None,
+          times = invalidTimes,
+          stopOnFirstFailure = false,
+        ) match {
+          case Left(error) =>
+            assert(error.contains("between 1 and 100"), error)
+          case Right(_) => fail(s"Expected an error for times = $invalidTimes")
+        }
+      }
     } yield ()
   }
 }
