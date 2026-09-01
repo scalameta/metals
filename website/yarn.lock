@@ -3123,18 +3123,10 @@
     tslib "^2.6.0"
     utility-types "^3.10.0"
 
-"@docusaurus/theme-translations@3.10.2":
+"@docusaurus/theme-translations@3.10.2", "@docusaurus/theme-translations@^2 || ^3":
   version "3.10.2"
   resolved "https://registry.yarnpkg.com/@docusaurus/theme-translations/-/theme-translations-3.10.2.tgz#cd649083babd12df324e7129008aaccacd4cfb13"
   integrity sha512-iv20wrxnyXkY89LM3TzRlzGlt5fIGO5UnaR6UL1ZVfB9RRFjxQFQ6awDrwAc6Km8Y5gD8pInuwYPF+6/TiCxXA==
-  dependencies:
-    fs-extra "^11.1.1"
-    tslib "^2.6.0"
-
-"@docusaurus/theme-translations@^2 || ^3":
-  version "3.10.1"
-  resolved "https://registry.yarnpkg.com/@docusaurus/theme-translations/-/theme-translations-3.10.1.tgz#c3119a015652290eea560ca45ac775963d6eb75b"
-  integrity sha512-cLMyaKivjBVWKMJuWqyFVVgtqe8DPJNPkog0bn8W1MDVAKcPdxRFycBfC1We1RaNp7Rdk513bmtW78RR6OBxBw==
   dependencies:
     fs-extra "^11.1.1"
     tslib "^2.6.0"
@@ -3212,10 +3204,10 @@
     cssesc "^3.0.0"
     immediate "^3.2.3"
 
-"@easyops-cn/docusaurus-search-local@0.55.2":
-  version "0.55.2"
-  resolved "https://registry.yarnpkg.com/@easyops-cn/docusaurus-search-local/-/docusaurus-search-local-0.55.2.tgz#563ab1f8fd7bc18541d889f4d5001a3ef85c5a1e"
-  integrity sha512-dI/riu+MbDxkAjAHAdc0uahjXRaWKvbIPe9IAmA6AGcUfnVb9xd8s2I/6wEPTOXsAd6eFqn4Yis3WBWh3KUd3g==
+"@easyops-cn/docusaurus-search-local@0.55.3":
+  version "0.55.3"
+  resolved "https://registry.yarnpkg.com/@easyops-cn/docusaurus-search-local/-/docusaurus-search-local-0.55.3.tgz#4beba8939a630a5fe4b37fd83bb41beca9923809"
+  integrity sha512-PlMKmxuonvZ1C+/zJS1hJaF1xaxD1TsUvOMzpP6DdQMtZqmTaYjcLGM12ePzl0m1rp3AgfTBeDbFNHQhwnH/dA==
   dependencies:
     "@docusaurus/plugin-content-docs" "^2 || ^3"
     "@docusaurus/theme-translations" "^2 || ^3"
@@ -4422,10 +4414,10 @@
   resolved "https://registry.yarnpkg.com/@types/ms/-/ms-0.7.34.tgz#10964ba0dee6ac4cd462e2795b6bebd407303433"
   integrity sha512-nG96G3Wp6acyAgJqGasjODb+acrI7KltPiRxzHPXnP3NgI28bpQDRv53olbqGXbfcgF5aiiHmO3xpwEpS5Ld9g==
 
-"@types/node@*", "@types/node@^26.1.2":
-  version "26.1.2"
-  resolved "https://registry.yarnpkg.com/@types/node/-/node-26.1.2.tgz#da79708f1f9c6294f4cdec8f455a3032b028808a"
-  integrity sha512-Vu4a5UFA9rIIFJ7rB/Vaafh9lrCQszopTCx6KjFboXTGQbPNasehVR5TEiithSDGyd1DEiUByggTZsg8jukeIg==
+"@types/node@*", "@types/node@^26.4.0":
+  version "26.4.0"
+  resolved "https://registry.yarnpkg.com/@types/node/-/node-26.4.0.tgz#4c4ca071c42241fe602741d02999f16b4e64c468"
+  integrity sha512-faiGnoIrLH/V8cibOMEAZ8pMw6oXqSukl29ra4mN8GdaB2ZewzeaLj+INpV5N+Z1eKWzY+IzaIZH2EIR6YZRNQ==
   dependencies:
     undici-types "~8.3.0"
 

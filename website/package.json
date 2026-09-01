@@ -8,14 +8,14 @@
     "serve": "docusaurus serve"
   },
   "devDependencies": {
-    "@types/node": "^26.1.2"
+    "@types/node": "^26.4.0"
   },
   "dependencies": {
     "@docusaurus/core": "3.10.2",
     "@docusaurus/faster": "3.10.2",
     "@docusaurus/plugin-client-redirects": "3.10.2",
     "@docusaurus/preset-classic": "3.10.2",
-    "@easyops-cn/docusaurus-search-local": "0.55.2",
+    "@easyops-cn/docusaurus-search-local": "0.55.3",
     "clsx": "^2.1.1",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
