@@ -92,13 +92,8 @@ final class BloopServers(
    * the next connection attempt can cold-start a fresh one.
    *
    * No-op unless this connection reused a pre-existing server: a server we just
-   * started that fails to come up is a startup problem, not a wedge, and exiting
-   * it would only loop. `BloopRifle.exit` sends a synchronous `ng-stop` over the
-   * same (possibly stuck) socket, so we run it off the calling thread and bound
-   * it with a timeout. The next `connect` only cold-starts a fresh server if the
-   * old one is actually gone (`BloopRifle.check` is socket-based), so we wait for
-   * it to stop and, if it can't be stopped, fail with an actionable message
-   * rather than silently reconnecting to the same wedged process.
+   * started that fails to come up is a startup problem, not a wedge, and
+   * exiting it would only loop.
    */
   private def recoverFromWedgedServer(
       connectedToPreexistingServer: AtomicBoolean
@@ -109,78 +104,16 @@ final class BloopServers(
         "Bloop server was reported as running but didn't respond; " +
           "stopping it so a fresh one can be started."
       )
-      // `ng-stop` is a synchronous call over the same (possibly stuck) socket,
-      // so run it on a dedicated daemon thread: a truly hung server then leaks
-      // only this isolated thread instead of occupying an execution-context one
-      // after recovery has moved on.
-      val exit = new Thread("bloop-exit-on-recovery") {
-        override def run(): Unit =
-          try {
-            BloopRifle.exit(config, bloopWorkingDir.toNIO, bloopLogger)
-            ()
-          } catch {
-            case NonFatal(e) =>
-              scribe.warn("Couldn't cleanly stop the Bloop server.", e)
-          }
-      }
-      exit.setDaemon(true)
-      exit.start()
-      // Wait — without blocking a thread — for the server to actually go down.
-      // `check` is socket-based, so the retry only cold-starts a fresh server
-      // once the old one is really gone; otherwise fail with actionable guidance.
-      awaitBloopStopped(
-        config,
-        System.currentTimeMillis() + RecoveryTimeoutMs,
-      ).map {
-        case true => ()
-        case false =>
-          // Show the actionable guidance directly: the reconnect path doesn't go
-          // through `ConnectionProvider`, so this is the only message there. Throw
-          // a marker so the initial-connect path doesn't also stack its generic
-          // "failed to connect" message on top of this one.
-          languageClient.showMessage(Messages.UnresponsiveBloopServer.params())
-          throw new AlreadyReportedConnectException(
-            Messages.UnresponsiveBloopServer.message
-          )
-      }
+      stopWedgedServer(
+        exitServer = () => {
+          BloopRifle.exit(config, bloopWorkingDir.toNIO, bloopLogger)
+          ()
+        },
+        isServerRunning = () => BloopRifle.check(config, bloopLogger),
+        sh,
+        serverConfig.bloopRecoveryTimeout.toMillis,
+      )
     } else Future.unit
-
-  /**
-   * Poll `BloopRifle.check` until Bloop is down or `deadline` (epoch ms) passes,
-   * scheduling the delays on `sh` rather than blocking a thread.
-   */
-  private def awaitBloopStopped(
-      config: BloopRifleConfig,
-      deadline: Long,
-  ): Future[Boolean] = {
-    val stopped = Promise[Boolean]()
-    def poll(): Unit =
-      try {
-        if (!BloopRifle.check(config, bloopLogger)) stopped.trySuccess(true)
-        else if (System.currentTimeMillis() >= deadline)
-          stopped.trySuccess(false)
-        else {
-          sh.schedule(
-            new Runnable { def run(): Unit = poll() },
-            RecoveryPollIntervalMs,
-            TimeUnit.MILLISECONDS,
-          )
-          ()
-        }
-      } catch {
-        case NonFatal(e) =>
-          // A scheduled poll runs on `sh`, where a thrown exception would be
-          // swallowed and leave `stopped` pending forever, so complete it here.
-          scribe.warn(
-            "Error while checking whether the Bloop server stopped.",
-            e,
-          )
-          stopped.trySuccess(false)
-          ()
-      }
-    poll()
-    stopped.future
-  }
 
   def newServer(
       projectRoot: AbsolutePath,
@@ -583,14 +516,80 @@ final class BloopServers(
 object BloopServers {
   val name = "Bloop"
 
-  // How long to wait for a wedged Bloop server to stop before giving up.
-  private val RecoveryTimeoutMs = 10000L
-
   // How often to poll whether the wedged Bloop server has stopped.
   private val RecoveryPollIntervalMs = 100L
 
   // Needed for creating unique socket files for each bloop connection
   private[BloopServers] val connectionCounter = new AtomicInteger(0)
+
+  /**
+   * Stop a possibly-wedged Bloop server and wait — without blocking a thread —
+   * until it is gone or `timeoutMs` passes.
+   *
+   * `exitServer` sends a synchronous `ng-stop` over the same (possibly stuck)
+   * socket, so it runs on a dedicated daemon thread: a truly hung server then
+   * leaks only that isolated thread instead of occupying an execution-context
+   * one after recovery has moved on. `isServerRunning` is socket-based and
+   * can't tell a surviving wedged server from a fresh one that another Metals
+   * instance started in the meantime, so when the wait times out we only log
+   * and let the caller reconnect anyway instead of failing.
+   */
+  def stopWedgedServer(
+      exitServer: () => Unit,
+      isServerRunning: () => Boolean,
+      sh: ScheduledExecutorService,
+      timeoutMs: Long,
+  )(implicit ec: ExecutionContext): Future[Unit] = {
+    val exit = new Thread("bloop-exit-on-recovery") {
+      override def run(): Unit =
+        try exitServer()
+        catch {
+          case NonFatal(e) =>
+            scribe.warn("Couldn't cleanly stop the Bloop server.", e)
+        }
+    }
+    exit.setDaemon(true)
+    exit.start()
+
+    val deadline = System.currentTimeMillis() + timeoutMs
+    val stopped = Promise[Boolean]()
+    def poll(): Unit =
+      try {
+        if (!isServerRunning()) stopped.trySuccess(true)
+        else if (System.currentTimeMillis() >= deadline)
+          stopped.trySuccess(false)
+        else {
+          sh.schedule(
+            new Runnable { def run(): Unit = poll() },
+            RecoveryPollIntervalMs,
+            TimeUnit.MILLISECONDS,
+          )
+          ()
+        }
+      } catch {
+        case NonFatal(e) =>
+          // A scheduled poll runs on `sh`, where a thrown exception would be
+          // swallowed and leave `stopped` pending forever, so complete it here.
+          scribe.warn(
+            "Error while checking whether the Bloop server stopped.",
+            e,
+          )
+          stopped.trySuccess(false)
+          ()
+      }
+    poll()
+    stopped.future.map {
+      case true => ()
+      case false =>
+        // Either the server can't be stopped, or another Metals instance
+        // already started a fresh one in the meantime — reconnect and let the
+        // retry find out. If the server stays wedged, `build-restart` or
+        // stopping the process manually are the remaining options.
+        scribe.warn(
+          "Bloop server is still reported as running after attempting to stop it; reconnecting anyway."
+        )
+    }
+  }
 
   def createBloopWorkingDir(implicit ec: ExecutionContext): AbsolutePath = {
 

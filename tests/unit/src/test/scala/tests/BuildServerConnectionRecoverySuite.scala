@@ -1,18 +1,102 @@
 package tests
 
 import java.io.IOException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 
+import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
+
+import scala.meta.internal.metals.BloopServers
 import scala.meta.internal.metals.BuildServerConnection.RecoverConnectAction
 
 /**
- * Unit tests for the build-server reconnection decision used by
- * `BuildServerConnection.fromSockets` (see issue #3146). The decision is what
- * lets Metals recover from a Bloop server that reports itself as running but is
- * actually wedged: the first connection failure restarts the server once, and
- * recovery is never attempted more than once so we don't thrash.
+ * Unit tests for the wedged-build-server recovery in
+ * `BuildServerConnection.fromSockets` and `BloopServers` (see issue #3146):
+ * the decision that restarts the server once on the first connection failure
+ * (and never more, so we don't thrash), and the stop-and-wait helper that must
+ * never hang recovery, no matter how the server misbehaves.
  */
 class BuildServerConnectionRecoverySuite extends BaseSuite {
+
+  // A real thread pool, not `munitExecutionContext`: the latter runs `Future`
+  // bodies inline on the test thread, which would deadlock the tests below
+  // that block inside a `Future` until the code under test unblocks them.
+  implicit val ec: ExecutionContextExecutorService =
+    ExecutionContext.fromExecutorService(Executors.newCachedThreadPool())
+  private val scheduler = Executors.newSingleThreadScheduledExecutor()
+
+  override def afterAll(): Unit = {
+    scheduler.shutdownNow()
+    ec.shutdownNow()
+    super.afterAll()
+  }
+
+  test("stop-wedged-server-stops") {
+    // The healthy path: exit brings the server down, the wait observes it.
+    val running = new AtomicBoolean(true)
+    BloopServers
+      .stopWedgedServer(
+        exitServer = () => running.set(false),
+        isServerRunning = () => running.get(),
+        scheduler,
+        timeoutMs = 5000,
+      )
+      .map(_ => assert(!running.get()))
+  }
+
+  test("stop-wedged-server-hanging-exit") {
+    // A truly hung server can block `ng-stop` forever; recovery must still
+    // complete once the timeout passes.
+    val hangForever = new CountDownLatch(1)
+    BloopServers
+      .stopWedgedServer(
+        exitServer = () => hangForever.await(),
+        isServerRunning = () => true,
+        scheduler,
+        timeoutMs = 200,
+      )
+      .map(_ => ())
+  }
+
+  test("stop-wedged-server-broken-check") {
+    // A failing liveness check must complete recovery, not hang it.
+    val checks = new AtomicBoolean(false)
+    BloopServers
+      .stopWedgedServer(
+        exitServer = () => (),
+        isServerRunning = () => {
+          checks.set(true)
+          throw new IOException("daemon socket gone")
+        },
+        scheduler,
+        timeoutMs = 5000,
+      )
+      .map(_ => assert(checks.get()))
+  }
+
+  test("stop-wedged-server-stops-eventually") {
+    // The server takes a few polls to go down after exit; the wait keeps
+    // polling instead of giving up on the first still-running check.
+    val running = new AtomicBoolean(true)
+    val exited = new CountDownLatch(1)
+    Future {
+      exited.await()
+      Thread.sleep(300)
+      running.set(false)
+    }
+    BloopServers
+      .stopWedgedServer(
+        exitServer = () => exited.countDown(),
+        isServerRunning = () => running.get(),
+        scheduler,
+        timeoutMs = 5000,
+      )
+      .map(_ => assert(!running.get()))
+  }
 
   test("first-failure-recovers") {
     // The first timeout or IO failure triggers a one-shot recovery of a

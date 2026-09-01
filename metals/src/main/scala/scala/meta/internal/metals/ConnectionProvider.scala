@@ -616,14 +616,10 @@ class ConnectionProvider(
           disconnect(false)
           val message =
             "Failed to connect with build server, no functionality will work."
-          // An `AlreadyReportedConnectException` has already shown the user a
-          // specific, actionable message, so don't stack the generic one on top.
-          if (!e.isInstanceOf[AlreadyReportedConnectException]) {
-            val details = " See logs for more details."
-            languageClient.showMessage(
-              new MessageParams(MessageType.Error, message + details)
-            )
-          }
+          val details = " See logs for more details."
+          languageClient.showMessage(
+            new MessageParams(MessageType.Error, message + details)
+          )
           scribe.error(message, e)
           BuildChange.Failed
         }

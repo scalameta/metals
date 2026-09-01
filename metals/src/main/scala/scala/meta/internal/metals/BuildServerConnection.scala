@@ -44,13 +44,6 @@ import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.MessageIssueException
 
 /**
- * A build-server connection failure whose message has already been shown to the
- * user, so `ConnectionProvider` should not add a generic one on top of it.
- */
-class AlreadyReportedConnectException(message: String)
-    extends IOException(message)
-
-/**
  * An actively running and initialized BSP connection
  */
 class BuildServerConnection private (

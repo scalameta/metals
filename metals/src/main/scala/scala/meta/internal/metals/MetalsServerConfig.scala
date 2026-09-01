@@ -49,6 +49,8 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param maxLogBackups The maximum number of backup log files.
  * @param metalsToIdleTime The time that needs to pass with no action to consider metals as idle.
  * @param pingInterval Interval in which we ping the build server.
+ * @param bloopRecoveryTimeout How long to wait for an unresponsive Bloop server
+ *                             to stop before reconnecting anyway.
  * @param debuggeeGracePeriod Grace period in seconds for the debuggee to start.
  */
 final case class MetalsServerConfig(
@@ -120,6 +122,10 @@ final case class MetalsServerConfig(
       Option(System.getProperty("metals.build-server-ping-interval"))
         .flatMap(opt => Try(Duration(opt)).toOption)
         .getOrElse(Duration("1m")),
+    bloopRecoveryTimeout: Duration =
+      Option(System.getProperty("metals.bloop-recovery-timeout"))
+        .flatMap(opt => Try(Duration(opt)).toOption)
+        .getOrElse(Duration("20s")),
     worksheetTimeout: Int =
       Option(System.getProperty("metals.worksheet-timeout"))
         .filter(_.forall(Character.isDigit(_)))
@@ -170,6 +176,7 @@ final case class MetalsServerConfig(
       s"max-log-backup=${maxLogBackups}",
       s"server-to-idle-time=${metalsToIdleTime}",
       s"build-server-ping-interval=${pingInterval}",
+      s"bloop-recovery-timeout=${bloopRecoveryTimeout}",
       s"worksheet-timeout=$worksheetTimeout",
       s"debug-server-start-timeout=$debugServerStartTimeout",
       s"debuggee-grace-period=$debuggeeGracePeriod",
