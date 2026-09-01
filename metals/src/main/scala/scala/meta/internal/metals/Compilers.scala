@@ -17,6 +17,7 @@ import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal
 import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.docstrings.MetalsSymbolLink
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
@@ -25,6 +26,7 @@ import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.LogMessages
 import scala.meta.internal.pc.PcSymbolInformation
+import scala.meta.internal.pc.ScalaHover
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.internal.{semanticdb => s}
@@ -33,6 +35,7 @@ import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
 import scala.meta.pc.CodeActionId
 import scala.meta.pc.CompletionItemPriority
+import scala.meta.pc.ContentType
 import scala.meta.pc.HoverSignature
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
@@ -51,10 +54,12 @@ import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentHighlight
+import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintKind
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.SelectionRange
@@ -415,7 +420,11 @@ class Compilers(
     for {
       data <- item.data
       compiler <- buildTargetPCFromCache(new BuildTargetIdentifier(data.target))
-    } yield compiler.completionItemResolve(item, data.symbol).asScala
+    } yield compiler.completionItemResolve(item, data.symbol).asScala.map {
+      resolved =>
+        stripWikiLinkMarkers(resolved.getDocumentation())
+        resolved
+    }
   }.getOrElse(Future.successful(item))
 
   /**
@@ -1126,6 +1135,7 @@ class Compilers(
       params: HoverExtParams,
       token: CancelToken,
   ): Future[Option[HoverSignature]] = {
+    val source = params.textDocument.getUri.toAbsolutePath
     withPCAndAdjustLsp(params) { (pc, pos, adjust) =>
       pc.hover(
         CompilerRangeParamsUtils.offsetOrRange(
@@ -1134,9 +1144,165 @@ class Compilers(
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
       ).asScala
-        .map(_.asScala.map { hover => adjust.adjustHoverResp(hover) })
+        .map(
+          _.asScala.map { hover =>
+            rewriteHoverWikiLinks(adjust.adjustHoverResp(hover), source)
+          }
+        )
     }
   }.getOrElse(Future.successful(None))
+
+  private val markerLinkOpen: String = MetalsSymbolLink.markerLinkOpen
+
+  /**
+   * Replaces every `[title]([[MetalsSymbolLink.scheme]]payload)` link with
+   * `transform(title, payload)`, scanning back from the marker for the label's
+   * `[` so bracketed titles don't leak the marker (scalameta/metals#3383).
+   */
+  private def rewriteMarkerLinks(
+      markdown: String,
+      transform: (String, String) => String,
+  ): String =
+    if (!markdown.contains(MetalsSymbolLink.scheme)) markdown
+    else {
+      val out = new java.lang.StringBuilder(markdown.length)
+      var i = 0
+      while (i < markdown.length) {
+        markdown.indexOf(markerLinkOpen, i) match {
+          case -1 =>
+            out.append(markdown, i, markdown.length)
+            i = markdown.length
+          case marker =>
+            val payloadStart = marker + markerLinkOpen.length
+            val payloadEnd = markdown.indexOf(')', payloadStart)
+            val titleOpen = labelOpenBracket(markdown, marker)
+            if (
+              payloadEnd < 0 || titleOpen < 0 || isEscaped(markdown, marker) ||
+              // Label opening already emitted (an earlier escaped marker advanced
+              // `i` past it); keep verbatim to avoid a backwards span (scalameta/metals#3383).
+              titleOpen < i
+            ) {
+              // Not a well-formed marker link; keep it verbatim and move on.
+              out.append(markdown, i, marker + 1)
+              i = marker + 1
+            } else {
+              out.append(markdown, i, titleOpen)
+              out.append(
+                transform(
+                  markdown.substring(titleOpen + 1, marker),
+                  markdown.substring(payloadStart, payloadEnd),
+                )
+              )
+              i = payloadEnd + 1
+            }
+        }
+      }
+      out.toString
+    }
+
+  /** Whether the char at `idx` is backslash-escaped (odd run of `\` before). */
+  private def isEscaped(s: String, idx: Int): Boolean = {
+    var backslashes = 0
+    var j = idx - 1
+    while (j >= 0 && s.charAt(j) == '\\') {
+      backslashes += 1
+      j -= 1
+    }
+    backslashes % 2 == 1
+  }
+
+  /**
+   * Index of the unescaped `[` opening the label closed by the `]` at
+   * `closeBracket`, or -1. `MarkdownGenerator` escapes the label's own brackets,
+   * so the first unescaped `[` scanning back is the opening one regardless of
+   * how unbalanced the title is.
+   */
+  private def labelOpenBracket(s: String, closeBracket: Int): Int = {
+    var j = closeBracket - 1
+    var result = -1
+    while (j >= 0 && result < 0) {
+      if (s.charAt(j) == '[' && !isEscaped(s, j)) result = j
+      j -= 1
+    }
+    result
+  }
+
+  /**
+   * Rewrites scaladoc wiki links marked with the [[MetalsSymbolLink.scheme]]
+   * sentinel: command-link clients get a clickable command, others get plain
+   * text, so no broken link is ever shown (scalameta/metals#3383).
+   */
+  private def rewriteHoverWikiLinks(
+      hover: HoverSignature,
+      source: AbsolutePath,
+  ): HoverSignature =
+    hover match {
+      // Fast path for the in-process compiler. The presentation compiler may
+      // also run in an isolated classloader, in which case its `HoverSignature`
+      // is a different `ScalaHover` class and we fall through to rewriting the
+      // rendered markup via the `toLsp` interface instead.
+      case scalaHover: ScalaHover =>
+        scalaHover.docstring match {
+          case Some(doc) if doc.contains(MetalsSymbolLink.scheme) =>
+            scalaHover.copy(docstring = Some(rewriteWikiLinks(doc, source)))
+          case _ => hover
+        }
+      case _ =>
+        val lsp = hover.toLsp()
+        Option(lsp.getContents())
+          .filter(c => c.isRight() && c.getRight() != null)
+          .map(_.getRight())
+          .filter(markup =>
+            markup.getValue() != null &&
+              markup.getValue().contains(MetalsSymbolLink.scheme)
+          ) match {
+          case Some(markup) =>
+            new Compilers.RewrittenHover(
+              hover,
+              rewriteWikiLinks(markup.getValue(), source),
+            )
+          case None => hover
+        }
+    }
+
+  private def rewriteWikiLinks(
+      docstring: String,
+      source: AbsolutePath,
+  ): String = {
+    val format = config.commandInHtmlFormat()
+    rewriteMarkerLinks(
+      docstring,
+      (title, payload) =>
+        // Emit a command that resolves the symbol lazily on click (keeps hover
+        // cheap); clients without command links get plain text (scalameta/metals#3383).
+        format match {
+          case Some(fmt) =>
+            val link = ServerCommands.GotoScaladocLink.toCommandLink(
+              ScaladocLinkParams(source.toURI.toString, payload),
+              fmt,
+            )
+            s"[$title]($link)"
+          case None => title
+        },
+    )
+  }
+
+  /**
+   * Strips the [[MetalsSymbolLink.scheme]] marker from docstring markdown,
+   * leaving just the title. Used on non-hover surfaces (completion, signature
+   * help) that just need to avoid leaking a broken marker (scalameta/metals#3383).
+   */
+  private def stripWikiLinkMarkers(markdown: String): String =
+    rewriteMarkerLinks(markdown, (title, _) => title)
+
+  private def stripWikiLinkMarkers(
+      documentation: JEither[String, MarkupContent]
+  ): Unit =
+    if (documentation != null && documentation.isRight()) {
+      val markup = documentation.getRight()
+      if (markup != null && markup.getValue() != null)
+        markup.setValue(stripWikiLinkMarkers(markup.getValue()))
+    }
 
   def prepareRename(
       params: TextDocumentPositionParams,
@@ -1270,6 +1436,7 @@ class Compilers(
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
       ).asScala
+        .map(stripWikiLinkMarkers)
     }.getOrElse(Future.successful(new SignatureHelp()))
 
   def signatureHelp(
@@ -1278,9 +1445,21 @@ class Compilers(
   ): Future[SignatureHelp] =
     loadCompiler(id)
       .map { pc =>
-        pc.signatureHelp(offsetParams).asScala
+        pc.signatureHelp(offsetParams).asScala.map(stripWikiLinkMarkers)
       }
       .getOrElse(Future.successful(new SignatureHelp()))
+
+  private def stripWikiLinkMarkers(help: SignatureHelp): SignatureHelp = {
+    Option(help.getSignatures()).foreach(_.asScala.foreach { signature =>
+      stripWikiLinkMarkers(signature.getDocumentation())
+      Option(signature.getParameters()).foreach(
+        _.asScala.foreach(param =>
+          stripWikiLinkMarkers(param.getDocumentation())
+        )
+      )
+    })
+    help
+  }
 
   def selectionRange(
       params: SelectionRangeParams,
@@ -1851,6 +2030,29 @@ class Compilers(
 }
 
 object Compilers {
+
+  /**
+   * Wraps a [[HoverSignature]] (whose type may live in an isolated
+   * presentation-compiler classloader) to replace its rendered markup with the
+   * wiki-link-rewritten version (scalameta/metals#3383).
+   */
+  private class RewrittenHover(
+      underlying: HoverSignature,
+      rewrittenMarkup: String,
+  ) extends HoverSignature {
+    override def toLsp(): Hover = {
+      val lsp = underlying.toLsp()
+      val contents = lsp.getContents()
+      if (contents != null && contents.isRight() && contents.getRight() != null)
+        contents.getRight().setValue(rewrittenMarkup)
+      lsp
+    }
+    override def signature(): ju.Optional[String] = underlying.signature()
+    override def getRange(): ju.Optional[LspRange] = underlying.getRange()
+    override def withRange(range: LspRange): HoverSignature =
+      new RewrittenHover(underlying.withRange(range), rewrittenMarkup)
+    override def contentType(): ContentType = underlying.contentType()
+  }
 
   sealed trait PresentationCompilerKey
   object PresentationCompilerKey {

@@ -22,6 +22,14 @@ class WikiLinkSuite extends BaseSuite {
   ): Unit =
     test(name)(assertEquals(WikiLink.atOffset(text, offset), expected))
 
+  private def checkSee(
+      name: String,
+      text: String,
+      offset: Int,
+      expected: Option[String],
+  ): Unit =
+    test(name)(assertEquals(WikiLink.seeTagAtOffset(text, offset), expected))
+
   checkSplit("split-plain", "scala.Foo", "scala.Foo", None)
   checkSplit("split-title", "scala.Foo the foo", "scala.Foo", Some("the foo"))
   // A backticked target keeps an embedded space instead of being split as a title.
@@ -63,4 +71,39 @@ class WikiLinkSuite extends BaseSuite {
   checkOffset("offset-adjacent-first", "[[a.A]][[b.B]]", 2, Some("a.A"))
   checkOffset("offset-adjacent-second-open", "[[a.A]][[b.B]]", 7, Some("b.B"))
   checkOffset("offset-closing-bracket", "[[a.A]]", 6, Some("a.A"))
+
+  // A `@see` BLOCK tag's reference is clickable from source, like the link hover
+  // renders it — but only the first token (the target), only when `@see` starts a
+  // comment line, and not for a quoted string (scalameta/metals#3383).
+  checkSee(
+    "see-block-tag",
+    " * @see java.util.List desc",
+    10,
+    Some("java.util.List"),
+  )
+  checkSee("see-block-member", " * @see #bar label", 9, Some("#bar"))
+  // A `@see` in prose (not at a line start) is not a block tag.
+  checkSee("see-mid-line-prose", " * text @see java.util.List", 16, None)
+  // A quoted `@see "..."` is plain text per the Javadoc spec, not a symbol.
+  checkSee("see-quoted-text", " * @see \"just text\"", 10, None)
+  // The description after the target is not part of the clickable link.
+  checkSee("see-offset-in-title", " * @see java.util.List desc", 24, None)
+  // A bare `@see` whose reference sits on a following continuation line still
+  // resolves — the parser appends it to the tag body (scalameta/metals#3383).
+  checkSee(
+    "see-continuation-line",
+    " * @see\n *   java.util.ArrayList\n */",
+    16,
+    Some("java.util.ArrayList"),
+  )
+  // A bare `@see` with nothing but the comment close after it is not a link.
+  checkSee("see-empty-then-close", " * @see\n */", 9, None)
+  // An empty bare `@see` must NOT swallow the following `@see`: the second tag's
+  // reference is still clickable (scalameta/metals#3383).
+  checkSee(
+    "see-empty-then-see",
+    " * @see\n * @see java.util.List\n */",
+    18,
+    Some("java.util.List"),
+  )
 }

@@ -550,6 +550,16 @@ object ServerCommands {
     "[location], where the location is a lsp location object.",
   )
 
+  val GotoScaladocLink = new ParametrizedCommand[ScaladocLinkParams](
+    "goto-scaladoc-link",
+    "Goto scaladoc link",
+    """|Resolve a scaladoc/javadoc documentation link (as rendered in hover) and
+       |move the cursor to its definition. Resolution happens on click so that
+       |building the hover stays cheap (scalameta/metals#3383).
+       |""".stripMargin,
+    "[ScaladocLinkParams]",
+  )
+
   val GotoSuperMethod = new ParametrizedCommand[TextDocumentPositionParams](
     "goto-super-method",
     "Go to super method/field definition",
@@ -825,6 +835,7 @@ object ServerCommands {
       ExtractMemberDefinition,
       GenerateBspConfig,
       GotoPosition,
+      GotoScaladocLink,
       GotoSuperMethod,
       GotoSymbol,
       GotoLog,
@@ -867,6 +878,15 @@ object ServerCommands {
   val allIds: Set[String] = all.map(_.id).toSet
 
 }
+
+/**
+ * A clicked scaladoc/javadoc wiki link. `payload` is the link marker, parsed
+ * lazily so building the hover stays cheap (scalameta/metals#3383).
+ */
+case class ScaladocLinkParams(
+    uri: String,
+    payload: String,
+)
 
 case class DebugUnresolvedMainClassParams(
     mainClass: String,

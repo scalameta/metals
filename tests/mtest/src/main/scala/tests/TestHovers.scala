@@ -64,7 +64,8 @@ trait TestHovers {
   ): String = {
     hover match {
       case Some(value) =>
-        val types = value.getContents.getRight.getValue()
+        val types =
+          DocstringMarkers.decode(value.getContents.getRight.getValue())
 
         val range = Option(value.getRange) match {
           case Some(value) if includeRange =>

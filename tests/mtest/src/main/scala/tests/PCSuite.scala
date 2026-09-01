@@ -130,9 +130,9 @@ trait PCSuite {
   def doc(e: JEither[String, MarkupContent]): String = {
     if (e == null) ""
     else if (e.isLeft) {
-      " " + e.getLeft
+      " " + DocstringMarkers.decode(e.getLeft)
     } else {
-      " " + e.getRight.getValue
+      " " + DocstringMarkers.decode(e.getRight.getValue)
     }
   }.trim
 }
