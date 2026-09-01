@@ -1103,6 +1103,11 @@ object TestFrameworkSymbolRegistry {
       .map(_ -> TestFrameworkUtils.ZioTestFramework)
       .toMap
 
+  private lazy val kyoTestSymbols: Map[String, TestFramework] =
+    TestFrameworkUtils.kyoTestBaseClasses
+      .map(_ -> TestFrameworkUtils.KyoTestFramework)
+      .toMap
+
   private lazy val junitSymbols: Map[String, TestFramework] = Set(
     JunitTestFinder.junitBaseClassSymbol,
     JunitTestFinder.junitAnnotationSymbol,
@@ -1121,6 +1126,7 @@ object TestFrameworkSymbolRegistry {
       munitSymbols ++
       weaverSymbols ++
       zioTestSymbols ++
+      kyoTestSymbols ++
       junitSymbols ++
       testngSymbols
 
@@ -1155,6 +1161,18 @@ object TestFrameworkUtils {
     List("zio.test.sbt.ZTestFramework")
   )
 
+  val KyoTestFramework: TestFramework = TestFramework(
+    List("kyo.test.runner.SbtFramework")
+  )
+
+  /** `SuiteFingerprintMarker` is what kyo-test's own sbt fingerprint matches. */
+  val kyoTestBaseClasses: Set[String] = Set(
+    "kyo/test/SuiteFingerprintMarker#",
+    "kyo/test/Test#",
+    "kyo/test/prop/PropertyTest#",
+    "kyo/test/snapshot/SnapshotTest#",
+  )
+
   private lazy val supportedFrameworks = Set(
     TestFramework.JUnit,
     TestFramework.munit,
@@ -1172,6 +1190,7 @@ object TestFrameworkUtils {
       case "weaver-cats-effect" => WeaverTestFramework
       case "TestNG" => TestFramework.TestNG
       case x if x.contains("ZIO Test") => ZioTestFramework
+      case "kyo-test" => KyoTestFramework
       case _ => TestFramework(Nil)
     }
     .getOrElse(TestFramework(Nil))
