@@ -8,6 +8,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.UUID
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
@@ -403,8 +404,8 @@ final class MbtBuildServer(
           )
         )
       case Some(starter) =>
-        val originId = testOriginId(params)
-        val taskId = "mbt-test"
+        val MbtInvocation(originId, taskId) =
+          mbtInvocation(params.getOriginId, "mbt-test")
         val outcome: Either[String, Future[Int]] = for {
           testSuites <- asScalaTestSuites(params)
           target <- importedBuildTargets
@@ -481,9 +482,6 @@ final class MbtBuildServer(
         )
     }
 
-  private def testOriginId(params: TestParams): String =
-    Option(params.getOriginId).getOrElse("metals-mbt-test")
-
   private def testPrint(
       originId: String,
       taskId: String,
@@ -510,8 +508,8 @@ final class MbtBuildServer(
           )
         )
       case Some(starter) =>
-        val originId = runOriginId(params)
-        val taskId = "mbt-run"
+        val MbtInvocation(originId, taskId) =
+          mbtInvocation(params.getOriginId, "mbt-run")
         val outcome: Either[String, Future[Int]] = for {
           mainClass <- asScalaMainClass(params)
           target <- importedBuildTargets
@@ -560,9 +558,6 @@ final class MbtBuildServer(
         Left("buildTarget/run: expected ScalaMainClass data")
     }
 
-  private def runOriginId(params: RunParams): String =
-    Option(params.getOriginId).getOrElse("metals-mbt-run")
-
   private def runPrint(
       originId: String,
       taskId: String,
@@ -588,6 +583,19 @@ final class MbtBuildServer(
       params.setOriginId(originId)
       client.onBuildTaskFinish(params)
     }
+  }
+
+  private case class MbtInvocation(originId: String, taskId: String)
+
+  private def mbtInvocation(
+      requestedOriginId: String,
+      taskName: String,
+  ): MbtInvocation = {
+    val taskId = s"$taskName-${UUID.randomUUID()}"
+    MbtInvocation(
+      originId = Option(requestedOriginId).getOrElse(taskId),
+      taskId = taskId,
+    )
   }
 
   override def buildTargetCleanCache(

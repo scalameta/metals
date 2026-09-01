@@ -160,7 +160,7 @@ class MbtDebugSessionStarter(
       err: String => Unit,
       onStart: SystemProcess => Unit,
   ): Future[Int] = {
-    out(s"> ${command.mkString(" ")}")
+    out(s"> ${renderCommand(command)}")
     val process = SystemProcess.run(
       command,
       workspace,
@@ -172,6 +172,22 @@ class MbtDebugSessionStarter(
     )
     onStart(process)
     process.complete
+  }
+
+  private def renderCommand(command: List[String]): String =
+    command.map(renderArgument).mkString(" ")
+
+  private def renderArgument(argument: String): String = {
+    val escaped = argument.flatMap {
+      case '\\' => "\\\\"
+      case '"' => "\\\""
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case char if Character.isISOControl(char) => f"\\u${char.toInt}%04x"
+      case char => char.toString
+    }
+    s"\"$escaped\""
   }
 
   private def launchVia(
