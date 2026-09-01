@@ -158,26 +158,42 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withErrorHandling { (exchange, _) =>
-        compilations
-          .cascadeCompile(buildTargets.allBuildTargetIds)
-          .map { _ =>
-            val allDiagnostics = diagnostics.allDiagnostics
-            val diagnosticsOutput = allDiagnostics.show(projectPath)
-            val content =
-              if (diagnosticsOutput.isEmpty) {
-                "Compilation successful."
-              } else if (allDiagnostics.hasErrors) {
-                s"Compilation failed with errors:\n$diagnosticsOutput"
-              } else {
-                s"Compilation successful with warnings:\n$diagnosticsOutput"
-              }
-            CallToolResult
-              .builder()
-              .content(createContent(content))
-              .isError(false)
-              .build()
-          }
-          .toMono
+        val allTargets = buildTargets.allBuildTargetIds
+        if (allTargets.isEmpty)
+          Future
+            .successful(
+              CallToolResult
+                .builder()
+                .content(
+                  createContent(
+                    "Error: no modules found, try running `import-build`."
+                  )
+                )
+                .isError(true)
+                .build()
+            )
+            .toMono
+        else
+          compilations
+            .cascadeCompile(allTargets)
+            .map { _ =>
+              val allDiagnostics = diagnostics.allDiagnostics
+              val diagnosticsOutput = allDiagnostics.show(projectPath)
+              val content =
+                if (diagnosticsOutput.isEmpty) {
+                  "Compilation successful."
+                } else if (allDiagnostics.hasErrors) {
+                  s"Compilation failed with errors:\n$diagnosticsOutput"
+                } else {
+                  s"Compilation successful with warnings:\n$diagnosticsOutput"
+                }
+              CallToolResult
+                .builder()
+                .content(createContent(content))
+                .isError(false)
+                .build()
+            }
+            .toMono
       },
     )
   }
@@ -251,10 +267,12 @@ trait MetalsMcpTools extends Cancelable {
                 .orElse(inUpstreamModulesErrors)
 
               val content =
-                if (compileResult.getStatusCode == StatusCode.CANCELLED) {
-                  diagnosticsContent.getOrElse(
-                    "Compilation cancelled."
-                  )
+                if (buildTarget.isEmpty) {
+                  s"Error: no build target for $path, try running `import-build`."
+                } else if (
+                  compileResult.getStatusCode == StatusCode.CANCELLED
+                ) {
+                  diagnosticsContent.getOrElse("Compilation cancelled.")
                 } else {
                   diagnosticsContent.getOrElse("Compilation successful.")
                 }
@@ -262,7 +280,7 @@ trait MetalsMcpTools extends Cancelable {
               CallToolResult
                 .builder()
                 .content(createContent(content))
-                .isError(false)
+                .isError(buildTarget.isEmpty)
                 .build()
             }
             .toMono
@@ -303,9 +321,8 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val module = arguments.getAs[String]("module")
-        (buildTargets.allScala ++ buildTargets.allJava).find(
-          _.displayName == module
-        ) match {
+        val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
+        targets.find(_.displayName == module) match {
           case Some(target) =>
             compilations
               .compileTarget(target.id)
@@ -344,7 +361,14 @@ trait MetalsMcpTools extends Cancelable {
               .successful(
                 CallToolResult
                   .builder()
-                  .content(createContent(s"Error: Module not found: $module"))
+                  .content(
+                    createContent(
+                      if (targets.isEmpty)
+                        "Error: no modules found, try running `import-build`."
+                      else
+                        s"Error: Module not found: $module, see `list-modules`."
+                    )
+                  )
                   .isError(true)
                   .build()
               )
@@ -467,11 +491,7 @@ trait MetalsMcpTools extends Cancelable {
         "properties": {
           "query": {
             "type": "string",
-            "description": "Substring of the symbol to search for"
-          },
-          "fileInFocus": {
-            "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "A single unqualified name, e.g. `Probe`, not `com.example.Probe`. Wildcards match literally."
           }
         },
         "required": ["query"]
@@ -481,10 +501,10 @@ trait MetalsMcpTools extends Cancelable {
       .builder()
       .name("glob-search")
       .description(
-        """|Search for symbols using glob pattern. Find packages, classes, objects, methods, traits,
-           |and other Scala symbols by partial name matching. Returns symbol locations
-           |and signatures from the entire project workspace.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+        """|Search symbols by name across all modules and their dependency classpaths.
+           |Matches the last part of a fully qualified name at name boundaries, ignoring
+           |case, so `idWordProbe` does not find `MidWordProbe`.
+           |Use `inspect` for details of a result.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -492,14 +512,13 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
-        val path = arguments.getFileInFocus
         indexingPromise.future.flatMap { _ =>
           queryEngine
-            .globSearch(query, Set.empty, path)
+            .globSearch(query, Set.empty)
             .map(result =>
               CallToolResult
                 .builder()
-                .content(createContent(result.map(_.show).mkString("\n")))
+                .content(createContent(result.show))
                 .isError(false)
                 .build()
             )
@@ -515,7 +534,7 @@ trait MetalsMcpTools extends Cancelable {
         "properties": {
           "query": {
             "type": "string",
-            "description": "Substring of the symbol to search for"
+            "description": "A single unqualified name, e.g. `Probe`, not `com.example.Probe`. Wildcards match literally."
           },
           "symbolType": {
             "type": "array",
@@ -523,11 +542,7 @@ trait MetalsMcpTools extends Cancelable {
               "type": "string",
               "enum": ["package", "class", "object", "function", "method", "trait"]
             },
-            "description": "The type of symbol to search for"
-          },
-          "fileInFocus": {
-            "type": "string",
-            "description": "The current file in focus for context, if empty we will try to detect it"
+            "description": "Symbol kinds to include in the results."
           }
         },
         "required": ["query", "symbolType"]
@@ -537,10 +552,8 @@ trait MetalsMcpTools extends Cancelable {
       .builder()
       .name("typed-glob-search")
       .description(
-        """|Search for symbols by type using glob pattern. Filter symbol search results
-           |by specific symbol types (package, class, object, function, method, trait).
-           |More precise than glob-search when you know the symbol type you're looking for.
-           |Use this if you encounter unknown API, for example proprietary libraries.""".stripMargin
+        """|Same as `glob-search`, restricted to the given symbol kinds. Note that packages are
+           |returned only when `package` is among them.""".stripMargin
       )
       .inputSchema(jsonMapper, schema)
       .build()
@@ -548,7 +561,6 @@ trait MetalsMcpTools extends Cancelable {
       tool,
       withErrorHandling { (exchange, arguments) =>
         val query = arguments.getAs[String]("query")
-        val path = arguments.getFileInFocus
         val symbolTypes = arguments.getAsList[String]("symbolType")
 
         val invalidSymbols =
@@ -563,11 +575,11 @@ trait MetalsMcpTools extends Cancelable {
 
         indexingPromise.future.flatMap { _ =>
           queryEngine
-            .globSearch(query, symbolTypesSet, path)
+            .globSearch(query, symbolTypesSet)
             .map(result =>
               CallToolResult
                 .builder()
-                .content(createContent(result.map(_.show).mkString("\n")))
+                .content(createContent(result.show))
                 .isError(false)
                 .build()
             )
@@ -892,7 +904,10 @@ trait MetalsMcpTools extends Cancelable {
             .builder()
             .content(
               createContent(
-                s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
+                if (modules.isEmpty)
+                  "No modules (build targets) found, try running `import-build`."
+                else
+                  s"Available modules (build targets):${modules.map(module => s"\n- $module").mkString}"
               )
             )
             .isError(false)

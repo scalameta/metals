@@ -2,9 +2,13 @@ package tests.mcp
 
 import java.nio.file.Path
 
+import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.mcp.McpPrinter._
 import scala.meta.internal.metals.mcp.SymbolType
+import scala.meta.internal.semanticdb.SymbolInformation.Kind
 
+import ch.epfl.scala.bsp4j.BuildTargetIdentifier
+import org.eclipse.lsp4j.Range
 import tests.BaseLspSuite
 
 class McpQueryLspSuite extends BaseLspSuite("query") {
@@ -72,12 +76,10 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("a/src/main/scala/com/test/TestClass.scala")
       _ = assertNoDiagnostics()
-      path = server.toPath("a/src/main/scala/com/test/TestClass.scala")
       // Test searching for "test" - should find packages, classes, objects, trait
       result <- server.headServer.queryEngine.globSearch(
         "test",
         Set.empty,
-        path,
       )
       _ = assertNoDiff(
         result.show,
@@ -98,7 +100,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       matching <- server.headServer.queryEngine.globSearch(
         "matching",
         Set.empty,
-        path,
       )
       _ = assertNoDiff(
         matching.show,
@@ -112,7 +113,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       testClasses <- server.headServer.queryEngine.globSearch(
         "test",
         Set(SymbolType.Class),
-        path,
       )
       // Test searching for "test" with class filter
       _ = assertNoDiff(
@@ -120,7 +120,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         """|class com.test.TestCaseClass
            |class com.test.TestClass
            |class java.awt.dnd.SerializationTester
-           |package com.test
            |""".stripMargin,
         "query: globSearch(\"test\", Set(SymbolType.Class))",
       )
@@ -129,7 +128,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         .globSearch(
           "method",
           Set(SymbolType.Method, SymbolType.Function),
-          path,
         )
       // Test searching for methods
       _ = assertNoDiff(
@@ -138,7 +136,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |method com.test.TestClass.testMethod
            |method com.test.TestTrait.abstractMethod
            |""".stripMargin,
-        "query: globSearch(\"test\", Set(SymbolType.Class))",
+        "query: globSearch(\"method\", Set(SymbolType.Method, SymbolType.Function))",
       )
     } yield ()
   }
@@ -181,13 +179,11 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("a/src/main/scala/com/test/CaseSensitivity.scala")
       _ = assertNoDiagnostics()
-      path = server.toPath("a/src/main/scala/com/test/CaseSensitivity.scala")
 
       // Case insensitive search for "camel"
       camel <- server.headServer.queryEngine.globSearch(
         "camel",
         Set.empty,
-        path,
       )
       _ = assertNoDiff(
         camel.show,
@@ -199,7 +195,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       uppercase <- server.headServer.queryEngine.globSearch(
         "uppercase",
         Set.empty,
-        path,
       )
       // Case insensitive search for "UPPERCASE"
       _ = assertNoDiff(
@@ -214,7 +209,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       lowercase <- server.headServer.queryEngine.globSearch(
         "lowercase",
         Set.empty,
-        path,
       )
       // Case insensitive search for "lowercase"
       _ = assertNoDiff(
@@ -273,16 +267,12 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
-      path = server.toPath(
-        "a/src/main/scala/com/test/nested/package1/Class1.scala"
-      )
 
       // Search for all packages
       packages <- server.headServer.queryEngine
         .globSearch(
           "package",
           Set(SymbolType.Package),
-          path,
         )
       _ = assertNoDiff(
         packages.show,
@@ -296,7 +286,6 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         .globSearch(
           "test",
           Set(SymbolType.Package),
-          path,
         )
       _ = assertNoDiff(
         testPackages.show,
@@ -310,12 +299,235 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         .globSearch(
           "nested",
           Set(SymbolType.Package),
-          path,
         )
       _ = assertNoDiff(
         nestedPackages.show,
         """|package com.test.nested
            |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("glob search mid-word - workspace") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/test/MidWordProbe.scala
+           |package com.test
+           |
+           |class MidWordProbe
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/test/MidWordProbe.scala")
+      _ = assertNoDiagnostics()
+
+      prefixMatch <- server.headServer.queryEngine.globSearch(
+        "MidWord",
+        Set(SymbolType.Class),
+      )
+      _ = assertNoDiff(
+        prefixMatch.show,
+        """|class com.test.MidWordProbe
+           |""".stripMargin,
+        "query: globSearch(\"MidWord\", Set(SymbolType.Class))",
+      )
+
+      // `McpSymbolSearch.matches` accepts this substring, but the candidate
+      // lookup in `WorkspaceSymbolQuery.matches` rejects it. This asserts a
+      // deficiency: if candidate lookup ever matches substrings, invert the
+      // assertion instead of deleting it.
+      midWord <- server.headServer.queryEngine.globSearch(
+        "idWordProbe",
+        Set(SymbolType.Class),
+      )
+      _ = assert(
+        !midWord.show.contains("MidWordProbe"),
+        s"""|query: globSearch("idWordProbe", Set(SymbolType.Class))
+            |expected no `MidWordProbe` result, but got:
+            |${midWord.show}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("glob search all modules - workspace") {
+    cleanWorkspace()
+    for {
+      // modules without a dependency between them, so that neither module's
+      // transitive sources cover the other one
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}, "b": {}}
+           |/a/src/main/scala/com/mcpshared/McpProbeAlpha.scala
+           |package com.mcpshared
+           |
+           |class McpProbeAlpha
+           |/b/src/main/scala/com/mcpshared/McpProbeBeta.scala
+           |package com.mcpshared
+           |
+           |class McpProbeBeta
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/mcpshared/McpProbeAlpha.scala")
+      _ = assertNoDiagnostics()
+
+      // symbols from every module are returned, without a file in focus
+      classes <- server.headServer.queryEngine.globSearch(
+        "McpProbe",
+        Set(SymbolType.Class),
+      )
+      _ = assertNoDiff(
+        classes.show,
+        """|class com.mcpshared.McpProbeAlpha
+           |class com.mcpshared.McpProbeBeta
+           |""".stripMargin,
+        "query: globSearch(\"McpProbe\", Set(SymbolType.Class))",
+      )
+      _ = assertEquals(classes.cappedByResultLimit, false)
+      _ = assertEquals(classes.searchBudgetExhausted, false)
+
+      // the package is declared in both modules, but reported once
+      packages <- server.headServer.queryEngine.globSearch(
+        "mcpshared",
+        Set(SymbolType.Package),
+      )
+      _ = assertNoDiff(
+        packages.show,
+        """|package com.mcpshared
+           |""".stripMargin,
+        "query: globSearch(\"mcpshared\", Set(SymbolType.Package))",
+      )
+
+      // packages are not returned when the requested types exclude them
+      notPackages <- server.headServer.queryEngine.globSearch(
+        "mcpshared",
+        Set(SymbolType.Class),
+      )
+      _ = assertNoDiff(
+        notPackages.show,
+        "No symbols found.",
+        "query: globSearch(\"mcpshared\", Set(SymbolType.Class))",
+      )
+    } yield ()
+  }
+
+  test("glob search ignores packages from unknown targets") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/active/Main.scala
+           |package com.active
+           |
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/active/Main.scala")
+      _ = assertNoDiagnostics()
+
+      // Package entries can outlive their build targets after a build reimport.
+      _ = server.headServer.workspaceSymbols.addWorkspacePackages(
+        Seq(
+          WorkspaceSymbolInformation(
+            "com/staleprobe/StaleProbe#",
+            Kind.CLASS,
+            new Range(),
+          )
+        ),
+        new BuildTargetIdentifier("stale-target"),
+      )
+      result <- server.headServer.queryEngine.globSearch(
+        "staleprobe",
+        Set(SymbolType.Package),
+      )
+      _ = assertNoDiff(
+        result.show,
+        "No symbols found.",
+        "packages from build targets that no longer exist must be ignored",
+      )
+    } yield ()
+  }
+
+  test("glob search module dependency - workspace") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"]}
+           |}
+           |/a/src/main/scala/com/module_a/OnlyA.scala
+           |package com.module_a
+           |
+           |class OnlyA
+           |/b/src/main/scala/com/module_b/OnlyB.scala
+           |package com.module_b
+           |
+           |class OnlyB
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/module_a/OnlyA.scala")
+      _ = assertNoDiagnostics()
+
+      // `sourcecode` is only on module "b"'s classpath, dependency search is
+      // workspace wide regardless
+      result <- server.headServer.queryEngine.globSearch(
+        "Enclosing",
+        Set(SymbolType.Class, SymbolType.Object),
+      )
+      _ = assert(
+        result.show.contains("sourcecode.Enclosing"),
+        s"""|query: globSearch("Enclosing", Set(SymbolType.Class, SymbolType.Object))
+            |expected a `sourcecode.Enclosing` result, but got:
+            |${result.show}""".stripMargin,
+      )
+    } yield ()
+  }
+
+  test("glob search budget exhausted - dependencies") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/Main.scala
+           |object Main
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/Main.scala")
+      _ = assertNoDiagnostics()
+
+      // longer than `Fuzzy.PrefixSearchLimit`, so not a short query, but broad
+      // enough to exceed `ClasspathSearch.maxNonExactMatches`, which allows 10
+      // non-exact matches, all of them from the JDK here
+      result <- server.headServer.queryEngine.globSearch(
+        "String",
+        Set.empty,
+      )
+      _ = assert(
+        result.searchBudgetExhausted,
+        s"""|query: globSearch("String", Set.empty)
+            |expected the classpath search to report incompleteness, but got:
+            |${result.show}""".stripMargin,
+      )
+      _ = assertEquals(result.cappedByResultLimit, false)
+      _ = assertEquals(
+        result.show.linesIterator.toList.lastOption,
+        Some(
+          "[The search stopped early, matches may exist beyond it. " +
+            "Use a longer or more specific query.]"
+        ),
+        s"""|query: globSearch("String", Set.empty)
+            |expected an incompleteness notice, but got:
+            |${result.show}""".stripMargin,
       )
     } yield ()
   }
