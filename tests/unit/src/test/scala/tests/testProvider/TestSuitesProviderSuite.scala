@@ -2,7 +2,6 @@ package tests.testProvider
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
@@ -12,6 +11,7 @@ import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestExplorerEvent
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
+import scala.meta.internal.metals.{BuildInfo => V}
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder

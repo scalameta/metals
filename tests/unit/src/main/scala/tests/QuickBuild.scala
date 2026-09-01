@@ -328,7 +328,7 @@ object QuickBuild {
    * Bump up this version in case the JSON generation algorithm changes
    * A new version triggers re-generation of QuickBuild files.
    */
-  val version = "v3"
+  val version = "v4"
   def toDependency(
       module: String,
       scalaVersion: String,
