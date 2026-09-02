@@ -89,14 +89,12 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
-      onStart: SystemProcess => Unit = _ => (),
   ): Future[Int] = {
     val command = buildTool.mbtRunCommand(workspace, target, mainClass)
     scribe.info(
       s"MBT run session via ${buildTool.executableName}: ${redactedCommand(command)}"
     )
-    runInTerminal(command, target, workspace, out, err, onStart)
-
+    runInTerminal(command, target, workspace, out, err)
   }
 
   private def resolveSourceFiles(
@@ -126,7 +124,6 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
-      onStart: SystemProcess => Unit = _ => (),
   ): Future[Int] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
     val command = buildTool.mbtTestCommand(
@@ -147,7 +144,7 @@ class MbtDebugSessionStarter(
       )
       workDoneProgress.trackFuture(
         s"Testing $artifactId",
-        runInTerminal(command, target, workspace, out, err, onStart),
+        runInTerminal(command, target, workspace, out, err),
       )
     }
   }
@@ -158,20 +155,18 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
-      onStart: SystemProcess => Unit,
   ): Future[Int] = {
     out(s"> ${renderCommand(command)}")
-    val process = SystemProcess.run(
-      command,
-      workspace,
-      redirectErrorOutput = false,
-      env = javaHomeEnv(target),
-      processOut = Some(ProcessOutput.Lines(out)),
-      processErr = Some(err),
-      discardInput = false,
-    )
-    onStart(process)
-    process.complete
+    SystemProcess
+      .run(
+        command,
+        workspace,
+        redirectErrorOutput = false,
+        env = javaHomeEnv(target),
+        processOut = Some(ProcessOutput.Lines(out)),
+        processErr = Some(err),
+      )
+      .complete
   }
 
   private def renderCommand(command: List[String]): String =
