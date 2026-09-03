@@ -229,7 +229,7 @@ class MetalsLanguageServer(
         val clientInfo = Option(params.getClientInfo()).fold("") { info =>
           s"for client ${info.getName()} ${Option(info.getVersion).getOrElse("")}"
         }
-        logInfoInProdDebugInTests(
+        scribe.info(
           s"Started: Metals version ${BuildInfo.metalsVersion} in folders '${folderPathsWithScala
               .mkString(", ")}' $clientInfo."
         )
