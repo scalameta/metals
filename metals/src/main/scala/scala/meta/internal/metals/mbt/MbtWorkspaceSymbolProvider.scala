@@ -50,6 +50,7 @@ import scala.meta.internal.metals.LoggerReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
+import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
@@ -80,6 +81,7 @@ case class MbtPossibleReferencesParams(
 )
 
 object MbtWorkspaceSymbolProvider {
+
   def isRelevantPath(file: String): Boolean = {
     file.endsWith(".java") ||
     file.endsWith(".proto") ||
@@ -684,127 +686,113 @@ class MbtWorkspaceSymbolProvider(
    * Extracts potential main class candidates from the MBT index without loading semanticdb.
    * Returns candidates that need to be confirmed via semanticdb before use.
    *
-   * Candidates are identified by:
+   * Candidates are identified by a single parallel pass over the index:
    * 1. Symbols ending in "#main()." or ".main()." (Java/Scala main methods)
-   * 2. Files referencing "scala/main#" (@main annotation)
-   * 3. Files referencing "scala/App#" (App trait extension)
+   * 2. Files whose bloom filter contains a `main#` identifier (@main annotation)
+   * 3. Files whose bloom filter contains an `App:` parent identifier (App trait)
    */
   def candidateMainClasses(
       filterPath: AbsolutePath => Boolean
   ): Seq[BuildTargetClasses.MainClassCandidate] = {
-    val candidates =
-      scala.collection.mutable.ArrayBuffer
-        .empty[BuildTargetClasses.MainClassCandidate]
     val javaMain = "#main()."
     val scalaMain = ".main()."
-    val mainAnnotRef = FingerprintedCharSequence.fuzzyReference("scala/main#")
-    val appRef = FingerprintedCharSequence.fuzzyReference("scala/App#")
-    val pathsFromMainSymbols =
-      queryWorkspaceSymbol("main")
-        .flatMap(info => Option(info.getLocation()))
-        .map(_.getUri.toAbsolutePath)
-    val pathsFromReferences =
-      possibleReferences(
-        MbtPossibleReferencesParams(
-          references = Seq(mainAnnotRef.value.toString, appRef.value.toString)
-        )
-      )
-    for {
-      path <- pathsFromMainSymbols.distinct
-      if filterPath(path)
-      doc <- documents.get(path).toList
-    } {
+    val hasher = StringBloomFilter.forEstimatedSize(0)
+    val mainAnnotHash = hasher.computeHashCode(
+      FingerprintedCharSequence.fuzzyReference("main#")
+    )
+    val appParentHash = hasher.computeHashCode(
+      FingerprintedCharSequence.fuzzyReference("App:")
+    )
+    val candidates =
+      new ju.concurrent.ConcurrentLinkedQueue[
+        BuildTargetClasses.MainClassCandidate
+      ]
 
-      // Check for main method symbols in the document
+    for {
+      path <- documentsKeys
+      if filterPath(path)
+      doc <- documents.get(path).toList.iterator
+    } {
+      val hasMainAnnot = doc.bloomFilter.mightContain(mainAnnotHash)
+      val hasApp = doc.bloomFilter.mightContain(appParentHash)
+      val fileCandidates =
+        scala.collection.mutable.ArrayBuffer
+          .empty[BuildTargetClasses.MainClassCandidate]
       for (symbolInfo <- doc.symbols) {
         val symbol = symbolInfo.getSymbol()
-        // Java main method pattern: com/example/Main#main().
-        if (symbol.endsWith(javaMain)) {
-          val classSymbol = symbol.stripSuffix("main().")
-          candidates += BuildTargetClasses.MainClassCandidate(path, classSymbol)
-        }
-        // Scala main method pattern: com/example/Main.main().
-        else if (symbol.endsWith(scalaMain)) {
-          val objectSymbol = symbol.stripSuffix("main().")
-          candidates += BuildTargetClasses.MainClassCandidate(
+        if (symbol.endsWith(javaMain) || symbol.endsWith(scalaMain)) {
+          fileCandidates += BuildTargetClasses.MainClassCandidate(
             path,
-            objectSymbol,
+            symbol.stripSuffix("main()."),
           )
-        }
-      }
-    }
-
-    for {
-      path <- pathsFromReferences
-      if filterPath(path)
-      doc <- documents.get(path).toList
-    } {
-      // Check bloom filter for @main annotation reference
-      if (doc.bloomFilter.mightContain(mainAnnotRef)) {
-        // For @main annotated methods, we need to find method symbols
-        // that could be annotated. We'll add all method symbols as candidates.
-        for (symbolInfo <- doc.symbols) {
-          val symbol = symbolInfo.getSymbol()
+        } else {
           val kind = symbolInfo.getKind()
-          // Methods that could have @main annotation
-          if (kind == Semanticdb.SymbolInformation.Kind.METHOD) {
-            candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
+          /* we have a potential main annot and there exists a method,
+           * which is enough to consider the file a main class candidate.
+           */
+          if (
+            hasMainAnnot &&
+            kind == Semanticdb.SymbolInformation.Kind.METHOD
+          ) {
+            fileCandidates += BuildTargetClasses.MainClassCandidate(
+              path,
+              symbol,
+            )
+            /* Same thing as above, but an App is present.
+             */
+          } else if (
+            hasApp &&
+            kind == Semanticdb.SymbolInformation.Kind.OBJECT &&
+            Symbol(symbol).isToplevel
+          ) {
+            fileCandidates += BuildTargetClasses.MainClassCandidate(
+              path,
+              symbol,
+            )
           }
         }
       }
-      // For App extension, we add class/object symbols as candidates
-      for (symbolInfo <- doc.symbols) {
-        val symbol = symbolInfo.getSymbol()
-        val kind = symbolInfo.getKind()
-        if (
-          kind == Semanticdb.SymbolInformation.Kind.OBJECT &&
-          Symbol(symbol).isToplevel
-        ) {
-          candidates += BuildTargetClasses.MainClassCandidate(path, symbol)
-        }
-
+      if (fileCandidates.nonEmpty) {
+        fileCandidates.foreach(candidates.add)
       }
     }
-    candidates.toSeq
+    candidates.asScala.toSeq
   }
 
   /**
-   * BFS through the inheritance chain starting from the given symbols.
-   * Returns all files that transitively reference those symbols as parents.
+   * Files that may contain test classes: annotation references (JUnit/TestNG)
+   * plus a bounded BFS over test-framework parent types (ScalaTest/MUnit/...).
    *
-   * At each level, top-level traits and classes defined in the current
-   * frontier files are extracted from the MBT index and used as seeds for
-   * the next [[possibleReferences]] call. Already-visited paths are excluded
-   * to prevent cycles.
+   * Annotation hits are candidates only and must not seed the BFS. Seeding with
+   * every class in those files (typical for `@Test` suites) turns the next
+   * [[possibleReferences]] call into O(files × class names) over the whole
+   * index — tens of seconds on a large Java repo such as Trino.
+   *
+   * Inheritance BFS starts from `implementations` and, at every level, seeds the
+   * next query with all top-level traits, interfaces, and classes of the matched
+   * files, so JUnit 3 `TestCase` subclasses and custom test bases both chain.
    */
   private def transitiveReferenceFiles(
       references: Seq[String],
       implementations: Seq[String],
   ): Set[AbsolutePath] = {
     val allMatchedPaths = scala.collection.mutable.HashSet.empty[AbsolutePath]
-    var frontier: Set[AbsolutePath] = possibleReferences(
-      MbtPossibleReferencesParams(
-        references = references,
-        implementations = implementations,
+    if (references.nonEmpty) {
+      allMatchedPaths ++= possibleReferences(
+        MbtPossibleReferencesParams(references = references)
       )
-    )
+    }
+
+    var frontier: Set[AbsolutePath] =
+      if (implementations.isEmpty) Set.empty
+      else
+        possibleReferences(
+          MbtPossibleReferencesParams(implementations = implementations)
+        )
 
     while (frontier.nonEmpty) {
       allMatchedPaths ++= frontier
-
-      val nextBaseSymbols = frontier.flatMap { path =>
-        documents.get(path).toSeq.flatMap { doc =>
-          doc.symbols
-            .filter { sym =>
-              val kind = sym.getKind()
-              (kind == Semanticdb.SymbolInformation.Kind.TRAIT ||
-                kind == Semanticdb.SymbolInformation.Kind.CLASS) &&
-              Symbol(sym.getSymbol()).isToplevel
-            }
-            .map(_.getSymbol())
-        }
-      }.toSeq
-
+      val nextBaseSymbols = frontier.flatMap(bfsSeedSymbols).toSeq
       frontier =
         if (nextBaseSymbols.isEmpty) Set.empty
         else
@@ -814,6 +802,27 @@ class MbtWorkspaceSymbolProvider(
     }
 
     allMatchedPaths.toSet
+  }
+
+  private def bfsSeedSymbols(
+      path: AbsolutePath
+  ): Seq[String] = {
+    documents.get(path).toSeq.flatMap { doc =>
+      doc.symbols.collect {
+        case sym
+            if isBfsSeedKind(sym.getKind()) &&
+              Symbol(sym.getSymbol()).isToplevel =>
+          sym.getSymbol()
+      }
+    }
+  }
+
+  private def isBfsSeedKind(
+      kind: Semanticdb.SymbolInformation.Kind
+  ): Boolean = {
+    kind == Semanticdb.SymbolInformation.Kind.TRAIT ||
+    kind == Semanticdb.SymbolInformation.Kind.INTERFACE ||
+    kind == Semanticdb.SymbolInformation.Kind.CLASS
   }
 
   /**
@@ -954,25 +963,27 @@ class MbtWorkspaceSymbolProvider(
         }
       }
     }
-    val fingerprints =
-      queries.iterator.map(FingerprintedCharSequence.fuzzyReference).toBuffer
-    val result = TrieMap.empty[AbsolutePath, Unit]
-    for {
-      path <- documentsKeys.toList
-      doc <- documents.get(path).toList.iterator
-      if fingerprints.exists(query => doc.bloomFilter.mightContain(query))
-    } {
-      if (doc.bloomFilter.isFull) {
-        scribe.warn(s"mbt-v2: bloom filter is full for ${path}")
-      }
-      if (path.exists) {
+    if (queries.isEmpty) {
+      Set.empty
+    } else {
+      // Precompute hashes once. `mightContain(CharSequence)` re-hashes the query
+      // for every document; WorkspaceSymbolQuery does the same precompute.
+      val hasher = StringBloomFilter.forEstimatedSize(0)
+      val hashes = queries.iterator.map { query =>
+        hasher.computeHashCode(FingerprintedCharSequence.fuzzyReference(query))
+      }.toArray
+      val result = TrieMap.empty[AbsolutePath, Unit]
+      // Iterate `documentsKeys` as a ParArray. `.toList` forced a sequential
+      // copy of the whole index on every call.
+      for {
+        path <- documentsKeys
+        doc <- documents.get(path).toList.iterator
+        if hashes.exists(doc.bloomFilter.mightContain)
+      } {
         result(path) = ()
-      } else {
-        // Clean up removed files
-        documents.remove(path)
       }
+      result.keysIterator.toSet
     }
-    result.keysIterator.toSet
   }
 
   // Convenience method to avoid dealing with the visitor-based query API
