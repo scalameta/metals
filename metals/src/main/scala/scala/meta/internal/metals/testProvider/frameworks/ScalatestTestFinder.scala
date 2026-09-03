@@ -318,6 +318,8 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/funsuite/AnyFunSuite#",
       "org/scalatest/funsuite/AnyFunSuiteLike#",
+      "org/scalatest/funsuite/FixtureAnyFunSuiteLike#",
+      "org/scalatest/funsuite/FixtureAnyFunSuite#",
     )
     override val leafMethods: Set[String] = Set("test", "ignore")
   }
@@ -326,6 +328,8 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/propspec/AnyPropSpec#",
       "org/scalatest/propspec/AnyPropSpecLike#",
+      "org/scalatest/propspec/FixtureAnyPropSpecLike#",
+      "org/scalatest/propspec/FixtureAnyPropSpec#",
     )
     override val leafMethods: Set[String] = Set("property", "ignore")
   }
@@ -334,6 +338,8 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/flatspec/AnyFlatSpec#",
       "org/scalatest/flatspec/AnyFlatSpecLike#",
+      "org/scalatest/flatspec/FixtureAnyFlatSpecLike#",
+      "org/scalatest/flatspec/FixtureAnyFlatSpec#",
     )
   }
 
@@ -341,6 +347,10 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/funspec/AnyFunSpec#",
       "org/scalatest/funspec/AnyFunSpecLike#",
+      "org/scalatest/funspec/FixtureAnyFunSpecLike#",
+      "org/scalatest/funspec/FixtureAnyFunSpec#",
+      "org/scalatest/funspec/PathAnyFunSpec#",
+      "org/scalatest/funspec/PathAnyFunSpecLike#",
     )
   }
 
@@ -364,6 +374,10 @@ object ScalatestStyle {
     val symbols: Set[String] = Set(
       "org/scalatest/freespec/AnyFreeSpec#",
       "org/scalatest/freespec/AnyFreeSpecLike#",
+      "org/scalatest/freespec/FixtureAnyFreeSpecLike#",
+      "org/scalatest/freespec/FixtureAnyFreeSpec#",
+      "org/scalatest/freespec/PathAnyFreeSpec#",
+      "org/scalatest/freespec/PathAnyFreeSpecLike#",
     )
     override val intermediateMethods: Set[String] = Set("-")
     override val leafMethods: Set[String] = Set("in", "ignore")
