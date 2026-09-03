@@ -263,6 +263,7 @@ abstract class MetalsLspService(
     clientConfig.initialConfig.enableBestEffort,
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
+  val initialBuildTargetsReady: Promise[Unit] = Promise[Unit]()
   def workspaceSymbolIndexingPromise: Promise[Unit] = {
     if (userConfig.workspaceSymbolProvider.isMBT) {
       // Don't block on BSP indexing when mbt is enabled.
@@ -928,14 +929,15 @@ abstract class MetalsLspService(
     focusedDocumentBuildTarget.set(
       buildTargets.inverseSources(path).getOrElse(null)
     )
-    buildTargets
+    val buildTargetClassesReady = buildTargets
       .inverseSources(path)
       .flatMap(buildTargets.activatePlatformForTarget)
-      .foreach { platform =>
+      .map { platform =>
         buildTargetClasses.rebuildIndex(
           buildTargets.targetsByPlatform(platform)
         )
       }
+      .getOrElse(Future.unit)
 
     // Update md5 fingerprint from file contents on disk
     fingerprints.add(path, FileIO.slurp(path, charset))
@@ -974,12 +976,14 @@ abstract class MetalsLspService(
                 compilations.compileFile(path, assumeDidNotChange = true),
                 compilers.load(List(path)),
                 parser,
-                testProvider.didOpen(path),
+                buildTargetClassesReady.flatMap(_ => testProvider.didOpen(path)),
               )
             )
             .ignoreValue
         }
-        maybeImportFileAndLoad(path, load)
+        initialBuildTargetsReadyForDiagnostics.flatMap(_ =>
+          maybeImportFileAndLoad(path, load)
+        )
       }.asJava
     }
   }
@@ -1010,6 +1014,7 @@ abstract class MetalsLspService(
         Future.successful(DidFocusResult.NoBuildTarget)
       } else {
         for {
+          _ <- initialBuildTargetsReadyForDiagnostics
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics.publishDiagnosticsNotAdjusted(
             path,
@@ -1032,6 +1037,17 @@ abstract class MetalsLspService(
       !path.isWorkspaceSource(folder) ||
       buildTargets.isDependencySource(path) ||
       buildTargets.checkIfGeneratedSource(path.toNIO)
+
+  private def initialBuildTargetsReadyForDiagnostics: Future[Unit] =
+    if (
+      userConfig.workspaceSymbolProvider.isMBT &&
+      userConfig.javaSymbolLoader.isTurbineClasspath
+    ) {
+      buildServerPromise.future.flatMap { _ =>
+        if (bspSession.isDefined) initialBuildTargetsReady.future
+        else Future.unit
+      }
+    } else Future.unit
 
   def sync(
       uri: String,
@@ -1164,15 +1180,15 @@ abstract class MetalsLspService(
       isIncludedPath: AbsolutePath => Boolean
   ): Future[Unit] = {
     // rerun diagnostics for all open documents
-    val futures =
-      buffers.open.filter(isIncludedPath).map { path =>
+    buffers.open.filter(isIncludedPath).foldLeft(Future.unit) {
+      case (previous, path) =>
         for {
+          _ <- previous
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics
             .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
         } yield ()
-      }
-    Future.sequence(futures).map(_ => ())
+    }
   }
 
   def resetPresentationCompilers(): Future[Unit] = {
@@ -1182,7 +1198,9 @@ abstract class MetalsLspService(
 
   def restartFallbackCompilers(): Future[Unit] = {
     compilers.restartFallbackCompilers()
-    refreshDiagnostics(path => buildTargets.inverseSources(path).isEmpty)
+    initialBuildTargetsReadyForDiagnostics.flatMap(_ =>
+      refreshDiagnostics(path => buildTargets.inverseSources(path).isEmpty)
+    )
   }
 
   protected def didCompileTarget(report: CompileReport): Unit = {

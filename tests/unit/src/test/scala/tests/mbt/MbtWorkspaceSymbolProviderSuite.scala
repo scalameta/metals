@@ -1,17 +1,39 @@
 package tests.mbt
 
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.util.EnumSet
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
+import javax.tools.Diagnostic
+import javax.tools.DiagnosticCollector
+import javax.tools.JavaFileObject
+import javax.tools.SimpleJavaFileObject
+import javax.tools.StandardLocation
+import javax.tools.ToolProvider
 
+import scala.collection.JavaConverters._
+import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
+import scala.util.Using
 
 import scala.meta.internal.metals.Configs
+import scala.meta.internal.metals.EmptyWorkDoneProgress
+import scala.meta.internal.metals.LoggerReportContext
+import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
+import scala.meta.internal.metals.mbt.TurbineCompileResult
+import scala.meta.internal.metals.mbt.TurbineCompiler
+import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.io.AbsolutePath
+import scala.meta.pc
 
+import com.google.turbine.diag.SourceFile
+import com.sun.source.util.JavacTask
 import munit.AnyFixture
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
@@ -154,6 +176,30 @@ object Hello2 {
     )
   }
 
+  test("turbine-indexes-proto-java-package-with-protobuf-lsp-disabled") {
+    FileLayout.fromString(
+      """
+/example/Dependency.proto
+syntax = "proto3";
+package example;
+option java_package = "generated.example";
+message Dependency {}
+""",
+      root = workspace(),
+    )
+    val proto = workspace().resolve("example/Dependency.proto")
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    assertEquals(
+      provider.onReindex().awaitBackgroundJobs(),
+      IndexingStats(totalFiles = 1, updatedFiles = 1),
+    )
+    assert(provider.listAllPackages().containsKey("generated/example/"))
+    assert(provider.document(proto).exists(_.cachedJavaOutlines.isEmpty))
+    assert(provider.protoJavaOutlines(proto).nonEmpty)
+  }
+
   test("exclude-module-info-java") {
     FileLayout.fromString(
       """
@@ -226,4 +272,156 @@ module com.example {
     assertResultIncludes = "Object TestProjectEnum ",
   )
 
+}
+
+class TurbineClasspathFileManagerSuite extends munit.FunSuite {
+  implicit val reportContext: LoggerReportContext.type = LoggerReportContext
+  implicit val executionContext: ExecutionContext = ExecutionContext.global
+
+  private val workspaceSource =
+    "package example; public class Dependency { public static class Builder { public void workspace() {} } }"
+  private val projectSource =
+    "package example; public class Dependency { public static class Builder { public void project() {} } }"
+
+  private def compile(source: String): TurbineCompileResult =
+    TurbineCompiler.compileClassfiles(
+      ParArray(source),
+      (text: String) => Seq(new SourceFile("Dependency.java", text)),
+      Nil,
+      EmptyWorkDoneProgress,
+    )
+
+  private def checkTargetClasspathPrecedence(
+      isGlobalClasspathEntry: Boolean
+  ): Unit = {
+    val projectResult = compile(projectSource)
+    val jar = Files.createTempFile("metals-project-classpath", ".jar")
+    val output = new ZipOutputStream(Files.newOutputStream(jar))
+    try {
+      for ((name, bytes) <- projectResult.lowered.bytes().asScala) {
+        output.putNextEntry(new ZipEntry(s"$name.class"))
+        output.write(bytes)
+        output.closeEntry()
+      }
+    } finally output.close()
+
+    var fallbackClasspath = Seq.empty[java.nio.file.Path]
+    val protoOutline = VirtualTextDocument(
+      URI.create("file:///Dependency.java"),
+      pc.Language.JAVA,
+      workspaceSource,
+      Seq("example/"),
+      Seq("example/Dependency#"),
+    )
+    val compiler = new TurbineCompiler[String](
+      () => ParArray(workspaceSource),
+      text => Seq(new SourceFile("Dependency.java", text)),
+      () => fallbackClasspath,
+      EmptyWorkDoneProgress,
+      () => Configs.TurbineRecompileDelayConfig.testing,
+      packageName =>
+        if (packageName == "example/") Iterator(protoOutline)
+        else Iterator.empty,
+      Sleeper.TestingSleeper,
+      () => (),
+      _ => (),
+    )
+    compiler.doCompileNow()
+    val workspaceResult = compiler.result
+    if (isGlobalClasspathEntry) fallbackClasspath = Seq(jar)
+
+    val standardFileManager = ToolProvider
+      .getSystemJavaCompiler()
+      .getStandardFileManager(null, null, null)
+    standardFileManager.setLocationFromPaths(
+      StandardLocation.CLASS_PATH,
+      List(jar).asJava,
+    )
+    val fileManager = compiler.createFileManager(
+      standardFileManager,
+      List(jar).asJava,
+    )
+    try {
+      val classfiles = fileManager
+        .list(
+          StandardLocation.CLASS_PATH,
+          "example",
+          EnumSet.of(JavaFileObject.Kind.CLASS),
+          false,
+        )
+        .asScala
+        .toList
+      val obtained = classfiles.map { classfile =>
+        val binaryName = fileManager
+          .inferBinaryName(StandardLocation.CLASS_PATH, classfile)
+          .replace('.', '/')
+        binaryName -> Using.resource(classfile.openInputStream())(
+          _.readAllBytes().toSeq
+        )
+      }.toMap
+      val expectedResult =
+        if (isGlobalClasspathEntry) workspaceResult
+        else projectResult
+      val expected = expectedResult.lowered
+        .bytes()
+        .asScala
+        .map { case (name, bytes) =>
+          name -> bytes.toSeq
+        }
+        .toMap
+      assertEquals(obtained, expected)
+      val sourcepath = fileManager
+        .list(
+          StandardLocation.SOURCE_PATH,
+          "example",
+          EnumSet.of(JavaFileObject.Kind.SOURCE),
+          false,
+        )
+        .asScala
+        .toList
+      assertEquals(
+        sourcepath.map(_.toUri()),
+        if (isGlobalClasspathEntry) List(protoOutline.toUri()) else Nil,
+      )
+      val diagnostics = new DiagnosticCollector[JavaFileObject]()
+      val method = if (isGlobalClasspathEntry) "workspace" else "project"
+      val source = new SimpleJavaFileObject(
+        URI.create("string:///example/Main.java"),
+        JavaFileObject.Kind.SOURCE,
+      ) {
+        override def getCharContent(
+            ignoreEncodingErrors: Boolean
+        ): CharSequence =
+          s"package example; public class Main { void test() { new Dependency.Builder().$method(); } }"
+      }
+      val task = ToolProvider
+        .getSystemJavaCompiler()
+        .getTask(
+          null,
+          fileManager,
+          diagnostics,
+          List("-Xprefer:source", "-proc:none", "-sourcepath", "").asJava,
+          null,
+          List(source).asJava,
+        )
+        .asInstanceOf[JavacTask]
+      task.parse()
+      task.analyze()
+      val errors = diagnostics.getDiagnostics().asScala.filter { diagnostic =>
+        diagnostic.getKind() == Diagnostic.Kind.ERROR
+      }
+      assertEquals(errors.map(_.toString()).toList, List.empty[String])
+    } finally {
+      fileManager.close()
+      Files.deleteIfExists(jar)
+    }
+  }
+
+  test("target-classpath-before-workspace-headers") {
+    checkTargetClasspathPrecedence(isGlobalClasspathEntry = false)
+  }
+
+  test("workspace-headers-before-global-fallback-classpath") {
+    checkTargetClasspathPrecedence(isGlobalClasspathEntry = true)
+  }
 }

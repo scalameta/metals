@@ -296,6 +296,46 @@ class MbtBuildServerLspSuite
     }
   }
 
+  test("mbt-initial-focus-waits-for-targets") {
+    cleanWorkspace()
+    val source = "src/Main.java"
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addJavaDependency("com.google.guava", "guava", "33.5.0-jre")
+      .addNamespace("main", List("src/**"))
+      .build()
+    writeLayout(
+      s"""|/.metals/mbt.json
+          |$mbtJson
+          |/$source
+          |package example;
+          |
+          |import com.google.common.collect.ImmutableList;
+          |
+          |public class Main {
+          |  public static ImmutableList<String> names = ImmutableList.of("Alice");
+          |}
+          |""".stripMargin
+    )
+
+    for {
+      _ <- server.initialize()
+      didOpen = server.didOpen(source)
+      didFocus = server.didFocus(source)
+      unexpectedDiagnostics = client.nextDiagnosticsFor(
+        workspace.resolve(source),
+        _.nonEmpty,
+      )
+      _ = assert(!didFocus.isCompleted)
+      _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
+      _ <- didOpen
+      _ <- didFocus
+      _ = server.assertBuildServerConnection()
+      _ = assert(!unexpectedDiagnostics.isCompleted)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()
     val scalaLibJarUri =
@@ -490,6 +530,66 @@ class MbtBuildServerLspSuite
         targetIds,
         Set("mbt://namespace/core", "mbt://namespace/extra"),
       )
+    } yield ()
+  }
+
+  test("mbt-target-update-refreshes-java-diagnostics") {
+    cleanWorkspace()
+    val source = "src/Main.java"
+    val otherSource = "src/Other.java"
+    val initialMbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addNamespace("main", List("src/**"))
+      .build()
+    val updatedMbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addJavaDependency("com.google.guava", "guava", "33.5.0-jre")
+      .addNamespace("main", List("src/**"))
+      .build()
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$initialMbtJson
+            |/$source
+            |package example;
+            |
+            |import com.google.common.collect.ImmutableList;
+            |
+            |public class Main {
+            |  public static ImmutableList<String> names = ImmutableList.of("Alice");
+            |}
+            |/$otherSource
+            |package example;
+            |
+            |import com.google.common.collect.ImmutableList;
+            |
+            |public class Other {
+            |  public static ImmutableList<String> names = ImmutableList.of("Bob");
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(source)
+      _ <- server.didFocus(source)
+      _ <- server.didOpen(otherSource)
+      _ <- server.didFocus(otherSource)
+      _ = assert(
+        client.workspaceDiagnostics.nonEmpty,
+        "Expected diagnostics before the target classpath update",
+      )
+      _ = Files.writeString(
+        workspace.resolve(".metals").resolve("mbt.json").toNIO,
+        updatedMbtJson,
+      )
+      diagnosticsCleared = Future.sequence(
+        List(source, otherSource).map(path =>
+          client.nextDiagnosticsFor(
+            workspace.resolve(path),
+            _.isEmpty,
+          )
+        )
+      )
+      _ <- server.didChangeWatchedFiles(".metals/mbt.json")
+      _ <- diagnosticsCleared
+      _ = assertNoDiagnostics()
     } yield ()
   }
 

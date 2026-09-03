@@ -28,6 +28,7 @@ trait IndexProviders {
   def workDoneProgress: WorkDoneProgress
   def timerProvider: TimerProvider
   def indexingPromise: Promise[Unit]
+  def initialBuildTargetsReady: Promise[Unit]
   def buildData(): Seq[Indexer.BuildTool]
   def clientConfig: ClientConfiguration
   def definitionIndex: OnDemandSymbolIndex
