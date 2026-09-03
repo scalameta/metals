@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.mbt
 
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
+import java.nio.channels.Channels
+import java.nio.channels.Pipe
 
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
@@ -54,10 +54,12 @@ abstract class MbtBuildServerConnectionFactory(
   override protected def connect()(implicit
       ec: ExecutionContextExecutorService
   ): Future[SocketConnection] = Future.successful {
-    val clientInput = new PipedInputStream()
-    val serverOutput = new PipedOutputStream(clientInput)
-    val serverInput = new PipedInputStream()
-    val clientOutput = new PipedOutputStream(serverInput)
+    val serverToClient = Pipe.open()
+    val clientToServer = Pipe.open()
+    val clientInput = Channels.newInputStream(serverToClient.source())
+    val serverOutput = Channels.newOutputStream(serverToClient.sink())
+    val serverInput = Channels.newInputStream(clientToServer.source())
+    val clientOutput = Channels.newOutputStream(clientToServer.sink())
     val finished = Promise[Unit]()
     def eagerBuild() = {
       val updatedBuild = mbtBuild()

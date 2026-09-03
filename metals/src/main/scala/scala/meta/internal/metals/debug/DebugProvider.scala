@@ -57,6 +57,7 @@ import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.debug.server.MetalsDebuggee
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.MbtTestResultAdapter
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.io.AbsolutePath
@@ -371,10 +372,11 @@ class DebugProvider(
               targetId,
               passed,
               duration,
+              MbtTestReport.fromTestResult(result),
             )
             .foreach(runner.testResult)
         }
-        result
+        new b.RunResult(result.getStatusCode)
       }
     }
   }

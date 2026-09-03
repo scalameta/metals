@@ -13,6 +13,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
@@ -183,6 +185,42 @@ case class MavenBuildTool(
       )
     )
 
+  override def mbtTestRun(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Future[MbtTestCommand] =
+    withTestReport(
+      workspace,
+      target,
+      mbtTestCommand(workspace, target, testSuites, sourceFiles, framework),
+    )
+
+  private def withTestReport(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      command: Future[List[String]],
+  ): Future[MbtTestCommand] = {
+    val reportDirectories = (
+      mavenModuleDirectory(target)
+        .getOrElse(workspace)
+        .resolve("target/surefire-reports") ::
+        target
+          .runClassDirectories(workspace, "maven", includeTests = true)
+          .map(_.parent.resolve("surefire-reports"))
+    ).distinct
+    command.map { arguments =>
+      MbtTestCommand(
+        arguments,
+        MbtTestReportProvider.changedJunitXmlDirectories(
+          reportDirectories
+        ),
+      )
+    }(ec)
+  }
+
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
@@ -221,6 +259,23 @@ case class MavenBuildTool(
         forkedDebugAgentFlag = Some(debugAgentFlag),
       )
     )
+  }
+
+  override def mbtTestDebugRunWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Int => Future[MbtTestCommand] = {
+    val commandWithPort = mbtTestDebugCommandWithPort(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      framework,
+    )
+    port => withTestReport(workspace, target, commandWithPort(port))
   }
 
   private def mbtTestExecCommand(

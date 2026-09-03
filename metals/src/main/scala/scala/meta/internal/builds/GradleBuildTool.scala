@@ -3,6 +3,7 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.UUID
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -13,6 +14,8 @@ import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
@@ -277,6 +280,39 @@ case class GradleBuildTool(
       )
     )
 
+  override def mbtTestRun(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Future[MbtTestCommand] =
+    withTestReport(
+      Future.successful(
+        gradleTestCommand(
+          target,
+          testSuites,
+          debugAgentFlag = None,
+          framework = framework,
+        )
+      )
+    )
+
+  private def withTestReport(
+      command: Future[List[String]]
+  ): Future[MbtTestCommand] = {
+    val reportDirectory = AbsolutePath(
+      tempDir.resolve(s"gradle-test-${UUID.randomUUID()}")
+    )
+    command.map { arguments =>
+      val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
+      MbtTestCommand(
+        arguments.take(1) ::: reportArgument :: arguments.drop(1),
+        MbtTestReportProvider.junitXmlDirectory(reportDirectory),
+      )
+    }
+  }
+
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
@@ -305,6 +341,23 @@ case class GradleBuildTool(
     )
   }
 
+  override def mbtTestDebugRunWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Int => Future[MbtTestCommand] = {
+    val commandWithPort = mbtTestDebugCommandWithPort(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      framework,
+    )
+    port => withTestReport(commandWithPort(port))
+  }
+
   private def gradleTestCommand(
       target: MbtTarget,
       testSuites: ScalaTestSuites,
@@ -316,8 +369,10 @@ case class GradleBuildTool(
         testSuites.getJvmOptions
       )
     val initScriptArgs =
-      List("--init-script", gradleTestInitScript(target, jvmOptions).toString)
-
+      List(
+        "--init-script",
+        gradleTestInitScript(target, jvmOptions).toString,
+      )
     gradleBaseCommand() ::: List(
       "--console=plain"
     ) ::: initScriptArgs ::: List(
@@ -349,6 +404,20 @@ case class GradleBuildTool(
         else s"    task.jvmArgs(${GradleBuildTool.groovyList(jvmOptions)})\n"
       s"""|  project.tasks.withType(Test).configureEach { task ->
           |$jvmArgsLine
+          |    def metalsTestReportDirectory = System.getProperty('metals.testReportDirectory')
+          |    if (metalsTestReportDirectory != null) {
+          |      def junitXml = task.reports.junitXml
+          |      if (junitXml.hasProperty('required')) {
+          |        junitXml.required.set(true)
+          |      } else {
+          |        junitXml.enabled = true
+          |      }
+          |      if (junitXml.hasProperty('outputLocation')) {
+          |        junitXml.outputLocation.set(task.project.file(metalsTestReportDirectory))
+          |      } else {
+          |        junitXml.destination = task.project.file(metalsTestReportDirectory)
+          |      }
+          |    }
           |    task.testLogging {
           |      events 'failed', 'skipped'
           |      exceptionFormat = 'full'

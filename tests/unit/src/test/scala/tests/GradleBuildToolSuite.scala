@@ -6,9 +6,9 @@ import java.nio.file.Paths
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
-import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.GradleBuildTool
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.io.AbsolutePath
@@ -171,6 +171,35 @@ class GradleBuildToolSuite extends BaseSuite {
       command.takeRight(3),
       List(":app:test", "--tests", "a.FooTest.testAddition"),
     )
+  }
+
+  test("gradle-mbt-test-run-configures-junit-report") {
+    val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
+    val testSuites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection("a.FooTest", Nil.asJava)
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+
+    val run = Await.result(
+      gradleBuildTool(workspace).mbtTestRun(
+        workspace,
+        mbtTarget("app"),
+        testSuites,
+        Nil,
+      ),
+      Duration.Inf,
+    )
+    val reportArgument = run.arguments.find(
+      _.startsWith("-Dmetals.testReportDirectory=")
+    )
+    val initScriptIndex = run.arguments.indexOf("--init-script")
+    val initScript = AbsolutePath(Paths.get(run.arguments(initScriptIndex + 1)))
+
+    assert(reportArgument.nonEmpty)
+    assert(initScript.readText.contains("junitXml.outputLocation.set"))
   }
 
   test("gradle-mbt-test-debug-command-uses-init-script") {

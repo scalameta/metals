@@ -162,6 +162,43 @@ class MavenBuildToolSuite extends BaseSuite {
     )
   }
 
+  test("maven-mbt-test-run-reads-new-surefire-report") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt"))
+    val module = workspace.resolve("app")
+    val reportDirectory = module.resolve("target/surefire-reports")
+    val testSuites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection("com.example.MySuite", Nil.asJava)
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+    val run = Await.result(
+      mavenBuildTool(workspace).mbtTestRun(
+        workspace,
+        mbtTarget(
+          "com.example:app:1.0.0",
+          "app/target/test-classes",
+          projectDir = Some(module),
+        ),
+        testSuites,
+        Nil,
+      ),
+      Duration.Inf,
+    )
+    reportDirectory.createDirectories()
+    reportDirectory
+      .resolve("TEST-com.example.MySuite.xml")
+      .writeText(
+        """<testsuite name="com.example.MySuite"><testcase classname="com.example.MySuite" name="passes" time="0.001" /></testsuite>"""
+      )
+
+    assertEquals(
+      run.reportProvider.read().testCases.map(_.testName),
+      List("passes"),
+    )
+  }
+
   test("maven-mbt-debug-command-uses-module-pom") {
     val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt"))
     val modulePom = workspace.resolve("app/pom.xml")

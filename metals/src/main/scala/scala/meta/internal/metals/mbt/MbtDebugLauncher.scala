@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt
 
+import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters.ListHasAsScala
 
@@ -41,6 +42,20 @@ trait MbtDebugLauncher { self: BuildTool =>
       framework: Option[TestFramework] = None,
   ): Future[List[String]]
 
+  def mbtTestRun(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Future[MbtTestCommand] =
+    mbtTestCommand(workspace, target, testSuites, sourceFiles, framework)
+      .map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+        ExecutionContext.parasitic
+      )
+
+  def transformMbtTestOutput(line: String): Option[String] = Some(line)
+
   def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
@@ -49,6 +64,25 @@ trait MbtDebugLauncher { self: BuildTool =>
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]]
+
+  def mbtTestDebugRun(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      debugAgentFlag: String,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Future[MbtTestCommand] =
+    mbtTestDebugCommand(
+      workspace,
+      target,
+      testSuites,
+      debugAgentFlag,
+      sourceFiles,
+      framework,
+    ).map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+      ExecutionContext.parasitic
+    )
 
   /**
    * Returns true if this launcher supports forked test debugging with a pre-assigned port.
@@ -74,6 +108,24 @@ trait MbtDebugLauncher { self: BuildTool =>
       MbtDebugLauncher.DebugAgentFlag,
       sourceFiles,
       framework,
+    )
+  }
+
+  def mbtTestDebugRunWithPort(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      testSuites: ScalaTestSuites,
+      sourceFiles: Seq[AbsolutePath],
+      framework: Option[TestFramework] = None,
+  ): Int => Future[MbtTestCommand] = { port =>
+    mbtTestDebugCommandWithPort(
+      workspace,
+      target,
+      testSuites,
+      sourceFiles,
+      framework,
+    )(port).map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+      ExecutionContext.parasitic
     )
   }
 }

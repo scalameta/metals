@@ -28,16 +28,16 @@ import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
  * Wrapper adapter for MBT test execution that intercepts test completion
  * and sends test result events to the debug client.
  *
- * Since MBT runs tests via external commands (like `bazel test`), we don't have
- * access to individual test case results. Instead, we report a summary based on
- * the exit code: if the process exits with 0, all tests are reported as passed;
- * otherwise, they are reported as failed.
+ * Test case results are read from build-tool reports when available. If the
+ * build tool does not provide a report, results fall back to the process exit
+ * code.
  */
 class MbtTestResultAdapter(
     inner: Debuggee,
     testSuites: ScalaTestSuites,
     testProvider: TestSuitesProvider,
     targetId: BuildTargetIdentifier,
+    report: () => Option[MbtTestReport] = () => None,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -92,6 +92,7 @@ class MbtTestResultAdapter(
         targetId,
         passed,
         duration,
+        report(),
       )
       .foreach(listener.testResult)
 }
@@ -106,32 +107,45 @@ object MbtTestResultAdapter {
       testSuites: ScalaTestSuites,
       testProvider: TestSuitesProvider,
       targetId: BuildTargetIdentifier,
+      report: () => Option[MbtTestReport] = () => None,
   )(implicit ec: ExecutionContext): MbtTestResultAdapter =
-    new MbtTestResultAdapter(inner, testSuites, testProvider, targetId)
+    new MbtTestResultAdapter(
+      inner,
+      testSuites,
+      testProvider,
+      targetId,
+      report,
+    )
 
-  /**
-   * Builds one [[TestSuiteSummary]] per requested suite. Every
-   * name we can attribute to this run gets the same pass/fail verdict.
-   */
+  /** Builds one [[TestSuiteSummary]] per requested suite. */
   def testSuiteSummaries(
       suites: List[ScalaTestSuiteSelection],
       testProvider: TestSuitesProvider,
       targetId: BuildTargetIdentifier,
       passed: Boolean,
       duration: Long,
+      report: Option[MbtTestReport] = None,
   ): List[TestSuiteSummary] =
     suites.map { suite =>
       val className = suite.getClassName
       val selectedTests = suite.getTests.asScala.toList
-      val testNames =
+      lazy val testNames =
         if (selectedTests.nonEmpty) selectedTests
         else
           // If the whole suit is selected, we still need to send data about all test cases
           // added to the client via `AddTestCases` for the results to show up correctly
           testProvider.knownTestCaseNames(targetId, className)
 
+      val reportedTests = report.toList
+        .flatMap(_.testCases)
+        .filter(test => test.suiteName == className)
+
       val testResults: java.util.List[SingleTestSummary] =
-        if (testNames.isEmpty) {
+        if (reportedTests.nonEmpty) {
+          reportedTests
+            .map(toSingleTestSummary(className, testNames, _))
+            .asJava
+        } else if (testNames.isEmpty) {
           java.util.Collections.singletonList(
             singleTestResult(className, passed, "Test suite failed", duration)
           )
@@ -148,8 +162,39 @@ object MbtTestResultAdapter {
             .asJava
         }
 
-      TestSuiteSummary(className, duration, testResults)
+      val suiteDuration =
+        if (reportedTests.nonEmpty) reportedTests.map(_.duration).sum
+        else duration
+      TestSuiteSummary(className, suiteDuration, testResults)
     }
+
+  private def toSingleTestSummary(
+      className: String,
+      knownTestNames: List[String],
+      test: MbtTestCaseResult,
+  ): SingleTestSummary = {
+    val reportedName = knownTestNames
+      .find(_ == test.testName)
+      .orElse(
+        knownTestNames.find(_.stripSuffix("()") == test.testName)
+      )
+      .getOrElse(test.testName)
+    val testName = s"$className.$reportedName"
+    test.status match {
+      case MbtTestCaseStatus.Passed =>
+        SingleTestResult.Passed(testName, test.duration)
+      case MbtTestCaseStatus.Skipped =>
+        SingleTestResult.Skipped(testName)
+      case MbtTestCaseStatus.Failed =>
+        SingleTestResult.Failed(
+          testName,
+          test.duration,
+          test.error.getOrElse("Test failed"),
+          test.stackTrace.orNull,
+          null,
+        )
+    }
+  }
 
   private def singleTestResult(
       testName: String,
