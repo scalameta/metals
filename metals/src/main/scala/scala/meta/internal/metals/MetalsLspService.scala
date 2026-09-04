@@ -230,7 +230,16 @@ abstract class MetalsLspService(
       definitionIndex,
       () => Some(mbtSymbolSearch),
       workDoneProgress,
+      shouldDiscoverMbtClasses = () => discoverMbtClassesFromIndex,
     )
+
+  /**
+   * Whether MBT should discover main/test classes from the symbol index.
+   * Bazel already declares them in `mbt.json`; Maven, Gradle, and scripts
+   * still need index discovery until those importers populate the same fields.
+   * Mixed workspaces that also contain Bazel must keep discovery enabled.
+   */
+  protected def discoverMbtClassesFromIndex: Boolean = true
 
   val scalaVersionSelector = new ScalaVersionSelector(
     () => userConfig,
@@ -347,7 +356,7 @@ abstract class MetalsLspService(
   private val sleeper: Sleeper =
     new Sleeper.ScheduledExecutorServiceSleeper(sh)
 
-  private val mbt2 = new MbtWorkspaceSymbolProvider(
+  protected val mbt2 = new MbtWorkspaceSymbolProvider(
     workspace = folder,
     config = () => userConfig.workspaceSymbolProvider,
     buffers = buffers,

@@ -69,8 +69,10 @@ import ch.epfl.scala.bsp4j.RunParams
 import ch.epfl.scala.bsp4j.RunProvider
 import ch.epfl.scala.bsp4j.RunResult
 import ch.epfl.scala.bsp4j.ScalaMainClass
+import ch.epfl.scala.bsp4j.ScalaMainClassesItem
 import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.ScalaMainClassesResult
+import ch.epfl.scala.bsp4j.ScalaTestClassesItem
 import ch.epfl.scala.bsp4j.ScalaTestClassesParams
 import ch.epfl.scala.bsp4j.ScalaTestClassesResult
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
@@ -573,17 +575,66 @@ final class MbtBuildServer(
 
   override def buildTargetScalaMainClasses(
       params: ScalaMainClassesParams
-  ): CompletableFuture[ScalaMainClassesResult] =
-    CompletableFuture.completedFuture(
-      new ScalaMainClassesResult(List.empty.asJava)
-    )
+  ): CompletableFuture[ScalaMainClassesResult] = {
+    val requestedTargets = params.getTargets.asScala.toSet
+    val items = importedBuildTargets
+      .filter(t => requestedTargets(t.id) && t.mainClasses.nonEmpty)
+      .map { target =>
+        new ScalaMainClassesItem(
+          target.id,
+          target.mainClasses.map { mc =>
+            new ScalaMainClass(
+              mc.className,
+              Nil.asJava,
+              Nil.asJava,
+            )
+          }.asJava,
+        )
+      }
+    CompletableFuture.completedFuture(new ScalaMainClassesResult(items.asJava))
+  }
 
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams
-  ): CompletableFuture[ScalaTestClassesResult] =
+  ): CompletableFuture[ScalaTestClassesResult] = try {
+    val requestedTargets = params.getTargets.asScala.toSet
+    val targetsWithTests = importedBuildTargets
+      .filter(t => requestedTargets(t.id) && t.testClasses.nonEmpty)
+    if (targetsWithTests.isEmpty) {
+      return CompletableFuture.completedFuture(
+        new ScalaTestClassesResult(List.empty.asJava)
+      )
+    }
+
+    // Verify all candidates at once, grouped by target
+    val verificationItems = targetsWithTests.map { target =>
+      val verifiedClasses =
+        MbtTestClassVerifier.verify(target.testClasses, workspace)
+      verifiedClasses
+        .groupBy(tc => Option(tc.framework))
+        .toSeq
+        .sortBy { case (framework, _) => framework.getOrElse("") }
+        .map { case (framework, classes) =>
+          val item = new ScalaTestClassesItem(
+            target.id,
+            classes.map(_.className).distinct.asJava,
+          )
+          framework.foreach(item.setFramework)
+          item
+        }
+    }.flatten
+
     CompletableFuture.completedFuture(
-      new ScalaTestClassesResult(List.empty.asJava)
+      new ScalaTestClassesResult(verificationItems.asJava)
     )
+
+  } catch {
+    case ex: Throwable =>
+      scribe.error("Error verifying test classes", ex)
+      CompletableFuture.completedFuture(
+        new ScalaTestClassesResult(List.empty.asJava)
+      )
+  }
 
   override def buildTargetDependencyModules(
       params: DependencyModulesParams

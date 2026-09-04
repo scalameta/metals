@@ -52,6 +52,11 @@ case class MbtBuild(
         .asJava
     )
 
+  /**
+   * Derived BSP targets for this build. Cached because construction logs
+   * missing-module warnings and is invoked from hot paths (test class
+   * lookup, BSP requests).
+   */
   def mbtTargets: Seq[MbtTarget] =
     if (getNamespaces.isEmpty) {
       Option
@@ -122,7 +127,9 @@ case class MbtBuild(
             .getOrElse(Nil),
           projectPath = Option(namespace.projectPath),
           configurations = namespace.getConfigurations,
+          mainClasses = namespace.getMainClasses,
           uncheckedSources = namespace.getUncheckedSources.asScala.toSeq,
+          testClasses = namespace.getTestClasses,
         )
       }
     }

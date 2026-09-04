@@ -269,6 +269,22 @@ class MbtWorkspaceSymbolProvider(
     }
   }
 
+  def classesForPath(relativePath: String): List[String] = {
+    documents
+      .get(workspace.resolve(relativePath))
+      .map(
+        _.symbols
+          .collect {
+            case symInfo
+                if symInfo.getKind == Semanticdb.SymbolInformation.Kind.CLASS || symInfo.getKind == Semanticdb.SymbolInformation.Kind.OBJECT =>
+              symInfo.getSymbol()
+          }
+          .toList
+      )
+      .getOrElse(Nil)
+      .filter(sym => Symbol(sym).isToplevel)
+  }
+
   /**
    * Excludes proto-generated classes that were compiled into the turbine
    * classpath from a previous version of the given proto file. Javac keeps

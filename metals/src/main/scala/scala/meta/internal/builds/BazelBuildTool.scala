@@ -11,6 +11,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
@@ -25,6 +26,7 @@ case class BazelBuildTool(
     override val projectRoot: AbsolutePath,
     shellRunner: ShellRunner,
     ec: ExecutionContext,
+    mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
 ) extends BazelMbtImporter(
@@ -33,6 +35,7 @@ case class BazelBuildTool(
       userConfig,
       languageClient,
       tables,
+      mbtWorkspaceSymbolProvider,
     )(ec)
     with BuildTool
     with BuildServerProvider
@@ -126,7 +129,7 @@ case class BazelBuildTool(
       "run",
       "--ui_event_filters=-info,-stderr",
       "--noshow_progress",
-      bazelRunTarget(target),
+      bazelRunTarget(target, mainClass.getClassName()),
       "--",
     ) ::: jvmFlags.map(flag => s"--jvm_flag=$flag") ::: appArgs
   }
@@ -138,13 +141,14 @@ case class BazelBuildTool(
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
-    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = None,
-        framework = framework,
-      )
+    resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
+      runTargets =>
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = None,
+          framework = framework,
+        )
     }
 
   override def mbtTestDebugCommand(
@@ -155,13 +159,14 @@ case class BazelBuildTool(
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
   ): Future[List[String]] =
-    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = Some(debugAgentFlag),
-        framework = framework,
-      )
+    resolveTestRunTargets(workspace, target, testSuites, sourceFiles).map {
+      runTargets =>
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = Some(debugAgentFlag),
+          framework = framework,
+        )
     }
 
   override def supportsForkedTestDebug: Boolean = true
@@ -174,7 +179,7 @@ case class BazelBuildTool(
       framework: Option[TestFramework] = None,
   ): Int => Future[List[String]] = {
     val resolvedRunTargets =
-      resolveTestRunTargets(workspace, target, sourceFiles)
+      resolveTestRunTargets(workspace, target, testSuites, sourceFiles)
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
         mbtTestExecCommand(
@@ -194,48 +199,61 @@ case class BazelBuildTool(
   private def resolveTestRunTargets(
       workspace: AbsolutePath,
       target: MbtTarget,
+      testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
-  ): Future[List[String]] =
-    target.configurations.toList match {
-      case Nil => Future.successful(List(target.name))
-      case single :: Nil => Future.successful(List(single))
-      case multiple =>
-        val packagePath = target.name.stripPrefix("//").split(":", 2).head
-        val packageDir = workspace.resolve(packagePath)
-        val filenames = sourceFiles
-          .flatMap(_.toRelativeInside(packageDir))
-          .map(_.toNIO.toString.replace('\\', '/'))
-          .distinct
-        if (filenames.isEmpty) Future.successful(List(multiple.head))
-        else {
-          val setExpr =
-            s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
-          val queryStr = filenames
-            .map { filename =>
-              val pattern = java.util.regex.Pattern.quote(filename)
-              // "srcs" attribute will appear as [//pkg:sub/dir/File.scala]
-              // or as list [//pkg:a.scala, //pkg:sub/b.scala].
-              // We try to match the file path relative to BUILD.bazel directory
-              val quoted = s"\"[:]$pattern[,\\]]\""
-              s"attr(srcs, $quoted, $setExpr)"
-            }
-            .mkString(" union ")
-          val env =
-            BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
-          BazelQuery(queryStr, BazelQuery.OutputMode.Label)
-            .run(env, target.javaHome)(ec)
-            .recover { case e =>
-              scribe.warn(
-                s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
-              )
-              ""
-            }
-            .map { result =>
-              val resolved = result.linesIterator.filter(_.nonEmpty).toList
-              if (resolved.nonEmpty) resolved else List(multiple.head)
-            }
-        }
+  ): Future[List[String]] = {
+    val classNames =
+      MbtDebugLauncher.listOrNil(testSuites.getSuites).map(_.getClassName)
+    val declaredBySuite = classNames.map { className =>
+      target.testClasses
+        .filter(_.className == className)
+        .flatMap(tc => Option(tc.configuration))
     }
+    val fromDeclared = declaredBySuite.flatten.distinct
+    if (classNames.nonEmpty && declaredBySuite.forall(_.nonEmpty))
+      Future.successful(fromDeclared)
+    else
+      target.configurations.toList match {
+        case Nil => Future.successful(List(target.name))
+        case single :: Nil => Future.successful(List(single))
+        case multiple =>
+          val packagePath = target.name.stripPrefix("//").split(":", 2).head
+          val packageDir = workspace.resolve(packagePath)
+          val filenames = sourceFiles
+            .flatMap(_.toRelativeInside(packageDir))
+            .map(_.toNIO.toString.replace('\\', '/'))
+            .distinct
+          if (filenames.isEmpty) Future.successful(List(multiple.head))
+          else {
+            val setExpr =
+              s"set(${multiple.flatMap(BazelQuery.quoteTarget).mkString(" ")})"
+            val queryStr = filenames
+              .map { filename =>
+                val pattern = java.util.regex.Pattern.quote(filename)
+                // "srcs" attribute will appear as [//pkg:sub/dir/File.scala]
+                // or as list [//pkg:a.scala, //pkg:sub/b.scala].
+                // We try to match the file path relative to BUILD.bazel directory
+                val quoted = s"\"[:]$pattern[,\\]]\""
+                s"attr(srcs, $quoted, $setExpr)"
+              }
+              .mkString(" union ")
+            val env =
+              BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
+            BazelQuery(queryStr, BazelQuery.OutputMode.Label)
+              .run(env, target.javaHome)(ec)
+              .recover { case e =>
+                scribe.warn(
+                  s"bazel-mbt: failed to resolve test targets for ${target.name}, falling back to ${multiple.head}: ${e.getMessage}"
+                )
+                ""
+              }
+              .map { result =>
+                val resolved = result.linesIterator.filter(_.nonEmpty).toList
+                if (resolved.nonEmpty) resolved else List(multiple.head)
+              }
+          }
+      }
+  }
 
   private def mbtTestExecCommand(
       runTargets: List[String],
@@ -283,8 +301,18 @@ case class BazelBuildTool(
       case targets => targets
     }
 
-  private def bazelRunTarget(target: MbtTarget): String =
-    target.configurations.headOption.getOrElse(target.name)
+  private def bazelRunTarget(target: MbtTarget, className: String): String = {
+    val fromClass = target.mainClasses
+      .find(_.className == className)
+      .flatMap(mc => Option(mc.configuration))
+    val fromAnyMain = target.mainClasses
+      .flatMap(mc => Option(mc.configuration))
+      .headOption
+    fromClass
+      .orElse(fromAnyMain)
+      .orElse(target.configurations.headOption)
+      .getOrElse(target.name)
+  }
 
 }
 
