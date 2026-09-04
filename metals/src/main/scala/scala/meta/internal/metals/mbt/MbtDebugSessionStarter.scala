@@ -94,17 +94,7 @@ class MbtDebugSessionStarter(
     scribe.info(
       s"MBT run session via ${buildTool.executableName}: ${redactedCommand(command)}"
     )
-    SystemProcess
-      .run(
-        command,
-        workspace,
-        redirectErrorOutput = false,
-        env = javaHomeEnv(target),
-        processOut = Some(ProcessOutput.Lines(out)),
-        processErr = Some(err),
-      )
-      .complete
-
+    runInTerminal(command, target, workspace, out, err)
   }
 
   private def resolveSourceFiles(
@@ -154,18 +144,45 @@ class MbtDebugSessionStarter(
       )
       workDoneProgress.trackFuture(
         s"Testing $artifactId",
-        SystemProcess
-          .run(
-            command,
-            workspace,
-            redirectErrorOutput = false,
-            env = javaHomeEnv(target),
-            processOut = Some(ProcessOutput.Lines(out)),
-            processErr = Some(err),
-          )
-          .complete,
+        runInTerminal(command, target, workspace, out, err),
       )
     }
+  }
+
+  private def runInTerminal(
+      command: List[String],
+      target: MbtTarget,
+      workspace: AbsolutePath,
+      out: String => Unit,
+      err: String => Unit,
+  ): Future[Int] = {
+    out(s"> ${renderCommand(command)}")
+    SystemProcess
+      .run(
+        command,
+        workspace,
+        redirectErrorOutput = false,
+        env = javaHomeEnv(target),
+        processOut = Some(ProcessOutput.Lines(out)),
+        processErr = Some(err),
+      )
+      .complete
+  }
+
+  private def renderCommand(command: List[String]): String =
+    command.map(renderArgument).mkString(" ")
+
+  private def renderArgument(argument: String): String = {
+    val escaped = argument.flatMap {
+      case '\\' => "\\\\"
+      case '"' => "\\\""
+      case '\n' => "\\n"
+      case '\r' => "\\r"
+      case '\t' => "\\t"
+      case char if Character.isISOControl(char) => f"\\u${char.toInt}%04x"
+      case char => char.toString
+    }
+    s"\"$escaped\""
   }
 
   private def launchVia(
