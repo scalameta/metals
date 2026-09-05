@@ -342,9 +342,15 @@ final class TargetData() {
       sourceItem: AbsolutePath,
       buildTarget: BuildTargetIdentifier,
   ): Unit = {
-    val dealiased = sourceItem.dealias
+    // FIXME
+    val dealiased =
+      if (sourceItem.toString.contains("external")) sourceItem
+      else sourceItem.dealias
     if (dealiased != sourceItem)
       originalSourceItems.add(sourceItem)
+    if (sourceItem.toString.contains("remote_execution")) {
+      scribe.warn(s"Added $sourceItem as $dealiased")
+    }
 
     val queue = sourceItemsToBuildTarget.getOrElseUpdate(
       dealiased,

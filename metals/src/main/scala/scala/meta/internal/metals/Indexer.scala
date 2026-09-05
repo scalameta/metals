@@ -467,7 +467,8 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
       (sourceItem, targets) <- data.sourceItemsToBuildTarget
       if sourceItem.exists
       source <- sourceItem.listRecursiveOrJar
-      if source.isScalaOrJava
+      // FIXME not sure if this is right
+      if source.isScalaOrJava || source.toString().endsWith(".proto")
     } {
       targets.asScala.foreach { target =>
         data.linkSourceFile(target, source)
