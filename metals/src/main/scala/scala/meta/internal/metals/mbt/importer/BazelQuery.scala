@@ -58,13 +58,18 @@ object BazelQuery {
     BazelQuery(query, outputMode = Label)
   }
 
+  /**
+   * Source files that appear in the `srcs` of `targets` (including via
+   * filegroups). Uses `deps(labels(srcs, ...))` rather than `deps(...)` so
+   * that sources belonging only to rule implementations (e.g. rules_scala)
+   * are not included.
+   */
   def sourceFilesLocationQuery(
       targets: List[String],
       extensions: List[String],
   ): BazelQuery = {
-    val innerQuery = fullInformationQuery(targets).query
     val query =
-      s"filter('.*\\.(${extensions mkString "|"})', kind('source file', $innerQuery))"
+      s"filter('.*\\.(${extensions mkString "|"})', kind('source file', deps(labels(srcs, ${quotedTargetSet(targets)}))))"
     BazelQuery(
       query,
       outputMode = Xml,
@@ -106,9 +111,13 @@ object BazelQuery {
     } else Some(target)
 
   def fullInformationQuery(targets: List[String]): BazelQuery = {
-    val escaped = targets.flatMap(quoteTarget)
-    val query = s"deps(set(${escaped.mkString(" ")}))"
+    val query = s"deps(${quotedTargetSet(targets)})"
     BazelQuery(query, outputMode = Xml)
+  }
+
+  private def quotedTargetSet(targets: List[String]): String = {
+    val escaped = targets.flatMap(quoteTarget)
+    s"set(${escaped.mkString(" ")})"
   }
 
   def allScalaLibrariesQuery: BazelQuery =
