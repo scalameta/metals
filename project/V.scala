@@ -9,7 +9,7 @@ object V {
 
   val scala3 = "3.3.8"
 
-  val scala3ForSBT2 = "3.8.4"
+  val scala3ForSBT2 = "3.9.0"
 
   val latestScala3Next = "3.9.0"
 
