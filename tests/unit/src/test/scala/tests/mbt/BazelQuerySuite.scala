@@ -178,7 +178,7 @@ class BazelQuerySuite extends FunSuite {
     val query = BazelQuery.sourceFilesLocationQuery(targets, extensions)
     assertEquals(
       query.query,
-      "filter('.*\\.(txt|java|tar.gz)', kind('source file', deps(set(//foo:bar //foo/bar:baz @repo//pkg:target))))",
+      "filter('.*\\.(txt|java|tar.gz)', kind('source file', deps(labels(srcs, set(//foo:bar //foo/bar:baz @repo//pkg:target)))))",
     )
   }
 }
