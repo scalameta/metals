@@ -153,7 +153,8 @@ object BazelMbtBuildSupport {
           )
         }
       } else {
-        val allSrcs = srcsByTarget.values.flatten.toSet
+        val allSrcs =
+          targetLabels.flatMap(srcsByTarget.getOrElse(_, Nil)).toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
         val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
         putNamespace(
