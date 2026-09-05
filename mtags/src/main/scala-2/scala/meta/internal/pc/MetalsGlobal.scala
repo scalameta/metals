@@ -66,7 +66,8 @@ class MetalsGlobal(
     with GlobalProxy
     with AutoImports
     with Keywords
-    with WorkspaceSymbolSearch { compiler =>
+    with WorkspaceSymbolSearch
+    with PackageObjectMemberSearch { compiler =>
   hijackPresentationCompilerThread()
 
   val logger: Logger = Logger.getLogger(classOf[MetalsGlobal].getName)
@@ -80,6 +81,7 @@ class MetalsGlobal(
   val compileUnitsCache = new CompileUnitsCache(5)
   def didChange(uri: URI): Unit = {
     compileUnitsCache.didChange(uri)
+    resetPackageObjectMemberSearch()
   }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)
