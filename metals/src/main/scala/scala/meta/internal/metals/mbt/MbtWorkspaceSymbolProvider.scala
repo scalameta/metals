@@ -727,7 +727,8 @@ class MbtWorkspaceSymbolProvider(
           )
         } else {
           val kind = symbolInfo.getKind()
-          /* we have a potential main annot and there exists a method,
+          /*
+           * We have a potential main annot and there exists a method,
            * which is enough to consider the file a main class candidate.
            */
           if (
@@ -738,7 +739,8 @@ class MbtWorkspaceSymbolProvider(
               path,
               symbol,
             )
-            /* Same thing as above, but an App is present.
+            /*
+             * Same thing as above, but an App is present.
              */
           } else if (
             hasApp &&
