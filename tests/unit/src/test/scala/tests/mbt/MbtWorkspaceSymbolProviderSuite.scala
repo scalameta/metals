@@ -231,6 +231,93 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
     )
   }
 
+  test("candidate-test-classes-junit-inherited-from-annotated-base") {
+    FileLayout.fromString(
+      """|/com/BaseTest.java
+         |package com;
+         |import org.junit.Test;
+         |public class BaseTest {
+         |  @Test
+         |  public void runs() {}
+         |}
+         |/com/SubTest.java
+         |package com;
+         |public class SubTest extends BaseTest {}
+         |/com/Helper.java
+         |package com;
+         |public class Helper {}
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(
+      relative,
+      List(
+        Paths.get("com/BaseTest.java").toString(),
+        Paths.get("com/SubTest.java").toString(),
+      ),
+    )
+    assertEquals(
+      candidates.map(_.candidateSymbol).toSet,
+      Set("com/BaseTest#", "com/SubTest#"),
+    )
+  }
+
+  test("candidate-test-classes-junit-inherited-scala") {
+    FileLayout.fromString(
+      """|/example/BaseTest.scala
+         |package example
+         |class BaseTest {
+         |  @org.junit.Test
+         |  def runs(): Unit = ()
+         |}
+         |/example/SubTest.scala
+         |package example
+         |class SubTest extends BaseTest
+         |/example/Unrelated.scala
+         |package example
+         |class Unrelated
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(
+      relative,
+      List(
+        Paths.get("example/BaseTest.scala").toString(),
+        Paths.get("example/SubTest.scala").toString(),
+      ),
+    )
+    assertEquals(
+      candidates.map(_.candidateSymbol).toSet,
+      Set("example/BaseTest#", "example/SubTest#"),
+    )
+  }
+
   test("candidate-test-classes-custom-funsuite-base") {
     FileLayout.fromString(
       """|/example/MySuite.scala

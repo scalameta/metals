@@ -761,34 +761,42 @@ class MbtWorkspaceSymbolProvider(
 
   /**
    * Files that may contain test classes: annotation references (JUnit/TestNG)
-   * plus a bounded BFS over test-framework parent types (ScalaTest/MUnit/...).
+   * plus a BFS over test-framework parent types (ScalaTest/MUnit/...) and
+   * top-level types declared in annotation-hit files.
    *
-   * Annotation hits are candidates only and must not seed the BFS. Seeding with
-   * every class in those files (typical for `@Test` suites) turns the next
-   * [[possibleReferences]] call into O(files × class names) over the whole
-   * index — tens of seconds on a large Java repo such as Trino.
+   * Annotation hits are candidates. Their top-level classes, traits, and
+   * interfaces are added to the BFS seed set so subclasses without their own
+   * annotations (e.g. `class SubTest extends BaseTest`) are still discovered.
+   * The annotation files themselves are not the first frontier, so later BFS
+   * levels expand only newly found subclasses rather than every `@Test` suite.
    *
-   * Inheritance BFS starts from `implementations` and, at every level, seeds the
-   * next query with all top-level traits, interfaces, and classes of the matched
-   * files, so JUnit 3 `TestCase` subclasses and custom test bases both chain.
+   * Inheritance BFS, at every level, seeds the next query with all top-level
+   * traits, interfaces, and classes of the matched files, so JUnit 3
+   * `TestCase` subclasses and custom test bases both chain.
    */
   private def transitiveReferenceFiles(
       references: Seq[String],
       implementations: Seq[String],
   ): Set[AbsolutePath] = {
     val allMatchedPaths = scala.collection.mutable.HashSet.empty[AbsolutePath]
-    if (references.nonEmpty) {
-      allMatchedPaths ++= possibleReferences(
-        MbtPossibleReferencesParams(references = references)
-      )
-    }
-
-    var frontier: Set[AbsolutePath] =
-      if (implementations.isEmpty) Set.empty
+    val annotationFiles =
+      if (references.isEmpty) Set.empty[AbsolutePath]
       else
         possibleReferences(
-          MbtPossibleReferencesParams(implementations = implementations)
+          MbtPossibleReferencesParams(references = references)
         )
+    allMatchedPaths ++= annotationFiles
+
+    val initialImplementations =
+      implementations ++ annotationFiles.flatMap(bfsSeedSymbols)
+    var frontier: Set[AbsolutePath] =
+      if (initialImplementations.isEmpty) Set.empty
+      else
+        possibleReferences(
+          MbtPossibleReferencesParams(
+            implementations = initialImplementations
+          )
+        ) -- allMatchedPaths
 
     while (frontier.nonEmpty) {
       allMatchedPaths ++= frontier
