@@ -54,20 +54,18 @@ trait MavenLockFileParser {
       relativePaths.map(path => scanned.dir.resolve(path)).find(_.exists)
 
     directMatch.orElse {
-      val bzlmodRepositoryNames =
-        repositoryNames.flatMap(repo => Seq(repo, s"unpinned_$repo")).distinct
 
       val candidateRepositories = scanned.entries.filter { entry =>
         val name = entry.filename.toString
         entry.isDirectory &&
         name.startsWith("rules_jvm_external") &&
-        bzlmodRepositoryNames.exists { repo =>
+        repositoryNames.exists { repo =>
           name.endsWith(s"+$repo") || name.endsWith(s"~$repo")
         }
       }
 
       val repositoryRelativePaths = relativePaths.flatMap { path =>
-        path +: bzlmodRepositoryNames.map(repo => path.stripPrefix(s"$repo/"))
+        path +: repositoryNames.map(repo => path.stripPrefix(s"$repo/"))
       }.distinct
 
       val found = candidateRepositories.flatMap { repo =>
@@ -84,15 +82,14 @@ trait MavenLockFileParser {
         )
       }
 
-      found.map { maybeSymlink =>
-        // The "unpinned" repository is a symlink to the actual location of the artifacts.
-        // If the workspace uses the lock file, this symlink may be removed automatically
-        // once the dependencies have been pinned.
-        // To ensure the JAR is still found, we need to dealias the symlink.
-        val actualPath = maybeSymlink.dealias
-        scribe.debug(s"Dealiased $maybeSymlink to $actualPath")
-        actualPath
+      found.foreach { path =>
+        if (path.toString().contains("unpinned")) {
+          scribe.error(
+            s"Artifact has been resolved to an ephemeral symlink in the unpinned repo: $path"
+          )
+        }
       }
+      found
     }
   }
 
