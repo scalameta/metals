@@ -3,11 +3,12 @@ package tests.mbt
 import java.nio.file.Files
 
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.mbt.MbtTestCaseResult
-import scala.meta.internal.metals.mbt.MbtTestCaseStatus
 import scala.meta.internal.metals.mbt.MbtTestReport
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.MbtTestResultAdapter
+import scala.meta.internal.metals.testResults.JunitTestReportParser
+import scala.meta.internal.metals.testResults.TestCaseResult
+import scala.meta.internal.metals.testResults.TestCaseStatus
+import scala.meta.internal.metals.testResults.TestReport
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -21,45 +22,30 @@ class MbtTestReportSuite extends munit.FunSuite {
     val directory = AbsolutePath(Files.createTempDirectory("mbt-test-report"))
     directory.resolve("TEST-example.FooSuite.xml").writeText(junitReport)
 
-    val report = MbtTestReportProvider.junitXmlDirectory(directory).read()
+    val report =
+      JunitTestReportParser.merge(
+        JunitTestReportParser.xmlFiles(List(directory))
+      )
 
     assertEquals(
       report.testCases.map(test => (test.testName, test.status, test.duration)),
       List(
-        ("passes", MbtTestCaseStatus.Passed, 12L),
-        ("fails", MbtTestCaseStatus.Failed, 34L),
-        ("skips", MbtTestCaseStatus.Skipped, 0L),
+        ("passes", TestCaseStatus.Passed, 12L),
+        ("fails", TestCaseStatus.Failed, 34L),
+        ("skips", TestCaseStatus.Skipped, 0L),
       ),
     )
     assertEquals(report.testCases(1).error, Some("expected true"))
     assertEquals(report.testCases(1).stackTrace, Some("example stack trace"))
   }
 
-  test("read-bazel-build-event") {
-    val directory = AbsolutePath(Files.createTempDirectory("mbt-bazel-report"))
-    val xml = directory.resolve("test.xml")
-    xml.writeText(junitReport)
-    val eventFile = directory.resolve("build-events.json")
-    eventFile.writeText(
-      s"""{"testResult":{"testActionOutput":[{"name":"test.log","uri":"${xml.toURI}"},{"name":"test.xml","uri":"${xml.toURI}"}]}}"""
-    )
-
-    val report = MbtTestReportProvider.bazelBuildEvent(eventFile).read()
-
-    assertEquals(
-      report.testCases.map(_.testName),
-      List("passes", "fails", "skips"),
-    )
-    assert(!eventFile.exists)
-  }
-
   test("report-json-roundtrip") {
-    val report = MbtTestReport(
+    val report = TestReport(
       List(
-        MbtTestCaseResult(
+        TestCaseResult(
           "example.FooSuite",
           "fails",
-          MbtTestCaseStatus.Failed,
+          TestCaseStatus.Failed,
           34L,
           Some("expected true"),
           Some("example stack trace"),
@@ -68,26 +54,26 @@ class MbtTestReportSuite extends munit.FunSuite {
     )
     val result = new TestResult(ch.epfl.scala.bsp4j.StatusCode.ERROR)
     result.setDataKind(MbtTestReport.dataKind)
-    result.setData(report.toJson)
+    result.setData(MbtTestReport.toJson(report))
 
     assertEquals(MbtTestReport.fromTestResult(result), Some(report))
   }
 
   test("use-individual-results") {
-    val report = MbtTestReport(
+    val report = TestReport(
       List(
-        MbtTestCaseResult(
+        TestCaseResult(
           "example.FooSuite",
           "passes",
-          MbtTestCaseStatus.Passed,
+          TestCaseStatus.Passed,
           12L,
           None,
           None,
         ),
-        MbtTestCaseResult(
+        TestCaseResult(
           "example.FooSuite",
           "fails",
-          MbtTestCaseStatus.Failed,
+          TestCaseStatus.Failed,
           34L,
           Some("expected true"),
           Some("example stack trace"),

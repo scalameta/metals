@@ -7,6 +7,9 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
+import scala.meta.internal.metals.testResults.TestCaseResult
+import scala.meta.internal.metals.testResults.TestCaseStatus
+import scala.meta.internal.metals.testResults.TestReport
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
@@ -37,7 +40,7 @@ class MbtTestResultAdapter(
     testSuites: ScalaTestSuites,
     testProvider: TestSuitesProvider,
     targetId: BuildTargetIdentifier,
-    report: () => Option[MbtTestReport] = () => None,
+    report: () => Option[TestReport] = () => None,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -107,7 +110,7 @@ object MbtTestResultAdapter {
       testSuites: ScalaTestSuites,
       testProvider: TestSuitesProvider,
       targetId: BuildTargetIdentifier,
-      report: () => Option[MbtTestReport] = () => None,
+      report: () => Option[TestReport] = () => None,
   )(implicit ec: ExecutionContext): MbtTestResultAdapter =
     new MbtTestResultAdapter(
       inner,
@@ -124,7 +127,7 @@ object MbtTestResultAdapter {
       targetId: BuildTargetIdentifier,
       passed: Boolean,
       duration: Long,
-      report: Option[MbtTestReport] = None,
+      report: Option[TestReport] = None,
   ): List[TestSuiteSummary] =
     suites.map { suite =>
       val className = suite.getClassName
@@ -171,7 +174,7 @@ object MbtTestResultAdapter {
   private def toSingleTestSummary(
       className: String,
       knownTestNames: List[String],
-      test: MbtTestCaseResult,
+      test: TestCaseResult,
   ): SingleTestSummary = {
     val reportedName = knownTestNames
       .find(_ == test.testName)
@@ -181,11 +184,11 @@ object MbtTestResultAdapter {
       .getOrElse(test.testName)
     val testName = s"$className.$reportedName"
     test.status match {
-      case MbtTestCaseStatus.Passed =>
+      case TestCaseStatus.Passed =>
         SingleTestResult.Passed(testName, test.duration)
-      case MbtTestCaseStatus.Skipped =>
+      case TestCaseStatus.Skipped =>
         SingleTestResult.Skipped(testName)
-      case MbtTestCaseStatus.Failed =>
+      case TestCaseStatus.Failed =>
         SingleTestResult.Failed(
           testName,
           test.duration,

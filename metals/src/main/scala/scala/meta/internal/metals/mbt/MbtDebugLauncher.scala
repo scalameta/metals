@@ -5,6 +5,8 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters.ListHasAsScala
 
 import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.metals.testResults.TestCommand
+import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -48,9 +50,9 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
+  ): Future[TestCommand] =
     mbtTestCommand(workspace, target, testSuites, sourceFiles, framework)
-      .map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+      .map(TestCommand(_, TestReportProvider.empty))(
         ExecutionContext.parasitic
       )
 
@@ -72,7 +74,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
+  ): Future[TestCommand] =
     mbtTestDebugCommand(
       workspace,
       target,
@@ -80,7 +82,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       debugAgentFlag,
       sourceFiles,
       framework,
-    ).map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+    ).map(TestCommand(_, TestReportProvider.empty))(
       ExecutionContext.parasitic
     )
 
@@ -117,14 +119,14 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = { port =>
+  ): Int => Future[TestCommand] = { port =>
     mbtTestDebugCommandWithPort(
       workspace,
       target,
       testSuites,
       sourceFiles,
       framework,
-    )(port).map(MbtTestCommand(_, MbtTestReportProvider.empty))(
+    )(port).map(TestCommand(_, TestReportProvider.empty))(
       ExecutionContext.parasitic
     )
   }

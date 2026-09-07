@@ -202,6 +202,45 @@ class GradleBuildToolSuite extends BaseSuite {
     assert(initScript.readText.contains("junitXml.outputLocation.set"))
   }
 
+  test("gradle-mbt-test-run-provider-reads-junit-xml") {
+    val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
+    val testSuites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection("a.FooTest", Nil.asJava)
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+
+    val run = Await.result(
+      gradleBuildTool(workspace).mbtTestRun(
+        workspace,
+        mbtTarget("app"),
+        testSuites,
+        Nil,
+      ),
+      Duration.Inf,
+    )
+    // Extract the report directory from the -Dmetals.testReportDirectory= argument
+    val reportDir = run.arguments
+      .find(_.startsWith("-Dmetals.testReportDirectory="))
+      .map(_.stripPrefix("-Dmetals.testReportDirectory="))
+      .map(path => AbsolutePath(Paths.get(path)))
+      .getOrElse(fail("Expected -Dmetals.testReportDirectory= argument"))
+
+    reportDir.createDirectories()
+    reportDir
+      .resolve("TEST-a.FooTest.xml")
+      .writeText(
+        """<testsuite name="a.FooTest"><testcase classname="a.FooTest" name="testAddition" time="0.005" /></testsuite>"""
+      )
+
+    val report = run.reportProvider.read()
+    assertEquals(report.testCases.map(_.testName), List("testAddition"))
+    // directory should be cleaned up after read
+    assert(!reportDir.exists)
+  }
+
   test("gradle-mbt-test-debug-command-uses-init-script") {
     val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
     val testSuites = new ScalaTestSuites(

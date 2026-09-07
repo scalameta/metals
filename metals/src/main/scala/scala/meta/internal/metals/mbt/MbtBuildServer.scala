@@ -25,6 +25,7 @@ import scala.meta.internal.metals.MetalsBuildServer
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsEnrichments.XtensionDebugSessionParams
 import scala.meta.internal.metals.ScalaVersionSelector
+import scala.meta.internal.metals.testResults.TestRunResult
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
@@ -405,7 +406,7 @@ final class MbtBuildServer(
                 val testResult = new TestResult(status)
                 if (run.report.testCases.nonEmpty) {
                   testResult.setDataKind(MbtTestReport.dataKind)
-                  testResult.setData(run.report.toJson)
+                  testResult.setData(MbtTestReport.toJson(run.report))
                 }
                 result.complete(testResult)
               case Failure(ex) =>

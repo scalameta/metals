@@ -8,15 +8,20 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
+import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
-import scala.meta.internal.metals.mbt.MbtTestCommand
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
+import scala.meta.internal.metals.testResults.JunitTestReportParser
+import scala.meta.internal.metals.testResults.TestCommand
+import scala.meta.internal.metals.testResults.TestReport
+import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -286,7 +291,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
+  ): Future[TestCommand] =
     withTestReport(
       Future.successful(
         gradleTestCommand(
@@ -300,19 +305,42 @@ case class GradleBuildTool(
 
   private def withTestReport(
       command: Future[List[String]]
-  ): Future[MbtTestCommand] = {
+  ): Future[TestCommand] = {
     val reportDirectory = AbsolutePath(
       tempDir.resolve(s"gradle-test-${UUID.randomUUID()}")
     )
     command.map { arguments =>
       val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
-      MbtTestCommand(
+      TestCommand(
         arguments.take(1) ::: reportArgument :: arguments.drop(1),
-        MbtTestReportProvider.junitXmlDirectory(reportDirectory),
+        gradleTestReportProvider(reportDirectory),
       )
     }
   }
 
+  private def gradleTestReportProvider(
+      directory: AbsolutePath
+  ): TestReportProvider = { () =>
+    try
+      JunitTestReportParser.merge(
+        JunitTestReportParser.xmlFiles(List(directory))
+      )
+    catch {
+      case NonFatal(error) =>
+        scribe.warn(s"Unable to read test reports from $directory", error)
+        TestReport.empty
+    } finally {
+      Try {
+        if (directory.exists) {
+          directory.deleteRecursively()
+          directory.deleteIfExists()
+        }
+      }.failed
+        .foreach { error =>
+          scribe.warn(s"Unable to remove test reports $directory", error)
+        }
+    }
+  }
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
@@ -347,7 +375,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
+  ): Int => Future[TestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,

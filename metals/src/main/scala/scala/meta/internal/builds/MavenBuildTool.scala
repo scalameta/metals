@@ -6,6 +6,8 @@ import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
+import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
@@ -13,9 +15,12 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
-import scala.meta.internal.metals.mbt.MbtTestCommand
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
+import scala.meta.internal.metals.testResults.JunitTestReportParser
+import scala.meta.internal.metals.testResults.TestCommand
+import scala.meta.internal.metals.testResults.TestReport
+import scala.meta.internal.metals.testResults.TestReportProvider
+import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -191,7 +196,7 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
+  ): Future[TestCommand] =
     withTestReport(
       workspace,
       target,
@@ -202,7 +207,7 @@ case class MavenBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       command: Future[List[String]],
-  ): Future[MbtTestCommand] = {
+  ): Future[TestCommand] = {
     val reportDirectories = (
       mavenModuleDirectory(target)
         .getOrElse(workspace)
@@ -212,13 +217,35 @@ case class MavenBuildTool(
           .map(_.parent.resolve("surefire-reports"))
     ).distinct
     command.map { arguments =>
-      MbtTestCommand(
+      TestCommand(
         arguments,
-        MbtTestReportProvider.changedJunitXmlDirectories(
-          reportDirectories
-        ),
+        mavenTestReportProvider(reportDirectories),
       )
     }(ec)
+  }
+
+  private def mavenTestReportProvider(
+      directories: List[AbsolutePath]
+  ): TestReportProvider = {
+    val initialMd5 = JunitTestReportParser
+      .xmlFiles(directories)
+      .flatMap { report =>
+        Try(MD5.compute(report.toNIO)).toOption.map(report -> _)
+      }
+      .toMap
+    () =>
+      try {
+        val changed = JunitTestReportParser
+          .xmlFiles(directories)
+          .filter { report =>
+            initialMd5.get(report).forall(_ != MD5.compute(report.toNIO))
+          }
+        JunitTestReportParser.merge(changed)
+      } catch {
+        case NonFatal(error) =>
+          scribe.warn("Unable to read changed Maven test reports", error)
+          TestReport.empty
+      }
   }
 
   override def mbtTestDebugCommand(
@@ -267,7 +294,7 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
+  ): Int => Future[TestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,

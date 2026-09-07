@@ -93,4 +93,43 @@ class BazelBuildToolSuite extends BaseSuite {
       List("passes"),
     )
   }
+
+  test("bazel-mbt-test-report-ignores-missing-event-file") {
+    implicit val ec: ExecutionContext = ExecutionContext.global
+    val workspace = AbsolutePath(Files.createTempDirectory("bazel-mbt"))
+    val config = UserConfiguration.default
+    val buildTool = BazelBuildTool(
+      () => config,
+      workspace,
+      new ShellRunner(Time.system, EmptyWorkDoneProgress, () => config),
+      ec,
+    )
+    val target = MbtTarget(
+      name = "//example:tests",
+      id = new BuildTargetIdentifier("mbt://example/tests"),
+      sources = Nil,
+      globMatchers = Nil,
+      scalacOptions = Nil,
+      javacOptions = Nil,
+      dependencyModules = Nil,
+      configurations = List("//example:tests"),
+    )
+    val suites = new ScalaTestSuites(
+      List(
+        new ScalaTestSuiteSelection("example.FooSuite", Nil.asJava)
+      ).asJava,
+      Nil.asJava,
+      Nil.asJava,
+    )
+
+    val run = Await.result(
+      buildTool.mbtTestRun(workspace, target, suites, Nil),
+      Duration.Inf,
+    )
+    // Provider for a non-existent event file returns empty
+    assertEquals(
+      run.reportProvider.read(),
+      scala.meta.internal.metals.testResults.TestReport.empty,
+    )
+  }
 }

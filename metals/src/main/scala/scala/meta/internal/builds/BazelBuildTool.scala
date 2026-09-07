@@ -1,9 +1,16 @@
 package scala.meta.internal.builds
 
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Paths
 import java.util.UUID
 
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
+import scala.util.Using
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -13,15 +20,18 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
-import scala.meta.internal.metals.mbt.MbtTestCommand
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
+import scala.meta.internal.metals.testResults.JunitTestReportParser
+import scala.meta.internal.metals.testResults.TestCommand
+import scala.meta.internal.metals.testResults.TestReport
+import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
+import com.google.gson.JsonParser
 import coursier.Dependency
 
 case class BazelBuildTool(
@@ -157,7 +167,7 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
+  ): Future[TestCommand] =
     withTestReport(
       mbtTestCommand(workspace, target, testSuites, sourceFiles, framework)
     )
@@ -170,17 +180,67 @@ case class BazelBuildTool(
 
   private def withTestReport(
       command: Future[List[String]]
-  ): Future[MbtTestCommand] = {
+  ): Future[TestCommand] = {
     val eventFile = AbsolutePath(
       tempDir.resolve(s"bazel-test-${UUID.randomUUID()}.json")
     )
     command.map { arguments =>
-      MbtTestCommand(
+      TestCommand(
         arguments :+ s"--build_event_json_file=$eventFile",
-        MbtTestReportProvider.bazelBuildEvent(eventFile),
+        bazelTestReportProvider(eventFile),
       )
     }
   }
+
+  private def bazelTestReportProvider(
+      eventFile: AbsolutePath
+  ): TestReportProvider = { () =>
+    try JunitTestReportParser.merge(bazelTestXmlFiles(eventFile))
+    catch {
+      case NonFatal(error) =>
+        scribe.warn(
+          s"Unable to read Bazel build events from $eventFile",
+          error,
+        )
+        TestReport.empty
+    } finally {
+      Try(eventFile.deleteIfExists()).failed.foreach { error =>
+        scribe.warn(s"Unable to remove Bazel build events $eventFile", error)
+      }
+    }
+  }
+
+  private def bazelTestXmlFiles(eventFile: AbsolutePath): List[AbsolutePath] =
+    if (!eventFile.isFile) Nil
+    else {
+      val reports = mutable.LinkedHashSet.empty[AbsolutePath]
+      Using.resource(Files.lines(eventFile.toNIO)) { lines =>
+        lines.forEach { line =>
+          Try(JsonParser.parseString(line).getAsJsonObject).toOption
+            .flatMap(json => Option(json.getAsJsonObject("testResult")))
+            .flatMap(json => Option(json.getAsJsonArray("testActionOutput")))
+            .foreach { outputs =>
+              List.tabulate(outputs.size)(outputs.get).foreach { output =>
+                val file = output.getAsJsonObject
+                val name = Option(file.get("name")).map(_.getAsString)
+                val uri = Option(file.get("uri")).map(_.getAsString)
+                if (name.exists(_.endsWith("test.xml"))) {
+                  uri
+                    .flatMap(bazelFileUri)
+                    .filter(_.isFile)
+                    .foreach(reports.add)
+                }
+              }
+            }
+        }
+      }
+      reports.toList
+    }
+
+  private def bazelFileUri(value: String): Option[AbsolutePath] =
+    Try(URI.create(value)).toOption
+      .filter(uri => uri.getScheme == "file")
+      .flatMap(uri => Try(AbsolutePath(Paths.get(uri))).toOption)
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -232,7 +292,7 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
+  ): Int => Future[TestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,
