@@ -17,7 +17,10 @@ class AutoImportsPackageObjectSuite extends BaseAutoImportsSuite {
   override def extraDependencies(scalaVersion: String): Seq[Dependency] = {
     val binaryVersion = createBinaryVersion(scalaVersion)
     Seq(
-      Dependency.of("org.tpolecat", s"doobie-core_$binaryVersion", "0.13.4")
+      Dependency.of("org.tpolecat", s"doobie-core_$binaryVersion", "0.13.4"),
+      // declares `class BlackWhiteContext` directly inside `package object
+      // pprint`, which is compiled to a `package$BlackWhiteContext` classfile
+      Dependency.of("com.lihaoyi", s"pprint_$binaryVersion", "0.9.6")
     )
   }
 
@@ -139,22 +142,33 @@ class AutoImportsPackageObjectSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // A candidate whose namespace cannot fix the error is still offered, the
+  // same way an ordinary type-only class is offered in a term position (e.g.
+  // `val x = AbstractSet`). `correctInTreeContext` is the general filter for
+  // this and covers neither position below; improving it for all symbols is
+  // left as a follow-up rather than special-casing package objects here.
   check(
-    "type-only-alias-not-in-term-position",
+    "type-only-alias-in-term-position",
     """|object A {
        |  val io = <<ConnectionIO>>.apply
        |}
        |""".stripMargin,
-    ""
+    """|doobie
+       |doobie.free
+       |doobie.hi
+       |""".stripMargin
   )
 
   check(
-    "type-only-alias-not-in-bare-expression",
+    "type-only-alias-in-bare-expression",
     """|object A {
        |  val io = <<ConnectionIO>>
        |}
        |""".stripMargin,
-    ""
+    """|doobie
+       |doobie.free
+       |doobie.hi
+       |""".stripMargin
   )
 
   // `FC` is a term-only module alias declared in `doobie.free.Modules` and
@@ -172,13 +186,36 @@ class AutoImportsPackageObjectSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // Unlike the two cases above, an ordinary `object` in a type position is
+  // already dropped by `correctInTreeContext`, which asks whether the symbol
+  // is a module with a companion class. `FC` is a plain `val`, so it is not a
+  // module and slips through that check. Tightening the check is not enough
+  // on its own either, because it only expresses a preference: when every
+  // candidate fails it, all of them are offered anyway.
   check(
-    "term-only-val-not-in-type-position",
+    "term-only-val-in-type-position",
     """|object A {
        |  def fc: <<FC>> = ???
        |}
        |""".stripMargin,
-    ""
+    """|doobie
+       |doobie.free
+       |doobie.hi
+       |""".stripMargin
   )
 
+  // A class declared inside a package object has a classfile of its own
+  // (`package$BlackWhiteContext.class`), so the classfile search finds it too
+  // and its owner is the package object. Both routes must render the same
+  // package, otherwise the user is offered `pprint` and `pprint.package`
+  // twice and the diagnostic drops out of "import all missing symbols".
+  check(
+    "class-declared-in-package-object-offered-once",
+    """|object A {
+       |  val c: <<BlackWhiteContext>> = ???
+       |}
+       |""".stripMargin,
+    """|pprint
+       |""".stripMargin
+  )
 }

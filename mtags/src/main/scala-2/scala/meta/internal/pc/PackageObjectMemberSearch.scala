@@ -16,29 +16,23 @@ import org.eclipse.{lsp4j => l}
  * members inherited from mixin parents (issue #2583).
  *
  * Package objects are discovered through the existing classpath and workspace
- * symbol indexes. Scalac resolves their members, and the results are cached for
- * the lifetime of the compiler generation.
+ * symbol indexes, once per compiler generation. Scalac resolves their members.
  */
 trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
 
-  /** Memo of a discovery that completed without cancellation. */
-  private var discoveredPackageObjects: Option[List[Symbol]] = None
-
   /**
-   * Drops all cached answers; called on `didChange` because outlined source
-   * changes (e.g. an alias added to a workspace package object or one of its
-   * parent traits) are visible to member lookups before any compilation, so
-   * a cached miss could otherwise outlive the edit that fixes it.
+   * Memo of a discovery that completed without cancellation, held for the
+   * lifetime of this compiler. Discovery reads the classpath and workspace
+   * symbol indexes, and neither is updated by an unsaved edit: saving a new
+   * package object reindexes and compiles, and compiling restarts this
+   * compiler, so the memo cannot outlive the state it was built from.
    */
-  def resetPackageObjectMemberSearch(): Unit = {
-    discoveredPackageObjects = None
-    packageObjectMemberCache.clear()
-  }
+  private var discoveredPackages: Option[List[Symbol]] = None
 
   private def packagesWithPackageObjects(
       isCancelled: () => Boolean
   ): List[Symbol] =
-    discoveredPackageObjects match {
+    discoveredPackages match {
       case Some(cached) => cached
       case None =>
         val start = System.nanoTime()
@@ -73,13 +67,18 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
           ju.Optional.empty(),
           collector
         )
+        // the classpath search yields packages in an order the comparator
+        // leaves unspecified, since every hit has the same `package.class`
+        // filename; sort so that a name exposed by several package objects
+        // is always offered in the same order
         val symbols = packages.iterator
           .takeWhile(_ => !requestCancelled())
           .flatMap(pkg => packageSymbolFromString(pkg))
           .toList
+          .sortBy(_.fullName)
         // an interrupted discovery may be missing packages, do not cache it
         if (!isCancelled()) {
-          discoveredPackageObjects = Some(symbols)
+          discoveredPackages = Some(symbols)
           val durationMs = (System.nanoTime() - start) / 1000000
           logger.fine(
             s"discovered ${symbols.size} packages with package objects on the classpath in ${durationMs}ms"
@@ -89,61 +88,21 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
     }
 
   /**
-   * Encoded member name -> (member, package classes whose package object
-   * exposes it, in discovery order). Only name-dependent facts are cached;
-   * context-dependent filters (accessibility, already in scope) are applied
-   * per request.
-   */
-  private val packageObjectMemberCache =
-    mutable.Map.empty[String, List[(Symbol, List[Symbol])]]
-
-  /**
    * Offers to `visit` every member named `name` that a package object on the
-   * classpath exposes, in both the type and the term namespace.
+   * classpath exposes, in both the type and the term namespace, paired with
+   * the package class it is importable through.
    *
-   * Returns the visited symbols mapped to the package classes they are
-   * importable through: a symbol declared in (or inherited by) the package
-   * object of package `doobie` is importable as `import doobie.<name>`, so
-   * auto-import must render it through the package rather than its declared
-   * owner. A symbol exposed by several package objects is importable through
-   * each of them.
+   * A member declared in (or inherited by) the package object of package
+   * `doobie` is importable as `import doobie.<name>`, so auto-import must
+   * render it through the package rather than through its declared owner. A
+   * member exposed by several package objects is importable through each.
    */
   def searchPackageObjectMembers(
       name: String,
       context: Context,
-      visit: Symbol => Boolean,
+      visit: (Symbol, Symbol) => Unit,
       isCancelled: () => Boolean
-  ): collection.Map[Symbol, List[Symbol]] = {
-    if (isCancelled()) Map.empty[Symbol, List[Symbol]]
-    else {
-      val encoded = NameTransformer.encode(name)
-      val candidates = packageObjectMemberCache.get(encoded) match {
-        case Some(cached) => cached
-        case None =>
-          val computed = probePackageObjects(encoded, isCancelled)
-          // an interrupted probe may be missing candidates, do not cache it
-          if (!isCancelled()) {
-            packageObjectMemberCache.update(encoded, computed)
-          }
-          computed
-      }
-      val result = mutable.LinkedHashMap.empty[Symbol, List[Symbol]]
-      for {
-        (sym, pkgClasses) <- candidates
-        if context.isAccessible(sym, sym.info)
-        if context.lookupSymbol(sym.name, _ => true).symbol != sym
-      } {
-        result.update(sym, pkgClasses)
-        visit(sym)
-      }
-      result
-    }
-  }
-
-  private def probePackageObjects(
-      encoded: String,
-      isCancelled: () => Boolean
-  ): List[(Symbol, List[Symbol])] = {
+  ): Unit = {
     def isUniversalOwner(owner: Symbol): Boolean =
       owner == definitions.ObjectClass ||
         owner == definitions.AnyClass ||
@@ -154,8 +113,7 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
           isUniversalOwner(overridden.owner)
         )
 
-    val candidates =
-      mutable.LinkedHashMap.empty[Symbol, mutable.ListBuffer[Symbol]]
+    val encoded = NameTransformer.encode(name)
     val packages = packagesWithPackageObjects(isCancelled).iterator
     while (packages.hasNext && !isCancelled()) {
       val pkg = packages.next()
@@ -173,18 +131,14 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
           if !sym.hasPackageFlag && !sym.owner.hasPackageFlag
           if !sym.isConstructor && !sym.isSynthetic && !sym.isArtifact
           if !isUniversalMember(sym)
-        } {
-          candidates.getOrElseUpdate(
-            sym,
-            mutable.ListBuffer.empty[Symbol]
-          ) += pkg.moduleClass
-        }
+          if context.isAccessible(sym, sym.info)
+          if context.lookupSymbol(sym.name, _ => true).symbol != sym
+        } visit(sym, pkg.moduleClass)
       } catch {
-        case NonFatal(_) =>
+        // completing a package object reads classfiles from arbitrary jars,
+        // which can fail with a linkage error rather than an exception
+        case NonFatal(_) | (_: LinkageError) =>
       }
     }
-    candidates.iterator.map { case (sym, pkgClasses) =>
-      (sym, pkgClasses.toList)
-    }.toList
   }
 }

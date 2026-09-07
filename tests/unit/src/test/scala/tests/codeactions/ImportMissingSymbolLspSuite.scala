@@ -681,7 +681,6 @@ class ImportMissingSymbolLspSuite
        |  def alias: LibAlias[Int] = ???
        |}
        |""".stripMargin,
-    expectNoDiagnostics = false,
     fileName = "B.scala",
     overrideLayout = Some(
       s"""|/metals.json

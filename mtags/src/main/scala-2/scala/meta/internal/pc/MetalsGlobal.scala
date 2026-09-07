@@ -81,7 +81,6 @@ class MetalsGlobal(
   val compileUnitsCache = new CompileUnitsCache(5)
   def didChange(uri: URI): Unit = {
     compileUnitsCache.didChange(uri)
-    resetPackageObjectMemberSearch()
   }
 
   class MetalsInteractiveAnalyzer(val global: compiler.type)

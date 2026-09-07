@@ -19,12 +19,6 @@ final class AutoImportsProvider(
 )(implicit queryInfo: PcQueryContext) {
   import compiler._
 
-  private case class RenderedResult(
-      result: AutoImportsResult,
-      symbol: Symbol,
-      isPackageObjectImport: Boolean
-  )
-
   def autoImports(): List[AutoImportsResult] = {
     val unit = addCompilationUnit(
       code = params.text(),
@@ -45,38 +39,52 @@ final class AutoImportsProvider(
 
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
-    val isSeen = mutable.Set.empty[String]
-    val symbols = List.newBuilder[Symbol]
+    val isSeen = mutable.Set.empty[(String, Boolean)]
+    // a symbol together with the package object class it is importable
+    // through, if it is not importable through its own owner (issue #2583)
+    val symbols = List.newBuilder[(Symbol, Option[Symbol])]
+
+    // Symbols are keyed on the import that would be written for them, plus
+    // the namespace: a type and a term of the same name are distinct
+    // candidates because only one of them may fit the position, but they
+    // collapse into a single import statement in `distinctImports`.
+    def visitThrough(
+        sym: Symbol,
+        throughPackageObject: Option[Symbol]
+    ): Unit = {
+      val importPath = throughPackageObject match {
+        case Some(pkgClass) => s"${pkgClass.fullName}.${sym.name.decoded}"
+        case None => sym.fullName
+      }
+      if (isSeen.add((importPath, sym.isType))) {
+        // the declared owner of a member exposed by a package object is a
+        // mixin parent or the package object itself, and neither is a usable
+        // import path, so keep the classfile search from offering the same
+        // symbol again through its owner
+        if (throughPackageObject.isDefined) {
+          isSeen += ((sym.fullName, sym.isType))
+        }
+        symbols += ((sym, throughPackageObject))
+      }
+    }
 
     def visit(sym: Symbol): Boolean = {
-      val id = sym.fullName
-      if (!isSeen(id)) {
-        isSeen += id
-        symbols += sym
-        true
-      }
+      visitThrough(sym, None)
+      // the search visitors count a `true` as one added symbol, and this
+      // provider has always reported none, which makes short queries retry
       false
     }
 
     compiler.searchOutline(visit, name)
 
-    val seenPackageObjectMembers = mutable.Set.empty[(String, Boolean)]
-    def visitPackageObjectMember(sym: Symbol): Boolean = {
-      val id = (sym.fullName, sym.isType)
-      if (seenPackageObjectMembers.add(id)) {
-        symbols += sym
-        true
-      } else false
-    }
-
-    // symbols importable only through a package object (issue #2583), mapped
-    // to the package classes the import can go through; searched before the
-    // classfile-based sources so that the import a library curates through
-    // its package object is offered before the definition's own package
-    val visitedThroughPackageObject = compiler.searchPackageObjectMembers(
+    // symbols importable only through a package object (issue #2583) are
+    // searched before the classfile-based sources so that the import a
+    // library curates through its package object is offered before the
+    // definition's own package
+    compiler.searchPackageObjectMembers(
       name,
       context,
-      visitPackageObjectMember,
+      (sym, pkgClass) => visitThrough(sym, Some(pkgClass)),
       () => params.token().isCanceled()
     )
 
@@ -116,9 +124,13 @@ final class AutoImportsProvider(
     def renderResult(
         sym: Symbol,
         throughPackageObject: Option[Symbol]
-    ): RenderedResult = {
+    ): (AutoImportsResult, Symbol) = {
       val importOwner = throughPackageObject.getOrElse(sym.owner)
-      val pkg = importOwner.fullName
+      // a member of a package object is imported through the enclosing
+      // package, never through `<package>.package`, and `fullNameSyntax`
+      // is the helper that already skips package objects and escapes
+      // keyword segments
+      val pkg = importOwner.fullNameSyntax
       val importOwnerOverride =
         throughPackageObject
           .map(pkgClass => Map(sym -> pkgClass))
@@ -160,90 +172,48 @@ final class AutoImportsProvider(
           s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
         )
       }
-      RenderedResult(
+      (
         AutoImportsResultImpl(
           pkg,
           edits.asJava,
           Optional.of(semanticdbSymbol(sym))
         ),
-        sym,
-        throughPackageObject.isDefined
+        sym
       )
     }
 
-    // Package-object members are resolved by name in both namespaces without
-    // any context, so a term-only member (a `val`) can come back for an
-    // unresolved type and vice versa; importing it would not fix the error,
-    // so keep only the candidates whose namespace fits the tree position.
-    def namespaceMatchesPosition(sym: Symbol): Boolean = {
-      def matchesTerm = sym.isTerm || sym.companionModule != NoSymbol
-      def matchesType = sym.isType || sym.companionClass != NoSymbol
-      lastVisitedParentTrees match {
-        // an import brings both namespaces into scope
-        case (_: Import) :: _ => true
-        case (_: Ident) :: (_: Import) :: _ => true
-        case (_: Ident) :: SingletonTypeTree(_) :: _ => matchesTerm
-        case (_: Ident) :: (_: TypTree) :: _ => matchesType
-        // a bare Ident as the declared type of a val or def
-        case (id: Ident) :: (df: ValOrDefDef) :: _ if df.tpt == id =>
-          matchesType
-        // a bare Ident as the right-hand side of a type alias
-        case (id: Ident) :: (td: TypeDef) :: _ if td.rhs == id =>
-          matchesType
-        // constructor calls and template parents need a class type
-        case (_: Ident) :: ((_: New) | (_: Template)) :: _ => matchesType
-        // any other position is an expression and needs a term
-        case _ => matchesTerm
-      }
-    }
-
-    val all = symbols.result().flatMap { sym =>
-      if (
-        isExactMatch(sym, name) && context.isAccessible(
-          sym,
-          sym.info
-        ) && !sym.owner.isEmptyPackageClass
-      ) {
-        // A symbol exposed by a package object is importable through the
-        // enclosing package rather than its declared owner (issue #2583); a
-        // symbol exposed by several package objects is importable through
-        // each of them, so offer one import per package.
-        val importOwners = visitedThroughPackageObject.get(sym) match {
-          case Some(pkgClasses) if namespaceMatchesPosition(sym) =>
-            pkgClasses.map(Some(_))
-          case Some(_) => Nil
-          case None => List(None)
-        }
-        importOwners.map(renderResult(sym, _))
-      } else Nil
-    }
-
-    // a package object can expose the same name in both namespaces (e.g.
-    // doobie inherits `type Transactor` and `val Transactor`); both render
-    // the same import statement, so offer only one code action for them
-    def dedupPackageObjectResults(
-        results: List[RenderedResult]
+    // A type and a term of the same name render the same import statement,
+    // whether they are a class and its companion object or a package object
+    // exposing both `type Transactor` and `val Transactor`; offer a single
+    // code action for them.
+    def distinctImports(
+        results: List[(AutoImportsResult, Symbol)]
     ): List[AutoImportsResult] = {
-      val seen = mutable.Set.empty[(String, ju.List[l.TextEdit])]
+      val seen = mutable.Set.empty[(String, String)]
       results.collect {
-        case rendered if !rendered.isPackageObjectImport => rendered.result
-        case rendered
-            if seen.add(
-              (rendered.result.packageName(), rendered.result.edits())
-            ) =>
-          rendered.result
+        case (result, sym)
+            if seen.add((result.packageName(), sym.name.dropLocal.decoded)) =>
+          result
       }
+    }
+
+    val all = symbols.result().collect {
+      case (sym, throughPackageObject)
+          if isExactMatch(sym, name) && context.isAccessible(
+            sym,
+            sym.info
+          ) && !sym.owner.isEmptyPackageClass =>
+        renderResult(sym, throughPackageObject)
     }
 
     all match {
-      case onlyResult :: Nil => List(onlyResult.result)
+      case (onlyResult, _) :: Nil => List(onlyResult)
       case Nil => Nil
       case moreResults =>
-        val moreExact = moreResults.filter { rendered =>
-          correctInTreeContext(rendered.symbol)
+        val moreExact = moreResults.filter { case (_, sym) =>
+          correctInTreeContext(sym)
         }
-        val results = if (moreExact.nonEmpty) moreExact else moreResults
-        dedupPackageObjectResults(results)
+        distinctImports(if (moreExact.nonEmpty) moreExact else moreResults)
     }
   }
 
