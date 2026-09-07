@@ -71,3 +71,24 @@ object MbtTestReport {
       TestReport(cases)
     }.toOption
 }
+
+/** MBT-specific abstraction over build-tool report discovery. */
+trait MbtTestReportProvider {
+  def read(): TestReport
+}
+
+object MbtTestReportProvider {
+  val empty: MbtTestReportProvider = () => TestReport.empty
+}
+
+/** MBT test command with its associated report provider. */
+final case class MbtTestCommand(
+    arguments: List[String],
+    reportProvider: MbtTestReportProvider,
+)
+
+/** Outcome of an MBT test run: process exit code and the parsed report. */
+final case class MbtTestRunResult(
+    exitCode: Int,
+    report: TestReport,
+)

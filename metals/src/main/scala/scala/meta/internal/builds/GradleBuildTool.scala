@@ -17,11 +17,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestCommand
 import scala.meta.internal.metals.testResults.TestReport
-import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -291,7 +291,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[TestCommand] =
+  ): Future[MbtTestCommand] =
     withTestReport(
       Future.successful(
         gradleTestCommand(
@@ -305,13 +305,13 @@ case class GradleBuildTool(
 
   private def withTestReport(
       command: Future[List[String]]
-  ): Future[TestCommand] = {
+  ): Future[MbtTestCommand] = {
     val reportDirectory = AbsolutePath(
       tempDir.resolve(s"gradle-test-${UUID.randomUUID()}")
     )
     command.map { arguments =>
       val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
-      TestCommand(
+      MbtTestCommand(
         arguments.take(1) ::: reportArgument :: arguments.drop(1),
         gradleTestReportProvider(reportDirectory),
       )
@@ -320,7 +320,7 @@ case class GradleBuildTool(
 
   private def gradleTestReportProvider(
       directory: AbsolutePath
-  ): TestReportProvider = { () =>
+  ): MbtTestReportProvider = { () =>
     try
       JunitTestReportParser.merge(
         JunitTestReportParser.xmlFiles(List(directory))
@@ -375,7 +375,7 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[TestCommand] = {
+  ): Int => Future[MbtTestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,

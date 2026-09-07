@@ -19,9 +19,6 @@ import scala.meta.internal.metals.debug.server.DebugeeProject
 import scala.meta.internal.metals.debug.server.ForkedTestDebugAdapter
 import scala.meta.internal.metals.debug.server.MetalsDebugToolsResolver
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
-import scala.meta.internal.metals.testResults.TestCommand
-import scala.meta.internal.metals.testResults.TestReportProvider
-import scala.meta.internal.metals.testResults.TestRunResult
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
@@ -128,7 +125,7 @@ class MbtDebugSessionStarter(
       workspace: AbsolutePath,
       out: String => Unit,
       err: String => Unit,
-  ): Future[TestRunResult] = {
+  ): Future[MbtTestRunResult] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
     val command = buildTool.mbtTestRun(
       workspace,
@@ -152,7 +149,7 @@ class MbtDebugSessionStarter(
         s"Testing $artifactId",
         runInTerminal(testCommand.arguments, target, workspace, forward(_, out), forward(_, err))
           .map { exitCode =>
-            TestRunResult(exitCode, testCommand.reportProvider.read())
+            MbtTestRunResult(exitCode, testCommand.reportProvider.read())
           },
       )
     }
@@ -268,11 +265,11 @@ class MbtDebugSessionStarter(
                 toolName,
                 isTests = true,
               )
-            val reportProvider = new AtomicReference[TestReportProvider](
-              TestReportProvider.empty
+            val reportProvider = new AtomicReference[MbtTestReportProvider](
+              MbtTestReportProvider.empty
             )
             def commandArguments(
-                command: Future[TestCommand],
+                command: Future[MbtTestCommand],
                 sessionKind: String,
             ): Future[List[String]] =
               command.map { testCommand =>

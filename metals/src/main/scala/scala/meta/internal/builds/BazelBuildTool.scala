@@ -20,12 +20,12 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestCommand
 import scala.meta.internal.metals.testResults.TestReport
-import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -167,7 +167,7 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[TestCommand] =
+  ): Future[MbtTestCommand] =
     withTestReport(
       mbtTestCommand(workspace, target, testSuites, sourceFiles, framework)
     )
@@ -180,12 +180,12 @@ case class BazelBuildTool(
 
   private def withTestReport(
       command: Future[List[String]]
-  ): Future[TestCommand] = {
+  ): Future[MbtTestCommand] = {
     val eventFile = AbsolutePath(
       tempDir.resolve(s"bazel-test-${UUID.randomUUID()}.json")
     )
     command.map { arguments =>
-      TestCommand(
+      MbtTestCommand(
         arguments :+ s"--build_event_json_file=$eventFile",
         bazelTestReportProvider(eventFile),
       )
@@ -194,7 +194,7 @@ case class BazelBuildTool(
 
   private def bazelTestReportProvider(
       eventFile: AbsolutePath
-  ): TestReportProvider = { () =>
+  ): MbtTestReportProvider = { () =>
     try JunitTestReportParser.merge(bazelTestXmlFiles(eventFile))
     catch {
       case NonFatal(error) =>
@@ -292,7 +292,7 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[TestCommand] = {
+  ): Int => Future[MbtTestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,

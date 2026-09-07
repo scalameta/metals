@@ -15,11 +15,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestCommand
 import scala.meta.internal.metals.testResults.TestReport
-import scala.meta.internal.metals.testResults.TestReportProvider
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -196,7 +196,7 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[TestCommand] =
+  ): Future[MbtTestCommand] =
     withTestReport(
       workspace,
       target,
@@ -207,7 +207,7 @@ case class MavenBuildTool(
       workspace: AbsolutePath,
       target: MbtTarget,
       command: Future[List[String]],
-  ): Future[TestCommand] = {
+  ): Future[MbtTestCommand] = {
     val reportDirectories = (
       mavenModuleDirectory(target)
         .getOrElse(workspace)
@@ -217,7 +217,7 @@ case class MavenBuildTool(
           .map(_.parent.resolve("surefire-reports"))
     ).distinct
     command.map { arguments =>
-      TestCommand(
+      MbtTestCommand(
         arguments,
         mavenTestReportProvider(reportDirectories),
       )
@@ -226,7 +226,7 @@ case class MavenBuildTool(
 
   private def mavenTestReportProvider(
       directories: List[AbsolutePath]
-  ): TestReportProvider = {
+  ): MbtTestReportProvider = {
     val initialMd5 = JunitTestReportParser
       .xmlFiles(directories)
       .flatMap { report =>
@@ -294,7 +294,7 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[TestCommand] = {
+  ): Int => Future[MbtTestCommand] = {
     val commandWithPort = mbtTestDebugCommandWithPort(
       workspace,
       target,
