@@ -62,7 +62,7 @@ object V {
 
   val modelContextProtocol = "2.0.1"
 
-  val munit = "1.3.5"
+  val munit = "1.3.6"
 
   val pprint = "0.9.6"
 
