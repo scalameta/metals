@@ -18,10 +18,9 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
-import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestReport
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -322,13 +321,13 @@ case class GradleBuildTool(
       directory: AbsolutePath
   ): MbtTestReportProvider = { () =>
     try
-      JunitTestReportParser.merge(
-        JunitTestReportParser.xmlFiles(List(directory))
+      MbtTestReport.mergeJunitXml(
+        MbtTestReport.xmlFiles(List(directory))
       )
     catch {
       case NonFatal(error) =>
         scribe.warn(s"Unable to read test reports from $directory", error)
-        TestReport.empty
+        MbtTestReport.empty
     } finally {
       Try {
         if (directory.exists) {

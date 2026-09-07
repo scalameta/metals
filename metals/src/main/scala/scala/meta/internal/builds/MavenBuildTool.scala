@@ -16,11 +16,9 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
-import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestReport
-import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -227,24 +225,30 @@ case class MavenBuildTool(
   private def mavenTestReportProvider(
       directories: List[AbsolutePath]
   ): MbtTestReportProvider = {
-    val initialMd5 = JunitTestReportParser
+    val snapshot = MbtTestReport
       .xmlFiles(directories)
       .flatMap { report =>
-        Try(MD5.compute(report.toNIO)).toOption.map(report -> _)
+        Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
+          .map(report -> _)
       }
       .toMap
     () =>
       try {
-        val changed = JunitTestReportParser
+        val changed = MbtTestReport
           .xmlFiles(directories)
           .filter { report =>
-            initialMd5.get(report).forall(_ != MD5.compute(report.toNIO))
+            snapshot.get(report) match {
+              case None => true
+              case Some(mtime) =>
+                Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
+                  .forall(_ != mtime)
+            }
           }
-        JunitTestReportParser.merge(changed)
+        MbtTestReport.mergeJunitXml(changed)
       } catch {
         case NonFatal(error) =>
           scribe.warn("Unable to read changed Maven test reports", error)
-          TestReport.empty
+          MbtTestReport.empty
       }
   }
 

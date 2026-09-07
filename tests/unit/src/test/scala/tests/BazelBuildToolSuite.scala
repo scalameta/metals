@@ -129,7 +129,7 @@ class BazelBuildToolSuite extends BaseSuite {
     // Provider for a non-existent event file returns empty
     assertEquals(
       run.reportProvider.read(),
-      scala.meta.internal.metals.testResults.TestReport.empty,
+      scala.meta.internal.metals.mbt.MbtTestReport.empty,
     )
   }
 }

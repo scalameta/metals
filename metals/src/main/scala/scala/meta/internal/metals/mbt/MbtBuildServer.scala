@@ -405,7 +405,7 @@ final class MbtBuildServer(
                 val testResult = new TestResult(status)
                 if (run.report.testCases.nonEmpty) {
                   testResult.setDataKind(MbtTestReport.dataKind)
-                  testResult.setData(MbtTestReport.toJson(run.report))
+                  testResult.setData(run.report.toJson)
                 }
                 result.complete(testResult)
               case Failure(ex) =>

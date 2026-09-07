@@ -21,11 +21,10 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
-import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestReport
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config.TestFramework
@@ -195,14 +194,14 @@ case class BazelBuildTool(
   private def bazelTestReportProvider(
       eventFile: AbsolutePath
   ): MbtTestReportProvider = { () =>
-    try JunitTestReportParser.merge(bazelTestXmlFiles(eventFile))
+    try MbtTestReport.mergeJunitXml(bazelTestXmlFiles(eventFile))
     catch {
       case NonFatal(error) =>
         scribe.warn(
           s"Unable to read Bazel build events from $eventFile",
           error,
         )
-        TestReport.empty
+        MbtTestReport.empty
     } finally {
       Try(eventFile.deleteIfExists()).failed.foreach { error =>
         scribe.warn(s"Unable to remove Bazel build events $eventFile", error)

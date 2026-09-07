@@ -147,7 +147,13 @@ class MbtDebugSessionStarter(
         buildTool.transformMbtTestOutput(line).foreach(consumer)
       workDoneProgress.trackFuture(
         s"Testing $artifactId",
-        runInTerminal(testCommand.arguments, target, workspace, forward(_, out), forward(_, err))
+        runInTerminal(
+          testCommand.arguments,
+          target,
+          workspace,
+          forward(_, out),
+          forward(_, err),
+        )
           .map { exitCode =>
             MbtTestRunResult(exitCode, testCommand.reportProvider.read())
           },

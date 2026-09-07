@@ -7,9 +7,6 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
-import scala.meta.internal.metals.testResults.TestCaseResult
-import scala.meta.internal.metals.testResults.TestCaseStatus
-import scala.meta.internal.metals.testResults.TestReport
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.ScalaTestSuiteSelection
@@ -40,7 +37,7 @@ class MbtTestResultAdapter(
     testSuites: ScalaTestSuites,
     testProvider: TestSuitesProvider,
     targetId: BuildTargetIdentifier,
-    report: () => Option[TestReport] = () => None,
+    report: () => Option[MbtTestReport] = () => None,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -110,7 +107,7 @@ object MbtTestResultAdapter {
       testSuites: ScalaTestSuites,
       testProvider: TestSuitesProvider,
       targetId: BuildTargetIdentifier,
-      report: () => Option[TestReport] = () => None,
+      report: () => Option[MbtTestReport] = () => None,
   )(implicit ec: ExecutionContext): MbtTestResultAdapter =
     new MbtTestResultAdapter(
       inner,
@@ -127,7 +124,7 @@ object MbtTestResultAdapter {
       targetId: BuildTargetIdentifier,
       passed: Boolean,
       duration: Long,
-      report: Option[TestReport] = None,
+      report: Option[MbtTestReport] = None,
   ): List[TestSuiteSummary] =
     suites.map { suite =>
       val className = suite.getClassName
@@ -145,9 +142,23 @@ object MbtTestResultAdapter {
 
       val testResults: java.util.List[SingleTestSummary] =
         if (reportedTests.nonEmpty) {
-          reportedTests
-            .map(toSingleTestSummary(className, testNames, _))
-            .asJava
+          val reportedNames = reportedTests.map(_.testName).toSet
+          val fallbacks = selectedTests
+            .filterNot { name =>
+              reportedNames.contains(name) ||
+              reportedNames.contains(name.stripSuffix("()"))
+            }
+            .map { testName =>
+              singleTestResult(
+                s"$className.$testName",
+                passed,
+                "Test failed",
+                duration,
+              )
+            }
+          (reportedTests.map(
+            toSingleTestSummary(className, testNames, _)
+          ) ++ fallbacks).asJava
         } else if (testNames.isEmpty) {
           java.util.Collections.singletonList(
             singleTestResult(className, passed, "Test suite failed", duration)
@@ -174,7 +185,7 @@ object MbtTestResultAdapter {
   private def toSingleTestSummary(
       className: String,
       knownTestNames: List[String],
-      test: TestCaseResult,
+      test: MbtTestCaseResult,
   ): SingleTestSummary = {
     val reportedName = knownTestNames
       .find(_ == test.testName)
@@ -184,11 +195,11 @@ object MbtTestResultAdapter {
       .getOrElse(test.testName)
     val testName = s"$className.$reportedName"
     test.status match {
-      case TestCaseStatus.Passed =>
+      case MbtTestCaseStatus.Passed =>
         SingleTestResult.Passed(testName, test.duration)
-      case TestCaseStatus.Skipped =>
+      case MbtTestCaseStatus.Skipped =>
         SingleTestResult.Skipped(testName)
-      case TestCaseStatus.Failed =>
+      case MbtTestCaseStatus.Failed =>
         SingleTestResult.Failed(
           testName,
           test.duration,

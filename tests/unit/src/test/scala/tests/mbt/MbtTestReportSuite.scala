@@ -3,12 +3,10 @@ package tests.mbt
 import java.nio.file.Files
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.mbt.MbtTestCaseResult
+import scala.meta.internal.metals.mbt.MbtTestCaseStatus
 import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.MbtTestResultAdapter
-import scala.meta.internal.metals.testResults.JunitTestReportParser
-import scala.meta.internal.metals.testResults.TestCaseResult
-import scala.meta.internal.metals.testResults.TestCaseStatus
-import scala.meta.internal.metals.testResults.TestReport
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -23,16 +21,16 @@ class MbtTestReportSuite extends munit.FunSuite {
     directory.resolve("TEST-example.FooSuite.xml").writeText(junitReport)
 
     val report =
-      JunitTestReportParser.merge(
-        JunitTestReportParser.xmlFiles(List(directory))
+      MbtTestReport.mergeJunitXml(
+        MbtTestReport.xmlFiles(List(directory))
       )
 
     assertEquals(
       report.testCases.map(test => (test.testName, test.status, test.duration)),
       List(
-        ("passes", TestCaseStatus.Passed, 12L),
-        ("fails", TestCaseStatus.Failed, 34L),
-        ("skips", TestCaseStatus.Skipped, 0L),
+        ("passes", MbtTestCaseStatus.Passed, 12L),
+        ("fails", MbtTestCaseStatus.Failed, 34L),
+        ("skips", MbtTestCaseStatus.Skipped, 0L),
       ),
     )
     assertEquals(report.testCases(1).error, Some("expected true"))
@@ -40,12 +38,12 @@ class MbtTestReportSuite extends munit.FunSuite {
   }
 
   test("report-json-roundtrip") {
-    val report = TestReport(
+    val report = MbtTestReport(
       List(
-        TestCaseResult(
+        MbtTestCaseResult(
           "example.FooSuite",
           "fails",
-          TestCaseStatus.Failed,
+          MbtTestCaseStatus.Failed,
           34L,
           Some("expected true"),
           Some("example stack trace"),
@@ -54,26 +52,26 @@ class MbtTestReportSuite extends munit.FunSuite {
     )
     val result = new TestResult(ch.epfl.scala.bsp4j.StatusCode.ERROR)
     result.setDataKind(MbtTestReport.dataKind)
-    result.setData(MbtTestReport.toJson(report))
+    result.setData(report.toJson)
 
     assertEquals(MbtTestReport.fromTestResult(result), Some(report))
   }
 
   test("use-individual-results") {
-    val report = TestReport(
+    val report = MbtTestReport(
       List(
-        TestCaseResult(
+        MbtTestCaseResult(
           "example.FooSuite",
           "passes",
-          TestCaseStatus.Passed,
+          MbtTestCaseStatus.Passed,
           12L,
           None,
           None,
         ),
-        TestCaseResult(
+        MbtTestCaseResult(
           "example.FooSuite",
           "fails",
-          TestCaseStatus.Failed,
+          MbtTestCaseStatus.Failed,
           34L,
           Some("expected true"),
           Some("example stack trace"),
