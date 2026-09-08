@@ -46,7 +46,7 @@ object BazelMavenJsonImporter {
    */
   def importMaven(
       projectDir: AbsolutePath,
-      outputBase: Option[Path],
+      outputBase: Option[AbsolutePath],
       hubs: List[MavenHub],
   ): Seq[MbtDependencyModule] = {
     val repositoryNames =
@@ -68,7 +68,7 @@ object BazelMavenJsonImporter {
           val json = gson.fromJson(content, classOf[JsonObject])
           extractArtifacts(
             json,
-            outputBase.map(AbsolutePath.apply),
+            outputBase,
             projectDir,
             repositoryNames,
             path,
