@@ -1,8 +1,5 @@
 package scala.meta.internal.metals.mbt.importer
 
-import java.nio.file.Files
-import java.nio.file.Path
-
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -48,7 +45,7 @@ abstract class BazelMbtImporter(
       namespaceMode: BazelMbtNamespaceMode,
   ): Future[Unit] = {
     val out = outputPath(workspace)
-    Files.createDirectories(out.toNIO.getParent)
+    out.parent.createDirectories()
     val patterns = BazelProjectViewTargets.patterns(projectRoot)
     for {
       outputBase <- queryOutputBase()
@@ -57,7 +54,7 @@ abstract class BazelMbtImporter(
         .discoverMavenHubs(
           BazelMavenJsonImporter.externalDirs(
             projectRoot,
-            outputBase.map(AbsolutePath.apply),
+            outputBase,
           )
         )
       _ = scribe.info(
@@ -157,7 +154,7 @@ abstract class BazelMbtImporter(
         effectiveScalaVersion,
         genSrcOutputsByTarget,
       )
-      _ <- Future(Files.writeString(out.toNIO, MbtBuild.toJson(build)))
+      _ <- Future(out.writeText(MbtBuild.toJson(build)))
     } yield ()
   }
 
@@ -169,7 +166,7 @@ abstract class BazelMbtImporter(
       ruleClass == "scala_test" || ruleClass == "java_test"
 
   private def classDirectoriesForRunTargets(
-      bazelBin: Option[Path],
+      bazelBin: Option[AbsolutePath],
       runTargets: Set[String],
       ruleOutputsByTarget: Map[String, List[String]],
   ): Map[String, String] =
@@ -243,7 +240,7 @@ abstract class BazelMbtImporter(
   private def buildImportJarModules(
       importTargetJarLabels: Map[String, List[String]],
       sourcesJarByTarget: Map[String, Option[String]],
-      bazelBin: Option[Path],
+      bazelBin: Option[AbsolutePath],
   ): Seq[MbtDependencyModule] = {
     val seen = scala.collection.mutable.Set.empty[String]
     importTargetJarLabels.toSeq.sortBy(_._1).flatMap {
@@ -327,15 +324,15 @@ abstract class BazelMbtImporter(
 
   private def resolveJarUri(
       label: String,
-      bazelBin: Option[Path],
+      bazelBin: Option[AbsolutePath],
   ): Option[String] = {
     BazelLabels.fileLabelToWorkspaceRelativePath(label).flatMap { relative =>
       val candidate = projectRoot.resolve(relative)
-      if (Files.exists(candidate.toNIO)) Some(candidate.toURI.toString)
+      if (candidate.exists) Some(candidate.toURI.toString)
       else {
         val generatedCandidate = bazelBin.map(_.resolve(relative))
-        generatedCandidate.filter(Files.exists(_)) match {
-          case Some(path) => Some(path.toUri.toString)
+        generatedCandidate.filter(_.exists) match {
+          case Some(path) => Some(path.toURI.toString)
           case None =>
             scribe.warn(
               s"bazel-mbt: could not resolve jar for label $label"
@@ -371,8 +368,8 @@ abstract class BazelMbtImporter(
     val workspaceFile = projectRoot.resolve("WORKSPACE")
 
     def extractFromFile(path: AbsolutePath): Option[String] =
-      if (Files.exists(path.toNIO)) {
-        val content = new String(Files.readAllBytes(path.toNIO))
+      if (path.exists) {
+        val content = new String(path.readAllBytes)
         versionPattern.findFirstMatchIn(content).map(_.group(1))
       } else None
 
@@ -442,7 +439,7 @@ abstract class BazelMbtImporter(
         .filter(ruleLabels)
         .flatMap(outputsByGenLabel.getOrElse(_, Nil))
       genPaths.foreach { genPath =>
-        if (!Files.exists(projectRoot.resolve(genPath).toNIO))
+        if (!projectRoot.resolve(genPath).exists)
           scribe.warn(
             s"bazel-mbt: generated source output for target $target does not exist on disk: $genPath"
           )
@@ -497,15 +494,15 @@ abstract class BazelMbtImporter(
       }
   }
 
-  private def queryOutputBase(): Future[Option[Path]] = {
+  private def queryOutputBase(): Future[Option[AbsolutePath]] = {
     queryBazelInfo("output_base")
   }
 
-  private def queryBazelBin(): Future[Option[Path]] = {
+  private def queryBazelBin(): Future[Option[AbsolutePath]] = {
     queryBazelInfo("bazel-bin")
   }
 
-  private def queryBazelInfo(key: String): Future[Option[Path]] = {
+  private def queryBazelInfo(key: String): Future[Option[AbsolutePath]] = {
     val buf = new StringBuilder()
     shellRunner
       .run(
@@ -521,7 +518,7 @@ abstract class BazelMbtImporter(
       .map {
         case ExitCodes.Success =>
           val output = buf.toString.trim
-          if (output.nonEmpty) Some(Path.of(output)) else None
+          if (output.nonEmpty) Some(AbsolutePath(output)) else None
         case _ => None
       }
   }
