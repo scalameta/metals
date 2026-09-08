@@ -6,20 +6,26 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtDependencyModule
+import scala.meta.internal.metals.mbt.TurbineCompiler
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 
+import com.google.turbine.diag.SourceFile
 import coursierapi.Dependency
 import coursierapi.Fetch
 import org.eclipse.lsp4j.FileChangeType
@@ -1076,6 +1082,95 @@ class MbtBuildServerLspSuite
            |```
            |""".stripMargin.hover,
       )
+    } yield ()
+  }
+}
+
+class MbtTargetClasspathLspSuite
+    extends BaseCompletionLspSuite("mbt-target-classpath") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      presentationCompilerDiagnostics = true,
+      buildOnChange = false,
+      buildOnFocus = false,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      referenceProvider = ReferenceProviderConfig.mbt,
+      fallbackClasspath = FallbackClasspathConfig(Nil),
+      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+    )
+
+  override def initializeGitRepo: Boolean = true
+
+  test("target-classpath-before-protobuf-outline") {
+    cleanWorkspace()
+    val jar = workspace.resolve("dependency.jar")
+    val result = TurbineCompiler.compileClassfiles(
+      ParArray(
+        """|package generated.example;
+           |
+           |public final class Dependency {
+           |  public static Builder newBuilder() { return new Builder(); }
+           |
+           |  public static final class Builder {
+           |    public Builder project() { return this; }
+           |  }
+           |}
+           |""".stripMargin
+      ),
+      (text: String) => Seq(new SourceFile("Dependency.java", text)),
+      Nil,
+      EmptyWorkDoneProgress,
+    )(server.reports)
+    val output = new ZipOutputStream(Files.newOutputStream(jar.toNIO))
+    try {
+      for ((name, bytes) <- result.lowered.bytes().asScala) {
+        output.putNextEntry(new ZipEntry(s"$name.class"))
+        output.write(bytes)
+        output.closeEntry()
+      }
+    } finally output.close()
+
+    val mbtJson = new MbtJsonBuilder(
+      BuildInfo.scalaVersion,
+      dependencyModules = List(
+        MbtDependencyModule(
+          "com.example:dependency:1.0.0",
+          jar.toURI.toString,
+          null,
+        )
+      ),
+    ).addNamespace("main", List("src/**")).build()
+    val source = "src/Main.java"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/src/dependency.proto
+            |syntax = "proto3";
+            |package example;
+            |option java_package = "generated.example";
+            |option java_multiple_files = true;
+            |message Dependency {}
+            |/$source
+            |package example;
+            |
+            |import generated.example.Dependency;
+            |
+            |public class Main {
+            |  public void test() {
+            |    Dependency.newBuilder().project();
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(source)
+      _ <- server.didFocus(source)
+      _ = assertNoDiagnostics()
     } yield ()
   }
 }

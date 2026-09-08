@@ -1180,15 +1180,15 @@ abstract class MetalsLspService(
       isIncludedPath: AbsolutePath => Boolean
   ): Future[Unit] = {
     // rerun diagnostics for all open documents
-    buffers.open.filter(isIncludedPath).foldLeft(Future.unit) {
-      case (previous, path) =>
+    val futures =
+      buffers.open.filter(isIncludedPath).map { path =>
         for {
-          _ <- previous
           reportedDiagnostics <- compilers.didFocus(path)
           _ = diagnostics
             .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
         } yield ()
-    }
+      }
+    Future.sequence(futures).map(_ => ())
   }
 
   def resetPresentationCompilers(): Future[Unit] = {
