@@ -1124,11 +1124,20 @@ object TestFrameworkSymbolRegistry {
 
   /** Annotation symbols used by JUnit and TestNG test discovery. */
   def annotationSymbols: Seq[String] =
-    (junitSymbols.keys ++ testngSymbols.keys).toSeq.distinct
+    Seq(
+      JunitTestFinder.junitAnnotationSymbol,
+      JunitTestFinder.junit5AnnotationSymbol,
+    ) ++ testngSymbols.keys
 
-  /** Base class symbols used by ScalaTest, MUnit, Weaver, and ZIO Test discovery. */
+  /**
+   * Base class symbols used by ScalaTest, MUnit, Weaver, ZIO Test, and JUnit 3
+   * `TestCase` discovery. These are searched via inheritance, not as annotations.
+   */
   def baseParentSymbols: Seq[String] =
-    (scalatestSymbols.keys ++ munitSymbols.keys ++ weaverSymbols.keys ++ zioTestSymbols.keys).toSeq.distinct
+    (scalatestSymbols.keys ++ munitSymbols.keys ++ weaverSymbols.keys ++
+      zioTestSymbols.keys ++ Iterator(
+        JunitTestFinder.junitBaseClassSymbol
+      )).toSeq.distinct
 }
 
 object TestFrameworkUtils {
