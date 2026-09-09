@@ -225,24 +225,21 @@ case class MavenBuildTool(
   private def mavenTestReportProvider(
       directories: List[AbsolutePath]
   ): MbtTestReportProvider = {
-    val snapshot = MbtTestReport
+    val startTime = System.currentTimeMillis()
+    val preExisting = MbtTestReport
       .xmlFiles(directories)
-      .flatMap { report =>
-        Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
-          .map(report -> _)
-      }
-      .toMap
+      .map(_.toNIO)
+      .toSet
     () =>
       try {
         val changed = MbtTestReport
           .xmlFiles(directories)
           .filter { report =>
-            snapshot.get(report) match {
-              case None => true
-              case Some(mtime) =>
-                Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
-                  .forall(_ != mtime)
-            }
+            val path = report.toNIO
+            if (!preExisting.contains(path)) true
+            else
+              Try(Files.getLastModifiedTime(path).toMillis).toOption
+                .forall(_ >= startTime)
           }
         MbtTestReport.mergeJunitXml(changed)
       } catch {
