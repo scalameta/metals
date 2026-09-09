@@ -2007,7 +2007,9 @@ abstract class MetalsLspService(
     HashBiMap.create()
 
   def bspTaskForTerminal(terminalId: String): Option[(String, String)] = {
-    Option(terminals.inverse().get(terminalId))
+    terminals.synchronized {
+      Option(terminals.inverse().get(terminalId))
+    }
   }
 
   val buildClient: ForwardingMetalsBuildClient =
