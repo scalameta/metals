@@ -285,23 +285,6 @@ case class BazelBuildTool(
       }
   }
 
-  override def mbtTestDebugRunWithPort(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
-    val commandWithPort = mbtTestDebugCommandWithPort(
-      workspace,
-      target,
-      testSuites,
-      sourceFiles,
-      framework,
-    )
-    port => withTestReport(commandWithPort(port))
-  }
-
   private def resolveTestRunTargets(
       workspace: AbsolutePath,
       target: MbtTarget,

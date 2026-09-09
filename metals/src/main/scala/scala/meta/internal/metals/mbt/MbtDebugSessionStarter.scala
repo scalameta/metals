@@ -2,6 +2,7 @@ package scala.meta.internal.metals.mbt
 
 import java.net.URI
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -270,16 +271,26 @@ class MbtDebugSessionStarter(
                 toolName,
                 isTests = true,
               )
+            val reportProviderRef =
+              new AtomicReference[MbtTestReportProvider](
+                MbtTestReportProvider.empty
+              )
             val innerDebuggee =
               if (launcher.supportsForkedTestDebug) {
-                val commandWithPort =
-                  launcher.mbtTestDebugCommandWithPort(
+                val testCommandWithPort =
+                  launcher.mbtTestDebugRunWithPort(
                     workspace,
                     target,
                     testSuites,
                     sourceFiles,
                     frameworkOf(target, testSuites),
                   )
+                val commandWithPort: Int => Future[List[String]] = { port =>
+                  testCommandWithPort(port).map { testCmd =>
+                    reportProviderRef.set(testCmd.reportProvider)
+                    testCmd.arguments
+                  }(ExecutionContext.parasitic)
+                }
                 commandWithPort(0).foreach { command =>
                   scribe.info(
                     s"MBT test debug session via $toolName (forked): ${redactedCommand(command)}"
@@ -321,6 +332,7 @@ class MbtDebugSessionStarter(
                 testSuites,
                 testProvider,
                 target.id,
+                report = () => Some(reportProviderRef.get().read()),
               )
             val handler = dap.DebugServer.run(
               debuggee,
