@@ -6,20 +6,26 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
+import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.AutoImportBuildKind
+import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.Configs.ReferenceProviderConfig
 import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
+import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.TestUserInterfaceKind
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
+import scala.meta.internal.metals.mbt.MbtDependencyModule
+import scala.meta.internal.metals.mbt.TurbineCompiler
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 
+import com.google.turbine.diag.SourceFile
 import coursierapi.Dependency
 import coursierapi.Fetch
 import org.eclipse.lsp4j.FileChangeType
@@ -296,6 +302,46 @@ class MbtBuildServerLspSuite
     }
   }
 
+  test("mbt-initial-focus-waits-for-targets") {
+    cleanWorkspace()
+    val source = "src/Main.java"
+    val mbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addJavaDependency("com.google.guava", "guava", "33.5.0-jre")
+      .addNamespace("main", List("src/**"))
+      .build()
+    writeLayout(
+      s"""|/.metals/mbt.json
+          |$mbtJson
+          |/$source
+          |package example;
+          |
+          |import com.google.common.collect.ImmutableList;
+          |
+          |public class Main {
+          |  public static ImmutableList<String> names = ImmutableList.of("Alice");
+          |}
+          |""".stripMargin
+    )
+
+    for {
+      _ <- server.initialize()
+      didOpen = server.didOpen(source)
+      didFocus = server.didFocus(source)
+      unexpectedDiagnostics = client.nextDiagnosticsFor(
+        workspace.resolve(source),
+        _.nonEmpty,
+      )
+      _ = assert(!didFocus.isCompleted)
+      _ <- server.initialized()
+      _ <- server.didChangeConfiguration(userConfig.toString)
+      _ <- didOpen
+      _ <- didFocus
+      _ = server.assertBuildServerConnection()
+      _ = assert(!unexpectedDiagnostics.isCompleted)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()
     val scalaLibJarUri =
@@ -490,6 +536,66 @@ class MbtBuildServerLspSuite
         targetIds,
         Set("mbt://namespace/core", "mbt://namespace/extra"),
       )
+    } yield ()
+  }
+
+  test("mbt-target-update-refreshes-java-diagnostics") {
+    cleanWorkspace()
+    val source = "src/Main.java"
+    val otherSource = "src/Other.java"
+    val initialMbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addNamespace("main", List("src/**"))
+      .build()
+    val updatedMbtJson = new MbtJsonBuilder(BuildInfo.scalaVersion)
+      .addJavaDependency("com.google.guava", "guava", "33.5.0-jre")
+      .addNamespace("main", List("src/**"))
+      .build()
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$initialMbtJson
+            |/$source
+            |package example;
+            |
+            |import com.google.common.collect.ImmutableList;
+            |
+            |public class Main {
+            |  public static ImmutableList<String> names = ImmutableList.of("Alice");
+            |}
+            |/$otherSource
+            |package example;
+            |
+            |import com.google.common.collect.ImmutableList;
+            |
+            |public class Other {
+            |  public static ImmutableList<String> names = ImmutableList.of("Bob");
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(source)
+      _ <- server.didFocus(source)
+      _ <- server.didOpen(otherSource)
+      _ <- server.didFocus(otherSource)
+      _ = assert(
+        client.workspaceDiagnostics.nonEmpty,
+        "Expected diagnostics before the target classpath update",
+      )
+      _ = Files.writeString(
+        workspace.resolve(".metals").resolve("mbt.json").toNIO,
+        updatedMbtJson,
+      )
+      diagnosticsCleared = Future.sequence(
+        List(source, otherSource).map(path =>
+          client.nextDiagnosticsFor(
+            workspace.resolve(path),
+            _.isEmpty,
+          )
+        )
+      )
+      _ <- server.didChangeWatchedFiles(".metals/mbt.json")
+      _ <- diagnosticsCleared
+      _ = assertNoDiagnostics()
     } yield ()
   }
 
@@ -976,6 +1082,95 @@ class MbtBuildServerLspSuite
            |```
            |""".stripMargin.hover,
       )
+    } yield ()
+  }
+}
+
+class MbtTargetClasspathLspSuite
+    extends BaseCompletionLspSuite("mbt-target-classpath") {
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(
+      fallbackScalaVersion = Some(BuildInfo.scalaVersion),
+      presentationCompilerDiagnostics = true,
+      buildOnChange = false,
+      buildOnFocus = false,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      referenceProvider = ReferenceProviderConfig.mbt,
+      fallbackClasspath = FallbackClasspathConfig(Nil),
+      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      preferredBuildServer = Some(MbtBuildServer.name),
+      automaticImportBuild = AutoImportBuildKind.All,
+    )
+
+  override def initializeGitRepo: Boolean = true
+
+  test("target-classpath-before-protobuf-outline") {
+    cleanWorkspace()
+    val jar = workspace.resolve("dependency.jar")
+    val result = TurbineCompiler.compileClassfiles(
+      ParArray(
+        """|package generated.example;
+           |
+           |public final class Dependency {
+           |  public static Builder newBuilder() { return new Builder(); }
+           |
+           |  public static final class Builder {
+           |    public Builder project() { return this; }
+           |  }
+           |}
+           |""".stripMargin
+      ),
+      (text: String) => Seq(new SourceFile("Dependency.java", text)),
+      Nil,
+      EmptyWorkDoneProgress,
+    )(server.reports)
+    val output = new ZipOutputStream(Files.newOutputStream(jar.toNIO))
+    try {
+      for ((name, bytes) <- result.lowered.bytes().asScala) {
+        output.putNextEntry(new ZipEntry(s"$name.class"))
+        output.write(bytes)
+        output.closeEntry()
+      }
+    } finally output.close()
+
+    val mbtJson = new MbtJsonBuilder(
+      BuildInfo.scalaVersion,
+      dependencyModules = List(
+        MbtDependencyModule(
+          "com.example:dependency:1.0.0",
+          jar.toURI.toString,
+          null,
+        )
+      ),
+    ).addNamespace("main", List("src/**")).build()
+    val source = "src/Main.java"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/src/dependency.proto
+            |syntax = "proto3";
+            |package example;
+            |option java_package = "generated.example";
+            |option java_multiple_files = true;
+            |message Dependency {}
+            |/$source
+            |package example;
+            |
+            |import generated.example.Dependency;
+            |
+            |public class Main {
+            |  public void test() {
+            |    Dependency.newBuilder().project();
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(source)
+      _ <- server.didFocus(source)
+      _ = assertNoDiagnostics()
     } yield ()
   }
 }

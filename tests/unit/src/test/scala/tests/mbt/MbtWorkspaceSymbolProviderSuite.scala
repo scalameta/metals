@@ -153,6 +153,30 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
     )
   }
 
+  test("turbine-indexes-proto-java-package-with-protobuf-lsp-disabled") {
+    FileLayout.fromString(
+      """
+/example/Dependency.proto
+syntax = "proto3";
+package example;
+option java_package = "generated.example";
+message Dependency {}
+""",
+      root = workspace(),
+    )
+    val proto = workspace().resolve("example/Dependency.proto")
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    assertEquals(
+      provider.onReindex().awaitBackgroundJobs(),
+      IndexingStats(totalFiles = 1, updatedFiles = 1),
+    )
+    assert(provider.listAllPackages().containsKey("generated/example/"))
+    assert(provider.document(proto).exists(_.cachedJavaOutlines.isEmpty))
+    assert(provider.protoJavaOutlines(proto).nonEmpty)
+  }
+
   test("exclude-module-info-java") {
     FileLayout.fromString(
       """|/com/Hello.java
