@@ -280,6 +280,7 @@ case class BazelBuildTool(
           "--nocache_test_results",
           "--test_output=streamed",
           "--test_strategy=exclusive",
+          "--ui_event_filters=-info,-warning,-fail,-stderr",
           s"--test_arg=--wrapper_script_flag=--debug=$port",
         )
       }
