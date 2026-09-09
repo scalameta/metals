@@ -2,7 +2,6 @@ package scala.meta.internal.metals.mbt
 
 import java.net.URI
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicReference
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -271,33 +270,23 @@ class MbtDebugSessionStarter(
                 toolName,
                 isTests = true,
               )
-            val reportProvider = new AtomicReference[MbtTestReportProvider](
-              MbtTestReportProvider.empty
-            )
-            def commandArguments(
-                command: Future[MbtTestCommand],
-                sessionKind: String,
-            ): Future[List[String]] =
-              command.map { testCommand =>
-                reportProvider.set(testCommand.reportProvider)
-                scribe.info(
-                  s"MBT test debug session via $toolName$sessionKind: ${redactedCommand(testCommand.arguments)}"
-                )
-                testCommand.arguments
-              }
-
             val innerDebuggee =
               if (launcher.supportsForkedTestDebug) {
                 val commandWithPort =
-                  launcher.mbtTestDebugRunWithPort(
+                  launcher.mbtTestDebugCommandWithPort(
                     workspace,
                     target,
                     testSuites,
                     sourceFiles,
                     frameworkOf(target, testSuites),
                   )
+                commandWithPort(0).foreach { command =>
+                  scribe.info(
+                    s"MBT test debug session via $toolName (forked): ${redactedCommand(command)}"
+                  )
+                }
                 new ForkedTestDebugAdapter(
-                  port => commandArguments(commandWithPort(port), " (forked)"),
+                  commandWithPort,
                   workspace,
                   env = javaHomeEnv(target),
                   patched,
@@ -305,7 +294,7 @@ class MbtDebugSessionStarter(
                 )
               } else {
                 val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
-                val commandFuture = launcher.mbtTestDebugRun(
+                val commandFuture = launcher.mbtTestDebugCommand(
                   workspace,
                   target,
                   testSuites,
@@ -313,8 +302,13 @@ class MbtDebugSessionStarter(
                   sourceFiles,
                   frameworkOf(target, testSuites),
                 )
+                commandFuture.foreach { command =>
+                  scribe.info(
+                    s"MBT test debug session via $toolName: ${redactedCommand(command)}"
+                  )
+                }
                 new BuildToolDebugAdapter(
-                  commandArguments(commandFuture, ""),
+                  commandFuture,
                   workspace,
                   env = javaHomeEnv(target),
                   patched,
@@ -327,7 +321,6 @@ class MbtDebugSessionStarter(
                 testSuites,
                 testProvider,
                 target.id,
-                () => Some(reportProvider.get().read()),
               )
             val handler = dap.DebugServer.run(
               debuggee,
