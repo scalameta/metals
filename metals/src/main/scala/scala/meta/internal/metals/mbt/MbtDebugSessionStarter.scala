@@ -288,13 +288,11 @@ class MbtDebugSessionStarter(
                 val commandWithPort: Int => Future[List[String]] = { port =>
                   testCommandWithPort(port).map { testCmd =>
                     reportProviderRef.set(testCmd.reportProvider)
+                    scribe.info(
+                      s"MBT test debug session via $toolName (forked): ${redactedCommand(testCmd.arguments)}"
+                    )
                     testCmd.arguments
                   }(ExecutionContext.parasitic)
-                }
-                commandWithPort(0).foreach { command =>
-                  scribe.info(
-                    s"MBT test debug session via $toolName (forked): ${redactedCommand(command)}"
-                  )
                 }
                 new ForkedTestDebugAdapter(
                   commandWithPort,
