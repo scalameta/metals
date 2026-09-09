@@ -14,6 +14,8 @@ import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 trait MbtDebugLauncher { self: BuildTool =>
 
+  def executableName: String
+
   def mbtCompileCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
