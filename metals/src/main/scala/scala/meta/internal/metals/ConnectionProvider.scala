@@ -680,32 +680,11 @@ class ConnectionProvider(
         }
         _ = compilers.cancel()
         buildChange <- index(check, progress)
-        // When testing we need to make sure the classpath is refreshed after mbt.json is generated
-        _ <- {
-          if (MetalsServerConfig.isTesting)
-            refreshMbtTurbineClasspath(session).withInterrupt
-          else
-            Future {
-              refreshMbtTurbineClasspath(session)
-            }.withInterrupt
-        }
       } yield {
         syncStatusReporter.importFinished(focusedDocument.map(_.toURI.toString))
         buildChange
       }
     }
-
-    private def refreshMbtTurbineClasspath(
-        session: BspSession
-    ): Future[Unit] =
-      if (
-        MbtBuildServer.isMbtServer(session.main.name) &&
-        userConfig.javaSymbolLoader.isTurbineClasspath
-      ) {
-        mbtSymbolSearch.scheduleRecompileTurbineClasspath()
-      } else {
-        Future.unit
-      }
 
     private def saveProjectReferencesInfo(
         bspBuilds: List[BspSession.BspBuild]

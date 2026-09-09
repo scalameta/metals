@@ -96,7 +96,7 @@ case class IndexedDocument(
   def toProto(): Mbt.IndexedDocument.Builder = {
     val bloomFilterVersion = language match {
       case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
-      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V9
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V6
     }
     Mbt.IndexedDocument
@@ -271,8 +271,8 @@ object IndexedDocument {
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
       case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
       case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V6
-      // V9: Proto bloom filters include scanner fixes for option blocks.
-      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V9
+      // V10: Includes V9 option-block scanner fixes and Java packages for Turbine.
+      case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
     }).getNumber()
 }
