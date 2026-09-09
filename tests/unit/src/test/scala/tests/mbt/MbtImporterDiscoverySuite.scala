@@ -34,6 +34,7 @@ class MbtImporterDiscoverySuite extends BaseSuite {
         () => UserConfiguration(),
       ),
       ec = ec,
+      mbtWorkspaceSymbolProvider = None,
     )
 
   private def write(path: AbsolutePath, content: String = ""): Unit = {

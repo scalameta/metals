@@ -112,7 +112,11 @@ class ProjectMetalsLspService(
     charset,
     shellRunner,
     ec,
+    Some(mbt2),
   )
+
+  override protected def discoverMbtClassesFromIndex: Boolean =
+    buildTools.discoverMbtClassesFromIndex
 
   override def indexer: Indexer = connectionProvider
   def buildServerPromise = connectionProvider.buildServerPromise
