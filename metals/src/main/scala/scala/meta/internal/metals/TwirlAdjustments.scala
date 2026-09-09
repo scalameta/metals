@@ -7,6 +7,7 @@ import scala.io.Codec
 import scala.util.matching.Regex
 
 import scala.meta.inputs.Input.VirtualFile
+import scala.meta.internal.metals.AdjustedLspData.LineColumn
 
 import org.eclipse.lsp4j.Position
 import play.twirl.compiler.GeneratedSourceVirtual
@@ -107,6 +108,11 @@ object TwirlAdjustments {
     new Position(lines.length - 1, lines.last.length)
   }
 
+  private def getLineColumnFromIndex(text: String, index: Int): LineColumn = {
+    val lines = text.substring(0, index).split("\n", -1)
+    (lines.length - 1, lines.last.length)
+  }
+
   /**
    * Converts an LSP `Position` (0 based - line number and character offset) into a character index.
    *
@@ -114,12 +120,16 @@ object TwirlAdjustments {
    * @param pos the LSP `Position` to convert (line and character)
    * @return the absolute character index in the string corresponding to the position
    */
-  private def getIndexFromPosition(text: String, pos: Position): Int = {
+  private def getIndexFromPosition(
+      text: String,
+      line: Int,
+      character: Int,
+  ): Int = {
     val lines = text.split("\n", -1)
     lines
-      .take(pos.getLine)
+      .take(line)
       .map(_.length + 1)
-      .sum + pos.getCharacter
+      .sum + character
   }
 
   private val pattern: Regex = """(\d+)->(\d+)""".r
@@ -171,7 +181,11 @@ object TwirlAdjustments {
      * Position in the compiled Scala output
      */
     def mapPosition(originalPos: Position): Position = {
-      val originalIndex = getIndexFromPosition(originalTwirl, originalPos)
+      val originalIndex = getIndexFromPosition(
+        originalTwirl,
+        originalPos.getLine(),
+        originalPos.getCharacter(),
+      )
       val idx = matrix.indexWhere(_._1 >= originalIndex)
       if (matrix.isEmpty) {
         return originalPos
@@ -192,19 +206,22 @@ object TwirlAdjustments {
     /**
      * Maps a Position in the compiled Scala output back to the original
      */
-    def reverseMapPosition(compiledPos: Position): Position = {
-      val compiledIndex = getIndexFromPosition(compiledTwirl, compiledPos)
+    def reverseMapPosition(line: Int, column: Int): LineColumn = {
+      val compiledIndex =
+        getIndexFromPosition(compiledTwirl, line, column)
       val mappedIndex = math.min(
         originalTwirl.length,
         math.max(0, compiledSource.mapPosition(compiledIndex)),
       )
-      getPositionFromIndex(originalTwirl, mappedIndex)
+      getLineColumnFromIndex(originalTwirl, mappedIndex)
     }
 
     (
       newVirtualFile,
       mapPosition,
-      AdjustedLspData.create(reverseMapPosition),
+      AdjustedLspData.create { case (line, column) =>
+        reverseMapPosition(line, column)
+      },
     )
   }
 }

@@ -33,10 +33,7 @@ class MetalsPasteProvider(
 
     val MissingSymbol = new MissingSymbolDiagnostic(isScala3, path)
     compilers
-      .didChangeWithDiagnostics(
-        path,
-        content = Some(params.text),
-      )
+      .didChangeWithDiagnostics(path)
       .flatMap { diagnostics =>
         val imports = diagnostics.collect {
           case d @ MissingSymbol(name, _)

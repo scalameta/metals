@@ -721,7 +721,7 @@ object SemanticTokensProvider {
           if (lineDelta == 0) character + charDelta
           else charDelta
 
-        val adjustedTokenPos = adjust.adjustPos(
+        val adjustedTokenPos = adjust.adjustPosition(
           new LspPosition(line + lineDelta, newCharacter),
           adjustToZero = false,
         )
