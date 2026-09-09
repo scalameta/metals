@@ -723,7 +723,7 @@ lazy val metals = project
         scalaVersion.value
       )).cross(CrossVersion.full),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.5.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
