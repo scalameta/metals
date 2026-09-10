@@ -44,6 +44,7 @@ import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
+import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
 
 /**
@@ -78,7 +79,10 @@ trait MetalsMcpTools extends Cancelable {
   protected lazy val client: Client =
     Client.allClients.find(_.names.contains(clientName)).getOrElse(NoClient)
 
-  protected val objectMapper: JsonMapper = JsonMapper.builder().build()
+  protected val objectMapper: JsonMapper = JsonMapper
+    .builder()
+    .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+    .build()
 
   protected val jsonMapper = new JacksonMcpJsonMapper(objectMapper)
 
