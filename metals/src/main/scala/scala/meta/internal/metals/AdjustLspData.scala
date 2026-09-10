@@ -38,7 +38,7 @@ trait AdjustLspData {
 
   def adjustTextDocument(
       document: s.TextDocument,
-      originalText: String,
+      originalText: => String,
   ): s.TextDocument = {
 
     def adjustSemanticdbRange(range: s.Range): s.Range = {
@@ -51,26 +51,29 @@ trait AdjustLspData {
       new s.Range(
         adjustedStartLine,
         adjustedStartCharacter,
-        adjustedEndLine.toShort,
-        adjustedEndCharacter.toShort,
+        adjustedEndLine,
+        adjustedEndCharacter,
       )
     }
     val adjustedOccurences =
-      document.occurrences.flatMap { occurence =>
-        occurence.range
-          .map(r => occurence.copy(range = Some(adjustSemanticdbRange(r))))
+      document.occurrences.map { occurence =>
+        occurence.range.fold(occurence)(r =>
+          occurence.copy(range = Some(adjustSemanticdbRange(r)))
+        )
       }
 
     val adjustedDiagnostic =
-      document.diagnostics.flatMap { diagnostic =>
-        diagnostic.range
-          .map(r => diagnostic.copy(range = Some(adjustSemanticdbRange(r))))
+      document.diagnostics.map { diagnostic =>
+        diagnostic.range.fold(diagnostic)(r =>
+          diagnostic.copy(range = Some(adjustSemanticdbRange(r)))
+        )
       }
 
     val adjustedSynthetic =
-      document.synthetics.flatMap { synthetic =>
-        synthetic.range
-          .map(r => synthetic.copy(range = Some(adjustSemanticdbRange(r))))
+      document.synthetics.map { synthetic =>
+        synthetic.range.fold(synthetic)(r =>
+          synthetic.copy(range = Some(adjustSemanticdbRange(r)))
+        )
       }
 
     s.TextDocument(
@@ -205,7 +208,7 @@ object DefaultAdjustedData extends AdjustLspData {
 
   override def adjustTextDocument(
       document: s.TextDocument,
-      originalText: String,
+      originalText: => String,
   ): s.TextDocument = identity(document)
 
   override def adjustTextEdits(
