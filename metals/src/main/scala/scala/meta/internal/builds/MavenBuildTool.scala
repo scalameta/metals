@@ -2,6 +2,7 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -209,12 +210,13 @@ case class MavenBuildTool(
   private def changedMavenTestReport(
       directories: List[AbsolutePath]
   ): () => MbtTestReport = {
+    def fingerprint(report: AbsolutePath): Option[(FileTime, Long)] =
+      Try(
+        (Files.getLastModifiedTime(report.toNIO), Files.size(report.toNIO))
+      ).toOption
     val snapshot = MbtTestReport
       .xmlFiles(directories)
-      .flatMap { report =>
-        Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
-          .map(report -> _)
-      }
+      .flatMap(report => fingerprint(report).map(report -> _))
       .toMap
     () => {
       val changed = MbtTestReport
@@ -222,9 +224,7 @@ case class MavenBuildTool(
         .filter { report =>
           snapshot.get(report) match {
             case None => true
-            case Some(baselineMtime) =>
-              Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
-                .forall(_ != baselineMtime)
+            case Some(baseline) => !fingerprint(report).contains(baseline)
           }
         }
       MbtTestReport.readJunitReports(changed, "changed Maven test reports")

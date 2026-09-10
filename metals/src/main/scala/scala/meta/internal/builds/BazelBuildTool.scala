@@ -234,6 +234,9 @@ case class BazelBuildTool(
       resolveTestRunTargets(workspace, target, sourceFiles)
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
+        val eventFile = AbsolutePath(
+          tempDir.resolve(s"bazel-test-debug-${UUID.randomUUID()}.json")
+        )
         MbtTestCommand(
           mbtTestExecCommand(
             runTargets,
@@ -245,7 +248,9 @@ case class BazelBuildTool(
             "--test_output=streamed",
             "--test_strategy=exclusive",
             s"--test_arg=--wrapper_script_flag=--debug=$port",
-          )
+            s"--build_event_json_file=$eventFile",
+          ),
+          () => bazelTestReport(eventFile),
         )
       }
   }
