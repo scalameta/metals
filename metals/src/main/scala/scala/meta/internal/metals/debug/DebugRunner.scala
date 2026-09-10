@@ -150,10 +150,7 @@ class DebugRunner(
   ) = {
     val output = new OutputEventArguments()
     output.setCategory(category)
-    output.setOutput(
-      if (message.endsWith("\n")) message
-      else message + "\n"
-    )
+    output.setOutput(message + "\n")
 
     def default = {
       val notification = new DebugNotificationMessage()

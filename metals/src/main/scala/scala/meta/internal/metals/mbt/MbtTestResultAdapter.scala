@@ -37,7 +37,7 @@ class MbtTestResultAdapter(
     testSuites: ScalaTestSuites,
     testProvider: TestSuitesProvider,
     targetId: BuildTargetIdentifier,
-    report: () => Option[MbtTestReport] = () => None,
+    consumeReport: () => MbtTestReport,
 )(implicit ec: ExecutionContext)
     extends Debuggee {
 
@@ -92,30 +92,12 @@ class MbtTestResultAdapter(
         targetId,
         passed,
         duration,
-        report(),
+        consumeReport(),
       )
       .foreach(listener.testResult)
 }
 
 object MbtTestResultAdapter {
-
-  /**
-   * Wraps an existing Debuggee to add test result reporting for MBT.
-   */
-  def apply(
-      inner: Debuggee,
-      testSuites: ScalaTestSuites,
-      testProvider: TestSuitesProvider,
-      targetId: BuildTargetIdentifier,
-      report: () => Option[MbtTestReport] = () => None,
-  )(implicit ec: ExecutionContext): MbtTestResultAdapter =
-    new MbtTestResultAdapter(
-      inner,
-      testSuites,
-      testProvider,
-      targetId,
-      report,
-    )
 
   /** Builds one [[TestSuiteSummary]] per requested suite. */
   def testSuiteSummaries(
@@ -124,8 +106,10 @@ object MbtTestResultAdapter {
       targetId: BuildTargetIdentifier,
       passed: Boolean,
       duration: Long,
-      report: Option[MbtTestReport] = None,
-  ): List[TestSuiteSummary] =
+      report: MbtTestReport = MbtTestReport.empty,
+  ): List[TestSuiteSummary] = {
+    val reportedTestsBySuite = report.testCases.groupBy(_.suiteName)
+
     suites.map { suite =>
       val className = suite.getClassName
       val selectedTests = suite.getTests.asScala.toList
@@ -136,33 +120,17 @@ object MbtTestResultAdapter {
           // added to the client via `AddTestCases` for the results to show up correctly
           testProvider.knownTestCaseNames(targetId, className)
 
-      val reportedTests = report.toList
-        .flatMap(_.testCases)
-        .filter(test => test.suiteName == className)
+      val reportedTests = reportedTestsBySuite.getOrElse(className, Nil)
 
       val testResults: java.util.List[SingleTestSummary] =
         if (reportedTests.nonEmpty) {
-          val reportedNames = reportedTests.map(_.testName).toSet
-          val fallbacks = selectedTests
-            .filterNot { name =>
-              reportedNames.contains(name) ||
-              reportedNames.contains(name.stripSuffix("()"))
-            }
-            .map { testName =>
-              singleTestResult(
-                s"$className.$testName",
-                passed,
-                "Test failed",
-                duration,
-              )
-            }
-          (reportedTests.map(
-            toSingleTestSummary(className, testNames, _)
-          ) ++ fallbacks).asJava
+          reportedTests
+            .map(toSingleTestSummary(className, testNames, _))
+            .asJava
         } else if (testNames.isEmpty) {
-          java.util.Collections.singletonList(
+          List(
             singleTestResult(className, passed, "Test suite failed", duration)
-          )
+          ).asJava
         } else {
           testNames
             .map(testName =>
@@ -181,17 +149,16 @@ object MbtTestResultAdapter {
         else duration
       TestSuiteSummary(className, suiteDuration, testResults)
     }
+  }
 
   private def toSingleTestSummary(
       className: String,
       knownTestNames: List[String],
       test: MbtTestCaseResult,
   ): SingleTestSummary = {
+    val normalizedReportedName = normalizedTestName(test.testName)
     val reportedName = knownTestNames
-      .find(_ == test.testName)
-      .orElse(
-        knownTestNames.find(_.stripSuffix("()") == test.testName)
-      )
+      .find(name => normalizedTestName(name) == normalizedReportedName)
       .getOrElse(test.testName)
     val testName = s"$className.$reportedName"
     test.status match {
@@ -209,6 +176,9 @@ object MbtTestResultAdapter {
         )
     }
   }
+
+  private def normalizedTestName(testName: String): String =
+    testName.stripSuffix("()")
 
   private def singleTestResult(
       testName: String,

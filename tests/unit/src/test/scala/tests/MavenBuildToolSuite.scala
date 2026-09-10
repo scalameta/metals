@@ -127,19 +127,21 @@ class MavenBuildToolSuite extends BaseSuite {
     )
 
     assertEquals(
-      Await.result(
-        mavenBuildTool(workspace).mbtTestCommand(
-          workspace,
-          mbtTarget(
-            "com.example:app:1.0.0",
-            "app/target/test-classes",
-            projectDir = Some(workspace.resolve("app")),
+      Await
+        .result(
+          mavenBuildTool(workspace).mbtTestCommand(
+            workspace,
+            mbtTarget(
+              "com.example:app:1.0.0",
+              "app/target/test-classes",
+              projectDir = Some(workspace.resolve("app")),
+            ),
+            testSuites,
+            Nil,
           ),
-          testSuites,
-          Nil,
-        ),
-        Duration.Inf,
-      ),
+          Duration.Inf,
+        )
+        .arguments,
       List(
         "mvn",
         "-f",
@@ -174,7 +176,7 @@ class MavenBuildToolSuite extends BaseSuite {
       Nil.asJava,
     )
     val run = Await.result(
-      mavenBuildTool(workspace).mbtTestRun(
+      mavenBuildTool(workspace).mbtTestCommand(
         workspace,
         mbtTarget(
           "com.example:app:1.0.0",
@@ -194,7 +196,7 @@ class MavenBuildToolSuite extends BaseSuite {
       )
 
     assertEquals(
-      run.reportProvider.read().testCases.map(_.testName),
+      run.consumeReport().testCases.map(_.testName),
       List("passes"),
     )
   }

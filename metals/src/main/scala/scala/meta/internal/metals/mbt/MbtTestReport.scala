@@ -16,29 +16,16 @@ import com.google.gson.JsonArray
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 
-sealed trait MbtTestCaseStatus {
-  def value: String
-}
+sealed abstract class MbtTestCaseStatus(val value: String)
 
 object MbtTestCaseStatus {
 
-  case object Passed extends MbtTestCaseStatus {
-    override val value: String = "passed"
-  }
-  case object Failed extends MbtTestCaseStatus {
-    override val value: String = "failed"
-  }
-  case object Skipped extends MbtTestCaseStatus {
-    override val value: String = "skipped"
-  }
+  case object Passed extends MbtTestCaseStatus("passed")
+  case object Failed extends MbtTestCaseStatus("failed")
+  case object Skipped extends MbtTestCaseStatus("skipped")
 
   def fromString(value: String): Option[MbtTestCaseStatus] =
-    value match {
-      case Passed.value => Some(Passed)
-      case Failed.value => Some(Failed)
-      case Skipped.value => Some(Skipped)
-      case _ => None
-    }
+    List(Passed, Failed, Skipped).find(_.value == value)
 }
 
 final case class MbtTestCaseResult(
@@ -46,26 +33,24 @@ final case class MbtTestCaseResult(
     testName: String,
     status: MbtTestCaseStatus,
     duration: Long,
-    error: Option[String],
-    stackTrace: Option[String],
+    error: Option[String] = None,
+    stackTrace: Option[String] = None,
 )
 
 final case class MbtTestReport(testCases: List[MbtTestCaseResult]) {
   def toJson: JsonElement = {
-    val cases = new JsonArray()
-    testCases.foreach { tc =>
+    val result = new JsonArray()
+    testCases.foreach { testCase =>
       val json = new JsonObject()
-      json.addProperty("suiteName", tc.suiteName)
-      json.addProperty("testName", tc.testName)
-      json.addProperty("status", tc.status.value)
-      json.addProperty("duration", tc.duration)
-      tc.error.foreach(json.addProperty("error", _))
-      tc.stackTrace.foreach(json.addProperty("stackTrace", _))
-      cases.add(json)
+      json.addProperty("suiteName", testCase.suiteName)
+      json.addProperty("testName", testCase.testName)
+      json.addProperty("status", testCase.status.value)
+      json.addProperty("duration", testCase.duration)
+      testCase.error.foreach(json.addProperty("error", _))
+      testCase.stackTrace.foreach(json.addProperty("stackTrace", _))
+      result.add(json)
     }
-    val report = new JsonObject()
-    report.add("testCases", cases)
-    report
+    result
   }
 }
 
@@ -75,56 +60,43 @@ object MbtTestReport {
   val empty: MbtTestReport = MbtTestReport(Nil)
 
   def fromTestResult(result: TestResult): Option[MbtTestReport] =
-    Option(result.getDataKind)
-      .filter(_ == dataKind)
-      .flatMap(_ => Option(result.getData))
-      .collect { case json: JsonElement => json }
-      .flatMap(fromJson)
-
-  def fromJson(json: JsonElement): Option[MbtTestReport] =
-    Try {
-      val jsonCases = json.getAsJsonObject
-        .getAsJsonArray("testCases")
-      val cases = List
-        .tabulate(jsonCases.size)(jsonCases.get)
-        .flatMap { element =>
-          val tc = element.getAsJsonObject
-          for {
-            status <- MbtTestCaseStatus.fromString(
-              tc.get("status").getAsString
-            )
-          } yield MbtTestCaseResult(
-            suiteName = tc.get("suiteName").getAsString,
-            testName = tc.get("testName").getAsString,
-            status = status,
-            duration = tc.get("duration").getAsLong,
-            error = Option(tc.get("error")).map(_.getAsString),
-            stackTrace = Option(tc.get("stackTrace")).map(_.getAsString),
-          )
+    for {
+      _ <- Option(result.getDataKind).filter(_ == dataKind)
+      json <- Option(result.getData).collect { case json: JsonElement => json }
+      testCases <- Try {
+        val cases = json.getAsJsonArray
+        List.tabulate(cases.size)(cases.get).flatMap { element =>
+          val testCase = element.getAsJsonObject
+          MbtTestCaseStatus
+            .fromString(testCase.get("status").getAsString)
+            .map { status =>
+              MbtTestCaseResult(
+                suiteName = testCase.get("suiteName").getAsString,
+                testName = testCase.get("testName").getAsString,
+                status = status,
+                duration = testCase.get("duration").getAsLong,
+                error = Option(testCase.get("error")).map(_.getAsString),
+                stackTrace = Option(testCase.get("stackTrace"))
+                  .map(_.getAsString),
+              )
+            }
         }
-      MbtTestReport(cases)
-    }.toOption
+      }.toOption
+    } yield MbtTestReport(testCases)
 
   /** Parses a single JUnit XML report file into a list of test-case results. */
-  def parseJunitXml(report: AbsolutePath): List[MbtTestCaseResult] =
+  private def parseJunitXml(report: AbsolutePath): List[MbtTestCaseResult] =
     try {
       val factory = SAXParserFactory.newInstance()
       factory.setFeature(
         "http://apache.org/xml/features/disallow-doctype-decl",
         true,
       )
-      factory.setFeature(
+      List(
         "http://xml.org/sax/features/external-general-entities",
-        false,
-      )
-      factory.setFeature(
         "http://xml.org/sax/features/external-parameter-entities",
-        false,
-      )
-      factory.setFeature(
         "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-        false,
-      )
+      ).foreach(factory.setFeature(_, false))
       factory.setXIncludeAware(false)
       val xml =
         XML.withSAXParser(factory.newSAXParser()).loadFile(report.toFile)
@@ -152,6 +124,22 @@ object MbtTestReport {
     }
     MbtTestReport(testCases.values.toList)
   }
+
+  def readJunitReports(
+      reports: => List[AbsolutePath],
+      description: String,
+      cleanup: => Unit = (),
+  ): MbtTestReport =
+    try mergeJunitXml(reports)
+    catch {
+      case NonFatal(error) =>
+        scribe.warn(s"Unable to read $description", error)
+        empty
+    } finally {
+      Try(cleanup).failed.foreach { error =>
+        scribe.warn(s"Unable to clean up $description", error)
+      }
+    }
 
   /**
    * Recursively finds all `.xml` files inside the given directories.
@@ -194,21 +182,13 @@ object MbtTestReport {
 
   private def attribute(node: Node, name: String): Option[String] =
     node.attribute(name).map(_.text).filter(_.nonEmpty)
-}
 
-/** MBT-specific abstraction over build-tool report discovery. */
-trait MbtTestReportProvider {
-  def read(): MbtTestReport
-}
-
-object MbtTestReportProvider {
-  val empty: MbtTestReportProvider = () => MbtTestReport.empty
 }
 
 /** MBT test command with its associated report provider. */
 final case class MbtTestCommand(
     arguments: List[String],
-    reportProvider: MbtTestReportProvider,
+    consumeReport: () => MbtTestReport = () => MbtTestReport.empty,
 )
 
 /** Outcome of an MBT test run: process exit code and the parsed report. */

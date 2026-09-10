@@ -8,8 +8,6 @@ import java.util.UUID
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
-import scala.util.Try
-import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
@@ -19,7 +17,6 @@ import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
 import scala.meta.internal.metals.mbt.MbtTestReport
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.GradleMbtImporter
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
@@ -274,25 +271,9 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
-    Future.successful(
-      gradleTestCommand(
-        target,
-        testSuites,
-        debugAgentFlag = None,
-        framework = framework,
-      )
-    )
-
-  override def mbtTestRun(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
   ): Future[MbtTestCommand] =
-    withTestReport(
-      Future.successful(
+    Future.successful(
+      withTestReport(
         gradleTestCommand(
           target,
           testSuites,
@@ -302,44 +283,27 @@ case class GradleBuildTool(
       )
     )
 
-  private def withTestReport(
-      command: Future[List[String]]
-  ): Future[MbtTestCommand] = {
+  private def withTestReport(arguments: List[String]): MbtTestCommand = {
     val reportDirectory = AbsolutePath(
       tempDir.resolve(s"gradle-test-${UUID.randomUUID()}")
     )
-    command.map { arguments =>
-      val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
-      MbtTestCommand(
-        arguments.take(1) ::: reportArgument :: arguments.drop(1),
-        gradleTestReportProvider(reportDirectory),
-      )
-    }
+    val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
+    MbtTestCommand(
+      arguments.take(1) ::: reportArgument :: arguments.drop(1),
+      () => gradleTestReport(reportDirectory),
+    )
   }
 
-  private def gradleTestReportProvider(
-      directory: AbsolutePath
-  ): MbtTestReportProvider = { () =>
-    try
-      MbtTestReport.mergeJunitXml(
-        MbtTestReport.xmlFiles(List(directory))
-      )
-    catch {
-      case NonFatal(error) =>
-        scribe.warn(s"Unable to read test reports from $directory", error)
-        MbtTestReport.empty
-    } finally {
-      Try {
-        if (directory.exists) {
-          directory.deleteRecursively()
-          directory.deleteIfExists()
-        }
-      }.failed
-        .foreach { error =>
-          scribe.warn(s"Unable to remove test reports $directory", error)
-        }
-    }
-  }
+  private def gradleTestReport(directory: AbsolutePath): MbtTestReport =
+    MbtTestReport.readJunitReports(
+      MbtTestReport.xmlFiles(List(directory)),
+      s"Gradle test reports from $directory",
+      if (directory.exists) {
+        directory.deleteRecursively()
+        directory.deleteIfExists()
+      },
+    )
+
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
       target: MbtTarget,
@@ -347,9 +311,11 @@ case class GradleBuildTool(
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     Future.successful(
-      gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
+      withTestReport(
+        gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
+      )
     )
 
   override def supportsForkedTestDebug: Boolean = true
@@ -360,29 +326,14 @@ case class GradleBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = { port =>
+  ): Int => Future[MbtTestCommand] = { port =>
     val debugAgentFlag =
       s"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port"
     Future.successful(
-      gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
+      withTestReport(
+        gradleTestCommand(target, testSuites, Some(debugAgentFlag), framework)
+      )
     )
-  }
-
-  override def mbtTestDebugRunWithPort(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
-    val commandWithPort = mbtTestDebugCommandWithPort(
-      workspace,
-      target,
-      testSuites,
-      sourceFiles,
-      framework,
-    )
-    port => withTestReport(commandWithPort(port))
   }
 
   private def gradleTestCommand(

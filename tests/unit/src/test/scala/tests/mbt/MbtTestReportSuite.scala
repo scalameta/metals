@@ -37,6 +37,27 @@ class MbtTestReportSuite extends munit.FunSuite {
     assertEquals(report.testCases(1).stackTrace, Some("example stack trace"))
   }
 
+  test("merge-junit-xml-prefers-latest-result") {
+    val directory = AbsolutePath(Files.createTempDirectory("mbt-test-report"))
+    val failedReport = directory.resolve("failed.xml")
+    val passedReport = directory.resolve("passed.xml")
+    failedReport.writeText(
+      """<testsuite name="example.FooSuite"><testcase name="test"><failure message="failed" /></testcase></testsuite>"""
+    )
+    passedReport.writeText(
+      """<testsuite name="example.FooSuite"><testcase name="test" /></testsuite>"""
+    )
+
+    val report = MbtTestReport.mergeJunitXml(
+      List(failedReport, passedReport)
+    )
+
+    assertEquals(
+      report.testCases.map(test => (test.testName, test.status)),
+      List(("test", MbtTestCaseStatus.Passed)),
+    )
+  }
+
   test("report-json-roundtrip") {
     val report = MbtTestReport(
       List(
@@ -45,8 +66,8 @@ class MbtTestReportSuite extends munit.FunSuite {
           "fails",
           MbtTestCaseStatus.Failed,
           34L,
-          Some("expected true"),
-          Some("example stack trace"),
+          error = Some("expected true"),
+          stackTrace = Some("example stack trace"),
         )
       )
     )
@@ -62,26 +83,24 @@ class MbtTestReportSuite extends munit.FunSuite {
       List(
         MbtTestCaseResult(
           "example.FooSuite",
-          "passes",
+          "passes()",
           MbtTestCaseStatus.Passed,
           12L,
-          None,
-          None,
         ),
         MbtTestCaseResult(
           "example.FooSuite",
           "fails",
           MbtTestCaseStatus.Failed,
           34L,
-          Some("expected true"),
-          Some("example stack trace"),
+          error = Some("expected true"),
+          stackTrace = Some("example stack trace"),
         ),
       )
     )
     val suites = List(
       new ScalaTestSuiteSelection(
         "example.FooSuite",
-        List("passes()", "fails").asJava,
+        List("passes", "fails").asJava,
       )
     )
 
@@ -91,7 +110,7 @@ class MbtTestReportSuite extends munit.FunSuite {
       new BuildTargetIdentifier("mbt://example"),
       passed = false,
       duration = 100L,
-      report = Some(report),
+      report = report,
     )
     val tests = summaries.head.tests.asScala.toList
 
@@ -99,7 +118,7 @@ class MbtTestReportSuite extends munit.FunSuite {
     assertEquals(tests.size, 2)
     tests.head match {
       case passed: SingleTestResult.Passed =>
-        assertEquals(passed.testName, "example.FooSuite.passes()")
+        assertEquals(passed.testName, "example.FooSuite.passes")
       case result => fail(s"Expected passed result, obtained $result")
     }
     tests(1) match {

@@ -14,6 +14,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -23,58 +25,9 @@ import ch.epfl.scala.bsp4j.ScalaTestSuites
 class BazelBuildToolSuite extends BaseSuite {
 
   test("bazel-mbt-test-run-reads-build-event-report") {
-    implicit val ec: ExecutionContext = ExecutionContext.global
-    val workspace = AbsolutePath(Files.createTempDirectory("bazel-mbt"))
-    val config = UserConfiguration.default
-    val buildTool = BazelBuildTool(
-      () => config,
-      workspace,
-      new ShellRunner(Time.system, EmptyWorkDoneProgress, () => config),
-      ec,
-    )
-    val target = MbtTarget(
-      name = "//example:tests",
-      id = new BuildTargetIdentifier("mbt://example/tests"),
-      sources = Nil,
-      globMatchers = Nil,
-      scalacOptions = Nil,
-      javacOptions = Nil,
-      dependencyModules = Nil,
-      configurations = List("//example:tests"),
-    )
-    val suites = new ScalaTestSuites(
-      List(
-        new ScalaTestSuiteSelection("example.FooSuite", Nil.asJava)
-      ).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
-
-    val run = Await.result(
-      buildTool.mbtTestRun(workspace, target, suites, Nil),
-      Duration.Inf,
-    )
+    val (workspace, run) = testRun()
     val eventArgument = run.arguments.find(
       _.startsWith("--build_event_json_file=")
-    )
-    assert(
-      run.arguments.contains(
-        "--ui_event_filters=-info,-warning,-fail"
-      )
-    )
-    assert(run.arguments.contains("--test_output=all"))
-    assert(run.arguments.contains("--test_summary=detailed"))
-    assertEquals(
-      buildTool.transformMbtTestOutput(
-        "Executed 1 out of 1 test: 1 fails locally."
-      ),
-      None,
-    )
-    assertEquals(
-      buildTool.transformMbtTestOutput(
-        "Test cases: finished with 49 passing and 1 failing"
-      ),
-      Some("Test cases: finished with 49 passing and 1 failing"),
     )
     val eventFile = eventArgument
       .map(_.stripPrefix("--build_event_json_file="))
@@ -89,12 +42,18 @@ class BazelBuildToolSuite extends BaseSuite {
     )
 
     assertEquals(
-      run.reportProvider.read().testCases.map(_.testName),
+      run.consumeReport().testCases.map(_.testName),
       List("passes"),
     )
   }
 
   test("bazel-mbt-test-report-ignores-missing-event-file") {
+    val (_, run) = testRun()
+
+    assertEquals(run.consumeReport(), MbtTestReport.empty)
+  }
+
+  private def testRun(): (AbsolutePath, MbtTestCommand) = {
     implicit val ec: ExecutionContext = ExecutionContext.global
     val workspace = AbsolutePath(Files.createTempDirectory("bazel-mbt"))
     val config = UserConfiguration.default
@@ -122,14 +81,9 @@ class BazelBuildToolSuite extends BaseSuite {
       Nil.asJava,
     )
 
-    val run = Await.result(
-      buildTool.mbtTestRun(workspace, target, suites, Nil),
+    workspace -> Await.result(
+      buildTool.mbtTestCommand(workspace, target, suites, Nil),
       Duration.Inf,
-    )
-    // Provider for a non-existent event file returns empty
-    assertEquals(
-      run.reportProvider.read(),
-      scala.meta.internal.metals.mbt.MbtTestReport.empty,
     )
   }
 }

@@ -10,7 +10,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 import scala.util.Using
-import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -22,7 +21,6 @@ import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
 import scala.meta.internal.metals.mbt.MbtTestReport
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
@@ -150,64 +148,27 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
-    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = None,
-        framework = framework,
-      )
-    }
-
-  override def mbtTestRun(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
-  ): Future[MbtTestCommand] =
-    withTestReport(
-      mbtTestCommand(workspace, target, testSuites, sourceFiles, framework)
-    )
-
-  override def transformMbtTestOutput(line: String): Option[String] =
-    line.trim match {
-      case BazelBuildTool.testTargetSummary() => None
-      case _ => Some(line)
-    }
-
-  private def withTestReport(
-      command: Future[List[String]]
   ): Future[MbtTestCommand] = {
     val eventFile = AbsolutePath(
       tempDir.resolve(s"bazel-test-${UUID.randomUUID()}.json")
     )
-    command.map { arguments =>
-      MbtTestCommand(
-        arguments :+ s"--build_event_json_file=$eventFile",
-        bazelTestReportProvider(eventFile),
-      )
+    resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
+      val arguments = mbtTestExecCommand(
+        runTargets,
+        testSuites,
+        debugAgentFlag = None,
+        framework = framework,
+      ) :+ s"--build_event_json_file=$eventFile"
+      MbtTestCommand(arguments, () => bazelTestReport(eventFile))
     }
   }
 
-  private def bazelTestReportProvider(
-      eventFile: AbsolutePath
-  ): MbtTestReportProvider = { () =>
-    try MbtTestReport.mergeJunitXml(bazelTestXmlFiles(eventFile))
-    catch {
-      case NonFatal(error) =>
-        scribe.warn(
-          s"Unable to read Bazel build events from $eventFile",
-          error,
-        )
-        MbtTestReport.empty
-    } finally {
-      Try(eventFile.deleteIfExists()).failed.foreach { error =>
-        scribe.warn(s"Unable to remove Bazel build events $eventFile", error)
-      }
-    }
-  }
+  private def bazelTestReport(eventFile: AbsolutePath): MbtTestReport =
+    MbtTestReport.readJunitReports(
+      bazelTestXmlFiles(eventFile),
+      s"Bazel build events from $eventFile",
+      eventFile.deleteIfExists(),
+    )
 
   private def bazelTestXmlFiles(eventFile: AbsolutePath): List[AbsolutePath] =
     if (!eventFile.isFile) Nil
@@ -248,13 +209,15 @@ case class BazelBuildTool(
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = Some(debugAgentFlag),
-        framework = framework,
+      MbtTestCommand(
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = Some(debugAgentFlag),
+          framework = framework,
+        )
       )
     }
 
@@ -266,22 +229,23 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = {
+  ): Int => Future[MbtTestCommand] = {
     val resolvedRunTargets =
       resolveTestRunTargets(workspace, target, sourceFiles)
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
-        mbtTestExecCommand(
-          runTargets,
-          testSuites,
-          debugAgentFlag = None,
-          framework = framework,
-        ) ::: List(
-          "--nocache_test_results",
-          "--test_output=streamed",
-          "--test_strategy=exclusive",
-          "--ui_event_filters=-info,-warning,-fail,-stderr",
-          s"--test_arg=--wrapper_script_flag=--debug=$port",
+        MbtTestCommand(
+          mbtTestExecCommand(
+            runTargets,
+            testSuites,
+            debugAgentFlag = None,
+            framework = framework,
+          ) ::: List(
+            "--nocache_test_results",
+            "--test_output=streamed",
+            "--test_strategy=exclusive",
+            s"--test_arg=--wrapper_script_flag=--debug=$port",
+          )
         )
       }
   }
@@ -367,9 +331,8 @@ case class BazelBuildTool(
     val jvmFlagsArgs =
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
-      "bazel", "test", "--ui_event_filters=-info,-warning,-fail",
-      "--noshow_progress", "--test_output=all", "--test_summary=detailed",
-      "--test_tag_filters=",
+      "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
+      "--noshow_progress", "--test_output=all", "--test_tag_filters=",
     ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
@@ -385,9 +348,6 @@ case class BazelBuildTool(
 }
 
 object BazelBuildTool {
-  private val testTargetSummary =
-    """Executed \d+ out of \d+ tests?:.*""".r
-
   val name: String = "bazel"
   val bspName: String = "bazelbsp"
   val bspVersion: String = "4.0.3"

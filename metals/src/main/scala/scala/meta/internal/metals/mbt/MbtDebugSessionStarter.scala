@@ -127,7 +127,7 @@ class MbtDebugSessionStarter(
       err: String => Unit,
   ): Future[MbtTestRunResult] = {
     val sourceFiles = resolveSourceFiles(target, testSuites)
-    val command = buildTool.mbtTestRun(
+    val commandFuture = buildTool.mbtTestCommand(
       workspace,
       target,
       testSuites,
@@ -139,23 +139,21 @@ class MbtDebugSessionStarter(
       val parts = target.name.split(':')
       if (parts.length >= 2) parts(1) else target.name
     }
-    command.flatMap { testCommand =>
+    commandFuture.flatMap { testCommand =>
       scribe.info(
         s"MBT test session via $toolName: ${redactedCommand(testCommand.arguments)}"
       )
-      def forward(line: String, consumer: String => Unit): Unit =
-        buildTool.transformMbtTestOutput(line).foreach(consumer)
       workDoneProgress.trackFuture(
         s"Testing $artifactId",
         runInTerminal(
           testCommand.arguments,
           target,
           workspace,
-          forward(_, out),
-          forward(_, err),
+          out,
+          err,
         )
           .map { exitCode =>
-            MbtTestRunResult(exitCode, testCommand.reportProvider.read())
+            MbtTestRunResult(exitCode, testCommand.consumeReport())
           },
       )
     }
@@ -271,31 +269,33 @@ class MbtDebugSessionStarter(
                 toolName,
                 isTests = true,
               )
-            val reportProviderRef =
-              new AtomicReference[MbtTestReportProvider](
-                MbtTestReportProvider.empty
+            val reportReader =
+              new AtomicReference[() => MbtTestReport](() =>
+                MbtTestReport.empty
               )
+            def arguments(
+                command: Future[MbtTestCommand],
+                suffix: String,
+            ): Future[List[String]] =
+              command.map { testCommand =>
+                reportReader.set(testCommand.consumeReport)
+                scribe.info(
+                  s"MBT test debug session via $toolName$suffix: ${redactedCommand(testCommand.arguments)}"
+                )
+                testCommand.arguments
+              }(ExecutionContext.parasitic)
             val innerDebuggee =
               if (launcher.supportsForkedTestDebug) {
                 val testCommandWithPort =
-                  launcher.mbtTestDebugRunWithPort(
+                  launcher.mbtTestDebugCommandWithPort(
                     workspace,
                     target,
                     testSuites,
                     sourceFiles,
                     frameworkOf(target, testSuites),
                   )
-                val commandWithPort: Int => Future[List[String]] = { port =>
-                  testCommandWithPort(port).map { testCmd =>
-                    reportProviderRef.set(testCmd.reportProvider)
-                    scribe.info(
-                      s"MBT test debug session via $toolName (forked): ${redactedCommand(testCmd.arguments)}"
-                    )
-                    testCmd.arguments
-                  }(ExecutionContext.parasitic)
-                }
                 new ForkedTestDebugAdapter(
-                  commandWithPort,
+                  port => arguments(testCommandWithPort(port), " (forked)"),
                   workspace,
                   env = javaHomeEnv(target),
                   patched,
@@ -303,19 +303,17 @@ class MbtDebugSessionStarter(
                 )
               } else {
                 val debugAgentFlag = MbtDebugLauncher.DebugAgentFlag
-                val commandFuture = launcher.mbtTestDebugCommand(
-                  workspace,
-                  target,
-                  testSuites,
-                  debugAgentFlag,
-                  sourceFiles,
-                  frameworkOf(target, testSuites),
+                val commandFuture = arguments(
+                  launcher.mbtTestDebugCommand(
+                    workspace,
+                    target,
+                    testSuites,
+                    debugAgentFlag,
+                    sourceFiles,
+                    frameworkOf(target, testSuites),
+                  ),
+                  "",
                 )
-                commandFuture.foreach { command =>
-                  scribe.info(
-                    s"MBT test debug session via $toolName: ${redactedCommand(command)}"
-                  )
-                }
                 new BuildToolDebugAdapter(
                   commandFuture,
                   workspace,
@@ -325,12 +323,12 @@ class MbtDebugSessionStarter(
                 )
               }
             val debuggee =
-              MbtTestResultAdapter(
+              new MbtTestResultAdapter(
                 innerDebuggee,
                 testSuites,
                 testProvider,
                 target.id,
-                report = () => Some(reportProviderRef.get().read()),
+                consumeReport = () => reportReader.get()(),
               )
             val handler = dap.DebugServer.run(
               debuggee,

@@ -372,7 +372,9 @@ class DebugProvider(
               targetId,
               passed,
               duration,
-              MbtTestReport.fromTestResult(result),
+              MbtTestReport
+                .fromTestResult(result)
+                .getOrElse(MbtTestReport.empty),
             )
             .foreach(runner.testResult)
         }

@@ -7,7 +7,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.Try
-import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
@@ -17,7 +16,6 @@ import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
 import scala.meta.internal.metals.mbt.MbtTestReport
-import scala.meta.internal.metals.mbt.MbtTestReportProvider
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
@@ -178,34 +176,25 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
-    Future.successful(
-      mbtTestExecCommand(
-        mbtMavenBaseCommand(workspace),
-        target,
-        testSuites,
-        framework,
-      )
-    )
-
-  override def mbtTestRun(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
   ): Future[MbtTestCommand] =
-    withTestReport(
-      workspace,
-      target,
-      mbtTestCommand(workspace, target, testSuites, sourceFiles, framework),
+    Future.successful(
+      withTestReport(
+        workspace,
+        target,
+        mbtTestExecCommand(
+          mbtMavenBaseCommand(workspace),
+          target,
+          testSuites,
+          framework,
+        ),
+      )
     )
 
   private def withTestReport(
       workspace: AbsolutePath,
       target: MbtTarget,
-      command: Future[List[String]],
-  ): Future[MbtTestCommand] = {
+      arguments: List[String],
+  ): MbtTestCommand = {
     val reportDirectories = (
       mavenModuleDirectory(target)
         .getOrElse(workspace)
@@ -214,17 +203,12 @@ case class MavenBuildTool(
           .runClassDirectories(workspace, "maven", includeTests = true)
           .map(_.parent.resolve("surefire-reports"))
     ).distinct
-    command.map { arguments =>
-      MbtTestCommand(
-        arguments,
-        mavenTestReportProvider(reportDirectories),
-      )
-    }(ec)
+    MbtTestCommand(arguments, changedMavenTestReport(reportDirectories))
   }
 
-  private def mavenTestReportProvider(
+  private def changedMavenTestReport(
       directories: List[AbsolutePath]
-  ): MbtTestReportProvider = {
+  ): () => MbtTestReport = {
     val snapshot = MbtTestReport
       .xmlFiles(directories)
       .flatMap { report =>
@@ -232,24 +216,19 @@ case class MavenBuildTool(
           .map(report -> _)
       }
       .toMap
-    () =>
-      try {
-        val changed = MbtTestReport
-          .xmlFiles(directories)
-          .filter { report =>
-            snapshot.get(report) match {
-              case None => true
-              case Some(baselineMtime) =>
-                Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
-                  .forall(_ != baselineMtime)
-            }
+    () => {
+      val changed = MbtTestReport
+        .xmlFiles(directories)
+        .filter { report =>
+          snapshot.get(report) match {
+            case None => true
+            case Some(baselineMtime) =>
+              Try(Files.getLastModifiedTime(report.toNIO).toMillis).toOption
+                .forall(_ != baselineMtime)
           }
-        MbtTestReport.mergeJunitXml(changed)
-      } catch {
-        case NonFatal(error) =>
-          scribe.warn("Unable to read changed Maven test reports", error)
-          MbtTestReport.empty
-      }
+        }
+      MbtTestReport.readJunitReports(changed, "changed Maven test reports")
+    }
   }
 
   override def mbtTestDebugCommand(
@@ -259,7 +238,7 @@ case class MavenBuildTool(
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     mbtTestDebugCommandWithPort(
       workspace,
       target,
@@ -276,37 +255,24 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = { port =>
+  ): Int => Future[MbtTestCommand] = { port =>
     // Use Surefire's forked JVM with a pre-assigned debug port.
     // This allows proper source mapping since tests run in a separate JVM.
     val debugAgentFlag =
       s"\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port\""
-    Future.successful(
-      mbtTestExecCommand(
-        mbtMavenBaseCommand(workspace),
+    Future.successful {
+      withTestReport(
+        workspace,
         target,
-        testSuites,
-        framework,
-        forkedDebugAgentFlag = Some(debugAgentFlag),
+        mbtTestExecCommand(
+          mbtMavenBaseCommand(workspace),
+          target,
+          testSuites,
+          framework,
+          forkedDebugAgentFlag = Some(debugAgentFlag),
+        ),
       )
-    )
-  }
-
-  override def mbtTestDebugRunWithPort(
-      workspace: AbsolutePath,
-      target: MbtTarget,
-      testSuites: ScalaTestSuites,
-      sourceFiles: Seq[AbsolutePath],
-      framework: Option[TestFramework] = None,
-  ): Int => Future[MbtTestCommand] = {
-    val commandWithPort = mbtTestDebugCommandWithPort(
-      workspace,
-      target,
-      testSuites,
-      sourceFiles,
-      framework,
-    )
-    port => withTestReport(workspace, target, commandWithPort(port))
+    }
   }
 
   private def mbtTestExecCommand(

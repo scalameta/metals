@@ -154,18 +154,21 @@ class GradleBuildToolSuite extends BaseSuite {
     )
 
     val command =
-      Await.result(
-        gradleBuildTool(workspace)
-          .mbtTestCommand(
-            workspace,
-            mbtTarget("app", gradleProjectPath = ":app"),
-            testSuites,
-            Nil,
-          ),
-        Duration.Inf,
-      )
+      Await
+        .result(
+          gradleBuildTool(workspace)
+            .mbtTestCommand(
+              workspace,
+              mbtTarget("app", gradleProjectPath = ":app"),
+              testSuites,
+              Nil,
+            ),
+          Duration.Inf,
+        )
+        .arguments
 
-    assertEquals(command.take(2), List("gradle", "--console=plain"))
+    assertEquals(command.head, "gradle")
+    assert(command.contains("--console=plain"))
     assert(command.contains("--init-script"))
     assertEquals(
       command.takeRight(3),
@@ -173,7 +176,7 @@ class GradleBuildToolSuite extends BaseSuite {
     )
   }
 
-  test("gradle-mbt-test-run-configures-junit-report") {
+  test("gradle-mbt-test-report") {
     val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
     val testSuites = new ScalaTestSuites(
       List(
@@ -184,7 +187,7 @@ class GradleBuildToolSuite extends BaseSuite {
     )
 
     val run = Await.result(
-      gradleBuildTool(workspace).mbtTestRun(
+      gradleBuildTool(workspace).mbtTestCommand(
         workspace,
         mbtTarget("app"),
         testSuites,
@@ -192,53 +195,26 @@ class GradleBuildToolSuite extends BaseSuite {
       ),
       Duration.Inf,
     )
-    val reportArgument = run.arguments.find(
-      _.startsWith("-Dmetals.testReportDirectory=")
-    )
+    val reportDirectoryArgument = "-Dmetals.testReportDirectory="
+    val reportDirectory = run.arguments
+      .find(_.startsWith(reportDirectoryArgument))
+      .map(_.stripPrefix(reportDirectoryArgument))
+      .map(path => AbsolutePath(Paths.get(path)))
+      .getOrElse(fail(s"Expected $reportDirectoryArgument argument"))
     val initScriptIndex = run.arguments.indexOf("--init-script")
     val initScript = AbsolutePath(Paths.get(run.arguments(initScriptIndex + 1)))
 
-    assert(reportArgument.nonEmpty)
     assert(initScript.readText.contains("junitXml.outputLocation.set"))
-  }
-
-  test("gradle-mbt-test-run-provider-reads-junit-xml") {
-    val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
-    val testSuites = new ScalaTestSuites(
-      List(
-        new ScalaTestSuiteSelection("a.FooTest", Nil.asJava)
-      ).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
-
-    val run = Await.result(
-      gradleBuildTool(workspace).mbtTestRun(
-        workspace,
-        mbtTarget("app"),
-        testSuites,
-        Nil,
-      ),
-      Duration.Inf,
-    )
-    // Extract the report directory from the -Dmetals.testReportDirectory= argument
-    val reportDir = run.arguments
-      .find(_.startsWith("-Dmetals.testReportDirectory="))
-      .map(_.stripPrefix("-Dmetals.testReportDirectory="))
-      .map(path => AbsolutePath(Paths.get(path)))
-      .getOrElse(fail("Expected -Dmetals.testReportDirectory= argument"))
-
-    reportDir.createDirectories()
-    reportDir
+    reportDirectory.createDirectories()
+    reportDirectory
       .resolve("TEST-a.FooTest.xml")
       .writeText(
         """<testsuite name="a.FooTest"><testcase classname="a.FooTest" name="testAddition" time="0.005" /></testsuite>"""
       )
 
-    val report = run.reportProvider.read()
+    val report = run.consumeReport()
     assertEquals(report.testCases.map(_.testName), List("testAddition"))
-    // directory should be cleaned up after read
-    assert(!reportDir.exists)
+    assert(!reportDirectory.exists)
   }
 
   test("gradle-mbt-test-debug-command-uses-init-script") {
@@ -255,19 +231,22 @@ class GradleBuildToolSuite extends BaseSuite {
     )
 
     val command =
-      Await.result(
-        gradleBuildTool(workspace)
-          .mbtTestDebugCommand(
-            workspace,
-            mbtTarget("app"),
-            testSuites,
-            "debug-agent",
-            Nil,
-          ),
-        Duration.Inf,
-      )
+      Await
+        .result(
+          gradleBuildTool(workspace)
+            .mbtTestDebugCommand(
+              workspace,
+              mbtTarget("app"),
+              testSuites,
+              "debug-agent",
+              Nil,
+            ),
+          Duration.Inf,
+        )
+        .arguments
 
-    assertEquals(command.take(2), List("gradle", "--console=plain"))
+    assertEquals(command.head, "gradle")
+    assert(command.contains("--console=plain"))
     assert(command.contains("--init-script"))
     assertEquals(command.takeRight(3), List("test", "--tests", "a.FooTest"))
     val script =
