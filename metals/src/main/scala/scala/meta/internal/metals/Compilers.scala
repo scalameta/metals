@@ -403,7 +403,7 @@ class Compilers(
                   reportStatus = false,
                   onlyIf = false,
                 ) {
-                  didChangePc(file)
+                  didChangePc(file, token = token)
                 }
                 .map { case (timer, reportedDiagnostics) =>
                   diagnostics.publishDiagnosticsNotAdjusted(
@@ -461,7 +461,8 @@ class Compilers(
           additionalOptions = Seq("-explain"),
         )
 
-        val input = path.toInputFromBuffers(buffers)
+        val (input, _, adjust) =
+          sourceMapper.pcMapping(path, scalaVersion)
         val params = CompilerVirtualFileParams(
           path.toNIO.toUri(),
           input.value,
@@ -474,7 +475,7 @@ class Compilers(
         explainCompiler.await
           .didChange(params)
           .asScala
-          .map(_.asScala.toList)
+          .map(_.asScala.map(adjust.adjustDiagnostic).toList)
           .andThen { case _ =>
             // Clean up the temporary compiler
             explainCompiler.shutdown()
@@ -488,6 +489,7 @@ class Compilers(
   private def didChangePc(
       path: AbsolutePath,
       shouldReturnDiagnostics: Boolean = false,
+      token: CancelToken = EmptyCancelToken,
   ): Future[List[Diagnostic]] = {
     loadCompiler(path)
       .map { pc =>
@@ -503,7 +505,7 @@ class Compilers(
                 CompilerVirtualFileParams(
                   path.toNIO.toUri,
                   input.value,
-                  EmptyCancelToken,
+                  token,
                   outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
                   shouldReturnDiagnostics =
                     shouldReturnDiagnostics || userConfig().presentationCompilerDiagnostics,
@@ -2157,8 +2159,8 @@ class Compilers(
         .flatMap(s => getCompiler(s).map(pc => (pc, s)))
         .groupBy(_._1)
     } yield {
-      val params: Seq[(VirtualFileParams, AdjustLspData)] = paths.map {
-        case (_, path) =>
+      val params: Seq[(VirtualFileParams, AdjustLspData, AbsolutePath)] =
+        paths.map { case (_, path) =>
 
           val (input, _, adjust) =
             sourceMapper.pcMapping(path, pc.scalaVersion())
@@ -2169,16 +2171,21 @@ class Compilers(
             shouldReturnDiagnostics = true,
             shouldPruneSemanticdb = shouldPruneSemanticdb,
           )
-          (params: VirtualFileParams, adjust)
-      }
+          (params: VirtualFileParams, adjust, path)
+        }
 
       if (pc.supportsBatchSemanticdbTextDocuments()) {
         val mapping = params.flatMap {
           // noop for normal files
-          case (_, DefaultAdjustedData) =>
+          case (_, DefaultAdjustedData, _) =>
             None
-          case (param, adjust) =>
-            Some(param.uri.toString() -> adjust)
+          case (param, adjust, path) =>
+            Some(
+              param.uri.toString() -> (
+                adjust,
+                path.toInputFromBuffers(buffers).value,
+              )
+            )
         }.toMap
 
         pc.batchSemanticdbTextDocuments(params.map(_._1).asJava, timeout)
@@ -2187,17 +2194,22 @@ class Compilers(
             s.TextDocuments.parseFrom(bytes).documents.map { case doc =>
               mapping
                 .get(doc.uri.toString())
-                .map(adjust => adjust.adjustTextDocument(doc, doc.text))
+                .map { case (adjust, originalText) =>
+                  adjust.adjustTextDocument(doc, originalText)
+                }
                 .getOrElse(doc)
             }
           )
       } else {
         val all = for {
-          (param, adjust) <- params
+          (param, adjust, path) <- params
           doc = pc.semanticdbTextDocument(param)
         } yield doc.asScala.map { d =>
           val textDoc = s.TextDocument.parseFrom(d)
-          adjust.adjustTextDocument(textDoc, param.text)
+          adjust.adjustTextDocument(
+            textDoc,
+            path.toInputFromBuffers(buffers).value,
+          )
         }
         Future.sequence(all).map { parsedDocs =>
           val targetRoot = buildTargets
@@ -2247,12 +2259,16 @@ class Compilers(
         config.initialConfig.compilers.timeoutDelay,
         config.initialConfig.compilers.timeoutUnit,
       )
+
     val textDocument = {
       val doc = s.TextDocument.parseFrom(bytes)
       if (doc.text.isEmpty()) doc.withText(text)
       else doc
     }
-    adjust.adjustTextDocument(textDocument, text)
+    adjust.adjustTextDocument(
+      textDocument,
+      text,
+    )
   }
 
 }
