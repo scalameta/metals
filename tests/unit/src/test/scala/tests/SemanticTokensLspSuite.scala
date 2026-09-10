@@ -356,7 +356,7 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
        |
        |<<val>>/*keyword*/ <<_>>/*variable,readonly*/ = <<process>>/*method*/(<<"test">>/*string*/)
        |""".stripMargin,
-    scalaVersion = Some("3.9.0-RC1"),
+    scalaVersion = Some("3.9.0"),
   )
 
   test("new-changes") {
