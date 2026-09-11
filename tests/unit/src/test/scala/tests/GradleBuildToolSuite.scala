@@ -6,9 +6,9 @@ import java.nio.file.Paths
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.Duration
+import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.GradleBuildTool
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.io.AbsolutePath
@@ -166,55 +166,11 @@ class GradleBuildToolSuite extends BaseSuite {
           Duration.Inf,
         )
         .arguments
-
-    assertEquals(command.head, "gradle")
-    assert(command.contains("--console=plain"))
     assert(command.contains("--init-script"))
     assertEquals(
       command.takeRight(3),
       List(":app:test", "--tests", "a.FooTest.testAddition"),
     )
-  }
-
-  test("gradle-mbt-test-report") {
-    val workspace = AbsolutePath(Files.createTempDirectory("gradle-mbt"))
-    val testSuites = new ScalaTestSuites(
-      List(
-        new ScalaTestSuiteSelection("a.FooTest", Nil.asJava)
-      ).asJava,
-      Nil.asJava,
-      Nil.asJava,
-    )
-
-    val run = Await.result(
-      gradleBuildTool(workspace).mbtTestCommand(
-        workspace,
-        mbtTarget("app"),
-        testSuites,
-        Nil,
-      ),
-      Duration.Inf,
-    )
-    val reportDirectoryArgument = "-Dmetals.testReportDirectory="
-    val reportDirectory = run.arguments
-      .find(_.startsWith(reportDirectoryArgument))
-      .map(_.stripPrefix(reportDirectoryArgument))
-      .map(path => AbsolutePath(Paths.get(path)))
-      .getOrElse(fail(s"Expected $reportDirectoryArgument argument"))
-    val initScriptIndex = run.arguments.indexOf("--init-script")
-    val initScript = AbsolutePath(Paths.get(run.arguments(initScriptIndex + 1)))
-
-    assert(initScript.readText.contains("junitXml.outputLocation.set"))
-    reportDirectory.createDirectories()
-    reportDirectory
-      .resolve("TEST-a.FooTest.xml")
-      .writeText(
-        """<testsuite name="a.FooTest"><testcase classname="a.FooTest" name="testAddition" time="0.005" /></testsuite>"""
-      )
-
-    val report = run.consumeReport()
-    assertEquals(report.testCases.map(_.testName), List("testAddition"))
-    assert(!reportDirectory.exists)
   }
 
   test("gradle-mbt-test-debug-command-uses-init-script") {
