@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.9-SNAPSHOT"
-def latestReleaseVersion = "1.6.8"
+def localSnapshotVersion = "1.6.10-SNAPSHOT"
+def latestReleaseVersion = "1.6.9"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
