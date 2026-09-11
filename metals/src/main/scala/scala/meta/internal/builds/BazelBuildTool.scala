@@ -247,6 +247,7 @@ case class BazelBuildTool(
             "--nocache_test_results",
             "--test_output=streamed",
             "--test_strategy=exclusive",
+            "--ui_event_filters=-info,-warning,-fail,-stderr",
             s"--test_arg=--wrapper_script_flag=--debug=$port",
             s"--build_event_json_file=$eventFile",
           ),
@@ -336,8 +337,9 @@ case class BazelBuildTool(
     val jvmFlagsArgs =
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
-      "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
-      "--noshow_progress", "--test_output=all", "--test_tag_filters=",
+      "bazel", "test", "--ui_event_filters=-info,-warning,-fail",
+      "--noshow_progress", "--test_output=all", "--test_summary=detailed",
+      "--test_tag_filters=",
     ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
