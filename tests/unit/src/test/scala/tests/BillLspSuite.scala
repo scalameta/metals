@@ -278,6 +278,103 @@ class BillLspSuite extends BaseLspSuite("bill") {
     testSelectServerDialogue()
   }
 
+  private def pollUntil(condition: => Boolean): Unit = {
+    var retries = 500
+    while (!condition && retries > 0) {
+      Thread.sleep(10)
+      retries -= 1
+    }
+  }
+
+  test("finished-compile-request-ends-compile-progress") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/no-task-finish
+           |true
+           |""".stripMargin
+      )
+      // Bill starts a compile task but never sends `build/taskFinish` for it,
+      // the progress must end once the compile request itself completes
+      result <- server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = assertEquals(result.getStatusCode(), StatusCode.OK)
+      _ = pollUntil(
+        client.beginProgressMessages.contains("Compiling id") && ongoing.isEmpty
+      )
+      _ = assert(
+        client.beginProgressMessages.contains("Compiling id"),
+        "the compilation should have shown a 'Compiling id' progress",
+      )
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "every 'Compiling' progress must end when its compile request completes",
+      )
+    } yield ()
+  }
+
+  test("disconnect-ends-compile-progress") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/hang-compile
+           |true
+           |""".stripMargin
+      )
+      // Bill hangs on this compile request forever, do not await it
+      pendingCompilation = server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = pollUntil(ongoing.nonEmpty)
+      _ = assertEquals(ongoing, List("Compiling id"))
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
+      _ = pollUntil(ongoing.isEmpty)
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "every 'Compiling' progress must end after disconnecting from the build server",
+      )
+      result <- pendingCompilation
+      _ = assertEquals(result.getStatusCode(), StatusCode.CANCELLED)
+    } yield ()
+  }
+
+  test("reconnect-ends-stale-compile-progress") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/hang-compile
+           |true
+           |""".stripMargin
+      )
+      _ = server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = pollUntil(ongoing.nonEmpty)
+      _ = assertEquals(ongoing, List("Compiling id"))
+      // restore normal Bill behavior for the new session
+      _ = RecursivelyDelete(workspace.resolve("hang-compile"))
+      _ <- server.executeCommand(ServerCommands.ConnectBuildServer)
+      _ = pollUntil(ongoing.isEmpty)
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "every 'Compiling' progress must end after reconnecting to the build server",
+      )
+    } yield ()
+  }
+
   test("cancel-compile") {
     val cancelPattern =
       """Sending notification '\$\/cancelRequest'\s*Params: \{\s*\"id\": \"([0-9]+)\"\s*\}""".r

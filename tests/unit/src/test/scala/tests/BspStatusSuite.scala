@@ -14,11 +14,11 @@ import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.io.AbsolutePath
 
 import bill.Bill
+import ch.epfl.scala.bsp4j.LogMessageParams
+import ch.epfl.scala.bsp4j.MessageType
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
-import org.eclipse.lsp4j.MessageParams
-import org.eclipse.lsp4j.MessageType
 
 class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
 
@@ -99,7 +99,7 @@ class BspStatusSuite extends BaseLspSuite("bsp-status-suite") {
       )
       _ = client.getStatusParams(StatusType.bsp).clear()
       _ = server.server.buildClient.onBuildLogMessage(
-        new MessageParams(MessageType.Error, "This is an error.")
+        new LogMessageParams(MessageType.ERROR, "This is an error.")
       )
       _ = assert(client.getStatusParams(StatusType.bsp).isEmpty())
       _ <- server.didFocus("bloopWorkspace/a/src/main/scala/Main.scala")

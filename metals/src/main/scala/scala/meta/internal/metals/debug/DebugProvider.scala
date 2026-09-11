@@ -13,6 +13,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
+import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -90,6 +91,7 @@ class DebugProvider(
     sourceMapper: SourceMapper,
     userConfig: () => UserConfiguration,
     testProvider: TestSuitesProvider,
+    sh: ju.concurrent.ScheduledExecutorService,
 )(implicit ec: ExecutionContext)
     extends Cancelable
     with LogForwarder {
@@ -182,9 +184,10 @@ class DebugProvider(
           awaitClient,
           stacktraceAnalyzer,
           () => {
+            val originId = ju.UUID.randomUUID().toString()
             val runParams =
               new b.RunParams(parameters.getTargets().asScala.head)
-            runParams.setOriginId(ju.UUID.randomUUID().toString())
+            runParams.setOriginId(originId)
 
             /**
              * We set data and dataKind with the information about the main class to run,
@@ -197,8 +200,115 @@ class DebugProvider(
               runParams.setDataKind(parameters.getDataKind())
               runParams.setData(parameters.getData())
             }
-            val run = buildServer.buildTargetRun(runParams, cancelPromise)
-            run.onComplete(_ => runningLocal.set(false))
+            val target = parameters.getTargets().asScala.head
+            val targets = parameters.getTargets().asScala.toSeq
+            // The run request stays pending for the launched process's whole
+            // lifetime, so compile first to get a real compile boundary
+            // (metals#3464). BSP allows run-only targets, so targets without
+            // `canCompile` skip straight to the run.
+            val canCompile = buildTargets
+              .info(target)
+              .exists(_.getCapabilities().getCanCompile())
+            // Cancellable, with Compilations' request policy and terminal
+            // cleanup. The already-terminated pre-check plus the request's
+            // own cancel wiring narrow the terminate race to the send
+            // instant.
+            val precompile =
+              if (!canCompile || cancelPromise.isCompleted)
+                Compilations.CancelableCompile(
+                  None,
+                  Future.successful(
+                    new b.CompileResult(
+                      if (canCompile) b.StatusCode.CANCELLED
+                      else b.StatusCode.OK
+                    )
+                  ),
+                )
+              else compilations.compileTargetCancelable(target, cancelPromise)
+            val compiled = precompile.result
+            // The request timeout is dismissible ("always wait"), so it is no
+            // liveness bound: sweep this precompile's abandoned compilations
+            // while it is pending, since the run sweep below only starts once
+            // the precompile completed (metals#3464).
+            precompile.originId.foreach { precompileOrigin =>
+              val precompileSweep = sh.scheduleWithFixedDelay(
+                () =>
+                  buildClient.endIdleCompilations(
+                    precompileOrigin,
+                    targets,
+                    DebugProvider.RunCompileIdleTimeout,
+                  ),
+                15,
+                15,
+                TimeUnit.SECONDS,
+              )
+              compiled.onComplete(_ => precompileSweep.cancel(false))
+            }
+            // pending -> dispatched/cancelled: whoever claims first decides,
+            // so an already-terminated session can never dispatch the run
+            val runState =
+              new ju.concurrent.atomic.AtomicReference[LocalRunState](Pending)
+            cancelPromise.future
+              .foreach(_ => runState.compareAndSet(Pending, RunCancelled))
+            val idleSweep = new ju.concurrent.atomic.AtomicReference(
+              Option.empty[ju.concurrent.ScheduledFuture[_]]
+            )
+            val run = Future
+              .firstCompletedOf(
+                Seq[Future[Either[Unit, b.CompileResult]]](
+                  compiled.map(Right(_)),
+                  cancelPromise.future.map(Left(_)),
+                )
+              )
+              .flatMap {
+                case Left(_) =>
+                  runState.compareAndSet(Pending, RunCancelled)
+                  Future.successful(new b.RunResult(b.StatusCode.CANCELLED))
+                case Right(compileResult)
+                    if compileResult.getStatusCode() != b.StatusCode.OK =>
+                  Future.successful(
+                    new b.RunResult(compileResult.getStatusCode())
+                  )
+                case Right(_) if !runState.compareAndSet(Pending, Dispatched) =>
+                  Future.successful(new b.RunResult(b.StatusCode.CANCELLED))
+                case Right(_) =>
+                  // the claim above linearizes with cancellation; re-checking
+                  // the promise after it closes the callback's asynchrony,
+                  // and the request's own cancel wiring revokes what is left
+                  val run =
+                    if (cancelPromise.isCompleted)
+                      Future.successful(new b.RunResult(b.StatusCode.CANCELLED))
+                    else buildServer.buildTargetRun(runParams, cancelPromise)
+                  // The run may still compile on its own and only responds
+                  // when the process exits, so sweep its abandoned
+                  // compilations by liveness while the process runs;
+                  // compilations still reporting activity are left alone.
+                  idleSweep.set(
+                    Some(
+                      sh.scheduleWithFixedDelay(
+                        () =>
+                          buildClient.endIdleCompilations(
+                            originId,
+                            targets,
+                            DebugProvider.RunCompileIdleTimeout,
+                          ),
+                        15,
+                        15,
+                        TimeUnit.SECONDS,
+                      )
+                    )
+                  )
+                  run
+              }
+            run.onComplete { _ =>
+              idleSweep.getAndSet(None).foreach(_.cancel(false))
+              runningLocal.set(false)
+              // Only clean up for a dispatched run; the precompile has its
+              // own terminal cleanup above and must not be preempted.
+              if (runState.get() == Dispatched) {
+                buildClient.onCompileRequestFinished(originId, targets)
+              }
+            }
             run
           },
           cancelPromise,
@@ -260,7 +370,7 @@ class DebugProvider(
           val startupTimeout =
             clientConfig.initialConfig.debugServerStartTimeout
 
-          conn
+          val timedConn = conn
             .withTimeout(
               startupTimeout,
               TimeUnit.SECONDS,
@@ -271,6 +381,16 @@ class DebugProvider(
               cancelPromise.trySuccess(())
               throw exception
             }
+          timedConn.onComplete { _ =>
+            // `debugSession/start` may compile but carries no originId the
+            // server could echo, so correlate by target only: the fresh
+            // origin below matches nothing (see scalameta/metals#3464)
+            buildClient.onCompileRequestFinished(
+              ju.UUID.randomUUID().toString(),
+              targets,
+            )
+          }
+          timedConn
         }
     }
 
@@ -827,6 +947,21 @@ class DebugProvider(
 }
 
 object DebugProvider {
+
+  /**
+   * How long a compilation triggered by a local `buildTarget/run` may go
+   * without any task activity before its "Compiling" progress is treated as
+   * abandoned (see scalameta/metals#3464). Well above the cadence of task
+   * notifications during a live compilation.
+   */
+  val RunCompileIdleTimeout: FiniteDuration =
+    FiniteDuration(60, TimeUnit.SECONDS)
+
+  /** Dispatch state of a local `buildTarget/run`, claimed atomically. */
+  private sealed trait LocalRunState
+  private case object Pending extends LocalRunState
+  private case object Dispatched extends LocalRunState
+  private case object RunCancelled extends LocalRunState
 
   /**
    * JVM options and environment variables for in-Metals ScalaTest runs, merged from workspace
