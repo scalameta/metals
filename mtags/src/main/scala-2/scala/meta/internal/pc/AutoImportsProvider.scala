@@ -40,19 +40,52 @@ final class AutoImportsProvider(
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
     val isSeen = mutable.Set.empty[String]
-    val symbols = List.newBuilder[Symbol]
+    // a symbol together with the package object class it is importable
+    // through, if it is not importable through its own owner (issue #2583)
+    val symbols = List.newBuilder[(Symbol, Option[Symbol])]
+
+    // Symbols are keyed on the import that would be written for them, so a
+    // type and a term of the same name collapse into one candidate the way
+    // a class and its companion object already do.
+    def visitThrough(
+        sym: Symbol,
+        throughPackageObject: Option[Symbol]
+    ): Unit = {
+      val importPath = throughPackageObject match {
+        case Some(pkgClass) => s"${pkgClass.fullName}.${sym.name.decoded}"
+        case None => sym.fullName
+      }
+      if (isSeen.add(importPath)) {
+        // the declared owner of a member exposed by a package object is a
+        // mixin parent or the package object itself, and neither is a usable
+        // import path, so keep the classfile search from offering the same
+        // symbol again through its owner
+        if (throughPackageObject.isDefined) {
+          isSeen += sym.fullName
+        }
+        symbols += ((sym, throughPackageObject))
+      }
+    }
 
     def visit(sym: Symbol): Boolean = {
-      val id = sym.fullName
-      if (!isSeen(id)) {
-        isSeen += id
-        symbols += sym
-        true
-      }
+      visitThrough(sym, None)
+      // the search visitors count a `true` as one added symbol, and this
+      // provider has always reported none, which makes short queries retry
       false
     }
 
     compiler.searchOutline(visit, name)
+
+    // symbols importable only through a package object (issue #2583) are
+    // searched before the classfile-based sources so that the import a
+    // library curates through its package object is offered before the
+    // definition's own package
+    compiler.searchPackageObjectMembers(
+      name,
+      context,
+      (sym, pkgClass) => visitThrough(sym, Some(pkgClass)),
+      () => params.token().isCanceled()
+    )
 
     val visitor =
       new CompilerSearchVisitor(context, visit)
@@ -87,54 +120,74 @@ final class AutoImportsProvider(
     def isExactMatch(sym: Symbol, name: String): Boolean =
       sym.name.dropLocal.decoded == name
 
+    def renderResult(
+        sym: Symbol,
+        throughPackageObject: Option[Symbol]
+    ): (AutoImportsResult, Symbol) = {
+      val importOwner = throughPackageObject.getOrElse(sym.owner)
+      // a member of a package object is imported through the enclosing
+      // package, never through `<package>.package`, and `fullNameSyntax`
+      // is the helper that already skips package objects and escapes
+      // keyword segments
+      val pkg = importOwner.fullNameSyntax
+      val importOwnerOverride =
+        throughPackageObject
+          .map(pkgClass => Map(sym -> pkgClass))
+          .getOrElse(Map.empty[Symbol, Symbol])
+      val edits = importPosition match {
+        // if we are in import section just specify full name
+        case None if isInImportTree =>
+          val fullName =
+            if (throughPackageObject.isDefined)
+              s"$pkg.${Identifier(sym.name)}"
+            else sym.fullNameSyntax
+          List(new l.TextEdit(namePos, fullName))
+        case None =>
+          // No import position means we can't insert an import without clashing with
+          // existing symbols in scope, so we just do nothing
+          Nil
+        case Some(value) =>
+          val (short, edits) = ShortenedNames.synthesize(
+            TypeRef(ThisType(importOwner), sym, Nil),
+            pos,
+            context,
+            value,
+            importOwnerOverride
+          )
+          val nameEdit = new l.TextEdit(namePos, short)
+
+          if (short != name && shouldApplyNameEdit) {
+            nameEdit :: edits
+          } else {
+            edits
+          }
+      }
+      if (edits.isEmpty) {
+        val trees = lastVisitedParentTrees
+          .take(5)
+          .map(_.getClass().getName())
+          .mkString(",")
+        logger.warning(
+          s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
+        )
+      }
+      (
+        AutoImportsResultImpl(
+          pkg,
+          edits.asJava,
+          Optional.of(semanticdbSymbol(sym))
+        ),
+        sym
+      )
+    }
+
     val all = symbols.result().collect {
-      case sym
+      case (sym, throughPackageObject)
           if isExactMatch(sym, name) && context.isAccessible(
             sym,
             sym.info
           ) && !sym.owner.isEmptyPackageClass =>
-        val pkg = sym.owner.fullName
-        val edits = importPosition match {
-          // if we are in import section just specify full name
-          case None if isInImportTree =>
-            val nameEdit = new l.TextEdit(namePos, sym.fullNameSyntax)
-            List(nameEdit)
-          case None =>
-            // No import position means we can't insert an import without clashing with
-            // existing symbols in scope, so we just do nothing
-            Nil
-          case Some(value) =>
-            val (short, edits) = ShortenedNames.synthesize(
-              TypeRef(ThisType(sym.owner), sym, Nil),
-              pos,
-              context,
-              value
-            )
-            val nameEdit = new l.TextEdit(namePos, short)
-
-            if (short != name && shouldApplyNameEdit) {
-              nameEdit :: edits
-            } else {
-              edits
-            }
-        }
-        if (edits.isEmpty) {
-          val trees = lastVisitedParentTrees
-            .take(5)
-            .map(_.getClass().getName())
-            .mkString(",")
-          logger.warning(
-            s"Could not infer edits for $pkg, tree around the position were $trees, auto import position was ${importPosition}"
-          )
-        }
-        (
-          AutoImportsResultImpl(
-            pkg,
-            edits.asJava,
-            Optional.of(semanticdbSymbol(sym))
-          ),
-          sym
-        )
+        renderResult(sym, throughPackageObject)
     }
 
     all match {
@@ -144,8 +197,7 @@ final class AutoImportsProvider(
         val moreExact = moreResults.filter { case (_, sym) =>
           correctInTreeContext(sym)
         }
-        if (moreExact.nonEmpty) moreExact.map(_._1)
-        else moreResults.map(_._1)
+        (if (moreExact.nonEmpty) moreExact else moreResults).map(_._1)
     }
   }
 
