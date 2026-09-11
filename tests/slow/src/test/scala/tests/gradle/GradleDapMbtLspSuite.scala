@@ -249,7 +249,8 @@ class GradleDapMbtLspSuite
         testEvents,
         """|
            |a.TestResultTest
-           |  a.TestResultTest - passed
+           |  a.TestResultTest.testOne - passed
+           |  a.TestResultTest.testTwo - passed
            |""".stripMargin,
       )
       assertContains(output, "BUILD SUCCESSFUL")

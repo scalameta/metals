@@ -378,7 +378,7 @@ final class MbtBuildServer(
       case Some(starter) =>
         val (originId, taskId) =
           mbtInvocation(params.getOriginId, "mbt-test")
-        val outcome: Either[String, Future[Int]] = for {
+        val outcome: Either[String, Future[MbtTestRunResult]] = for {
           testSuites <- asScalaTestSuites(params)
           target <- importedBuildTargets
             .find(_.id == params.getTargets.asScala.headOption.orNull)
@@ -398,12 +398,16 @@ final class MbtBuildServer(
             result.completeExceptionally(new IllegalArgumentException(error))
           case Right(future) =>
             future.onComplete {
-              case Success(0) =>
-                finishTask(originId, taskId, StatusCode.OK)
-                result.complete(new TestResult(StatusCode.OK))
-              case Success(_) =>
-                finishTask(originId, taskId, StatusCode.ERROR)
-                result.complete(new TestResult(StatusCode.ERROR))
+              case Success(run) =>
+                val status =
+                  if (run.exitCode == 0) StatusCode.OK else StatusCode.ERROR
+                finishTask(originId, taskId, status)
+                val testResult = new TestResult(status)
+                if (run.report.testCases.nonEmpty) {
+                  testResult.setDataKind(MbtTestReport.dataKind)
+                  testResult.setData(run.report.toJson)
+                }
+                result.complete(testResult)
               case Failure(ex) =>
                 finishTask(originId, taskId, StatusCode.ERROR)
                 result.completeExceptionally(ex)

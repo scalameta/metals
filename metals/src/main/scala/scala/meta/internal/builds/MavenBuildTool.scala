@@ -2,10 +2,12 @@ package scala.meta.internal.builds
 
 import java.nio.file.Files
 import java.nio.file.Paths
+import java.nio.file.attribute.FileTime
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
+import scala.util.Try
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaBinary
@@ -13,6 +15,8 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.io.AbsolutePath
 
@@ -173,15 +177,59 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     Future.successful(
-      mbtTestExecCommand(
-        mbtMavenBaseCommand(workspace),
+      withTestReport(
+        workspace,
         target,
-        testSuites,
-        framework,
+        mbtTestExecCommand(
+          mbtMavenBaseCommand(workspace),
+          target,
+          testSuites,
+          framework,
+        ),
       )
     )
+
+  private def withTestReport(
+      workspace: AbsolutePath,
+      target: MbtTarget,
+      arguments: List[String],
+  ): MbtTestCommand = {
+    val reportDirectories = (
+      mavenModuleDirectory(target)
+        .getOrElse(workspace)
+        .resolve("target/surefire-reports") ::
+        target
+          .runClassDirectories(workspace, "maven", includeTests = true)
+          .map(_.parent.resolve("surefire-reports"))
+    ).distinct
+    MbtTestCommand(arguments, changedMavenTestReport(reportDirectories))
+  }
+
+  private def changedMavenTestReport(
+      directories: List[AbsolutePath]
+  ): () => MbtTestReport = {
+    def fingerprint(report: AbsolutePath): Option[(FileTime, Long)] =
+      Try(
+        (Files.getLastModifiedTime(report.toNIO), Files.size(report.toNIO))
+      ).toOption
+    val snapshot = MbtTestReport
+      .xmlFiles(directories)
+      .flatMap(report => fingerprint(report).map(report -> _))
+      .toMap
+    () => {
+      val changed = MbtTestReport
+        .xmlFiles(directories)
+        .filter { report =>
+          snapshot.get(report) match {
+            case None => true
+            case Some(baseline) => !fingerprint(report).contains(baseline)
+          }
+        }
+      MbtTestReport.readJunitReports(changed, "changed Maven test reports")
+    }
+  }
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -190,7 +238,7 @@ case class MavenBuildTool(
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     mbtTestDebugCommandWithPort(
       workspace,
       target,
@@ -207,20 +255,24 @@ case class MavenBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = { port =>
+  ): Int => Future[MbtTestCommand] = { port =>
     // Use Surefire's forked JVM with a pre-assigned debug port.
     // This allows proper source mapping since tests run in a separate JVM.
     val debugAgentFlag =
       s"\"-agentlib:jdwp=transport=dt_socket,server=y,suspend=y,address=*:$port\""
-    Future.successful(
-      mbtTestExecCommand(
-        mbtMavenBaseCommand(workspace),
+    Future.successful {
+      withTestReport(
+        workspace,
         target,
-        testSuites,
-        framework,
-        forkedDebugAgentFlag = Some(debugAgentFlag),
+        mbtTestExecCommand(
+          mbtMavenBaseCommand(workspace),
+          target,
+          testSuites,
+          framework,
+          forkedDebugAgentFlag = Some(debugAgentFlag),
+        ),
       )
-    )
+    }
   }
 
   private def mbtTestExecCommand(

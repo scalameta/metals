@@ -13,7 +13,7 @@ import ch.epfl.scala.bsp4j.ScalaTestSuites
 
 trait MbtDebugLauncher { self: BuildTool =>
 
-  def executableName: String = self.executableName
+  def executableName: String
 
   def mbtCompileCommand(
       workspace: AbsolutePath,
@@ -39,7 +39,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]]
+  ): Future[MbtTestCommand]
 
   def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -48,7 +48,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]]
+  ): Future[MbtTestCommand]
 
   /**
    * Returns true if this launcher supports forked test debugging with a pre-assigned port.
@@ -66,7 +66,7 @@ trait MbtDebugLauncher { self: BuildTool =>
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = { _ =>
+  ): Int => Future[MbtTestCommand] = { _ =>
     mbtTestDebugCommand(
       workspace,
       target,

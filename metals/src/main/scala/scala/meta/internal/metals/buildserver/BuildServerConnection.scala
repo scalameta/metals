@@ -399,12 +399,8 @@ class BuildServerConnection private[metals] (
   def buildTargetTest(
       params: TestParams,
       cancelPromise: Promise[Unit],
-  ): Future[RunResult] = {
-    val completableFuture = register(server =>
-      server
-        .buildTargetTest(params)
-        .thenApply(result => new RunResult(result.getStatusCode()))
-    )
+  ): Future[TestResult] = {
+    val completableFuture = register(server => server.buildTargetTest(params))
     cancelPromise.future.foreach { _ =>
       completableFuture.cancel(true)
     }

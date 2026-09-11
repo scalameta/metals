@@ -1,7 +1,14 @@
 package scala.meta.internal.builds
 
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Paths
+
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
+import scala.util.Using
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
@@ -11,6 +18,8 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
+import scala.meta.internal.metals.mbt.MbtTestCommand
+import scala.meta.internal.metals.mbt.MbtTestReport
 import scala.meta.internal.metals.mbt.importer.BazelMbtImporter
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 import scala.meta.io.AbsolutePath
@@ -18,6 +27,7 @@ import scala.meta.io.AbsolutePath
 import bloop.config.Config.TestFramework
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import ch.epfl.scala.bsp4j.ScalaTestSuites
+import com.google.gson.JsonParser
 import coursier.Dependency
 
 case class BazelBuildTool(
@@ -137,15 +147,59 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] = {
+    val eventFile = AbsolutePath(
+      Files.createTempFile("bazel-test-", ".json")
+    )
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
+      val arguments = mbtTestExecCommand(
         runTargets,
         testSuites,
         debugAgentFlag = None,
         framework = framework,
-      )
+      ) :+ s"--build_event_json_file=$eventFile"
+      MbtTestCommand(arguments, () => bazelTestReport(eventFile))
     }
+  }
+
+  private def bazelTestReport(eventFile: AbsolutePath): MbtTestReport =
+    MbtTestReport.readJunitReports(
+      bazelTestXmlFiles(eventFile),
+      s"Bazel build events from $eventFile",
+      eventFile.deleteIfExists(),
+    )
+
+  private def bazelTestXmlFiles(eventFile: AbsolutePath): List[AbsolutePath] =
+    if (!eventFile.isFile) Nil
+    else {
+      val reports = mutable.LinkedHashSet.empty[AbsolutePath]
+      Using.resource(Files.lines(eventFile.toNIO)) { lines =>
+        lines.forEach { line =>
+          Try(JsonParser.parseString(line).getAsJsonObject).toOption
+            .flatMap(json => Option(json.getAsJsonObject("testResult")))
+            .flatMap(json => Option(json.getAsJsonArray("testActionOutput")))
+            .foreach { outputs =>
+              List.tabulate(outputs.size)(outputs.get).foreach { output =>
+                val file = output.getAsJsonObject
+                val name = Option(file.get("name")).map(_.getAsString)
+                val uri = Option(file.get("uri")).map(_.getAsString)
+                if (name.exists(_.endsWith("test.xml"))) {
+                  uri
+                    .flatMap(bazelFileUri)
+                    .filter(_.isFile)
+                    .foreach(reports.add)
+                }
+              }
+            }
+        }
+      }
+      reports.toList
+    }
+
+  private def bazelFileUri(value: String): Option[AbsolutePath] =
+    Try(URI.create(value)).toOption
+      .filter(uri => uri.getScheme == "file")
+      .flatMap(uri => Try(AbsolutePath(Paths.get(uri))).toOption)
 
   override def mbtTestDebugCommand(
       workspace: AbsolutePath,
@@ -154,13 +208,15 @@ case class BazelBuildTool(
       debugAgentFlag: String,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Future[List[String]] =
+  ): Future[MbtTestCommand] =
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
-      mbtTestExecCommand(
-        runTargets,
-        testSuites,
-        debugAgentFlag = Some(debugAgentFlag),
-        framework = framework,
+      MbtTestCommand(
+        mbtTestExecCommand(
+          runTargets,
+          testSuites,
+          debugAgentFlag = Some(debugAgentFlag),
+          framework = framework,
+        )
       )
     }
 
@@ -172,21 +228,29 @@ case class BazelBuildTool(
       testSuites: ScalaTestSuites,
       sourceFiles: Seq[AbsolutePath],
       framework: Option[TestFramework] = None,
-  ): Int => Future[List[String]] = {
+  ): Int => Future[MbtTestCommand] = {
     val resolvedRunTargets =
       resolveTestRunTargets(workspace, target, sourceFiles)
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
-        mbtTestExecCommand(
-          runTargets,
-          testSuites,
-          debugAgentFlag = None,
-          framework = framework,
-        ) ::: List(
-          "--nocache_test_results",
-          "--test_output=streamed",
-          "--test_strategy=exclusive",
-          s"--test_arg=--wrapper_script_flag=--debug=$port",
+        val eventFile = AbsolutePath(
+          Files.createTempFile("bazel-test-debug-", ".json")
+        )
+        MbtTestCommand(
+          mbtTestExecCommand(
+            runTargets,
+            testSuites,
+            debugAgentFlag = None,
+            framework = framework,
+          ) ::: List(
+            "--nocache_test_results",
+            "--test_output=streamed",
+            "--test_strategy=exclusive",
+            "--ui_event_filters=-info,-warning,-fail,-stderr",
+            s"--test_arg=--wrapper_script_flag=--debug=$port",
+            s"--build_event_json_file=$eventFile",
+          ),
+          () => bazelTestReport(eventFile),
         )
       }
   }
@@ -272,8 +336,9 @@ case class BazelBuildTool(
     val jvmFlagsArgs =
       jvmFlags.map(flag => s"--test_arg=--wrapper_script_flag=--jvm_flag=$flag")
     List(
-      "bazel", "test", "--ui_event_filters=-info,-stderr,-warning",
-      "--noshow_progress", "--test_output=all", "--test_tag_filters=",
+      "bazel", "test", "--ui_event_filters=-info,-warning,-fail",
+      "--noshow_progress", "--test_output=all", "--test_summary=detailed",
+      "--test_tag_filters=",
     ) ::: runTargets ::: testFilterArgs ::: jvmFlagsArgs
   }
 
