@@ -145,6 +145,65 @@ class BazelMbtLspSuite
     s"org.jsoup:jsoup:$jsoupVersion"
   )
 
+  private val externalSourcesBazelModuleLayout: String =
+    """|/main-repo/.bazelversion
+       |9.0.0
+       |
+       |/main-repo/BUILD
+       |load("@rules_java//java:defs.bzl", "java_binary")
+       |package(default_visibility = ["//visibility:public"])
+       |java_binary(
+       |    name = "app",
+       |    srcs = ["@app_sources//:App.java"],
+       |    main_class = "App",
+       |)
+       |
+       |/main-repo/MODULE.bazel
+       |bazel_dep(name = "rules_java", version = "9.1.0")
+       |local_repository = use_repo_rule("@bazel_tools//tools/build_defs/repo:local.bzl", "local_repository")
+       |local_repository(name = "app_sources", path = "../external-repo")
+       |
+       |/main-repo/.metals/dummy.txt
+       |In this test we need to create the .metals directory manually
+       |to make sure that main-repo is recognised as a Metals project,
+       |even though it has no Scala or Java sources.
+       |
+       |/external-repo/BUILD
+       |exports_files(["App.java"])
+       |
+       |/external-repo/REPO.bazel
+       |# No content here
+       |
+       |/external-repo/App.java
+       |public class App {
+       |    public static void main(String[] args) {
+       |        System.out.println("Hi!");
+       |    }
+       |}
+       |""".stripMargin
+
+  private val externalSourcesMbtJson: String =
+    """|{
+       |  "dependencyModules": [],
+       |  "namespaces": {
+       |    "//": {
+       |      "sources": [
+       |        "bazel-main-repo/external/+local_repository+app_sources/App.java"
+       |      ],
+       |      "scalacOptions": [],
+       |      "javacOptions": [],
+       |      "dependencyModules": [],
+       |      "dependsOn": [],
+       |      "classDirectories": ["<classDirectories-path>"],
+       |      "configurations": [
+       |        "//:app"
+       |      ]
+       |    }
+       |  },
+       |  "uncheckedSources": []
+       |}
+       |""".stripMargin
+
   private def javaBazelWorkspaceLayout: String =
     """|/.bazelproject
        |targets:
@@ -1117,6 +1176,23 @@ class BazelMbtLspSuite
       // Identical to the single-target result: the hub name
       // does not appear in the imported model.
       _ = assertNoDiff(escapeMbtFile(mbtFile), singleCoreMbtJson)
+    } yield ()
+  }
+
+  test("bazel-import-mbt-external-sources") {
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        externalSourcesBazelModuleLayout,
+        initializeInNestedDirectory = Some("main-repo"),
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace
+        .resolve("main-repo")
+        .resolve(".metals/mbt.json")
+        .readText
+      _ = assertNoDiff(escapeMbtFile(mbtFile), externalSourcesMbtJson)
     } yield ()
   }
 

@@ -161,6 +161,7 @@ abstract class BaseLspSuite(
       layout: String,
       expectError: Boolean = false,
       runAdditionalCommands: (AbsolutePath) => Unit = _ => (),
+      initializeInNestedDirectory: Option[String] = None,
   ): Future[InitializeResult] = {
     Debug.printEnclosing()
     writeLayout(layout)
@@ -175,7 +176,16 @@ abstract class BaseLspSuite(
     }
     runAdditionalCommands(workspace)
     scribe.info(s"Initializing with $initializer")
-    initializer.initialize(workspace, server, client, expectError, userConfig)
+    val directoryToInitialize =
+      initializeInNestedDirectory.map(workspace.resolve).getOrElse(workspace)
+    initializer.initialize(
+      directoryToInitialize,
+      server,
+      client,
+      expectError,
+      userConfig,
+      initializeInNestedDirectory.map(List(_)),
+    )
   }
 
   def initialize(
