@@ -3,7 +3,6 @@ import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.UUID
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -285,7 +284,7 @@ case class GradleBuildTool(
 
   private def withTestReport(arguments: List[String]): MbtTestCommand = {
     val reportDirectory = AbsolutePath(
-      tempDir.resolve(s"gradle-test-${UUID.randomUUID()}")
+      Files.createTempDirectory("gradle-test")
     )
     val reportArgument = s"-Dmetals.testReportDirectory=$reportDirectory"
     MbtTestCommand(

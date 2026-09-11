@@ -3,7 +3,6 @@ package scala.meta.internal.builds
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.util.UUID
 
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
@@ -150,7 +149,7 @@ case class BazelBuildTool(
       framework: Option[TestFramework] = None,
   ): Future[MbtTestCommand] = {
     val eventFile = AbsolutePath(
-      tempDir.resolve(s"bazel-test-${UUID.randomUUID()}.json")
+      Files.createTempFile("bazel-test-", ".json")
     )
     resolveTestRunTargets(workspace, target, sourceFiles).map { runTargets =>
       val arguments = mbtTestExecCommand(
@@ -235,7 +234,7 @@ case class BazelBuildTool(
     (port: Int) =>
       resolvedRunTargets.map { runTargets =>
         val eventFile = AbsolutePath(
-          tempDir.resolve(s"bazel-test-debug-${UUID.randomUUID()}.json")
+          Files.createTempFile("bazel-test-debug-", ".json")
         )
         MbtTestCommand(
           mbtTestExecCommand(
