@@ -17,7 +17,14 @@ import scala.meta.io.AbsolutePath
  */
 class NotebookLspSuite extends BaseLspSuite("notebooks") {
 
-  private val notebookPath = "a/src/main/scala/a/Notebook.ipynb"
+  // Deliberately NOT nested under any build target's own source root (e.g.
+  // `a/src/main/scala/a/...`): `TargetData.sourceBuildTargets` matches by
+  // path *prefix*, so a notebook physically inside a target's source tree
+  // would accidentally resolve to that target's real classpath via the
+  // target's own, normal BSP-registered source root — regardless of whether
+  // this file's own association mechanism ever runs — making tests that
+  // check the "no/wrong association" case pass for the wrong reason.
+  private val notebookPath = "Notebook.ipynb"
 
   private def ipynb: AbsolutePath = server.toPath(notebookPath)
 
@@ -507,4 +514,28 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
       Seq.empty,
     )
   }
+
+  test("single-real-build-target-auto-associates") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  }
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
+      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+    } yield assertEquals(
+      client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
+      Seq.empty,
+      "the workspace's only build target should auto-associate, giving the cell circe on its classpath",
+    )
+  }
+
 }

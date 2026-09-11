@@ -223,6 +223,7 @@ abstract class MetalsLspService(
     languageClient,
     () => compilers,
     parseTrees(_),
+    buildTargets,
   )(using ec)
 
   val sourceMapper: SourceMapper = SourceMapper(
@@ -910,6 +911,11 @@ abstract class MetalsLspService(
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
+
+  def chooseNotebookBuildTarget(notebookUri: String): Future[Unit] =
+    notebookProvider
+      .chooseAndSetBuildTarget(notebookUri.toAbsolutePath)
+      .map(_ => ())
 
   override def didSave(
       params: DidSaveTextDocumentParams

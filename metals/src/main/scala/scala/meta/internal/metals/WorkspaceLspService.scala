@@ -1012,6 +1012,12 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
+      case ServerCommands.ChooseNotebookBuildTarget(uri) =>
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .chooseNotebookBuildTarget(uri)
+          .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
           _.switchBspServer().ignoreValue,

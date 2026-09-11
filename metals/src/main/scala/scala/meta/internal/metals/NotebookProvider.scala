@@ -10,7 +10,11 @@ import scala.concurrent.Future
 import scala.util.control.NonFatal
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
+import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
 import scala.meta.io.AbsolutePath
+import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeNotebookDocumentParams
 import org.eclipse.lsp4j.DidCloseNotebookDocumentParams
@@ -23,7 +27,6 @@ import org.eclipse.lsp4j.NotebookDocumentChangeEventCellStructure
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.services.LanguageClient
 
 import scala.util.chaining.scalaUtilChainingOps
 
@@ -46,7 +49,7 @@ import scala.util.chaining.scalaUtilChainingOps
  */
 final class NotebookProvider(
     buffers: Buffers,
-    languageClient: LanguageClient,
+    languageClient: MetalsLanguageClient,
     compilers: () => Compilers,
     // Ordinary `textDocument/didOpen|didChange` also feed the parsed-trees
     // cache that features like `textDocument/foldingRange` read from
@@ -55,6 +58,7 @@ final class NotebookProvider(
     // are no-ops for `vscode-notebook-cell:` uris), we have to feed it
     // ourselves or those features see a cell that was "never opened".
     parseTrees: AbsolutePath => Future[Unit],
+    buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
   import NotebookProvider.*
 
@@ -69,6 +73,18 @@ final class NotebookProvider(
   // any cell's content or the cell list itself changes.
   private val combinedCache =
     TrieMap.empty[AbsolutePath, CombinedScript]
+  // real `.ipynb` path -> the build target its cells should resolve against,
+  // if the user has associated one (absent until they pick one, or if the
+  // notebook has never been opened while the workspace had exactly one
+  // build target to auto-associate with).
+  private val associatedTarget =
+    TrieMap.empty[AbsolutePath, b.BuildTargetIdentifier]
+  // real `.ipynb` path -> the `TargetData` currently registered into
+  // `buildTargets` for that notebook's *current* cell paths. `TargetData`
+  // has no "remove a single source item" operation, only whole-instance
+  // granularity, so a change to the cell set or the association replaces
+  // this wholesale rather than mutating it in place.
+  private val registeredData = TrieMap.empty[AbsolutePath, TargetData]
 
   def didOpen(params: DidOpenNotebookDocumentParams): Unit = {
     val ipynbPath = params.getNotebookDocument.getUri.toAbsolutePath
@@ -82,6 +98,12 @@ final class NotebookProvider(
     val initialText =
       params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getText)
     registerCells(ipynbPath, order, initialText)
+    if (!associatedTarget.contains(ipynbPath)) {
+      buildTargets.allBuildTargetIds match {
+        case Seq(only) => associate(ipynbPath, Some(only))
+        case _ => // ambiguous or none; leave unassociated until the user picks
+      }
+    }
     triggerDiagnostics(ipynbPath)
   }
 
@@ -127,6 +149,88 @@ final class NotebookProvider(
 
   def didSave(@annotation.unused params: DidSaveNotebookDocumentParams): Unit =
     ()
+
+  /**
+   * Associates `ipynbPath` with one of the workspace's build targets, so its
+   * cells' presentation-compiler features see that target's real dependency
+   * classpath instead of just the standard library. Auto-picks if there's
+   * exactly one candidate, does nothing if there are none, otherwise asks
+   * the user via `metals/quickPick` — mirrors
+   * `DebugDiscovery.requestMain`'s auto-pick/quickpick split.
+   */
+  def chooseAndSetBuildTarget(
+      ipynbPath: AbsolutePath
+  ): Future[Option[b.BuildTargetIdentifier]] =
+    buildTargets.allBuildTargetIds match {
+      case Seq(only) =>
+        setBuildTarget(ipynbPath, Some(only))
+        Future.successful(Some(only))
+      case Seq() =>
+        Future.successful(None)
+      case many =>
+        val items = many.map { id =>
+          new MetalsQuickPickItem(
+            id.getUri,
+            buildTargets.info(id).map(_.getDisplayName).getOrElse(id.getUri),
+          )
+        }
+        languageClient
+          .metalsQuickPick(
+            new MetalsQuickPickParams(
+              items.asJava,
+              placeHolder = "Pick a build target for this notebook's cells",
+            )
+          )
+          .asScala
+          .map(_.flatMap(choice => many.find(_.getUri == choice.itemId)))
+          .map { chosen =>
+            chosen.foreach(id => setBuildTarget(ipynbPath, Some(id)))
+            chosen
+          }
+    }
+
+  def setBuildTarget(
+      ipynbPath: AbsolutePath,
+      target: Option[b.BuildTargetIdentifier],
+  ): Unit = {
+    associate(ipynbPath, target)
+    triggerDiagnostics(ipynbPath)
+  }
+
+  private def associate(
+      ipynbPath: AbsolutePath,
+      target: Option[b.BuildTargetIdentifier],
+  ): Unit = {
+    target match {
+      case Some(id) => associatedTarget.put(ipynbPath, id)
+      case None => associatedTarget.remove(ipynbPath)
+    }
+    reregisterTargetData(ipynbPath)
+  }
+
+  /**
+   * `TargetData.addSourceItem` is a plain, synchronous map write with no BSP
+   * round-trip; `BuildTargets.scalaTarget`/`targetClasspath` look up a
+   * `BuildTargetIdentifier` across every registered `TargetData`, not just
+   * whichever one added it, so pointing a notebook's synthetic cell paths at
+   * an already-imported real target here is enough for
+   * `Compilers.loadCompiler` to pick up its real classpath unmodified.
+   * `combinedMarkerPath` is registered too, since `triggerDiagnostics` uses
+   * that path for its own, separate `compilers().didChange` call.
+   */
+  private def reregisterTargetData(ipynbPath: AbsolutePath): Unit = {
+    registeredData.remove(ipynbPath).foreach(buildTargets.removeData)
+    for {
+      target <- associatedTarget.get(ipynbPath)
+      cellPaths <- notebooks.get(ipynbPath)
+    } {
+      val data = new TargetData
+      cellPaths.foreach(data.addSourceItem(_, target))
+      data.addSourceItem(combinedMarkerPath(ipynbPath), target)
+      buildTargets.addData(data)
+      registeredData.put(ipynbPath, data)
+    }
+  }
 
   /**
    * Consulted from [[SourceMapper.pcMapping]]. `None` for any path that
@@ -270,6 +374,7 @@ final class NotebookProvider(
     }
     notebooks.put(ipynbPath, updated)
     combinedCache.remove(ipynbPath)
+    reregisterTargetData(ipynbPath)
   }
 
   private def forgetNotebook(ipynbPath: AbsolutePath): Unit = {
@@ -282,6 +387,8 @@ final class NotebookProvider(
       buffers.remove(path)
     }
     combinedCache.remove(ipynbPath)
+    associatedTarget.remove(ipynbPath)
+    registeredData.remove(ipynbPath).foreach(buildTargets.removeData)
   }
 
   private def clearDiagnostics(uri: String): Unit =
