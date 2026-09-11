@@ -781,10 +781,17 @@ object MetalsEnrichments
           None
       }
 
+    def isNotebookCellUri: Boolean = NotebookProvider.isNotebookCellUri(value)
+
     def toAbsolutePath: AbsolutePath = toAbsolutePath(followSymlink = true)
 
     def toAbsolutePath(followSymlink: Boolean): AbsolutePath =
-      MtagsEnrichments.XtensionStringMtags(value).toAbsolutePath(followSymlink)
+      if (isNotebookCellUri)
+        NotebookProvider.uriToPath(value)
+      else
+        MtagsEnrichments
+          .XtensionStringMtags(value)
+          .toAbsolutePath(followSymlink)
 
     def indexToLspPosition(index: Int): l.Position = {
       var i = 0
@@ -1527,6 +1534,18 @@ object MetalsEnrichments
           case _ => false
         }) =>
       e.getCause().getMessage()
+  }
+
+  implicit final class XtensionIterableOnce[C[X] <: IterableOnce[X], A](
+      private val coll: C[A]
+  ) extends AnyVal {
+    def toMapBy[K, V](keyFun: A => K, valueFun: A => V): Map[K, V] = {
+      val res = Map.newBuilder[K, V]
+      coll.iterator.foreach { a =>
+        res += ((keyFun(a), valueFun(a)))
+      }
+      res.result()
+    }
   }
 
 }

@@ -13,6 +13,7 @@ import org.eclipse.{lsp4j => l}
 final case class SourceMapper(
     buildTargets: BuildTargets,
     buffers: Buffers,
+    notebookProvider: NotebookProvider,
 ) {
   def mappedFrom(path: AbsolutePath): Option[AbsolutePath] =
     buildTargets.mappedFrom(path)
@@ -80,7 +81,10 @@ final case class SourceMapper(
               }
           }
         Try(TwirlAdjustments(input, scalaVersion, playVersion)).toOption
-      } else None
+      } else {
+        // no-op for any path that isn't a currently-known notebook cell
+        notebookProvider.combinedAdjustments(path)
+      }
 
     forScripts.getOrElse(default)
   }

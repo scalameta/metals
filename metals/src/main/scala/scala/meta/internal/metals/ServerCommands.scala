@@ -201,6 +201,18 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val ChooseNotebookBuildTarget = new ParametrizedCommand[String](
+    "notebook-choose-build-target",
+    "Choose build target for notebook",
+    """|Associate a `.ipynb` notebook's Scala cells with one of the
+       |workspace's build targets, so hover/completion/definition/
+       |diagnostics for its cells see that target's real dependency
+       |classpath instead of just the standard library.
+       |""".stripMargin,
+    """|[uri], uri of the `.ipynb` notebook.
+       |""".stripMargin,
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -846,6 +858,7 @@ object ServerCommands {
       DisconnectBuildServer,
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
+      ChooseNotebookBuildTarget,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,
