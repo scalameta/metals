@@ -74,8 +74,8 @@ class AutoImportsPackageObjectSuite extends BaseAutoImportsSuite {
     selection = 0
   )
 
-  // the type alias and the val re-export are distinct symbols but render the
-  // same import statement; only one `doobie` code action should be offered
+  // the type alias and the val re-export are distinct symbols that render
+  // the same import, so they collapse into one `doobie` code action
   check(
     "type-term-twin-dedup",
     """|object A {

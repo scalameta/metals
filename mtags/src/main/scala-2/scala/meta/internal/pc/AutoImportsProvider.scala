@@ -39,15 +39,14 @@ final class AutoImportsProvider(
 
     val importPosition = autoImportPosition(pos, params.text())
     val context = doLocateImportContext(pos)
-    val isSeen = mutable.Set.empty[(String, Boolean)]
+    val isSeen = mutable.Set.empty[String]
     // a symbol together with the package object class it is importable
     // through, if it is not importable through its own owner (issue #2583)
     val symbols = List.newBuilder[(Symbol, Option[Symbol])]
 
-    // Symbols are keyed on the import that would be written for them, plus
-    // the namespace: a type and a term of the same name are distinct
-    // candidates because only one of them may fit the position, but they
-    // collapse into a single import statement in `distinctImports`.
+    // Symbols are keyed on the import that would be written for them, so a
+    // type and a term of the same name collapse into one candidate the way
+    // a class and its companion object already do.
     def visitThrough(
         sym: Symbol,
         throughPackageObject: Option[Symbol]
@@ -56,13 +55,13 @@ final class AutoImportsProvider(
         case Some(pkgClass) => s"${pkgClass.fullName}.${sym.name.decoded}"
         case None => sym.fullName
       }
-      if (isSeen.add((importPath, sym.isType))) {
+      if (isSeen.add(importPath)) {
         // the declared owner of a member exposed by a package object is a
         // mixin parent or the package object itself, and neither is a usable
         // import path, so keep the classfile search from offering the same
         // symbol again through its owner
         if (throughPackageObject.isDefined) {
-          isSeen += ((sym.fullName, sym.isType))
+          isSeen += sym.fullName
         }
         symbols += ((sym, throughPackageObject))
       }
@@ -182,21 +181,6 @@ final class AutoImportsProvider(
       )
     }
 
-    // A type and a term of the same name render the same import statement,
-    // whether they are a class and its companion object or a package object
-    // exposing both `type Transactor` and `val Transactor`; offer a single
-    // code action for them.
-    def distinctImports(
-        results: List[(AutoImportsResult, Symbol)]
-    ): List[AutoImportsResult] = {
-      val seen = mutable.Set.empty[(String, String)]
-      results.collect {
-        case (result, sym)
-            if seen.add((result.packageName(), sym.name.dropLocal.decoded)) =>
-          result
-      }
-    }
-
     val all = symbols.result().collect {
       case (sym, throughPackageObject)
           if isExactMatch(sym, name) && context.isAccessible(
@@ -213,7 +197,7 @@ final class AutoImportsProvider(
         val moreExact = moreResults.filter { case (_, sym) =>
           correctInTreeContext(sym)
         }
-        distinctImports(if (moreExact.nonEmpty) moreExact else moreResults)
+        (if (moreExact.nonEmpty) moreExact else moreResults).map(_._1)
     }
   }
 

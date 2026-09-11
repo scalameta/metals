@@ -119,9 +119,13 @@ trait PackageObjectMemberSearch { compiler: MetalsGlobal =>
       val pkg = packages.next()
       try {
         for {
+          // the term namespace first, matching the classfile search, so that
+          // when a package object exposes both a type and a term of one name
+          // the surviving candidate is the one `correctInTreeContext` can
+          // judge in a call position; a single import covers both anyway
           member <- List(
-            pkg.info.member(TypeName(encoded)),
-            pkg.info.member(TermName(encoded))
+            pkg.info.member(TermName(encoded)),
+            pkg.info.member(TypeName(encoded))
           )
           sym <- member.alternatives
           if sym.exists && !sym.isErroneous
