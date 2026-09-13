@@ -78,6 +78,53 @@ class DebugProtocolSuite
     } yield assertNoDiff(output, "FooBarFoo")
   }
 
+  // https://github.com/scalameta/metals/issues/2888
+  // sbt-bloop injects `-Duser.dir` into every project's java options, so the
+  // build server always supplies one. Options coming from the debug request
+  // must still win, since the JVM honours the last occurrence of `-Duser.dir`.
+  // Requires Bloop >= 2.1.2 (scalacenter/bloop#3029).
+  test("user-jvm-options-take-precedence") {
+    // `workspace` is absolute, so escape it for the json layout below
+    val buildServerWorkingDir = workspace.toString.replace("\\", "\\\\")
+    val userWorkingDir = workspace.resolve("user-working-dir")
+    val mainClass = new ScalaMainClass(
+      "a.Main",
+      emptyList(),
+      singletonList(s"-Duser.dir=$userWorkingDir"),
+    )
+    for {
+      _ <- initialize(
+        s"""/metals.json
+           |{
+           |  "a": {
+           |    "javaOptions": ["-Duser.dir=$buildServerWorkingDir"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |package a
+           |object Main {
+           |  def main(args: Array[String]) = {
+           |    // printing the path itself is brittle across platforms
+           |    print(sys.props("user.dir").endsWith("user-working-dir"))
+           |    System.exit(0)
+           |  }
+           |}
+           |""".stripMargin
+      )
+      _ = Files.createDirectories(userWorkingDir.toNIO)
+      debugger <- server.startDebugging(
+        "a",
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        mainClass,
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "true")
+  }
+
   test("attach") {
     val port = 5566
     def runningMain() = Future {
