@@ -2,7 +2,10 @@ package scala.meta.internal.metals
 
 import java.{util => ju}
 
+import scala.meta.internal.metals.AdjustedLspData.LineColumn
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.mtags.MD5
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.pc
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.HoverSignature
@@ -18,12 +21,78 @@ import org.eclipse.lsp4j.{Range => LspRange}
 
 trait AdjustLspData {
 
-  def adjustPos(pos: Position, adjustToZero: Boolean = true): Position
+  def adjust(pos: LineColumn): LineColumn
+
+  def adjustPosition(
+      position: Position,
+      adjustToZero: Boolean = true,
+  ): Position = {
+    val lineColumn = (position.getLine(), position.getCharacter())
+    val (adjustedLine, adjustedCharacter) = adjust(lineColumn)
+    val finalAdjustedCharacter =
+      if (adjustToZero && adjustedCharacter < 0) 0 else adjustedCharacter
+    val finalAdjustedLine =
+      if (adjustToZero && adjustedLine < 0) 0 else adjustedLine
+    new Position(finalAdjustedLine, finalAdjustedCharacter)
+  }
+
+  def adjustTextDocument(
+      document: s.TextDocument,
+      originalText: => String,
+  ): s.TextDocument = {
+
+    def adjustSemanticdbRange(range: s.Range): s.Range = {
+      val (adjustedStartLine, adjustedStartCharacter) = adjust(
+        (range.startLine, range.startCharacter)
+      )
+      val (adjustedEndLine, adjustedEndCharacter) = adjust(
+        (range.endLine, range.endCharacter)
+      )
+      new s.Range(
+        adjustedStartLine,
+        adjustedStartCharacter,
+        adjustedEndLine,
+        adjustedEndCharacter,
+      )
+    }
+    val adjustedOccurences =
+      document.occurrences.map { occurence =>
+        occurence.range.fold(occurence)(r =>
+          occurence.copy(range = Some(adjustSemanticdbRange(r)))
+        )
+      }
+
+    val adjustedDiagnostic =
+      document.diagnostics.map { diagnostic =>
+        diagnostic.range.fold(diagnostic)(r =>
+          diagnostic.copy(range = Some(adjustSemanticdbRange(r)))
+        )
+      }
+
+    val adjustedSynthetic =
+      document.synthetics.map { synthetic =>
+        synthetic.range.fold(synthetic)(r =>
+          synthetic.copy(range = Some(adjustSemanticdbRange(r)))
+        )
+      }
+
+    s.TextDocument(
+      schema = document.schema,
+      uri = document.uri,
+      text = originalText,
+      md5 = MD5.compute(originalText),
+      language = document.language,
+      symbols = document.symbols,
+      occurrences = adjustedOccurences,
+      diagnostics = adjustedDiagnostic,
+      synthetics = adjustedSynthetic,
+    )
+  }
 
   def adjustRange(range: LspRange): LspRange =
     new LspRange(
-      adjustPos(range.getStart),
-      adjustPos(range.getEnd),
+      adjustPosition(range.getStart),
+      adjustPosition(range.getEnd),
     )
 
   def adjustTextEdits(
@@ -108,7 +177,7 @@ trait AdjustLspData {
 }
 
 case class AdjustedLspData(
-    adjustPosition: Position => Position,
+    adjustLineColumn: LineColumn => LineColumn,
     filterOutLocations: Location => Boolean,
     adjustUri: String => String = identity,
 ) extends AdjustLspData {
@@ -123,26 +192,24 @@ case class AdjustedLspData(
         loc
     }.asJava
   }
-  override def adjustPos(
-      pos: Position,
-      adjustToZero: Boolean = true,
-  ): Position = {
-    val adjusted = adjustPosition(pos)
-    if (adjustToZero && adjusted.getCharacter() < 0) adjusted.setCharacter(0)
-    if (adjustToZero && adjusted.getLine() < 0) adjusted.setLine(0)
-    adjusted
-  }
+  override def adjust(
+      pos: LineColumn
+  ): LineColumn = adjustLineColumn(pos)
 
 }
 
 object DefaultAdjustedData extends AdjustLspData {
 
-  override def adjustPos(
-      pos: Position,
-      adjustToZero: Boolean = true,
-  ): Position = identity(pos)
+  override def adjust(
+      pos: LineColumn
+  ): LineColumn = identity(pos)
 
   override def adjustRange(range: LspRange): LspRange = identity(range)
+
+  override def adjustTextDocument(
+      document: s.TextDocument,
+      originalText: => String,
+  ): s.TextDocument = identity(document)
 
   override def adjustTextEdits(
       edits: java.util.List[TextEdit]
@@ -168,15 +235,17 @@ object DefaultAdjustedData extends AdjustLspData {
 object AdjustedLspData {
 
   def create(
-      f: Position => Position,
+      f: LineColumn => LineColumn,
       filterOutLocations: Location => Boolean = _ => false,
       adjustUri: String => String = identity,
   ): AdjustLspData =
     AdjustedLspData(
-      pos => f(pos),
+      f,
       filterOutLocations,
       adjustUri,
     )
 
   val default: AdjustLspData = DefaultAdjustedData
+
+  type LineColumn = (Int, Int)
 }

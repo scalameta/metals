@@ -48,7 +48,7 @@ final case class SourceMapper(
       } else if (
         path.isWorksheet && ScalaVersions.isScala3Version(scalaVersion)
       ) {
-        WorksheetProvider.worksheetScala3Adjustments(input)
+        Some(WorksheetProvider.worksheetScala3Adjustments(input))
       } else if (path.isTwirlTemplate) {
         val playVersion = buildTargets
           .inverseSources(path)

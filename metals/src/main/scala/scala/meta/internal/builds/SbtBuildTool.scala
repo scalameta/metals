@@ -486,8 +486,10 @@ object SbtBuildTool {
       position.getCharacter(),
     )
     val adjustLspData = AdjustedLspData.create(
-      pos => {
-        new Position(pos.getLine() - appendLineSize, pos.getCharacter())
+      {
+        case (line, column) => {
+          (line - appendLineSize, column)
+        }
       },
       filterOutLocations = { loc => !loc.getUri().isSbt },
     )

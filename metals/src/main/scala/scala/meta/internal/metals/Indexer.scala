@@ -19,6 +19,7 @@ import scala.meta.infra.Event
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
+import scala.meta.internal.metals.AdjustedLspData.LineColumn
 import scala.meta.internal.metals.Indexer.BackgroundJob
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.SemanticdbDefinition
@@ -397,12 +398,9 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
           topWrapperLineCount + scPos.getLine,
           scPos.getCharacter,
         )
-    val fromScala: Position => Position =
-      scalaPos =>
-        new Position(
-          scalaPos.getLine - topWrapperLineCount,
-          scalaPos.getCharacter,
-        )
+    val fromScala: LineColumn => LineColumn = { case (line, column) =>
+      (line - topWrapperLineCount, column)
+    }
 
     new TargetData.MappedSource {
       def path = generatedPath
