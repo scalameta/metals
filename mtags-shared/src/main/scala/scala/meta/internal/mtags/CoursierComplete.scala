@@ -44,7 +44,8 @@ class CoursierComplete(scalaVersion: String) {
   ): List[String] = {
     // Version completions
     if (dependency.replaceAll(":+", ":").count(_ == ':') == 2) {
-      versionCompletions(dependency, supportNonJvm)
+      val (stable, preRelease) = completeVersions(dependency, supportNonJvm)
+      stable ++ preRelease
     } else {
       val javaCompletions = completions(dependency)
       val scalaCompletions =
@@ -59,24 +60,34 @@ class CoursierComplete(scalaVersion: String) {
     }
   }
 
-  private def versionCompletions(
+  /**
+   * Returns version completions for the given dependency string, split into
+   * stable and pre-release ones, newest first.
+   *
+   * @param supportNonJvm Default to `::` before version if dependency name doesn't end with `sjs` or `native`
+   */
+  def completeVersions(
       dependency: String,
-      supportNonJvm: Boolean
-  ): List[String] = {
+      supportNonJvm: Boolean = true
+  ): (List[String], List[String]) = {
     val adjusted = adjustDoubleColon(dependency)
-    val sortedCompletions = completions(adjusted).sortWith(
-      Version.fromString(_) >= Version.fromString(_)
-    )
+    val (stable, preRelease) = completions(adjusted)
+      .map(completion => (completion, Version.fromString(completion)))
+      .sortWith { case ((_, leftVersion), (_, rightVersion)) =>
+        Version.stableFirst.compare(leftVersion, rightVersion) < 0
+      }
+      .partition { case (_, version) => version.isStable }
 
     def addDoubleColon: Boolean =
       supportNonJvm && !hasSpecifiedPlatform(dependency) &&
         dependency.count(_ == ':') == 3
 
-    // If dependency name doesn't end with `sjs` or `native` and we can default to `::` before version
-    if (addDoubleColon)
-      sortedCompletions.map(":" + _)
-    else sortedCompletions
+    def labels(versions: List[(String, Version)]): List[String] = {
+      val completed = versions.map(_._1)
+      if (addDoubleColon) completed.map(":" + _) else completed
+    }
 
+    (labels(stable), labels(preRelease))
   }
 
   private def adjustDoubleColon(dependency: String): String = {

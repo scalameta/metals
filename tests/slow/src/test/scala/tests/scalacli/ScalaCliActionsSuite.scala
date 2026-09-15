@@ -27,10 +27,9 @@ class ScalaCliActionsSuite
 
   val oldOsLibVersion: Version = Version("0.7.8")
   val coursierComplete = new CoursierComplete(scalaCompilerVersion)
-  val newestOsLib: String = coursierComplete
-    .complete("com.lihaoyi::os-lib:")
-    .filterNot(_.contains("M"))
-    .headOption
+  val (stableOsLibVersions, _) =
+    coursierComplete.completeVersions("com.lihaoyi::os-lib:")
+  val newestOsLib: String = stableOsLibVersions.headOption
     .map(_.stripPrefix(":"))
     .getOrElse("0.8.1")
 
