@@ -5,6 +5,21 @@ import tests.BaseAutoImportsSuite
 
 class AutoImportsSuite extends BaseAutoImportsSuite {
 
+  // `package object scala` aliases `Vector`, `List`, `Either` and friends.
+  // They are already in scope, so the package-object member search must not
+  // offer a `scala` import for them in every project; only the unrelated
+  // `java.util.Vector` is a real candidate here.
+  check(
+    "scala-package-object-alias-not-duplicated",
+    """|object A {
+       |  val x: <<Vector>>[Int] = ???
+       |}
+       |""".stripMargin,
+    """|java.util
+       |scala.collection.immutable
+       |""".stripMargin
+  )
+
   check(
     "basic",
     """|object A {
