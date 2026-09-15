@@ -205,8 +205,10 @@ sbt
 # (recommended) run a specific test suite, great for edit/test/debug workflows.
 > unit/testOnly tests.DefinitionSuite
 
-# run a specific test case inside the suite.
-> unit/testOnly tests.DefinitionSuite -- <exact-test-name>
+# run a specific test case inside the suite. The filter is a MUnit glob, so it
+# needs the `*` wildcards -- a bare test name matches nothing and the suite is
+# reported as ignored.
+> unit/testOnly tests.DefinitionSuite -- *part-of-test-name*
 
 # run unit tests, moderately fast but still a bit too slow for edit/test/debug workflows.
 > unit/test
