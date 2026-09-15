@@ -13,8 +13,10 @@ trait DependencyCompletions {
       (o1, o2) match {
         case (c1: DependecyMember, c2: DependecyMember)
             if c1.isVersion && c2.isVersion =>
-          // For version completions, we want to show the latest version first
-          Version.fromString(c2.label).compare(Version.fromString(c1.label))
+          Version.stableFirst.compare(
+            Version.fromString(c1.label),
+            Version.fromString(c2.label)
+          )
         case _ => super.compare(o1, o2)
       }
 

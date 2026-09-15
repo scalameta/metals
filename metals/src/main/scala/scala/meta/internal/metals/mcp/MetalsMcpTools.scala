@@ -853,18 +853,22 @@ trait MetalsMcpTools extends Cancelable {
         val completions = {
           for {
             (key, depString) <- potentialDepStrings.iterator
-            completed = coursierComplete.complete(depString)
-            if completed.nonEmpty
-          } yield {
-            if (key == FindDepKey.version)
-              McpMessages.FindDep.versionMessage(completed.headOption)
-            else
-              McpMessages.FindDep.dependencyReturnMessage(
-                key,
-                completed.distinct,
-              )
-
-          }
+            message <-
+              if (key == FindDepKey.version) {
+                val (stable, preRelease) =
+                  coursierComplete.completeVersions(depString)
+                Option.when(stable.nonEmpty || preRelease.nonEmpty)(
+                  McpMessages.FindDep
+                    .versionMessage(stable.headOption, preRelease)
+                )
+              } else {
+                val completed = coursierComplete.complete(depString)
+                Option.when(completed.nonEmpty)(
+                  McpMessages.FindDep
+                    .dependencyReturnMessage(key, completed.distinct)
+                )
+              }
+          } yield message
         }.headOption
           .getOrElse(McpMessages.FindDep.noCompletionsFound)
 
