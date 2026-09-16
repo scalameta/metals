@@ -30,6 +30,7 @@ import scala.meta.internal.metals.mcp.McpTestRunner
 import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.MetalsMcpStdioServer
 import scala.meta.internal.metals.mcp.ScalafixLlmRuleProvider
+import scala.meta.internal.metals.mcp.ScalafmtRunner
 import scala.meta.internal.metals.watcher.FileWatcherEvent
 import scala.meta.internal.metals.watcher.FileWatcherEvent.EventType
 import scala.meta.internal.metals.watcher.ProjectFileWatcher
@@ -277,6 +278,8 @@ class ProjectMetalsLspService(
     compilations,
   )
 
+  val scalafmtRunner = new ScalafmtRunner(folder, () => userConfig)
+
   def startMcpServer(): Future[Unit] =
     startMcpServer(useStdio = false)
 
@@ -300,10 +303,9 @@ class ProjectMetalsLspService(
                 initializeParams.getClientInfo().getName()
               ),
               getVisibleName,
-              languageClient,
               connectionProvider,
               scalaVersionSelector,
-              formattingProvider,
+              scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
             )
@@ -325,7 +327,7 @@ class ProjectMetalsLspService(
               languageClient,
               connectionProvider,
               scalaVersionSelector,
-              formattingProvider,
+              scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
             )

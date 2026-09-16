@@ -1,5 +1,6 @@
 package tests.feature
 
+import java.nio.file.Files
 import java.util.concurrent.Executors
 
 import scala.concurrent.ExecutionContext
@@ -20,6 +21,56 @@ class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
         _ <- client.shutdown()
       } yield {
         assert(result != null, "Initialize result should not be null")
+      }
+    }
+  }
+
+  test("stdio-format-all-writes-every-file") {
+    withStdioClient("stdio-format-all-test") { client =>
+      val firstRelative = "a/src/main/scala/com/example/Hello.scala"
+      val secondRelative = "a/src/main/scala/com/example/Second.scala"
+      val first = client.workspacePath.resolve(firstRelative)
+      val second = client.workspacePath.resolve(secondRelative)
+      val expectedFirst =
+        """|package com.example
+           |
+           |object Hello {
+           |  val value = 1
+           |}
+           |""".stripMargin
+      val expectedSecond =
+        """|package com.example
+           |
+           |object Second {
+           |  val value = 2
+           |}
+           |""".stripMargin
+      Files.writeString(
+        first,
+        """|package com.example
+           |
+           |object Hello {
+           | val value = 1  }
+           |""".stripMargin,
+      )
+      Files.createDirectories(second.getParent)
+      Files.writeString(
+        second,
+        """|package com.example
+           |
+           |object Second {
+           | val value = 2  }
+           |""".stripMargin,
+      )
+
+      for {
+        _ <- client.initialize()
+        result <- client.formatAll()
+        _ <- client.shutdown()
+      } yield {
+        assertEquals(result, "Scalafmt completed successfully.")
+        assertEquals(Files.readString(first), expectedFirst)
+        assertEquals(Files.readString(second), expectedSecond)
       }
     }
   }
@@ -46,7 +97,7 @@ class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
         usagesResult <- client.getUsages("com.example.Hello.add")
 
         compileModuleResult <- client.compileModule("a")
-        formatResult <- client.formatFile(filePath)
+        formatResult <- client.formatFiles(List(filePath))
         compileFileResult <- client.compileFile(filePath)
         compileFullResult <- client.compileFull()
         importBuildResult <- client.importBuild()

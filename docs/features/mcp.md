@@ -164,12 +164,12 @@ Notes on symbol search:
 
 ### Code Quality
 
-| Tool                     | Description                                                                                |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| `format-file`            | Format a Scala file using the project's Scalafmt configuration.                            |
-| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings.        |
-| `run-scalafix-rule`      | Run a previously created Scalafix rule.                                                    |
-| `list-scalafix-rules`    | List available Scalafix rules including the generated ones from `.metals/rules` directory. |
+| Tool                     | Description                                                                                  |
+|--------------------------|----------------------------------------------------------------------------------------------|
+| `format-file`            | Format saved Scala files using the project's Scalafmt configuration.                         |
+| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings.          |
+| `run-scalafix-rule`      | Run a previously created Scalafix rule.                                                      |
+| `list-scalafix-rules`    | List available Scalafix rules including the generated ones from `.metals/rules` directory.   |
 
 ## Tool Usage Examples
 
@@ -242,8 +242,10 @@ When working with Metals MCP, AI agents should:
 4. **For dependency lookup**: Use `find-dep` to find the correct artifact names
    and latest versions.
 
-5. **After code changes**: Call `format-file` to ensure code follows project
-   style guidelines.
+5. **After code changes**: Call `format-file` with `files` for changed files, or
+   `all` for the whole workspace. Explicit paths bypass Scalafmt project filters;
+   `all` honors them and fails when they match no files. A successful run does
+   not report which files changed.
 
 You can add these tips to your AI agent's prompt to help it use Metals MCP
 effectively. Examples of such approaches are in the
@@ -286,3 +288,5 @@ MCP support was introduced in Metals v1.5.3 and has been continuously improved:
   of the one owning the file in focus, dropped their `fileInFocus` parameter and
   capped their results
 - **v1.6.10**: `find-dep` no longer suggests a pre-release as the latest version
+- **v1.6.10**: `format-file` formats saved files on disk with `files` and `all`
+  selectors; no imported build required
