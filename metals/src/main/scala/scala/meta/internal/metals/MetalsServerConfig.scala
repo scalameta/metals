@@ -52,7 +52,7 @@ import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
  * @param bloopRecoveryTimeout How long to wait for an unresponsive Bloop server
  *                             to stop before reconnecting anyway.
  * @param debuggeeGracePeriod Grace period in seconds for the debuggee to start.
- * @param maxMcpSearchResults The maximum number of results a single MCP symbol search returns.
+ * @param maxMcpSearchResults The maximum number of entries a single MCP response lists.
  */
 final case class MetalsServerConfig(
     globSyntax: GlobSyntaxConfig = GlobSyntaxConfig.default,

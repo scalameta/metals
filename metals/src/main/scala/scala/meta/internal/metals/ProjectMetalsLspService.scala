@@ -306,6 +306,7 @@ class ProjectMetalsLspService(
               formattingProvider,
               scalafixLlmRuleProvider,
               indexingPromise,
+              initialServerConfig.maxMcpSearchResults,
             )
           ).run()
         } else {
@@ -328,6 +329,7 @@ class ProjectMetalsLspService(
               formattingProvider,
               scalafixLlmRuleProvider,
               indexingPromise,
+              initialServerConfig.maxMcpSearchResults,
             )
           ).run()
         }

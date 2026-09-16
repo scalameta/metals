@@ -164,12 +164,12 @@ Notes on symbol search:
 
 ### Code Quality
 
-| Tool                     | Description                                                                                |
-| ------------------------ | ------------------------------------------------------------------------------------------ |
-| `format-file`            | Format a Scala file using the project's Scalafmt configuration.                            |
-| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings.        |
-| `run-scalafix-rule`      | Run a previously created Scalafix rule.                                                    |
-| `list-scalafix-rules`    | List available Scalafix rules including the generated ones from `.metals/rules` directory. |
+| Tool                     | Description                                                                                          |
+|--------------------------|------------------------------------------------------------------------------------------------------|
+| `format-file`            | Format explicit files, or a module/workspace scope skipping generated sources and Scalafmt excludes. |
+| `generate-scalafix-rule` | Generate and run a Scalafix rule on the project. Useful for automated refactorings.                  |
+| `run-scalafix-rule`      | Run a previously created Scalafix rule.                                                              |
+| `list-scalafix-rules`    | List available Scalafix rules including the generated ones from `.metals/rules` directory.           |
 
 ## Tool Usage Examples
 
@@ -221,8 +221,8 @@ When using MCP with Metals in an editor:
 
 ### Server Properties
 
-The result cap of `glob-search` and `typed-glob-search` is configurable through
-the `-Dmetals.max-mcp-search-results`
+The result cap of `glob-search`, `typed-glob-search` and of the errors reported
+by `format-file` is configurable through the `-Dmetals.max-mcp-search-results`
 [server property](../integrations/new-editor.md#metals-server-properties), which
 defaults to `100`.
 
@@ -242,8 +242,8 @@ When working with Metals MCP, AI agents should:
 4. **For dependency lookup**: Use `find-dep` to find the correct artifact names
    and latest versions.
 
-5. **After code changes**: Call `format-file` to ensure code follows project
-   style guidelines.
+5. **After code changes**: Call `format-file` with `files` for changed files, or use
+   `module`/`all` for a wider non-generated source scope.
 
 You can add these tips to your AI agent's prompt to help it use Metals MCP
 effectively. Examples of such approaches are in the
@@ -286,3 +286,5 @@ MCP support was introduced in Metals v1.5.3 and has been continuously improved:
   of the one owning the file in focus, dropped their `fileInFocus` parameter and
   capped their results
 - **v1.6.10**: `find-dep` no longer suggests a pre-release as the latest version
+- **v1.6.10**: `format-file` gained `files`, `module` and `all` selectors for
+    formatting many files at once

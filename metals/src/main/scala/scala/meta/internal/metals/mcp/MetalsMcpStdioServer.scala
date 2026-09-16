@@ -41,6 +41,7 @@ class MetalsMcpStdioServer(
     protected val formattingProvider: FormattingProvider,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
+    protected val maxMcpSearchResults: Int,
 )(implicit
     protected val ec: ExecutionContext
 ) extends MetalsMcpTools {

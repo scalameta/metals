@@ -70,6 +70,7 @@ trait MetalsMcpTools extends Cancelable {
   protected def formattingProvider: FormattingProvider
   protected def scalafixLlmRuleProvider: ScalafixLlmRuleProvider
   protected def indexingPromise: Promise[Unit]
+  protected def maxMcpSearchResults: Int
   protected implicit def ec: ExecutionContext
 
   // Shared mutable state
@@ -932,98 +933,304 @@ trait MetalsMcpTools extends Cancelable {
          |  "properties": {
          |    "fileInFocus": {
          |      "type": "string",
-         |      "description": "The file to format, if empty we will try to detect file in focus"
+         |      "description": "The file to format, if empty we will try to detect the file in focus. Ignored when files, module or all is selected."
+         |    },
+         |    "files": {
+         |      "type": "array",
+         |      "items": { "type": "string" },
+         |      "description": "Scala files to format, absolute or relative to the project root. Use this after changing several files."
+         |    },
+         |    "module": {
+         |      "type": "string",
+         |      "description": "Format every non-generated Scala source of this module (build target), see `list-modules`."
+         |    },
+         |    "all": {
+         |      "type": "boolean",
+         |      "description": "Format every non-generated Scala source in the workspace, excluding sbt build targets."
          |    }
          |  }
          |}""".stripMargin
     val tool = Tool
       .builder()
       .name("format-file")
-      .description("Format a Scala file and return the formatted text")
+      .description(
+        """|Format Scala files with the project's Scalafmt configuration.
+           |Use `files`, `module`, or `all` for more than one file; multi-file calls return a
+           |summary, not full text.""".stripMargin
+      )
       .inputSchema(jsonMapper, schema)
       .build()
     new AsyncToolSpecification(
       tool,
       withErrorHandling { (_, arguments) =>
-        val path = arguments.getFileInFocus
-        if (path.exists && path.isScalaFilename) {
-          val cancelChecker = new org.eclipse.lsp4j.jsonrpc.CancelChecker {
-            override def isCanceled(): Boolean = false
-            override def checkCanceled(): Unit = ()
-          }
+        import FormatSelection._
+        val selections = List(
+          Option(arguments.get("files"))
+            .map(_ => arguments.getAsList[String]("files"))
+            .map(Files.apply),
+          arguments.getOptNoEmptyString("module").map(Module.apply),
+          Option
+            .when(arguments.getOptAs[Boolean]("all").contains(true))(Workspace),
+        ).flatten
 
-          formattingProvider
-            .formatForMcp(path, projectPath, cancelChecker)
-            .flatMap {
-              case Left(errorMessage) =>
-                Future.successful(
-                  CallToolResult
-                    .builder()
-                    .content(createContent(errorMessage))
-                    .isError(true)
-                    .build()
-                )
-              case Right(Nil) =>
-                Future.successful(
-                  CallToolResult
-                    .builder()
-                    .content(
-                      createContent("File is already properly formatted.")
-                    )
-                    .isError(false)
-                    .build()
-                )
-              case Right(formattedText) =>
-                languageClient
-                  .applyEdit(
-                    new ApplyWorkspaceEditParams(
-                      new WorkspaceEdit(
-                        Map(
-                          path.toURI.toString -> formattedText.asJava
-                        ).asJava
-                      )
-                    )
-                  )
-                  .asScala
-                  .map { response =>
-                    if (response.isApplied()) {
-                      CallToolResult
-                        .builder()
-                        .content(createContent(s"$path was formatted"))
-                        .isError(false)
-                        .build()
-                    } else {
-                      CallToolResult
-                        .builder()
-                        .content(
-                          createContent(
-                            s"Failed to format $path: ${Option(response.getFailureReason()).getOrElse("unknown error")}"
-                          )
-                        )
-                        .isError(true)
-                        .build()
-                    }
-                  }
-            }
-            .toMono
-        } else {
-          Future
-            .successful(
-              CallToolResult
-                .builder()
-                .content(
-                  createContent(
-                    s"Error: File not found or not a Scala file: $path"
-                  )
-                )
-                .isError(true)
-                .build()
+        (selections match {
+          case List(Files(files)) =>
+            val resolved = Either.cond(
+              files.nonEmpty && files.forall(_.trim.nonEmpty),
+              files
+                .map(file => AbsolutePath(Path.of(file))(projectPath))
+                .map(normalizeFormatPath)
+                .distinct,
+              "Error: `files` must contain at least one non-empty path.",
             )
-            .toMono
-        }
+            formatResolvedPaths(resolved)
+          case List(Module(module)) =>
+            indexingPromise.future.flatMap(_ =>
+              formatResolvedPaths(
+                moduleSources(module),
+                respectProjectFilters = true,
+              )
+            )
+          case List(Workspace) =>
+            indexingPromise.future.flatMap(_ =>
+              if (buildTargets.allBuildTargetIds.isEmpty)
+                Future.successful(
+                  formatToolResult(
+                    "Error: no modules found, try running `import-build`.",
+                    isError = true,
+                  )
+                )
+              else
+                formatBatchPaths(
+                  workspaceSources(),
+                  respectProjectFilters = true,
+                )
+            )
+          case Nil => formatFileInFocus(arguments.getFileInFocus)
+          case _ =>
+            Future.successful(
+              formatToolResult(
+                "Error: set only one of `files`, `module` or `all`.",
+                isError = true,
+              )
+            )
+        }).toMono
       },
     )
   }
+
+  private sealed trait FormatSelection
+  private object FormatSelection {
+    case class Files(paths: List[String]) extends FormatSelection
+    case class Module(name: String) extends FormatSelection
+    case object Workspace extends FormatSelection
+  }
+
+  private def normalizeFormatPath(path: AbsolutePath): AbsolutePath = {
+    val normalized = AbsolutePath(path.toNIO.normalize())(projectPath)
+    if (path.exists) Try(path.dealias).getOrElse(normalized)
+    else normalized
+  }
+
+  private def formatToolResult(
+      content: String,
+      isError: Boolean,
+  ): CallToolResult =
+    CallToolResult
+      .builder()
+      .content(createContent(content))
+      .isError(isError)
+      .build()
+
+  private def applyFormatEdits(
+      formatted: List[FormattingProvider.McpFormatResult.Formatted]
+  ): Future[Either[String, Unit]] = {
+    val edits = formatted
+      .map(result => result.path.toURI.toString -> List(result.edit).asJava)
+      .toMap
+    val workspaceEdit = new WorkspaceEdit(edits.asJava)
+    languageClient
+      .applyEdit(new ApplyWorkspaceEditParams(workspaceEdit))
+      .asScala
+      .map(response =>
+        Either.cond(
+          response.isApplied(),
+          (),
+          Option(response.getFailureReason()).getOrElse("unknown error"),
+        )
+      )
+  }
+
+  private def formatFileInFocus(
+      requestedPath: AbsolutePath
+  ): Future[CallToolResult] = {
+    import FormattingProvider.McpFormatResult._
+    val path = normalizeFormatPath(requestedPath)
+    if (path.exists && path.isScalaFilename)
+      formattingProvider.formatAllForMcp(List(path), projectPath).flatMap {
+        case Left(error) =>
+          Future.successful(formatToolResult(error, isError = true))
+        case Right(results) =>
+          results match {
+            case (formatted: Formatted) :: Nil =>
+              applyFormatEdits(List(formatted)).map {
+                case Right(_) =>
+                  formatToolResult(
+                    s"${formatRelativePath(path)} was formatted",
+                    isError = false,
+                  )
+                case Left(failure) =>
+                  formatToolResult(
+                    s"Failed to format ${formatRelativePath(path)}: $failure",
+                    isError = true,
+                  )
+              }
+            case Unchanged(_) :: Nil =>
+              Future.successful(
+                formatToolResult(
+                  "File is already properly formatted.",
+                  isError = false,
+                )
+              )
+            case Failed(_, message) :: Nil =>
+              Future.successful(formatToolResult(message, isError = true))
+            case prepared =>
+              Future.successful(
+                formatToolResult(
+                  s"Formatting error: expected one result, got ${prepared.size}",
+                  isError = true,
+                )
+              )
+          }
+      }
+    else
+      Future.successful(
+        formatToolResult(
+          s"Error: File not found or not a Scala file: $path",
+          isError = true,
+        )
+      )
+  }
+
+  private def formattableSources(
+      targetIds: List[BuildTargetIdentifier]
+  ): List[AbsolutePath] =
+    targetIds
+      .flatMap(buildTargets.buildTargetSources(_))
+      .filter(path =>
+        path.exists && path.isScalaFilename &&
+          !buildTargets.checkIfGeneratedSource(path.toNIO)
+      )
+      .map(normalizeFormatPath)
+      .distinct
+      .sortBy(_.toString)
+
+  private def moduleSources(
+      module: String
+  ): Either[String, List[AbsolutePath]] = {
+    val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
+    targets.find(_.displayName == module) match {
+      case Some(target) => Right(formattableSources(List(target.id)))
+      case None =>
+        Left(s"Error: Module not found: $module, see `list-modules`.")
+    }
+  }
+
+  private def workspaceSources(): List[AbsolutePath] =
+    formattableSources(
+      buildTargets.allScala.filterNot(_.isSbt).map(_.id).toList
+    )
+
+  // MCP clients get forward slashes on every platform.
+  private def formatRelativePath(path: AbsolutePath): String =
+    path
+      .toRelativeInside(projectPath)
+      .fold(path.toString)(_.toString)
+      .replace('\\', '/')
+
+  /** Only failures list paths; the agent has to open those files to fix them. */
+  private def formatSummary(
+      results: List[FormattingProvider.McpFormatResult]
+  ): String = {
+    import FormattingProvider.McpFormatResult._
+    val formatted = results.collect { case result: Formatted => result }
+    val unchanged = results.collect { case result: Unchanged => result }
+    val excluded = results.collect { case result: Excluded => result }
+    val failed = results.collect { case failure: Failed => failure }
+    val summary =
+      s"Format summary: formatted ${formatted.size}, unchanged ${unchanged.size}, " +
+        s"excluded ${excluded.size}, errors ${failed.size}."
+    val shown = failed.take(maxMcpSearchResults).map { failure =>
+      s"- ${formatRelativePath(failure.path)}: ${failure.message}"
+    }
+    val remaining = failed.size - shown.size
+    val more = if (remaining > 0) List(s"- ... and $remaining more") else Nil
+    if (failed.isEmpty) summary
+    else summary + "\n\n" + (List("Errors:") ++ shown ++ more).mkString("\n")
+  }
+
+  private def formatResolvedPaths(
+      resolved: Either[String, List[AbsolutePath]],
+      respectProjectFilters: Boolean = false,
+  ): Future[CallToolResult] =
+    resolved.fold(
+      error => Future.successful(formatToolResult(error, isError = true)),
+      paths => formatBatchPaths(paths, respectProjectFilters),
+    )
+
+  private def formatBatchPaths(
+      paths: List[AbsolutePath],
+      respectProjectFilters: Boolean,
+  ): Future[CallToolResult] =
+    if (paths.isEmpty)
+      Future.successful(
+        formatToolResult(formatSummary(Nil), isError = false)
+      )
+    else {
+      import FormattingProvider.McpFormatResult._
+      val (valid, invalid) =
+        paths.partition(path => path.exists && path.isScalaFilename)
+      val formatting: Future[
+        Either[String, List[FormattingProvider.McpFormatResult]]
+      ] =
+        if (valid.isEmpty) Future.successful(Right(Nil))
+        else
+          formattingProvider.formatAllForMcp(
+            valid,
+            projectPath,
+            respectProjectFilters,
+          )
+      formatting.flatMap {
+        case Left(error) =>
+          Future.successful(formatToolResult(error, isError = true))
+        case Right(results) =>
+          val allResults = results ++ invalid.map(path =>
+            Failed(path, "File not found or not a Scala file")
+          )
+          val formatted = allResults.collect { case result: Formatted =>
+            result
+          }
+          // Successful edits keep per-file failures from failing the whole call.
+          val isError = formatted.isEmpty && allResults.exists {
+            case _: Failed => true
+            case _ => false
+          }
+          if (formatted.isEmpty)
+            Future.successful(
+              formatToolResult(formatSummary(allResults), isError)
+            )
+          else
+            applyFormatEdits(formatted).map {
+              case Right(_) =>
+                formatToolResult(formatSummary(allResults), isError)
+              case Left(failure) =>
+                formatToolResult(
+                  s"Failed to apply formatting edits: $failure. Some files may have changed; check the working tree.",
+                  isError = true,
+                )
+            }
+      }
+    }
 
   protected def createGenerateScalafixRuleTool(): AsyncToolSpecification = {
     val schema =

@@ -596,9 +596,10 @@ Possible values:
 
 ### `-Dmetals.max-mcp-search-results`
 
-Maximum number of results a single MCP symbol search (`glob-search`,
-`typed-glob-search`) returns. Matches beyond the cap are dropped, and the
-response states that it is partial. Default value is `100`.
+Maximum number of entries a single MCP response lists, both for symbol searches
+(`glob-search`, `typed-glob-search`) and for the errors of `format-file`.
+Entries beyond the cap are dropped, and the response states that it is partial.
+Default value is `100`.
 
 ### `-Dbloop.sbt.version`
 

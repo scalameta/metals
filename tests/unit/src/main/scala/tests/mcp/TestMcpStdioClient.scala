@@ -24,7 +24,7 @@ import tools.jackson.databind.json.JsonMapper
 
 /** Spawns metals-mcp server as a subprocess and communicates via stdin/stdout. */
 class TestMcpStdioClient(
-    workspacePath: Path,
+    val workspacePath: Path,
     classpath: String,
     mainClass: String = "scala.meta.metals.McpMain",
 )(implicit ec: ExecutionContext)
