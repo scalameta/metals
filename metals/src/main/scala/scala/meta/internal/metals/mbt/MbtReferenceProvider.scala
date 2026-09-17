@@ -763,10 +763,11 @@ class MbtReferenceProvider(
     }
     def index(paths: Seq[AbsolutePath]): s.TextDocuments = {
       val docs = Buffer.empty[s.TextDocument]
-      val pathsWithMd5 = paths.map { path =>
-        val input = path.toInputFromBuffers(buffers)
-        val md5 = MD5.compute(input.text)
-        path -> md5
+      val pathsWithMd5 = paths.collect {
+        case path if path.exists || buffers.contains(path) =>
+          val input = path.toInputFromBuffers(buffers)
+          val md5 = MD5.compute(input.text)
+          path -> md5
       }.toMap
 
       val toIndex = pathsWithMd5.filter { case (path, md5) =>
