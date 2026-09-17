@@ -17,6 +17,7 @@ import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
+import scala.meta.io.RelativePath
 
 /**
  * Extracts [[MbtBuild]] from a Bazel workspace using `bazel query`. Target
@@ -37,13 +38,17 @@ abstract class BazelMbtImporter(
   private lazy val queryEnv =
     BazelQuery.Env(projectRoot, shellRunner, userConfig().javaHome)
 
-  override def extract(workspace: AbsolutePath): Future[Unit] =
-    selectedNamespaceMode().flatMap(extract(workspace, _))
+  override def extract(workspace: AbsolutePath): Future[Unit] = for {
+    namespaceMode <- selectedNamespaceMode
+    mbtBuild <- extract(workspace, namespaceMode)
+    json = MbtBuild.toJson(mbtBuild)
+    _ <- Future(outputPath(workspace).writeText(json))
+  } yield ()
 
   private def extract(
       workspace: AbsolutePath,
       namespaceMode: BazelMbtNamespaceMode,
-  ): Future[Unit] = {
+  ): Future[MbtBuild] = {
     val out = outputPath(workspace)
     out.parent.createDirectories()
     val patterns = BazelProjectViewTargets.patterns(projectRoot)
@@ -75,6 +80,9 @@ abstract class BazelMbtImporter(
         .fullInformationQuery(targets)
         .run(queryEnv)
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
+      sourceMapQueryOutput <- BazelQuery
+        .sourceFilesLocationQuery(targets, List("scala", "java", "proto"))
+        .run(queryEnv)
       srcs = targetsXmlDump.getLabels("srcs")
       (genSrcOutputsByTarget, genSrcLabels) <-
         if (userConfig().mbtConfig.importGeneratedSources)
@@ -140,10 +148,33 @@ abstract class BazelMbtImporter(
         case Some(value) => Future.successful(Some(value))
         case None => queryScalaVersion(targets)
       }
-      build = BazelMbtBuildSupport.fromDiscovery(
+    } yield {
+      val sourceMapXmlDump = new SourceMapXmlDump(sourceMapQueryOutput)
+      def toWorkspaceRelativePath(location: String): Option[RelativePath] = {
+        val absolute = AbsolutePath(location)
+        val symlinked = for {
+          ob <- outputBase
+          rel <- absolute.toRelativeInside(ob)
+        } yield workspace.resolve(s"bazel-${workspace.filename}").resolve(rel)
+        val maybePath = symlinked
+          .getOrElse(absolute)
+          .toRelativeInside(workspace)
+        if (maybePath.isEmpty) {
+          scribe.warn(s"Could not convert location to relative path: $location")
+        }
+        maybePath
+      }
+      val relativeSourcePathsByTarget = filteredSrcs.view.mapValues {
+        sourceFileLabels =>
+          // Applying the mapping as a partial function
+          sourceFileLabels
+            .collect(sourceMapXmlDump.locationBySourceFile)
+            .flatMap(toWorkspaceRelativePath)
+      }.toMap
+      BazelMbtBuildSupport.fromDiscovery(
         namespaceMode,
         targets,
-        filteredSrcs,
+        relativeSourcePathsByTarget,
         scalacOptions,
         javacOptions,
         deps,
@@ -154,8 +185,7 @@ abstract class BazelMbtImporter(
         effectiveScalaVersion,
         genSrcOutputsByTarget,
       )
-      _ <- Future(out.writeText(MbtBuild.toJson(build)))
-    } yield ()
+    }
   }
 
   private def asLines(output: String) =
