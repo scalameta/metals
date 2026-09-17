@@ -169,26 +169,30 @@ class BuildServerConnection private (
    */
   def shutdown(): Future[Unit] =
     connection.map { conn =>
-      try {
-        if (isShuttingDown.compareAndSet(false, true)) {
+      if (isShuttingDown.compareAndSet(false, true)) {
+        try {
           conn.server.buildShutdown().get(2, TimeUnit.SECONDS)
           conn.server.onBuildExit()
+        } catch {
+          case _: TimeoutException =>
+            scribe.error(
+              s"timeout: build server '${conn.displayName}' during shutdown"
+            )
+          case InterruptException() =>
+          case e: Throwable =>
+            scribe.error(
+              s"build shutdown: ${conn.displayName}",
+              e,
+            )
+        } finally {
           conn.optLivenessMonitor.foreach(_.shutdown())
-          scribe.info("Shut down connection with build server.")
           // Cancel pending compilations on our side, this is not needed for Bloop.
           cancel()
+          // Destroy the BSP process so a cancelled or replaced connect cannot
+          // leave mill --bsp running and auto-reconnecting.
+          Cancelable.cancelAll(conn.cancelables)
+          scribe.info("Shut down connection with build server.")
         }
-      } catch {
-        case _: TimeoutException =>
-          scribe.error(
-            s"timeout: build server '${conn.displayName}' during shutdown"
-          )
-        case InterruptException() =>
-        case e: Throwable =>
-          scribe.error(
-            s"build shutdown: ${conn.displayName}",
-            e,
-          )
       }
     }
 
