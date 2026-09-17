@@ -194,7 +194,9 @@ abstract class MetalsLspService(
 
   @volatile
   var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
+    ExcludedPackagesHandler.fromUserConfiguration(
+      userConfig.excludedPackages.getOrElse(Nil)
+    )
 
   protected val mtags = new Mtags
 
