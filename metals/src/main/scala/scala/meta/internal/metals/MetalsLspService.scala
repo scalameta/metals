@@ -422,6 +422,7 @@ abstract class MetalsLspService(
     getVisibleName,
     folder,
     workDoneProgress,
+    () => compilers,
   )
 
   protected lazy val codeLensProvider: CodeLensProvider = {

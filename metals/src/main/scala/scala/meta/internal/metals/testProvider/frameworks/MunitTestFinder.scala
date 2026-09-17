@@ -15,7 +15,6 @@ import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.frameworks.TreeUtils._
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.SymbolInformation
@@ -27,7 +26,7 @@ import scala.meta.io.AbsolutePath
 class MunitTestFinder(
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: () => Semanticdbs,
+    semanticdbs: SemanticdbsWithMbtFallback,
 ) {
 
   protected val baseParentClasses: Set[String] =
@@ -132,9 +131,7 @@ class MunitTestFinder(
       val methods = for {
         definition <- symbolIndex.definition(mtags.Symbol(parentSymbol))
         tree <- trees.get(definition.path)
-        doc <- semanticdbs()
-          .textDocument(definition.path)
-          .documentIncludingStale
+        doc <- semanticdbs.textDocumentWithMbtFallback(definition.path)
         parentClassName = parentSymbol
           .stripPrefix("_empty_/")
           .stripSuffix("#")

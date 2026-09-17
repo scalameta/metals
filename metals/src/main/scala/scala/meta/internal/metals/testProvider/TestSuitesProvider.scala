@@ -12,6 +12,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
@@ -28,6 +29,7 @@ import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
+import scala.meta.internal.metals.testProvider.frameworks.SemanticdbsWithMbtFallback
 import scala.meta.internal.metals.testProvider.frameworks.TestNGTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.WeaverCatsEffectTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ZioTestFinder
@@ -59,19 +61,26 @@ final class TestSuitesProvider(
     folderName: String,
     folderUri: AbsolutePath,
     workDoneProgress: WorkDoneProgress,
+    compilers: () => Compilers,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CodeLens {
 
   private val index = new TestSuitesIndex
+  private val semanticdbsWithMbtFallback =
+    new SemanticdbsWithMbtFallback(semanticdbs, buildTargets, compilers)
   private val junitTestFinder = new JunitTestFinder
   private val testNGTestFinder = new TestNGTestFinder
   private val munitTestFinder =
-    new MunitTestFinder(trees, symbolIndex, semanticdbs)
+    new MunitTestFinder(trees, symbolIndex, semanticdbsWithMbtFallback)
   private val scalatestTestFinder =
-    new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
+    new ScalatestTestFinder(trees, symbolIndex, semanticdbsWithMbtFallback)
   private val weaverCatsEffect =
-    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
+    new WeaverCatsEffectTestFinder(
+      trees,
+      symbolIndex,
+      semanticdbsWithMbtFallback,
+    )
   private val zioTestFinder = new ZioTestFinder(trees)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&

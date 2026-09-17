@@ -25,7 +25,7 @@ import scala.meta.io.AbsolutePath
 class ScalatestTestFinder(
     trees: Trees,
     symbolIndex: mtags.GlobalSymbolIndex,
-    semanticdbs: () => mtags.Semanticdbs,
+    semanticdbs: SemanticdbsWithMbtFallback,
 ) {
 
   def findTests(
@@ -65,9 +65,7 @@ class ScalatestTestFinder(
       case parentSymbol if !ScalatestStyle.baseSymbols.contains(parentSymbol) =>
         for {
           definition <- symbolIndex.definition(mtags.Symbol(parentSymbol))
-          doc <- semanticdbs()
-            .textDocument(definition.path)
-            .documentIncludingStale
+          doc <- semanticdbs.textDocumentWithMbtFallback(definition.path)
           style <- inferScalatestStyle(doc, mtags.Symbol(parentSymbol))
         } yield style
     }

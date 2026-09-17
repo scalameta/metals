@@ -1,13 +1,12 @@
 package scala.meta.internal.metals.testProvider.frameworks
 
 import scala.meta.internal.mtags.GlobalSymbolIndex
-import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.Trees
 
 class WeaverCatsEffectTestFinder(
     trees: Trees,
     symbolIndex: GlobalSymbolIndex,
-    semanticdbs: () => Semanticdbs,
+    semanticdbs: SemanticdbsWithMbtFallback,
 ) extends MunitTestFinder(trees, symbolIndex, semanticdbs) {
   override protected val baseParentClasses: Set[String] =
     WeaverCatsEffectTestFinder.baseParentClasses
