@@ -52,17 +52,18 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
           cache(Content.from(symbol, contentType)) = EmptySymbolDocumentation
         result
     }
-    /* Fall back to parent javadocs/scaladocs if nothing is specified for the current symbol
-     * This way we also cache the result in order not to calculate parents again.
+    /* Fall back to parent javadocs/scaladocs if nothing is specified for the
+     * current symbol. The merged result is intentionally NOT cached under this
+     * symbol's key (see parentDocumentation): parents are cached individually, and
+     * caching the copy here would outlive an edit to the parent's own file.
      */
     val resultWithParentDocs = result match {
       case Some(value: MetalsSymbolDocumentation)
           if value.docstring.isEmpty() =>
-        Some(parentDocumentation(symbol, value, parents, contentType))
+        Some(parentDocumentation(value, parents, contentType))
       case None =>
         Some(
           parentDocumentation(
-            symbol,
             MetalsSymbolDocumentation.empty(symbol),
             parents,
             contentType
@@ -74,7 +75,6 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
   }
 
   def parentDocumentation(
-      symbol: String,
       docs: MetalsSymbolDocumentation,
       parents: ParentSymbols,
       contentType: ContentType
@@ -89,13 +89,10 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
         }
       }
       .find(_.docstring().nonEmpty)
-      .fold {
-        docs
-      } { withDocs =>
-        val updated = docs.copy(docstring = withDocs.docstring())
-        cache(Content.from(symbol, contentType)) = updated
-        updated
-      }
+      // Don't cache the parent's docstring under the child's key: editing the
+      // parent doesn't invalidate the child's file, so the copy would go stale
+      // (scalameta/metals#3383).
+      .fold(docs)(withDocs => docs.copy(docstring = withDocs.docstring()))
   }
 
   private def getFromCacheWithProxy(
@@ -123,6 +120,13 @@ class Docstrings(index: GlobalSymbolIndex)(implicit rc: ReportContext) {
     path.toLanguage match {
       case Language.SCALA =>
         new Deindexer(path.toInput, dialect).indexRoot()
+      case Language.JAVA =>
+        // Java docstring fallbacks embed the file's imports, so editing a Java
+        // import must expire the cached docstrings too (scalameta/metals#3383).
+        JavadocIndexer.foreach(path.toInput, PLAINTEXT) { doc =>
+          for (contentType <- ContentType.values())
+            cache.remove(Content.from(doc.symbol(), contentType))
+        }
       case _ =>
     }
   }

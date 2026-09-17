@@ -578,6 +578,453 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  // Source go-to-definition resolves an imported link the same way hover does:
+  // `[[Future]]` after `import scala.concurrent.Future` navigates even though the
+  // link is unqualified (the source path previously had no import fallbacks)
+  // (scalameta/metals#3383).
+  test("scaladoc-definition-import") {
+    val testCase =
+      """|package a
+         |
+         |import scala.concurrent.Future
+         |
+         |object O {
+         |  /**
+         |   * Returns a [[Fut@@ure]].
+         |   */
+         |  def f: Future[Int] = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(
+        locations.head.getUri().endsWith("concurrent/Future.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // An import declared INSIDE the enclosing object (a sibling of the documented
+  // member) is in scope for source go-to-definition too, not only file-top-level
+  // imports (scalameta/metals#3383).
+  test("scaladoc-definition-nested-import") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  import scala.concurrent.Future
+         |  /**
+         |   * Returns a [[Fut@@ure]].
+         |   */
+         |  def f: Future[Int] = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "nested import not in scope")
+      _ = assert(
+        locations.head.getUri().endsWith("concurrent/Future.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // A wildcard import inside the enclosing class is likewise in scope for source
+  // go-to-definition (scalameta/metals#3383).
+  test("scaladoc-definition-nested-wildcard-import") {
+    val testCase =
+      """|package a
+         |
+         |class O {
+         |  import scala.concurrent._
+         |  /**
+         |   * Returns a [[Fut@@ure]].
+         |   */
+         |  def f: Future[Int] = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "nested wildcard import not in scope")
+      _ = assert(
+        locations.head.getUri().endsWith("concurrent/Future.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  test("scaladoc-definition-triple-bracket") {
+    val testCase =
+      """|package a
+         |
+         |object O {
+         |  /**
+         |   * Returns a [[[scala.Do@@uble]]] representing yada yada yada...
+         |   */
+         |  def f: Double = ???
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": { }
+           |}
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty)
+      _ = assert(locations.head.getUri().endsWith("scala/Double.scala"))
+    } yield ()
+  }
+
+  // Scala 3 Scaladoc binds an ambiguous `[[Name]]` to the entity FIRST in source
+  // order: with `object Target` declared before `class Target`, the link opens the
+  // object (line 1), not the class (line 2) — Scala 2 picks the type
+  // (scalameta/metals#3383).
+  test("scaladoc-definition-scala3-source-order") {
+    val testCase =
+      """|package a
+         |object Target { def x: Int = 1 }
+         |class Target
+         |object O {
+         |  /** See [[Tar@@get]]. */
+         |  def f: Int = 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "ambiguous companion link did not resolve")
+      // `object Target` is on line 1 (0-based); `class Target` on line 2.
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        1,
+        s"expected the source-first object Target (line 1), got $locations",
+      )
+    } yield ()
+  }
+
+  // A Scala 3 TOP-LEVEL member lives in the file's synthetic `<file>$package`
+  // object, so a relative `[[helper]]` in `def entry`'s doc must resolve against
+  // `a/Main$package.helper` — the source path synthesizes that owner, matching the
+  // SemanticDB owner the indexer keeps for hover (scalameta/metals#3383).
+  test("scaladoc-definition-scala3-toplevel-member") {
+    val testCase =
+      """|package a
+         |/** See [[hel@@per]]. */
+         |def entry = 1
+         |def helper = 2
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "top-level [[helper]] did not resolve")
+      // `def helper` is on line 3 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        3,
+        s"expected top-level def helper (line 3), got $locations",
+      )
+    } yield ()
+  }
+
+  // Source go-to-definition mirrors the indexer for an enum case: `[[r]]` in the
+  // doc of `case Mix(r: Int)` resolves against the CASE (Mix), not the enclosing
+  // enum (scalameta/metals#3383).
+  test("scaladoc-definition-enum-case-param") {
+    val testCase =
+      """|package a
+         |enum E {
+         |  /** The mix [[r@@]]. */
+         |  case Mix(r: Int)
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/E.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/E.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/E.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "enum case param link did not resolve")
+      _ = assert(
+        locations.head.getUri().endsWith("/a/E.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // The source context encodes an owner name as its SemanticDB descriptor: inside
+  // a keyword-named `class `type``, a relative `[[field]]` resolves against the
+  // escaped owner `a/`type`#`, matching the hover/indexed path (scalameta/metals#3383).
+  test("scaladoc-definition-escaped-owner") {
+    val testCase =
+      """|package a
+         |class `type` {
+         |  /** See [[fie@@ld]]. */
+         |  def m: Int = field
+         |  def field: Int = 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { } }
+           |/a/src/main/scala/a/Esc.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Esc.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Esc.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(
+        locations.nonEmpty,
+        "escaped-owner relative link did not resolve",
+      )
+      _ = assert(
+        locations.head.getUri().endsWith("/a/Esc.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // Source go-to-definition inside a JAVA doc comment resolves an IMPORTED class
+  // ({@link ArrayList} via `import java.util.ArrayList`) and a RELATIVE member
+  // ({@link #bar} against the enclosing class) — the source path now builds the
+  // Java owner + import scope instead of falling back to empty context, matching
+  // hover (scalameta/metals#3383).
+  test("scaladoc-definition-java") {
+    val source =
+      """|package a;
+         |import java.util.ArrayList;
+         |public class Foo {
+         |  /** See {@link ArrayList} and {@link #bar}. */
+         |  void m() {}
+         |  void bar() {}
+         |}
+         |""".stripMargin
+    val importedCursor =
+      source.replace("{@link ArrayList}", "{@link Array@@List}")
+    val relativeCursor = source.replace("{@link #bar}", "{@link #ba@@r}")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { } }
+           |/a/src/main/java/a/Foo.java
+           |$source
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Foo.java")
+      imported <- server.definition(
+        "a/src/main/java/a/Foo.java",
+        importedCursor,
+        workspace,
+      )
+      _ = assert(
+        imported.nonEmpty,
+        "imported {@link ArrayList} did not resolve",
+      )
+      _ = assert(
+        imported.head.getUri().contains("ArrayList"),
+        imported.toString,
+      )
+      relative <- server.definition(
+        "a/src/main/java/a/Foo.java",
+        relativeCursor,
+        workspace,
+      )
+      _ = assert(relative.nonEmpty, "relative {@link #bar} did not resolve")
+      _ = assert(
+        relative.head.getUri().endsWith("/a/Foo.java"),
+        relative.toString,
+      )
+    } yield ()
+  }
+
+  // A Javadoc `@see` BLOCK tag is source-clickable, like hover renders it: an
+  // imported `@see ArrayList` and a relative `@see #bar` both navigate, matching
+  // the inline `{@link}` behaviour (scalameta/metals#3383).
+  test("scaladoc-definition-java-see-tag") {
+    val source =
+      """|package a;
+         |import java.util.ArrayList;
+         |public class Foo {
+         |  /**
+         |   * @see ArrayList
+         |   * @see #bar
+         |   */
+         |  void m() {}
+         |  void bar() {}
+         |}
+         |""".stripMargin
+    val importedCursor = source.replace("@see ArrayList", "@see Array@@List")
+    val relativeCursor = source.replace("@see #bar", "@see #ba@@r")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { } }
+           |/a/src/main/java/a/Foo.java
+           |$source
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Foo.java")
+      imported <- server.definition(
+        "a/src/main/java/a/Foo.java",
+        importedCursor,
+        workspace,
+      )
+      _ = assert(imported.nonEmpty, "@see ArrayList did not resolve")
+      _ = assert(
+        imported.head.getUri().contains("ArrayList"),
+        imported.toString,
+      )
+      relative <- server.definition(
+        "a/src/main/java/a/Foo.java",
+        relativeCursor,
+        workspace,
+      )
+      _ = assert(relative.nonEmpty, "@see #bar did not resolve")
+      _ = assert(
+        relative.head.getUri().endsWith("/a/Foo.java"),
+        relative.toString,
+      )
+    } yield ()
+  }
+
+  // A Javadoc `{@link}` resolves in a Scala 3 build target too: the Java doc path
+  // carries `isScala3 = false` (Javadoc is never Scala 3 source), matching the
+  // `docIsScala3 = false` the indexer bakes into Java hover markers, so source
+  // navigation and hover agree regardless of the target's Scala version
+  // (scalameta/metals#3383).
+  test("scaladoc-definition-java-in-scala3-target") {
+    val source =
+      """|package a;
+         |public class Foo {
+         |  /** See {@link Target}. */
+         |  void m() {}
+         |}
+         |""".stripMargin
+    val cursor = source.replace("{@link Target}", "{@link Tar@@get}")
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/Target.scala
+           |package a
+           |object Target { def x: Int = 1 }
+           |class Target { def y: Int = 2 }
+           |/a/src/main/java/a/Foo.java
+           |$source
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/java/a/Foo.java")
+      locations <- server.definition(
+        "a/src/main/java/a/Foo.java",
+        cursor,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "Java {@link Target} did not resolve")
+      _ = assert(
+        locations.head.getUri().endsWith("/a/Target.scala"),
+        locations.toString,
+      )
+    } yield ()
+  }
+
   test("weird-symbol") {
     val testCase =
       """|package a

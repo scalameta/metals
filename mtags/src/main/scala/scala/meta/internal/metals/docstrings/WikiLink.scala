@@ -1,10 +1,9 @@
 package scala.meta.internal.docstrings
 
 /**
- * Shared parsing of scaladoc entity (wiki) links `[[ ... ]]`, so the renderer
- * and source-position extraction (go-to-definition) agree on a link's
- * boundaries and its target/title split — instead of separate regexes that
- * disagree on backticks, bracket nesting and parenthesised signatures
+ * Shared parsing of scaladoc/javadoc entity links, so the renderer and
+ * source-position extraction (go-to-definition) agree on link boundaries and
+ * target/title splitting instead of using separate, inconsistent parsers
  * (scalameta/metals#3383).
  */
 object WikiLink {
@@ -41,6 +40,116 @@ object WikiLink {
       val titleOpt = if (title.isEmpty) None else Some(title)
       (content.substring(start, split), titleOpt)
     }
+  }
+
+  /**
+   * The target of the Javadoc inline link (`{@link ... }` / `{@linkplain ... }`)
+   * whose braces enclose `offset`, matching what the renderer extracts so source
+   * clicks navigate the same links. The first token is the target; the rest is
+   * the label (scalameta/metals#3383).
+   */
+  def javadocAtOffset(text: String, offset: Int): Option[String] = {
+    val tags = List("{@linkplain", "{@link")
+    val n = text.length
+    var i = 0
+    var result: Option[String] = None
+    while (i < n && result.isEmpty) {
+      if (text.charAt(i) == '{') {
+        tags.find(text.startsWith(_, i)) match {
+          case Some(tag) =>
+            val end = text.indexOf('}', i + tag.length)
+            if (end < 0) i += 1
+            else {
+              if (offset >= i && offset <= end) {
+                val target =
+                  splitTargetTitle(text.substring(i + tag.length, end))._1
+                if (target.nonEmpty) result = Some(target)
+              }
+              i = end + 1
+            }
+          case None => i += 1
+        }
+      } else i += 1
+    }
+    result
+  }
+
+  /**
+   * The symbol reference of a `@see` BLOCK tag whose target encloses `offset`.
+   * `@see` isn't an inline `{@link}` / `[[ ... ]]`, so without this its reference
+   * is clickable on hover yet dead from the source. Only the first token is the
+   * target; a quoted string or HTML anchor is plain text, not a symbol
+   * (scalameta/metals#3383).
+   */
+  def seeTagAtOffset(text: String, offset: Int): Option[String] = {
+    val tag = "@see"
+    val n = text.length
+    var i = 0
+    var result: Option[String] = None
+    while (i < n && result.isEmpty) {
+      val boundary = i + tag.length
+      val isTag =
+        text.startsWith(tag, i) &&
+          isBlockTagStart(text, i) &&
+          (boundary >= n || text.charAt(boundary).isWhitespace)
+      if (isTag) {
+        // A bare `@see`'s reference may sit on a continuation line, so skip
+        // whitespace, newlines and the continuation `*` to reach it
+        // (scalameta/metals#3383).
+        var refStart = boundary
+        var skipping = true
+        while (refStart < n && skipping) {
+          text.charAt(refStart) match {
+            case ' ' | '\t' | '\n' | '\r' | '*' => refStart += 1
+            case _ => skipping = false
+          }
+        }
+        var lineEnd = refStart
+        while (
+          lineEnd < n &&
+          text.charAt(lineEnd) != '\n' && text.charAt(lineEnd) != '\r'
+        ) lineEnd += 1
+        val reference = text.substring(refStart, lineEnd)
+        if (reference.nonEmpty) {
+          val head = reference.charAt(0)
+          // A quoted string or HTML anchor is plain text, a `/` starts the
+          // comment's closing marker, and `@` starts the next block tag — none
+          // is a `@see` reference (scalameta/metals#3383).
+          if (head != '"' && head != '<' && head != '/' && head != '@') {
+            val target = splitTargetTitle(reference)._1
+            if (
+              target.nonEmpty && offset >= refStart &&
+              offset <= refStart + target.length
+            ) result = Some(target)
+          }
+        }
+        // A new block tag (`@`) ends this `@see`'s body, so rewind to it and let
+        // it be scanned as its own tag (scalameta/metals#3383).
+        i =
+          if (refStart < n && text.charAt(refStart) == '@') refStart
+          else lineEnd
+      } else i += 1
+    }
+    result
+  }
+
+  /**
+   * Whether `i` begins a BLOCK tag: everything back to the line start is only
+   * comment scaffolding (whitespace, a `*`, or the opening marker), so a `@see`
+   * in prose or a `{@link}` body isn't mistaken for one (scalameta/metals#3383).
+   */
+  private def isBlockTagStart(text: String, i: Int): Boolean = {
+    var j = i - 1
+    var ok = true
+    var atLineStart = false
+    while (j >= 0 && !atLineStart && ok) {
+      text.charAt(j) match {
+        case '\n' | '\r' => atLineStart = true
+        case ' ' | '\t' | '*' | '/' => j -= 1
+        case _ => ok = false
+      }
+    }
+    ok
   }
 
   /**

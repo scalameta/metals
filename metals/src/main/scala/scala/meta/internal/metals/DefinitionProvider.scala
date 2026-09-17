@@ -140,20 +140,38 @@ final class DefinitionProvider(
 
     val shouldUseOldOrder = isScala3 && !scala3DefinitionBugFixed
 
-    val strategies: List[() => Future[Option[DefinitionResult]]] =
-      if (shouldUseOldOrder)
-        List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
-      else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
+    // For `.java` files SemanticDB can resolve a doc-comment position to the
+    // enclosing class, pre-empting the doc-link fallback; `fromScalaDoc` returns
+    // None unless it's a real doc link, so run it first (scalameta/metals#3383).
+    val isJava = path.isJava
+
+    // The precise strategies, in order; `fromFallback` (a heuristic search) is
+    // applied separately below because it must respect a stricter guard.
+    val coreStrategies: List[() => Future[Option[DefinitionResult]]] =
+      if (isJava)
+        List(fromScalaDoc, fromCompiler, fromSemanticDb)
+      else if (shouldUseOldOrder)
+        List(fromSemanticDb, fromCompiler, fromScalaDoc)
+      else List(fromCompiler, fromSemanticDb, fromScalaDoc)
 
     for {
-      result <- strategies.foldLeft(Future.successful(DefinitionResult.empty)) {
-        case (acc, next) =>
-          acc.flatMap {
-            case res if res.isEmpty && !res.symbol.endsWith("/") =>
-              next().map(_.getOrElse(res))
-            case res => Future.successful(res)
-          }
+      // Each strategy runs only until something resolves. A doc-comment position
+      // can resolve to the enclosing package (symbol `a/`, no location), so an
+      // empty package result must not stop `fromScalaDoc` (scalameta/metals#3383).
+      core <- coreStrategies.foldLeft(
+        Future.successful(DefinitionResult.empty)
+      ) { case (acc, next) =>
+        acc.flatMap {
+          case res if res.isEmpty => next().map(_.getOrElse(res))
+          case res => Future.successful(res)
+        }
       }
+      // The fallback must not override a package-symbol result (no location), so
+      // it keeps the package guard the core loop dropped (scalameta/metals#3383).
+      result <-
+        if (core.isEmpty && !core.symbol.endsWith("/"))
+          fromFallback().map(_.getOrElse(core))
+        else Future.successful(core)
     } yield {
       reportBuilder
         .build(scalaVersionSelector)
