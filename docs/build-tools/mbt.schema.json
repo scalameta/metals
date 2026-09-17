@@ -157,6 +157,17 @@
           "bazel-out/k8-fastbuild/bin/src/other/other_generated_sources"
         ]
       }
+    },
+    "watchedFiles": {
+      "type": "array",
+      "description": "Extra files, in addition to the build tool's own build files, whose contents this description depends on. Changing one of them prompts for a re-import. Paths are relative to the workspace root; glob patterns are not supported and are ignored.",
+      "items": {
+        "type": "string",
+        "examples": [
+          "deps.lock",
+          "tools/versions.txt"
+        ]
+      }
     }
   }
 }

@@ -39,6 +39,7 @@ import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDebugSessionStarter
+import scala.meta.internal.metals.mbt.MbtWatchedFiles
 import scala.meta.internal.metals.mbt.importer.MbtImport
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -70,6 +71,7 @@ class ConnectionProvider(
     indexProviders: IndexProviders,
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
+    mbtWatchedFiles: MbtWatchedFiles,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
     extends Indexer(indexProviders, mbtBuild)
@@ -138,6 +140,7 @@ class ConnectionProvider(
     languageClient,
     tables,
     () => userConfig,
+    mbtWatchedFiles,
   )
 
   private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
@@ -183,6 +186,9 @@ class ConnectionProvider(
       Some(tables),
     )
     if (isMbtPreferred) {
+      // watch what the build on disk declared, in case the digest is unchanged
+      // and no import runs below
+      mbtWatchedFiles.initialize()
       for {
         _ <- runMbtReimport(mbtImporters)
         _ = tables.buildServers.chooseServer(MbtBuildServer.name)
@@ -241,6 +247,10 @@ class ConnectionProvider(
   private def isMbtPreferred: Boolean =
     userConfig.preferredBuildServer.contains(MbtBuildServer.name) ||
       tables.buildServers.selectedServer().contains(MbtBuildServer.name)
+
+  /** `true` for a file the last MBT import declared under `watchedFiles`. */
+  def isMbtWatchedFile(path: AbsolutePath): Boolean =
+    mbtWatchedFiles.isWatched(path)
 
   def runMbtReimport(importers: List[MbtImportProvider]): Future[Unit] =
     mbtImport.runIfApproved(importers, isMbtImportInProcess).ignoreValue

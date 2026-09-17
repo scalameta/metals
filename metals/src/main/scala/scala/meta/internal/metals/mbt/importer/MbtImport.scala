@@ -18,6 +18,7 @@ import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.mbt.MbtBuild
+import scala.meta.internal.metals.mbt.MbtWatchedFiles
 import scala.meta.io.AbsolutePath
 
 /**
@@ -28,6 +29,7 @@ final class MbtImport(
     languageClient: MetalsLanguageClient,
     tables: Tables,
     userConfig: () => UserConfiguration,
+    watchedFiles: MbtWatchedFiles,
 )(implicit ec: ExecutionContext) {
 
   private lazy val notification = tables.dismissedNotifications.MbtImportChanges
@@ -85,7 +87,8 @@ final class MbtImport(
   }
 
   /**
-   * Serializes a merged [[MbtBuild]] to `.metals/mbt.json`.
+   * Serializes a merged [[MbtBuild]] to `.metals/mbt.json` and starts watching
+   * the files the build declared.
    */
   private def writeOutput(build: MbtBuild): Unit = {
     val metalsDir = workspace.resolve(".metals")
@@ -93,6 +96,7 @@ final class MbtImport(
     val outputFile = metalsDir.resolve("mbt.json")
     Files.writeString(outputFile.toNIO, MbtBuild.toJson(build))
     scribe.info("mbt-import: wrote .metals/mbt.json")
+    watchedFiles.update(build)
   }
 
   /**
@@ -140,19 +144,28 @@ final class MbtImport(
                 } yield result
               }
             run.andThen { case Success(status) =>
-              status.toChecksumStatus.foreach(
-                tables.digests.setStatus(digest, _)
-              )
+              status.toChecksumStatus.foreach { checksum =>
+                // the import may have changed which files are watched, so the
+                // digest worth remembering is the one taken after it finished
+                val current = computeDigest(providers).getOrElse(digest)
+                tables.digests.setStatus(current, checksum)
+              }
             }
         }
     }
   }
 
+  /**
+   * Digest of everything a re-import would read: the build files owned by each
+   * provider plus the files the last import asked us to watch.
+   */
   private def computeDigest(
       providers: List[MbtImportProvider]
   ): Option[String] = {
     val parts = providers.flatMap(_.digest(workspace))
-    Option.when(parts.size == providers.size)(parts.mkString("|"))
+    Option.when(parts.size == providers.size)(
+      (parts ++ watchedFiles.digest).mkString("|")
+    )
   }
 
   private def oldImportResult(

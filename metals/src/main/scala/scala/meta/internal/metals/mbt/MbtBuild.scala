@@ -16,6 +16,7 @@ case class MbtBuild(
     @Nullable dependencyModules: ju.List[MbtDependencyModule],
     @Nullable namespaces: ju.Map[String, MbtNamespace],
     @Nullable uncheckedSources: ju.List[String],
+    @Nullable watchedFiles: ju.List[String] = null,
 ) {
 
   def getDependencyModules(): ju.List[MbtDependencyModule] =
@@ -32,6 +33,30 @@ case class MbtBuild(
     val fromNamespaces =
       getNamespaces.values.asScala.flatMap(_.getUncheckedSources.asScala)
     (topLevel ++ fromNamespaces).distinct.asJava
+  }
+
+  def getWatchedFiles: ju.List[String] =
+    Option(this.watchedFiles).getOrElse(ju.Collections.emptyList())
+
+  /**
+   * Workspace-relative paths declared under `watchedFiles`, normalized to
+   * forward slashes with a leading `./` stripped.
+   *
+   * Only plain paths are supported here, since each one is registered with the
+   * client individually; glob patterns are dropped with a warning.
+   */
+  def explicitWatchedFiles: List[String] = {
+    val (globs, plain) =
+      getWatchedFiles.asScala.toList.partition(MbtGlobMatcher.isPatternGlob)
+    for (glob <- globs) {
+      scribe.warn(
+        s"mbt-build: ignoring '$glob' in 'watchedFiles', glob patterns are not supported."
+      )
+    }
+    for (declared <- plain) yield {
+      val normalized = MbtGlobMatcher.normalizeSlashes(declared)
+      if (normalized.startsWith("./")) normalized.substring(2) else normalized
+    }
   }
 
   def isEmpty: Boolean =
@@ -86,7 +111,8 @@ case class MbtBuild(
               None
             }
           }
-        val globPatterns = namespace.getSources.asScala.toSeq.filter(isGlob)
+        val globPatterns = namespace.getSources.asScala.toSeq
+          .filter(MbtGlobMatcher.isPatternGlob)
         val nsModules = for {
           moduleId <- namespace.getDependencyModuleIds.asScala.toSeq
           module <- modulesById.get(moduleId).orElse {
@@ -101,7 +127,7 @@ case class MbtBuild(
           id =
             new bsp4j.BuildTargetIdentifier(MbtBuild.namespaceTargetId(name)),
           sources = namespace.getSources.asScala.toSeq
-            .filterNot(isGlob),
+            .filterNot(MbtGlobMatcher.isPatternGlob),
           globMatchers = globPatterns.map(pattern =>
             MbtGlobMatcher(
               pattern = pattern,
@@ -127,17 +153,9 @@ case class MbtBuild(
       }
     }
 
-  private def isGlob(pattern: String): Boolean = {
-    val n = normalizeSlashes(pattern)
-    n.exists(c => c == '*' || c == '?' || c == '[' || c == '{')
-  }
-
-  private def normalizeSlashes(s: String): String =
-    s.trim.replace('\\', '/')
-
   /** Leading `./` is stripped so matchers align with workspace-relative paths. */
   private def globPatternForMatcher(pattern: String): String = {
-    val n = normalizeSlashes(pattern)
+    val n = MbtGlobMatcher.normalizeSlashes(pattern)
     if (n.startsWith("./")) n.substring(2) else n
   }
 
@@ -146,7 +164,7 @@ case class MbtBuild(
       .split('/')
       .toSeq
       .filter(_.nonEmpty)
-      .takeWhile(segment => !isGlob(segment))
+      .takeWhile(segment => !MbtGlobMatcher.isPatternGlob(segment))
     literalSegments match {
       case head +: tail => Some(Paths.get(head, tail: _*))
       case _ => None
@@ -230,7 +248,18 @@ object MbtBuild {
           .getOrElse(ju.Collections.emptyList())
           .asScala).distinct.asJava
 
-    MbtBuild(mergedModules, mergedNamespaces, mergedUncheckedSources)
+    val mergedWatchedFiles = {
+      val combined =
+        (a.getWatchedFiles.asScala ++ b.getWatchedFiles.asScala).distinct
+      if (combined.isEmpty) null else combined.asJava
+    }
+
+    MbtBuild(
+      mergedModules,
+      mergedNamespaces,
+      mergedUncheckedSources,
+      mergedWatchedFiles,
+    )
   }
 
 }
