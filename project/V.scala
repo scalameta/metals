@@ -11,7 +11,7 @@ object V {
 
   val scala3ForSBT2 = "3.8.4"
 
-  val latestScala3Next = "3.8.4"
+  val latestScala3Next = "3.9.0"
 
   // When you can add to removedScalaVersions in MtagsResolver.scala with the last released version
   val sbtScala = "2.12.20"
@@ -23,7 +23,7 @@ object V {
 
   val betterMonadicFor = "0.3.1"
 
-  val bloop = "2.1.1"
+  val bloop = "2.1.2"
 
   val bloopConfig = "2.3.3"
 
@@ -47,7 +47,7 @@ object V {
 
   val javaSemanticdb = "0.12.3"
 
-  val jsoup = "1.23.1"
+  val jsoup = "1.23.2"
 
   val kindProjector = "0.13.4"
 
@@ -55,14 +55,14 @@ object V {
 
   val mavenBloop = "2.0.5"
 
-  val mill = "1.1.8"
+  val mill = "1.1.9"
 
   // use from project/plugins.sbt
   val mdoc = _root_.mdoc.BuildInfo.version
 
-  val modelContextProtocol = "2.0.0"
+  val modelContextProtocol = "2.0.1"
 
-  val munit = "1.3.5"
+  val munit = "1.3.6"
 
   val pprint = "0.9.6"
 
@@ -72,17 +72,17 @@ object V {
 
   val scalaCli = "1.14.0"
 
-  val scalafix = "0.14.7"
+  val scalafix = "0.14.8"
 
   val scalafmt = "3.11.5"
 
-  val scalameta = "4.17.3"
+  val scalameta = "4.17.4"
 
   val scribe = "3.19.0"
 
   val sbt2Version = "2.0.3"
 
-  val guava = "com.google.guava" % "guava" % "33.6.0-jre"
+  val guava = "com.google.guava" % "guava" % "33.7.1-jre"
 
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV
 

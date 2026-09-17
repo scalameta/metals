@@ -55,6 +55,9 @@ import coursierapi.Repository
  *       scalacOptions: [
  *         "-deprecation"
  *       ],
+ *       javaOptions: [
+ *         "-Duser.dir=/path/to/working/directory"
+ *       ],
  *       dependsOn: [ "id2" ]
  *     },
  *    "id2": { ... }
@@ -72,6 +75,7 @@ case class QuickBuild(
     sbtVersion: String,
     sbtAutoImports: Array[String],
     platformJavaHome: String,
+    javaOptions: Array[String],
     repositories: Array[String],
 ) {
   def withId(id: String): QuickBuild =
@@ -87,6 +91,7 @@ case class QuickBuild(
       sbtVersion,
       orEmpty(sbtAutoImports),
       platformJavaHome,
+      orEmpty(javaOptions),
       orEmpty(repositories),
     )
   private def orEmpty(array: Array[String]): Array[String] =
@@ -289,7 +294,13 @@ case class QuickBuild(
       sbt = sbt,
       test = testFrameworks,
       platform = Some(
-        C.Platform.Jvm(C.JvmConfig(javaHome, Nil), None, None, None, None)
+        C.Platform.Jvm(
+          C.JvmConfig(javaHome, javaOptions.toList),
+          None,
+          None,
+          None,
+          None,
+        )
       ),
       resolution = Some(C.Resolution(resolution.toList)),
       resources = None,
@@ -319,13 +330,16 @@ object QuickBuild {
     "dev.zio::zio-test-sbt" -> Config.TestFramework(
       List("zio.test.sbt.ZTestFramework")
     ),
+    "io.getkyo::kyo-test-runner" -> Config.TestFramework(
+      List("kyo.test.runner.SbtFramework")
+    ),
   )
 
   /**
    * Bump up this version in case the JSON generation algorithm changes
    * A new version triggers re-generation of QuickBuild files.
    */
-  val version = "v3"
+  val version = "v4"
   def toDependency(
       module: String,
       scalaVersion: String,

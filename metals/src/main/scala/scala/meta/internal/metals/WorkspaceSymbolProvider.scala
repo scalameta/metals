@@ -126,6 +126,17 @@ final class WorkspaceSymbolProvider(
     SymbolSearch.Result.COMPLETE
   }
 
+  /**
+   * Visit workspace packages, either of a single build target and its
+   * transitive dependencies, or of every known build target when `target` is
+   * `None`.
+   *
+   * Iterates build targets rather than `packages` keys, because package entries
+   * outlive the build targets they came from, e.g. after a build reimport.
+   *
+   * Note that a package declared in several build targets is visited once per
+   * target, so callers that search all targets have to deduplicate.
+   */
   def searchWorkspacePackages(
       visitor: SymbolSearchVisitor,
       target: Option[BuildTargetIdentifier],
@@ -137,11 +148,16 @@ final class WorkspaceSymbolProvider(
         loop(node.children, pkg)
       }
     }
-    target.foreach { id =>
-      buildTargets
-        .buildTargetTransitiveDependencies(id)
-        .foreach { dep =>
-          packages.get(dep).foreach(loop(_, ""))
+    target match {
+      case Some(id) =>
+        buildTargets
+          .buildTargetTransitiveDependencies(id)
+          .foreach { dep =>
+            packages.get(dep).foreach(loop(_, ""))
+          }
+      case None =>
+        buildTargets.allBuildTargetIds.foreach { id =>
+          packages.get(id).foreach(loop(_, ""))
         }
     }
     SymbolSearch.Result.COMPLETE

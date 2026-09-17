@@ -594,6 +594,12 @@ Possible values:
   compiler.
 - `on`: log verbose debugging information for the presentation compiler.
 
+### `-Dmetals.max-mcp-search-results`
+
+Maximum number of results a single MCP symbol search (`glob-search`,
+`typed-glob-search`) returns. Matches beyond the cap are dropped, and the
+response states that it is partial. Default value is `100`.
+
 ### `-Dbloop.sbt.version`
 
 Version number of the sbt-bloop plugin to use for the "Install build" command.

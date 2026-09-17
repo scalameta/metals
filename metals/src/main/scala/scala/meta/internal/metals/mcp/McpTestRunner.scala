@@ -42,12 +42,15 @@ class McpTestRunner(
     }
     val cancelPromise = Promise[Unit]()
     for {
-      path <- optPath
-        .orElse(resolvePath(testClass))
-        .toRight(s"Missing path to test suite and failed to resolve it.")
+      path <- optPath match {
+        case Some(path) => Right(path)
+        case None => resolvePath(testClass)
+      }
       id <- buildTargets
         .inverseSources(path)
-        .toRight(s"Could not find build target for $path")
+        .toRight(
+          s"Could not find build target for $path, try running `import-build`."
+        )
       jvmTestEnv = debugProvider.jvmTestEnvironment(id)
       projectFut <- debugProvider.createDebugeeProjectForTests(
         id,
@@ -80,8 +83,15 @@ class McpTestRunner(
     }
   }
 
-  private def resolvePath(fqcn: String): Option[AbsolutePath] = {
-    mcpSearch.exactSearch(fqcn, None).flatMap(_.definitionPath).headOption
+  private def resolvePath(fqcn: String): Either[String, AbsolutePath] = {
+    mcpSearch
+      .exactSearchAllTargets(fqcn)
+      .flatMap(_.definitionPath)
+      .distinct match {
+      case Seq(path) => Right(path)
+      case Nil => Left("Missing path to test suite and failed to resolve it.")
+      case _ => Left(s"Multiple test suites found for $fqcn. Provide testFile.")
+    }
   }
 }
 

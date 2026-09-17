@@ -1,5 +1,9 @@
 package tests.mcp
 
+import java.net.URI
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
 import java.time.Duration
 
 import scala.compat.java8.FutureConverters._
@@ -29,6 +33,22 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
     .build()
   private val client =
     McpClient.async(transport).requestTimeout(Duration.ofMinutes(5)).build()
+
+  def sendRawInitialize(
+      requestBody: String
+  ): Future[HttpResponse[String]] = {
+    val httpClient = HttpClient.newHttpClient()
+    val httpRequest = HttpRequest
+      .newBuilder()
+      .uri(URI.create(s"$url${MetalsMcpServer.mcpEndpoint}"))
+      .header("Content-Type", "application/json")
+      .header("Accept", "application/json, text/event-stream")
+      .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+      .build()
+    httpClient
+      .sendAsync(httpRequest, HttpResponse.BodyHandlers.ofString())
+      .toScala
+  }
 
   override protected def callTool(
       toolName: String,

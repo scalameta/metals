@@ -239,6 +239,8 @@ class WorkspaceLspService(
       workDoneProgress,
       bspStatus,
       moduleStatus,
+      workspaceFolders = () =>
+        (folderServices.map(_.path) ++ nonScalaProjects.map(_.path)).distinct,
     )
   }
 

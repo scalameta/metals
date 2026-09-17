@@ -479,6 +479,8 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons(),
     clientConfig.isReadClipboardProvider(),
+    buildTargets,
+    trees,
     onCreate = path => {
       onCreate(path)
       onChange(List(path))
@@ -734,7 +736,12 @@ abstract class MetalsLspService(
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
-      userConfig.javaHome != old.javaHome
+      userConfig.javaHome != old.javaHome ||
+      // a presentation compiler memoises which packages have a package
+      // object, and that answer comes from the symbol indexes, which apply
+      // the exclusions; the memo lives as long as the compiler, so the
+      // compilers have to be restarted for a change here to take effect
+      userConfig.excludedPackages != old.excludedPackages
     ) {
       compilers.restartAll()
     }

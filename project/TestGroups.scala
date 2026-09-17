@@ -16,7 +16,8 @@ object TestGroups {
     "tests.worksheets.WorksheetNoDecorationsLspSuite",
     "tests.CompletionLspSuite", "tests.TreeViewLspSuite", "tests.HoverLspSuite",
     "tests.SuperHierarchyLspSuite", "tests.DidFocusLspSuite",
-    "tests.BuildServerConnectionLspSuite", "tests.BuildTargetsLspSuite",
+    "tests.BuildServerConnectionLspSuite",
+    "tests.BuildServerConnectionRecoverySuite", "tests.BuildTargetsLspSuite",
     "tests.FileWatcherLspSuite", "tests.CurrentProjectCompileLspSuite",
     "tests.WindowStateDidChangeLspSuite", "tests.DocumentSymbolLspSuite",
     "tests.WorkspaceSymbolExpectSuite", "tests.digest.DigestsSuite",
@@ -41,6 +42,7 @@ object TestGroups {
     "tests.MtagsScala2Suite", "tests.UriEncoderDecoderSuite",
     "tests.DidFocusWhileCompilingLspSuite",
     "tests.testProvider.ScalatestFinderSuite", "tests.ScalaCliSuite",
+    "tests.OutOfWorkspaceScalaCliLspSuite",
     "tests.debug.BreakpointScalaCliDapSuite", "tests.CallHierarchyLspSuite",
     "tests.BspStatusSuite", "tests.ServerLivenessMonitorLspSuite",
     "tests.ToplevelWithInnerScala2Suite", "tests.ScaladocSymbolsSuite",
@@ -139,6 +141,8 @@ object TestGroups {
     "tests.parsing.BloopDiagnosticsParserSuite",
     "tests.codeactions.RemoveInfixLspSuite",
     "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
+    "tests.mcp.McpGlobSearchCapLspSuite",
+    "scala.meta.internal.metals.mcp.tests.McpGlobSearchNormalizeSuite",
   )
 
   val numberOfShards = 4

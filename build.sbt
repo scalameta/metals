@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.9-SNAPSHOT"
-def latestReleaseVersion = "1.6.8"
+def localSnapshotVersion = "1.6.10-SNAPSHOT"
+def latestReleaseVersion = "1.6.9"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -289,7 +289,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.1",
-      "com.google.protobuf" % "protobuf-java" % "4.35.1",
+      "com.google.protobuf" % "protobuf-java" % "4.36.1",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),
@@ -420,7 +420,7 @@ lazy val metals = project
       // for bloom filters
       V.guava,
       "com.google.code.findbugs" % "jsr305" % "3.0.2",
-      "org.scalameta" %% "metaconfig-core" % "0.18.7",
+      "org.scalameta" %% "metaconfig-core" % "0.18.8",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -430,7 +430,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "12.10.0",
-      "com.h2database" % "h2" % "2.4.240",
+      "com.h2database" % "h2" % "2.5.250",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.8.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -469,7 +469,7 @@ lazy val metals = project
         scalaVersion.value
       )).cross(CrossVersion.full),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.5.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       // For test frameworks
@@ -868,7 +868,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.7",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.8",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion

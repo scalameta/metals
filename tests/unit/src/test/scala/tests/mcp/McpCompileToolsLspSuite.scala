@@ -58,6 +58,28 @@ class McpCompileToolsLspSuite
     } yield ()
   }
 
+  test("compile-file-outside-build") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |object Hello
+           |/Outside.scala
+           |object Outside
+           |""".stripMargin
+      )
+      client <- startMcpServer()
+      result <- client.compileFile("Outside.scala")
+      _ = assert(result.contains("no build target for"), result)
+      _ = assert(result.contains("`import-build`"), result)
+      _ <- client.shutdown()
+    } yield ()
+  }
+
   test("compile-module") {
     cleanWorkspace()
     for {
