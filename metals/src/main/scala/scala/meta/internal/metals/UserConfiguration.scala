@@ -6,6 +6,7 @@ import scala.collection.mutable.ListBuffer
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -154,6 +155,7 @@ case class UserConfiguration(
           enableBestEffort,
         )
       ),
+      optStringField("defaultShell", defaultShell),
       Some(
         (
           "startMcpServer",
@@ -959,6 +961,36 @@ object UserConfiguration {
     import JsonParser._
     config.parseJson.getAsJsonObject
   }
+
+  def load(
+      folder: AbsolutePath,
+      clientConfiguration: ClientConfiguration,
+  ): Option[UserConfiguration] = {
+    val path = folder.resolve(Directories.userConfig)
+    path.readTextOpt.flatMap { text =>
+      Try(parse(text)) match {
+        case Failure(error) =>
+          scribe.warn(s"Failed to parse persisted user configuration: $error")
+          None
+        case Success(json) =>
+          fromJson(json, clientConfiguration) match {
+            case Left(errors) =>
+              errors.foreach { error =>
+                scribe.warn(s"Persisted user configuration error: $error")
+              }
+              None
+            case Right(config) => Some(config)
+          }
+      }
+    }
+  }
+
+  def save(folder: AbsolutePath, config: UserConfiguration): Unit =
+    try folder.resolve(Directories.userConfig).writeText(config.toString())
+    catch {
+      case NonFatal(error) =>
+        scribe.warn(s"Failed to persist user configuration: $error")
+    }
 
 }
 
