@@ -55,6 +55,7 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.WorkDoneProgressBegin
 import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
+import org.eclipse.lsp4j.WorkDoneProgressEnd
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
 import tests.MetalsTestEnrichments._
@@ -170,6 +171,30 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
         } else None
       }
       .mkString("\n")
+
+  /**
+   * Titles of `$/progress` tasks that have begun but not yet ended, in order
+   * of their begin notifications.
+   */
+  def ongoingProgress(titleFilter: String => Boolean): List[String] = {
+    val ongoing = new java.util.LinkedHashMap[AnyRef, String]()
+    progressParams.asScala.foreach { params =>
+      if (params.getValue().isLeft()) {
+        params.getValue().getLeft() match {
+          case begin: WorkDoneProgressBegin =>
+            if (titleFilter(begin.getTitle()))
+              ongoing.put(params.getToken(), begin.getTitle())
+          case _: WorkDoneProgressEnd =>
+            ongoing.remove(params.getToken())
+          case _ =>
+        }
+      }
+    }
+    ongoing.values().asScala.toList
+  }
+
+  def ongoingCompilations: List[String] =
+    ongoingProgress(_.startsWith("Compiling"))
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams

@@ -184,26 +184,30 @@ class ProjectMetalsLspService(
   )
 
   val connectionProvider: ConnectionProvider = {
-    val provider = new ConnectionProvider(
-      buildToolProvider,
-      compilations,
-      buildTools,
-      buffers,
-      compilers,
-      scalaCli,
-      bloopServers,
-      shellRunner,
-      bspConfigGenerator,
-      check,
-      doctor,
-      initTreeView,
-      diagnostics,
-      charset,
-      buildClient,
-      bspGlobalDirectories,
-      connectionBspStatus,
-      mainBuildTargetsData,
-      this,
+    // registered so that service teardown closes the provider, which stops
+    // any in-flight connect from publishing a session afterwards
+    val provider = register(
+      new ConnectionProvider(
+        buildToolProvider,
+        compilations,
+        buildTools,
+        buffers,
+        compilers,
+        scalaCli,
+        bloopServers,
+        shellRunner,
+        bspConfigGenerator,
+        check,
+        doctor,
+        initTreeView,
+        diagnostics,
+        charset,
+        buildClient,
+        bspGlobalDirectories,
+        connectionBspStatus,
+        mainBuildTargetsData,
+        this,
+      )
     )
     provider.buildServerPromise.future.onComplete(_ => moduleStatus.refresh())
     provider

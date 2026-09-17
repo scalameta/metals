@@ -40,7 +40,9 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
   private implicit def ec: ExecutionContextExecutorService = executionContext
   val sharedIndices: SqlSharedIndices = new SqlSharedIndices
 
-  var bspSession: Option[BspSession] = Option.empty[BspSession]
+  // read from the build client's notification thread (the build session gate,
+  // see scalameta/metals#3464), so make writes visible across threads
+  @volatile var bspSession: Option[BspSession] = Option.empty[BspSession]
 
   protected val workspaceReload: WorkspaceReload = new WorkspaceReload(
     folder,
