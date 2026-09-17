@@ -2,6 +2,7 @@ package tests
 
 import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException
@@ -111,6 +112,51 @@ class RequestRegistrySuite extends FunSuite {
       _ <- promise1.future
       _ <- promise2.future
     } yield ()
+  }
+
+  test("cancel-during-in-flight-send") {
+    // `register` invokes `action()` inline, and that call is the JSON-RPC
+    // send, which blocks for as long as a wedged build server doesn't read
+    // (see scalameta/metals#3464). Teardown must not wait for it, and the
+    // request that finishes sending afterwards must not outlive the drain.
+    val sendStarted = new CountDownLatch(1)
+    val releaseSend = new CountDownLatch(1)
+    val promise = Promise[Unit]()
+    val requestRegistry = createRegistry()
+    val send = ExampleFutures.infinite(promise)
+    val registering = Future {
+      requestRegistry.register(
+        () => {
+          sendStarted.countDown()
+          releaseSend.await()
+          send()
+        },
+        timeout = None,
+      )
+    }
+    for {
+      _ <- Future(sendStarted.await())
+      // fails with a `TimeoutException` if `cancel()` queues behind the send
+      _ <- Future(requestRegistry.cancel())
+        .withTimeout(duration * 10, reason = Some("cancelling the registry"))
+      _ = releaseSend.countDown()
+      registered <- registering
+      err <- registered.future.failed
+      _ = assert(err.isInstanceOf[CancellationException])
+      _ <- promise.future
+    } yield ()
+  }
+
+  test("register-after-cancel-is-rejected") {
+    val requestRegistry = createRegistry()
+    requestRegistry.cancel()
+    assert(requestRegistry.isCancelled)
+    for {
+      err <- requestRegistry
+        .register(ExampleFutures.done, timeout = None)
+        .future
+        .failed
+    } yield assert(err.isInstanceOf[IllegalStateException])
   }
 
   test("wait-on-timeout") {

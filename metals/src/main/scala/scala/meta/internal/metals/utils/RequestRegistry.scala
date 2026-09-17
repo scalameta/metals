@@ -10,6 +10,7 @@ import scala.concurrent.duration.Duration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.CancelableFuture
@@ -61,31 +62,67 @@ class RequestRegistry(
     }
 
   // sticky: set by `cancel()`, after which no request may be registered.
-  // Guarded by `lock` together with the registration itself, so admission and
-  // insertion are one atomic operation and a request can never be added to an
-  // already drained registry (see scalameta/metals#3464).
+  // `@volatile` so a request being sent can re-read it without `lock`
+  // (see scalameta/metals#3464).
   private val lock = new Object
-  private var cancelled = false
+  @volatile private var cancelled = false
 
-  def isCancelled: Boolean = lock.synchronized(cancelled)
+  def isCancelled: Boolean = cancelled
 
   def register[T](
       action: () => CompletableFuture[T],
       timeout: Option[Timeout],
       cancelByDefault: Boolean = false,
-  ): CancelableFuture[T] =
-    lock.synchronized {
-      if (cancelled)
-        CancelableFuture(
-          Future.failed(
-            new IllegalStateException("the connection is already closed")
-          ),
-          Cancelable.empty,
-        )
-      else registerOpen(action, timeout, cancelByDefault)
+  ): CancelableFuture[T] = {
+    // Admission reserves a slot in `ongoingRequests` and fills it once the
+    // request exists, so `lock` never spans the send: `action()` writes to the
+    // build server socket and blocks for as long as a wedged server doesn't
+    // read, and `cancel()` is teardown, which must not queue behind that write.
+    val slot = new MutableCancelable
+    val admitted = lock.synchronized {
+      if (cancelled) false
+      else {
+        ongoingRequests.add(slot)
+        true
+      }
     }
+    if (admitted) registerOpen(action, timeout, cancelByDefault, slot)
+    else
+      CancelableFuture(
+        Future.failed(
+          new IllegalStateException("the connection is already closed")
+        ),
+        Cancelable.empty,
+      )
+  }
 
   private def registerOpen[T](
+      action: () => CompletableFuture[T],
+      timeout: Option[Timeout],
+      cancelByDefault: Boolean,
+      slot: MutableCancelable,
+  ): CancelableFuture[T] = {
+    val CancelableFuture(result, cancelable) =
+      try sendRequest(action, timeout, cancelByDefault)
+      catch {
+        case NonFatal(e) =>
+          // the slot was reserved before the send, it must not outlive it
+          ongoingRequests.remove(slot)
+          throw e
+      }
+
+    slot.add(cancelable)
+    // A drain that ran while the request was being sent found the slot empty,
+    // so the request cancels itself here; one that runs after this point finds
+    // the cancelable in the slot. Cancelling twice is harmless.
+    if (cancelled) slot.cancel()
+
+    result.onComplete { _ => ongoingRequests.remove(slot) }
+
+    CancelableFuture(result, cancelable)
+  }
+
+  private def sendRequest[T](
       action: () => CompletableFuture[T],
       timeout: Option[Timeout],
       cancelByDefault: Boolean,
@@ -116,10 +153,6 @@ class RequestRegistry(
           CancelableFuture(resultFuture.asScala, cancelable)
       }
 
-    ongoingRequests.add(cancelable)
-
-    result.onComplete { _ => ongoingRequests.remove(cancelable) }
-
     CancelableFuture(result, cancelable)
   }
 
@@ -127,6 +160,8 @@ class RequestRegistry(
     ongoingRequests.addAll(values)
 
   def cancel(): Unit = {
+    // `lock` here only orders the flag against admission, and is never held
+    // across a request send, so teardown cannot stall behind one
     lock.synchronized { cancelled = true }
     ongoingRequests.cancel()
   }
