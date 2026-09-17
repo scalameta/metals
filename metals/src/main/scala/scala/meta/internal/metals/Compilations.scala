@@ -252,6 +252,14 @@ final class Compilations(
    * whole batch. Applies the same request policy and terminal cleanup as
    * batched compiles; the batch queue state (`isCompiling`/`lastCompile`)
    * is deliberately untouched.
+   *
+   * Tracking it there would not make callers wait for it either:
+   * `compilationFinished` does not await the batch state, it starts a compile
+   * of its own, and this target has no batch to join. Every `compilationFinished`
+   * caller — rename, scalafix, debug startup — would therefore issue a second
+   * compile of a target that is already compiling. The cost of leaving it out
+   * is narrower: a concurrent debug startup sees an empty batch state and
+   * proceeds without waiting for this compile.
    */
   def compileTargetCancelable(
       target: b.BuildTargetIdentifier,
