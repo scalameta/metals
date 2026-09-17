@@ -682,7 +682,7 @@ object FileDecoderProviderLspSuite {
         |  tooling: Scala ${V.scala3}
         |     UUID: 000af99d-8578-97d4-00fd-3ab11b2e95b0
         |
-        |Names (307 bytes, starting from 35):
+        |Names (307 bytes, starting from 39):
         |     0: ASTs
         |     1: foo
         |     2: bar
@@ -727,7 +727,7 @@ object FileDecoderProviderLspSuite {
         |    41: Comments
         |
         |
-        |Trees (101 bytes, starting from 344):
+        |Trees (101 bytes, starting from 348):
         |     0: PACKAGE(99)
         |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
         |     4:   VALDEF(18) 6 [Main]
@@ -783,7 +783,7 @@ object FileDecoderProviderLspSuite {
         |    99:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   101:
         |
-        |Positions (44 bytes, starting from 447):
+        |Positions (44 bytes, starting from 451):
         |  lines: 3
         |  line sizes:
         |     23, 11, 0
@@ -815,7 +815,7 @@ object FileDecoderProviderLspSuite {
         |  tooling: Scala ${V.scala3}
         |     UUID: 00c4e36f-58ab-50ea-00a1-598e5ec4df86
         |
-        |Names (208 bytes, starting from 35):
+        |Names (208 bytes, starting from 39):
         |     0: ASTs
         |     1: foo
         |     2: bar
@@ -846,7 +846,7 @@ object FileDecoderProviderLspSuite {
         |    27: Comments
         |
         |
-        |Trees (48 bytes, starting from 245):
+        |Trees (48 bytes, starting from 249):
         |     0: PACKAGE(46)
         |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
         |     4:   TYPEDEF(42) 6 [Foo]
@@ -873,7 +873,7 @@ object FileDecoderProviderLspSuite {
         |    46:         STRINGconst 25 [app/src/main/scala/Main.scala]
         |    48:
         |
-        |Positions (29 bytes, starting from 295):
+        |Positions (29 bytes, starting from 299):
         |  lines: 4
         |  line sizes:
         |     23, 9, 9, 0
@@ -898,7 +898,7 @@ object FileDecoderProviderLspSuite {
         |  tooling: Scala ${V.scala3}
         |     UUID: 0086aea0-56eb-7ed4-0077-cbc6a31c7680
         |
-        |Names (315 bytes, starting from 35):
+        |Names (315 bytes, starting from 39):
         |     0: ASTs
         |     1: foo
         |     2: bar
@@ -943,7 +943,7 @@ object FileDecoderProviderLspSuite {
         |    41: Comments
         |
         |
-        |Trees (114 bytes, starting from 352):
+        |Trees (114 bytes, starting from 356):
         |     0: PACKAGE(112)
         |     2:   TERMREFpkg 5 [foo[Qualified . bar][Qualified . example]]
         |     4:   VALDEF(19) 6 [Main$$package]
@@ -1007,7 +1007,7 @@ object FileDecoderProviderLspSuite {
         |   112:         STRINGconst 39 [app/src/main/scala/Main.scala]
         |   114:
         |
-        |Positions (50 bytes, starting from 468):
+        |Positions (50 bytes, starting from 472):
         |  lines: 4
         |  line sizes:
         |     23, 11, 20, 0
