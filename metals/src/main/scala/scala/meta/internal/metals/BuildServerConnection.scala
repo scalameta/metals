@@ -937,10 +937,30 @@ object BuildServerConnection {
               userConfiguration,
             )
           } catch {
-            case e: TimeoutException =>
+            case NonFatal(e) =>
+              // This launcher never becomes a connection, so nothing installs
+              // it and nothing closes it later. It is torn down here, gate
+              // first: a half-initialized launcher that keeps dispatching
+              // notifications is exactly the dead generation the gate exists
+              // to silence (see scalameta/metals#3464). Connect retries and
+              // server recovery make abandoned launchers a routine path, not
+              // a one-off.
+              dispatchGate.close()
               conn.cancelables.foreach(_.cancel())
               stopListening.cancel()
-              scribe.error("Timeout waiting for 'build/initialize' response")
+              e match {
+                case _: TimeoutException =>
+                  scribe.error(
+                    "Timeout waiting for 'build/initialize' response"
+                  )
+                case _ =>
+                  // the caller decides whether to retry, so this is not yet
+                  // a failure of the connection as a whole
+                  scribe.warn(
+                    s"Failed to initialize a connection to $serverName",
+                    e,
+                  )
+              }
               throw e
           }
 
