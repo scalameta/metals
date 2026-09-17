@@ -14,7 +14,9 @@ object SemVer {
       patch: Int,
       releaseCandidate: Option[Int] = None,
       milestone: Option[Int] = None,
-      nightlyDate: Option[Int] = None
+      nightlyDate: Option[Int] = None,
+      developmentBuild: Option[Long] = None,
+      isStable: Boolean = true
   ) extends Ordered[Version] {
     private def toList: List[Int] = {
       val rcMilestonePart =
@@ -50,12 +52,30 @@ object SemVer {
   }
 
   object Version {
+
+    /** Suggestion order: stable before pre-release, then newest first. */
+    val stableFirst: Ordering[Version] = new Ordering[Version] {
+      def compare(left: Version, right: Version): Int =
+        if (left.isStable != right.isStable) {
+          if (left.isStable) -1 else 1
+        } else {
+          val comparison = right.compare(left)
+          if (comparison != 0) comparison
+          else
+            (left.developmentBuild, right.developmentBuild) match {
+              case (Some(leftBuild), Some(rightBuild)) =>
+                java.lang.Long.compare(rightBuild, leftBuild)
+              case _ => 0
+            }
+        }
+    }
+
     def fromString(version: String): Version = {
-      val parts = version.split("\\.|-")
-      val parsed = parts.take(3).map(p => Try(p.toInt).toOption)
+      val numericCore = version.takeWhile(char => char.isDigit || char == '.')
+      val numbers = numericCore.split('.').map(part => Try(part.toInt).toOption)
       val (major, minor, patch) =
-        parsed match {
-          case Array(Some(major), Some(minor), Some(patch)) =>
+        numbers match {
+          case Array(Some(major), Some(minor), Some(patch), _*) =>
             (major, minor, patch)
           case Array(Some(major), Some(minor), _*) =>
             (major, minor, 0)
@@ -65,25 +85,89 @@ object SemVer {
             logger.warning(s"Version $version is invalid.")
             throw new IllegalArgumentException(s"Version $version is invalid")
         }
-      val (rc, milestone) = parts
-        .lift(3)
-        .map { v =>
-          if (v.startsWith("RC")) (Some(tryToInt(v.stripPrefix("RC"))), None)
-          else if (v.startsWith("M")) (None, Some(tryToInt(v.stripPrefix("M"))))
-          else (None, None)
-        }
-        .getOrElse((None, None))
+      val qualifiers = qualifiersOf(version, numericCore)
       // specific condition for Scala 3 nightlies - 3.2.0-RC1-bin-20220307-6dc591a-NIGHTLY
       val date =
-        if (parts.lift(7).contains("NIGHTLY"))
-          parts.lift(5).flatMap(d => Try(d.toInt).toOption)
+        if (qualifiers.contains("NIGHTLY")) qualifiers.collectFirst {
+          case token if token.length == 8 && token.forall(_.isDigit) =>
+            token.toInt
+        }
         else None
-      Version(major, minor, patch, rc, milestone, date)
+      val developmentBuild = qualifiers.headOption
+        .filter(_.forall(_.isDigit))
+        .flatMap(token => Try(token.toLong).toOption)
+      Version(
+        major,
+        minor,
+        patch,
+        numberAfter("RC", qualifiers),
+        milestoneNumber(qualifiers),
+        date,
+        developmentBuild = developmentBuild,
+        isStable = isStable(qualifiers)
+      )
     }
 
-  }
+    /** Everything past the leading digits and dots, as in `RC1`, `bin`, `NIGHTLY`. */
+    private def qualifiersOf(
+        version: String,
+        numericCore: String
+    ): List[String] =
+      version
+        .drop(numericCore.length)
+        .split("[-._+]")
+        .filter(_.nonEmpty)
+        .toList
 
-  private def tryToInt(s: String): Int = Try { s.toInt }.toOption.getOrElse(0)
+    private def numberAfter(
+        prefix: String,
+        qualifiers: List[String]
+    ): Option[Int] =
+      qualifiers.collectFirst {
+        case token
+            if token.startsWith(prefix) && token.length > prefix.length &&
+              token.drop(prefix.length).forall(_.isDigit) =>
+          token.drop(prefix.length).toInt
+      }
+
+    private def milestoneNumber(qualifiers: List[String]): Option[Int] =
+      numberAfter("M", qualifiers).orElse(
+        qualifiers.collectFirst {
+          case token if token.equalsIgnoreCase("MF") =>
+            0
+        }
+      )
+
+    private val preReleaseNames = Set(
+      "alpha", "beta", "cr", "dev", "m", "mf", "milestone", "nightly", "pre",
+      "preview", "rc", "snap", "snapshot"
+    )
+
+    private def isStable(qualifiers: List[String]): Boolean =
+      !qualifiers.zipWithIndex.exists { case (token, index) =>
+        isPreReleaseName(token) ||
+        isDevelopmentBuild(token, isFirstToken = index == 0)
+      }
+
+    private def isPreReleaseName(token: String): Boolean = {
+      val letters = token.toLowerCase.takeWhile(_.isLetter)
+      preReleaseNames.contains(letters) &&
+      token.drop(letters.length).forall(_.isDigit)
+    }
+
+    /** Commit distance or hash, as in `3.7-4972921` and `3.2-148-d9af944`. */
+    private def isDevelopmentBuild(
+        token: String,
+        isFirstToken: Boolean
+    ): Boolean =
+      (isFirstToken && token.forall(_.isDigit)) ||
+        (token.length >= 6 && token.forall(isHexDigit))
+
+    private def isHexDigit(char: Char): Boolean = {
+      val lowerCase = char.toLower
+      char.isDigit || (lowerCase >= 'a' && lowerCase <= 'f')
+    }
+  }
 
   def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
     Version.fromString(version) >= Version.fromString(minimumVersion)

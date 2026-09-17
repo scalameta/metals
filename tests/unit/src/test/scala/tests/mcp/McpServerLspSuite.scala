@@ -72,6 +72,25 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         McpMessages.FindDep
           .versionMessage(Some("4.10.2")),
       )
+      resultDevBuilds <- client.findDep(
+        "co.fs2",
+        Some("fs2-core"),
+        Some("3.2"),
+      )
+      devBuildMessage = resultDevBuilds.mkString("\n")
+      _ = assert(
+        devBuildMessage.startsWith("Latest stable version found: 3.2.14\n")
+      )
+      _ = assert(devBuildMessage.contains("Development/pre-release matches: "))
+      resultPlatformSuffix <- client.findDep(
+        "com.google.guava",
+        Some("guava"),
+        Some("33.0"),
+      )
+      _ = assertNoDiff(
+        resultPlatformSuffix.mkString("\n"),
+        McpMessages.FindDep.versionMessage(Some("33.0.0-jre")),
+      )
       _ <- client.shutdown()
     } yield ()
   }
