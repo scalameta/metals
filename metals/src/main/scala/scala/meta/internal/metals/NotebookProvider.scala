@@ -13,6 +13,7 @@ import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.Diagnostic
@@ -57,6 +58,7 @@ final class NotebookProvider(
     // cells skip that normal flow entirely (MetalsLspService.didOpen/didChange
     // are no-ops for `vscode-notebook-cell:` uris), we have to feed it
     // ourselves or those features see a cell that was "never opened".
+    trees: () => Trees,
     parseTrees: AbsolutePath => Future[Unit],
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
@@ -122,21 +124,25 @@ final class NotebookProvider(
       textContent <- textContents.asScala
     } {
       val path = uriToPath(textContent.getDocument.getUri)
-      val current = buffers.get(path).getOrElse("")
-      val updated = textContent.getChanges.asScala.foldLeft(current) {
-        (text, change) =>
-          change.getRange match {
-            case null => change.getText
-            case range =>
-              TextEdits.applyEdits(
-                text,
-                List(new TextEdit(range, change.getText)),
-              )
-          }
+      // The selector on `notebookDocument/didChange`'s registration isn't a
+      // runtime guard: a change can still arrive for an unregistered cell.
+      if (cells.contains(path)) {
+        val current = buffers.get(path).getOrElse("")
+        val updated = textContent.getChanges.asScala.foldLeft(current) {
+          (text, change) =>
+            change.getRange match {
+              case null => change.getText
+              case range =>
+                TextEdits.applyEdits(
+                  text,
+                  List(new TextEdit(range, change.getText)),
+                )
+            }
+        }
+        buffers.put(path, updated)
+        parseTrees(path)
+        combinedCache.remove(ipynbPath)
       }
-      buffers.put(path, updated)
-      parseTrees(path)
-      combinedCache.remove(ipynbPath)
     }
 
     triggerDiagnostics(ipynbPath)
@@ -195,6 +201,26 @@ final class NotebookProvider(
   ): Unit = {
     associate(ipynbPath, target)
     triggerDiagnostics(ipynbPath)
+  }
+
+  /**
+   * A notebook opened before the workspace's build import finishes sees no
+   * build targets at `didOpen` time and is left unassociated (see
+   * [[didOpen]]'s own auto-pick), with no later retry: `BuildTargets.addData`
+   * doesn't know about notebooks at all. Call this once new targets become
+   * available (e.g. once the initial import completes) to auto-pick for
+   * every still-unassociated, currently open notebook.
+   */
+  def retryAssociations(): Unit = buildTargets.allBuildTargetIds match {
+    case Seq(only) =>
+      for {
+        ipynbPath <- notebooks.keysIterator
+        if !associatedTarget.contains(ipynbPath)
+      } {
+        associate(ipynbPath, Some(only))
+        triggerDiagnostics(ipynbPath)
+      }
+    case _ => // ambiguous or none; leave unassociated until the user picks
   }
 
   private def associate(
@@ -371,6 +397,7 @@ final class NotebookProvider(
       cells.remove(path)
       buffers.remove(path)
       clearDiagnostics(textDocument.getUri)
+      closeCellState(path)
     }
     notebooks.put(ipynbPath, updated)
     combinedCache.remove(ipynbPath)
@@ -385,10 +412,21 @@ final class NotebookProvider(
     } {
       clearDiagnostics(ref.uri)
       buffers.remove(path)
+      closeCellState(path)
     }
+    closeCellState(combinedMarkerPath(ipynbPath))
     combinedCache.remove(ipynbPath)
     associatedTarget.remove(ipynbPath)
     registeredData.remove(ipynbPath).foreach(buildTargets.removeData)
+  }
+
+  // `MetalsLspService.didClose` never sees these synthetic paths (notebook
+  // cells skip `textDocument/didClose` entirely, see its own comment), so a
+  // cell's entry in the parser/compiler caches would otherwise outlive the
+  // cell itself.
+  private def closeCellState(path: AbsolutePath): Unit = {
+    trees().didClose(path)
+    compilers().didClose(path)
   }
 
   private def clearDiagnostics(uri: String): Unit =
@@ -520,7 +558,13 @@ object NotebookProvider {
    */
   def uriToPath(uri: String): AbsolutePath = {
     val parsed = new URI(uri)
-    val ipynbPath = AbsolutePath(Paths.get(parsed.getPath))
+    // `parsed.getPath` is a decoded plain path, not itself a `file:` uri, so
+    // `Paths.get(String)` mishandles a Windows drive path like `/C:/foo`.
+    // Re-wrap it as a `file:` uri and let `Paths.get(URI)` parse it, same as
+    // the OS-specific handling a real `file:` uri would get.
+    val ipynbPath = AbsolutePath(
+      Paths.get(new URI("file", null, parsed.getPath, null))
+    )
     val fragment = Option(parsed.getRawFragment).getOrElse("")
     cellPath(ipynbPath, fragment)
   }

@@ -222,6 +222,7 @@ abstract class MetalsLspService(
     buffers,
     languageClient,
     () => compilers,
+    () => trees,
     parseTrees(_),
     buildTargets,
   )(using ec)
@@ -690,6 +691,12 @@ abstract class MetalsLspService(
   def initialized(): Future[Unit] =
     if (wasInitialized.compareAndSet(false, true)) {
       registerNiceToHaveFilePatterns()
+      // Retry auto-association for any notebook opened before this point,
+      // now that the initial build import may have made a target available
+      // (see NotebookProvider.retryAssociations).
+      buildServerPromise.future.foreach(_ =>
+        notebookProvider.retryAssociations()
+      )
 
       for {
         _ <- loadFingerPrints()

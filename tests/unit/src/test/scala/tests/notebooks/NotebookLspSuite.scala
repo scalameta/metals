@@ -29,7 +29,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
   private def ipynb: AbsolutePath = server.toPath(notebookPath)
 
   private def cellUri(id: String): String =
-    s"${NotebookProvider.scheme}:${ipynb.toString}#$id"
+    s"${NotebookProvider.scheme}:${ipynb.toURI.getRawPath}#$id"
 
   private def cellPath(id: String): AbsolutePath =
     NotebookProvider.uriToPath(cellUri(id))
