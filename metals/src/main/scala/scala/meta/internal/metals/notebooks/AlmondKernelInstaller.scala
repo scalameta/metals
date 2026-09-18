@@ -30,15 +30,19 @@ import org.eclipse.lsp4j.MessageType
 object AlmondKernelInstaller {
 
   /**
-   * Almond's `kernel_2.13` artifact was never published past this release
-   * (nothing newer exists on Maven Central) — pinning to it is what lets
-   * this install a kernel for both Scala 2.13 and Scala 3 notebooks. The
-   * `launcher_3` artifact this downloads and runs is only ever published
-   * for Scala 3 regardless of Almond version — that's the launcher tool's
-   * own implementation language, unrelated to the *target* notebook's Scala
-   * version, which is threaded through separately via `--scala`.
+   * Almond publishes `scala-kernel-api`/`kernel` per exact target Scala
+   * patch version (`--scala`, below), not just per Scala minor line, so an
+   * `almondVersion` older than the target project's own Almond release can
+   * 404 at kernel-start time for a Scala patch version newer than whatever
+   * was current when that Almond version shipped (verified empirically:
+   * `0.14.1` has no `scala-kernel-api_2.13.18`, only `0.14.5` does — this
+   * project's own Scala version at the time of writing). Keep this at
+   * Almond's latest release. The `launcher_3` artifact this downloads and
+   * runs is only ever published for Scala 3 regardless of Almond version —
+   * that's the launcher tool's own implementation language, unrelated to
+   * the *target* notebook's Scala version.
    */
-  private val almondVersion = "0.14.1"
+  private val almondVersion = "0.14.5"
 
   def install(
       languageClient: MetalsLanguageClient,
