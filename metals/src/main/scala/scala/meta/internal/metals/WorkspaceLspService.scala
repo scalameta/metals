@@ -1023,6 +1023,12 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
+      case ServerCommands.InstallNotebookKernel(uri) =>
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .installNotebookKernel(uri)
+          .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
           _.switchBspServer().ignoreValue,

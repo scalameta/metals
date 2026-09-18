@@ -48,6 +48,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.notebook.NotebookKernelInstaller
 import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -232,6 +233,13 @@ abstract class MetalsLspService(
     () => compilers,
     buildTargets,
   )(using ec)
+
+  val notebookKernelInstaller = new NotebookKernelInstaller(
+    notebookProvider,
+    buildTargets,
+    languageClient,
+    () => javaHome,
+  )
 
   val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
@@ -938,6 +946,9 @@ abstract class MetalsLspService(
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
+
+  def installNotebookKernel(notebookUri: String): Future[Unit] =
+    notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
 
   override def didSave(
       params: DidSaveTextDocumentParams

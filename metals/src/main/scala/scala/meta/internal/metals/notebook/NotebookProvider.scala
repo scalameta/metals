@@ -176,9 +176,11 @@ final class NotebookProvider(
    * otherwise the highest-scored candidate across the workspace by
    * `BuildTargets.buildTargetsOrder` (same as `inferBuildTarget`). Recomputed
    * on every call rather than cached, so a build reload that adds, removes,
-   * or reorders targets is picked up automatically.
+   * or reorders targets is picked up automatically. Also consulted by
+   * `NotebookKernelInstaller` to know which classpath to install a kernel
+   * against.
    */
-  private def bestTarget(
+  def bestTarget(
       ipynbPath: AbsolutePath
   ): Option[b.BuildTargetIdentifier] =
     buildTargets
