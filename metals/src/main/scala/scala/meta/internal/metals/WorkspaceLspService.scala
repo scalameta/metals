@@ -1,104 +1,97 @@
 package scala.meta.internal.metals
 
+import ch.epfl.scala.bsp4j.{BuildTargetIdentifier, DebugSessionParams}
+import com.google.gson.{Gson, JsonPrimitive}
+import io.undertow.server.HttpServerExchange
+import org.eclipse.lsp4j
+import org.eclipse.lsp4j.{
+  CallHierarchyIncomingCall,
+  CallHierarchyIncomingCallsParams,
+  CallHierarchyItem,
+  CallHierarchyOutgoingCall,
+  CallHierarchyOutgoingCallsParams,
+  CallHierarchyPrepareParams,
+  CodeAction,
+  CodeActionParams,
+  CodeLens,
+  CodeLensParams,
+  CompletionItem,
+  CompletionList,
+  CompletionParams,
+  DidChangeConfigurationParams,
+  DidChangeNotebookDocumentParams,
+  DidChangeTextDocumentParams,
+  DidChangeWatchedFilesParams,
+  DidCloseNotebookDocumentParams,
+  DidCloseTextDocumentParams,
+  DidOpenNotebookDocumentParams,
+  DidOpenTextDocumentParams,
+  DidSaveNotebookDocumentParams,
+  DidSaveTextDocumentParams,
+  DocumentFormattingParams,
+  DocumentHighlight,
+  DocumentOnTypeFormattingParams,
+  DocumentRangeFormattingParams,
+  DocumentSymbol,
+  DocumentSymbolParams,
+  ExecuteCommandParams,
+  FoldingRange,
+  FoldingRangeRequestParams,
+  Hover,
+  Location,
+  ReferenceParams,
+  RenameFilesParams,
+  RenameParams,
+  SelectionRange,
+  SelectionRangeParams,
+  SemanticTokens,
+  SemanticTokensParams,
+  SignatureHelp,
+  SymbolInformation,
+  TextDocumentPositionParams,
+  TextEdit,
+  TypeHierarchyItem,
+  TypeHierarchyPrepareParams,
+  TypeHierarchySubtypesParams,
+  TypeHierarchySupertypesParams,
+  WorkspaceEdit,
+  WorkspaceSymbolParams,
+}
+import org.eclipse.lsp4j.jsonrpc.{messages, ResponseErrorException}
+
+import java.util as ju
 import java.net.URI
 import java.nio.file.ProviderMismatchException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
-import java.{util => ju}
-
-import scala.concurrent.Await
-import scala.concurrent.ExecutionContextExecutorService
-import scala.concurrent.Future
-import scala.concurrent.Promise
+import scala.concurrent.{
+  Await,
+  ExecutionContextExecutorService,
+  Future,
+  Promise,
+}
 import scala.concurrent.duration.Duration
-import scala.util.control.NonFatal
-
 import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.builds.NewProjectProvider
-import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.DidFocusResult
-import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.MetalsLspService
-import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.builds.{NewProjectProvider, ShellRunner}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.clients.language.{
+  ConfiguredLanguageClient,
+  MetalsLanguageClient,
+}
 import scala.meta.internal.metals.config.StatusBarState
-import scala.meta.internal.metals.debug.DebugProvider
-import scala.meta.internal.metals.debug.DiscoveryFailures
-import scala.meta.internal.metals.doctor.DoctorVisibilityDidChangeParams
-import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.debug.{DebugProvider, DiscoveryFailures}
+import scala.meta.internal.metals.doctor.{
+  DoctorVisibilityDidChangeParams,
+  HeadDoctor,
+}
 import scala.meta.internal.metals.findfiles.FindTextInDependencyJarsRequest
 import scala.meta.internal.metals.logging.LanguageClientLogger
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.pc
-import scala.meta.internal.tvp.MetalsTreeViewChildrenResult
-import scala.meta.internal.tvp.MetalsTreeViewProvider
-import scala.meta.internal.tvp.NoopTreeViewProvider
-import scala.meta.internal.tvp.TreeViewChildrenParams
-import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
-import scala.meta.internal.tvp.TreeViewNodeRevealResult
-import scala.meta.internal.tvp.TreeViewParentParams
-import scala.meta.internal.tvp.TreeViewParentResult
-import scala.meta.internal.tvp.TreeViewProvider
-import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
+import scala.meta.internal.tvp.*
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.lsp.ScalaLspService
-
-import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.bsp4j.DebugSessionParams
-import com.google.gson.Gson
-import com.google.gson.JsonPrimitive
-import io.undertow.server.HttpServerExchange
-import org.eclipse.lsp4j
-import org.eclipse.lsp4j.CallHierarchyIncomingCall
-import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
-import org.eclipse.lsp4j.CallHierarchyItem
-import org.eclipse.lsp4j.CallHierarchyOutgoingCall
-import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
-import org.eclipse.lsp4j.CallHierarchyPrepareParams
-import org.eclipse.lsp4j.CodeAction
-import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.lsp4j.CodeLens
-import org.eclipse.lsp4j.CodeLensParams
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionList
-import org.eclipse.lsp4j.CompletionParams
-import org.eclipse.lsp4j.DidChangeConfigurationParams
-import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams
-import org.eclipse.lsp4j.DidCloseTextDocumentParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
-import org.eclipse.lsp4j.DidSaveTextDocumentParams
-import org.eclipse.lsp4j.DocumentFormattingParams
-import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.DocumentSymbol
-import org.eclipse.lsp4j.DocumentSymbolParams
-import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeRequestParams
-import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.RenameFilesParams
-import org.eclipse.lsp4j.RenameParams
-import org.eclipse.lsp4j.SelectionRange
-import org.eclipse.lsp4j.SelectionRangeParams
-import org.eclipse.lsp4j.SemanticTokens
-import org.eclipse.lsp4j.SemanticTokensParams
-import org.eclipse.lsp4j.SignatureHelp
-import org.eclipse.lsp4j.SymbolInformation
-import org.eclipse.lsp4j.TextDocumentPositionParams
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.TypeHierarchyItem
-import org.eclipse.lsp4j.TypeHierarchyPrepareParams
-import org.eclipse.lsp4j.TypeHierarchySubtypesParams
-import org.eclipse.lsp4j.TypeHierarchySupertypesParams
-import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.WorkspaceSymbolParams
-import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
-import org.eclipse.lsp4j.jsonrpc.messages
+import scala.util.control.NonFatal
 
 class WorkspaceLspService(
     ec: ExecutionContextExecutorService,
@@ -109,7 +102,7 @@ class WorkspaceLspService(
     val folders: List[Folder],
     fallbackServicePath: => AbsolutePath,
 ) extends ScalaLspService {
-  import serverInputs._
+  import serverInputs.*
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
@@ -506,6 +499,20 @@ class WorkspaceLspService(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] =
     getServiceFor(params.getTextDocument().getUri()).didSave(params)
+
+  override def notebookDidOpen(params: DidOpenNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidOpen(params)
+
+  override def notebookDidChange(
+      params: DidChangeNotebookDocumentParams
+  ): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidChange(params)
+
+  override def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidSave(params)
+
+  override def notebookDidClose(params: DidCloseNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidClose(params)
 
   override def definition(
       position: TextDocumentPositionParams
@@ -1005,6 +1012,12 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
+      case ServerCommands.ChooseNotebookBuildTarget(uri) =>
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .chooseNotebookBuildTarget(uri)
+          .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
           _.switchBspServer().ignoreValue,
@@ -1382,6 +1395,20 @@ class WorkspaceLspService(
           new lsp4j.SaveOptions( /* includeText = */ false)
         )
         textDocumentSyncOptions.setOpenClose(true)
+
+        // Sync Scala cells of any notebook (see NotebookProvider), so we stop
+        // crashing on `vscode-notebook-cell:` uris and can give them basic
+        // language support (https://github.com/scalameta/metals-feature-requests/issues/236).
+        val notebookSelector = new lsp4j.NotebookSelector()
+        notebookSelector.setNotebook("*")
+        notebookSelector.setCells(
+          List(new lsp4j.NotebookSelectorCell("scala")).asJava
+        )
+        capabilities.setNotebookDocumentSync(
+          new lsp4j.NotebookDocumentSyncRegistrationOptions(
+            List(notebookSelector).asJava
+          )
+        )
 
         val scalaFilesPattern = new lsp4j.FileOperationPattern("**/*.scala")
         scalaFilesPattern.setMatches(lsp4j.FileOperationPatternKind.File)

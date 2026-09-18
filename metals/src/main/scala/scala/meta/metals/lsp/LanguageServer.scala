@@ -45,6 +45,7 @@ trait LanguageServer {
 
 trait ScalaLspService
     extends TextDocumentService
+    with NotebookDocumentService
     with WorkspaceService
     with MetalsService
     with WindowService

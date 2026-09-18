@@ -37,6 +37,22 @@ class DelegatingScalaService(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = underlying.didOpen(params)
 
+  override def notebookDidOpen(
+      params: DidOpenNotebookDocumentParams
+  ): Unit = underlying.notebookDidOpen(params)
+
+  override def notebookDidChange(
+      params: DidChangeNotebookDocumentParams
+  ): Unit = underlying.notebookDidChange(params)
+
+  override def notebookDidSave(
+      params: DidSaveNotebookDocumentParams
+  ): Unit = underlying.notebookDidSave(params)
+
+  override def notebookDidClose(
+      params: DidCloseNotebookDocumentParams
+  ): Unit = underlying.notebookDidClose(params)
+
   override def didFocus(
       params: AnyRef
   ): CompletableFuture[DidFocusResult.Value] = underlying.didFocus(params)
