@@ -30,6 +30,8 @@ object Directories {
     RelativePath(".bsp")
   def metalsSettings: RelativePath =
     RelativePath(".metals").resolve("settings.json")
+  def userConfig: RelativePath =
+    RelativePath(".metals").resolve("last-known-user-config.json")
   def rules: RelativePath =
     RelativePath(".metals").resolve("rules")
   def explainedDiagnostics: RelativePath =

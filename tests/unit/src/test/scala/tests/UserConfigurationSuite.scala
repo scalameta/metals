@@ -1,5 +1,6 @@
 package tests
 
+import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.Properties
 
@@ -495,5 +496,17 @@ class UserConfigurationSuite extends BaseSuite {
     """.stripMargin,
   ) { obtained =>
     assert(obtained.targetBuildTool == Some("sbt"))
+  }
+
+  test("persist-and-load-user-configuration") {
+    val folder = AbsolutePath(Files.createTempDirectory("metals-user-config"))
+    val config = UserConfiguration(
+      enableBestEffort = true,
+      customProjectRoot = Some("project"),
+    )
+    UserConfiguration.save(folder, config)
+    val loaded = UserConfiguration.load(folder, ClientConfiguration.default)
+    assertEquals(loaded.map(_.enableBestEffort), Some(true))
+    assertEquals(loaded.flatMap(_.customProjectRoot), Some("project"))
   }
 }

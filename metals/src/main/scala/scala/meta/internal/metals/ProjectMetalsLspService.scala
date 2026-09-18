@@ -743,7 +743,10 @@ class ProjectMetalsLspService(
       userConfig.customProjectRoot != old.customProjectRoot
     val slowConnect =
       if (
-        projectRootChanged || userConfig.enableBestEffort != old.enableBestEffort
+        projectRootChanged ||
+        // best effort is currently only supported by bloop
+        userConfig.enableBestEffort != old.enableBestEffort && bspSession
+          .exists(_.main.isBloop)
       ) {
         if (projectRootChanged) {
           tables.buildServers.reset()
