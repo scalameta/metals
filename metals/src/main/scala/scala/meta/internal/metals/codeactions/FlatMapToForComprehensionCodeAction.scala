@@ -3,12 +3,15 @@ package scala.meta.internal.metals.codeactions
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.Try
 
 import scala.meta.Case
 import scala.meta.Enumerator
+import scala.meta.Init
 import scala.meta.Lit
 import scala.meta.Name
 import scala.meta.Pat
+import scala.meta.Stat
 import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.Type
@@ -17,8 +20,6 @@ import scala.meta.XtensionSyntax
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.codeactions.CodeAction
-import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
@@ -138,14 +139,15 @@ class FlatMapToForComprehensionCodeAction(
    *  .filter(_ > 3)
    * }}}
    * <p>Now when the cursor is on `map`, we want to start the conversion
-   * on `filter`` instead, which is the parentMost or `outerMost` apply.
+   * on `filter` instead, which is the parentMost or `outerMost` apply.
+   *
    * @param currentTermApply the termApply on which the cursor is
    *                         when invoking the code action
    * @param lastValidTermApply the last inner [[Term.Apply]] from the previous
    *                           iteration which had one of the functions of
    *                           `map`, `flatMap`, `filter`, `filterNot`, or `withFilter`
    *                           in its [[Term.Select]]
-   * @return the `lastValidTermApply`` if the `currenTermApply` does not have
+   * @return the `lastValidTermApply` if the `currenTermApply` does not have
    *         an interesting function. Otherwise, the currentTermApply.
    */
   @tailrec
@@ -273,8 +275,150 @@ class FlatMapToForComprehensionCodeAction(
     else None
   }
 
+  private def replaceNameInTermWithNewName(
+      term: Term,
+      nameGenerator: MetalsNames,
+      nameToReplace: Name,
+  ): Option[(Pat, Term)] = {
+    def replaceName(
+        tree: Term,
+        newName: Term.Name,
+    ): Term = {
+      def handleCase(caseTree: Case) = caseTree match {
+        case Case(Pat.Var(Term.Name(patVarName)), _, _)
+            if patVarName == nameToReplace.value =>
+          caseTree // New scope, outer nameToReplace is unreachable
+        case Case(Pat.Typed(Pat.Var(Term.Name(patVarName)), _), _, _)
+            if patVarName == nameToReplace.value =>
+          caseTree // New scope, outer nameToReplace is unreachable
+        case Case(Pat.Extract(_, argClause), _, _)
+            if !argClause.forall(_.isInstanceOf[Pat.Var]) =>
+          throw new IllegalStateException("Too complex to handle")
+        case Case(Pat.Extract(_, argClause), _, _) if argClause.exists {
+              case Pat.Var(Term.Name(patVarName)) =>
+                patVarName == nameToReplace.value
+            } =>
+          caseTree // New scope, outer nameToReplace is unreachable
+        case Case(pat, perhapsGuard, body) =>
+          Case(
+            pat,
+            perhapsGuard.map(replaceName(_, newName)),
+            replaceName(body, newName),
+          )
+      }
+
+      tree match {
+        case apply @ Term.Apply(fun, args) =>
+          val newFun = replaceName(fun, newName)
+          val newArgs = args.map(replaceName(_, newName))
+          Term.Apply(newFun, Term.ArgClause(newArgs, apply.argClause.mod))
+
+        case apply @ Term.ApplyInfix(lhs, op, targs, args) =>
+          val newLHS = replaceName(lhs, newName)
+          val newArgs = args.map(replaceName(_, newName))
+          Term.ApplyInfix(
+            newLHS,
+            op,
+            Type.ArgClause(targs),
+            Term.ArgClause(newArgs, apply.argClause.mod),
+          )
+
+        case Term.Select(qual, name) =>
+          Term.Select(replaceName(qual, newName), name)
+
+        case Term.Block(stats) =>
+          Term.Block(stats.map {
+            case term: Term => replaceName(term, newName)
+            case _: Stat =>
+              throw new IllegalStateException("Too complex to handle")
+          })
+
+        case termFor @ Term.For(enums, yieldExpr) =>
+          val anyNameOverlaps = enums.exists {
+            case Enumerator.Assign(Pat.Var(Term.Name(name)), _) =>
+              name == nameToReplace.value
+            case _ => false
+          }
+          if (anyNameOverlaps)
+            termFor // New scope, outer nameToReplace is unreachable
+          else
+            Term.For(
+              enums.map {
+                case Enumerator.Val(pat, rhs) =>
+                  Enumerator.Val(pat, replaceName(rhs, newName))
+                case Enumerator.Guard(term) =>
+                  Enumerator.Guard(replaceName(term, newName))
+                case Enumerator.Generator(pat, rhs) =>
+                  Enumerator.Generator(pat, replaceName(rhs, newName))
+                case Enumerator.CaseGenerator(pat, rhs) =>
+                  Enumerator.CaseGenerator(pat, replaceName(rhs, newName))
+                case other => other
+              },
+              replaceName(yieldExpr, newName),
+            )
+
+        case Term.If(cond, thenTerm, elseTerm) =>
+          Term.If(
+            replaceName(cond, newName),
+            replaceName(thenTerm, newName),
+            replaceName(elseTerm, newName),
+          )
+
+        case Term.Assign(lhs @ Term.Name(_), rhs) =>
+          Term.Assign(
+            replaceName(lhs, newName),
+            replaceName(rhs, newName),
+          )
+
+        case Term.AnonymousFunction(term) =>
+          Term.AnonymousFunction(replaceName(term, newName))
+
+        case Term.PartialFunction(cases) =>
+          Term.PartialFunction(cases.map(handleCase))
+
+        case Term.Match(term, cases) =>
+          Term.Match(
+            replaceName(term, newName),
+            cases.map(handleCase),
+          )
+
+        case Term.Try(expr, catchClause, finallyClause) =>
+          Term.Try(
+            replaceName(expr, newName),
+            catchClause.map(handleCase),
+            finallyClause.map(replaceName(_, newName)),
+          )
+
+        case Term.Throw(term) =>
+          Term.Throw(replaceName(term, newName))
+
+        case Term.New(Init(tpe, name, termsNested)) =>
+          Term.New(
+            Init(tpe, name, termsNested.map(_.map(replaceName(_, newName))))
+          )
+
+        case Term.Interpolate(name, literals, terms) =>
+          Term.Interpolate(
+            name,
+            literals,
+            terms.map(replaceName(_, newName)),
+          )
+
+        case Term.Name(name) if nameToReplace.value == name =>
+          newName
+
+        case other => other
+      }
+    }
+
+    val newName = nameGenerator.createNewName()
+    Try(replaceName(term, Term.Name(newName)))
+      .map(newTerm => (Pat.Var(Term.Name(newName)), newTerm))
+      .toOption
+  }
+
   private def isSimple(pat: Pat): Boolean = { // this is to decide whether to
-    // put pat in the left side of an Enumerator
+    // put pat on the left side of an Enumerator
     pat match {
       case _: Pat.Extract | _: Pat.ExtractInfix | _: Pat.Interpolate | _: Lit |
           _: Term.Name | _: Pat.Typed | _: Pat.Var =>
@@ -286,6 +430,7 @@ class FlatMapToForComprehensionCodeAction(
     }
   }
 
+  @tailrec
   private def processPatAndNextQual(
       tree: Tree,
       nameGenerator: MetalsNames,
@@ -296,7 +441,12 @@ class FlatMapToForComprehensionCodeAction(
         val newName = nameGenerator.createNewName()
         Some(Pat.Var(Term.Name(newName)), term)
       case Term.Function(List(param), term) =>
-        Some(Pat.Var(Term.Name(param.name.value)), term)
+        if (nameGenerator.isNameEncountered(param.name.value)) {
+          replaceNameInTermWithNewName(term, nameGenerator, param.name)
+        } else {
+          nameGenerator.recordNameEncountered(param.name.value)
+          Some(Pat.Var(Term.Name(param.name.value)), term)
+        }
       case Term.AnonymousFunction(term) =>
         replacePlaceHolderInTermWithNewName(term, nameGenerator)
       case term: Term.Eta =>
@@ -314,10 +464,6 @@ class FlatMapToForComprehensionCodeAction(
           Pat.Var(Term.Name(newName)),
           Term.Apply(term, List(Term.Name(newName))),
         )
-        Some(
-          Pat.Var(Term.Name(newName)),
-          Term.Apply(term, List(Term.Name(newName))),
-        )
       case _ => None
     }
   }
@@ -329,14 +475,14 @@ class FlatMapToForComprehensionCodeAction(
    *
    * @param nameGenerator the stateful mutable name generator object for
    *                      creating a new Metals generated name in each call.
-   * @param perhapsLastName paramName from previous iteration
+   * @param perhapsLastPat pat from previous iteration
    *                        in `list.map(x => x + 1).flatMap(b => Some(b - 1))`,
-   *                        if we are now processing `map`, it would be `b``
+   * if we are now processing `map`, it would be `b`
    * @param shouldFlat is it map or flatMap
    * @param existingForElements list of enumerators obtained from previous iterations
    * @param maybeCurrentYieldTerm the yield term from previous iterations if they
-   *                              existed or `None``
-   * @param nextQual in `list.map(x => x + 1)`, it is `x + 1``
+   * existed or `None`
+   * @param nextQual in `list.map(x => x + 1)`, it is `x + 1`
    * @return (the list of deducted enumerators, maybe the deducted yield term)
    */
   private def obtainNextYieldAndElemsForMap(
@@ -358,7 +504,7 @@ class FlatMapToForComprehensionCodeAction(
                 nextQual,
               )
             } else
-              Enumerator.Val( // when it is map
+              Enumerator.Val( // when it is map,
                 // it is lastName = nextQual
                 lastPat,
                 nextQual,
@@ -565,7 +711,7 @@ class FlatMapToForComprehensionCodeAction(
    *    .filter(s => s > 7)
    * }}}
    * <p>if it had traversed `filter` in the previous iteration, the value of
-   * `perhapseLastName` would be `s` which would be passed as argument when
+   * `perhapsLastPat` would be `s` which would be passed as argument when
    * we are passing `map` as the termApply. Also, `s` itself would be the value
    * of the so far extracted `maybeCurrentYieldTerm`, because of `filter`.
    *
@@ -579,11 +725,10 @@ class FlatMapToForComprehensionCodeAction(
    * case `List(1, 2, 3)`, or it is to be paired with the qual extracted from the
    * next iteration, in case, there is a `map`/`flatMap` before it.
    *
-   * @param perhapsLastName the param name extracted from the termApply
-   *                        in the last iteration
-   * @param currentYieldTerm the so far extraxcted yield term from the previous iterations
-   * @param existingForElements
-   * @param termApply the termApply to be traveresed in this iteration
+   * @param perhapsLastPat      the pat extracted from the termApply in the last iteration
+   * @param currentYieldTerm    the so far extracted yield term from the previous iterations
+   * @param existingForElements Tail of already processed enumerators
+   * @param termApply           the termApply to be traversed in this iteration
    * @param nameGenerator a stateful mutable object which is used for creating
    *                      non-overlapping
    *                      names for the anonymous parameters/placeholders of
@@ -599,7 +744,7 @@ class FlatMapToForComprehensionCodeAction(
       termApply: Term.Apply,
       nameGenerator: MetalsNames,
   ): (List[Enumerator], Option[Term]) = {
-    val perhapsValueNameAndNextQual = termApply.args.headOption.flatMap {
+    def perhapsValueNameAndNextQual = termApply.args.headOption.flatMap {
       processPatAndNextQual(
         _,
         nameGenerator,
