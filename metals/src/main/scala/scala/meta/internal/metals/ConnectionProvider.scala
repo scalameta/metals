@@ -386,14 +386,15 @@ class ConnectionProvider(
               case ConnectToSession(session) =>
                 connectToSession(session)
               case CreateSession(shutdownBuildServer) =>
-                createSession(shutdownBuildServer)
+                createSession(shutdownBuildServer, request.cancelPromise)
               case GenerateBspConfigAndConnect(buildTool, shutdownServer) =>
                 generateBspConfigAndConnect(
                   buildTool,
                   shutdownServer,
+                  request.cancelPromise,
                 )
               case BloopInstallAndConnect(buildTool) =>
-                bloopInstallAndConnect(buildTool)
+                bloopInstallAndConnect(buildTool, request.cancelPromise)
             }
         result.future.onComplete { res =>
           res match {
@@ -401,7 +402,7 @@ class ConnectionProvider(
               request.promise.trySuccess(BuildChange.Cancelled)
             case _ => request.promise.tryComplete(res)
           }
-          currentRequest = None
+          synchronized { currentRequest = None }
           pollAndConnect()
         }
       }
@@ -550,7 +551,8 @@ class ConnectionProvider(
     }
 
     def createSession(
-        shutdownServer: Boolean
+        shutdownServer: Boolean,
+        cancelPromise: Promise[Unit],
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       def compileAllOpenFiles: BuildChange => Future[BuildChange] = {
         case change if !change.isFailed =>
@@ -569,29 +571,38 @@ class ConnectionProvider(
       isConnecting.set(true)
       (for {
         _ <- disconnect(shutdownServer)
-        maybeSession <- timerProvider
-          .timed(
-            "Connected to build server",
-            true,
-          ) {
-            // If chosen build tool was removed at any point we want to readd it
-            val buildToolOpt: Future[Option[BuildTool]] =
-              buildToolProvider.buildTool match {
-                case Some(value) =>
-                  Future.successful(Some(value))
-                case None =>
-                  buildToolProvider.supportedBuildTool().map(_.map(_.buildTool))
+        maybeSession <- {
+          val sessionF = timerProvider
+            .timed(
+              "Connected to build server",
+              true,
+            ) {
+              // If chosen build tool was removed at any point we want to readd it
+              val buildToolOpt: Future[Option[BuildTool]] =
+                buildToolProvider.buildTool match {
+                  case Some(value) =>
+                    Future.successful(Some(value))
+                  case None =>
+                    buildToolProvider
+                      .supportedBuildTool()
+                      .map(_.map(_.buildTool))
+                }
+              buildToolOpt.flatMap { toolOpt =>
+                bspConnector.connect(
+                  toolOpt,
+                  folder,
+                  () => userConfig,
+                  shellRunner,
+                )
               }
-            buildToolOpt.flatMap { toolOpt =>
-              bspConnector.connect(
-                toolOpt,
-                folder,
-                () => userConfig,
-                shellRunner,
-              )
             }
-          }
-          .withInterrupt
+          // make sure we shutdown even if connectToSession is never called
+          cancelPromise.future.foreach(_ =>
+            sessionF.foreach(_.foreach(_.shutdown()))
+          )
+          sessionF
+
+        }.withInterrupt
         result <- maybeSession match {
           case Some(session) =>
             val result = connectToSession(session)
@@ -633,6 +644,7 @@ class ConnectionProvider(
     private def generateBspConfigAndConnect(
         buildTool: BuildServerProvider,
         shutdownServer: Boolean,
+        cancelPromise: Promise[Unit],
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       tables.buildTool.chooseBuildTool(buildTool.executableName)
       maybeChooseServer(buildTool.buildServerName, alreadySelected = false)
@@ -649,7 +661,7 @@ class ConnectionProvider(
           .withInterrupt
         shouldConnect = handleGenerationStatus(buildTool, status)
         status <-
-          if (shouldConnect) createSession(false)
+          if (shouldConnect) createSession(false, cancelPromise)
           else Interruptable.successful(BuildChange.Failed)
       } yield status
     }
@@ -686,7 +698,8 @@ class ConnectionProvider(
     }
 
     private def bloopInstallAndConnect(
-        buildTool: BloopInstallProvider
+        buildTool: BloopInstallProvider,
+        cancelPromise: Promise[Unit],
     )(implicit cancelSwitch: CancelSwitch): Interruptable[BuildChange] = {
       val logsFile = buildToolProvider.folder.resolve(Directories.log)
       val logsPath = logsFile.toURI.toString
@@ -695,7 +708,8 @@ class ConnectionProvider(
       for {
         result <- bloopInstall.run(buildTool).withInterrupt
         change <- {
-          if (result.isInstalled) createSession(shutdownServer = false)
+          if (result.isInstalled)
+            createSession(shutdownServer = false, cancelPromise)
           else if (result.isFailed) {
             for {
               change <-
@@ -733,7 +747,7 @@ class ConnectionProvider(
                   // Connect nevertheless, many build import failures are caused
                   // by resolution errors in one weird module while other modules
                   // exported successfully.
-                  createSession(shutdownServer = false)
+                  createSession(shutdownServer = false, cancelPromise)
                 } else {
                   buildTool match {
                     case _: BuildServerProvider =>
