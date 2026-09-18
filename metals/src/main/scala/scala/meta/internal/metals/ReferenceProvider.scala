@@ -14,6 +14,8 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.Importee
+import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.SuperMethodProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
@@ -37,6 +39,7 @@ import com.google.common.hash.BloomFilter
 import com.google.common.hash.Funnels
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.TextDocumentPositionParams
 
 final class ReferenceProvider(
     workspace: AbsolutePath,
@@ -47,6 +50,7 @@ final class ReferenceProvider(
     buildTargets: BuildTargets,
     compilers: Compilers,
     scalaVersionSelector: ScalaVersionSelector,
+    implementationProvider: () => ImplementationProvider,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CompletionItemPriority {
@@ -176,6 +180,7 @@ final class ReferenceProvider(
       params: ReferenceParams,
       findRealRange: AdjustRange = noAdjustRange,
       includeSynthetics: Synthetic => Boolean = _ => true,
+      includeImplementations: Boolean = true,
   )(implicit report: ReportContext): Future[List[ReferencesResult]] = {
     val source = params.getTextDocument.getUri.toAbsolutePath
     val textDoc = semanticdbs().textDocument(source)
@@ -250,21 +255,53 @@ final class ReferenceProvider(
             }
           }
         }
+        val includeDeclaration = params.getContext().isIncludeDeclaration()
         val pcResult =
           pcReferences(
             source,
             results.flatMap(_.occurrence).map(_.symbol),
-            params.getContext().isIncludeDeclaration(),
+            includeDeclaration,
             findRealRange,
           )
 
+        val implementationRefs: Future[List[ReferencesResult]] =
+          if (includeImplementations) {
+            val hasMethodSymbol = results.exists(
+              _.occurrence.exists(_.symbol.desc.isMethod)
+            )
+            if (hasMethodSymbol) {
+              val textParams = new TextDocumentPositionParams(
+                params.getTextDocument(),
+                params.getPosition(),
+              )
+              implementationProvider().implementations(textParams).flatMap {
+                implLocs =>
+                  val implRefs = implLocs.map { implLoc =>
+                    val implParams =
+                      implLoc.toReferenceParams(includeDeclaration)
+                    references(
+                      implParams,
+                      findRealRange,
+                      includeSynthetics,
+                      includeImplementations = false,
+                    )
+                  }
+                  Future.sequence(implRefs).map(_.flatten)
+              }
+            } else {
+              Future.successful(Nil)
+            }
+          } else {
+            Future.successful(Nil)
+          }
+
         Future
-          .sequence(List(semanticdbResult, pcResult))
+          .sequence(List(semanticdbResult, pcResult, implementationRefs))
           .map(
             _.flatten
               .groupBy(_.symbol)
               .collect { case (symbol, refs) =>
-                ReferencesResult(symbol, refs.flatMap(_.locations))
+                ReferencesResult(symbol, refs.flatMap(_.locations).distinct)
               }
               .toList
           )
@@ -379,6 +416,12 @@ final class ReferenceProvider(
               alternatives.isContructorParam(info)
             }.toSet
 
+        val overriddenSymbols = definitionDoc.symbols
+          .find(_.symbol == symbol)
+          .map(SuperMethodProvider.getSuperMethodHierarchy)
+          .getOrElse(Nil)
+          .toSet
+
         val nonSyntheticSymbols = for {
           occ <- definitionDoc.occurrences
           if isCandidate(occ.symbol) || occ.symbol == symbol
@@ -397,11 +440,11 @@ final class ReferenceProvider(
         } yield info.symbol
 
         if (defPath.isJava)
-          isCandidate
+          isCandidate ++ overriddenSymbols
         else if (isSyntheticSymbol)
-          isCandidate ++ additionalAlternativesForSynthetic
+          isCandidate ++ additionalAlternativesForSynthetic ++ overriddenSymbols
         else
-          isCandidate
+          isCandidate ++ overriddenSymbols
       case None => Set.empty
     }
   }
