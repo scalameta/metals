@@ -214,19 +214,21 @@ final class TypeHierarchyProvider(
     mbtReferenceProvider match {
       case None => Future.successful(Nil)
       case Some(mbt) =>
-        mbt.implementations(
-          source,
-          params.getItem().getRange().getStart(),
-          createOutput = { (location, info) =>
-            itemBuilder.build(
-              symbol = info.symbol,
-              info = Some(info),
-              source = location.getUri.toAbsolutePath,
-              range = location.getRange,
-              selectionRange = location.getRange,
-            )
-          },
-        )
+        mbt
+          .implementations(
+            source,
+            params.getItem().getRange().getStart(),
+            createOutput = { (location, info) =>
+              itemBuilder.build(
+                symbol = info.symbol,
+                info = Some(info),
+                source = location.getUri.toAbsolutePath,
+                range = location.getRange,
+                selectionRange = location.getRange,
+              )
+            },
+          )
+          .map(_.results)
     }
 
   private def getItemInfo(data: Object): Option[TypeHierarchyItemInfo] =

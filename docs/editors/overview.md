@@ -354,6 +354,11 @@ projects.
 - References to overridden methods are not included in the results. For example,
   if you run "find references" on the method `Dog.name()` then it won't include
   references to the super method `Animal.name()`.
+- In MBT mode, find-references and implementations stop after a configurable
+  timeout (20 seconds by default, `mbt.references-timeout`). Partial matches are
+  returned and Metals reports that results are incomplete via the status bar and
+  `window/logMessage`. Nearby files are searched first. Rename is aborted if the
+  search times out so that incomplete edits are never applied.
 
 ## Worksheets
 

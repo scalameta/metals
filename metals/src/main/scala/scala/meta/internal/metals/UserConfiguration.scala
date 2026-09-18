@@ -373,6 +373,7 @@ case class UserConfiguration(
               "importGeneratedSources" -> mbtConfig.importGeneratedSources,
               "semanticdbCacheEnabled" -> mbtConfig.semanticdbCacheEnabled,
               "semanticdbCacheMaxSize" -> mbtConfig.semanticdbCacheMaxSize,
+              "referencesTimeout" -> mbtConfig.referencesTimeoutSeconds,
             ).asJava,
           )
         ),
@@ -966,6 +967,17 @@ object UserConfiguration {
            |A higher value uses more memory but can improve performance for large projects.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "mbt.references-timeout",
+        MbtConfig.defaultReferencesTimeoutSeconds.toString(),
+        "20",
+        "MBT Find References Timeout (seconds)",
+        """|Maximum time in seconds to search for references and implementations
+           |in MBT mode. When the timeout is reached, Metals returns the matches
+           |found so far and reports that the results are incomplete. Nearby files
+           |are searched first. Rename is aborted if the search times out.
+           |""".stripMargin,
+      ),
     )
 
   def listOptions: String =
@@ -1511,6 +1523,9 @@ object UserConfiguration {
       mbtSubKey
         .flatMap(getIntKeyOnObj("semanticdb-cache-max-size", _))
         .orElse(getIntKey("mbt-semanticdb-cache-max-size")),
+      mbtSubKey
+        .flatMap(getIntKeyOnObj("references-timeout", _))
+        .orElse(getIntKey("mbt-references-timeout")),
     )
 
     if (errors.isEmpty) {
