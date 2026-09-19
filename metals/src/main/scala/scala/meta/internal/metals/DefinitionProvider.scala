@@ -140,20 +140,38 @@ final class DefinitionProvider(
 
     val shouldUseOldOrder = isScala3 && !scala3DefinitionBugFixed
 
-    val strategies: List[() => Future[Option[DefinitionResult]]] =
+    // The precise strategies, in order; `fromFallback` (a heuristic search) is
+    // applied separately below because it must respect a stricter guard.
+    val coreStrategies: List[() => Future[Option[DefinitionResult]]] =
       if (shouldUseOldOrder)
-        List(fromSemanticDb, fromCompiler, fromScalaDoc, fromFallback)
-      else List(fromCompiler, fromSemanticDb, fromScalaDoc, fromFallback)
+        List(fromSemanticDb, fromCompiler, fromScalaDoc)
+      else List(fromCompiler, fromSemanticDb, fromScalaDoc)
 
     for {
-      result <- strategies.foldLeft(Future.successful(DefinitionResult.empty)) {
-        case (acc, next) =>
-          acc.flatMap {
-            case res if res.isEmpty && !res.symbol.endsWith("/") =>
-              next().map(_.getOrElse(res))
-            case res => Future.successful(res)
-          }
+      // A doc-comment position can resolve to the enclosing package (`a/`, no
+      // location); that must not stop `fromScalaDoc`, but a later empty result
+      // must not erase that package symbol either (it drives the fallback guard
+      // below) (scalameta/metals#3383).
+      core <- coreStrategies.foldLeft(
+        Future.successful(DefinitionResult.empty)
+      ) { case (acc, next) =>
+        acc.flatMap {
+          case res if res.isEmpty =>
+            next().map {
+              case Some(n)
+                  if n.isEmpty && n.symbol.isEmpty && res.symbol.nonEmpty =>
+                res
+              case other => other.getOrElse(res)
+            }
+          case res => Future.successful(res)
+        }
       }
+      // The heuristic fallback must not override a package-symbol result (a
+      // package-qualifier click carries no location) (scalameta/metals#3383).
+      result <-
+        if (core.isEmpty && !core.symbol.endsWith("/"))
+          fromFallback().map(_.getOrElse(core))
+        else Future.successful(core)
     } yield {
       reportBuilder
         .build(scalaVersionSelector)

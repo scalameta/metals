@@ -684,6 +684,161 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  // A relative link inside a backtick-escaped owner (`` class `my type` ``)
+  // resolves via its SemanticDB descriptor (scalameta/metals#3383).
+  test("scaladoc-definition-escaped-owner") {
+    val testCase =
+      """|package a
+         |class `my type` {
+         |  /** See [[fie@@ld]]. */
+         |  def m: Int = field
+         |  def field: Int = 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { } }
+           |/a/src/main/scala/a/Esc.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Esc.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Esc.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(
+        locations.nonEmpty,
+        "escaped-owner relative link did not resolve",
+      )
+      _ = assert(
+        locations.head.getUri().endsWith("/a/Esc.scala"),
+        locations.toString,
+      )
+      // `def field` is on line 4 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        4,
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // A package-object doc resolves relative links against its `package.`
+  // template (scalameta/metals#3383).
+  test("scaladoc-definition-package-object") {
+    val testCase =
+      """|package a
+         |package object q {
+         |  /** See [[hel@@per]]. */
+         |  def entry: Int = helper
+         |  def helper: Int = 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { } }
+           |/a/src/main/scala/a/q/package.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/q/package.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/q/package.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "package-object link did not resolve")
+      _ = assert(
+        locations.head.getUri().endsWith("/a/q/package.scala"),
+        locations.toString,
+      )
+      // `def helper` is on line 4 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        4,
+        locations.toString,
+      )
+    } yield ()
+  }
+
+  // Scala 3 binds an ambiguous `[[Name]]` first-in-source-order. NOTE: only
+  // the companion OBJECT resolves here, so this guards resolution, not the
+  // tie-break (scalameta/metals#3383).
+  test("scaladoc-definition-scala3-source-order") {
+    val testCase =
+      """|package a
+         |object Target { def x: Int = 1 }
+         |class Target
+         |object O {
+         |  /** See [[Tar@@get]]. */
+         |  def f: Int = 1
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "ambiguous companion link did not resolve")
+      // `object Target` is on line 1 (0-based); `class Target` on line 2.
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        1,
+        s"expected the source-first object Target (line 1), got $locations",
+      )
+    } yield ()
+  }
+
+  // A Scala 3 top-level member's doc resolves against the file's synthetic
+  // `<file>$package` object (scalameta/metals#3383).
+  test("scaladoc-definition-scala3-toplevel-member") {
+    val testCase =
+      """|package a
+         |/** See [[hel@@per]]. */
+         |def entry = 1
+         |def helper = 2
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{ "a": { "scalaVersion": "${V.scala3}" } }
+           |/a/src/main/scala/a/Main.scala
+           |${testCase.replace("@@", "")}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/a/Main.scala")
+      locations <- server.definition(
+        "a/src/main/scala/a/Main.scala",
+        testCase,
+        workspace,
+      )
+      _ = assert(locations.nonEmpty, "top-level [[helper]] did not resolve")
+      // `def helper` is on line 3 (0-based).
+      _ = assertEquals(
+        locations.head.getRange().getStart().getLine(),
+        3,
+        s"expected top-level def helper (line 3), got $locations",
+      )
+    } yield ()
+  }
+
   test("scaladoc-definition-this") {
     for {
       _ <- initialize(
