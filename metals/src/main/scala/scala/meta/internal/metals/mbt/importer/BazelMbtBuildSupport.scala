@@ -8,6 +8,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.MbtNamespace
+import scala.meta.io.RelativePath
 
 sealed abstract class BazelMbtNamespaceMode(val name: String)
 
@@ -32,7 +33,7 @@ object BazelMbtBuildSupport {
   def fromDiscovery(
       granularity: BazelMbtNamespaceMode,
       targetLabels: List[String],
-      srcsByTarget: Map[String, List[String]],
+      srcsByTarget: Map[String, List[RelativePath]],
       scalacOptionsByTarget: Map[String, List[String]],
       javacOptionsByTarget: Map[String, List[String]],
       directDepRules: Map[String, List[String]],
@@ -82,13 +83,26 @@ object BazelMbtBuildSupport {
           classDirectoriesByTarget,
           keys,
         )
-      val srcFilesByTarget = srcsByTarget.map { case (k, v) =>
-        k -> v.flatMap(BazelLabels.fileLabelToWorkspaceRelativePath)
+
+      def isExternalSource(p: RelativePath): Boolean = {
+        // This is a hack to get Bazel's external sources indexed as MBT's unchecked sources
+        p.toString().contains("external")
+      }
+
+      val externalSrcsByTarget = {
+        srcsByTarget.view
+          .mapValues(_.filter(isExternalSource))
+          .filter(_._2.nonEmpty)
+      }
+      val nonExternalSrcsByTarget = {
+        srcsByTarget.view
+          .mapValues(_.filterNot(isExternalSource))
+          .filter(_._2.nonEmpty)
       }
       val namespaces = new ju.LinkedHashMap[String, MbtNamespace]()
 
       if (granularity == BazelMbtNamespaceMode.BuildFile) {
-        val byBuildFile = mutable.Map.empty[String, mutable.Set[String]]
+        val byBuildFile = mutable.Map.empty[String, mutable.Set[RelativePath]]
         val scalacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
         val javacOptionsByBuildFile = mutable.Map.empty[String, List[String]]
         val genSrcOutputsByNamespaces =
@@ -96,7 +110,7 @@ object BazelMbtBuildSupport {
         for {
           t <- targetLabels
           p = keys(t)
-          f <- srcFilesByTarget.getOrElse(t, Nil)
+          f <- srcsByTarget.getOrElse(t, Nil)
         } {
           byBuildFile.getOrElseUpdate(p, mutable.Set.empty) += f
         }
@@ -138,10 +152,21 @@ object BazelMbtBuildSupport {
           ) += path
         }
         for ((namespace, files) <- byBuildFile) {
+          val generatedSources = genSrcOutputsByNamespaces
+            .getOrElse(namespace, mutable.Buffer.empty)
+            .toSeq
+          val externalSources = for {
+            t <- targetLabels
+            path <- externalSrcsByTarget.getOrElse(t, List.empty)
+          } yield path.toString()
+          val nonExternalSources = for {
+            t <- targetLabels
+            path <- nonExternalSrcsByTarget.getOrElse(t, List.empty)
+          } yield path
           putNamespace(
             namespaces,
             namespace,
-            files.toSet,
+            nonExternalSources.filter(files.contains).toSet,
             scalacOptionsByBuildFile.getOrElse(namespace, Nil),
             javacOptionsByBuildFile.getOrElse(namespace, Nil),
             dependsByNs.getOrElse(namespace, Set.empty),
@@ -149,15 +174,15 @@ object BazelMbtBuildSupport {
             runTargetsByNs.getOrElse(namespace, Set.empty),
             classDirectoriesByNs.getOrElse(namespace, Nil),
             scalaVersion,
-            genSrcOutputsByNamespaces
-              .getOrElse(namespace, mutable.Buffer.empty)
-              .toSeq,
+            generatedSources ++ externalSources,
           )
         }
       } else {
-        val allSrcs = srcFilesByTarget.values.flatten.toSet
+        val allSrcs = srcsByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
         val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
+        val allExternalSources =
+          externalSrcsByTarget.values.flatten.map(_.toString).toSeq
         putNamespace(
           namespaces,
           workspaceNamespaceName,
@@ -170,7 +195,7 @@ object BazelMbtBuildSupport {
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
           classDirectoriesByNs.getOrElse(workspaceNamespaceName, Nil),
           scalaVersion,
-          allGenSrcOutputs,
+          allGenSrcOutputs ++ allExternalSources,
         )
       }
       MbtBuild(
@@ -280,7 +305,7 @@ object BazelMbtBuildSupport {
   private def putNamespace(
       namespaces: ju.Map[String, MbtNamespace],
       name: String,
-      sources: Set[String],
+      sources: Set[RelativePath],
       scalacOptions: Seq[String],
       javacOptions: Seq[String],
       dependsOn: Set[String],
@@ -295,7 +320,7 @@ object BazelMbtBuildSupport {
     namespaces.put(
       name,
       new MbtNamespace(
-        sources = sources.toSeq.sorted.asJava,
+        sources = sources.map(_.toString).toSeq.sorted.asJava,
         scalacOptions = scalacOptions.distinct.asJava,
         javacOptions = javacOptions.distinct.asJava,
         dependencyModules = dependencyModuleIds.toSeq.sorted.asJava,
