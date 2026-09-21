@@ -187,9 +187,7 @@ class BazelMbtLspSuite
        |  "dependencyModules": [],
        |  "namespaces": {
        |    "//": {
-       |      "sources": [
-       |        "bazel-main-repo/external/+local_repository+app_sources/App.java"
-       |      ],
+       |      "sources": [],
        |      "scalacOptions": [],
        |      "javacOptions": [],
        |      "dependencyModules": [],
@@ -197,6 +195,9 @@ class BazelMbtLspSuite
        |      "classDirectories": ["<classDirectories-path>"],
        |      "configurations": [
        |        "//:app"
+       |      ],
+       |      "uncheckedSources": [
+       |        "bazel-main-repo/external/+local_repository+app_sources/App.java"
        |      ]
        |    }
        |  },

@@ -122,30 +122,32 @@ object GitVCS {
   ): ParArray[GitBlob] = {
     val result = ParArray.newBuilder[GitBlob]
     dirs.foreach { dir =>
-      if (Files.isDirectory(dir.toNIO)) {
-        Files.walkFileTree(
-          dir.toNIO,
-          new SimpleFileVisitor[Path] {
-            override def visitFile(
-                file: Path,
-                attrs: BasicFileAttributes,
-            ): FileVisitResult = {
-              val blob = new GitBlob(file.toString, Array.emptyByteArray)
-              if (attrs.isRegularFile && isRelevantPath(blob)) {
-                try {
-                  val oid = OID.fromBlob(Files.readAllBytes(file))
-                  blob.oidBytes = oid.getBytes(StandardCharsets.UTF_8)
-                  result += blob
-                } catch {
-                  case NonFatal(_) => // silently ignore unreadable files
-                }
-              }
-              FileVisitResult.CONTINUE
-            }
-          },
-        )
+      if (!Files.isDirectory(dir.toNIO)) {
+        scribe.warn(s"lsFilesFromDirs on non-dir: $dir")
       }
+      Files.walkFileTree(
+        dir.toNIO,
+        new SimpleFileVisitor[Path] {
+          override def visitFile(
+              file: Path,
+              attrs: BasicFileAttributes,
+          ): FileVisitResult = {
+            val blob = new GitBlob(file.toString, Array.emptyByteArray)
+            if (attrs.isRegularFile && isRelevantPath(blob)) {
+              try {
+                val oid = OID.fromBlob(Files.readAllBytes(file))
+                blob.oidBytes = oid.getBytes(StandardCharsets.UTF_8)
+                result += blob
+              } catch {
+                case NonFatal(_) => // silently ignore unreadable files
+              }
+            }
+            FileVisitResult.CONTINUE
+          }
+        },
+      )
     }
+
     result.result()
   }
 
