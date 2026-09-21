@@ -32,7 +32,7 @@ final class MbtProtobufReferenceProvider(
     userConfig: () => UserConfiguration,
 ) {
 
-  val timeout: FiniteDuration =
+  private def timeout: FiniteDuration =
     userConfig().mbtConfig.referencesTimeoutSeconds.seconds
 
   def implementations[T](
@@ -222,21 +222,21 @@ final class MbtProtobufReferenceProvider(
     var processedCandidates = 0
     val totalCandidates = candidates.size
 
-    for {
-      paths <- candidates.iterator.grouped(groupSize)
-      if !timer.hasElapsed(timeout)
-      doc <- indexDocuments(paths).documents
-    } {
-      visitDoc(doc)
-      processedCandidates += 1
-      taskProgress.update(
-        processedCandidates,
-        totalCandidates,
-        Some(s"Processing ${doc.uri.toString.split("/").last}"),
-      )
+    val remaining = candidates.iterator.grouped(groupSize)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val paths = remaining.next()
+      for (doc <- indexDocuments(paths).documents) {
+        visitDoc(doc)
+        processedCandidates += 1
+        taskProgress.update(
+          processedCandidates,
+          totalCandidates,
+          Some(s"Processing ${doc.uri.toString.split("/").last}"),
+        )
+      }
     }
 
-    val isIncomplete = timer.hasElapsed(timeout)
+    val isIncomplete = remaining.hasNext
     if (isIncomplete) {
       scribe.warn(
         s"proto implementations: timed out at $processedCandidates/$totalCandidates"
@@ -501,10 +501,9 @@ final class MbtProtobufReferenceProvider(
 
     processDoc(requestDoc)
 
-    for {
-      candidates <- candidatesList.iterator.grouped(groupSize)
-      if !timer.hasElapsed(timeout)
-    } {
+    val remaining = candidatesList.iterator.grouped(groupSize)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val candidates = remaining.next()
       val docTimer = new Timer(time)
       val docs = indexDocuments(candidates).documents
       scribe.info(
@@ -514,7 +513,7 @@ final class MbtProtobufReferenceProvider(
       processedCandidates += candidates.length
       taskProgress.update(processedCandidates, totalCandidates)
     }
-    val isIncomplete = timer.hasElapsed(timeout)
+    val isIncomplete = remaining.hasNext
     if (isIncomplete) {
       taskProgress.update(
         processedCandidates,

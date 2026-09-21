@@ -1688,7 +1688,15 @@ abstract class MetalsLspService(
       params: TypeHierarchySubtypesParams
   ): CompletableFuture[util.List[TypeHierarchyItem]] =
     CancelTokens.future { _ =>
-      typeHierarchyProvider.subtypes(params).map(_.asJava)
+      typeHierarchyProvider.subtypes(params).map { result =>
+        notifyIncompleteSearch(
+          result.isIncomplete,
+          result.processedCandidates,
+          result.totalCandidates,
+          "Subtypes",
+        )
+        result.results.asJava
+      }
     }
 
   override def completion(

@@ -225,6 +225,7 @@ class MbtReferenceProvider(
     val isVisitedURI = mutable.Set.empty[String]
     var processedCandidates = 0
     var totalCandidates = 0
+    var timedOut = false
 
     def visitDoc(doc: s.TextDocument): Boolean = {
       def overridesOrImplements(info: s.SymbolInformation): Boolean = {
@@ -288,26 +289,26 @@ class MbtReferenceProvider(
       var didMakeProgress = false
       processedCandidates = 0
       totalCandidates = candidates.size
-      for {
-        paths <- groupPathsForIndexing(candidates)
-        if !timer.hasElapsed(timeout)
-        doc <- cache.index(paths).documents
-      } {
-        val didVisit = visitDoc(doc)
-        didMakeProgress = didMakeProgress || didVisit
-        processedCandidates += 1
-        taskProgress.update(
-          processedCandidates,
-          totalCandidates,
-          Some(s"Processing ${doc.uri.toString.split("/").last}"),
-        )
+      val remaining = groupPathsForIndexing(candidates)
+      while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+        val paths = remaining.next()
+        for (doc <- cache.index(paths).documents) {
+          val didVisit = visitDoc(doc)
+          didMakeProgress = didMakeProgress || didVisit
+          processedCandidates += 1
+          taskProgress.update(
+            processedCandidates,
+            totalCandidates,
+            Some(s"Processing ${doc.uri.toString.split("/").last}"),
+          )
+        }
       }
-      if (timer.hasElapsed(timeout)) {
+      timedOut = remaining.hasNext
+      if (timedOut) {
         scribe.warn(
           s"Time out analyzing candidate files at $processedCandidates/${totalCandidates}."
         )
-      }
-      if (didMakeProgress) {
+      } else if (didMakeProgress) {
         loop(depth = depth + 1)
       }
     }
@@ -319,7 +320,7 @@ class MbtReferenceProvider(
       s"implementations: found ${result.size} implementation results in $timer"
     )
 
-    val isIncomplete = timer.hasElapsed(timeout)
+    val isIncomplete = timedOut
     (
       ImplementationsResult(
         result.toList,
@@ -620,10 +621,9 @@ class MbtReferenceProvider(
     processDoc(requestDoc)
 
     // Process external candidates with progress reporting
-    for {
-      candidates <- groupPathsForIndexing(candidatesList)
-      if !timer.hasElapsed(timeout)
-    } {
+    val remaining = groupPathsForIndexing(candidatesList)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val candidates = remaining.next()
       val docTimer = new Timer(time)
       val docs = cache.index(candidates).documents
       scribe.info(
@@ -633,7 +633,7 @@ class MbtReferenceProvider(
       processedCandidates += candidates.length
       taskProgress.update(processedCandidates, totalCandidates)
     }
-    val isIncomplete = timer.hasElapsed(timeout)
+    val isIncomplete = remaining.hasNext
     if (isIncomplete) {
       scribe.warn("references timed out, returning partial results")
       taskProgress.update(
