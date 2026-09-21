@@ -121,6 +121,7 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
+            |      "scalaVersion": "2.13.18",
             |      "javaHome": "<javaHome-path>",
             |      "classDirectories": [
             |        "build/classes/java/main",
@@ -140,6 +141,7 @@ class GradleMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
+            |      "scalaVersion": "2.13.18",
             |      "javaHome": "<javaHome-path>",
             |      "dependsOn": [
             |        "basic"
