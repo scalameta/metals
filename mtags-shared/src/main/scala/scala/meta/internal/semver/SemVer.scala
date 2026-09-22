@@ -14,7 +14,8 @@ object SemVer {
       patch: Int,
       releaseCandidate: Option[Int] = None,
       milestone: Option[Int] = None,
-      nightlyDate: Option[Int] = None
+      nightlyDate: Option[Int] = None,
+      isStable: Boolean = true
   ) extends Ordered[Version] {
     private def toList: List[Int] = {
       val rcMilestonePart =
@@ -50,6 +51,17 @@ object SemVer {
   }
 
   object Version {
+
+    /** Suggestion order: stable before pre-release, then newest first. */
+    val stableFirst: Ordering[Version] = new Ordering[Version] {
+      def compare(left: Version, right: Version): Int =
+        if (left.isStable != right.isStable) {
+          if (left.isStable) -1 else 1
+        } else {
+          right.compare(left)
+        }
+    }
+
     def fromString(version: String): Version = {
       val parts = version.split("\\.|-")
       val parsed = parts.take(3).map(p => Try(p.toInt).toOption)
@@ -78,12 +90,36 @@ object SemVer {
         if (parts.lift(7).contains("NIGHTLY"))
           parts.lift(5).flatMap(d => Try(d.toInt).toOption)
         else None
-      Version(major, minor, patch, rc, milestone, date)
+      Version(
+        major,
+        minor,
+        patch,
+        rc,
+        milestone,
+        date,
+        isStable = isStable(version)
+      )
     }
 
-  }
+    private def tryToInt(s: String): Int = Try(s.toInt).toOption.getOrElse(0)
 
-  private def tryToInt(s: String): Int = Try { s.toInt }.toOption.getOrElse(0)
+    private val preReleaseNames = Set(
+      "alpha", "beta", "cr", "dev", "m", "mf", "milestone", "nightly", "pre",
+      "preview", "rc", "snap", "snapshot"
+    )
+
+    private def isStable(version: String): Boolean = {
+      val suffix = version.dropWhile(char => char.isDigit || char == '.')
+      val qualifiers = suffix.split("[-._+]").filter(_.nonEmpty)
+      val isDevelopmentBuild =
+        qualifiers.headOption.exists(_.forall(_.isDigit))
+      val isPreRelease = qualifiers.exists { qualifier =>
+        val name = qualifier.toLowerCase.takeWhile(_.isLetter)
+        preReleaseNames.contains(name)
+      }
+      !isDevelopmentBuild && !isPreRelease
+    }
+  }
 
   def isCompatibleVersion(minimumVersion: String, version: String): Boolean = {
     Version.fromString(version) >= Version.fromString(minimumVersion)

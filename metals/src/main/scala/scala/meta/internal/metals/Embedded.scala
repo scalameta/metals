@@ -493,11 +493,11 @@ object Embedded {
 
     val scalafixVersion = properties.getProperty("scalafixVersion");
     val scalaVersion = Version.fromString(requestedScalaVersion) match {
-      case Version(2, minor, _, _, _, _) =>
+      case Version(2, minor, _, _, _, _, _) =>
         properties.getProperty(s"scala2$minor")
-      case Version(3, minor, _, _, _, _) if minor <= 3 =>
+      case Version(3, minor, _, _, _, _, _) if minor <= 3 =>
         properties.getProperty(s"scala33")
-      case Version(3, minor, _, _, _, _) =>
+      case Version(3, minor, _, _, _, _, _) =>
         Option(properties.getProperty(s"scala3$minor"))
           .getOrElse(properties.getProperty("scala3Next"))
       case _ =>

@@ -285,3 +285,4 @@ MCP support was introduced in Metals v1.5.3 and has been continuously improved:
 - **v1.6.9**: `glob-search` and `typed-glob-search` search every module instead
   of the one owning the file in focus, dropped their `fileInFocus` parameter and
   capped their results
+- **v1.6.10**: `find-dep` no longer suggests a pre-release as the latest version

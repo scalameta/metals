@@ -4,9 +4,24 @@ object McpMessages {
 
   object FindDep {
 
-    def versionMessage(completed: Option[String]): String = {
-      s"""|Latest version found: ${completed.getOrElse("none")}
-          |""".stripMargin
+    private val MaxDisplayedPreReleases = 3
+
+    def versionMessage(
+        latestStable: Option[String],
+        preReleases: Seq[String] = Nil,
+    ): String = {
+      val stableLine = latestStable.fold("No stable version found")(version =>
+        s"Latest stable version found: $version"
+      )
+      val preReleaseLine =
+        if (preReleases.isEmpty) ""
+        else {
+          val displayed = preReleases.take(MaxDisplayedPreReleases)
+          val truncated =
+            if (preReleases.size > MaxDisplayedPreReleases) ", [...]" else ""
+          s"\nDevelopment/pre-release matches: ${displayed.mkString(", ")}$truncated"
+        }
+      s"$stableLine$preReleaseLine\n"
     }
 
     def dependencyReturnMessage(
