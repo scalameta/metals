@@ -252,7 +252,9 @@ final class RenameProvider(
             for {
               refs <- currentReferences
               companion <- companionRefs
-              joined = (refs ++ companion).reduce(_ ++ _)
+              joined = (refs ++ companion)
+                .reduceOption(_ ++ _)
+                .getOrElse(ReferencesResult.empty)
             } yield joined
               .copy(locations = joined.locations ++ definitionLocation)
           }
@@ -260,8 +262,9 @@ final class RenameProvider(
           .sequence(allReferences)
           .map { results =>
             val flatResult =
-              if (results.nonEmpty) results.reduce(_ ++ _)
-              else ReferencesResult.empty
+              results
+                .reduceOption(_ ++ _)
+                .getOrElse(ReferencesResult.empty)
             (flatResult, symbolOccurrence, definition, newName)
           }
       }
