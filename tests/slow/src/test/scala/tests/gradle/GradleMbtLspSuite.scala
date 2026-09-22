@@ -115,7 +115,12 @@ class GradleMbtLspSuite
             |        "src/main/scala"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.scala-lang:scala-library:2.13.18",
             |        "org.typelevel:cats-core_2.13:2.13.0",
@@ -135,7 +140,12 @@ class GradleMbtLspSuite
             |        "src/test/scala"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.scala-lang:scala-library:2.13.18",
             |        "org.typelevel:cats-core_2.13:2.13.0",
@@ -370,7 +380,12 @@ class GradleMbtLspSuite
             |        "src/main/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
@@ -383,7 +398,12 @@ class GradleMbtLspSuite
             |        "src/test/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
@@ -522,7 +542,12 @@ class GradleMbtLspSuite
             |        "src/main/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
@@ -538,7 +563,12 @@ class GradleMbtLspSuite
             |        "src/test/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
@@ -555,7 +585,12 @@ class GradleMbtLspSuite
             |        "plugin-lib/src/main/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "org.jsoup:jsoup:1.21.1"
             |      ],
@@ -568,7 +603,12 @@ class GradleMbtLspSuite
             |        "plugin-lib/src/test/java"
             |      ],
             |      "scalacOptions": [],
-            |      "javacOptions": [],
+            |      "javacOptions": [
+            |        "-source",
+            |        "17",
+            |        "-target",
+            |        "17"
+            |      ],
             |      "dependencyModules": [
             |        "junit:junit:4.13.2",
             |        "org.hamcrest:hamcrest-core:1.3",

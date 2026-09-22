@@ -246,14 +246,21 @@ object GradleInfoExtractor {
           |    if (task == null || !task.hasProperty('options')) return []
           |    def options = task.options
           |    def opts = []
+          |    def release = null
           |    if (options.hasProperty('release')) {
-          |      def release = unwrap(options.release)
+          |      release = unwrap(options.release)
           |      if (release != null) {
           |        opts.add('--release')
           |        opts.add(release.toString())
           |      }
           |    }
-          |    opts.addAll(asStringList(options.compilerArgs))
+          |    if (release == null) {
+          |      opts.add('-source')
+          |      opts.add(task.sourceCompatibility.toString())
+          |      opts.add('-target')
+          |      opts.add(task.targetCompatibility.toString())
+          |    }
+          |    opts.addAll(asStringList(options.allCompilerArgs))
           |    return opts
           |  }
           |  def result = [:]
