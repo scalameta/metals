@@ -8,7 +8,15 @@ case class ReferencesResult(
     isIncomplete: Boolean = false,
     processedCandidates: Int = 0,
     totalCandidates: Int = 0,
-)
+) {
+  def ++(other: ReferencesResult): ReferencesResult = ReferencesResult(
+    symbol,
+    locations ++ other.locations,
+    isIncomplete || other.isIncomplete,
+    processedCandidates + other.processedCandidates,
+    totalCandidates + other.totalCandidates,
+  )
+}
 
 object ReferencesResult {
   def empty: ReferencesResult = ReferencesResult("", Nil)

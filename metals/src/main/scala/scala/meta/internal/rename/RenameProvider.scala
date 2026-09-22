@@ -245,52 +245,47 @@ final class RenameProvider(
               newName,
             )
           } yield {
-            for {
-              refs <- currentReferences
-              companion <- companionRefs
-            } yield refs ++ companion
-          }
-        Future
-          .sequence(allReferences)
-          .map { results =>
             val definitionLocation =
               definition.locations.asScala
                 .filter(_.getUri().isScalaOrJavaFilename)
                 .map(findDefinitionRage)
-            val flatResults = results.flatten
-            (
-              /* all locations */ flatResults.flatMap(
-                _.locations
-              ) ++ definitionLocation.toSeq,
-              /* incomplete result */ flatResults.find(_.isIncomplete),
-              symbolOccurrence,
-              definition,
-              newName,
-            )
+            for {
+              refs <- currentReferences
+              companion <- companionRefs
+              joined = (refs ++ companion).reduce(_ ++ _)
+            } yield joined
+              .copy(locations = joined.locations ++ definitionLocation)
+          }
+        Future
+          .sequence(allReferences)
+          .map { results =>
+            val flatResult =
+              if (results.nonEmpty) results.reduce(_ ++ _)
+              else ReferencesResult.empty
+            (flatResult, symbolOccurrence, definition, newName)
           }
       }
       .map {
         case (
-              _,
-              Some(incomplete),
-              _,
+              result,
               _,
               _,
-            ) =>
+              _,
+            ) if result.isIncomplete =>
           client.showMessage(
             Messages.ReferencesTimedOut.renameAborted(
-              incomplete.processedCandidates,
-              incomplete.totalCandidates,
+              result.processedCandidates,
+              result.totalCandidates,
             )
           )
           new WorkspaceEdit()
-        case (allReferences, None, symbolOccurrence, definition, newName) =>
+        case (result, symbolOccurrence, definition, newName) =>
           def isOccurrence(fn: String => Boolean): Boolean = {
             symbolOccurrence.exists { occ =>
               fn(occ.symbol)
             }
           }
-
+          val allReferences = result.locations
           // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
           val fallbackOccurences =
             if (allReferences.isEmpty)
