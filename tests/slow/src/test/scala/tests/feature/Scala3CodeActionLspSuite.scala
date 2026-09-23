@@ -390,6 +390,7 @@ class Scala3CodeActionLspSuite
        |given <<Foo>> with {}
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
+        |Add missing methods
         |""".stripMargin,
     """|package a
        |
@@ -698,6 +699,7 @@ class Scala3CodeActionLspSuite
        |object <<X>> extends Hello
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
+        |Add missing methods
         |${ExtractRenameMember.title("object", "X")}
         |""".stripMargin,
     """|package a
@@ -725,6 +727,7 @@ class Scala3CodeActionLspSuite
        |object <<X>> extends Hello
        |""".stripMargin,
     s"""|${ImplementAbstractMembers.title}
+        |Add missing methods
         |${ExtractRenameMember.title("object", "X")}
         |""".stripMargin,
     """|package a
