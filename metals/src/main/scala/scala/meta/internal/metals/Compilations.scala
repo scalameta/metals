@@ -29,6 +29,7 @@ final class Compilations(
     buildtargetInFocus: () => Option[b.BuildTargetIdentifier],
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
+    onCompileRequestFinished: (String, Seq[b.BuildTargetIdentifier]) => Unit,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     fileChanges: FileChanges,
@@ -270,6 +271,9 @@ final class Compilations(
 
     val result = compilation.asScala
       .andThen { case result =>
+        // any outcome, including failure and cancellation, ends this request's
+        // "Compiling" progress (scalameta/metals#3464)
+        onCompileRequestFinished(originId, targets)
         updateCompiledTargetState(result)
         afterSuccessfulCompilation()
 

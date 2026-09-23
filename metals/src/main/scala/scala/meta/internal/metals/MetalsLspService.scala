@@ -232,6 +232,8 @@ abstract class MetalsLspService(
     () => Option(focusedDocumentBuildTarget.get()),
     worksheets => onWorksheetChanged(worksheets),
     onStartCompilation,
+    (originId, targets) =>
+      buildClient.onCompileRequestFinished(originId, targets),
     () => userConfig,
     downstreamTargets,
     fileChanges,
@@ -1542,6 +1544,7 @@ abstract class MetalsLspService(
       bspErrorHandler,
       workDoneProgress,
       moduleStatus,
+      cancelCompilations = () => compilations.cancel(),
     )
 
   protected val buildTargetClassesFinder: BuildTargetClassesFinder =

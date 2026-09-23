@@ -58,6 +58,7 @@ final class ForwardingMetalsBuildClient(
     bspErrorHandler: BspErrorHandler,
     workDoneProgress: WorkDoneProgress,
     moduleStatus: ModuleStatus,
+    cancelCompilations: () => Unit,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -72,6 +73,7 @@ final class ForwardingMetalsBuildClient(
   private class Compilation(
       val timer: Timer,
       token: Future[WorkDoneProgress.Token],
+      val originId: Option[String],
       taskProgress: TaskProgress = TaskProgress.empty,
   ) {
 
@@ -124,6 +126,33 @@ final class ForwardingMetalsBuildClient(
     } {
       compilation.end()
     }
+  }
+
+  /**
+   * Ends the "Compiling" progress a finished compile request left behind. A
+   * well-behaved server sends `build/taskFinish` before it responds, so this
+   * only ends progress whose `build/taskFinish` was dropped
+   * (scalameta/metals#3464). Progress is matched by `originId`, or, when the
+   * server didn't send one, by the requested targets and their dependencies.
+   */
+  def onCompileRequestFinished(
+      originId: String,
+      targets: Seq[b.BuildTargetIdentifier],
+  ): Unit = {
+    val requestedTargets =
+      buildTargets.buildTargetTransitiveDependencies(targets.toList).toSet
+    for {
+      (target, compilation) <- compilations.readOnlySnapshot()
+      if compilation.originId.contains(originId) ||
+        (compilation.originId.isEmpty && requestedTargets(target))
+      // skip a compilation that a new `build/taskStart` has already replaced
+      if compilations.remove(target, compilation)
+    } compilation.end()
+  }
+
+  private def cancelCompilation(target: b.BuildTargetIdentifier): Unit = {
+    compilations.remove(target).foreach(_.end())
+    cancelCompilations()
   }
 
   def onBuildShowMessage(params: l.MessageParams): Unit =
@@ -188,9 +217,13 @@ final class ForwardingMetalsBuildClient(
             workDoneProgress.startProgress(
               s"Compiling $name",
               withProgress = true,
+              // lets the user end a progress that nothing else ends, e.g. when
+              // the server never sends `build/taskFinish` (scalameta/metals#3464)
+              onCancel = Some(() => cancelCompilation(target)),
             )
-          val compilation = new Compilation(new Timer(time), token)
-          compilations(task.getTarget) = compilation
+          val compilation =
+            new Compilation(new Timer(time), token, Option(params.getOriginId))
+          compilations(target) = compilation
         }
       case _ =>
     }
@@ -202,8 +235,10 @@ final class ForwardingMetalsBuildClient(
       case b.TaskFinishDataKind.COMPILE_REPORT =>
         for {
           report <- params.asCompileReport
-          compilation <- compilations.remove(report.getTarget)
         } {
+          // the progress may already be ended, e.g. by the user or when its
+          // compile request finished, but the report still has to be processed
+          val compilation = compilations.remove(report.getTarget)
           diagnostics.onFinishCompileBuildTarget(
             report,
             params.getStatus(),
@@ -217,7 +252,7 @@ final class ForwardingMetalsBuildClient(
               scribe.error(s"failed to process compile report", e)
           }
           val target = report.getTarget
-          compilation.end()
+          compilation.foreach(_.end())
           val name = buildTargets.info(report.getTarget) match {
             case Some(i) => i.getDisplayName
             case None => report.getTarget.getUri
@@ -226,13 +261,16 @@ final class ForwardingMetalsBuildClient(
           val icon =
             if (isSuccess) clientConfig.icons().check
             else clientConfig.icons().alert
-          val message = s"${icon}Compiled $name (${compilation.timer})"
-          if (report.getNoOp())
-            scribe.debug(
-              s"time: noop compilation of $name in ${compilation.timer}"
-            )
-          else
-            scribe.info(s"time: compiled $name in ${compilation.timer}")
+          val timeTaken = compilation.map(c => s" (${c.timer})").getOrElse("")
+          val message = s"${icon}Compiled $name$timeTaken"
+          compilation.foreach { compilation =>
+            if (report.getNoOp())
+              scribe.debug(
+                s"time: noop compilation of $name in ${compilation.timer}"
+              )
+            else
+              scribe.info(s"time: compiled $name in ${compilation.timer}")
+          }
           if (isSuccess) {
             if (hasReportedError.contains(target)) {
               // Only report success compilation if it fixes a previous compile error.
