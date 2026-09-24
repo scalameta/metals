@@ -54,7 +54,6 @@ final class NotebookProvider(
     // cells skip that normal flow entirely (MetalsLspService.didOpen/didChange
     // are no-ops for `vscode-notebook-cell:` uris), we have to feed it
     // ourselves or those features see a cell that was "never opened".
-    trees: () => Trees,
     parseTrees: AbsolutePath => Future[Unit],
     // Mirrors `parseTrees` above: notebook cells skip `MetalsLspService`'s
     // normal `textDocument/didClose` handling, so `forgetNotebook` has to
