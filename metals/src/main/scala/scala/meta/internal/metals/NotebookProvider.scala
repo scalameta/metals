@@ -11,9 +11,6 @@ import scala.util.control.NonFatal
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
-import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
-import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.Diagnostic
@@ -22,7 +19,6 @@ import org.eclipse.lsp4j.DidCloseNotebookDocumentParams
 import org.eclipse.lsp4j.DidOpenNotebookDocumentParams
 import org.eclipse.lsp4j.DidSaveNotebookDocumentParams
 import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.NotebookCell
 import org.eclipse.lsp4j.NotebookCellKind
 import org.eclipse.lsp4j.NotebookDocumentChangeEventCellStructure
 import org.eclipse.lsp4j.Position
@@ -34,19 +30,19 @@ import scala.util.chaining.scalaUtilChainingOps
 /**
  * Gives Scala notebook cells (`vscode-notebook-cell:` documents, see
  * https://github.com/scalameta/metals-feature-requests/issues/236) cross-cell
- * language support without running any code: [[combinedAdjustments]]
- * concatenates a notebook's cells into one virtual script so a cell can see
- * imports/vals from earlier ones, and [[triggerDiagnostics]] typechecks that
- * concatenation and fans the resulting diagnostics back out per cell.
+ * language support: [[combinedAdjustments]] concatenates a notebook's cells
+ * into one virtual script so a cell can see imports/vals from earlier ones,
+ * and [[triggerDiagnostics]] typechecks that concatenation and fans the
+ * resulting diagnostics back out per cell. Once a notebook is associated
+ * with a build target (see [[tryAutoAssociate]]), its cells see that
+ * target's real classpath instead of just the standard library.
  *
  * Each cell gets a synthetic, never-written-to-disk `.sc` path (see
  * [[NotebookProvider.cellPath]]) that is a pure function of its uri, so
  * `toAbsolutePath` can resolve it with no registry lookup.
  *
- * Deliberately out of scope: executing cells, and any project/build-target
- * classpath inside a cell (same non-goals as the design doc at
- * https://github.com/scalameta/metals/issues/4434) — cells only see the
- * standard library, exactly like any other standalone scratch `.sc` file.
+ * Deliberately out of scope: executing cells (same non-goal as the design
+ * doc at https://github.com/scalameta/metals/issues/4434).
  */
 final class NotebookProvider(
     buffers: Buffers,
@@ -60,6 +56,11 @@ final class NotebookProvider(
     // ourselves or those features see a cell that was "never opened".
     trees: () => Trees,
     parseTrees: AbsolutePath => Future[Unit],
+    // Mirrors `parseTrees` above: notebook cells skip `MetalsLspService`'s
+    // normal `textDocument/didClose` handling, so `forgetNotebook` has to
+    // close each cell's parser/compiler state itself or it leaks for the
+    // rest of the server's lifetime.
+    didCloseTrees: AbsolutePath => Unit,
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
   import NotebookProvider.*
@@ -75,10 +76,9 @@ final class NotebookProvider(
   // any cell's content or the cell list itself changes.
   private val combinedCache =
     TrieMap.empty[AbsolutePath, CombinedScript]
-  // real `.ipynb` path -> the build target its cells should resolve against,
-  // if the user has associated one (absent until they pick one, or if the
-  // notebook has never been opened while the workspace had exactly one
-  // build target to auto-associate with).
+  // real `.ipynb` path -> the build target its cells should resolve against.
+  // Absent until [[tryAutoAssociate]] finds a candidate, which can be never,
+  // if the workspace has no build targets at all.
   private val associatedTarget =
     TrieMap.empty[AbsolutePath, b.BuildTargetIdentifier]
   // real `.ipynb` path -> the `TargetData` currently registered into
@@ -88,45 +88,54 @@ final class NotebookProvider(
   // this wholesale rather than mutating it in place.
   private val registeredData = TrieMap.empty[AbsolutePath, TargetData]
 
-  def didOpen(params: DidOpenNotebookDocumentParams): Unit = {
-    val ipynbPath = params.getNotebookDocument.getUri.toAbsolutePath
-    val languageById =
-      params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getLanguageId)
-    val order = params.getNotebookDocument.getCells.asScala.iterator
-      .filter(cell => cell.getKind == NotebookCellKind.Code)
-      .filter(cell => languageById.get(cell.getDocument) contains "scala")
-      .map(_.getDocument)
-      .toVector
-    val initialText =
-      params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getText)
-    registerCells(ipynbPath, order, initialText)
-    if (!associatedTarget.contains(ipynbPath)) {
-      buildTargets.allBuildTargetIds match {
-        case Seq(only) => associate(ipynbPath, Some(only))
-        case _ => // ambiguous or none; leave unassociated until the user picks
-      }
+  // `toAbsolutePathSafe` (rather than `toAbsolutePath`) throughout this
+  // class's entry points: a client can in principle send a notebook uri
+  // Metals can't turn into a real path (e.g. `untitled:`), and that should
+  // drop the notification rather than blow up the request that carries it.
+  def didOpen(params: DidOpenNotebookDocumentParams): Unit =
+    for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe) {
+      val languageById =
+        params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getLanguageId)
+      // The full cell order, any kind/language: `applyStructureChange`'s
+      // `arrayChange.getStart`/`getDeleteCount` index into *this* array, so
+      // it has to mirror the client's array shape exactly, not just the
+      // Scala cells we otherwise care about.
+      val order = params.getNotebookDocument.getCells.asScala.iterator
+        .map(_.getDocument)
+        .toVector
+      val scalaUris = params.getNotebookDocument.getCells.asScala.iterator
+        .filter(cell => cell.getKind == NotebookCellKind.Code)
+        .map(_.getDocument)
+        .filter(uri => languageById.get(uri) contains "scala")
+        .toSet
+      val initialText =
+        params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getText)
+      registerCells(ipynbPath, order, scalaUris, initialText)
+      tryAutoAssociate(ipynbPath)
+      triggerDiagnostics(ipynbPath)
     }
-    triggerDiagnostics(ipynbPath)
-  }
 
-  def didChange(params: DidChangeNotebookDocumentParams): Unit = {
-    val ipynbPath = params.getNotebookDocument.getUri.toAbsolutePath
-    val cellsChange = Option(params.getChange).flatMap(c => Option(c.getCells))
+  def didChange(params: DidChangeNotebookDocumentParams): Unit =
+    for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe) {
+      val cellsChange =
+        Option(params.getChange).flatMap(c => Option(c.getCells))
 
-    for {
-      cellsChange <- cellsChange
-      structure <- Option(cellsChange.getStructure)
-    } applyStructureChange(ipynbPath, structure)
+      for {
+        cellsChange <- cellsChange
+        structure <- Option(cellsChange.getStructure)
+      } applyStructureChange(ipynbPath, structure)
 
-    for {
-      cellsChange <- cellsChange
-      textContents <- Option(cellsChange.getTextContent)
-      textContent <- textContents.asScala
-    } {
-      val path = uriToPath(textContent.getDocument.getUri)
-      // The selector on `notebookDocument/didChange`'s registration isn't a
-      // runtime guard: a change can still arrive for an unregistered cell.
-      if (cells.contains(path)) {
+      for {
+        cellsChange <- cellsChange
+        textContents <- Option(cellsChange.getTextContent)
+        textContent <- textContents.asScala
+        path = uriToPath(textContent.getDocument.getUri)
+        // The selector isn't a runtime guard: a client can send a text
+        // change for a cell that isn't (or isn't yet) one of our registered
+        // Scala cells, e.g. a markdown cell. Ignore it rather than feeding a
+        // cell `computeCombined` never reads into `buffers`/`parseTrees`.
+        if cells.contains(path)
+      } {
         val current = buffers.get(path).getOrElse("")
         val updated = textContent.getChanges.asScala.foldLeft(current) {
           (text, change) =>
@@ -143,85 +152,16 @@ final class NotebookProvider(
         parseTrees(path)
         combinedCache.remove(ipynbPath)
       }
+
+      triggerDiagnostics(ipynbPath)
     }
 
-    triggerDiagnostics(ipynbPath)
-  }
-
-  def didClose(params: DidCloseNotebookDocumentParams): Unit = {
-    val ipynbPath = params.getNotebookDocument.getUri.toAbsolutePath
-    forgetNotebook(ipynbPath)
-  }
+  def didClose(params: DidCloseNotebookDocumentParams): Unit =
+    for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe)
+      forgetNotebook(ipynbPath)
 
   def didSave(@annotation.unused params: DidSaveNotebookDocumentParams): Unit =
     ()
-
-  /**
-   * Associates `ipynbPath` with one of the workspace's build targets, so its
-   * cells' presentation-compiler features see that target's real dependency
-   * classpath instead of just the standard library. Auto-picks if there's
-   * exactly one candidate, does nothing if there are none, otherwise asks
-   * the user via `metals/quickPick` — mirrors
-   * `DebugDiscovery.requestMain`'s auto-pick/quickpick split.
-   */
-  def chooseAndSetBuildTarget(
-      ipynbPath: AbsolutePath
-  ): Future[Option[b.BuildTargetIdentifier]] =
-    buildTargets.allBuildTargetIds match {
-      case Seq(only) =>
-        setBuildTarget(ipynbPath, Some(only))
-        Future.successful(Some(only))
-      case Seq() =>
-        Future.successful(None)
-      case many =>
-        val items = many.map { id =>
-          new MetalsQuickPickItem(
-            id.getUri,
-            buildTargets.info(id).map(_.getDisplayName).getOrElse(id.getUri),
-          )
-        }
-        languageClient
-          .metalsQuickPick(
-            new MetalsQuickPickParams(
-              items.asJava,
-              placeHolder = "Pick a build target for this notebook's cells",
-            )
-          )
-          .asScala
-          .map(_.flatMap(choice => many.find(_.getUri == choice.itemId)))
-          .map { chosen =>
-            chosen.foreach(id => setBuildTarget(ipynbPath, Some(id)))
-            chosen
-          }
-    }
-
-  def setBuildTarget(
-      ipynbPath: AbsolutePath,
-      target: Option[b.BuildTargetIdentifier],
-  ): Unit = {
-    associate(ipynbPath, target)
-    triggerDiagnostics(ipynbPath)
-  }
-
-  /**
-   * A notebook opened before the workspace's build import finishes sees no
-   * build targets at `didOpen` time and is left unassociated (see
-   * [[didOpen]]'s own auto-pick), with no later retry: `BuildTargets.addData`
-   * doesn't know about notebooks at all. Call this once new targets become
-   * available (e.g. once the initial import completes) to auto-pick for
-   * every still-unassociated, currently open notebook.
-   */
-  def retryAssociations(): Unit = buildTargets.allBuildTargetIds match {
-    case Seq(only) =>
-      for {
-        ipynbPath <- notebooks.keysIterator
-        if !associatedTarget.contains(ipynbPath)
-      } {
-        associate(ipynbPath, Some(only))
-        triggerDiagnostics(ipynbPath)
-      }
-    case _ => // ambiguous or none; leave unassociated until the user picks
-  }
 
   private def associate(
       ipynbPath: AbsolutePath,
@@ -233,6 +173,35 @@ final class NotebookProvider(
     }
     reregisterTargetData(ipynbPath)
   }
+
+  /**
+   * Auto-picks a build target for `ipynbPath` if it's still unassociated,
+   * the same way any other ambiguous file does: the highest-scored target by
+   * `BuildTargets.buildTargetsOrder`, same as `inferBuildTarget`/
+   * `inverseSources`. No user-facing "choose a build target" prompt — a
+   * notebook is just another file as far as target selection goes. Returns
+   * whether it associated.
+   */
+  private def tryAutoAssociate(ipynbPath: AbsolutePath): Boolean =
+    if (associatedTarget.contains(ipynbPath)) false
+    else
+      buildTargets.allBuildTargetIds
+        .maxByOption(buildTargets.buildTargetsOrder)
+        .map { id =>
+          associate(ipynbPath, Some(id))
+        }
+        .isDefined
+
+  /**
+   * Called once a build import finishes, in case a build target has become
+   * available for a notebook that was opened before any target existed (or
+   * while more than one made auto-pick ambiguous).
+   */
+  def retryAssociations(): Unit =
+    for {
+      ipynbPath <- notebooks.keysIterator
+      if tryAutoAssociate(ipynbPath)
+    } triggerDiagnostics(ipynbPath)
 
   /**
    * `TargetData.addSourceItem` is a plain, synchronous map write with no BSP
@@ -248,15 +217,24 @@ final class NotebookProvider(
     registeredData.remove(ipynbPath).foreach(buildTargets.removeData)
     for {
       target <- associatedTarget.get(ipynbPath)
-      cellPaths <- notebooks.get(ipynbPath)
+      if notebooks.contains(ipynbPath)
     } {
       val data = new TargetData
-      cellPaths.foreach(data.addSourceItem(_, target))
+      scalaCellPaths(ipynbPath).foreach(data.addSourceItem(_, target))
       data.addSourceItem(combinedMarkerPath(ipynbPath), target)
       buildTargets.addData(data)
       registeredData.put(ipynbPath, data)
     }
   }
+
+  /**
+   * `notebooks` keeps the notebook's full cell order (any kind/language) so
+   * `applyStructureChange` can patch it with the client's own array indices;
+   * everything downstream (combining/typechecking/target registration) only
+   * ever wants the Scala code cells within that order.
+   */
+  private def scalaCellPaths(ipynbPath: AbsolutePath): Vector[AbsolutePath] =
+    notebooks.getOrElse(ipynbPath, Vector.empty).filter(cells.contains)
 
   /**
    * Consulted from [[SourceMapper.pcMapping]]. `None` for any path that
@@ -268,7 +246,7 @@ final class NotebookProvider(
       path: AbsolutePath
   ): Option[(Input.VirtualFile, Position => Position, AdjustLspData)] = for {
     ref <- cells.get(path)
-    cellPaths <- notebooks.get(ref.ipynbPath)
+    cellPaths = scalaCellPaths(ref.ipynbPath)
     idx = cellPaths.indexOf(path)
     if idx >= 0
     combined = combine(ref.ipynbPath, cellPaths)
@@ -329,15 +307,18 @@ final class NotebookProvider(
   private def registerCells(
       ipynbPath: AbsolutePath,
       order: Vector[String],
+      scalaUris: Set[String],
       initialText: Map[String, String],
   ): Unit = {
     forgetNotebook(ipynbPath)
     val paths = order.map { uri =>
       val path = uriToPath(uri)
-      cells.put(path, CellRef(ipynbPath, uri))
-      initialText.get(uri).foreach { text =>
-        buffers.put(path, text)
-        parseTrees(path)
+      if (scalaUris.contains(uri)) {
+        cells.put(path, CellRef(ipynbPath, uri))
+        initialText.get(uri).foreach { text =>
+          buffers.put(path, text)
+          parseTrees(path)
+        }
       }
       path
     }
@@ -349,28 +330,18 @@ final class NotebookProvider(
       structure: NotebookDocumentChangeEventCellStructure,
   ): Unit = {
     val current = notebooks.getOrElse(ipynbPath, Vector.empty)
-    // Language for a cell newly appearing in this change comes from its
-    // matching `didOpen` entry; a cell reappearing without one is just being
-    // reordered/moved, so trust whatever we already recorded for it.
-    val openedLanguageById = Option(structure.getDidOpen)
-      .map(_.asScala.toMapBy(_.getUri, _.getLanguageId))
-      .getOrElse(Map.empty)
-    def isScalaCodeCell(cell: NotebookCell): Boolean =
-      cell.getKind == NotebookCellKind.Code && {
-        openedLanguageById.get(cell.getDocument) match {
-          case Some(languageId) => languageId == "scala"
-          case None => cells.contains(uriToPath(cell.getDocument))
-        }
-      }
+    // `arrayChange.getStart`/`getDeleteCount` index into the notebook's full
+    // cell array (every kind/language), not just the Scala cells we track in
+    // `cells`, so `current`/`updated`/`replacement` here all have to keep
+    // every cell too, or a mixed-language notebook would patch the wrong
+    // position. Which of `replacement`'s cells are actually Scala is decided
+    // separately below, from `structure.getDidOpen`/`getDidClose`.
     val updated = structure.getArray match {
       case null => current
       case arrayChange =>
         val replacement = Option(arrayChange.getCells)
           .map(
-            _.asScala.iterator
-              .filter(isScalaCodeCell)
-              .map(cell => uriToPath(cell.getDocument))
-              .toVector
+            _.asScala.iterator.map(cell => uriToPath(cell.getDocument)).toVector
           )
           .getOrElse(Vector.empty)
         current.patch(
@@ -396,8 +367,8 @@ final class NotebookProvider(
     } {
       cells.remove(path)
       buffers.remove(path)
-      clearDiagnostics(textDocument.getUri)
       closeCellState(path)
+      clearDiagnostics(textDocument.getUri)
     }
     notebooks.put(ipynbPath, updated)
     combinedCache.remove(ipynbPath)
@@ -414,6 +385,9 @@ final class NotebookProvider(
       buffers.remove(path)
       closeCellState(path)
     }
+    // `triggerDiagnostics` opens `combinedMarkerPath` in parser/compiler
+    // state too (see `reregisterTargetData`'s doc), so it needs the same
+    // close as every individual cell above.
     closeCellState(combinedMarkerPath(ipynbPath))
     combinedCache.remove(ipynbPath)
     associatedTarget.remove(ipynbPath)
@@ -425,7 +399,7 @@ final class NotebookProvider(
   // cell's entry in the parser/compiler caches would otherwise outlive the
   // cell itself.
   private def closeCellState(path: AbsolutePath): Unit = {
-    trees().didClose(path)
+    didCloseTrees(path)
     compilers().didClose(path)
   }
 
@@ -486,7 +460,8 @@ final class NotebookProvider(
    * its own per-cell split of the resulting diagnostics.
    */
   private def triggerDiagnostics(ipynbPath: AbsolutePath): Unit = for {
-    cellPaths <- notebooks.get(ipynbPath)
+    _ <- notebooks.get(ipynbPath)
+    cellPaths = scalaCellPaths(ipynbPath)
     combined = combine(ipynbPath, cellPaths)
     markerPath = combinedMarkerPath(ipynbPath)
   } {
@@ -558,10 +533,10 @@ object NotebookProvider {
    */
   def uriToPath(uri: String): AbsolutePath = {
     val parsed = new URI(uri)
-    // `parsed.getPath` is a decoded plain path, not itself a `file:` uri, so
-    // `Paths.get(String)` mishandles a Windows drive path like `/C:/foo`.
-    // Re-wrap it as a `file:` uri and let `Paths.get(URI)` parse it, same as
-    // the OS-specific handling a real `file:` uri would get.
+    // Re-wrap the decoded path as a `file:` URI rather than
+    // `Paths.get(String)`: on Windows, `parsed.getPath` is a drive-rooted
+    // path (`/C:/Users/...`) that `Paths.get(URI)` resolves correctly but
+    // `Paths.get(String)` does not.
     val ipynbPath = AbsolutePath(
       Paths.get(new URI("file", null, parsed.getPath, null))
     )

@@ -1,65 +1,64 @@
 package scala.meta.internal.metals
 
-import ch.epfl.scala.bsp4j as b
-import ch.epfl.scala.bsp4j.CompileReport
-import org.eclipse.lsp4j as l
-import org.eclipse.lsp4j.{ExecuteCommandParams, *}
-import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
-
 import java.net.URI
-import java.nio.file.*
+import java.nio.file._
 import java.util
-import java.util.concurrent.{
-  CompletableFuture,
-  ScheduledExecutorService,
-  TimeUnit,
-}
-import java.util.concurrent.atomic.{AtomicBoolean, AtomicReference}
-import scala.concurrent.{
-  ExecutionContextExecutorService,
-  Future,
-  Promise,
-  TimeoutException,
-}
-import scala.concurrent.duration.*
-import scala.meta.internal.bsp.{BspSession, ConnectionBspStatus}
-import scala.meta.internal.builds.{BspErrorHandler, ShellRunner}
-import scala.meta.internal.implementation.{ImplementationProvider, Supermethods}
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+
+import scala.collection.immutable.Nil
+import scala.concurrent.ExecutionContextExecutorService
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.TimeoutException
+import scala.concurrent.duration._
+import scala.util.Failure
+import scala.util.Success
+import scala.util.Try
+import scala.util.control.NonFatal
+
+import scala.meta.internal.bsp.BspSession
+import scala.meta.internal.bsp.ConnectionBspStatus
+import scala.meta.internal.builds.BspErrorHandler
+import scala.meta.internal.builds.ShellRunner
+import scala.meta.internal.implementation.ImplementationProvider
+import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
-import scala.meta.internal.metals.clients.language.{
-  ConfiguredLanguageClient,
-  ForwardingMetalsBuildClient,
-}
+import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.codeactions.CodeActionProvider
-import scala.meta.internal.metals.codelenses.{
-  RunTestCodeLens,
-  SuperMethodCodeLens,
-  WorksheetCodeLens,
-}
-import scala.meta.internal.metals.debug.*
-import scala.meta.internal.metals.doctor.{Doctor, HeadDoctor, MetalsServiceInfo}
-import scala.meta.internal.metals.findfiles.*
-import scala.meta.internal.metals.formatting.{
-  OnTypeFormattingProvider,
-  RangeFormattingProvider,
-}
+import scala.meta.internal.metals.codelenses.RunTestCodeLens
+import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
+import scala.meta.internal.metals.codelenses.WorksheetCodeLens
+import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.BuildTargetClassesFinder
+import scala.meta.internal.metals.debug.DebugDiscovery
+import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DiscoveryFailures
+import scala.meta.internal.metals.doctor.Doctor
+import scala.meta.internal.metals.doctor.HeadDoctor
+import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.findfiles._
+import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
+import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
-import scala.meta.internal.metals.scalacli.{ScalaCli, ScalaCliServers}
-import scala.meta.internal.metals.testProvider.{
-  BuildTargetUpdate,
-  TestSuitesProvider,
-}
+import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.metals.scalacli.ScalaCliServers
+import scala.meta.internal.metals.testProvider.BuildTargetUpdate
+import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.mtags.*
-import scala.meta.internal.parsing.{
-  ClassFinderGranularity,
-  DocumentSymbolProvider,
-  FoldingRangeProvider,
-  Trees,
-}
+import scala.meta.internal.mtags._
+import scala.meta.internal.parsing.ClassFinderGranularity
+import scala.meta.internal.parsing.DocumentSymbolProvider
+import scala.meta.internal.parsing.FoldingRangeProvider
+import scala.meta.internal.parsing.Trees
 import scala.meta.internal.rename.RenameProvider
 import scala.meta.internal.search.SymbolHierarchyOps
 import scala.meta.internal.worksheets.WorksheetProvider
@@ -68,8 +67,13 @@ import scala.meta.metals.lsp.TextDocumentService
 import scala.meta.parsers.ParseException
 import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
-import scala.util.{Failure, Success, Try}
-import scala.util.control.NonFatal
+
+import ch.epfl.scala.bsp4j.CompileReport
+import ch.epfl.scala.{bsp4j => b}
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.{lsp4j => l}
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -222,8 +226,8 @@ abstract class MetalsLspService(
     buffers,
     languageClient,
     () => compilers,
-    () => trees,
     parseTrees(_),
+    trees.didClose(_),
     buildTargets,
   )(using ec)
 
@@ -691,12 +695,6 @@ abstract class MetalsLspService(
   def initialized(): Future[Unit] =
     if (wasInitialized.compareAndSet(false, true)) {
       registerNiceToHaveFilePatterns()
-      // Retry auto-association for any notebook opened before this point,
-      // now that the initial build import may have made a target available
-      // (see NotebookProvider.retryAssociations).
-      buildServerPromise.future.foreach(_ =>
-        notebookProvider.retryAssociations()
-      )
 
       for {
         _ <- loadFingerPrints()
@@ -918,11 +916,6 @@ abstract class MetalsLspService(
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
-
-  def chooseNotebookBuildTarget(notebookUri: String): Future[Unit] =
-    notebookProvider
-      .chooseAndSetBuildTarget(notebookUri.toAbsolutePath)
-      .map(_ => ())
 
   override def didSave(
       params: DidSaveTextDocumentParams
