@@ -320,9 +320,13 @@ class CompilerConfiguration(
             val old = presentationCompilerRef.get()
             if (old != null) old
             else {
-              val newFallback = fallbackWithSources()
-              presentationCompilerRef.set(newFallback)
-              newFallback
+              lazy val newFallback = fallbackWithSources()
+              val didSetPc =
+                presentationCompilerRef.compareAndSet(null, newFallback)
+              if (!didSetPc) {
+                newFallback.shutdown()
+              }
+              presentationCompilerRef.get()
             }
           }
       }
