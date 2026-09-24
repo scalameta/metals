@@ -141,6 +141,21 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
       )
       .asScala
 
+  /**
+   * The first `take` completion labels, alphabetically — enough to show the
+   * actual completions a regression would change, without pinning down the
+   * whole (long, version-sensitive) `List` API surface.
+   */
+  private def renderCompletionLabels(
+      completions: l.CompletionList,
+      take: Int = 5,
+  ): String =
+    completions.getItems.asScala
+      .map(_.getLabel)
+      .sorted
+      .take(take)
+      .mkString("\n")
+
   private def hoverAt(
       id: String,
       line: Int,
@@ -196,10 +211,13 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c2" -> "xs.",
       )
       completions <- completionAt("c2", 0, 3)
-      labels = completions.getItems.asScala.map(_.getLabel).toSet
-      _ = assert(
-        labels.exists(_.startsWith("length")),
-        s"expected `length` among completions, got: $labels",
+      _ = assertNoDiff(
+        renderCompletionLabels(completions),
+        """|+(other: String): String
+           |++:[B >: Int](prefix: IterableOnce[B]): List[B]
+           |++[B >: Int](suffix: IterableOnce[B]): List[B]
+           |+:[B >: Int](elem: B): List[B]
+           |/:[B](z: B)(op: (B, Int) => B): B""".stripMargin,
       )
       hover <- hoverAt("c2", 0, 1, "xs.")
       _ = assert(
@@ -386,10 +404,13 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         )
       )
       completions <- completionAt("c2", 0, 3)
-      labels = completions.getItems.asScala.map(_.getLabel).toSet
-    } yield assert(
-      labels.exists(_.startsWith("length")),
-      s"expected `length` among completions with markdown/python cells filtered out of the combined script, got: $labels",
+    } yield assertNoDiff(
+      renderCompletionLabels(completions),
+      """|+(other: String): String
+         |++:[B >: Int](prefix: IterableOnce[B]): List[B]
+         |++[B >: Int](suffix: IterableOnce[B]): List[B]
+         |+:[B >: Int](elem: B): List[B]
+         |/:[B](z: B)(op: (B, Int) => B): B""".stripMargin,
     )
   }
 
