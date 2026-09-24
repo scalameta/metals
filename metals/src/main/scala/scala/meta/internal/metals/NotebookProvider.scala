@@ -91,69 +91,69 @@ final class NotebookProvider(
   // class's entry points: a client can in principle send a notebook uri
   // Metals can't turn into a real path (e.g. `untitled:`), and that should
   // drop the notification rather than blow up the request that carries it.
-  def didOpen(params: DidOpenNotebookDocumentParams): Unit =
-    for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe) {
-      val languageById =
-        params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getLanguageId)
-      // The full cell order, any kind/language: `applyStructureChange`'s
-      // `arrayChange.getStart`/`getDeleteCount` index into *this* array, so
-      // it has to mirror the client's array shape exactly, not just the
-      // Scala cells we otherwise care about.
-      val order = params.getNotebookDocument.getCells.asScala.iterator
-        .map(_.getDocument)
-        .toVector
-      val scalaUris = params.getNotebookDocument.getCells.asScala.iterator
-        .filter(cell => cell.getKind == NotebookCellKind.Code)
-        .map(_.getDocument)
-        .filter(uri => languageById.get(uri) contains "scala")
-        .toSet
-      val initialText =
-        params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getText)
-      registerCells(ipynbPath, order, scalaUris, initialText)
-      tryAutoAssociate(ipynbPath)
-      triggerDiagnostics(ipynbPath)
-    }
+  def didOpen(params: DidOpenNotebookDocumentParams): Unit = for {
+    ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe
+    languageById =
+      params.getCellTextDocuments.asScala.toMapBy(_.getUri, _.getLanguageId)
+    // The full cell order, any kind/language: `applyStructureChange`'s
+    // `arrayChange.getStart`/`getDeleteCount` index into *this* array, so
+    // it has to mirror the client's array shape exactly, not just the
+    // Scala cells we otherwise care about.
+    order = params.getNotebookDocument.getCells.asScala.iterator
+      .map(_.getDocument)
+      .toVector
+    scalaUris = params.getNotebookDocument.getCells.asScala.iterator
+      .filter(cell => cell.getKind == NotebookCellKind.Code)
+      .map(_.getDocument)
+      .filter(uri => languageById.get(uri) contains "scala")
+      .toSet
+    initialText = params.getCellTextDocuments.asScala
+      .toMapBy(_.getUri, _.getText)
+  } {
+    registerCells(ipynbPath, order, scalaUris, initialText)
+    tryAutoAssociate(ipynbPath)
+    triggerDiagnostics(ipynbPath)
+  }
 
-  def didChange(params: DidChangeNotebookDocumentParams): Unit =
-    for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe) {
-      val cellsChange =
-        Option(params.getChange).flatMap(c => Option(c.getCells))
+  def didChange(params: DidChangeNotebookDocumentParams): Unit = for {
+    ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe
+    cellsChange = Option(params.getChange).flatMap(c => Option(c.getCells))
+  } {
+    for {
+      cellsChange <- cellsChange
+      structure <- Option(cellsChange.getStructure)
+    } applyStructureChange(ipynbPath, structure)
 
-      for {
-        cellsChange <- cellsChange
-        structure <- Option(cellsChange.getStructure)
-      } applyStructureChange(ipynbPath, structure)
-
-      for {
-        cellsChange <- cellsChange
-        textContents <- Option(cellsChange.getTextContent)
-        textContent <- textContents.asScala
-        path = uriToPath(textContent.getDocument.getUri)
-        // The selector isn't a runtime guard: a client can send a text
-        // change for a cell that isn't (or isn't yet) one of our registered
-        // Scala cells, e.g. a markdown cell. Ignore it rather than feeding a
-        // cell `computeCombined` never reads into `buffers`/`parseTrees`.
-        if cells.contains(path)
-      } {
-        val current = buffers.get(path).getOrElse("")
-        val updated = textContent.getChanges.asScala.foldLeft(current) {
-          (text, change) =>
-            change.getRange match {
-              case null => change.getText
-              case range =>
-                TextEdits.applyEdits(
-                  text,
-                  List(new TextEdit(range, change.getText)),
-                )
-            }
-        }
-        buffers.put(path, updated)
-        parseTrees(path)
-        combinedCache.remove(ipynbPath)
+    for {
+      cellsChange <- cellsChange
+      textContents <- Option(cellsChange.getTextContent)
+      textContent <- textContents.asScala
+      path = uriToPath(textContent.getDocument.getUri)
+      // The selector isn't a runtime guard: a client can send a text
+      // change for a cell that isn't (or isn't yet) one of our registered
+      // Scala cells, e.g. a markdown cell. Ignore it rather than feeding a
+      // cell `computeCombined` never reads into `buffers`/`parseTrees`.
+      if cells.contains(path)
+    } {
+      val current = buffers.get(path).getOrElse("")
+      val updated = textContent.getChanges.asScala.foldLeft(current) {
+        (text, change) =>
+          change.getRange match {
+            case null => change.getText
+            case range =>
+              TextEdits.applyEdits(
+                text,
+                List(new TextEdit(range, change.getText)),
+              )
+          }
       }
-
-      triggerDiagnostics(ipynbPath)
+      buffers.put(path, updated)
+      parseTrees(path)
+      combinedCache.remove(ipynbPath)
     }
+
+    triggerDiagnostics(ipynbPath)
+  }
 
   def didClose(params: DidCloseNotebookDocumentParams): Unit =
     for (ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe)
