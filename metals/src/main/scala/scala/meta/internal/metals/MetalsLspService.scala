@@ -124,7 +124,8 @@ abstract class MetalsLspService(
   def shellRunner: ShellRunner
 
   @volatile
-  var userConfig: UserConfiguration = initialUserConfig
+  var userConfig: UserConfiguration =
+    UserConfiguration.load(folder, clientConfig).getOrElse(initialUserConfig)
   protected val userConfigPromise: Promise[Unit] = Promise()
 
   ThreadPools.discardRejectedRunnables("MetalsLanguageServer.sh", sh)
@@ -193,7 +194,9 @@ abstract class MetalsLspService(
 
   @volatile
   var excludedPackageHandler: ExcludedPackagesHandler =
-    ExcludedPackagesHandler.default
+    ExcludedPackagesHandler.fromUserConfiguration(
+      userConfig.excludedPackages.getOrElse(Nil)
+    )
 
   protected val mtags = new Mtags
 
@@ -724,6 +727,9 @@ abstract class MetalsLspService(
       userConfig.excludedPackages.getOrElse(Nil)
     )
     userConfigPromise.trySuccess(())
+    if (old != newConfig) {
+      UserConfiguration.save(folder, newConfig)
+    }
     old
   }
 
@@ -745,7 +751,12 @@ abstract class MetalsLspService(
 
     if (
       userConfig.symbolPrefixes != old.symbolPrefixes ||
-      userConfig.javaHome != old.javaHome
+      userConfig.javaHome != old.javaHome ||
+      // a presentation compiler memoises which packages have a package
+      // object, and that answer comes from the symbol indexes, which apply
+      // the exclusions; the memo lives as long as the compiler, so the
+      // compilers have to be restarted for a change here to take effect
+      userConfig.excludedPackages != old.excludedPackages
     ) {
       compilers.restartAll()
     }

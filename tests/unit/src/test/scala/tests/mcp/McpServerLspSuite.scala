@@ -72,6 +72,25 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         McpMessages.FindDep
           .versionMessage(Some("4.10.2")),
       )
+      resultDevBuilds <- client.findDep(
+        "co.fs2",
+        Some("fs2-core"),
+        Some("3.2"),
+      )
+      devBuildMessage = resultDevBuilds.mkString("\n")
+      _ = assert(
+        devBuildMessage.startsWith("Latest stable version found: 3.2.14\n")
+      )
+      _ = assert(devBuildMessage.contains("Development/pre-release matches: "))
+      resultPlatformSuffix <- client.findDep(
+        "com.google.guava",
+        Some("guava"),
+        Some("33.0"),
+      )
+      _ = assertNoDiff(
+        resultPlatformSuffix.mkString("\n"),
+        McpMessages.FindDep.versionMessage(Some("33.0.0-android")),
+      )
       _ <- client.shutdown()
     } yield ()
   }
@@ -452,6 +471,51 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         result,
         """|Tool (typed-glob-search) input validation failed: Validation failed: JSON schema validation errors: [/symbolType: string found, array expected]
            |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("initialize-with-unknown-properties") {
+    cleanWorkspace()
+    val requestBody =
+      """|{
+         |    "jsonrpc": "2.0",
+         |    "id": 2,
+         |    "method": "initialize",
+         |    "params": {
+         |        "clientInfo": {
+         |            "name": "antigravity-client (via mcp-remote 0.8.6)",
+         |            "version": "v1.0.0"
+         |        },
+         |        "protocolVersion": "2025-11-25",
+         |        "capabilities": {
+         |            "elicitation": {
+         |                "form": {},
+         |                "url": {}
+         |            }
+         |        },
+         |        "somethingUnknown": false
+         |    }
+         |}""".stripMargin
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}}
+           |/a/src/main/scala/com/example/Hello.scala
+           |package com.example
+           |
+           |object Hello { def main(args: Array[String]): Unit = println("Hello") }
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/example/Hello.scala")
+      client <- startMcpServer(initialize = false)
+      response <- client.sendRawInitialize(requestBody)
+      _ = assertEquals(response.statusCode(), 200)
+      _ = assert(
+        response.body().contains("root-metals"),
+        s"Expected response to contain server info, got: ${response.body()}",
       )
       _ <- client.shutdown()
     } yield ()

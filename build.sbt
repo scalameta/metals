@@ -9,8 +9,8 @@ Global / onChangedBuildSource := ReloadOnSourceChanges
 Global / resolvers += "scala-nightlies" at
   "https://repo.scala-lang.org/artifactory/maven-nightlies"
 
-def localSnapshotVersion = "1.6.9-SNAPSHOT"
-def latestReleaseVersion = "1.6.8"
+def localSnapshotVersion = "1.6.10-SNAPSHOT"
+def latestReleaseVersion = "1.6.9"
 def isCI = System.getenv("CI") != null
 def isTest = System.getenv("METALS_TEST") != null
 
@@ -289,7 +289,7 @@ lazy val mtagsShared = project
     Compile / packageSrc / publishArtifact := true,
     libraryDependencies ++= List(
       "org.lz4" % "lz4-java" % "1.8.1",
-      "com.google.protobuf" % "protobuf-java" % "4.36.1",
+      "com.google.protobuf" % "protobuf-java" % "4.36.2",
       V.guava,
       "io.get-coursier" % "interface" % V.coursierInterfaces,
     ),

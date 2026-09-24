@@ -33,10 +33,8 @@ object Worksheet3NextSuite {
       .asScala
       .toList
       .reverse
-      .collectFirst { version =>
-        SemVer.Version.fromString(version) match {
-          case SemVer.Version(_, _, _, None, None, None) => version
-        }
+      .collectFirst {
+        case version if SemVer.Version.fromString(version).isStable => version
       }
       .get
 }

@@ -11,7 +11,7 @@ import tests.BaseLspSuite
 trait McpTestUtils {
   self: BaseLspSuite =>
 
-  def startMcpServer(): Future[TestMcpClient] =
+  def startMcpServer(initialize: Boolean = true): Future[TestMcpClient] =
     for {
       _ <- server.didChangeConfiguration(
         UserConfiguration(startMcpServer = true).toString
@@ -25,6 +25,6 @@ trait McpTestUtils {
       )
       _ = assert(port.isDefined, "MCP server port should be defined")
       client = new TestMcpClient(s"http://localhost:${port.get}", port.get)
-      _ <- client.initialize()
+      _ <- if (initialize) client.initialize() else Future.successful(())
     } yield client
 }

@@ -72,11 +72,11 @@ object V {
 
   val scalaCli = "1.14.0"
 
-  val scalafix = "0.14.8"
+  val scalafix = "0.14.9"
 
   val scalafmt = "3.11.5"
 
-  val scalameta = "4.17.3"
+  val scalameta = "4.17.4"
 
   val scribe = "3.19.0"
 
