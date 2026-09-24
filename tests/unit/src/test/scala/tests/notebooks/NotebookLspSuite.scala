@@ -55,6 +55,14 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
     )
   }
 
+  private def closeNotebook(): Unit =
+    server.fullServer.notebookDidClose(
+      new l.DidCloseNotebookDocumentParams(
+        new l.NotebookDocumentIdentifier(ipynb.toURI.toString),
+        ju.List.of(),
+      )
+    )
+
   private def changeCell(
       id: String,
       newText: String,
@@ -557,6 +565,200 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
       Seq.empty,
       "the workspace's only build target should auto-associate, giving the cell circe on its classpath",
     )
+  }
+
+  test("multiple-build-targets-still-auto-associate") {
+    // Exercises tryAutoAssociate's buildTargetsOrder-based pick, not the old
+    // "exactly one candidate, otherwise ask the user" gate: both targets
+    // carry the same extra dependency, so the assertion holds no matter
+    // which of the two tryAutoAssociate actually picks.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  },
+            |  "b": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  }
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
+      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+    } yield assertEquals(
+      client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
+      Seq.empty,
+      "with two candidate build targets there's no longer a 'choose build " +
+        "target' command to fall back on, so the notebook must still " +
+        "auto-associate with one of them",
+    )
+  }
+
+  test("didClose-clears-each-cell's-diagnostics") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      _ = openNotebook(
+        "c1" -> "val xs = List(1, 2, 3)",
+        "c2" -> "val y: Int = \"bad\"",
+      )
+      _ <- client.nextDiagnosticsFor(cellPath("c2"), _.nonEmpty)
+      _ = assert(
+        client.diagnostics(cellPath("c2")).nonEmpty,
+        "sanity check: c2 has a diagnostic while the notebook is open",
+      )
+      // forgetNotebook's clearDiagnostics publishes synchronously as part of
+      // this call (same as structural cell removal elsewhere in this
+      // suite), so there is no later event to await here.
+      _ = closeNotebook()
+    } yield assertEquals(
+      client.diagnostics.getOrElse(cellPath("c2"), Seq.empty),
+      Seq.empty,
+      "c2's stale diagnostic must be cleared once the notebook is closed",
+    )
+  }
+
+  test("didChange-to-an-unregistered-cell-is-ignored") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      cellsMeta = List(
+        l.NotebookCellKind.Markup -> "md",
+        l.NotebookCellKind.Code -> "c1",
+        l.NotebookCellKind.Code -> "c2",
+      )
+      notebookCells = cellsMeta.map { case (kind, id) =>
+        new l.NotebookCell(kind, cellUri(id))
+      }
+      notebookDocument = new l.NotebookDocument(
+        ipynb.toURI.toString,
+        "jupyter-notebook",
+        1,
+        notebookCells.asJava,
+      )
+      cellTextDocuments = List(
+        new l.TextDocumentItem(cellUri("md"), "markdown", 1, "# hello"),
+        new l.TextDocumentItem(
+          cellUri("c1"),
+          "scala",
+          1,
+          "val xs = List(1, 2, 3)",
+        ),
+        new l.TextDocumentItem(cellUri("c2"), "scala", 1, "xs."),
+      )
+      _ = server.fullServer.notebookDidOpen(
+        new l.DidOpenNotebookDocumentParams(
+          notebookDocument,
+          cellTextDocuments.asJava,
+        )
+      )
+      // The selector on the notebookDocument/didChange registration isn't a
+      // runtime guard (see NotebookProvider.didChange): a client can still
+      // send a text-content change for the markdown cell. If that ever got
+      // spliced into the combined script, it would break its compilation
+      // entirely and c2's completions below would come back empty/garbage.
+      _ = changeCell("md", "# hello *garbage* {{{ not scala at all ]]]")
+      completions <- completionAt("c2", 0, 3)
+    } yield assertNoDiff(
+      renderCompletionLabels(completions),
+      """|+(other: String): String
+         |++:[B >: Int](prefix: IterableOnce[B]): List[B]
+         |++[B >: Int](suffix: IterableOnce[B]): List[B]
+         |+:[B >: Int](elem: B): List[B]
+         |/:[B](z: B)(op: (B, Int) => B): B""".stripMargin,
+    )
+  }
+
+  test("cell-inserted-via-structure-change-gets-cross-cell-context") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      _ = openNotebook(
+        "c1" -> "val xs = List(1, 2, 3)",
+        "c2" -> "xs.length",
+      )
+      _ <- client.nextDiagnosticsFor(cellPath("c2"))
+      // Insert c3 between c1 and c2 (index 1), no deletion.
+      _ = structureChange(
+        start = 1,
+        deleteCount = 0,
+        inserted = List("c3" -> "xs."),
+      )
+      completions <- completionAt("c3", 0, 3)
+    } yield assertNoDiff(
+      renderCompletionLabels(completions),
+      """|+(other: String): String
+         |++:[B >: Int](prefix: IterableOnce[B]): List[B]
+         |++[B >: Int](suffix: IterableOnce[B]): List[B]
+         |+:[B >: Int](elem: B): List[B]
+         |/:[B](z: B)(op: (B, Int) => B): B""".stripMargin,
+    )
+  }
+
+  test("notebook-with-unresolvable-uri-does-not-crash") {
+    // A brand new, never-saved-to-disk notebook has an `untitled:` uri that
+    // NotebookProvider.uriToPath (or the general fallback for a non-cell
+    // uri) can't turn into a real path. Before the toAbsolutePathSafe guard,
+    // this threw inside didOpen instead of just dropping the notification;
+    // reaching this point at all is the assertion.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {}
+            |}
+            |""".stripMargin
+      )
+      untitledUri = "untitled:Untitled-1"
+      notebookCells = List(
+        new l.NotebookCell(l.NotebookCellKind.Code, s"$untitledUri#c1")
+      )
+      notebookDocument = new l.NotebookDocument(
+        untitledUri,
+        "jupyter-notebook",
+        1,
+        notebookCells.asJava,
+      )
+      cellTextDocuments = List(
+        new l.TextDocumentItem(s"$untitledUri#c1", "scala", 1, "val x = 1")
+      )
+      _ = server.fullServer.notebookDidOpen(
+        new l.DidOpenNotebookDocumentParams(
+          notebookDocument,
+          cellTextDocuments.asJava,
+        )
+      )
+    } yield ()
   }
 
 }
