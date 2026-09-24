@@ -761,4 +761,61 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
     } yield ()
   }
 
+  test("cell-under-a-target's-source-root-prefers-that-target") {
+    // tryAutoAssociate must prefer a location-compatible candidate from
+    // BuildTargets.sourceBuildTargets (same preference inverseSources gives
+    // regular files) over ranking every workspace target globally: a
+    // notebook physically inside a's source tree must associate with a,
+    // regardless of how a and b compare under buildTargetsOrder.
+    cleanWorkspace()
+    val nestedNotebookPath = "a/src/main/scala/Notebook.ipynb"
+    def nestedIpynb: AbsolutePath = server.toPath(nestedNotebookPath)
+    def nestedCellUri(id: String): String =
+      s"${NotebookProvider.scheme}:${nestedIpynb.toURI.getRawPath}#$id"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  },
+            |  "b": {}
+            |}
+            |/$nestedNotebookPath
+            |{}
+            |""".stripMargin
+      )
+      notebookCells = List(
+        new l.NotebookCell(l.NotebookCellKind.Code, nestedCellUri("c1"))
+      )
+      notebookDocument = new l.NotebookDocument(
+        nestedIpynb.toURI.toString,
+        "jupyter-notebook",
+        1,
+        notebookCells.asJava,
+      )
+      cellTextDocuments = List(
+        new l.TextDocumentItem(
+          nestedCellUri("c1"),
+          "scala",
+          1,
+          "val x: io.circe.Decoder[Int] = ???",
+        )
+      )
+      _ = server.fullServer.notebookDidOpen(
+        new l.DidOpenNotebookDocumentParams(
+          notebookDocument,
+          cellTextDocuments.asJava,
+        )
+      )
+      nestedCellPath = NotebookProvider.uriToPath(nestedCellUri("c1"))
+      _ <- client.nextDiagnosticsFor(nestedCellPath)
+    } yield assertEquals(
+      client.diagnostics.getOrElse(nestedCellPath, Seq.empty),
+      Seq.empty,
+      "a notebook nested under a's source root must associate with a " +
+        "(which has circe), not b, regardless of buildTargetsOrder ranking",
+    )
+  }
+
 }

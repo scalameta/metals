@@ -174,22 +174,35 @@ final class NotebookProvider(
   }
 
   /**
-   * Auto-picks a build target for `ipynbPath` if it's still unassociated,
-   * the same way any other ambiguous file does: the highest-scored target by
-   * `BuildTargets.buildTargetsOrder`, same as `inferBuildTarget`/
-   * `inverseSources`. No user-facing "choose a build target" prompt — a
-   * notebook is just another file as far as target selection goes. Returns
-   * whether it associated.
+   * Auto-picks a build target for `ipynbPath` if it's still unassociated, or
+   * if a build reload has since made its current association stale (that
+   * target no longer exists) — the same way any other ambiguous file does:
+   * prefer a location-compatible candidate from
+   * `BuildTargets.sourceBuildTargets` if the notebook happens to sit under
+   * one's source root, same as `inverseSources`'s own preference, otherwise
+   * the highest-scored candidate across the whole workspace by
+   * `BuildTargets.buildTargetsOrder`, same as `inferBuildTarget`. No
+   * user-facing "choose a build target" prompt — a notebook is just another
+   * file as far as target selection goes. Returns whether it (re-)associated.
    */
-  private def tryAutoAssociate(ipynbPath: AbsolutePath): Boolean =
-    if (associatedTarget.contains(ipynbPath)) false
-    else
-      buildTargets.allBuildTargetIds
+  private def tryAutoAssociate(ipynbPath: AbsolutePath): Boolean = {
+    val isStale = associatedTarget
+      .get(ipynbPath)
+      .exists(id => !buildTargets.allBuildTargetIds.contains(id))
+    if (associatedTarget.contains(ipynbPath) && !isStale) false
+    else {
+      val candidates = buildTargets
+        .sourceBuildTargets(ipynbPath)
+        .map(_.toSeq)
+        .getOrElse(buildTargets.allBuildTargetIds)
+      candidates
         .maxByOption(buildTargets.buildTargetsOrder)
         .map { id =>
           associate(ipynbPath, Some(id))
         }
         .isDefined
+    }
+  }
 
   /**
    * Called once a build import finishes, in case a build target has become
