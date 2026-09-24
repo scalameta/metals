@@ -1,12 +1,16 @@
 package tests.notebooks
 
 import org.eclipse.lsp4j as l
-import tests.{BaseLspSuite, TestHovers}
+import tests.{BaseLspSuite, QuickBuild, TestHovers}
 
 import java.util as ju
 import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments.*
-import scala.meta.internal.metals.{HoverExtParams, NotebookProvider}
+import scala.meta.internal.metals.{
+  HoverExtParams,
+  NotebookProvider,
+  ServerCommands,
+}
 import scala.meta.io.AbsolutePath
 
 /**
@@ -815,6 +819,53 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
       Seq.empty,
       "a notebook nested under a's source root must associate with a " +
         "(which has circe), not b, regardless of buildTargetsOrder ranking",
+    )
+  }
+
+  test("stale-association-is-replaced-after-a-build-reload") {
+    // tryAutoAssociate must notice when its current association's target no
+    // longer exists (e.g. after a build reload swapped it for a new one)
+    // and re-pick, instead of leaving the notebook pinned to a dead target
+    // id forever.
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  }
+            |}
+            |/$notebookPath
+            |{}
+            |""".stripMargin
+      )
+      _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
+      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+      _ = assertEquals(
+        client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
+        Seq.empty,
+        "sanity check: c1 auto-associates with a before the reload",
+      )
+      // Swap "a" for "b" under the hood, the same way a real build.sbt edit
+      // + reimport would, then trigger the reconnect a real reload does.
+      _ = writeLayout(
+        s"""|/metals.json
+            |{
+            |  "b": {
+            |    "libraryDependencies": ["io.circe::circe-generic:0.12.0"]
+            |  }
+            |}
+            |""".stripMargin
+      )
+      _ = QuickBuild.bloopInstall(workspace)
+      _ <- server.executeCommand(ServerCommands.RestartBuildServer)
+      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+    } yield assertEquals(
+      client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
+      Seq.empty,
+      "c1 must re-associate with b (which also has circe) once a is gone, " +
+        "not stay silently pinned to the removed a",
     )
   }
 
