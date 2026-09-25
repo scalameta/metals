@@ -43,4 +43,5 @@ trait IndexProviders {
   def implementationProvider: ImplementationProvider
   def resetService(): Unit
   def fileChanges: FileChanges
+  def notebookProvider: NotebookProvider
 }

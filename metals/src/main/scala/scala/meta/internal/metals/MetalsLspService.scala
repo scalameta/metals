@@ -118,7 +118,7 @@ abstract class MetalsLspService(
     with TextDocumentService
     with IndexProviders
     with ModulesService {
-  import serverInputs._
+  import serverInputs.*
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
   def shellRunner: ShellRunner
@@ -214,9 +214,30 @@ abstract class MetalsLspService(
 
   protected val downstreamTargets = new PreviouslyCompiledDownsteamTargets
 
+  val parseTrees = new BatchedFunction[AbsolutePath, Unit](
+    paths =>
+      CancelableFuture(
+        buildServerPromise.future
+          .flatMap(_ => parseTreesAndPublishDiags(paths))
+          .ignoreValue,
+        Cancelable.empty,
+      ),
+    "trees",
+  )
+
+  val notebookProvider: NotebookProvider = new NotebookProvider(
+    buffers,
+    languageClient,
+    () => compilers,
+    parseTrees(_),
+    trees.didClose(_),
+    buildTargets,
+  )(using ec)
+
   val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
     buffers,
+    notebookProvider,
   )
 
   val compilations: Compilations = new Compilations(
@@ -239,16 +260,6 @@ abstract class MetalsLspService(
   )
   var indexingPromise: Promise[Unit] = Promise[Unit]()
   def buildServerPromise: Promise[Unit]
-  val parseTrees = new BatchedFunction[AbsolutePath, Unit](
-    paths =>
-      CancelableFuture(
-        buildServerPromise.future
-          .flatMap(_ => parseTreesAndPublishDiags(paths))
-          .ignoreValue,
-        Cancelable.empty,
-      ),
-    "trees",
-  )
 
   protected val trees = new Trees(buffers, scalaVersionSelector)
 
@@ -756,70 +767,73 @@ abstract class MetalsLspService(
       params: DidOpenTextDocumentParams
   ): CompletableFuture[Unit] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
-    // In some cases like peeking definition didOpen might be followed up by close
-    // and we would lose the notion of the focused document
-    recentlyOpenedFiles.add(path)
-    focusedDocumentBuildTarget.set(
-      buildTargets.inverseSources(path).getOrElse(null)
-    )
-    buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.activatePlatformForTarget)
-      .foreach { platform =>
-        buildTargetClasses.rebuildIndex(
-          buildTargets.targetsByPlatform(platform)
-        )
-      }
+    // Notebook cells are tracked from `notebookDocument/didOpen` instead
+    if (params.getTextDocument.getUri.isNotebookCellUri) {
+      CompletableFuture.completedFuture(())
+    } else {
+      // In some cases like peeking definition didOpen might be followed up by close
+      // and we would lose the notion of the focused document
+      recentlyOpenedFiles.add(path)
+      focusedDocumentBuildTarget.set(buildTargets.inverseSources(path).orNull)
+      buildTargets
+        .inverseSources(path)
+        .flatMap(buildTargets.activatePlatformForTarget)
+        .foreach { platform =>
+          buildTargetClasses.rebuildIndex(
+            buildTargets.targetsByPlatform(platform)
+          )
+        }
 
-    // Update md5 fingerprint from file contents on disk
-    fingerprints.add(path, FileIO.slurp(path, charset))
-    // Update in-memory buffer contents from LSP client
-    buffers.put(
-      path,
-      params.getTextDocument.getText,
-      params.getTextDocument.getVersion(),
-    )
-
-    val optVersion =
-      Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
-        params.getTextDocument().getVersion()
+      // Update md5 fingerprint from file contents on disk
+      fingerprints.add(path, FileIO.slurp(path, charset))
+      // Update in-memory buffer contents from LSP client
+      buffers.put(
+        path,
+        params.getTextDocument.getText,
+        params.getTextDocument.getVersion,
       )
 
-    packageProvider
-      .workspaceEdit(path, params.getTextDocument().getText(), optVersion)
-      .map(new ApplyWorkspaceEditParams(_))
-      .foreach(languageClient.applyEdit)
+      val optVersion =
+        Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
+          params.getTextDocument.getVersion
+        )
 
-    /**
-     * Trigger compilation in preparation for definition requests for dependency
-     * sources and standalone files, but wait for build tool information, so
-     * that we don't try to generate it for project files
-     */
-    val interactive = buildServerPromise.future.map { _ =>
-      interactiveSemanticdbs.textDocument(path)
-    }
+      packageProvider
+        .workspaceEdit(path, params.getTextDocument.getText, optVersion)
+        .map(new ApplyWorkspaceEditParams(_))
+        .foreach(languageClient.applyEdit)
 
-    val parser = parseTrees(path)
+      /**
+       * Trigger compilation in preparation for definition requests for dependency
+       * sources and standalone files, but wait for build tool information, so
+       * that we don't try to generate it for project files
+       */
+      val interactive = buildServerPromise.future.map { _ =>
+        interactiveSemanticdbs.textDocument(path)
+      }
 
-    if (path.isDependencySource(folder)) {
-      parser.asJava
-    } else {
-      buildServerPromise.future.flatMap { _ =>
-        def load(): Future[Unit] = {
-          Future
-            .sequence(
-              List(
-                compilations.compileFile(path, assumeDidNotChange = true),
-                compilers.load(List(path)),
-                parser,
-                interactive,
-                testProvider.didOpen(path),
+      val parser = parseTrees(path)
+
+      if (path.isDependencySource(folder)) {
+        parser.asJava
+      } else {
+        buildServerPromise.future.flatMap { _ =>
+          def load(): Future[Unit] = {
+            Future
+              .sequence(
+                List(
+                  compilations.compileFile(path, assumeDidNotChange = true),
+                  compilers.load(List(path)),
+                  parser,
+                  interactive,
+                  testProvider.didOpen(path),
+                )
               )
-            )
-            .ignoreValue
-        }
-        maybeImportFileAndLoad(path, load)
-      }.asJava
+              .ignoreValue
+          }
+          maybeImportFileAndLoad(path, load)
+        }.asJava
+      }
     }
   }
 
@@ -871,29 +885,48 @@ abstract class MetalsLspService(
       )
     }
 
-    params.getContentChanges.asScala.lastOption match {
-      case None => CompletableFuture.completedFuture(())
-      case Some(change) =>
-        val path = params.getTextDocument.getUri.toAbsolutePath
-        Option(params.getTextDocument.getVersion()) match {
-          case Some(version) => buffers.put(path, change.getText, version)
-          case None => buffers.put(path, change.getText)
-        }
-        diagnostics.didChange(path)
-        compilers.didChange(path, false)
-        referencesProvider.didChange(path, change.getText)
-        parseTrees(path).asJava
+    // Notebook cells are tracked from `notebookDocument/didChange` instead.
+    if (params.getTextDocument.getUri.isNotebookCellUri) {
+      CompletableFuture.completedFuture(())
+    } else {
+      params.getContentChanges.asScala.lastOption match {
+        case None => CompletableFuture.completedFuture(())
+        case Some(change) =>
+          val path = params.getTextDocument.getUri.toAbsolutePath
+          params.getTextDocument.getVersion match {
+            case null => buffers.put(path, change.getText)
+            case version => buffers.put(path, change.getText, version)
+          }
+          diagnostics.didChange(path)
+          compilers.didChange(path, shouldReturnDiagnostics = false)
+          referencesProvider.didChange(path, change.getText)
+          parseTrees(path).asJava
+      }
     }
   }
 
-  override def didClose(params: DidCloseTextDocumentParams): Unit = {
-    val path = params.getTextDocument.getUri.toAbsolutePath
-    buffers.remove(path)
-    compilers.didClose(path)
-    trees.didClose(path)
-    diagnostics.onClose(path)
-    interactiveSemanticdbs.onClose(path)
-  }
+  override def didClose(params: DidCloseTextDocumentParams): Unit =
+    // Notebook cells are tracked from `notebookDocument/didClose` instead.
+    if (!params.getTextDocument.getUri.isNotebookCellUri) {
+      val path = params.getTextDocument.getUri.toAbsolutePath
+      buffers.remove(path)
+      compilers.didClose(path)
+      trees.didClose(path)
+      diagnostics.onClose(path)
+      interactiveSemanticdbs.onClose(path)
+    }
+
+  def notebookDidOpen(params: DidOpenNotebookDocumentParams): Unit =
+    notebookProvider.didOpen(params)
+
+  def notebookDidChange(params: DidChangeNotebookDocumentParams): Unit =
+    notebookProvider.didChange(params)
+
+  def notebookDidClose(params: DidCloseNotebookDocumentParams): Unit =
+    notebookProvider.didClose(params)
+
+  def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
+    notebookProvider.didSave(params)
 
   override def didSave(
       params: DidSaveTextDocumentParams

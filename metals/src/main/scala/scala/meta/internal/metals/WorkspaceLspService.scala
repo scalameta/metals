@@ -64,10 +64,14 @@ import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
+import org.eclipse.lsp4j.DidChangeNotebookDocumentParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DidCloseNotebookDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
+import org.eclipse.lsp4j.DidOpenNotebookDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DidSaveNotebookDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.DocumentFormattingParams
 import org.eclipse.lsp4j.DocumentHighlight
@@ -109,7 +113,7 @@ class WorkspaceLspService(
     val folders: List[Folder],
     fallbackServicePath: => AbsolutePath,
 ) extends ScalaLspService {
-  import serverInputs._
+  import serverInputs.*
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
@@ -506,6 +510,20 @@ class WorkspaceLspService(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] =
     getServiceFor(params.getTextDocument().getUri()).didSave(params)
+
+  override def notebookDidOpen(params: DidOpenNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidOpen(params)
+
+  override def notebookDidChange(
+      params: DidChangeNotebookDocumentParams
+  ): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidChange(params)
+
+  override def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidSave(params)
+
+  override def notebookDidClose(params: DidCloseNotebookDocumentParams): Unit =
+    getServiceFor(params.getNotebookDocument.getUri).notebookDidClose(params)
 
   override def definition(
       position: TextDocumentPositionParams
@@ -1382,6 +1400,20 @@ class WorkspaceLspService(
           new lsp4j.SaveOptions( /* includeText = */ false)
         )
         textDocumentSyncOptions.setOpenClose(true)
+
+        // Sync Scala cells of any notebook (see NotebookProvider), so we stop
+        // crashing on `vscode-notebook-cell:` uris and can give them basic
+        // language support (https://github.com/scalameta/metals-feature-requests/issues/236).
+        val notebookSelector = new lsp4j.NotebookSelector()
+        notebookSelector.setNotebook("*")
+        notebookSelector.setCells(
+          List(new lsp4j.NotebookSelectorCell("scala")).asJava
+        )
+        capabilities.setNotebookDocumentSync(
+          new lsp4j.NotebookDocumentSyncRegistrationOptions(
+            List(notebookSelector).asJava
+          )
+        )
 
         val scalaFilesPattern = new lsp4j.FileOperationPattern("**/*.scala")
         scalaFilesPattern.setMatches(lsp4j.FileOperationPatternKind.File)
