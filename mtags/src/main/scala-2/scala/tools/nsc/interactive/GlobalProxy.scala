@@ -39,10 +39,26 @@ trait GlobalProxy { this: MetalsGlobal =>
    * Shuts down the default presentation compiler thread and replaces it with a custom implementation.
    */
   private def newRunnerThread(backgroundCompilation: Boolean): Thread = {
-    if (compileRunner.isAlive) {
+    val previous = compileRunner
+    if (previous.isAlive) {
       try {
         this.askShutdown()
-        while (compileRunner.isAlive) Thread.sleep(0)
+        var interrupted = false
+        while (previous.isAlive) {
+          /* Join makes sure that all thread writes are visible to the current thread,
+           * otherwise it's possible that we create new WorkScheduler, which is then
+           * replaced by NoWorkScheduler from previous.
+           *
+           * Later when we want to shutdown the compiler, nothing will happen
+           * because NoWorkScheduler will not do anything.
+           */
+          try previous.join()
+          catch {
+            case _: InterruptedException =>
+              interrupted = true
+          }
+        }
+        if (interrupted) Thread.currentThread.interrupt()
       } catch {
         case NonFatal(e) =>
           logger.info(
