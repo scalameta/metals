@@ -39,6 +39,17 @@ class BazelTargetsXmlDump(xmlDump: String) {
     targetLabels.toMap
   }
 
+  def getLocationOfSourceFile(label: String): String = {
+    val targetLabels = for {
+      rule <- root \\ "source-file"
+      target = (rule \ "@name").text if target == label
+      location = (rule \ "@location").text
+    } yield location
+    // We are assuming that this element exists,
+    // because the label name is taken from the same query output
+    targetLabels.head
+  }
+
   lazy val ruleClassesByTarget: Map[String, String] = {
     val targetLabels = for {
       rule <- root \\ "rule"
