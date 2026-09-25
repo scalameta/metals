@@ -347,13 +347,16 @@ class Compilers(
     }
 
   def didClose(path: AbsolutePath): Unit = {
+    inFlightDidChange.remove(path).foreach(_.cancel())
     loadCompiler(path).foreach(_.didClose(path.toNIO.toUri()))
   }
 
-  def didFocus(path: AbsolutePath): Future[List[Diagnostic]] = {
+  def didFocus(path: AbsolutePath): Future[Option[List[Diagnostic]]] = {
     val maybeDiagnostics =
       for (pc <- loadCompiler(path))
         yield {
+          val token = new CompletableCancelToken()
+          inFlightDidChange.put(path, token).foreach(_.cancel())
           timerProvider
             .withTimer(
               s"[${pc.buildTargetId()}] computed diagnostics",
@@ -364,6 +367,7 @@ class Compilers(
                 path,
                 shouldReturnDiagnostics =
                   userConfig().presentationCompilerDiagnostics,
+                token,
               )
             }
             .map { case (timer, result) =>
@@ -372,11 +376,12 @@ class Compilers(
                   .duration("diagnostics", timer.elapsed)
                   .withLanguage(path.toJLanguage)
               )
-              result
+              if (token.isCancelled) None
+              else Some(result)
             }
         }
 
-    maybeDiagnostics.getOrElse(Future.successful(List.empty))
+    maybeDiagnostics.getOrElse(Future.successful(Some(List.empty)))
   }
 
   private val inFlightDidChange =
@@ -406,10 +411,12 @@ class Compilers(
                   didChangePc(file, token = token)
                 }
                 .map { case (timer, reportedDiagnostics) =>
-                  diagnostics.publishDiagnosticsNotAdjusted(
-                    file,
-                    reportedDiagnostics.toList,
-                  )
+                  if (!token.isCancelled) {
+                    diagnostics.publishDiagnosticsNotAdjusted(
+                      file,
+                      reportedDiagnostics.toList,
+                    )
+                  }
                   metrics.recordEvent(
                     Event
                       .duration("diagnostics", timer.elapsed)
