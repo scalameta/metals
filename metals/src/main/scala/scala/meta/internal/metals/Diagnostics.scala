@@ -345,9 +345,18 @@ final class Diagnostics(
     if (!path.isFile) return didDelete(path)
     val uri = path.toURI.toString
     val all = new ju.ArrayList[Diagnostic](queue.size() + 1)
+    // The token edit distance only depends on the file's snapshot and current
+    // buffer, not on the individual diagnostic, so compute it once for the whole
+    // queue instead of once per diagnostic. `lazy` keeps it uncomputed when the
+    // queue is empty.
+    lazy val snapshotAndEdit = snapshotEditDistance(path)
     for {
       diagnostic <- queue.asScala
-      freshDiagnostic <- toFreshDiagnostic(path, diagnostic.diagnostic)
+      freshDiagnostic <- toFreshDiagnostic(
+        snapshotAndEdit,
+        diagnostic.diagnostic,
+        fallbackToNearest = true,
+      )
     } {
       all.add(freshDiagnostic)
     }
@@ -381,18 +390,31 @@ final class Diagnostics(
     clearDiagnosticsBuffer().foreach { path => publishDiagnostics(path) }
   }
 
+  /**
+   * Computes the token edit distance between the diagnostics snapshot and the
+   * current buffer. This only depends on the file, not the individual
+   * diagnostic, so callers publishing multiple diagnostics for a file should
+   * compute it once and share it across all of them.
+   */
+  private def snapshotEditDistance(
+      path: AbsolutePath
+  ): Option[(Input.VirtualFile, TokenEditDistance)] =
+    snapshots.get(path).map { snapshot =>
+      (
+        snapshot,
+        buffers.tokenEditDistance(path, snapshot.value, scalaVersionSelector),
+      )
+    }
+
   // Adjust positions for type errors for changes in the open buffer.
   // Only needed when merging syntax errors with type errors.
-  def toFreshDiagnostic(
-      path: AbsolutePath,
+  private def toFreshDiagnostic(
+      snapshotAndEdit: Option[(Input.VirtualFile, TokenEditDistance)],
       d: Diagnostic,
-      fallbackToNearest: Boolean = true,
+      fallbackToNearest: Boolean,
   ): Option[Diagnostic] = {
-    val snapshot = snapshots.get(path)
-    snapshot match {
-      case Some(snapshot) =>
-        val edit =
-          buffers.tokenEditDistance(path, snapshot.value, scalaVersionSelector)
+    snapshotAndEdit match {
+      case Some((snapshot, edit)) =>
         val result = edit
           .toRevised(
             range = d.getRange,
