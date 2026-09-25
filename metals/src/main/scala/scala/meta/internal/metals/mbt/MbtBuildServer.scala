@@ -88,6 +88,7 @@ import ch.epfl.scala.bsp4j.TestParamsDataKind
 import ch.epfl.scala.bsp4j.TestProvider
 import ch.epfl.scala.bsp4j.TestResult
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
+import ch.epfl.scala.bsp4j.ScalaMainClassesItem
 
 final class MbtBuildServer(
     workspace: AbsolutePath,
@@ -589,13 +590,36 @@ final class MbtBuildServer(
     )
   }
 
+  /* Especially useful in Bazel where we can have main classes from dependencies defined
+   * in build files. For example Play servers.
+   */
   override def buildTargetScalaMainClasses(
       params: ScalaMainClassesParams
-  ): CompletableFuture[ScalaMainClassesResult] =
-    CompletableFuture.completedFuture(
-      new ScalaMainClassesResult(List.empty.asJava)
-    )
+  ): CompletableFuture[ScalaMainClassesResult] = {
+    val requestedTargets = params.getTargets.asScala.toSet
+    val items = importedBuildTargets
+      .filter(t => requestedTargets(t.id) && t.mainClasses.nonEmpty)
+      .map { target =>
+        new ScalaMainClassesItem(
+          target.id,
+          target.mainClasses.map { mc =>
+            new ScalaMainClass(
+              mc.className,
+              Nil.asJava,
+              Nil.asJava,
+            )
+          }.asJava,
+        )
+      }
+    CompletableFuture.completedFuture(new ScalaMainClassesResult(items.asJava))
+  }
 
+  /**
+   * Test are calculated by entirely using test candidates from mbt indexes,
+   * since we never really have tests from dependencies defined in build files.
+   * we can also have globs for test sources, so it's easier to just discover and
+   * verify them.
+   */
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams
   ): CompletableFuture[ScalaTestClassesResult] =

@@ -30,7 +30,9 @@ case class MbtTarget(
     classDirectories: Seq[String] = Nil,
     projectPath: Option[String] = None,
     configurations: Seq[String] = Nil,
+    mainClasses: Seq[MbtMainClass] = Nil,
     uncheckedSources: Seq[String] = Nil,
+    testClasses: Seq[MbtTestClass] = Nil,
 ) {
 
   // mbt doesn't produce any classfiles

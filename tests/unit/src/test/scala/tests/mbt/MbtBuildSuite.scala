@@ -11,6 +11,7 @@ import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.io.AbsolutePath
 
+import ch.epfl.scala.bsp4j.ScalaMainClassesParams
 import ch.epfl.scala.bsp4j.SourceItemKind
 import ch.epfl.scala.bsp4j.SourcesParams
 import com.google.gson.GsonBuilder
@@ -325,6 +326,118 @@ class MbtBuildSuite extends tests.BaseSuite {
     assertEquals(sourcesByUri(model).getKind, SourceItemKind.FILE)
     assertEquals(sourcesByUri(service).getKind, SourceItemKind.FILE)
     assertEquals(sourcesByUri(helper).getKind, SourceItemKind.FILE)
+  }
+
+  test("namespaces-preserve-test-classes") {
+    val dir = Files.createTempDirectory("mbt-test-classes")
+    val f = dir.resolve("mbt.json")
+    Files.writeString(
+      f,
+      """|{
+         |  "namespaces": {
+         |    "//test": {
+         |      "sources": [
+         |        "test/FooTest.java",
+         |        "test/BarTest.java"
+         |      ],
+         |      "configurations": [
+         |        "//test:BarTest",
+         |        "//test:FooTest"
+         |      ],
+         |      "testClasses": [
+         |        {
+         |          "className": "test.BarTest",
+         |          "configuration": "//test:BarTest",
+         |          "framework": "JUnit"
+         |        },
+         |        {
+         |          "className": "test.FooTest",
+         |          "configuration": "//test:FooTest",
+         |          "framework": "JUnit"
+         |        }
+         |      ]
+         |    }
+         |  }
+         |}
+         |""".stripMargin,
+    )
+    val target = MbtBuild
+      .fromFile(f)
+      .mbtTargets
+      .find(_.name == "//test")
+      .getOrElse(fail("missing //test target"))
+
+    assertEquals(
+      target.testClasses.map(tc =>
+        (tc.className, tc.configuration, tc.framework)
+      ),
+      Seq(
+        ("test.BarTest", "//test:BarTest", "JUnit"),
+        ("test.FooTest", "//test:FooTest", "JUnit"),
+      ),
+    )
+  }
+
+  test("namespaces-preserve-main-classes") {
+    val dir = Files.createTempDirectory("mbt-main-classes")
+    val f = dir.resolve("mbt.json")
+    Files.writeString(
+      f,
+      """|{
+         |  "namespaces": {
+         |    "//app": {
+         |      "sources": [
+         |        "app/Main.scala",
+         |        "app/Other.scala"
+         |      ],
+         |      "configurations": [
+         |        "//app:hello",
+         |        "//app:other"
+         |      ],
+         |      "mainClasses": [
+         |        {
+         |          "className": "app.Main",
+         |          "configuration": "//app:hello"
+         |        },
+         |        {
+         |          "className": "app.Other",
+         |          "configuration": "//app:other"
+         |        }
+         |      ]
+         |    }
+         |  }
+         |}
+         |""".stripMargin,
+    )
+    val build = MbtBuild.fromFile(f)
+    val target = build.mbtTargets
+      .find(_.name == "//app")
+      .getOrElse(fail("missing //app target"))
+
+    assertEquals(
+      target.mainClasses.map(mc => (mc.className, mc.configuration)),
+      Seq(
+        ("app.Main", "//app:hello"),
+        ("app.Other", "//app:other"),
+      ),
+    )
+
+    val server =
+      new MbtBuildServer(
+        AbsolutePath(dir),
+        () => build,
+        ScalaVersionSelector.default,
+        debugStarter = None,
+      )(scala.concurrent.ExecutionContext.global)
+    val classNames = server
+      .buildTargetScalaMainClasses(
+        new ScalaMainClassesParams(List(target.id).asJava)
+      )
+      .get()
+      .getItems
+      .asScala
+      .flatMap(_.getClasses.asScala.map(_.getClassName))
+    assertEquals(classNames.toSeq, Seq("app.Main", "app.Other"))
   }
 
 }

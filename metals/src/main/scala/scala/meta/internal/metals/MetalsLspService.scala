@@ -230,6 +230,7 @@ abstract class MetalsLspService(
       definitionIndex,
       () => Some(mbtSymbolSearch),
       workDoneProgress,
+      mbtBuild = () => Some(currentMbtBuild),
     )
 
   val scalaVersionSelector = new ScalaVersionSelector(
@@ -348,7 +349,7 @@ abstract class MetalsLspService(
   private val sleeper: Sleeper =
     new Sleeper.ScheduledExecutorServiceSleeper(sh)
 
-  private val mbt2 = new MbtWorkspaceSymbolProvider(
+  protected val mbt2 = new MbtWorkspaceSymbolProvider(
     workspace = folder,
     config = () => userConfig.workspaceSymbolProvider,
     buffers = buffers,

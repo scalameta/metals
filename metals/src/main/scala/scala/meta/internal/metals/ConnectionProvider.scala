@@ -71,8 +71,9 @@ class ConnectionProvider(
     syncStatusReporter: SyncStatusReporter,
     mbtBuild: () => MbtBuild,
     mbtDebugStarter: () => Option[MbtDebugSessionStarter] = () => None,
+    updateMbtBuild: MbtBuild => Unit,
 )(implicit ec: ExecutionContextExecutorService, rc: ReportContext)
-    extends Indexer(indexProviders, mbtBuild)
+    extends Indexer(indexProviders)
     with Cancelable {
 
   import Connect.connect
@@ -138,6 +139,7 @@ class ConnectionProvider(
     languageClient,
     tables,
     () => userConfig,
+    onImported = updateMbtBuild,
   )
 
   private val isMbtImportInProcess: AtomicBoolean = new AtomicBoolean(false)
