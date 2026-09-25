@@ -617,6 +617,8 @@ final class MbtBuildServer(
   /**
    * Test are calculated by entirely using test candidates from mbt indexes,
    * since we never really have tests from dependencies defined in build files.
+   * we can also have globs for test sources, so it's easier to just discover and
+   * verify them.
    */
   override def buildTargetScalaTestClasses(
       params: ScalaTestClassesParams

@@ -1,5 +1,6 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.nio.file.Paths
 import java.{util => ju}
 
 import scala.collection.mutable
@@ -7,6 +8,7 @@ import scala.collection.mutable
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
+import scala.meta.internal.metals.mbt.MbtGlobMatcher
 import scala.meta.internal.metals.mbt.MbtMainClass
 import scala.meta.internal.metals.mbt.MbtNamespace
 import scala.meta.internal.metals.mbt.MbtTestClass
@@ -437,30 +439,111 @@ object BazelMbtBuildSupport {
       framework: String,
       configuration: String,
   ): List[MbtTestClass] = {
-    val jvmSources = srcLabels.flatMap { label =>
-      BazelLabels.fileLabelToWorkspaceRelativePath(label).filter(isJvmSource)
+    val packageDir =
+      BazelLabels
+        .splitLabel(configuration)
+        .map { case (pkg, _) => pkg }
+        .getOrElse("")
+    val concrete = List.newBuilder[String]
+    val fromGlobs = List.newBuilder[String]
+    for (label <- srcLabels) {
+      BazelLabels.srcGlob(label) match {
+        case Some(glob) =>
+          fromGlobs ++= discoverGlobSources(
+            glob,
+            packageDir,
+            mbtWorkspaceSymbolProvider,
+          )
+        case None =>
+          BazelLabels
+            .fileLabelToWorkspaceRelativePath(label)
+            .filter(isJvmSource)
+            .foreach(concrete += _)
+      }
     }
+    val discovered = fromGlobs.result()
+    val jvmSources =
+      if (discovered.nonEmpty) (concrete.result() ++ discovered).distinct
+      else concrete.result()
 
     jvmSources match {
       case List(relativePath) =>
-        mbtWorkspaceSymbolProvider
-          .map(provider =>
-            provider
-              .classesForPath(relativePath)
-              .map(c =>
-                MbtTestClass(
-                  className = c.symbolToFullyQualifiedName,
-                  framework = framework,
-                  sourcePath = relativePath,
-                  configuration = configuration,
-                )
-              )
+        testClassesForSource(
+          relativePath,
+          mbtWorkspaceSymbolProvider,
+          framework,
+          configuration,
+        )
+      case sources if discovered.nonEmpty =>
+        sources.flatMap(relativePath =>
+          testClassesForSource(
+            relativePath,
+            mbtWorkspaceSymbolProvider,
+            framework,
+            configuration,
           )
-          .getOrElse(Nil)
+        )
       case _ =>
         Nil
     }
   }
+
+  /**
+   * Package-relative `glob()` patterns are matched against indexed workspace
+   * files. Only JVM sources are kept.
+   */
+  private def discoverGlobSources(
+      glob: BazelLabels.SrcGlob,
+      packageDir: String,
+      mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
+  ): List[String] =
+    mbtWorkspaceSymbolProvider match {
+      case None => Nil
+      case Some(provider) =>
+        val includeMatchers = glob.includes.map { pattern =>
+          MbtGlobMatcher.fromPattern(
+            BazelLabels.workspaceGlob(packageDir, pattern, glob.packageRelative)
+          )
+        }
+        val excludeMatchers = glob.excludes.map { pattern =>
+          MbtGlobMatcher.fromPattern(
+            BazelLabels.workspaceGlob(packageDir, pattern, glob.packageRelative)
+          )
+        }
+        val matched = List.newBuilder[String]
+        for (file <- provider.allFiles()) {
+          val relative =
+            file.toRelative(provider.workspace).toString.replace('\\', '/')
+          if (isJvmSource(relative)) {
+            val path = Paths.get(relative)
+            val included = includeMatchers.exists(_.matcher.matches(path))
+            val excluded = excludeMatchers.exists(_.matcher.matches(path))
+            if (included && !excluded) matched += relative
+          }
+        }
+        matched.result()
+    }
+
+  private def testClassesForSource(
+      relativePath: String,
+      mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider],
+      framework: String,
+      configuration: String,
+  ): List[MbtTestClass] =
+    mbtWorkspaceSymbolProvider
+      .map(provider =>
+        provider
+          .classesForPath(relativePath)
+          .map(c =>
+            MbtTestClass(
+              className = c.symbolToFullyQualifiedName,
+              framework = framework,
+              sourcePath = relativePath,
+              configuration = configuration,
+            )
+          )
+      )
+      .getOrElse(Nil)
 
   private def isJvmSource(relativePath: String): Boolean =
     relativePath.endsWith(".java") ||

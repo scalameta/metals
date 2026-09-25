@@ -1,9 +1,7 @@
 package scala.meta.internal.metals.mbt
 
-import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.{util => ju}
 import javax.annotation.Nullable
 
@@ -86,7 +84,8 @@ case class MbtBuild(
               None
             }
           }
-        val globPatterns = namespace.getSources.asScala.toSeq.filter(isGlob)
+        val globPatterns =
+          namespace.getSources.asScala.toSeq.filter(MbtGlobMatcher.isGlob)
         val nsModules = for {
           moduleId <- namespace.getDependencyModuleIds.asScala.toSeq
           module <- modulesById.get(moduleId).orElse {
@@ -101,16 +100,8 @@ case class MbtBuild(
           id =
             new bsp4j.BuildTargetIdentifier(MbtBuild.namespaceTargetId(name)),
           sources = namespace.getSources.asScala.toSeq
-            .filterNot(isGlob),
-          globMatchers = globPatterns.map(pattern =>
-            MbtGlobMatcher(
-              pattern = pattern,
-              prefix = globPrefix(pattern),
-              matcher = FileSystems.getDefault.getPathMatcher(
-                "glob:" + globPatternForMatcher(pattern)
-              ),
-            )
-          ),
+            .filterNot(MbtGlobMatcher.isGlob),
+          globMatchers = globPatterns.map(MbtGlobMatcher.fromPattern),
           scalacOptions = namespace.getScalacOptions.asScala.toSeq,
           javacOptions = namespace.getJavacOptions.asScala.toSeq,
           dependencyModules = nsModules,
@@ -129,31 +120,6 @@ case class MbtBuild(
       }
     }
 
-  private def isGlob(pattern: String): Boolean = {
-    val n = normalizeSlashes(pattern)
-    n.exists(c => c == '*' || c == '?' || c == '[' || c == '{')
-  }
-
-  private def normalizeSlashes(s: String): String =
-    s.trim.replace('\\', '/')
-
-  /** Leading `./` is stripped so matchers align with workspace-relative paths. */
-  private def globPatternForMatcher(pattern: String): String = {
-    val n = normalizeSlashes(pattern)
-    if (n.startsWith("./")) n.substring(2) else n
-  }
-
-  private def globPrefix(pattern: String): Option[Path] = {
-    val literalSegments = globPatternForMatcher(pattern)
-      .split('/')
-      .toSeq
-      .filter(_.nonEmpty)
-      .takeWhile(segment => !isGlob(segment))
-    literalSegments match {
-      case head +: tail => Some(Paths.get(head, tail: _*))
-      case _ => None
-    }
-  }
 }
 
 object MbtBuild {
