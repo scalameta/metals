@@ -94,7 +94,11 @@ object BazelQuery {
   def fullInformationQuery(targets: List[String]): BazelQuery = {
     val escaped = targets.flatMap(quoteTarget)
     val query = s"deps(set(${escaped.mkString(" ")}))"
-    BazelQuery(query, outputMode = Xml)
+    BazelQuery(
+      query,
+      outputMode = Xml,
+      extraArgs = List("--noimplicit_deps", "--noxml:line_numbers"),
+    )
   }
 
   def allScalaLibrariesQuery: BazelQuery =
