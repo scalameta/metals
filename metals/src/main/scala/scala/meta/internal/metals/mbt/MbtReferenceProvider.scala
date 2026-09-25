@@ -24,6 +24,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyCancelToken
+import scala.meta.internal.metals.ImplementationsResult
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
@@ -129,20 +130,22 @@ class MbtReferenceProvider(
   // take a long time to compute. We still stream results for clients that
   // support partial results so the user should see results much faster than
   // this timeout.
-  private val timeout: FiniteDuration =
-    if (sys.props.contains("metals.debug")) 20.minutes else 20.seconds
+  private def timeout: FiniteDuration =
+    if (sys.props.contains("metals.debug")) 20.minutes
+    else userConfig().mbtConfig.referencesTimeoutSeconds.seconds
+
   private val protobufReferences = new MbtProtobufReferenceProvider(
     mbt,
     buffers,
     languageClient,
     time,
     groupSize,
-    timeout,
+    userConfig,
   )
 
   def implementations(
       params: l.TextDocumentPositionParams
-  ): Future[List[l.Location]] = implementations(
+  ): Future[ImplementationsResult[l.Location]] = implementations(
     params.getTextDocument.getUri.toAbsolutePath,
     params.getPosition(),
     createOutput = (location, info) => location,
@@ -152,7 +155,7 @@ class MbtReferenceProvider(
       path: AbsolutePath,
       pos: l.Position,
       createOutput: (l.Location, s.SymbolInformation) => T,
-  ): Future[List[T]] =
+  ): Future[ImplementationsResult[T]] =
     workDoneProgress.trackProgressFuture(
       "Finding implementations",
       taskProgress => {
@@ -163,7 +166,7 @@ class MbtReferenceProvider(
               Event
                 .duration("find_implementations", timer.elapsed)
                 .withLanguage(path.toJLanguage)
-                .withLabel("resultCount", results.size.toString)
+                .withLabel("resultCount", results.results.size.toString)
                 .withOptional("symbol", symbol)
             )
             results
@@ -176,7 +179,7 @@ class MbtReferenceProvider(
       pos: l.Position,
       taskProgress: TaskProgress,
       createOutput: (l.Location, s.SymbolInformation) => T,
-  ): (List[T], Option[String]) = {
+  ): (ImplementationsResult[T], Option[String]) = {
     val timer = new Timer(time)
     val requestDoc = cache.indexSingle(path)
     val enclosingOccurrences = this.enclosingOccurrences(requestDoc, pos)
@@ -212,7 +215,7 @@ class MbtReferenceProvider(
       taskProgress: TaskProgress,
       timer: Timer,
       createOutput: (l.Location, s.SymbolInformation) => T,
-  ): (List[T], Option[String]) = {
+  ): (ImplementationsResult[T], Option[String]) = {
     val enclosingSymbols = enclosingOccurrences.map(_.symbol)
     val primarySymbol = enclosingSymbols.headOption
     val isOverridenSymbol = mutable.Set.from(enclosingSymbols)
@@ -220,6 +223,9 @@ class MbtReferenceProvider(
     var lastQueryRound = Set.empty[String]
     val result = mutable.ListBuffer.empty[T]
     val isVisitedURI = mutable.Set.empty[String]
+    var processedCandidates = 0
+    var totalCandidates = 0
+    var timedOut = false
 
     def visitDoc(doc: s.TextDocument): Boolean = {
       def overridesOrImplements(info: s.SymbolInformation): Boolean = {
@@ -281,28 +287,28 @@ class MbtReferenceProvider(
       scribe.info(s"Found ${candidates.size} candidate files for depth $depth.")
       lastQueryRound = Set.from(isOverridenSymbol)
       var didMakeProgress = false
-      var processedInRound = 0
-      val totalInRound = candidates.size
-      for {
-        paths <- groupPathsForIndexing(candidates)
-        if !timer.hasElapsed(timeout)
-        doc <- cache.index(paths).documents
-      } {
-        val didVisit = visitDoc(doc)
-        didMakeProgress = didMakeProgress || didVisit
-        processedInRound += 1
-        taskProgress.update(
-          processedInRound,
-          totalInRound,
-          Some(s"Processing ${doc.uri.toString.split("/").last}"),
-        )
+      processedCandidates = 0
+      totalCandidates = candidates.size
+      val remaining = groupPathsForIndexing(candidates)
+      while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+        val paths = remaining.next()
+        for (doc <- cache.index(paths).documents) {
+          val didVisit = visitDoc(doc)
+          didMakeProgress = didMakeProgress || didVisit
+          processedCandidates += 1
+          taskProgress.update(
+            processedCandidates,
+            totalCandidates,
+            Some(s"Processing ${doc.uri.toString.split("/").last}"),
+          )
+        }
       }
-      if (timer.hasElapsed(timeout)) {
+      timedOut = remaining.hasNext
+      if (timedOut) {
         scribe.warn(
-          s"Time out analyzing candidate files at $processedInRound/${totalInRound}."
+          s"Time out analyzing candidate files at $processedCandidates/${totalCandidates}."
         )
-      }
-      if (didMakeProgress) {
+      } else if (didMakeProgress) {
         loop(depth = depth + 1)
       }
     }
@@ -314,7 +320,16 @@ class MbtReferenceProvider(
       s"implementations: found ${result.size} implementation results in $timer"
     )
 
-    (result.toList, primarySymbol)
+    val isIncomplete = timedOut
+    (
+      ImplementationsResult(
+        result.toList,
+        isIncomplete,
+        processedCandidates,
+        totalCandidates,
+      ),
+      primarySymbol,
+    )
   }
 
   def enclosingOccurrences(
@@ -606,10 +621,9 @@ class MbtReferenceProvider(
     processDoc(requestDoc)
 
     // Process external candidates with progress reporting
-    for {
-      candidates <- groupPathsForIndexing(candidatesList)
-      if !timer.hasElapsed(timeout)
-    } {
+    val remaining = groupPathsForIndexing(candidatesList)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val candidates = remaining.next()
       val docTimer = new Timer(time)
       val docs = cache.index(candidates).documents
       scribe.info(
@@ -619,7 +633,8 @@ class MbtReferenceProvider(
       processedCandidates += candidates.length
       taskProgress.update(processedCandidates, totalCandidates)
     }
-    if (timer.hasElapsed(timeout)) {
+    val isIncomplete = remaining.hasNext
+    if (isIncomplete) {
       scribe.warn("references timed out, returning partial results")
       taskProgress.update(
         processedCandidates,
@@ -631,9 +646,26 @@ class MbtReferenceProvider(
     scribe.info(
       s"references: found $resultCount reference results in $timer"
     )
-    referenceResults.iterator.map { case (symbol, locations) =>
-      ReferencesResult(symbol, locations.toSeq)
+    val results = referenceResults.iterator.map { case (symbol, locations) =>
+      ReferencesResult(
+        symbol,
+        locations.toSeq,
+        isIncomplete = isIncomplete,
+        processedCandidates = processedCandidates,
+        totalCandidates = totalCandidates,
+      )
     }.toList
+    if (isIncomplete && results.isEmpty)
+      List(
+        ReferencesResult(
+          "",
+          Nil,
+          isIncomplete = true,
+          processedCandidates = processedCandidates,
+          totalCandidates = totalCandidates,
+        )
+      )
+    else results
   }
 
   private def enclosingOccurrences(

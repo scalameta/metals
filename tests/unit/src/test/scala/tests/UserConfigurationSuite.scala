@@ -354,6 +354,17 @@ class UserConfigurationSuite extends BaseSuite {
     )
   }
 
+  checkOK(
+    "mbt-references-timeout",
+    """
+      |{
+      |  "mbt-references-timeout": "5"
+      |}
+      |""".stripMargin,
+  ) { obtained =>
+    assertEquals(obtained.mbtConfig.referencesTimeoutSeconds, 5)
+  }
+
   test("check-print") {
     val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
     val fakePathString = fakePath.toString().replace("\\", "\\\\")
@@ -529,7 +540,8 @@ class UserConfigurationSuite extends BaseSuite {
   "mbt": {
     "importGeneratedSources": false,
     "semanticdbCacheEnabled": true,
-    "semanticdbCacheMaxSize": 1000
+    "semanticdbCacheMaxSize": 1000,
+    "referencesTimeout": 20
   }
 }""",
     )
@@ -615,7 +627,8 @@ class UserConfigurationSuite extends BaseSuite {
           |mcp-client                                   string                         ""              MCP Client Name
           |mbt.import-generated-sources                 boolean                        false           Import Generated Sources In MBT Builds
           |mbt.semanticdb-cache-enabled                 boolean                        false           Enable MBT Semanticdb Cache
-          |mbt.semanticdb-cache-max-size                string                         ${Int.MaxValue.toString.padTo(15, ' ')} MBT Semanticdb In-Memory Cache Size Limit""".stripMargin
+          |mbt.semanticdb-cache-max-size                string                         ${Int.MaxValue.toString.padTo(15, ' ')} MBT Semanticdb In-Memory Cache Size Limit
+          |mbt.references-timeout                       string                         20              MBT Find References Timeout (seconds)""".stripMargin
     assertNoDiff(obtained, expected)
   }
 

@@ -375,21 +375,30 @@ object Configs {
       importGeneratedSources: Boolean,
       semanticdbCacheEnabled: Boolean,
       semanticdbCacheMaxSize: Int,
+      referencesTimeoutSeconds: Int = MbtConfig.defaultReferencesTimeoutSeconds,
   )
 
   object MbtConfig {
     val defaultMaxSize: Int = Int.MaxValue
+    val defaultReferencesTimeoutSeconds: Int = 20
     def default: MbtConfig =
-      MbtConfig(false, false, defaultMaxSize)
+      MbtConfig(
+        false,
+        false,
+        defaultMaxSize,
+        defaultReferencesTimeoutSeconds,
+      )
     def fromConfig(
         importGeneratedSources: Option[Boolean],
         semanticdbCacheEnabled: Option[Boolean],
         semanticdbCacheMaxSize: Option[Int],
+        referencesTimeoutSeconds: Option[Int],
     ): MbtConfig =
       MbtConfig(
         importGeneratedSources.getOrElse(false),
         semanticdbCacheEnabled.getOrElse(false),
         semanticdbCacheMaxSize.getOrElse(defaultMaxSize),
+        referencesTimeoutSeconds.getOrElse(defaultReferencesTimeoutSeconds),
       )
   }
 

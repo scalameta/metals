@@ -2,15 +2,17 @@ package scala.meta.internal.metals.mbt
 
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
-import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration._
 
 import scala.meta.internal.metals.Buffers
+import scala.meta.internal.metals.ImplementationsResult
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
@@ -27,8 +29,11 @@ final class MbtProtobufReferenceProvider(
     languageClient: MetalsLanguageClient,
     time: Time,
     groupSize: Int,
-    timeout: FiniteDuration,
+    userConfig: () => UserConfiguration,
 ) {
+
+  private def timeout: FiniteDuration =
+    userConfig().mbtConfig.referencesTimeoutSeconds.seconds
 
   def implementations[T](
       path: AbsolutePath,
@@ -39,8 +44,8 @@ final class MbtProtobufReferenceProvider(
       indexDocuments: Seq[AbsolutePath] => s.TextDocuments,
       commonPrefixLength: (AbsolutePath, AbsolutePath) => Int,
       createOutput: (l.Location, s.SymbolInformation) => T,
-  ): (List[T], Option[String]) = {
-    if (enclosingOccurrences.isEmpty) return (Nil, None)
+  ): (ImplementationsResult[T], Option[String]) = {
+    if (enclosingOccurrences.isEmpty) return (ImplementationsResult.empty, None)
 
     val protoSymbols = enclosingOccurrences.map(_.symbol)
     val protoJavaResult =
@@ -48,7 +53,7 @@ final class MbtProtobufReferenceProvider(
 
     if (protoJavaResult.javaPackage.isEmpty) {
       scribe.debug("proto implementations: no java_package found")
-      return (Nil, None)
+      return (ImplementationsResult.empty, None)
     }
 
     val isService = requestDoc.symbols.exists { info =>
@@ -63,7 +68,7 @@ final class MbtProtobufReferenceProvider(
 
     if (!isService && !isRpc) {
       scribe.debug("proto implementations: not a service or RPC")
-      return (Nil, None)
+      return (ImplementationsResult.empty, None)
     }
 
     val implBaseSymbols: Seq[String] =
@@ -74,7 +79,7 @@ final class MbtProtobufReferenceProvider(
 
     if (implBaseSymbols.isEmpty) {
       scribe.debug("proto implementations: no ImplBase symbols found")
-      return (Nil, None)
+      return (ImplementationsResult.empty, None)
     }
 
     val javaMethodNames: Set[String] =
@@ -217,21 +222,22 @@ final class MbtProtobufReferenceProvider(
     var processedCandidates = 0
     val totalCandidates = candidates.size
 
-    for {
-      paths <- candidates.iterator.grouped(groupSize)
-      if !timer.hasElapsed(timeout)
-      doc <- indexDocuments(paths).documents
-    } {
-      visitDoc(doc)
-      processedCandidates += 1
-      taskProgress.update(
-        processedCandidates,
-        totalCandidates,
-        Some(s"Processing ${doc.uri.toString.split("/").last}"),
-      )
+    val remaining = candidates.iterator.grouped(groupSize)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val paths = remaining.next()
+      for (doc <- indexDocuments(paths).documents) {
+        visitDoc(doc)
+        processedCandidates += 1
+        taskProgress.update(
+          processedCandidates,
+          totalCandidates,
+          Some(s"Processing ${doc.uri.toString.split("/").last}"),
+        )
+      }
     }
 
-    if (timer.hasElapsed(timeout)) {
+    val isIncomplete = remaining.hasNext
+    if (isIncomplete) {
       scribe.warn(
         s"proto implementations: timed out at $processedCandidates/$totalCandidates"
       )
@@ -241,7 +247,15 @@ final class MbtProtobufReferenceProvider(
       s"proto implementations: found ${result.size} results in $timer"
     )
 
-    (result.toList, Some(protoJavaResult.javaPackage))
+    (
+      ImplementationsResult(
+        result.toList,
+        isIncomplete,
+        processedCandidates,
+        totalCandidates,
+      ),
+      Some(protoJavaResult.javaPackage),
+    )
   }
 
   def references(
@@ -487,10 +501,9 @@ final class MbtProtobufReferenceProvider(
 
     processDoc(requestDoc)
 
-    for {
-      candidates <- candidatesList.iterator.grouped(groupSize)
-      if !timer.hasElapsed(timeout)
-    } {
+    val remaining = candidatesList.iterator.grouped(groupSize)
+    while (remaining.hasNext && !timer.hasElapsed(timeout)) {
+      val candidates = remaining.next()
       val docTimer = new Timer(time)
       val docs = indexDocuments(candidates).documents
       scribe.info(
@@ -500,7 +513,8 @@ final class MbtProtobufReferenceProvider(
       processedCandidates += candidates.length
       taskProgress.update(processedCandidates, totalCandidates)
     }
-    if (timer.hasElapsed(timeout)) {
+    val isIncomplete = remaining.hasNext
+    if (isIncomplete) {
       taskProgress.update(
         processedCandidates,
         totalCandidates,
@@ -511,8 +525,25 @@ final class MbtProtobufReferenceProvider(
     scribe.info(
       s"references: found $resultCount reference results in $timer"
     )
-    referenceResults.iterator.map { case (symbol, locations) =>
-      ReferencesResult(symbol, locations.toSeq)
+    val results = referenceResults.iterator.map { case (symbol, locations) =>
+      ReferencesResult(
+        symbol,
+        locations.toSeq,
+        isIncomplete = isIncomplete,
+        processedCandidates = processedCandidates,
+        totalCandidates = totalCandidates,
+      )
     }.toList
+    if (isIncomplete && results.isEmpty)
+      List(
+        ReferencesResult(
+          "",
+          Nil,
+          isIncomplete = true,
+          processedCandidates = processedCandidates,
+          totalCandidates = totalCandidates,
+        )
+      )
+    else results
   }
 }

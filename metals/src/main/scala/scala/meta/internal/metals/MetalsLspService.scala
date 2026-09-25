@@ -1441,7 +1441,15 @@ abstract class MetalsLspService(
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
       if (userConfig.referenceProvider.isMbt) {
-        mbtReferenceProvider.implementations(position).map(_.asJava)
+        mbtReferenceProvider.implementations(position).map { result =>
+          notifyIncompleteSearch(
+            result.isIncomplete,
+            result.processedCandidates,
+            result.totalCandidates,
+            "Implementations",
+          )
+          result.results.asJava
+        }
       } else {
         implementationProvider.implementations(position).map(_.asJava)
       }
@@ -1589,11 +1597,42 @@ abstract class MetalsLspService(
   ): CompletableFuture[util.List[Location]] =
     CancelTokens.future { _ =>
       if (userConfig.referenceProvider.isMbt) {
-        mbtReferenceProvider.references(params).map(getSortedLocations)
+        mbtReferenceProvider.references(params).map { results =>
+          results.find(_.isIncomplete).foreach { result =>
+            notifyIncompleteSearch(
+              result.isIncomplete,
+              result.processedCandidates,
+              result.totalCandidates,
+              "References",
+            )
+          }
+          getSortedLocations(results)
+        }
       } else {
         referencesProvider.references(params).map(getSortedLocations)
       }
     }
+
+  private def notifyIncompleteSearch(
+      isIncomplete: Boolean,
+      processed: Int,
+      total: Int,
+      kind: String,
+  ): Unit = {
+    if (isIncomplete) {
+      statusBar.addMessage(
+        Messages.ReferencesTimedOut.status(
+          clientConfig.icons(),
+          processed,
+          total,
+          kind,
+        )
+      )
+      languageClient.logMessage(
+        Messages.ReferencesTimedOut.logMessage(processed, total, kind)
+      )
+    }
+  }
 
   private def getSortedLocations(referencesResult: List[ReferencesResult]) =
     referencesResult
@@ -1682,7 +1721,15 @@ abstract class MetalsLspService(
       params: TypeHierarchySubtypesParams
   ): CompletableFuture[util.List[TypeHierarchyItem]] =
     CancelTokens.future { _ =>
-      typeHierarchyProvider.subtypes(params).map(_.asJava)
+      typeHierarchyProvider.subtypes(params).map { result =>
+        notifyIncompleteSearch(
+          result.isIncomplete,
+          result.processedCandidates,
+          result.totalCandidates,
+          "Subtypes",
+        )
+        result.results.asJava
+      }
     }
 
   override def completion(

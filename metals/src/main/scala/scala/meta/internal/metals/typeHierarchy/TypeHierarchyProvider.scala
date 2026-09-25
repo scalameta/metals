@@ -5,6 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.DefinitionProvider
+import scala.meta.internal.metals.ImplementationsResult
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
@@ -166,9 +167,9 @@ final class TypeHierarchyProvider(
 
   def subtypes(
       params: TypeHierarchySubtypesParams
-  ): Future[List[TypeHierarchyItem]] =
+  ): Future[ImplementationsResult[TypeHierarchyItem]] =
     getItemInfo(params.getItem.getData) match {
-      case None => Future.successful(Nil)
+      case None => Future.successful(ImplementationsResult.empty)
       case Some(itemInfo) =>
         val symbol = itemInfo.symbol
         val source = params.getItem.getUri.toAbsolutePath
@@ -203,16 +204,16 @@ final class TypeHierarchyProvider(
                 }
               }
             if (items.isEmpty) subtypesFromMbt(source, params)
-            else Future.successful(items)
+            else Future.successful(ImplementationsResult(items))
           }
     }
 
   private def subtypesFromMbt(
       source: AbsolutePath,
       params: TypeHierarchySubtypesParams,
-  ): Future[List[TypeHierarchyItem]] =
+  ): Future[ImplementationsResult[TypeHierarchyItem]] =
     mbtReferenceProvider match {
-      case None => Future.successful(Nil)
+      case None => Future.successful(ImplementationsResult.empty)
       case Some(mbt) =>
         mbt.implementations(
           source,
