@@ -51,6 +51,13 @@ final case class ModuleReport(
     testFixturesSources: Seq[String] = Nil,
     testFixturesClassDirectories: Seq[String] = Nil,
     testFixturesProjectDeps: Seq[String] = Nil,
+    scalaVersion: Option[String] = None,
+    scalacOptions: Seq[String] = Nil,
+    testScalacOptions: Seq[String] = Nil,
+    testFixturesScalacOptions: Seq[String] = Nil,
+    javacOptions: Seq[String] = Nil,
+    testJavacOptions: Seq[String] = Nil,
+    testFixturesJavacOptions: Seq[String] = Nil,
 )
 
 /** Top-level information about the Gradle build. */
@@ -98,12 +105,13 @@ final case class ProjectReport(
         .distinct
       val testDependsOn = m.projectDependencies.map(_.targetModule).distinct
 
+      val scalaVersion = m.scalaVersion.orNull
       val mainNamespace = m.name -> MbtNamespaceJson(
         sources = m.sourceDirectories,
-        scalacOptions = Seq.empty,
-        javacOptions = Seq.empty,
+        scalacOptions = m.scalacOptions,
+        javacOptions = m.javacOptions,
         dependencyModules = mainDepIds,
-        scalaVersion = null,
+        scalaVersion = scalaVersion,
         javaHome = javaHome,
         dependsOn = if (mainDependsOn.nonEmpty) mainDependsOn else null,
         classDirectories = m.classDirectories,
@@ -122,10 +130,10 @@ final case class ProjectReport(
           Some(
             s"${m.name}:test" -> MbtNamespaceJson(
               sources = m.testSourceDirectories,
-              scalacOptions = Seq.empty,
-              javacOptions = Seq.empty,
+              scalacOptions = m.testScalacOptions,
+              javacOptions = m.testJavacOptions,
               dependencyModules = testDepIds,
-              scalaVersion = null,
+              scalaVersion = scalaVersion,
               javaHome = javaHome,
               dependsOn = (testDeps ++ fixtureDeps).distinct,
               classDirectories = m.testClassDirectory,
@@ -141,10 +149,10 @@ final case class ProjectReport(
         )(
           s"${m.name}:testFixtures" -> MbtNamespaceJson(
             sources = m.testFixturesSources,
-            scalacOptions = Seq.empty,
-            javacOptions = Seq.empty,
+            scalacOptions = m.testFixturesScalacOptions,
+            javacOptions = m.testFixturesJavacOptions,
             dependencyModules = testDepIds,
-            scalaVersion = null,
+            scalaVersion = scalaVersion,
             javaHome = javaHome,
             dependsOn =
               (m.name +: (mainDependsOn ++ m.testFixturesProjectDeps)).distinct,
