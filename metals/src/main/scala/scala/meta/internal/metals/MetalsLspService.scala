@@ -1016,9 +1016,8 @@ abstract class MetalsLspService(
         for {
           _ <- initialBuildTargetsReadyForDiagnostics
           reportedDiagnostics <- compilers.didFocus(path)
-          _ = diagnostics.publishDiagnosticsNotAdjusted(
-            path,
-            reportedDiagnostics,
+          _ = reportedDiagnostics.foreach(
+            diagnostics.publishDiagnosticsNotAdjusted(path, _)
           )
           result <-
             if (recentlyOpenedFiles.isRecentlyActive(path)) {
@@ -1184,8 +1183,9 @@ abstract class MetalsLspService(
       buffers.open.filter(isIncludedPath).map { path =>
         for {
           reportedDiagnostics <- compilers.didFocus(path)
-          _ = diagnostics
-            .publishDiagnosticsNotAdjusted(path, reportedDiagnostics)
+          _ = reportedDiagnostics.foreach(
+            diagnostics.publishDiagnosticsNotAdjusted(path, _)
+          )
         } yield ()
       }
     Future.sequence(futures).map(_ => ())
