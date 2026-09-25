@@ -9,6 +9,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.sys.process.BasicIO
+import scala.util.Properties
 import scala.util.Using
 import scala.util.Using.Releasable
 import scala.util.control.NonFatal
@@ -150,16 +151,30 @@ object SystemProcess {
         ps.getOutputStream
 
       override def cancel: Unit = {
-        ps.destroy()
-        val normalTermination = ps.waitFor(200, TimeUnit.MILLISECONDS)
-
-        if (!normalTermination) {
-          ps.destroyForcibly()
-          ps.waitFor(200, TimeUnit.MILLISECONDS)
+        if (!Properties.isWin) SystemProcess.interrupt(ps.pid())
+        if (!ps.waitFor(2, TimeUnit.SECONDS)) {
+          SystemProcess.destroyTree(ps, forcibly = false)
+          if (!ps.waitFor(200, TimeUnit.MILLISECONDS))
+            SystemProcess.destroyTree(ps, forcibly = true)
         }
         outReaders.foreach(_.interrupt())
       }
     }
+  }
+
+  private def interrupt(pid: Long): Unit =
+    try {
+      new ProcessBuilder("kill", "-INT", pid.toString).start().waitFor()
+      ()
+    } catch {
+      case NonFatal(_) => ()
+    }
+
+  private def destroyTree(ps: Process, forcibly: Boolean): Unit = {
+    ps.toHandle.descendants().forEach { handle =>
+      if (forcibly) handle.destroyForcibly() else handle.destroy()
+    }
+    if (forcibly) ps.destroyForcibly() else ps.destroy()
   }
 
   val Failed: SystemProcess =
