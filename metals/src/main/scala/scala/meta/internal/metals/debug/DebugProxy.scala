@@ -32,6 +32,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.InitializeRequest
 import scala.meta.internal.metals.debug.DebugProtocol.LaunchRequest
 import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
+import scala.meta.internal.metals.debug.DebugProtocol.TerminateRequest
 import scala.meta.internal.metals.debug.DebugProtocol.TestResults
 import scala.meta.internal.metals.debug.DebugProxy._
 import scala.meta.io.AbsolutePath
@@ -115,6 +116,12 @@ private[debug] final class DebugProxy(
       // set the status first, since the server can kill the connection
       exitStatus.trySuccess(Restarted)
       outputTerminated = true
+      server.send(request)
+    case request @ DisconnectRequest(_) =>
+      initialized.trySuccess(())
+      server.send(request)
+    case request @ TerminateRequest(_) =>
+      initialized.trySuccess(())
       server.send(request)
     case request @ SetBreakpointRequest(_) if debugMode == DebugMode.Disabled =>
       // ignore breakpoints when not debugging

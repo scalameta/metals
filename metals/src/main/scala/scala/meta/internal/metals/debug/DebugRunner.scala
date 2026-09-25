@@ -167,6 +167,7 @@ class DebugRunner(
   def cancel(): Unit = {
     if (cancelled.compareAndSet(false, true)) {
       scribe.info(s"Canceling run for [$sessionName]")
+      cancelling.trySuccess(())
       Cancelable.cancelAll(List(client))
     }
   }
