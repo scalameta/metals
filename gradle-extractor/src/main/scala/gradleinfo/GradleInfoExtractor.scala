@@ -217,6 +217,8 @@ object GradleInfoExtractor {
       outputFile.toString.replace("\\", "\\\\").replace("'", "\\'")
     val script =
       s"""|gradle.projectsEvaluated {
+          |  if (gradle.parent != null) return
+          |
           |  def unwrap = { value ->
           |    if (value == null) {
           |      return null
