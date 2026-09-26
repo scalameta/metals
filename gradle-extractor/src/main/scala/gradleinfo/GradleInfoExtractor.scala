@@ -210,6 +210,8 @@ object GradleInfoExtractor {
       outputFile.toString.replace("\\", "\\\\").replace("'", "\\'")
     val script =
       s"""|gradle.projectsEvaluated {
+          |  if (gradle.parent != null) return
+          |
           |  def result = [:]
           |  gradle.rootProject.allprojects { project ->
           |    def sourceSets = project.extensions.findByName('sourceSets')
