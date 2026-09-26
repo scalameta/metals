@@ -261,7 +261,12 @@ object GradleInfoExtractor {
         read[Map[String, SourceSetDirectories]](Files.readString(outputFile))
       else Map.empty
     } catch {
-      case NonFatal(_) => Map.empty
+      case NonFatal(e) =>
+        scribe.warn(
+          s"GradleInfoExtractor: Could not read the source sets from $outputFile",
+          e,
+        )
+        Map.empty
     }
 
   /**
