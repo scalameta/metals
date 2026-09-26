@@ -18,6 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Failure
 import scala.util.Success
+import scala.util.Try
 
 import scala.meta._
 import scala.meta.internal.io.FileIO
@@ -38,6 +39,7 @@ import org.scalafmt.dynamic.ScalafmtDynamicError
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt
 import org.scalafmt.interfaces.ScalafmtReporter
+import org.scalafmt.interfaces.ScalafmtSession
 
 /**
  * Implement text formatting using Scalafmt
@@ -169,92 +171,93 @@ final class FormattingProvider(
   }
 
   /**
-   * Format a file for MCP tools, returning either the formatted text or an error message.
-   * Unlike the regular format method, this doesn't log errors but returns them.
+   * Format files for MCP tools, returning errors instead of logging them.
    *
-   * @return Either(errorMessage, formattedText) where Left indicates an error and Right indicates success.
-   *         If Right(None), the file was already properly formatted.
-   *         If Right(Some(text)), the file was formatted and this is the new text.
+   * A Left aborts the whole batch, a Right has one result per requested path.
+   * Never touches the shared cancellation state used by editor formatting.
    */
-  def formatForMcp(
-      path: AbsolutePath,
+  def formatAllForMcp(
+      paths: List[AbsolutePath],
       projectRoot: AbsolutePath,
-      token: CancelChecker,
-  ): Future[Either[String, List[l.TextEdit]]] = {
-    reset(token)
-    val input = path.toInputFromBuffers(buffers)
-
-    def formatWithConfig(
-        config: AbsolutePath
-    ): Either[String, Option[String]] = {
-      val cleanScalafmt = scalafmt.withReporter(EmptyScalafmtReporter)
-
-      try {
-        val session = cleanScalafmt.createSession(config.toNIO)
-        val result = session.formatOrError(path.toNIO, input.text)
-
-        if (result.exception != null) {
-          result.exception match {
-            case p: PositionException =>
-              Left(
-                s"Scalafmt parsing error at line ${p.startLine() + 1}: ${p.shortMessage()}"
+      respectProjectFilters: Boolean = false,
+  ): Future[Either[String, List[FormattingProvider.McpFormatResult]]] = {
+    def resolveConfig(): Either[String, AbsolutePath] =
+      scalafmtConf(projectRoot) match {
+        case Some(config) => Right(config)
+        case None =>
+          val defaultConfig = projectRoot.resolve(Directories.hiddenScalafmt)
+          if (defaultConfig.exists) Right(defaultConfig)
+          else
+            Try(
+              Files.write(
+                defaultConfig.toNIO,
+                initialConfig().getBytes(StandardCharsets.UTF_8),
               )
-            case e =>
-              Left(s"Formatting error: ${e.getMessage}")
-          }
-        } else {
-          val formatted = result.value
-          if (formatted != input.text) {
-            Right(Some(formatted))
-          } else {
-            Right(None)
+            ).toEither.left
+              .map(error =>
+                s"Failed to create default scalafmt config: ${error.getMessage}"
+              )
+              .map(_ => defaultConfig)
+      }
+
+    def formatOne(
+        session: ScalafmtSession,
+        path: AbsolutePath,
+    ): FormattingProvider.McpFormatResult = {
+      import FormattingProvider.McpFormatResult._
+      Try {
+        if (respectProjectFilters && !session.matchesProjectFilters(path.toNIO))
+          Excluded(path)
+        else {
+          val input = path.toInputFromBuffers(buffers)
+          val result = session.formatOrError(path.toNIO, input.text)
+          if (result.exception != null)
+            Failed(path, fileFormatError(result.exception))
+          else if (result.value == input.text) Unchanged(path)
+          else {
+            val range = Position.Range(input, 0, input.chars.length).toLsp
+            Formatted(path, new l.TextEdit(range, result.value))
           }
         }
-      } catch {
-        case e: ScalafmtDynamicError =>
-          Left(s"Scalafmt configuration error: ${e.getMessage}")
-        case e: PositionException =>
-          Left(
-            s"Scalafmt parsing error at line ${e.startLine() + 1}: ${e.shortMessage()}"
-          )
-        case e: Exception =>
-          Left(s"Formatting error: ${e.getMessage}")
-      }
-    }
-    def fullDocumentFormat(config: AbsolutePath) = {
-      val fullDocumentRange =
-        Position.Range(input, 0, input.chars.length).toLsp
-      formatWithConfig(config).map { formatted =>
-        formatted.map { text =>
-          new l.TextEdit(fullDocumentRange, text)
-        }.toList
-      }
+      }.fold(
+        error => Failed(path, fileFormatError(error)),
+        result => result,
+      )
     }
 
-    scalafmtConf(projectRoot) match {
-      case Some(config) =>
-        Future.successful(fullDocumentFormat(config))
-      case None =>
-        // No config found, use default config
-        val defaultConfig = projectRoot.resolve(Directories.hiddenScalafmt)
-        if (!defaultConfig.exists) {
-          try {
-            Files.write(
-              defaultConfig.toNIO,
-              initialConfig().getBytes(StandardCharsets.UTF_8),
-            )
-          } catch {
-            case e: Exception =>
-              return Future.successful(
-                Left(
-                  s"Failed to create default scalafmt config: ${e.getMessage}"
-                )
-              )
-          }
-        }
-        Future.successful(fullDocumentFormat(defaultConfig))
+    val formatting = Future {
+      for {
+        config <- resolveConfig()
+        session <- Try(
+          scalafmt
+            .withReporter(EmptyScalafmtReporter)
+            .createSession(config.toNIO)
+        ).toEither.left.map(configFormatError)
+      } yield paths.map(path => formatOne(session, path))
     }
+
+    if (paths.lengthCompare(1) > 0)
+      workDoneProgress.trackFuture(
+        s"Formatting ${paths.length} files",
+        formatting,
+      )
+    else formatting
   }
+
+  // Scalafmt wraps per-file failures in ScalafmtDynamicError.
+  private def fileFormatError(error: Throwable): String =
+    error match {
+      case position: PositionException =>
+        s"Scalafmt parsing error at line ${position.startLine() + 1}: ${position.shortMessage()}"
+      case other => s"Formatting error: ${other.getMessage}"
+    }
+
+  private def configFormatError(error: Throwable): String =
+    error match {
+      case dynamic: ScalafmtDynamicError =>
+        s"Scalafmt configuration error: ${dynamic.getMessage}"
+      case other => s"Formatting error: ${other.getMessage}"
+    }
 
   private def runFormat(
       path: AbsolutePath,
@@ -672,6 +675,16 @@ final class FormattingProvider(
 }
 
 object FormattingProvider {
+
+  sealed trait McpFormatResult { def path: AbsolutePath }
+  object McpFormatResult {
+    case class Formatted(path: AbsolutePath, edit: l.TextEdit)
+        extends McpFormatResult
+    case class Unchanged(path: AbsolutePath) extends McpFormatResult
+    case class Excluded(path: AbsolutePath) extends McpFormatResult
+    case class Failed(path: AbsolutePath, message: String)
+        extends McpFormatResult
+  }
 
   sealed trait RewriteType
   object RewriteType {

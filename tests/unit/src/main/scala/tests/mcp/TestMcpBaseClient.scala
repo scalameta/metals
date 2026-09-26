@@ -59,6 +59,29 @@ abstract class TestMcpBaseClient(implicit protected val ec: ExecutionContext) {
     callTool("format-file", params).map(_.mkString)
   }
 
+  def formatWithSelectors(
+      files: Option[List[String]] = None,
+      module: Option[String] = None,
+      all: Boolean = false,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    files.foreach { filePaths =>
+      val array = params.putArray("files")
+      filePaths.foreach(filePath => array.add(filePath))
+    }
+    module.foreach(name => params.put("module", name))
+    if (all) params.put("all", true)
+    callTool("format-file", params).map(_.mkString)
+  }
+
+  def formatFiles(filePaths: List[String]): Future[String] =
+    formatWithSelectors(files = Some(filePaths))
+
+  def formatModule(module: String): Future[String] =
+    formatWithSelectors(module = Some(module))
+
+  def formatAll(): Future[String] = formatWithSelectors(all = true)
+
   def generateScalafixRule(
       ruleImplementation: String,
       description: String,
