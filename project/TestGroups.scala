@@ -139,6 +139,7 @@ object TestGroups {
     "tests.JavaReferencesLspSuite", "tests.TypeHierarchyLspSuite",
     "tests.worksheets.Issue7090LspSuite",
     "tests.parsing.BloopDiagnosticsParserSuite",
+    "tests.DiagnosticsTokenEditDistanceSuite",
     "tests.codeactions.RemoveInfixLspSuite",
     "scala.meta.internal.metals.debug.tests.DebugProxyTeardownSuite",
     "tests.mcp.McpGlobSearchCapLspSuite",

@@ -33,7 +33,7 @@ object V {
   // changing coursier interfaces version may be not binary compatible.
   // After each update of coursier interfaces, remember to bump the version in dotty repository.
 
-  val coursierInterfaces = "1.0.29-M2"
+  val coursierInterfaces = "1.0.29"
 
   val debugAdapter = "4.2.13"
 
@@ -55,7 +55,7 @@ object V {
 
   val mavenBloop = "2.0.5"
 
-  val mill = "1.1.9"
+  val mill = "1.1.10"
 
   // use from project/plugins.sbt
   val mdoc = _root_.mdoc.BuildInfo.version
