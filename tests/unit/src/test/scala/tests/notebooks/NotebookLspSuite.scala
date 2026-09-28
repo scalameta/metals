@@ -574,10 +574,10 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
   }
 
   test("multiple-build-targets-still-auto-associate") {
-    // Exercises tryAutoAssociate's buildTargetsOrder-based pick, not the old
+    // Exercises bestTarget's buildTargetsOrder-based pick, not the old
     // "exactly one candidate, otherwise ask the user" gate: both targets
     // carry the same extra dependency, so the assertion holds no matter
-    // which of the two tryAutoAssociate actually picks.
+    // which of the two bestTarget actually picks.
     cleanWorkspace()
     for {
       _ <- initialize(
@@ -768,7 +768,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
   }
 
   test("cell-under-a-target's-source-root-prefers-that-target") {
-    // tryAutoAssociate must prefer a location-compatible candidate from
+    // bestTarget must prefer a location-compatible candidate from
     // BuildTargets.sourceBuildTargets (same preference inverseSources gives
     // regular files) over ranking every workspace target globally: a
     // notebook physically inside a's source tree must associate with a,
@@ -824,11 +824,11 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
     )
   }
 
-  test("stale-association-is-replaced-after-a-build-reload") {
-    // tryAutoAssociate must notice when its current association's target no
-    // longer exists (e.g. after a build reload swapped it for a new one)
-    // and re-pick, instead of leaving the notebook pinned to a dead target
-    // id forever.
+  test("target-is-recomputed-after-a-build-reload") {
+    // retryAssociations recomputes bestTarget on every reload rather than
+    // reusing a cached pick, so a notebook whose target disappeared (e.g. a
+    // build.sbt edit renamed/removed it) re-associates with whatever now
+    // exists, instead of staying pinned to a dead target id forever.
     cleanWorkspace()
     for {
       _ <- initialize(
