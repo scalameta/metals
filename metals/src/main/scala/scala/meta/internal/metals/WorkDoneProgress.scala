@@ -308,8 +308,13 @@ class WorkDoneProgress(
   override def endProgress(token: Future[Token]): Future[Unit] =
     token
       .map { token =>
-        taskMap.remove(token)
+        val task = taskMap.remove(token)
         val end = new WorkDoneProgressEnd()
+        for {
+          t <- Option(task)
+          progress <- t.maybeProgress
+          if progress.message.nonEmpty
+        } end.setMessage(progress.message)
         val params =
           messages.Either.forLeft[WorkDoneProgressNotification, Object](end)
         client.notifyProgress(new ProgressParams(token, params))

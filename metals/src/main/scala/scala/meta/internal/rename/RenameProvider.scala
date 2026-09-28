@@ -16,8 +16,10 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.DefinitionResult
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
+import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -211,8 +213,8 @@ final class RenameProvider(
 
         val allReferences =
           for {
-            occurence <- symbolOccurrence.iterator
-            text <- buffers.get(source).iterator
+            occurence <- symbolOccurrence
+            text <- buffers.get(source).toList
             definitionLoc <-
               definition.locations.asScala.headOption.toIterable
             definitionPath = definitionLoc.getUri().toAbsolutePath
@@ -235,96 +237,112 @@ final class RenameProvider(
                 )
                 .map { refs =>
                   scribe.debug(s"Found ${refs.size} basic references")
-                  refs.flatMap(_.locations)
+                  refs
                 }
-            definitionLocation =
-              definition.locations.asScala
-                .filter(_.getUri().isScalaOrJavaFilename)
-                .map(findDefinitionRage)
             companionRefs = companionReferences(
               occurence.symbol,
               source,
               newName,
             )
-          } yield Future
-            .sequence(
-              List(currentReferences, companionRefs)
-            )
-            .map(
-              _.flatten ++ definitionLocation
-            )
+          } yield {
+            val definitionLocation =
+              definition.locations.asScala
+                .filter(_.getUri().isScalaOrJavaFilename)
+                .map(findDefinitionRage)
+            for {
+              refs <- currentReferences
+              companion <- companionRefs
+              joined = (refs ++ companion)
+                .reduceOption(_ ++ _)
+                .getOrElse(ReferencesResult.empty)
+            } yield joined
+              .copy(locations = joined.locations ++ definitionLocation)
+          }
         Future
           .sequence(allReferences)
-          .map(locs =>
-            (
-              locs.flatten.filterNot(_.getRange().isOffset),
-              symbolOccurrence,
-              definition,
-              newName,
-            )
-          )
+          .map { results =>
+            val flatResult =
+              results
+                .reduceOption(_ ++ _)
+                .getOrElse(ReferencesResult.empty)
+            (flatResult, symbolOccurrence, definition, newName)
+          }
       }
-      .map { case (allReferences, symbolOccurrence, definition, newName) =>
-        def isOccurrence(fn: String => Boolean): Boolean = {
-          symbolOccurrence.exists { occ =>
-            fn(occ.symbol)
-          }
-        }
-
-        // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
-        val fallbackOccurences =
-          if (allReferences.isEmpty)
-            renamedImportOccurrences(
-              source,
-              symbolOccurrence.headOption,
-              mbtReferenceProvider.textDocument(source),
+      .map {
+        case (
+              result,
+              _,
+              _,
+              _,
+            ) if result.isIncomplete =>
+          client.showMessage(
+            Messages.ReferencesTimedOut.renameAborted(
+              result.processedCandidates,
+              result.totalCandidates,
             )
-          else allReferences
-
-        if (fallbackOccurences.isEmpty) {
-          scribe.debug(
-            s"Symbol occurence was $symbolOccurrence"
           )
-          scribe.debug(s"""|The definition found was:
-                           | - path ${definition.definition}
-                           | - symbol ${definition.symbol}
-                           |""".stripMargin)
-        }
-
-        val allChanges = for {
-          (path, locs) <- fallbackOccurences.toList.distinct
-            .groupBy(_.getUri().toAbsolutePath)
-        } yield {
-          val textEdits = for (loc <- locs) yield {
-            textEdit(isOccurrence, loc, newName)
+          new WorkspaceEdit()
+        case (result, symbolOccurrence, definition, newName) =>
+          def isOccurrence(fn: String => Boolean): Boolean = {
+            symbolOccurrence.exists { occ =>
+              fn(occ.symbol)
+            }
           }
-          Seq(path -> textEdits.toList)
-        }
-        val fileChanges = allChanges.flatten.toMap
-        val shouldRenameInBackground =
-          !clientConfig
-            .isOpenFilesOnRenameProvider() || fileChanges.keySet.size >= clientConfig
-            .renameFileThreshold()
-        val (openedEdits, closedEdits) =
-          if (shouldRenameInBackground) {
-            if (clientConfig.isOpenFilesOnRenameProvider()) {
-              client.showMessage(
-                fileThreshold(fileChanges.keySet.size)
+          val allReferences = result.locations
+          // If we didn't find any references then it might be a renamed symbol `import a.{ B => C }`
+          val fallbackOccurences =
+            if (allReferences.isEmpty)
+              renamedImportOccurrences(
+                source,
+                symbolOccurrence.headOption,
+                mbtReferenceProvider.textDocument(source),
               )
-            }
-            fileChanges.partition { case (path, _) =>
-              buffers.contains(path)
-            }
-          } else {
-            (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+            else allReferences
+
+          if (fallbackOccurences.isEmpty) {
+            scribe.debug(
+              s"Symbol occurence was $symbolOccurrence"
+            )
+            scribe.debug(s"""|The definition found was:
+                             | - path ${definition.definition}
+                             | - symbol ${definition.symbol}
+                             |""".stripMargin)
           }
 
-        awaitingSave.add(() => changeClosedFiles(closedEdits))
+          val allChanges = for {
+            (path, locs) <- fallbackOccurences.toList.distinct
+              .groupBy(_.getUri().toAbsolutePath)
+          } yield {
+            val textEdits = for (loc <- locs) yield {
+              textEdit(isOccurrence, loc, newName)
+            }
+            Seq(path -> textEdits.toList)
+          }
+          val fileChanges = allChanges.flatten.toMap
+          val shouldRenameInBackground =
+            !clientConfig
+              .isOpenFilesOnRenameProvider() || fileChanges.keySet.size >= clientConfig
+              .renameFileThreshold()
+          val (openedEdits, closedEdits) =
+            if (shouldRenameInBackground) {
+              if (clientConfig.isOpenFilesOnRenameProvider()) {
+                client.showMessage(
+                  fileThreshold(fileChanges.keySet.size)
+                )
+              }
+              fileChanges.partition { case (path, _) =>
+                buffers.contains(path)
+              }
+            } else {
+              (fileChanges, Map.empty[AbsolutePath, List[TextEdit]])
+            }
 
-        val edits = documentEdits(openedEdits)
-        val renames =
-          fileRenames(isOccurrence, fileChanges.keySet, newName)
-        new WorkspaceEdit((edits ++ renames).asJava)
+          awaitingSave.add(() => changeClosedFiles(closedEdits))
+
+          val edits = documentEdits(openedEdits)
+          val renames =
+            fileRenames(isOccurrence, fileChanges.keySet, newName)
+          new WorkspaceEdit((edits ++ renames).asJava)
       }
   }
 
@@ -481,7 +499,7 @@ final class RenameProvider(
       sym: String,
       source: AbsolutePath,
       newName: String,
-  ): Future[Seq[Location]] = {
+  ): Future[List[ReferencesResult]] = {
     val results = for {
       companionSymbol <- companion(sym).toIterable
       loc <-
@@ -497,9 +515,9 @@ final class RenameProvider(
           findRealRange = AdjustRange(findRealRange(newName)),
           withDefinitionFallback = Some(sym),
         )
-        .map(_.flatMap(_.locations :+ loc))
+        .map(_.map(result => result.copy(locations = result.locations :+ loc)))
     }
-    Future.sequence(results).map(_.flatten.toSeq)
+    Future.sequence(results).map(_.flatten.toList)
   }
 
   private def companion(sym: String) = {

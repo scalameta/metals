@@ -1327,6 +1327,35 @@ object Messages {
 
   val missedByUser = new MessageActionItem("Missed by user")
 
+  object ReferencesTimedOut {
+    def status(
+        icons: Icons,
+        processed: Int,
+        total: Int,
+        kind: String = "References",
+    ): MetalsStatusParams =
+      MetalsStatusParams(
+        s"${icons.alert}$kind incomplete ($processed/$total files)",
+        level = "warn",
+      )
+
+    def logMessage(
+        processed: Int,
+        total: Int,
+        kind: String = "References",
+    ): MessageParams =
+      new MessageParams(
+        MessageType.Warning,
+        s"$kind incomplete ($processed/$total files). Nearby files were searched first.",
+      )
+
+    def renameAborted(processed: Int, total: Int): MessageParams =
+      new MessageParams(
+        MessageType.Error,
+        s"Rename aborted because find-references timed out after searching $processed/$total files.",
+      )
+  }
+
 }
 object FileOutOfScalaCliBspScope {
   val regenerateAndRestart = new MessageActionItem("Yes")
