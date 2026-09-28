@@ -63,7 +63,7 @@ object SemanticTokensProvider {
           delta = delta.moveLine(1)
         }
       }
-      if (lines.last.isEmpty()) delta = Line(1, 0)
+      if (lines.last.isEmpty()) delta = delta.moveLine(-1)
       else delta = Line(0, lines.last.length())
     } else {
       val lines = text.split("\n", -1)
