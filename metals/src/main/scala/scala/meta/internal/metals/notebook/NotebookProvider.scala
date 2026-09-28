@@ -105,7 +105,8 @@ final class NotebookProvider(
     val result = for {
       ipynbPath <- params.getNotebookDocument.getUri.toAbsolutePathSafe
     } yield {
-      val cellsChange = Option(params.getChange).flatMap(c => Option(c.getCells))
+      val cellsChange =
+        Option(params.getChange).flatMap(c => Option(c.getCells))
 
       val structureChanges = (for {
         cellsChange <- cellsChange
@@ -321,7 +322,8 @@ final class NotebookProvider(
     CellChanges(opened, closed)
   }
 
-  /** Drops all state for `ipynbPath` and returns the cell paths (plus its
+  /**
+   * Drops all state for `ipynbPath` and returns the cell paths (plus its
    * combined-script marker path) whose parser/compiler state the caller
    * must now close, since `MetalsLspService.didClose` never sees these
    * synthetic paths (notebook cells skip `textDocument/didClose` entirely).
