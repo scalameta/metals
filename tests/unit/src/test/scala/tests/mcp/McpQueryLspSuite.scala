@@ -1348,6 +1348,91 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("get-source-module-dependency-not-on-inferred-target") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"]}
+           |}
+           |/a/src/main/scala/com/module_a/OnlyA.scala
+           |package com.module_a
+           |
+           |class OnlyA
+           |/b/src/main/scala/com/module_b/OnlyB.scala
+           |package com.module_b
+           |
+           |class OnlyB
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/module_a/OnlyA.scala")
+      _ = assertNoDiagnostics()
+
+      // `sourcecode` is only on module "b"'s classpath, but the path in focus
+      // belongs to module "a" - exact search must fall back to every target.
+      res = server.headServer.queryEngine.getSource(
+        "sourcecode.Enclosing",
+        Some(server.toPath("a/src/main/scala/com/module_a/OnlyA.scala")),
+        module = None,
+        detailed = false,
+      )
+      _ = res match {
+        case Some((resPath, _)) =>
+          assertNoDiff(resPath.toString, "/sourcecode/Enclosing.scala")
+        case None =>
+          fail(
+            "Source should be found for sourcecode.Enclosing even though " +
+              "it is only declared on module \"b\""
+          )
+      }
+    } yield ()
+  }
+
+  test("get-documentation-module-dependency-not-on-inferred-target") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"]}
+           |}
+           |/a/src/main/scala/com/module_a/OnlyA.scala
+           |package com.module_a
+           |
+           |class OnlyA
+           |/b/src/main/scala/com/module_b/OnlyB.scala
+           |package com.module_b
+           |
+           |class OnlyB
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/com/module_a/OnlyA.scala")
+      _ = assertNoDiagnostics()
+
+      // Same fallback must apply to get-docs, which currently has no
+      // dependency-symbol coverage at all.
+      res = server.headServer.queryEngine.getDocumentation(
+        "sourcecode.Enclosing",
+        Some(server.toPath("a/src/main/scala/com/module_a/OnlyA.scala")),
+        module = None,
+      )
+      _ = res match {
+        case Some(result) =>
+          assertNoDiff(result.path, "sourcecode.Enclosing")
+        case None =>
+          fail(
+            "Documentation lookup should be found for sourcecode.Enclosing " +
+              "even though it is only declared on module \"b\""
+          )
+      }
+    } yield ()
+  }
+
   def timed[T](f: => T): T = {
     val start = System.currentTimeMillis()
     val res = f
