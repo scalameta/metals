@@ -96,7 +96,7 @@ final class NotebookProvider(
       triggerDiagnostics(ipynbPath)
       CellChanges(opened, closed)
     }
-    result.getOrElse(CellChanges.empty)
+    result.getOrElse(CellChanges())
   }
 
   def didChange(
@@ -112,7 +112,7 @@ final class NotebookProvider(
         cellsChange <- cellsChange
         structure <- Option(cellsChange.getStructure)
       } yield applyStructureChange(ipynbPath, structure)).getOrElse(
-        CellChanges.empty
+        CellChanges()
       )
 
       val changedPaths = for {
@@ -146,13 +146,13 @@ final class NotebookProvider(
       triggerDiagnostics(ipynbPath)
       structureChanges.copy(opened = structureChanges.opened ++ changedPaths)
     }
-    result.getOrElse(CellChanges.empty)
+    result.getOrElse(CellChanges())
   }
 
   def didClose(params: DidCloseNotebookDocumentParams): CellChanges =
     params.getNotebookDocument.getUri.toAbsolutePathSafe
-      .map(ipynbPath => CellChanges(Vector.empty, forgetNotebook(ipynbPath)))
-      .getOrElse(CellChanges.empty)
+      .map(ipynbPath => CellChanges(closed = forgetNotebook(ipynbPath)))
+      .getOrElse(CellChanges())
 
   def didSave(@annotation.unused params: DidSaveNotebookDocumentParams): Unit =
     ()
@@ -511,10 +511,7 @@ object NotebookProvider {
    * cache (`opened` needs `parseTrees`, `closed` needs `trees.didClose`).
    */
   final case class CellChanges(
-      opened: Vector[AbsolutePath],
-      closed: Vector[AbsolutePath],
+      opened: Vector[AbsolutePath] = Vector.empty,
+      closed: Vector[AbsolutePath] = Vector.empty,
   )
-  object CellChanges {
-    val empty: CellChanges = CellChanges(Vector.empty, Vector.empty)
-  }
 }
