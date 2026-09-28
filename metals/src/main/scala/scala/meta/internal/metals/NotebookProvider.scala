@@ -2,17 +2,21 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.nio.file.Paths
-import java.util as ju
+import java.{util => ju}
+
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.chaining.scalaUtilChainingOps
 import scala.util.control.NonFatal
+
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.io.AbsolutePath
-import ch.epfl.scala.bsp4j as b
+
+import ch.epfl.scala.{bsp4j => b}
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeNotebookDocumentParams
 import org.eclipse.lsp4j.DidCloseNotebookDocumentParams
@@ -24,8 +28,6 @@ import org.eclipse.lsp4j.NotebookDocumentChangeEventCellStructure
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.TextEdit
-
-import scala.util.chaining.scalaUtilChainingOps
 
 /**
  * Gives Scala notebook cells (`vscode-notebook-cell:` documents, see
@@ -62,7 +64,7 @@ final class NotebookProvider(
     didCloseTrees: AbsolutePath => Unit,
     buildTargets: BuildTargets,
 )(implicit ec: ExecutionContext) {
-  import NotebookProvider.*
+  import NotebookProvider._
 
   // real `.ipynb` path -> ordered synthetic cell paths
   private val notebooks = TrieMap.empty[AbsolutePath, Vector[AbsolutePath]]

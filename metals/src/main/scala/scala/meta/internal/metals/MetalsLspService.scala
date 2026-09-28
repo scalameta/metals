@@ -118,7 +118,7 @@ abstract class MetalsLspService(
     with TextDocumentService
     with IndexProviders
     with ModulesService {
-  import serverInputs.*
+  import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
   def shellRunner: ShellRunner

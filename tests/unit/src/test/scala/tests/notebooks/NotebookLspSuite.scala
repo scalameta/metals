@@ -1,17 +1,19 @@
 package tests.notebooks
 
-import org.eclipse.lsp4j as l
-import tests.{BaseLspSuite, QuickBuild, TestHovers}
+import java.{util => ju}
 
-import java.util as ju
 import scala.concurrent.Future
-import scala.meta.internal.metals.MetalsEnrichments.*
+
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{
   HoverExtParams,
   NotebookProvider,
   ServerCommands,
 }
 import scala.meta.io.AbsolutePath
+
+import org.eclipse.{lsp4j => l}
+import tests.{BaseLspSuite, QuickBuild, TestHovers}
 
 /**
  * End to end tests for basic notebook cell language support

@@ -113,7 +113,7 @@ class WorkspaceLspService(
     val folders: List[Folder],
     fallbackServicePath: => AbsolutePath,
 ) extends ScalaLspService {
-  import serverInputs.*
+  import serverInputs._
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()
