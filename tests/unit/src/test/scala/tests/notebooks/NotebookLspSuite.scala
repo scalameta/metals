@@ -6,8 +6,8 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.NotebookProvider
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}

@@ -48,6 +48,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
@@ -229,8 +230,6 @@ abstract class MetalsLspService(
     buffers,
     languageClient,
     () => compilers,
-    parseTrees(_),
-    trees.didClose(_),
     buildTargets,
   )(using ec)
 
@@ -917,13 +916,22 @@ abstract class MetalsLspService(
     }
 
   def notebookDidOpen(params: DidOpenNotebookDocumentParams): Unit =
-    notebookProvider.didOpen(params)
+    applyCellChanges(notebookProvider.didOpen(params))
 
   def notebookDidChange(params: DidChangeNotebookDocumentParams): Unit =
-    notebookProvider.didChange(params)
+    applyCellChanges(notebookProvider.didChange(params))
 
   def notebookDidClose(params: DidCloseNotebookDocumentParams): Unit =
-    notebookProvider.didClose(params)
+    applyCellChanges(notebookProvider.didClose(params))
+
+  // Notebook cells skip the ordinary `textDocument/didOpen|didClose` flow
+  // entirely (see `NotebookDocumentService`), so `NotebookProvider` reports
+  // which synthetic cell paths it opened/closed instead, and this feeds them
+  // into the same parsed-trees cache ordinary files use.
+  private def applyCellChanges(changes: NotebookProvider.CellChanges): Unit = {
+    changes.opened.foreach(parseTrees(_))
+    changes.closed.foreach(trees.didClose(_))
+  }
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)

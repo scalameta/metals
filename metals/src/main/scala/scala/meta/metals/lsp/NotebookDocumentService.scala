@@ -11,7 +11,8 @@ import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
  * (https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#notebookDocument_synchronization),
  * used to give Scala notebook cells (`vscode-notebook-cell:` documents,
  * see https://github.com/scalameta/metals-feature-requests/issues/236)
- * language support. See [[scala.meta.internal.metals.NotebookProvider]].
+ * language support. See
+ * [[scala.meta.internal.metals.notebook.NotebookProvider]].
  */
 trait NotebookDocumentService {
 

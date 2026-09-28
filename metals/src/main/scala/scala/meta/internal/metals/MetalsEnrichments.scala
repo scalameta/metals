@@ -38,6 +38,7 @@ import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.concurrent.FileLock
 import scala.meta.internal.metals.debug.DiscoveryFailures
+import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.mtags.MtagsEnrichments
 import scala.meta.internal.parsing.EmptyResult
 import scala.meta.internal.semanticdb.Scala.Descriptor

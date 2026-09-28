@@ -5,6 +5,7 @@ import scala.util.Try
 import scala.meta.inputs.Input
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.worksheets.WorksheetProvider
 import scala.meta.io.AbsolutePath
 
