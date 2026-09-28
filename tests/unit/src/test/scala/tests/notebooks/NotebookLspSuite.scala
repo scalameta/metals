@@ -4,16 +4,16 @@ import java.{util => ju}
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{
-  HoverExtParams,
-  NotebookProvider,
-  ServerCommands,
-}
+import scala.meta.internal.metals.NotebookProvider
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.{lsp4j => l}
-import tests.{BaseLspSuite, QuickBuild, TestHovers}
+import tests.BaseLspSuite
+import tests.QuickBuild
+import tests.TestHovers
 
 /**
  * End to end tests for basic notebook cell language support
