@@ -1381,11 +1381,59 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ = res match {
         case Some((resPath, _)) =>
-          assertNoDiff(resPath.toString, "/sourcecode/Enclosing.scala")
+          // `Enclosing` is declared alongside `Name`, `File`, `Line`, etc.
+          // in `SourceContext.scala`, not in a file of its own.
+          assertNoDiff(resPath.toString, "/sourcecode/SourceContext.scala")
         case None =>
           fail(
             "Source should be found for sourcecode.Enclosing even though " +
               "it is only declared on module \"b\""
+          )
+      }
+    } yield ()
+  }
+
+  test("get-source-module-dependency-shadowed-by-local-package") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {"libraryDependencies": ["com.lihaoyi::sourcecode:0.1.7"]}
+           |}
+           |/a/src/main/scala/sourcecode/Marker.scala
+           |package sourcecode
+           |
+           |class Marker
+           |/b/src/main/scala/com/module_b/OnlyB.scala
+           |package com.module_b
+           |
+           |class OnlyB
+           |""".stripMargin
+      )
+      _ <- server.didOpen("a/src/main/scala/sourcecode/Marker.scala")
+      _ = assertNoDiagnostics()
+
+      // module "a" declares a `sourcecode` package, which matches the query
+      // but has no definition to show - exact search must still fall back
+      // to every target instead of stopping at that package-only match.
+      res = server.headServer.queryEngine.getSource(
+        "sourcecode.Enclosing",
+        Some(server.toPath("a/src/main/scala/sourcecode/Marker.scala")),
+        module = None,
+        detailed = false,
+      )
+      _ = res match {
+        case Some((resPath, _)) =>
+          // `Enclosing` is declared alongside `Name`, `File`, `Line`, etc.
+          // in `SourceContext.scala`, not in a file of its own.
+          assertNoDiff(resPath.toString, "/sourcecode/SourceContext.scala")
+        case None =>
+          fail(
+            "Source should be found for sourcecode.Enclosing even though " +
+              "module \"a\" has a same-named package with no definition"
           )
       }
     } yield ()

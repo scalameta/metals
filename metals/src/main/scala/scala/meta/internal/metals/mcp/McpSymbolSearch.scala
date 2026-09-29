@@ -56,14 +56,17 @@ class McpSymbolSearch(
   /**
    * Search the build target inferred from `path` first, falling back to
    * every workspace build target when the symbol isn't found there (e.g. a
-   * third-party dependency declared by a different module).
+   * third-party dependency declared by a different module), or when every
+   * match found there is a package sharing the query's name and has no
+   * definition to show.
    */
   def exactSearch(
       query: String,
       path: Option[AbsolutePath],
   ): Seq[SearchResult] =
     exactSearchInTarget(query, singleBuildTarget(path)) match {
-      case Seq() => exactSearchAllTargets(query)
+      case results if results.forall(_.definitionPath.isEmpty) =>
+        exactSearchAllTargets(query)
       case results => results
     }
 
