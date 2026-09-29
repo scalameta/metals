@@ -1269,6 +1269,100 @@ class BazelMbtLspSuite
     } yield ()
   }
 
+  private val globSrcsLayout =
+    """|/src/test/BUILD
+       |load("@rules_scala//scala:scala.bzl", "scala_test")
+       |
+       |scala_test(
+       |    name = "foo",
+       |    srcs = glob(["scala/**/*.scala"]),
+       |    visibility = ["//visibility:public"],
+       |)
+       |/src/test/scala/foo/FooTest.scala
+       |package foo
+       |class FooTest
+       |/src/test/scala/bar/BarTest.scala
+       |package bar
+       |class BarTest
+       |""".stripMargin
+
+  test("bazel-import-test-glob-files") {
+
+    client.selectedServer = Messages.ChooseBuildServer.mbt
+    cleanWorkspace()
+    client.chooseBazelMbtNamespaceMode =
+      Messages.BazelMbtNamespaceChoice.packages
+    for {
+      _ <- initialize(
+        BazelBuildLayout(
+          globSrcsLayout,
+          V.scala213,
+          bazelVersion,
+          mavenDeps,
+        ),
+        runAdditionalCommands = pinMaven,
+      )
+      _ <- server.headServer.connectionProvider.buildServerPromise.future
+      mbtFile = workspace.resolve(".metals/mbt.json").readText
+      _ = assertContains(
+        client.workspaceMessageRequests,
+        Messages.BazelMbtNamespaceChoice.params().getMessage(),
+      )
+      _ = assertNoDiff(
+        escapeMbtFile(mbtFile),
+        s"""|{
+            |  "dependencyModules": [
+            |    {
+            |      "id": "org.scala-lang:scala-library:2.13.16",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.typelevel:cats-core_2.13:2.13.0",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    },
+            |    {
+            |      "id": "org.typelevel:cats-kernel_2.13:2.13.0",
+            |      "jar": "<jar-path>",
+            |      "sources": "<sources-path>"
+            |    }
+            |  ],
+            |  "namespaces": {
+            |    "//src/test": {
+            |      "sources": [
+            |        "src/test/scala/bar/BarTest.scala",
+            |        "src/test/scala/foo/FooTest.scala"
+            |      ],
+            |      "scalacOptions": [],
+            |      "javacOptions": [],
+            |      "dependencyModules": [],
+            |      "scalaVersion": "2.13.18",
+            |      "dependsOn": [],
+            |      "classDirectories": ["<classDirectories-path>"],
+            |      "configurations": [
+            |        "//src/test:foo"
+            |      ],
+            |      "testClasses": [
+            |        {
+            |          "className": "bar.BarTest",
+            |          "sourcePath": "src/test/scala/bar/BarTest.scala",
+            |          "configuration": "//src/test:foo"
+            |        },
+            |        {
+            |          "className": "foo.FooTest",
+            |          "sourcePath": "src/test/scala/foo/FooTest.scala",
+            |          "configuration": "//src/test:foo"
+            |        }
+            |      ]
+            |    }
+            |  },
+            |  "uncheckedSources": []
+            |}""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("bazel-import-mbt-mixed-scala-versions") {
     cleanWorkspace()
     for {
