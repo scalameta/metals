@@ -773,7 +773,9 @@ abstract class MetalsLspService(
       // In some cases like peeking definition didOpen might be followed up by close
       // and we would lose the notion of the focused document
       recentlyOpenedFiles.add(path)
-      focusedDocumentBuildTarget.set(buildTargets.inverseSources(path).orNull)
+      focusedDocumentBuildTarget.set(
+        buildTargets.inverseSources(path).getOrElse(null)
+      )
       buildTargets
         .inverseSources(path)
         .flatMap(buildTargets.activatePlatformForTarget)
@@ -789,16 +791,16 @@ abstract class MetalsLspService(
       buffers.put(
         path,
         params.getTextDocument.getText,
-        params.getTextDocument.getVersion,
+        params.getTextDocument.getVersion(),
       )
 
       val optVersion =
         Option.when(initializeParams.supportsVersionedWorkspaceEdits)(
-          params.getTextDocument.getVersion
+          params.getTextDocument().getVersion()
         )
 
       packageProvider
-        .workspaceEdit(path, params.getTextDocument.getText, optVersion)
+        .workspaceEdit(path, params.getTextDocument().getText(), optVersion)
         .map(new ApplyWorkspaceEditParams(_))
         .foreach(languageClient.applyEdit)
 
@@ -892,12 +894,12 @@ abstract class MetalsLspService(
         case None => CompletableFuture.completedFuture(())
         case Some(change) =>
           val path = params.getTextDocument.getUri.toAbsolutePath
-          params.getTextDocument.getVersion match {
-            case null => buffers.put(path, change.getText)
-            case version => buffers.put(path, change.getText, version)
+          Option(params.getTextDocument.getVersion()) match {
+            case Some(version) => buffers.put(path, change.getText, version)
+            case None => buffers.put(path, change.getText)
           }
           diagnostics.didChange(path)
-          compilers.didChange(path, shouldReturnDiagnostics = false)
+          compilers.didChange(path, false)
           referencesProvider.didChange(path, change.getText)
           parseTrees(path).asJava
       }
