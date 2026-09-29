@@ -231,6 +231,32 @@ class SemanticTokensLspSuite extends BaseLspSuite("SemanticTokens") {
         |""".stripMargin,
   )
 
+  // https://github.com/scalameta/metals/issues/8887
+  private val multilineInterpolatorAtColumnZero =
+    s"""|<<object>>/*keyword*/ <<Repro>>/*class*/ {
+        |  <<val>>/*keyword*/ <<name>>/*variable,definition,readonly*/: <<String>>/*type*/ = <<"world">>/*string*/
+        |  <<val>>/*keyword*/ <<message>>/*variable,definition,readonly*/ =
+        |    <<s>>/*keyword*/<<\"\"\">>/*string*/<<Intro line.>>/*string*/
+        |<<$$>>/*keyword*/<<name>>/*variable,readonly*/
+        |
+        |<<Outro.>>/*string*/<<$$>>/*keyword*/<<name>>/*variable,readonly*/
+        |
+        |<<$$>>/*keyword*/<<name>>/*variable,readonly*/<<\"\"\">>/*string*/
+        |  <<val>>/*keyword*/ <<afterString>>/*variable,definition,readonly*/ = <<42>>/*number*/
+        |}
+        |""".stripMargin
+
+  check(
+    "multiline-interpolator-at-column-zero",
+    multilineInterpolatorAtColumnZero,
+  )
+
+  check(
+    "multiline-interpolator-at-column-zero-scala3",
+    multilineInterpolatorAtColumnZero,
+    scalaVersion = Some("3.3.8"),
+  )
+
   check(
     "interpolated-string2",
     s"""|<<package>>/*keyword*/ <<a>>/*namespace*/
