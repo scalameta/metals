@@ -692,10 +692,7 @@ final class BuildTargets private (
 
   def removeData(data: TargetData): Unit =
     dataLock.synchronized {
-      this.data match {
-        case BuildTargets.DataSeq(list) =>
-          BuildTargets.DataSeq(list.filterNot(_ == data))
-      }
+      this.data = BuildTargets.DataSeq(this.data.list.filterNot(_ == data))
     }
 
   def supportsPcRefs(id: BuildTargetIdentifier): Boolean = {

@@ -9,6 +9,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.watcher.FileWatcher
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.io.AbsolutePath
@@ -43,4 +44,5 @@ trait IndexProviders {
   def implementationProvider: ImplementationProvider
   def resetService(): Unit
   def fileChanges: FileChanges
+  def notebookProvider: NotebookProvider
 }

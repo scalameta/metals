@@ -63,6 +63,10 @@ case class Indexer(indexProviders: IndexProviders)(implicit rc: ReportContext) {
       },
     )
     tracked.foreach { _ =>
+      // A notebook opened before any build target existed (or while more
+      // than one made auto-pick ambiguous) never retries on its own; a
+      // build import completing is exactly the moment that can change.
+      notebookProvider.retryAssociations()
       statusBar.addMessage(
         s"${clientConfig.icons().rocket} Indexing complete!"
       )
