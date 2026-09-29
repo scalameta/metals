@@ -213,7 +213,7 @@ class TurbineCompiler[T](
     }
   }
 
-  def doCompileNow(): TurbineCompileResult = {
+  def doCompileNow(): TurbineCompileResult = synchronized {
 
     def compile() = {
       result = TurbineCompiler.compileClassfiles(

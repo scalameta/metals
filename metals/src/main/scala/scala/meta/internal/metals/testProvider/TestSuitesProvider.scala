@@ -88,11 +88,23 @@ final class TestSuitesProvider(
   val refreshTestSuites: BatchedFunction[Unit, Unit] =
     BatchedFunction.fromFuture(
       { _ =>
-        if (isSuiteRefreshEnabled) doRefreshTestSuites()
-        else Future.unit
+        if (isSuiteRefreshEnabled) {
+          Future
+            .traverse(buffers.open.toSeq)(confirmMbtTestClassCandidates)
+            .flatMap(_ => doRefreshTestSuites())
+        } else Future.unit
       },
       "refreshTestSuites",
     )
+
+  private def confirmMbtTestClassCandidates(
+      path: AbsolutePath
+  ): Future[Unit] =
+    Future
+      .traverse(buildTargets.inverseSourcesAll(path)) { targetId =>
+        buildTargetClasses.confirmMbtTestClassCandidates(path, targetId)
+      }
+      .map(_ => ())
 
   private val updateTestCases
       : BatchedFunction[(AbsolutePath, TextDocument), Unit] =
@@ -193,11 +205,7 @@ final class TestSuitesProvider(
   private def discoverMbtTestsForPath(
       path: AbsolutePath
   ): Future[Unit] = {
-    val targetIds = buildTargets.inverseSourcesAll(path)
-    val confirmFutures = targetIds.map { targetId =>
-      buildTargetClasses.confirmMbtTestClassCandidates(path, targetId)
-    }
-    Future.sequence(confirmFutures).flatMap(_ => doRefreshTestSuites())
+    confirmMbtTestClassCandidates(path).flatMap(_ => doRefreshTestSuites())
   }
 
   /**
