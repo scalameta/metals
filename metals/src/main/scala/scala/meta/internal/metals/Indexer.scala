@@ -219,7 +219,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
         ) && userConfig.javaSymbolLoader.isTurbineClasspath
       ) {
         mbtSymbolSearch
-          .scheduleRecompileTurbineClasspath()
+          .recompileTurbineClasspath()
           .flatMap(_ => resetPresentationCompilers())
       } else {
         resetPresentationCompilers()
