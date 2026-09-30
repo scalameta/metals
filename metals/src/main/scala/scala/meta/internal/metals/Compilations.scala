@@ -12,6 +12,7 @@ import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.utils.Timeout
@@ -29,7 +30,8 @@ final class Compilations(
     buildtargetInFocus: () => Option[b.BuildTargetIdentifier],
     compileWorksheets: Seq[AbsolutePath] => Future[Unit],
     onStartCompilation: () => Unit,
-    onCompileRequestFinished: (String, Seq[b.BuildTargetIdentifier]) => Unit,
+    // a function because the build client is created after `Compilations`
+    buildClient: () => ForwardingMetalsBuildClient,
     userConfiguration: () => UserConfiguration,
     downstreamTargets: PreviouslyCompiledDownsteamTargets,
     fileChanges: FileChanges,
@@ -273,7 +275,7 @@ final class Compilations(
       .andThen { case result =>
         // any outcome, including failure and cancellation, ends this request's
         // "Compiling" progress (scalameta/metals#3464)
-        onCompileRequestFinished(originId, targets)
+        buildClient().onCompileRequestFinished(originId, targets)
         updateCompiledTargetState(result)
         afterSuccessfulCompilation()
 

@@ -12,6 +12,7 @@ import scala.meta.internal.builds.BspErrorHandler
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClientConfiguration
+import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
@@ -58,7 +59,7 @@ final class ForwardingMetalsBuildClient(
     bspErrorHandler: BspErrorHandler,
     workDoneProgress: WorkDoneProgress,
     moduleStatus: ModuleStatus,
-    cancelCompilations: () => Unit,
+    compilations: Compilations,
 ) extends MetalsBuildClient
     with Cancelable {
 
@@ -90,7 +91,8 @@ final class ForwardingMetalsBuildClient(
     }
   }
 
-  private val compilations = TrieMap.empty[b.BuildTargetIdentifier, Compilation]
+  private val compilationProgress =
+    TrieMap.empty[b.BuildTargetIdentifier, Compilation]
   private val hasReportedError = Collections.newSetFromMap(
     new ConcurrentHashMap[b.BuildTargetIdentifier, java.lang.Boolean]()
   )
@@ -121,8 +123,8 @@ final class ForwardingMetalsBuildClient(
 
   override def cancel(): Unit = {
     for {
-      key <- compilations.keysIterator
-      compilation <- compilations.remove(key)
+      key <- compilationProgress.keysIterator
+      compilation <- compilationProgress.remove(key)
     } {
       compilation.end()
     }
@@ -142,17 +144,17 @@ final class ForwardingMetalsBuildClient(
     val requestedTargets =
       buildTargets.buildTargetTransitiveDependencies(targets.toList).toSet
     for {
-      (target, compilation) <- compilations.readOnlySnapshot()
+      (target, compilation) <- compilationProgress.readOnlySnapshot()
       if compilation.originId.contains(originId) ||
         (compilation.originId.isEmpty && requestedTargets(target))
       // skip a compilation that a new `build/taskStart` has already replaced
-      if compilations.remove(target, compilation)
+      if compilationProgress.remove(target, compilation)
     } compilation.end()
   }
 
   private def cancelCompilation(target: b.BuildTargetIdentifier): Unit = {
-    compilations.remove(target).foreach(_.end())
-    cancelCompilations()
+    compilationProgress.remove(target).foreach(_.end())
+    compilations.cancel()
   }
 
   def onBuildShowMessage(params: l.MessageParams): Unit =
@@ -210,7 +212,7 @@ final class ForwardingMetalsBuildClient(
         } {
           diagnostics.onStartCompileBuildTarget(target)
           // cancel ongoing compilation for the current target, if any.
-          compilations.remove(target).foreach(_.end())
+          compilationProgress.remove(target).foreach(_.end())
 
           val name = info.getDisplayName
           val (_, token) =
@@ -223,7 +225,7 @@ final class ForwardingMetalsBuildClient(
             )
           val compilation =
             new Compilation(new Timer(time), token, Option(params.getOriginId))
-          compilations(target) = compilation
+          compilationProgress(target) = compilation
         }
       case _ =>
     }
@@ -238,7 +240,7 @@ final class ForwardingMetalsBuildClient(
         } {
           // the progress may already be ended, e.g. by the user or when its
           // compile request finished, but the report still has to be processed
-          val compilation = compilations.remove(report.getTarget)
+          val compilation = compilationProgress.remove(report.getTarget)
           diagnostics.onFinishCompileBuildTarget(
             report,
             params.getStatus(),
@@ -312,7 +314,7 @@ final class ForwardingMetalsBuildClient(
       case "bloop-progress" =>
         for {
           buildTarget <- buildTargetFromParams
-          report <- compilations.get(buildTarget)
+          report <- compilationProgress.get(buildTarget)
         } yield {
           report.updateProgress(params.getProgress, params.getTotal)
         }
@@ -321,7 +323,7 @@ final class ForwardingMetalsBuildClient(
         // so we should fix the total to 100.
         for {
           buildTarget <- buildTargetFromParams
-          report <- compilations.get(buildTarget)
+          report <- compilationProgress.get(buildTarget)
         } yield {
           report.updateProgress(params.getProgress)
         }
