@@ -990,6 +990,185 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("get-source-module-with-shared-source") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {"additionalSources": ["shared/Shared.scala"]},
+            |  "b": {"additionalSources": ["shared/"], "dependsOn": ["c"]},
+            |  "c": {}
+            |}
+            |/shared/Shared.scala
+            |object Shared
+            |
+            |/a/src/main/scala/com/test/TargetClass.scala
+            |package com.test
+            |class TargetClass { def fromA: Int = 1 }
+            |
+            |/c/src/main/scala/com/test/TargetClass.scala
+            |package com.test
+            |class TargetClass { def fromC: Int = 2 }
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      // `b` owns only the shared file, which maps to `a` first.
+      res = server.headServer.queryEngine.getSource(
+        "com.test.TargetClass",
+        module = Some("b"),
+      )
+      _ = assertEquals(
+        res.map { case (path, _) => path },
+        Some(server.toPath("c/src/main/scala/com/test/TargetClass.scala")),
+      )
+    } yield ()
+  }
+
+  test("get-source-no-module-with-shared-source") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{
+            |  "a": {"additionalSources": ["shared/Shared.scala"]},
+            |  "b": {"additionalSources": ["shared/"], "dependsOn": ["c"]},
+            |  "c": {}
+            |}
+            |/shared/Shared.scala
+            |object Shared
+            |
+            |/a/src/main/scala/com/test/TargetClass.scala
+            |package com.test
+            |class TargetClass { def fromA: Int = 1 }
+            |
+            |/c/src/main/scala/com/test/TargetClass.scala
+            |package com.test
+            |class TargetClass { def fromC: Int = 2 }
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      inspected <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = None,
+      )
+      withoutModule = server.headServer.queryEngine.getSource(
+        "com.test.TargetClass"
+      )
+      withInspectedModule = server.headServer.queryEngine.getSource(
+        "com.test.TargetClass",
+        module = inspected.primaryTarget,
+      )
+      _ = assertEquals(
+        withoutModule.map { case (path, _) => path },
+        withInspectedModule.map { case (path, _) => path },
+      )
+    } yield ()
+  }
+
+  test("inspect-headless-multiple-modules") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""
+           |/metals.json
+           |{"a": {}, "b": {}}
+           |/a/src/main/scala/com/test/OtherClass.scala
+           |package com.test
+           |
+           |class OtherClass
+           |
+           |/b/src/main/scala/com/test/TargetClass.scala
+           |package com.test
+           |
+           |class TargetClass {
+           |  def targetMethod(): Int = 42
+           |}
+           |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/test/OtherClass.scala")
+      _ <- server.didOpen("b/src/main/scala/com/test/TargetClass.scala")
+      _ = assertNoDiagnostics()
+      focusedPath = server.toPath("b/src/main/scala/com/test/TargetClass.scala")
+      otherPath = server.toPath("a/src/main/scala/com/test/OtherClass.scala")
+      focused <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = Some(focusedPath),
+      )
+      byModule <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = None,
+        module = Some("b"),
+      )
+      moduleOverridesPath <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = Some(otherPath),
+        module = Some("b"),
+      )
+      wrongModule <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = None,
+        module = Some("a"),
+      )
+      wrongModuleMember <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass.targetMethod",
+        path = None,
+        module = Some("a"),
+      )
+      allTargets <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = None,
+        searchAllTargets = true,
+      )
+      implicitTarget <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = None,
+      )
+      implicitOther <- server.headServer.queryEngine.inspect(
+        "com.test.OtherClass",
+        path = None,
+      )
+      implicitTargetMember <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass.targetMethod",
+        path = None,
+      )
+      wrongPath <- server.headServer.queryEngine.inspect(
+        "com.test.TargetClass",
+        path = Some(otherPath),
+      )
+      _ = assertEquals(implicitTarget.results, byModule.results)
+      _ = assertEquals(implicitTarget.primaryTarget, Some("b"))
+      _ = assertEquals(implicitOther.primaryTarget, Some("a"))
+      // Each class lives in one module, so one lookup needs the fallback.
+      _ = assert(implicitOther.results.nonEmpty)
+      _ = assert(implicitTargetMember.results.nonEmpty)
+      _ = assertEquals(wrongPath.results, Nil)
+      _ = assertEquals(byModule.results, focused.results)
+      _ = assertEquals(moduleOverridesPath.results, byModule.results)
+      _ = assertEquals(byModule.primaryTarget, Some("b"))
+      _ = assertEquals(wrongModule.results, Nil)
+      _ = assertEquals(wrongModuleMember.results, Nil)
+      _ = assertEquals(allTargets.results, byModule.results)
+      _ = assertEquals(allTargets.searchedTargets.sorted, List("a", "b"))
+      missing <- server.headServer.queryEngine.inspect(
+        "com.test.MissingClass",
+        path = None,
+        module = Some("b"),
+      )
+      _ = assertEquals(missing.results, Nil)
+      _ = assertEquals(
+        missing.show,
+        "Symbol not found (searched targets: b)",
+      )
+      implicitMissing <- server.headServer.queryEngine.inspect(
+        "com.test.MissingClass",
+        path = None,
+      )
+      _ = assertEquals(implicitMissing.searchedTargets.sorted, List("a", "b"))
+    } yield ()
+  }
+
   test("docstrings-with-module") {
     cleanWorkspace()
     for {
@@ -1110,6 +1289,39 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
     } yield ()
   }
 
+  test("usages-module-without-sources") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}, "b": {"dependsOn": ["a"]}}
+            |/a/src/main/scala/com/test/Thing.scala
+            |package com.test
+            |class Thing {
+            |  def method: Int = 42
+            |}
+            |/a/src/main/scala/com/test/Use.scala
+            |package com.test
+            |object Use { val value = new Thing().method }
+            |""".stripMargin
+      )
+      _ <- server.server.indexingPromise.future
+      _ <- server.didOpen("a/src/main/scala/com/test/Thing.scala")
+      _ = assertNoDiff(
+        server.headServer.queryEngine
+          .getUsages(
+            "com.test.Thing.method",
+            path = None,
+            module = Some("b"),
+          )
+          .show(server.workspace),
+        s"""|${Path.of("a/src/main/scala/com/test/Thing.scala")}:3
+            |${Path.of("a/src/main/scala/com/test/Use.scala")}:2
+            |""".stripMargin,
+      )
+    } yield ()
+  }
+
   test("inspect-searchAllTargets") {
     cleanWorkspace()
     for {
@@ -1180,6 +1392,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |	 - fallbackMethod(): Int
            |""".stripMargin,
       )
+      _ = assertEquals(res.primaryTarget, Some("a"))
     } yield ()
   }
 
