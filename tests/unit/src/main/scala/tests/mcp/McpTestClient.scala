@@ -79,9 +79,6 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
     client.closeGracefully().toFuture().asScala.map(_ => ())
   }
 
-  /** Alias for formatFile, kept for backward compatibility */
-  def format(filePath: String): Future[String] = formatFile(filePath)
-
   def typedGlobSearch(
       query: String,
       symbolTypes: List[String],

@@ -19,7 +19,6 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -40,9 +39,6 @@ import io.modelcontextprotocol.spec.McpSchema.CallToolResult
 import io.modelcontextprotocol.spec.McpSchema.Content
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 import io.modelcontextprotocol.spec.McpSchema.Tool
-import org.eclipse.lsp4j.ApplyWorkspaceEditParams
-import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.services.LanguageClient
 import reactor.core.publisher.Mono
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
@@ -64,10 +60,9 @@ trait MetalsMcpTools extends Cancelable {
   protected def mcpTestRunner: McpTestRunner
   protected def clientName: String
   protected def projectName: String
-  protected def languageClient: LanguageClient
   protected def connectionProvider: ConnectionProvider
   protected def scalaVersionSelector: ScalaVersionSelector
-  protected def formattingProvider: FormattingProvider
+  protected def scalafmtRunner: ScalafmtRunner
   protected def scalafixLlmRuleProvider: ScalafixLlmRuleProvider
   protected def indexingPromise: Promise[Unit]
   protected implicit def ec: ExecutionContext
@@ -930,97 +925,86 @@ trait MetalsMcpTools extends Cancelable {
       """|{
          |  "type": "object",
          |  "properties": {
-         |    "fileInFocus": {
-         |      "type": "string",
-         |      "description": "The file to format, if empty we will try to detect file in focus"
+         |    "files": {
+         |      "type": "array",
+         |      "items": { "type": "string" },
+         |      "description": "Scala files to format, absolute or relative to the project root. Use this after changing several files."
+         |    },
+         |    "all": {
+         |      "type": "boolean",
+         |      "description": "Format every Scala source discovered by Scalafmt from the project root."
          |    }
          |  }
          |}""".stripMargin
     val tool = Tool
       .builder()
       .name("format-file")
-      .description("Format a Scala file and return the formatted text")
+      .description(
+        """|Format saved Scala files using the project's Scalafmt configuration.
+           |Use `files` for explicit paths or `all` for the whole workspace.""".stripMargin
+      )
       .inputSchema(jsonMapper, schema)
       .build()
     new AsyncToolSpecification(
       tool,
       withErrorHandling { (_, arguments) =>
-        val path = arguments.getFileInFocus
-        if (path.exists && path.isScalaFilename) {
-          val cancelChecker = new org.eclipse.lsp4j.jsonrpc.CancelChecker {
-            override def isCanceled(): Boolean = false
-            override def checkCanceled(): Unit = ()
+        val filesSelected =
+          Option(arguments.get("files")).map(_ =>
+            arguments.getAsList[String]("files")
+          )
+        val allSelected =
+          arguments.getOptAs[Boolean]("all").contains(true)
+
+        val selection: Either[String, List[String]] =
+          (filesSelected, allSelected) match {
+            case (Some(files), false)
+                if files.isEmpty || files.exists(_.isEmpty) =>
+              Left("Error: `files` must contain at least one non-empty path.")
+            case (Some(files), false) =>
+              val missing = files.filterNot(file =>
+                AbsolutePath(Path.of(file))(projectPath).exists
+              )
+              Either.cond(
+                missing.isEmpty,
+                files,
+                s"Error: files not found: ${missing.mkString(", ")}",
+              )
+            case (Some(_), true) =>
+              Left("Error: set only one of `files` or `all`.")
+            case (None, true) => Right(List("."))
+            case (None, false) => Left("Error: set either `files` or `all`.")
           }
 
-          formattingProvider
-            .formatForMcp(path, projectPath, cancelChecker)
-            .flatMap {
-              case Left(errorMessage) =>
-                Future.successful(
-                  CallToolResult
-                    .builder()
-                    .content(createContent(errorMessage))
-                    .isError(true)
-                    .build()
-                )
-              case Right(Nil) =>
-                Future.successful(
-                  CallToolResult
-                    .builder()
-                    .content(
-                      createContent("File is already properly formatted.")
-                    )
-                    .isError(false)
-                    .build()
-                )
-              case Right(formattedText) =>
-                languageClient
-                  .applyEdit(
-                    new ApplyWorkspaceEditParams(
-                      new WorkspaceEdit(
-                        Map(
-                          path.toURI.toString -> formattedText.asJava
-                        ).asJava
-                      )
-                    )
-                  )
-                  .asScala
-                  .map { response =>
-                    if (response.isApplied()) {
-                      CallToolResult
-                        .builder()
-                        .content(createContent(s"$path was formatted"))
-                        .isError(false)
-                        .build()
-                    } else {
-                      CallToolResult
-                        .builder()
-                        .content(
-                          createContent(
-                            s"Failed to format $path: ${Option(response.getFailureReason()).getOrElse("unknown error")}"
-                          )
-                        )
-                        .isError(true)
-                        .build()
-                    }
-                  }
-            }
-            .toMono
-        } else {
-          Future
-            .successful(
+        (selection match {
+          case Left(error) =>
+            Future.successful(
               CallToolResult
                 .builder()
-                .content(
-                  createContent(
-                    s"Error: File not found or not a Scala file: $path"
-                  )
-                )
+                .content(createContent(error))
                 .isError(true)
                 .build()
             )
-            .toMono
-        }
+          case Right(formatArguments) =>
+            val formatting =
+              if (allSelected) scalafmtRunner.formatAll()
+              else scalafmtRunner.format(formatArguments)
+            formatting.map {
+              case Right(()) =>
+                CallToolResult
+                  .builder()
+                  .content(
+                    createContent("Scalafmt completed successfully.")
+                  )
+                  .isError(false)
+                  .build()
+              case Left(message) =>
+                CallToolResult
+                  .builder()
+                  .content(createContent(s"Scalafmt failed:\n$message"))
+                  .isError(true)
+                  .build()
+            }
+        }).toMono
       },
     )
   }

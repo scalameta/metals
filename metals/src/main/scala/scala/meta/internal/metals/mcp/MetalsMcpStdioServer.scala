@@ -8,13 +8,11 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.io.AbsolutePath
 
 import io.modelcontextprotocol.server.McpServer
 import io.modelcontextprotocol.server.transport.StdioServerTransportProvider
-import org.eclipse.lsp4j.services.LanguageClient
 
 /**
  * MCP server implementation using stdio transport.
@@ -35,10 +33,9 @@ class MetalsMcpStdioServer(
     protected val mcpTestRunner: McpTestRunner,
     protected val clientName: String,
     protected val projectName: String,
-    protected val languageClient: LanguageClient,
     protected val connectionProvider: ConnectionProvider,
     protected val scalaVersionSelector: ScalaVersionSelector,
-    protected val formattingProvider: FormattingProvider,
+    protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
 )(implicit

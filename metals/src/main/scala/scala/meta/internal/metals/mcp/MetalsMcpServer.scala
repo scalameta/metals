@@ -10,7 +10,6 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mcp.McpQueryEngine
@@ -38,7 +37,7 @@ class MetalsMcpServer(
     protected val languageClient: LanguageClient,
     protected val connectionProvider: ConnectionProvider,
     protected val scalaVersionSelector: ScalaVersionSelector,
-    protected val formattingProvider: FormattingProvider,
+    protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
 )(implicit
