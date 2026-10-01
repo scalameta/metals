@@ -161,7 +161,8 @@ object BazelMbtBuildSupport {
                 "analysis."
             )
           val nsScalaVersion =
-            BazelScalaVersionResolver.maxVersion(nsScalaVersions)
+            BazelScalaVersionResolver
+              .maxVersion(nsScalaVersions)
               .orElse(fallbackScalaVersion)
           putNamespace(
             namespaces,
@@ -183,9 +184,11 @@ object BazelMbtBuildSupport {
         val allSrcs = srcFilesByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
         val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
-        val wsScalaVersion = BazelScalaVersionResolver.maxVersion(
-          targetLabels.flatMap(scalaVersionByTarget.getOrElse(_, None))
-        ).orElse(fallbackScalaVersion)
+        val wsScalaVersion = BazelScalaVersionResolver
+          .maxVersion(
+            targetLabels.flatMap(scalaVersionByTarget.getOrElse(_, None))
+          )
+          .orElse(fallbackScalaVersion)
         putNamespace(
           namespaces,
           workspaceNamespaceName,
