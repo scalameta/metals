@@ -454,7 +454,6 @@ lazy val metals = project
       "io.get-coursier" % "interface" % V.coursierInterfaces,
       // for comparing versions && fetching from sbt maven repository
       "io.get-coursier" %% "coursier" % V.coursier,
-      "io.get-coursier" %% "coursier-sbt-maven-repository" % V.coursier,
       // for logging
       "com.outr" %% "scribe" % V.scribe,
       "com.outr" %% "scribe-file" % V.scribe,
