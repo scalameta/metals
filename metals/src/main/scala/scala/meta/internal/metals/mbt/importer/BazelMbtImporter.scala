@@ -136,7 +136,8 @@ abstract class BazelMbtImporter(
         importDepModules,
       )
       scalaVersions = targetsXmlDump.getStrings("scala_version")
-      effectiveScalaVersion = BazelScalaVersionResolver.resolve(
+      effectiveScalaVersion <- BazelScalaVersionResolver.resolve(
+        queryEnv,
         outputBase,
         allDependencyModules,
         scalaVersions,
