@@ -1,6 +1,7 @@
 package tests
 
 import scala.concurrent.Future
+import scala.concurrent.Promise
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages
@@ -11,6 +12,8 @@ import scala.meta.io.AbsolutePath
 
 import bill._
 import ch.epfl.scala.bsp4j.StatusCode
+import org.eclipse.lsp4j.WorkDoneProgressBegin
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 
 class BillLspSuite extends BaseLspSuite("bill") {
 
@@ -276,6 +279,119 @@ class BillLspSuite extends BaseLspSuite("bill") {
     Bill.installWorkspace(workspace, "Bill")
     Bill.installGlobal(globalBsp, "Bob")
     testSelectServerDialogue()
+  }
+
+  private def pollUntil(condition: => Boolean): Unit = {
+    var retries = 500
+    while (!condition && retries > 0) {
+      Thread.sleep(10)
+      retries -= 1
+    }
+  }
+
+  test("finished-compile-request-ends-compile-progress") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/no-task-finish
+           |true
+           |""".stripMargin
+      )
+      // Bill starts a compile task but never sends `build/taskFinish` for it,
+      // the progress must end once the compile request itself completes
+      result <- server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = assertEquals(result.getStatusCode(), StatusCode.OK)
+      _ = pollUntil(
+        client.beginProgressMessages.contains("Compiling id") && ongoing.isEmpty
+      )
+      _ = assert(
+        client.beginProgressMessages.contains("Compiling id"),
+        "the compilation should have shown a 'Compiling id' progress",
+      )
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "every 'Compiling' progress must end when its compile request completes",
+      )
+    } yield ()
+  }
+
+  test("disconnect-ends-compile-progress") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/hang-compile
+           |true
+           |""".stripMargin
+      )
+      // Bill hangs on this compile request forever, do not await it
+      pendingCompilation = server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      _ = pollUntil(ongoing.nonEmpty)
+      _ = assertEquals(ongoing, List("Compiling id"))
+      _ <- server.executeCommand(ServerCommands.DisconnectBuildServer)
+      _ = pollUntil(ongoing.isEmpty)
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "every 'Compiling' progress must end after disconnecting from the build server",
+      )
+      result <- pendingCompilation
+      _ = assertEquals(result.getStatusCode(), StatusCode.CANCELLED)
+    } yield ()
+  }
+
+  test("cancelling-compile-progress-cancels-compilation") {
+    cleanWorkspace()
+    Bill.installWorkspace(workspace)
+    def ongoing = client.ongoingCompilations
+    val compileProgress = Promise[WorkDoneProgressCancelParams]()
+    client.onWorkDoneProgressStart = (title, cancelParams) =>
+      if (title == "Compiling id") compileProgress.trySuccess(cancelParams)
+    for {
+      _ <- initialize(
+        """|/src/com/App.scala
+           |object App {}
+           |/hang-compile
+           |true
+           |""".stripMargin
+      )
+      // Bill hangs on this compile request forever, do not await it
+      pendingCompilation = server.server.compilations
+        .compileFile(workspace.resolve("src/com/App.scala"))
+      cancelParams <- compileProgress.future
+      _ = pollUntil(ongoing.nonEmpty)
+      _ = assertEquals(ongoing, List("Compiling id"))
+      _ = assert(
+        client.progressParams.asScala.exists { params =>
+          params.getValue().isLeft() && (params.getValue().getLeft() match {
+            case begin: WorkDoneProgressBegin =>
+              begin.getTitle() == "Compiling id" && begin.getCancellable()
+            case _ => false
+          })
+        },
+        "the 'Compiling' progress must be cancellable in the editor",
+      )
+      _ = server.fullServer.didCancelWorkDoneProgress(cancelParams)
+      _ = pollUntil(ongoing.isEmpty)
+      _ = assertEquals(
+        ongoing,
+        Nil,
+        "cancelling a 'Compiling' progress must end it",
+      )
+      result <- pendingCompilation
+      _ = assertEquals(result.getStatusCode(), StatusCode.CANCELLED)
+      _ = client.onWorkDoneProgressStart = (_, _) => {}
+    } yield ()
   }
 
   test("cancel-compile") {

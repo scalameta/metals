@@ -32,6 +32,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Interruptable._
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.io.AbsolutePath
@@ -55,7 +56,7 @@ class ConnectionProvider(
     initTreeView: () => Unit,
     diagnostics: Diagnostics,
     charset: Charset,
-    buildClient: MetalsBuildClient,
+    buildClient: ForwardingMetalsBuildClient,
     bspGlobalDirectories: List[AbsolutePath],
     bspStatus: bsp.ConnectionBspStatus,
     mainBuildTargetsData: TargetData,
@@ -430,6 +431,9 @@ class ConnectionProvider(
       compilations.cancel()
       buildTargetClasses.cancel()
       diagnostics.reset()
+      // the server this progress came from can no longer finish it, including
+      // compilations Metals didn't request, e.g. for a run (scalameta/metals#3464)
+      buildClient.cancel()
       bspSession.foreach(connection =>
         scribe.info(s"Disconnecting from ${connection.main.name} session...")
       )

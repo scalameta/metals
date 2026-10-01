@@ -93,6 +93,34 @@ object Bill {
       Files.isRegularFile(workspace.resolve("shutdown-trace"))
     }
 
+    // Returns true if compile requests should emit `build/taskStart` without
+    // a matching `build/taskFinish` while still responding to the request,
+    // simulating a build server that drops a compile task on the floor
+    // (scalameta/metals#3464).
+    def isNoTaskFinish(): Boolean = {
+      Files.isRegularFile(workspace.resolve("no-task-finish"))
+    }
+
+    // Returns true if compile requests should emit `build/taskStart` and then
+    // never respond, simulating a build server that hangs mid-compilation
+    // (scalameta/metals#3464).
+    def isHangCompile(): Boolean = {
+      Files.isRegularFile(workspace.resolve("hang-compile"))
+    }
+
+    private def startTaskWithoutFinish(originId: String): Unit = {
+      val taskStart = new TaskStartParams(
+        new TaskId(util.UUID.randomUUID().toString)
+      )
+      taskStart.setMessage("Compiling id")
+      taskStart.setDataKind(TaskStartDataKind.COMPILE_TASK)
+      taskStart.setData(new CompileTask(target.getId))
+      // echo the request's originId like a real build server, so Metals can
+      // correlate the dropped task with the finished compile request
+      Option(originId).foreach(taskStart.setOriginId)
+      client.onBuildTaskStart(taskStart)
+    }
+
     def firstShutdownTimeout(): Option[Long] = {
       val fileName = "first-shutdown-timeout"
       val shouldShutdown =
@@ -321,34 +349,45 @@ object Bill {
           Thread.sleep(duration.toMillis)
         )
       }
-      CompletableFuture.completedFuture {
-        reporter.reset()
-        val run = new g.Run()
-        val sources: List[BatchSourceFile] =
-          if (Files.isDirectory(src)) {
-            Files
-              .walk(src)
-              .collect(Collectors.toList())
-              .asScala
-              .iterator
-              .filter(_.getFileName.toString.endsWith(".scala"))
-              .map(path => {
-                val text =
-                  new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
-                val chars = text.toCharArray
-                new BatchSourceFile(new VirtualFile(path.toUri.toString), chars)
-              })
-              .toList
-          } else {
-            Nil
+      // an empty-targets compile is the liveness ping, never a compilation
+      if (isHangCompile() && !params.getTargets().isEmpty()) {
+        startTaskWithoutFinish(params.getOriginId())
+        new CompletableFuture[CompileResult]()
+      } else
+        CompletableFuture.completedFuture {
+          if (isNoTaskFinish() && !params.getTargets().isEmpty()) {
+            startTaskWithoutFinish(params.getOriginId())
           }
-        run.compileSources(sources)
-        publishDiagnostics()
-        val exit =
-          if (reporter.hasErrors) StatusCode.ERROR
-          else StatusCode.OK
-        new CompileResult(exit)
-      }
+          reporter.reset()
+          val run = new g.Run()
+          val sources: List[BatchSourceFile] =
+            if (Files.isDirectory(src)) {
+              Files
+                .walk(src)
+                .collect(Collectors.toList())
+                .asScala
+                .iterator
+                .filter(_.getFileName.toString.endsWith(".scala"))
+                .map(path => {
+                  val text =
+                    new String(Files.readAllBytes(path), StandardCharsets.UTF_8)
+                  val chars = text.toCharArray
+                  new BatchSourceFile(
+                    new VirtualFile(path.toUri.toString),
+                    chars,
+                  )
+                })
+                .toList
+            } else {
+              Nil
+            }
+          run.compileSources(sources)
+          publishDiagnostics()
+          val exit =
+            if (reporter.hasErrors) StatusCode.ERROR
+            else StatusCode.OK
+          new CompileResult(exit)
+        }
     }
     override def buildTargetTest(
         params: TestParams
