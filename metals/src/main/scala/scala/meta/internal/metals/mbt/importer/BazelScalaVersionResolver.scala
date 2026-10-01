@@ -24,25 +24,23 @@ object BazelScalaVersionResolver {
    * The default Scala version from the generated `@…rules_scala_config`
    * repository's `config.bzl`, which `bazel query` materializes without a
    * build. Reading the resolved value works however the version was written in
-   * the build files. Stale repositories may linger after upgrades, so the
-   * highest version wins. `None` when rules_scala is not in use.
+   * the build files. Stale repositories may linger after a rename, so the
+   * most recently written one wins. `None` when rules_scala is not in use.
    */
-  def scalaConfigVersion(externalDir: Path): Option[String] =
-    maxVersion(
-      listDirectory(externalDir)
-        .filter(dir =>
-          dir.getFileName.toString.endsWith("rules_scala_config") &&
-            Files.isDirectory(dir)
-        )
-        .flatMap { dir =>
-          val configBzl = dir.resolve("config.bzl")
-          if (Files.isRegularFile(configBzl))
-            Try(new String(Files.readAllBytes(configBzl))).toOption
-              .flatMap(scalaConfigVersionPattern.findFirstMatchIn)
-              .map(_.group(1))
-          else None
-        }
-    )
+  def scalaConfigVersion(externalDir: Path): Option[String] = {
+    val versionsByModifiedTime = for {
+      dir <- listDirectory(externalDir)
+      if dir.getFileName.toString.endsWith("rules_scala_config")
+      configBzl = dir.resolve("config.bzl")
+      if Files.isRegularFile(configBzl)
+      modified <- Try(Files.getLastModifiedTime(configBzl).toMillis).toOption
+      content <- Try(new String(Files.readAllBytes(configBzl))).toOption
+      matched <- scalaConfigVersionPattern.findFirstMatchIn(content)
+    } yield modified -> matched.group(1)
+    versionsByModifiedTime
+      .maxByOption { case (modified, _) => modified }
+      .map { case (_, version) => version }
+  }
 
   private def listDirectory(dir: Path): List[Path] =
     if (Files.isDirectory(dir))

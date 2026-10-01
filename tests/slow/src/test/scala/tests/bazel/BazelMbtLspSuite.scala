@@ -355,7 +355,6 @@ class BazelMbtLspSuite
         |scala_deps = use_extension("@rules_scala//scala/extensions:deps.bzl", "scala_deps")
         |scala_deps.settings(fetch_sources = True)
         |scala_deps.scala()
-        |scala_deps.scala(scala_version = "${V.scala3}")
         |use_repo(scala_deps, "rules_scala_toolchains")
         |
         |register_toolchains("@rules_scala_toolchains//...:all")
