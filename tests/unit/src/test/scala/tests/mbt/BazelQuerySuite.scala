@@ -7,21 +7,36 @@ import munit.FunSuite
 
 class BazelQuerySuite extends FunSuite {
 
-  test("fetch-passes-distinct-sorted-labels-positionally") {
+  test("fetch-batches-distinct-sorted-labels-positionally") {
+    val batches = BazelFetch.batches(
+      List(
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+        "@@rules_jvm_external++maven+maven//:org_assertj_assertj_core",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+      )
+    )
     assertEquals(
-      BazelFetch.commandArgs(
+      batches.map(BazelFetch.commandArgs),
+      List(
         List(
-          "@maven//:org_junit_jupiter_junit_jupiter_api",
+          "bazel", "fetch", "--keep_going",
           "@@rules_jvm_external++maven+maven//:org_assertj_assertj_core",
           "@maven//:org_junit_jupiter_junit_jupiter_api",
         )
       ),
-      List(
-        "bazel", "fetch", "--keep_going",
-        "@@rules_jvm_external++maven+maven//:org_assertj_assertj_core",
-        "@maven//:org_junit_jupiter_junit_jupiter_api",
-      ),
     )
+  }
+
+  test("fetch-splits-labels-to-stay-below-the-command-length-limit") {
+    val labels = (1 to 9).map(i => s"@maven//:artifact_$i").toList
+    val limit = "bazel fetch --keep_going".length + 2 * 21
+    val batches = BazelFetch.batches(labels, limit)
+    assertEquals(batches.flatten, labels.sorted)
+    assert(batches.forall(_.size == 2) || batches.last.size == 1)
+    batches.foreach { batch =>
+      assert(BazelFetch.commandArgs(batch).mkString(" ").length <= limit)
+    }
+    assertEquals(batches.size, 5)
   }
 
   test("parse-special-characters-bazel-query") {
