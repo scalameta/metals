@@ -133,7 +133,7 @@ class BazelMbtLspSuite
        |        "org.typelevel:cats-core_2.13:2.13.0",
        |        "org.typelevel:cats-kernel_2.13:2.13.0"
        |      ],
-       |      "scalaVersion": "2.13.16",
+       |      "scalaVersion": "2.13.18",
        |      "dependsOn": [],
        |      "classDirectories": []
        |    }
@@ -421,7 +421,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.12.0",
             |        "org.typelevel:cats-kernel_2.13:2.12.0"
             |      ],
-            |      "scalaVersion": "2.13.14",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    },
@@ -436,7 +436,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.14",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    }
@@ -497,7 +497,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": []
             |    },
@@ -513,7 +513,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [
             |        "//core"
             |      ],
@@ -947,7 +947,7 @@ class BazelMbtLspSuite
             |        "org.typelevel:cats-core_2.13:2.13.0",
             |        "org.typelevel:cats-kernel_2.13:2.13.0"
             |      ],
-            |      "scalaVersion": "2.13.16",
+            |      "scalaVersion": "2.13.18",
             |      "dependsOn": [],
             |      "classDirectories": ["<classDirectories-path>"],
             |      "configurations": [

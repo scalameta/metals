@@ -97,9 +97,6 @@ object BazelQuery {
     BazelQuery(query, outputMode = Xml)
   }
 
-  def allScalaLibrariesQuery: BazelQuery =
-    BazelQuery("filter('scala.library', deps(//...))", outputMode = Label)
-
   private val ruleKinds: List[String] =
     List(
       "scala_library", "java_library", "scala_binary", "java_binary",

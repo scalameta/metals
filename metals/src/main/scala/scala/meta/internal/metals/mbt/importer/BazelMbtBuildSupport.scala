@@ -40,16 +40,25 @@ object BazelMbtBuildSupport {
       runTargets: Set[String],
       classDirectoriesByTarget: Map[String, String],
       dependencyModules: Seq[MbtDependencyModule],
-      scalaVersion: Option[String],
+      scalaVersionByTarget: Map[String, Option[String]],
       genSrcOutputsByTarget: Map[String, List[String]] = Map.empty,
   ): MbtBuild = {
     val depModules = new ju.ArrayList[MbtDependencyModule]()
     dependencyModules.foreach(depModules.add)
+    // The latest Scala version used anywhere in the project, used as a fallback
+    // for namespaces whose targets declare no version.
+    val fallbackScalaVersion = BazelScalaVersionResolver.maxVersion(
+      scalaVersionByTarget.values.flatten
+    )
     if (targetLabels.isEmpty) {
       if (granularity == BazelMbtNamespaceMode.Workspace) {
         MbtBuild(
           depModules,
-          singleNamespace(workspaceNamespaceName, Set.empty, scalaVersion),
+          singleNamespace(
+            workspaceNamespaceName,
+            Set.empty,
+            fallbackScalaVersion,
+          ),
           uncheckedSources = ju.Collections.emptyList(),
         )
       } else {
@@ -137,7 +146,23 @@ object BazelMbtBuildSupport {
             mutable.Buffer.empty,
           ) += path
         }
+        val targetsByNamespace = targetLabels.groupBy(keys)
         for ((namespace, files) <- byBuildFile) {
+          val nsScalaVersions = targetsByNamespace
+            .getOrElse(namespace, Nil)
+            .flatMap(scalaVersionByTarget.getOrElse(_, None))
+            .distinct
+          if (nsScalaVersions.size > 1)
+            scribe.warn(
+              s"bazel-mbt: build-file namespace '$namespace' has targets " +
+                s"with multiple Scala versions ${nsScalaVersions.sorted.mkString(", ")}; " +
+                s"analyzing all of them as ${BazelScalaVersionResolver.maxVersion(nsScalaVersions).getOrElse("?")}. " +
+                "Split mixed-version targets into separate packages for correct " +
+                "analysis."
+            )
+          val nsScalaVersion =
+            BazelScalaVersionResolver.maxVersion(nsScalaVersions)
+              .orElse(fallbackScalaVersion)
           putNamespace(
             namespaces,
             namespace,
@@ -148,7 +173,7 @@ object BazelMbtBuildSupport {
             externalDepsByNs.getOrElse(namespace, Set.empty),
             runTargetsByNs.getOrElse(namespace, Set.empty),
             classDirectoriesByNs.getOrElse(namespace, Nil),
-            scalaVersion,
+            nsScalaVersion,
             genSrcOutputsByNamespaces
               .getOrElse(namespace, mutable.Buffer.empty)
               .toSeq,
@@ -158,6 +183,9 @@ object BazelMbtBuildSupport {
         val allSrcs = srcFilesByTarget.values.flatten.toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
         val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
+        val wsScalaVersion = BazelScalaVersionResolver.maxVersion(
+          targetLabels.flatMap(scalaVersionByTarget.getOrElse(_, None))
+        ).orElse(fallbackScalaVersion)
         putNamespace(
           namespaces,
           workspaceNamespaceName,
@@ -169,7 +197,7 @@ object BazelMbtBuildSupport {
           allExtDeps,
           runTargetsByNs.getOrElse(workspaceNamespaceName, Set.empty),
           classDirectoriesByNs.getOrElse(workspaceNamespaceName, Nil),
-          scalaVersion,
+          wsScalaVersion,
           allGenSrcOutputs,
         )
       }
