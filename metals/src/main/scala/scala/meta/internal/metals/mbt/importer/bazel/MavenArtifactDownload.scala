@@ -18,9 +18,9 @@ private[bazel] object MavenArtifactDownload {
   ): Option[String] = {
     Try {
       val uri = URI.create(url)
-      require(
-        Set("http", "https").contains(uri.getScheme),
-        "Unsupported repository URL",
+      require(uri.getScheme == "https", "Unsupported repository URL")
+      val expected = checksum.getOrElse(
+        throw new IllegalArgumentException("Missing SHA-256 checksum")
       )
       val cache = Path.of(System.getProperty("user.home"), ".m2", "repository")
       val target = cache.resolve(relative).normalize()
@@ -37,7 +37,7 @@ private[bazel] object MavenArtifactDownload {
         try Files.copy(in, temporary, StandardCopyOption.REPLACE_EXISTING)
         finally in.close()
         val actual = digest.digest().map(b => f"${b & 0xff}%02x").mkString
-        require(checksum.forall(_.equalsIgnoreCase(actual)), "SHA-256 mismatch")
+        require(expected.equalsIgnoreCase(actual), "SHA-256 mismatch")
         Files.move(
           temporary,
           target,
