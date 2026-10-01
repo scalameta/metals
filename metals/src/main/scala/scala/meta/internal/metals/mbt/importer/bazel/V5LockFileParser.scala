@@ -21,10 +21,8 @@ import com.google.gson.JsonObject
  * }
  * </pre>
  */
-class V5LockFileParser private[bazel] (
-    artifacts: JsonObject,
-    repositories: Option[JsonObject],
-) extends MavenLockFileParser {
+class V5LockFileParser private[bazel] (artifacts: JsonObject)
+    extends MavenLockFileParser {
 
   override def parse(
       repositoryNames: Seq[String],
@@ -71,7 +69,6 @@ class V5LockFileParser private[bazel] (
           // Find JAR file path
           val jarPath =
             findJarPath(groupId, artifactId, v, repositoryNames, extDirs)
-              .orElse(download(coordKey, info, groupId, artifactId, v, "jar"))
 
           jarPath.map { jar =>
             val sourcesPath =
@@ -81,8 +78,6 @@ class V5LockFileParser private[bazel] (
                 v,
                 repositoryNames,
                 extDirs,
-              ).orElse(
-                download(coordKey, info, groupId, artifactId, v, "sources")
               )
 
             MbtDependencyModule(
@@ -93,36 +88,6 @@ class V5LockFileParser private[bazel] (
           }
         }
       }
-    }
-  }
-
-  private def download(
-      coordinate: String,
-      info: JsonObject,
-      groupId: String,
-      artifactId: String,
-      version: String,
-      classifier: String,
-  ): Option[String] = {
-    val checksum = for {
-      shasums <- Option(info.getAsJsonObject("shasums"))
-      value <- Option(shasums.get(classifier)).filter(_.isJsonPrimitive)
-    } yield value.getAsString
-    val key =
-      if (classifier == "jar") coordinate else s"$coordinate:jar:$classifier"
-    val suffix = if (classifier == "jar") "" else s"-$classifier"
-    val relative =
-      s"${groupId.replace('.', '/')}/$artifactId/$version/$artifactId-$version$suffix.jar"
-    val urls = repositories.toSeq.flatMap(_.entrySet().asScala).collect {
-      case entry
-          if entry.getValue.isJsonArray && entry.getValue.getAsJsonArray.asScala
-            .exists(value =>
-              value.isJsonPrimitive && value.getAsString == key
-            ) =>
-        s"${entry.getKey.stripSuffix("/")}/$relative"
-    }
-    urls.foldLeft(Option.empty[String]) { (found, url) =>
-      found.orElse(MavenArtifactDownload.download(url, relative, checksum))
     }
   }
 

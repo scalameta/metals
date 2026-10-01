@@ -1,10 +1,39 @@
 package tests.mbt
 
+import java.nio.file.Path
+
+import scala.meta.internal.metals.mbt.importer.BazelFetch
 import scala.meta.internal.metals.mbt.importer.BazelQuery
 
 import munit.FunSuite
 
 class BazelQuerySuite extends FunSuite {
+
+  test("fetch-uses-a-target-pattern-file") {
+    val file = Path.of("/tmp/metals-bazel-fetch-1.txt")
+    assertEquals(
+      BazelFetch.commandArgs(file),
+      List(
+        "bazel",
+        "fetch",
+        "--keep_going",
+        "--target_pattern_file=/tmp/metals-bazel-fetch-1.txt",
+      ),
+    )
+  }
+
+  test("fetch-pattern-file-lists-distinct-labels-one-per-line") {
+    val labels = List(
+      "@maven//:org_junit_jupiter_junit_jupiter_api",
+      "@@rules_jvm_external++maven+maven//:org_assertj_assertj_core",
+      "@maven//:org_junit_jupiter_junit_jupiter_api",
+    )
+    assertEquals(
+      BazelFetch.patternFileContent(labels),
+      "@@rules_jvm_external++maven+maven//:org_assertj_assertj_core\n" +
+        "@maven//:org_junit_jupiter_junit_jupiter_api\n",
+    )
+  }
 
   test("parse-special-characters-bazel-query") {
     val targets = List(

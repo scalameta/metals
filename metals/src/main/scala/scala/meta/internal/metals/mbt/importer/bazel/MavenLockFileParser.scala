@@ -15,12 +15,7 @@ object MavenLockFileParser {
     Option(json.getAsJsonObject("artifacts")) match {
       case Some(artifacts) =>
         scribe.debug("Using the v5 parser for the rules_jvm_external lock file")
-        Some(
-          new V5LockFileParser(
-            artifacts,
-            Option(json.getAsJsonObject("repositories")),
-          )
-        )
+        Some(new V5LockFileParser(artifacts))
       case None =>
         Option(json.getAsJsonObject("dependency_tree"))
           .flatMap(dt => Option(dt.getAsJsonArray("dependencies"))) match {
