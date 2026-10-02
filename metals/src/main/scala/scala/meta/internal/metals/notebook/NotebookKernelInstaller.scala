@@ -24,6 +24,19 @@ final class NotebookKernelInstaller(
     javaHome: => Option[String],
 )(implicit ec: ExecutionContext) {
 
+  def isKernelUpToDate(ipynbPath: AbsolutePath): Future[Boolean] = {
+    val resolved = for {
+      target <- notebookProvider.bestTarget(ipynbPath)
+      classpathFuture <- buildTargets.fullClasspath(target, Promise())
+    } yield classpathFuture.map { classpath =>
+      AlmondKernelInstaller.isUpToDate(
+        NotebookKernelInstaller.kernelIdFor(ipynbPath),
+        classpath.map(_.toNIO),
+      )
+    }
+    resolved.getOrElse(Future.successful(false))
+  }
+
   def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
     notebookProvider.bestTarget(ipynbPath) match {
       case None =>

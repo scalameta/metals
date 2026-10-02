@@ -10,6 +10,7 @@ import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
+import scala.util.Try
 import scala.util.Using
 import scala.util.control.NonFatal
 
@@ -56,7 +57,7 @@ object AlmondKernelInstaller {
         scalaVersion,
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
-      writeKernelSpec(kernelId, displayName, runCommand)
+      writeKernelSpec(kernelId, displayName, runCommand, classpath)
       languageClient.showMessage(
         MessageType.Info,
         s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
@@ -74,28 +75,54 @@ object AlmondKernelInstaller {
       kernelId: String,
       displayName: String,
       runCommand: List[String],
+      classpath: List[Path],
   ): Unit = {
     val dir = userKernelsDir.resolve(kernelId)
     if (Files.exists(dir)) deleteRecursively(dir)
     Files.createDirectories(dir)
     Files.write(
       dir.resolve("kernel.json"),
-      kernelSpecJson(displayName, runCommand).toString.getBytes(
+      kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
         StandardCharsets.UTF_8
       ),
     )
   }
 
+  /**
+   * True only if a kernel is installed for `kernelId` AND it was installed
+   * against the same Almond version and classpath as now — otherwise a
+   * stale install (Almond bumped, or the project's classpath changed since)
+   * looks identical to "not installed" to callers deciding whether to
+   * offer a (re)install.
+   */
+  def isUpToDate(kernelId: String, classpath: List[Path]): Boolean = {
+    val file = userKernelsDir.resolve(kernelId).resolve("kernel.json")
+    Try(ujson.read(Files.readString(file))).toOption
+      .exists(isUpToDateJson(_, classpath))
+  }
+
+  def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
+    Try {
+      val metadata = kernelJson("metadata")
+      metadata("almondVersion").str == almondVersion &&
+      metadata("classpath").arr.map(_.str).toList == classpath.map(_.toString)
+    }.getOrElse(false)
+
   // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
   def kernelSpecJson(
       displayName: String,
       runCommand: List[String],
+      classpath: List[Path],
   ): ujson.Obj =
     ujson.Obj(
       "argv" -> (runCommand ++ List("--connection-file", "{connection_file}")),
       "display_name" -> displayName,
       "language" -> "scala",
       "env" -> ujson.Obj(),
+      "metadata" -> ujson.Obj(
+        "almondVersion" -> almondVersion,
+        "classpath" -> classpath.map(_.toString),
+      ),
     )
 
   private def deleteRecursively(path: Path): Unit = {
