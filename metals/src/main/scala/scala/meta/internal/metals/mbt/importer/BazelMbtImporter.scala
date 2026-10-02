@@ -135,11 +135,20 @@ abstract class BazelMbtImporter(
         externalDepModules,
         importDepModules,
       )
-      scalaVersionFromDeps <- queryScalaVersionFromDeps()
-      effectiveScalaVersion <- scalaVersionFromDeps match {
-        case Some(value) => Future.successful(Some(value))
-        case None => queryScalaVersion(targets)
-      }
+      scalaVersions = targetsXmlDump.getStrings("scala_version")
+      effectiveScalaVersion <- BazelScalaVersionResolver.resolve(
+        queryEnv,
+        outputBase,
+        allDependencyModules,
+        scalaVersions,
+        userConfig(),
+      )
+      scalaVersionByTarget = targets.map { target =>
+        target -> scalaVersions
+          .get(target)
+          .flatMap(BazelScalaVersionResolver.maxVersion)
+          .orElse(effectiveScalaVersion)
+      }.toMap
       build = BazelMbtBuildSupport.fromDiscovery(
         namespaceMode,
         targets,
@@ -151,7 +160,7 @@ abstract class BazelMbtImporter(
         runTargets,
         classDirectories,
         allDependencyModules,
-        effectiveScalaVersion,
+        scalaVersionByTarget,
         genSrcOutputsByTarget,
       )
       _ <- Future(out.writeText(MbtBuild.toJson(build)))
@@ -350,35 +359,6 @@ abstract class BazelMbtImporter(
     allKeys.map { key =>
       key -> maps.flatMap(_.getOrElse(key, Nil)).distinct.toList
     }.toMap
-  }
-
-  private def queryScalaVersionFromDeps(): Future[Option[String]] = for {
-    queryOutput <- BazelQuery.allScalaLibrariesQuery.run(queryEnv)
-    lines = asLines(queryOutput)
-  } yield lines.flatMap(extractScalaVersionFromLabel).headOption
-
-  private def queryScalaVersion(
-      @annotation.nowarn("msg=never used") targets: List[String]
-  ): Future[Option[String]] =
-    Future.successful(parseScalaVersionFromBuildFiles())
-
-  private def parseScalaVersionFromBuildFiles(): Option[String] = {
-    val versionPattern = """scala_version\s*=\s*["'](\d+\.\d+\.\d+)["']""".r
-    val moduleFile = projectRoot.resolve("MODULE.bazel")
-    val workspaceFile = projectRoot.resolve("WORKSPACE")
-
-    def extractFromFile(path: AbsolutePath): Option[String] =
-      if (path.exists) {
-        val content = new String(path.readAllBytes)
-        versionPattern.findFirstMatchIn(content).map(_.group(1))
-      } else None
-
-    extractFromFile(moduleFile).orElse(extractFromFile(workspaceFile))
-  }
-
-  private def extractScalaVersionFromLabel(label: String): Option[String] = {
-    val versionPattern = """scala[_-]library[_-](\d+\.\d+\.\d+)""".r
-    versionPattern.findFirstMatchIn(label).map(_.group(1))
   }
 
   /**
