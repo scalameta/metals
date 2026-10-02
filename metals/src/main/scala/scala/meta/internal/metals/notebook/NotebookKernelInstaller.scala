@@ -5,6 +5,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.io.AbsolutePath

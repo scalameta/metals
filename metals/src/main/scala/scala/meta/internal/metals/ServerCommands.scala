@@ -213,7 +213,6 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
