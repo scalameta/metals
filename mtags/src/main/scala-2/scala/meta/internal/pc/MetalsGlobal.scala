@@ -2,6 +2,7 @@ package scala.meta.internal.pc
 
 import java.net.URI
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util
 import java.{util => ju}
 
@@ -747,6 +748,40 @@ class MetalsGlobal(
    */
   def removeAfterUsing(filename: String): Unit = {
     if (compileUnitsCache.canBeRemoved(filename)) remove(filename)
+  }
+
+  /**
+   * Drop a closed editor buffer from the presentation compiler.
+   *
+   * Open files are keyed by a virtual file whose path is the URI string.
+   * The same source loaded from the sourcepath is keyed by its filesystem
+   * path, so removing only the virtual file leaves the dependency unit and
+   * its problems in place.
+   */
+  def forgetClosedSource(uri: URI): Unit = {
+    val uriString = uri.toString
+    val filesystemPath =
+      if (uri.getScheme == "file")
+        try Some(Paths.get(uri))
+        catch { case NonFatal(_) => None }
+      else None
+    val matching = unitOfFile.keys.filter { file =>
+      val path = file.path
+      path == uriString || filesystemPath.exists { fsPath =>
+        val underlying = file.file
+        underlying != null && {
+          try underlying.toPath == fsPath
+          catch { case NonFatal(_) => false }
+        }
+      }
+    }
+    toBeRemoved.synchronized {
+      matching.foreach { file =>
+        unitOfFile.get(file).foreach(_.problems.clear())
+        toBeRemoved.add(file)
+      }
+    }
+    richCompilationCache.remove(uriString)
   }
 
   private def remove(filename: String): Unit = {

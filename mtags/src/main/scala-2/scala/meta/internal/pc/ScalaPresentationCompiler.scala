@@ -356,9 +356,7 @@ case class ScalaPresentationCompiler(
       (),
       EmptyCancelToken
     ) { pc =>
-      pc.compiler()
-        .removeUnitOf(new MetalsSourceFile(uri.toString, Array.empty))
-      pc.compiler().richCompilationCache.remove(uri.toString())
+      pc.compiler().forgetClosedSource(uri)
     }(emptyQueryContext)
   }
 

@@ -398,9 +398,16 @@ final class Diagnostics(
       ds: List[Diagnostic],
   ): Unit = {
     if (userConfig().presentationCompilerDiagnostics) {
-      if (ds.isEmpty) pcDiagnostics.remove(path)
-      else pcDiagnostics(path) = ds
-      publishDiagnostics(path)
+      // A compile started while the file was open can finish after didClose.
+      // Drop that result so a closed file, including a sourcepath dependency,
+      // does not get its errors published again.
+      if (!buffers.contains(path)) {
+        if (pcDiagnostics.remove(path).isDefined) publishDiagnostics(path)
+      } else {
+        if (ds.isEmpty) pcDiagnostics.remove(path)
+        else pcDiagnostics(path) = ds
+        publishDiagnostics(path)
+      }
     }
   }
 
