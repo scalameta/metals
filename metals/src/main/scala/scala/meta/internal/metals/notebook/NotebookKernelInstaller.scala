@@ -5,7 +5,6 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.io.AbsolutePath
@@ -22,7 +21,7 @@ final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
-    javaHome: () => Option[String],
+    javaHome: => Option[String],
 )(implicit ec: ExecutionContext) {
 
   def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
@@ -45,7 +44,7 @@ final class NotebookKernelInstaller(
         } yield classpathFuture.flatMap { classpath =>
           AlmondKernelInstaller.install(
             languageClient,
-            javaHome(),
+            javaHome,
             ipynbPath.parent,
             scalaTarget.scalaVersion,
             classpath.map(_.toNIO),
@@ -68,13 +67,11 @@ object NotebookKernelInstaller {
   // The filename stem alone collides for two same-named notebooks in
   // different directories; `AlmondKernelInstaller.install` runs with
   // `--force`, so installing the second would silently overwrite the
-  // first's unrelated kernel. Mixing in a hash of the full absolute path
-  // disambiguates them while keeping the id short and filesystem-safe.
-  def kernelIdFor(ipynbPath: AbsolutePath): String = {
-    val name = ipynbPath.filename
-    val dot = name.lastIndexOf('.')
-    val stem = if (dot > 0) name.substring(0, dot) else name
-    val pathHash = Integer.toHexString(ipynbPath.toString.hashCode)
-    s"metals-${stem.replaceAll("[^A-Za-z0-9_-]", "_")}-$pathHash"
-  }
+  // first's unrelated kernel. Encoding the whole absolute path (rather
+  // than hashing it) disambiguates them with no collision risk at all, and
+  // keeps the id traceable back to its notebook by eye when browsing the
+  // Jupyter kernels directory — the same tradeoff `notebookScratchDir`
+  // already makes by nesting on the real path instead of flattening it.
+  def kernelIdFor(ipynbPath: AbsolutePath): String =
+    s"metals-${ipynbPath.toString.replaceAll("[^A-Za-z0-9_-]", "_")}"
 }
