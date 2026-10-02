@@ -63,6 +63,7 @@ case class UserConfiguration(
     defaultShell: Option[String] = None,
     startMcpServer: Boolean = false,
     mcpClient: Option[String] = None,
+    notebookAlmondVersion: Option[String] = None,
 ) {
 
   override def toString(): String = {
@@ -163,6 +164,7 @@ case class UserConfiguration(
         )
       ),
       optStringField("mcpClient", mcpClient),
+      optStringField("notebookAlmondVersion", notebookAlmondVersion),
     ).flatten.toMap.asJava
     val gson = new GsonBuilder().setPrettyPrinting().create()
     gson.toJson(fields).toString()
@@ -611,6 +613,18 @@ object UserConfiguration {
            |and it will still generate the one matching your editor if it's also supported.
            |""".stripMargin,
       ),
+      UserConfigurationOption(
+        "notebook-almond-version",
+        "",
+        """"0.15.0"""",
+        "Notebook Almond version",
+        """|Overrides the Almond version used to install a Jupyter kernel for a
+           |notebook (`Metals: Install Jupyter kernel for notebook`). Almond's own
+           |supported Scala version matrix varies by release, so override this if
+           |the bundled default doesn't support your project's Scala version.
+           |""".stripMargin,
+        defaultDescription = Some("Metals' own bundled default."),
+      ),
     )
 
   def listOptions: String =
@@ -913,6 +927,8 @@ object UserConfiguration {
 
     val mcpClient = getStringKey("mcp-client")
 
+    val notebookAlmondVersion = getStringKey("notebook-almond-version")
+
     if (errors.isEmpty) {
       Right(
         UserConfiguration(
@@ -950,6 +966,7 @@ object UserConfiguration {
           defaultShell,
           startMcpServer,
           mcpClient,
+          notebookAlmondVersion,
         )
       )
     } else {

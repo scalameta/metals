@@ -233,6 +233,7 @@ abstract class MetalsLspService(
     buildTargets,
     languageClient,
     javaHome,
+    userConfig.notebookAlmondVersion,
   )
 
   val sourceMapper: SourceMapper = SourceMapper(

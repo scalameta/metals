@@ -22,7 +22,11 @@ final class NotebookKernelInstaller(
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
     javaHome: => Option[String],
+    configuredAlmondVersion: => Option[String],
 )(implicit ec: ExecutionContext) {
+
+  private def almondVersion: String =
+    configuredAlmondVersion.getOrElse(AlmondKernelInstaller.defaultAlmondVersion)
 
   def isKernelUpToDate(ipynbPath: AbsolutePath): Future[Boolean] = {
     val resolved = for {
@@ -31,6 +35,7 @@ final class NotebookKernelInstaller(
     } yield classpathFuture.map { classpath =>
       AlmondKernelInstaller.isUpToDate(
         NotebookKernelInstaller.kernelIdFor(ipynbPath),
+        almondVersion,
         classpath.map(_.toNIO),
       )
     }
@@ -58,6 +63,7 @@ final class NotebookKernelInstaller(
           AlmondKernelInstaller.install(
             languageClient,
             javaHome,
+            almondVersion,
             scalaTarget.scalaVersion,
             classpath.map(_.toNIO),
             kernelId = NotebookKernelInstaller.kernelIdFor(ipynbPath),
