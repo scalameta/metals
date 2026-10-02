@@ -944,6 +944,9 @@ abstract class MetalsLspService(
   def installNotebookKernel(notebookUri: String): Future[Unit] =
     notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
 
+  def isNotebookKernelUpToDate(notebookUri: String): Future[Boolean] =
+    notebookKernelInstaller.isKernelUpToDate(notebookUri.toAbsolutePath)
+
   override def didSave(
       params: DidSaveTextDocumentParams
   ): CompletableFuture[Unit] = {

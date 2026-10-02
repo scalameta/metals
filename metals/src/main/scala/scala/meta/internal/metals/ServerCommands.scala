@@ -213,6 +213,18 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val NotebookKernelUpToDate = new ParametrizedCommand[String](
+    "notebook-kernel-up-to-date",
+    "Check if a notebook's Jupyter kernel is installed and up to date",
+    """|Returns whether a `.ipynb` notebook has an installed Jupyter kernel
+       |that still matches the current Almond version and project
+       |classpath, so a client can decide whether to offer a (re)install
+       |without guessing at Metals' own kernel id scheme or disk state.
+       |""".stripMargin,
+    """|[uri], uri of the `.ipynb` notebook.
+       |""".stripMargin,
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -859,6 +871,7 @@ object ServerCommands {
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
       InstallNotebookKernel,
+      NotebookKernelUpToDate,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,

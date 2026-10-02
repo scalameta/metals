@@ -1029,6 +1029,12 @@ class WorkspaceLspService(
           .getOrElse(fallbackService)
           .installNotebookKernel(uri)
           .asJavaObject
+      case ServerCommands.NotebookKernelUpToDate(uri) =>
+        getServiceForOpt(uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .isNotebookKernelUpToDate(uri)
+          .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
           _.switchBspServer().ignoreValue,
