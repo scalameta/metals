@@ -63,14 +63,9 @@ final class NotebookKernelInstaller(
 
 object NotebookKernelInstaller {
 
-  // The filename stem alone collides for two same-named notebooks in
-  // different directories; `AlmondKernelInstaller` force-overwrites an
-  // existing kernel dir, so installing the second would silently replace
-  // the first's unrelated kernel. Encoding the whole absolute path (rather
-  // than hashing it) disambiguates them with no collision risk, and keeps
-  // the id traceable back to its notebook by eye when browsing the
-  // Jupyter kernels directory — the same tradeoff `notebookScratchDir`
-  // makes by nesting on the real path instead of flattening it.
+  // Encodes the whole path (not a hash) so two same-named notebooks in
+  // different directories can't collide and overwrite each other's kernel
+  // (AlmondKernelInstaller force-overwrites an existing kernel dir).
   def kernelIdFor(ipynbPath: AbsolutePath): String =
     s"metals-${ipynbPath.toString.replaceAll("[^A-Za-z0-9_-]", "_")}"
 }
