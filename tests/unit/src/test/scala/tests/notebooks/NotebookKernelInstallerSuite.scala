@@ -47,6 +47,19 @@ class NotebookKernelInstallerSuite extends BaseSuite {
     )
   }
 
+  test(
+    "a literal underscore in the path can't collide with a sanitized separator"
+  ) {
+    val withSlash =
+      NotebookKernelInstaller.kernelIdFor(
+        path("a", "b", "x.ipynb"),
+        almondVersion,
+      )
+    val withUnderscore =
+      NotebookKernelInstaller.kernelIdFor(path("a_b", "x.ipynb"), almondVersion)
+    assertNotEquals(withSlash, withUnderscore)
+  }
+
   test("the id stays traceable back to the notebook's own path") {
     val id =
       NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), almondVersion)
