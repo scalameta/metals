@@ -51,8 +51,8 @@ import org.eclipse.lsp4j.TextEdit
  * closed rather than reaching back out into the parsed-trees cache
  * themselves; the caller (`MetalsLspService`) owns that cache and feeds it.
  *
- * Deliberately out of scope: executing cells (same non-goal as the design
- * doc at https://github.com/scalameta/metals/issues/4434).
+ * Deliberately out of scope for this class: executing cells (see
+ * `NotebookKernelInstaller`).
  */
 final class NotebookProvider(
     buffers: Buffers,
