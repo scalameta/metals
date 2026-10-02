@@ -45,7 +45,6 @@ final class NotebookKernelInstaller(
           AlmondKernelInstaller.install(
             languageClient,
             javaHome,
-            ipynbPath.parent,
             scalaTarget.scalaVersion,
             classpath.map(_.toNIO),
             kernelId = NotebookKernelInstaller.kernelIdFor(ipynbPath),
