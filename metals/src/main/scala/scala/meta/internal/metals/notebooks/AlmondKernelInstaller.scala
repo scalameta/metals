@@ -31,19 +31,23 @@ import org.eclipse.lsp4j.MessageType
 object AlmondKernelInstaller {
 
   /**
-   * Almond publishes `scala-kernel-api`/`kernel` per exact target Scala
-   * patch version (`--scala`, below), not just per Scala minor line, so an
-   * `almondVersion` older than the target project's own Almond release can
-   * 404 at kernel-start time for a Scala patch version newer than whatever
-   * was current when that Almond version shipped (verified empirically:
-   * `0.14.1` has no `scala-kernel-api_2.13.18`, only `0.14.5` does — this
-   * project's own Scala version at the time of writing). Keep this at
-   * Almond's latest release. The `launcher_3` artifact this downloads and
-   * runs is only ever published for Scala 3 regardless of Almond version —
-   * that's the launcher tool's own implementation language, unrelated to
-   * the *target* notebook's Scala version.
+   * Bumped from `0.14.5`: as of 0.15.0, `scala-kernel-api`/`scala-kernel`/
+   * `scala-interpreter` publish once per *binary* Scala version (`_2.12`,
+   * `_2.13`, `_3`) instead of once per *full* version (`_2.13.18`, …), so a
+   * single Almond release now covers every patch of a supported line —
+   * what previously forced a re-pin on every new Scala patch (`0.14.1` had
+   * no `scala-kernel-api_2.13.18`, only `0.14.5` did).
+   *
+   * Trade-off: 0.15.0 also narrowed Scala 3 support to only the latest
+   * release and the LTS (`3.9.0`/`3.3.8` at the time of writing) — `3.4.x`
+   * through `3.8.x` aren't supported anymore, so a notebook on one of those
+   * installs a kernel that won't actually start. The `launcher_3` artifact
+   * this downloads and runs is, regardless, only ever published for Scala 3
+   * — that's the launcher tool's own implementation language, unrelated to
+   * the *target* notebook's Scala version, threaded through separately via
+   * `--scala`.
    */
-  private val almondVersion = "0.14.5"
+  private val almondVersion = "0.15.0"
 
   def install(
       languageClient: MetalsLanguageClient,
@@ -54,7 +58,7 @@ object AlmondKernelInstaller {
       kernelId: String,
       displayName: String,
   )(implicit ec: ExecutionContext): Future[Unit] = {
-    val installed = for {
+    for {
       launcherClasspath <- Future {
         Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion)
       }
@@ -95,27 +99,23 @@ object AlmondKernelInstaller {
           env = Map.empty,
         )
         .complete
-    } yield exitCode
-
-    installed
-      .map { exitCode =>
-        if (exitCode == 0)
-          languageClient.showMessage(
-            MessageType.Info,
-            s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
-          )
-        else
-          languageClient.showMessage(
-            MessageType.Error,
-            s"Failed to install Jupyter kernel '$displayName' (exit code $exitCode) — check the Metals log for details.",
-          )
-      }
-      .recover { case NonFatal(e) =>
-        scribe.error(s"failed to install Almond kernel '$kernelId'", e)
+    } yield
+      if (exitCode == 0)
+        languageClient.showMessage(
+          MessageType.Info,
+          s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
+        )
+      else
         languageClient.showMessage(
           MessageType.Error,
-          s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
+          s"Failed to install Jupyter kernel '$displayName' (exit code $exitCode) — check the Metals log for details.",
         )
-      }
+  }.recover { case NonFatal(e) =>
+    scribe.error(s"failed to install Almond kernel '$kernelId'", e)
+    languageClient.showMessage(
+      MessageType.Error,
+      s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
+    )
+
   }
 }
