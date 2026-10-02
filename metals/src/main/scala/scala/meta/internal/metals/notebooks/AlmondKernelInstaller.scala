@@ -3,6 +3,7 @@ package scala.meta.internal.metals.notebooks
 import java.io.File
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
+import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -71,15 +72,14 @@ object AlmondKernelInstaller {
       // starts, written into kernel.json's `argv` verbatim (with
       // `--connection-file {connection_file}` appended below, the same way
       // Almond's own installer does).
-      runCommand =
-        List(
-          javaBin,
-          "-cp",
-          launcherClasspathStr,
-          "almond.launcher.Launcher",
-          "--scala",
-          scalaVersion,
-        ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
+      runCommand = List(
+        javaBin,
+        "-cp",
+        launcherClasspathStr,
+        "almond.launcher.Launcher",
+        "--scala",
+        scalaVersion,
+      ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
       writeKernelSpec(kernelId, displayName, runCommand)
       languageClient.showMessage(
@@ -124,9 +124,17 @@ object AlmondKernelInstaller {
       "env" -> ujson.Obj(),
     )
 
+  // NOFOLLOW_LINKS so a symlink inside the kernel dir is deleted as a leaf
+  // rather than traversed into (which could otherwise delete files outside
+  // the kernel dir entirely); Files.list's Stream holds an open directory
+  // handle that must be closed explicitly, or it leaks a file descriptor
+  // for the rest of this long-lived process.
   private def deleteRecursively(path: Path): Unit = {
-    if (Files.isDirectory(path))
-      Files.list(path).forEach(deleteRecursively)
+    if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
+      val children = Files.list(path)
+      try children.forEach(deleteRecursively)
+      finally children.close()
+    }
     Files.deleteIfExists(path)
   }
 
