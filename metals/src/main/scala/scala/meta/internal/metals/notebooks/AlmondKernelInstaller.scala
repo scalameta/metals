@@ -46,7 +46,7 @@ object AlmondKernelInstaller {
       classpath: List[Path],
       kernelId: String,
       displayName: String,
-      notifyOnSuccess: Boolean = true,
+      notify: Boolean = true,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     for {
       launcherClasspath <- Future {
@@ -65,7 +65,7 @@ object AlmondKernelInstaller {
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
       writeKernelSpec(kernelId, displayName, runCommand, classpath)
-      if (notifyOnSuccess)
+      if (notify)
         languageClient.showMessage(
           MessageType.Info,
           s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
@@ -73,10 +73,11 @@ object AlmondKernelInstaller {
     }
   }.recover { case NonFatal(e) =>
     scribe.error(s"failed to install Almond kernel '$kernelId'", e)
-    languageClient.showMessage(
-      MessageType.Error,
-      s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
-    )
+    if (notify)
+      languageClient.showMessage(
+        MessageType.Error,
+        s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
+      )
   }
 
   def exists(kernelId: String): Boolean =
@@ -116,10 +117,13 @@ object AlmondKernelInstaller {
     result
   }
 
+  // Compared as sets: BSP gives no ordering guarantee across separate
+  // calls, so two calls returning the same entries in a different order
+  // must not be treated as a classpath change.
   def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
     Try {
-      val stored = kernelJson("metadata")("classpath").arr.map(_.str).toList
-      val current = classpath.map(_.toString)
+      val stored = kernelJson("metadata")("classpath").arr.map(_.str).toSet
+      val current = classpath.map(_.toString).toSet
       if (stored != current)
         scribe.debug(s"stored classpath=$stored current classpath=$current")
       stored == current
@@ -141,24 +145,40 @@ object AlmondKernelInstaller {
       ),
     )
 
+  // Not AbsolutePath.deleteRecursively(): this one needs to guarantee it
+  // never follows a symlink into deleting outside the kernel directory,
+  // which requires checking NOFOLLOW_LINKS explicitly on every entry.
   private def deleteRecursively(path: Path): Unit = {
     if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS))
       Using.resource(Files.list(path))(_.forEach(deleteRecursively))
     Files.deleteIfExists(path)
   }
 
-  // Mirrors almond.kernel.util.JupyterPaths.userPath.
+  // Mirrors almond.kernel.util.JupyterPaths.userPath / Jupyter's own
+  // jupyter_core.paths.jupyter_data_dir, including the env var overrides
+  // real Jupyter honors (JUPYTER_DATA_DIR, XDG_DATA_HOME) — otherwise an
+  // installed kernel can silently not show up in Jupyter's own picker.
   private def userKernelsDir: Path = {
     val home = Paths.get(sys.props("user.home"))
-    if (Properties.isMac)
-      home.resolve("Library").resolve("Jupyter").resolve("kernels")
-    else if (Properties.isWin)
-      Paths.get(sys.env("APPDATA")).resolve("jupyter").resolve("kernels")
-    else
-      home
-        .resolve(".local")
-        .resolve("share")
-        .resolve("jupyter")
-        .resolve("kernels")
+    val dataDir = sys.env
+      .get("JUPYTER_DATA_DIR")
+      .map(Paths.get(_))
+      .getOrElse {
+        if (Properties.isMac)
+          home.resolve("Library").resolve("Jupyter")
+        else if (Properties.isWin)
+          sys.env
+            .get("APPDATA")
+            .map(Paths.get(_))
+            .getOrElse(home.resolve("AppData").resolve("Roaming"))
+            .resolve("jupyter")
+        else
+          sys.env
+            .get("XDG_DATA_HOME")
+            .map(Paths.get(_))
+            .getOrElse(home.resolve(".local").resolve("share"))
+            .resolve("jupyter")
+      }
+    dataDir.resolve("kernels")
   }
 }

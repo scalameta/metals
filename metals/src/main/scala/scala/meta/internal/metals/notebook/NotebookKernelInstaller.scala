@@ -55,17 +55,24 @@ final class NotebookKernelInstaller(
         AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
       )
         Future.successful(true)
-      else install(ipynbPath, notifyOnSuccess = false).map(_ => true)
+      else
+        // Re-check afterwards rather than assuming success: install()
+        // recovers from failures into a successful Future (so it can
+        // show its own error message instead of crashing the caller),
+        // which would otherwise make a failed refresh look up to date.
+        install(ipynbPath, notify = false).map(_ =>
+          AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
+        )
     }
     resolved.getOrElse(Future.successful(false))
   }
 
   def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
-    install(ipynbPath, notifyOnSuccess = true)
+    install(ipynbPath, notify = true)
 
   private def install(
       ipynbPath: AbsolutePath,
-      notifyOnSuccess: Boolean,
+      notify: Boolean,
   ): Future[Unit] =
     notebookProvider.bestTarget(ipynbPath) match {
       case None =>
@@ -93,7 +100,7 @@ final class NotebookKernelInstaller(
             kernelId =
               NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
             displayName = s"Scala ($targetDisplayName, Almond $almondVersion)",
-            notifyOnSuccess = notifyOnSuccess,
+            notify = notify,
           )
         }
         resolved.getOrElse {
@@ -114,6 +121,11 @@ object NotebookKernelInstaller {
   // Also encodes the Almond version, so switching it installs a new kernel
   // instead of overwriting the old one.
   def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String =
-    s"metals-${ipynbPath.toString.replaceAll("[^A-Za-z0-9_-]", "_")}" +
-      s"-${almondVersion.replaceAll("[^A-Za-z0-9_-]", "_")}"
+    s"metals-${sanitize(ipynbPath.toString)}-${sanitize(almondVersion)}"
+
+  // Literal underscores are doubled up first, so a lone `_` in the result
+  // always came from collapsing a disallowed character: without this,
+  // "a/b" and "a_b" would otherwise both sanitize to "a_b" and collide.
+  private def sanitize(s: String): String =
+    s.replace("_", "__").replaceAll("[^A-Za-z0-9_-]", "_")
 }

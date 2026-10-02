@@ -40,4 +40,10 @@ class AlmondKernelInstallerSuite extends BaseSuite {
     val changedClasspath = classpath :+ Paths.get("/new.jar")
     assert(!AlmondKernelInstaller.isUpToDateJson(json, changedClasspath))
   }
+
+  test("isUpToDateJson ignores classpath ordering") {
+    val json =
+      AlmondKernelInstaller.kernelSpecJson("Scala (a)", List("java"), classpath)
+    assert(AlmondKernelInstaller.isUpToDateJson(json, classpath.reverse))
+  }
 }

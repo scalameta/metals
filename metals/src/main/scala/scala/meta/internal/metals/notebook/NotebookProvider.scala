@@ -180,7 +180,7 @@ final class NotebookProvider(
    * `NotebookKernelInstaller` to know which classpath to install a kernel
    * against.
    */
-  def bestTarget(
+  private[notebook] def bestTarget(
       ipynbPath: AbsolutePath
   ): Option[b.BuildTargetIdentifier] =
     buildTargets
