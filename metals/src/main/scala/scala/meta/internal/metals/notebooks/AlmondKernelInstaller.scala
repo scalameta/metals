@@ -2,6 +2,7 @@ package scala.meta.internal.metals.notebooks
 
 import java.io.File
 import java.nio.file.Path
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
@@ -53,18 +54,17 @@ object AlmondKernelInstaller {
       kernelId: String,
       displayName: String,
   )(implicit ec: ExecutionContext): Future[Unit] = {
-    Future {
-      Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion)
-    }.flatMap { launcherClasspath =>
-      val javaBin = JavaBinary(javaHome)
-      val launcherClasspathStr =
-        launcherClasspath.mkString(File.pathSeparator)
-
+    val installed = for {
+      launcherClasspath <- Future {
+        Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion)
+      }
+      javaBin = JavaBinary(javaHome)
+      launcherClasspathStr = launcherClasspath.mkString(File.pathSeparator)
       // The command Jupyter will actually run every time this kernel
       // starts; becomes the installed `kernel.json`'s `argv` verbatim
       // (`--connection-file {connection_file}` is appended by the
       // installer automatically, confirmed empirically).
-      val runCommand =
+      runCommand =
         List(
           javaBin,
           "-cp",
@@ -73,8 +73,7 @@ object AlmondKernelInstaller {
           "--scala",
           scalaVersion,
         ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
-
-      val installArgs =
+      installArgs =
         List(
           "-cp",
           launcherClasspathStr,
@@ -88,8 +87,7 @@ object AlmondKernelInstaller {
           displayName,
           "--force",
         ) ++ runCommand.flatMap(arg => List("--arg", arg))
-
-      SystemProcess
+      exitCode <- SystemProcess
         .run(
           javaBin :: installArgs,
           cwd,
@@ -97,23 +95,27 @@ object AlmondKernelInstaller {
           env = Map.empty,
         )
         .complete
-    }
-  }.map { exitCode =>
-    if (exitCode == 0)
-      languageClient.showMessage(
-        MessageType.Info,
-        s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
-      )
-    else
-      languageClient.showMessage(
-        MessageType.Error,
-        s"Failed to install Jupyter kernel '$displayName' (exit code $exitCode) — check the Metals log for details.",
-      )
-  }.recover { case NonFatal(e) =>
-    scribe.error(s"failed to install Almond kernel '$kernelId'", e)
-    languageClient.showMessage(
-      MessageType.Error,
-      s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
-    )
+    } yield exitCode
+
+    installed
+      .map { exitCode =>
+        if (exitCode == 0)
+          languageClient.showMessage(
+            MessageType.Info,
+            s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
+          )
+        else
+          languageClient.showMessage(
+            MessageType.Error,
+            s"Failed to install Jupyter kernel '$displayName' (exit code $exitCode) — check the Metals log for details.",
+          )
+      }
+      .recover { case NonFatal(e) =>
+        scribe.error(s"failed to install Almond kernel '$kernelId'", e)
+        languageClient.showMessage(
+          MessageType.Error,
+          s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
+        )
+      }
   }
 }
