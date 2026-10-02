@@ -23,7 +23,8 @@ class NotebookKernelInstallerSuite extends BaseSuite {
   }
 
   test("sanitizes characters that aren't valid in a kernelspec id") {
-    val id = NotebookKernelInstaller.kernelIdFor(path("a b", "my notebook!.ipynb"))
+    val id =
+      NotebookKernelInstaller.kernelIdFor(path("a b", "my notebook!.ipynb"))
     assert(
       id.matches("metals-my_notebook_-[0-9a-f]+"),
       s"expected a sanitized 'metals-my_notebook_-<hash>' id, got '$id'",
