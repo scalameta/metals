@@ -26,8 +26,16 @@ class NotebookKernelInstallerSuite extends BaseSuite {
     val id =
       NotebookKernelInstaller.kernelIdFor(path("a b", "my notebook!.ipynb"))
     assert(
-      id.matches("metals-my_notebook_-[0-9a-f]+"),
-      s"expected a sanitized 'metals-my_notebook_-<hash>' id, got '$id'",
+      id.matches("metals-[A-Za-z0-9_-]+"),
+      s"expected only filesystem-safe characters, got '$id'",
+    )
+  }
+
+  test("the id stays traceable back to the notebook's own path") {
+    val id = NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"))
+    assert(
+      id.contains("foo"),
+      s"expected the notebook's own filename to appear in the id, got '$id'",
     )
   }
 }
