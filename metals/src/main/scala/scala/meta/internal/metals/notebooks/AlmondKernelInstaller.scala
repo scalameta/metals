@@ -28,6 +28,11 @@ import org.eclipse.lsp4j.MessageType
  * (`almond.kernel.install.Install.installIn`), `--install` does nothing
  * beyond resolving the kernels directory, force-overwriting an existing
  * one, and serializing this same JSON.
+ *
+ * `kernelId` already encodes the Almond version (see
+ * `NotebookKernelInstaller.kernelIdFor`), so a different version never
+ * collides with, or gets mistaken for up to date against, another one —
+ * only the classpath needs comparing here.
  */
 object AlmondKernelInstaller {
 
@@ -58,13 +63,7 @@ object AlmondKernelInstaller {
         scalaVersion,
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
-      writeKernelSpec(
-        kernelId,
-        displayName,
-        runCommand,
-        almondVersion,
-        classpath,
-      )
+      writeKernelSpec(kernelId, displayName, runCommand, classpath)
       languageClient.showMessage(
         MessageType.Info,
         s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
@@ -82,7 +81,6 @@ object AlmondKernelInstaller {
       kernelId: String,
       displayName: String,
       runCommand: List[String],
-      almondVersion: String,
       classpath: List[Path],
   ): Unit = {
     val dir = userKernelsDir.resolve(kernelId)
@@ -90,44 +88,34 @@ object AlmondKernelInstaller {
     Files.createDirectories(dir)
     Files.write(
       dir.resolve("kernel.json"),
-      kernelSpecJson(displayName, runCommand, almondVersion, classpath).toString
-        .getBytes(StandardCharsets.UTF_8),
+      kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
+        StandardCharsets.UTF_8
+      ),
     )
   }
 
   /**
    * True only if a kernel is installed for `kernelId` AND it was installed
-   * against the same Almond version and classpath as now — otherwise a
-   * stale install (Almond bumped, or the project's classpath changed since)
-   * looks identical to "not installed" to callers deciding whether to
-   * offer a (re)install.
+   * against the same classpath as now — otherwise a stale install (the
+   * project's classpath changed since) looks identical to "not installed"
+   * to callers deciding whether to offer a (re)install.
    */
-  def isUpToDate(
-      kernelId: String,
-      almondVersion: String,
-      classpath: List[Path],
-  ): Boolean = {
+  def isUpToDate(kernelId: String, classpath: List[Path]): Boolean = {
     val file = userKernelsDir.resolve(kernelId).resolve("kernel.json")
     Try(ujson.read(Files.readString(file))).toOption
-      .exists(isUpToDateJson(_, almondVersion, classpath))
+      .exists(isUpToDateJson(_, classpath))
   }
 
-  def isUpToDateJson(
-      kernelJson: ujson.Value,
-      almondVersion: String,
-      classpath: List[Path],
-  ): Boolean =
+  def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
     Try {
-      val metadata = kernelJson("metadata")
-      metadata("almondVersion").str == almondVersion &&
-      metadata("classpath").arr.map(_.str).toList == classpath.map(_.toString)
+      kernelJson("metadata")("classpath").arr.map(_.str).toList ==
+        classpath.map(_.toString)
     }.getOrElse(false)
 
   // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
   def kernelSpecJson(
       displayName: String,
       runCommand: List[String],
-      almondVersion: String,
       classpath: List[Path],
   ): ujson.Obj =
     ujson.Obj(
@@ -136,8 +124,7 @@ object AlmondKernelInstaller {
       "language" -> "scala",
       "env" -> ujson.Obj(),
       "metadata" -> ujson.Obj(
-        "almondVersion" -> almondVersion,
-        "classpath" -> classpath.map(_.toString),
+        "classpath" -> classpath.map(_.toString)
       ),
     )
 

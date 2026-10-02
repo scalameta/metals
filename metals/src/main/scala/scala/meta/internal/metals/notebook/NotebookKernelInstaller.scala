@@ -16,6 +16,11 @@ import org.eclipse.lsp4j.MessageType
  * whichever build target a notebook's cells currently resolve against (see
  * [[NotebookProvider.bestTarget]]), so "Run" actually executes cells
  * against the same dependencies its language features already see.
+ *
+ * The kernel id encodes the Almond version too, so switching
+ * `notebookAlmondVersion` installs a separate kernel rather than
+ * overwriting the old one — both stay selectable side by side in
+ * Jupyter's own kernel picker.
  */
 final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
@@ -26,7 +31,9 @@ final class NotebookKernelInstaller(
 )(implicit ec: ExecutionContext) {
 
   private def almondVersion: String =
-    configuredAlmondVersion.getOrElse(AlmondKernelInstaller.defaultAlmondVersion)
+    configuredAlmondVersion.getOrElse(
+      AlmondKernelInstaller.defaultAlmondVersion
+    )
 
   def isKernelUpToDate(ipynbPath: AbsolutePath): Future[Boolean] = {
     val resolved = for {
@@ -34,8 +41,7 @@ final class NotebookKernelInstaller(
       classpathFuture <- buildTargets.fullClasspath(target, Promise())
     } yield classpathFuture.map { classpath =>
       AlmondKernelInstaller.isUpToDate(
-        NotebookKernelInstaller.kernelIdFor(ipynbPath),
-        almondVersion,
+        NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
         classpath.map(_.toNIO),
       )
     }
@@ -66,8 +72,9 @@ final class NotebookKernelInstaller(
             almondVersion,
             scalaTarget.scalaVersion,
             classpath.map(_.toNIO),
-            kernelId = NotebookKernelInstaller.kernelIdFor(ipynbPath),
-            displayName = s"Scala ($targetDisplayName)",
+            kernelId =
+              NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
+            displayName = s"Scala ($targetDisplayName, Almond $almondVersion)",
           )
         }
         resolved.getOrElse {
@@ -85,6 +92,9 @@ object NotebookKernelInstaller {
   // Encodes the whole path (not a hash) so two same-named notebooks in
   // different directories can't collide and overwrite each other's kernel
   // (AlmondKernelInstaller force-overwrites an existing kernel dir).
-  def kernelIdFor(ipynbPath: AbsolutePath): String =
-    s"metals-${ipynbPath.toString.replaceAll("[^A-Za-z0-9_-]", "_")}"
+  // Also encodes the Almond version, so switching it installs a new kernel
+  // instead of overwriting the old one.
+  def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String =
+    s"metals-${ipynbPath.toString.replaceAll("[^A-Za-z0-9_-]", "_")}" +
+      s"-${almondVersion.replaceAll("[^A-Za-z0-9_-]", "_")}"
 }
