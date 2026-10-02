@@ -8,6 +8,7 @@ import scala.meta.internal.builds.BuildToolSelector
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.VersionRecommendation
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

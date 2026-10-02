@@ -4,7 +4,7 @@ import scala.annotation.tailrec
 import scala.meta
 
 import scala.meta.XtensionClassifiable
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.MtagsEnrichments._
 import scala.meta.tokens.Token
 import scala.meta.tokens.Tokens

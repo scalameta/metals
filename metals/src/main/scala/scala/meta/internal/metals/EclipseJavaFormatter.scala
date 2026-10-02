@@ -6,6 +6,7 @@ import scala.util.Try
 import scala.xml.Node
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.meta.{inputs => m}
 
@@ -66,32 +67,30 @@ final class EclipseJavaFormatter(
     DefaultCodeFormatterOptions.getEclipseDefaultSettings.getMap.asScala.toMap
 
   private def loadEclipseFormatConfig: Map[String, String] = {
-    userConfig().javaFormatConfig
-      .map(javaFormatConfig => {
-        val eclipseFormatFile = javaFormatConfig.eclipseFormatConfigPath
-        if (eclipseFormatFile.exists) {
-          val text = eclipseFormatFile.toInputFromBuffers(buffers).text
-          parseEclipseFormatFile(
-            text,
-            javaFormatConfig.eclipseFormatProfile,
-          ) match {
-            case Failure(e) =>
-              scribe.error(
-                s"Failed to parse $eclipseFormatFile. Using default formatting",
-                e,
-              )
-              defaultSettings
-            case Success(values) =>
-              values
-          }
-        } else {
-          scribe.warn(
-            s"$eclipseFormatFile not found.  Using default java formatting"
-          )
-          defaultSettings
+    val javaFormatConfig = userConfig().eclipseFormat
+    val eclipseFormatFile = javaFormatConfig.eclipseFormatConfigPath
+    eclipseFormatFile match {
+      case Some(file) if file.exists =>
+        val text = file.toInputFromBuffers(buffers).text
+        parseEclipseFormatFile(
+          text,
+          javaFormatConfig.eclipseFormatProfile,
+        ) match {
+          case Failure(e) =>
+            scribe.error(
+              s"Failed to parse $eclipseFormatFile. Using default formatting",
+              e,
+            )
+            defaultSettings
+          case Success(values) =>
+            values
         }
-      })
-      .getOrElse(defaultSettings)
+      case _ =>
+        scribe.warn(
+          s"$eclipseFormatFile not found.  Using default java formatting"
+        )
+        defaultSettings
+    }
   }
 
   def format(

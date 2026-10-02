@@ -7,10 +7,9 @@ import scala.concurrent.Future
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
-import scala.meta.internal.metals.Configs.DefinitionProviderConfig
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.KeywordWrapper.Scala3SoftKeywords
@@ -66,9 +65,8 @@ final class DefinitionProvider(
     scalaVersionSelector: ScalaVersionSelector,
     saveDefFileToDisk: Boolean,
     sourceMapper: SourceMapper,
-    definitionProviders: () => DefinitionProviderConfig,
+    userConfig: () => UserConfiguration,
     mbt: MbtWorkspaceSymbolProvider,
-    protobufLspConfig: () => ProtobufLspConfig,
 )(implicit ec: ExecutionContext, rc: ReportContext) {
 
   private val fallback = new FallbackDefinitionProvider(trees, index)
@@ -76,8 +74,7 @@ final class DefinitionProvider(
     workspace,
     buffers,
     mbt,
-    definitionProviders,
-    protobufLspConfig,
+    userConfig,
     mtags,
   )
   val destinationProvider = new DestinationProvider(

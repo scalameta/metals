@@ -1,8 +1,8 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 import tests.MbtTestInitializer
 
@@ -16,7 +16,7 @@ class ImportMissingSymbolJavaLspSuite
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       presentationCompilerDiagnostics = true,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
     )
 
   override protected def toPath(

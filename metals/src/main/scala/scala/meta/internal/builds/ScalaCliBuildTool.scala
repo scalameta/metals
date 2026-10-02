@@ -8,7 +8,7 @@ import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 

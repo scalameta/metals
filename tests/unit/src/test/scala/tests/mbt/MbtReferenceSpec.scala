@@ -1,11 +1,11 @@
 package tests.mbt
 
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs.MbtConfig
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.MbtConfig
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BuildInfo
@@ -19,7 +19,7 @@ class MbtReferenceSuite extends MbtReferenceSpec {
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
     )
 }
 
@@ -30,8 +30,8 @@ class MbtReferenceCacheSuite
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
-      mbtConfig = MbtConfig(
+      autoImportBuild = AutoImportBuildKind.All,
+      mbt = MbtConfig(
         importGeneratedSources = false,
         semanticdbCacheEnabled = true,
         semanticdbCacheMaxSize = 1000,

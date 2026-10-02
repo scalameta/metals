@@ -150,10 +150,8 @@ case class QuickBuild(
         )
       }
     val allDependencies = scalaDependencies ++ libraryDependencies
-    val additionalRepositories = repositories.map(MavenRepository.of)
     val allJars = QuickBuild.fetch(
       allDependencies,
-      additionalRepositories.toList,
       scalaVersion,
       binaryVersion,
       sources = !skipSources,
@@ -181,8 +179,7 @@ case class QuickBuild(
         .withTransitive(false)
     )
     val pluginJars = QuickBuild.fetchDependencies(
-      pluginDependencies,
-      additionalRepositories.toList,
+      pluginDependencies
     )
     val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
     val allScalacOptions =
@@ -272,7 +269,6 @@ case class QuickBuild(
               scalaCompiler,
               "jline:jline:2.14.6",
             ),
-            additionalRepositories.toList,
             scalaVersion,
             binaryVersion,
           ),
@@ -348,7 +344,6 @@ object QuickBuild {
     }
   def fetch(
       dependencies: Array[String],
-      repositories: List[Repository],
       scalaVersion: String,
       scalaBinaryVersion: String,
       sources: Boolean = false,
@@ -357,12 +352,10 @@ object QuickBuild {
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
-      repositories,
       sources,
     )
   def fetchDependencies(
       dependencies: List[Dependency],
-      additionalRepositories: List[Repository],
       sources: Boolean = false,
   ): List[Path] = {
     val classifiers =

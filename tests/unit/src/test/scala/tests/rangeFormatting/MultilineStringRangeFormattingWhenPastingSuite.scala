@@ -1,6 +1,6 @@
 package tests.rangeFormatting
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import tests.BaseRangeFormatterSuite
 

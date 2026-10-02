@@ -7,7 +7,6 @@ import scala.meta.dialects
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.internal.protopc.ProtoPresentationCompiler
 import scala.meta.io.AbsolutePath
-import scala.meta.pc.ProtobufLspConfig
 
 import org.slf4j.LoggerFactory
 import tests.BaseSuite
@@ -27,7 +26,7 @@ abstract class BaseProtoPCSuite extends BaseSuite with PCSuite {
         PresentationCompilerConfigImpl()
           .copy(
             emitDiagnostics = true,
-            protobufLspConfig = ProtobufLspConfig.ENABLED,
+            protobufLspEnabled = true,
           )
       )
       .withLogger(LoggerFactory.getLogger("proto.metals"))

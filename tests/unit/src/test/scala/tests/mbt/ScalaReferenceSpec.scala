@@ -1,8 +1,8 @@
 package tests.mbt
 
-import scala.meta.internal.metals.AutoImportBuildKind
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BuildInfo
@@ -18,7 +18,7 @@ class MbtScalaReferenceSuite
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
     )
 }
 

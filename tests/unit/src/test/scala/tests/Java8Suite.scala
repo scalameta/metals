@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import com.google.gson.JsonPrimitive
 import coursierapi.JvmManager

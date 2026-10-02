@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.util.Properties
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifleConfig

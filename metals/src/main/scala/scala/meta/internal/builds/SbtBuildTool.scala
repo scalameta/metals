@@ -15,6 +15,7 @@ import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStat
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.isCompatibleVersion
 import scala.meta.io.AbsolutePath

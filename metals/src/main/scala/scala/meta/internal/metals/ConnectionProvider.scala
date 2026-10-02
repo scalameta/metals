@@ -35,6 +35,7 @@ import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
+import scala.meta.internal.metals.config.AutoImportBuildKind
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -466,7 +467,7 @@ class ConnectionProvider(
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
-            if (userConfig.automaticImportBuild == AutoImportBuildKind.All) {
+            if (userConfig.autoImportBuild == AutoImportBuildKind.All) {
               reloadAndIndex(session)
             } else {
               for {

@@ -2,7 +2,8 @@ package tests.mbt
 
 import scala.tools.nsc.ParsedLogicalPackage
 
-import scala.meta.internal.metals.Configs
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 
 import munit.AnyFixture
@@ -21,7 +22,10 @@ class MbtLogicalPackageProviderSuite extends munit.FunSuite {
   def newProvider(): MbtWorkspaceSymbolProvider =
     new MbtWorkspaceSymbolProvider(
       workspace(),
-      config = () => Configs.WorkspaceSymbolProviderConfig.mbt,
+      userConfig = () =>
+        UserConfiguration.default.copy(
+          workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT
+        ),
     )(munitExecutionContext)
 
   def check(layout: String, expected: String): Unit = {

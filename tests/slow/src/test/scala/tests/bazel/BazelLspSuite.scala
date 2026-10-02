@@ -14,6 +14,7 @@ import scala.meta.internal.metals.FileDecoderProvider
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages._
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.WorkDoneProgress
@@ -41,6 +42,8 @@ class BazelLspSuite
     workspace,
     new ShellRunner(Time.system, EmptyWorkDoneProgress, () => userConfig),
     ExecutionContext.global,
+    mbtWorkspaceSymbolProvider = None,
+    MetalsServerConfig.default,
   )
 
   val bazelVersion = "6.4.0"

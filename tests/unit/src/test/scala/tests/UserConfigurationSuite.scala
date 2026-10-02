@@ -7,26 +7,24 @@ import java.util.Properties
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
-import scala.meta.internal.metals.Configs.BatchSemanticdbConfig
-import scala.meta.internal.metals.Configs.FallbackClasspathConfig
-import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
-import scala.meta.internal.metals.Configs.JavacServicesOverrides
-import scala.meta.internal.metals.Configs.MbtConfig
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.InlayHintsOption
 import scala.meta.internal.metals.InlayHintsOptions
-import scala.meta.internal.metals.JavaFormatConfig
 import scala.meta.internal.metals.JavaFormatterConfig
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.TestUserInterfaceKind
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.BloopJvmProperties
+import scala.meta.internal.metals.config.EclipseFormatConfig
+import scala.meta.internal.metals.config.FallbackClasspathConfig
+import scala.meta.internal.metals.config.FallbackSourcepathConfig
+import scala.meta.internal.metals.config.JavacServicesOverrides
+import scala.meta.internal.metals.config.MbtConfig
+import scala.meta.internal.metals.config.TargetBuildTool
+import scala.meta.internal.metals.config.TestUserInterfaceKind
+import scala.meta.internal.metals.config.TurbineRecompileDelayConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
 
@@ -244,7 +242,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "workspace-symbol-provider": "invalid"
       |}
       |""".stripMargin,
-    "json error: invalid config value 'invalid' for workspaceSymbolProvider. Valid values are \"bsp\" and \"mbt\"",
+    "Invalid workspace-symbol-provider 'invalid'. Valid values are: bsp, mbt",
   )
 
   checkOK(
@@ -257,20 +255,19 @@ class UserConfigurationSuite extends BaseSuite {
   ) { ok => assert(ok.enableStripMarginOnTypeFormatting == false) }
 
   checkOK(
-    "java format setting",
+    "eclipse-format-setting",
     """
       |{
-      | "javaFormat": {
-      |  "eclipseConfigPath": "path",
-      |  "eclipseProfile": "profile"
+      | "eclipseFormat": {
+      |  "configPath": "path",
+      |  "profile": "profile"
       | }
       |}
     """.stripMargin,
   ) { obtained =>
     assert(
-      obtained.javaFormatConfig == Some(
-        JavaFormatConfig(AbsolutePath("path"), Some("profile"))
-      )
+      obtained.eclipseFormat ==
+        EclipseFormatConfig(Some(AbsolutePath("path")), Some("profile"))
     )
   }
   checkOK(
@@ -280,21 +277,22 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.javaFormatConfig == None)
+    assert(obtained.eclipseFormat == EclipseFormatConfig.default)
   }
   checkOK(
     "java format no profile setting",
     """
       |{
-      | "javaFormat": {
-      |  "eclipseConfigPath": "path"
+      | "eclipseFormat": {
+      |  "configPath": "path"
       | }
       |}
     """.stripMargin,
   ) { obtained =>
     assert(
-      obtained.javaFormatConfig == Some(
-        JavaFormatConfig(AbsolutePath("path"), None)
+      obtained.eclipseFormat == EclipseFormatConfig(
+        Some(AbsolutePath("path")),
+        None,
       )
     )
   }
@@ -319,7 +317,7 @@ class UserConfigurationSuite extends BaseSuite {
     )
     assertEquals(
       obtained.workspaceSymbolProvider,
-      WorkspaceSymbolProviderConfig("mbt"),
+      WorkspaceSymbolProviderConfig.MBT,
     )
 
     // Assert that a custom "bsp" setting overrides the feature flag
@@ -332,25 +330,7 @@ class UserConfigurationSuite extends BaseSuite {
     )
     assertEquals(
       obtained2.workspaceSymbolProvider,
-      WorkspaceSymbolProviderConfig("bsp"),
-    )
-  }
-
-  checkOK(
-    "protobuf package prefix",
-    """
-      |{
-      |  "protobufLsp": {
-      |    "definition": true,
-      |    "javaPackagePrefix": "grpc_shaded."
-      |  }
-      |}
-      |""".stripMargin,
-  ) { obtained =>
-    assertEquals(obtained.protobufLspConfig.definition, true)
-    assertEquals(
-      obtained.protobufLspConfig.javaPackagePrefix,
-      "grpc_shaded.",
+      WorkspaceSymbolProviderConfig.BSP,
     )
   }
 
@@ -358,11 +338,13 @@ class UserConfigurationSuite extends BaseSuite {
     "mbt-references-timeout",
     """
       |{
-      |  "mbt-references-timeout": "5"
+      |  "mbt": {
+      |    "referencesTimeoutSeconds": "5"
+      |  }
       |}
       |""".stripMargin,
   ) { obtained =>
-    assertEquals(obtained.mbtConfig.referencesTimeoutSeconds, 5)
+    assertEquals(obtained.mbt.referencesTimeoutSeconds, 5)
   }
 
   test("check-print") {
@@ -377,53 +359,49 @@ class UserConfigurationSuite extends BaseSuite {
       millScript = Some("mill"),
       scalafmtConfigPath = Some(fakePath),
       scalafixConfigPath = Some(fakePath),
-      javaFormatter = Some(JavaFormatterConfig("eclipse")),
+      javaFormatter = JavaFormatterConfig.Eclipse,
       symbolPrefixes = Map("java/util/" -> "hello."),
       shimGlobs = Map(
         "default" -> List("shims.scala", "**/shims/*.scala"),
         "db" -> List("**/db-shims/*.scala"),
       ),
-      worksheetScreenWidth = 140,
       worksheetCancelTimeout = 10,
       bloopSbtAlreadyInstalled = true,
       bloopVersion = Some("1.2.3"),
       bloopJvmProperties =
         BloopJvmProperties.WithProperties(List("a", "b", "c")),
       superMethodLensesEnabled = true,
-      inlayHintsOptions = InlayHintsOptions(
-        Map(
-          InlayHintsOption.HintsInPatternMatch -> true,
-          InlayHintsOption.ImplicitArguments -> true,
-          InlayHintsOption.InferredType -> true,
-          InlayHintsOption.ImplicitConversions -> true,
-          InlayHintsOption.TypeParameters -> true,
-        )
+      inlayHints = InlayHintsOptions(
+        hintsInPatternMatch = true,
+        implicitArguments = true,
+        inferredType = true,
+        implicitConversions = true,
+        typeParameters = true,
       ),
       enableStripMarginOnTypeFormatting = false,
       enableIndentOnPaste = true,
-      enableSemanticHighlighting = false,
       excludedPackages = Some(List("excluded")),
       fallbackScalaVersion = Some("3.2.1"),
-      fallbackClasspath = FallbackClasspathConfig.all3rdparty,
-      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      fallbackClasspath = FallbackClasspathConfig.All3rdparty,
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       testUserInterface = TestUserInterfaceKind.TestExplorer,
-      javaFormatConfig = Some(JavaFormatConfig(fakePath, Some("profile"))),
+      eclipseFormat = EclipseFormatConfig(Some(fakePath), Some("profile")),
       javacServicesOverrides =
         JavacServicesOverrides.default.copy(names = false),
       scalafixRulesDependencies = List("rule1", "rule2"),
       customProjectRoot = Some("customs"),
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig("mbt"),
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
       javaTurbineRecompileDelay = TurbineRecompileDelayConfig.testing,
       verboseCompilation = true,
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
       scalaCliEnabled = true,
       defaultBspToBuildTool = true,
-      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
+      additionalPcChecks = List("refchecks"),
       scalaImportsPlacement = ScalaImportsPlacement.SMART,
-      batchSemanticdbCompilerInstances = BatchSemanticdbConfig(4),
+      batchSemanticdbCompilerInstances = 4,
       promptBuildImport = true,
-      mbtConfig = MbtConfig(false, true, 1000),
+      mbt = MbtConfig(false, true, 1000),
     )
 
     val json = nonDefault.toString()
@@ -449,8 +427,14 @@ class UserConfigurationSuite extends BaseSuite {
       "**/db-shims/*.scala"
     ]
   },
-  "worksheetScreenWidth": 140,
-  "worksheetCancelTimeout": 10,
+  "scalafixRulesDependencies": [
+    "rule1",
+    "rule2"
+  ],
+  "scalafixLintEnabled": false,
+  "excludedPackages": [
+    "excluded"
+  ],
   "bloopSbtAlreadyInstalled": true,
   "bloopVersion": "1.2.3",
   "bloopJvmProperties": [
@@ -460,43 +444,54 @@ class UserConfigurationSuite extends BaseSuite {
   ],
   "superMethodLensesEnabled": true,
   "gotoTestLensesEnabled": true,
-  "inlayHintsOptions": {
-    "HintsInPatternMatch": "true",
-    "ImplicitArguments": "true",
-    "TypeParameters": "true",
-    "InferredType": "true",
-    "ImplicitConversions": "true"
+  "inlayHints": {
+    "inferredTypes": {
+      "enable": false
+    },
+    "typeParameters": {
+      "enable": false
+    },
+    "implicitArguments": {
+      "enable": false
+    },
+    "hintsInPatternMatch": {
+      "enable": false
+    },
+    "hintsXRayMode": {
+      "enable": false
+    },
+    "namedParameters": {
+      "enable": false
+    },
+    "implicitConversions": {
+      "enable": false
+    },
+    "closingLabels": {
+      "enable": false
+    },
+    "byNameParameters": {
+      "enable": false
+    }
   },
   "enableStripMarginOnTypeFormatting": false,
   "enableIndentOnPaste": true,
   "rangeFormattingProviders": [
     "scalafmt"
   ],
-  "enableSemanticHighlighting": false,
-  "excludedPackages": [
-    "excluded"
-  ],
   "fallbackScalaVersion": "3.2.1",
-  "fallbackClasspath": [
-    "all-3rdparty"
-  ],
-  "fallbackSourcepath": "all-sources",
+  "worksheetCancelTimeout": 10,
   "testUserInterface": "test explorer",
-  "javaFormat": {
-    "eclipseConfigPath": "$fakePathString",
-    "eclipseProfile": "profile"
+  "eclipseFormat": {
+    "configPath": "$fakePathString",
+    "profile": "profile"
   },
   "javaFormatter": "eclipse",
-  "scalafixRulesDependencies": [
-    "rule1",
-    "rule2"
-  ],
-  "scalafixLintEnabled": false,
-  "customProjectRoot": "customs",
-  "verboseCompilation": true,
-  "autoImportBuilds": "all",
   "scalaCliLauncher": "scala-cli",
   "scalaCliEnabled": true,
+  "customProjectRoot": "customs",
+  "verboseCompilation": true,
+  "autoImportBuild": "all",
+  "targetBuildTool": "none",
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
   "buildChangedAction": "none",
@@ -504,11 +499,7 @@ class UserConfigurationSuite extends BaseSuite {
   "buildOnFocus": false,
   "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
-  "definitionProviders": [
-    "mbt",
-    "protobuf"
-  ],
-  "protoOutlineProvider": "v1",
+  "definitionProviders": "all",
   "javaSymbolLoader": "turbine-classpath",
   "javaTurbineRecompileDelay": "100 milliseconds",
   "javaTurbineCache": false,
@@ -526,23 +517,17 @@ class UserConfigurationSuite extends BaseSuite {
   "scalaImportsPlacement": "smart",
   "batchSemanticdbCompilerInstances": 4,
   "promptBuildImport": true,
-  "protobufLsp": {
-    "hover": false,
-    "semanticdb": false,
-    "diagnostics": false,
-    "definition": false,
-    "javaPackagePrefix": "",
-    "completions": false,
-    "semanticTokens": false
-  },
+  "protobufLspEnabled": true,
   "enableBestEffort": false,
   "startMcpServer": false,
   "mbt": {
     "importGeneratedSources": false,
     "semanticdbCacheEnabled": true,
     "semanticdbCacheMaxSize": 1000,
-    "referencesTimeout": 20
-  }
+    "referencesTimeoutSeconds": 20
+  },
+  "fallbackClasspath": "all3rdparty",
+  "fallbackSourcepath": "allsources"
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
@@ -565,7 +550,7 @@ class UserConfigurationSuite extends BaseSuite {
       )
       .getOrElse(fail("Failed to parse roundtrip json"))
       // maps have a different order
-      .copy(inlayHintsOptions = nonDefault.inlayHintsOptions)
+      .copy(inlayHints = nonDefault.inlayHints)
     assertEquals(roundtrip, nonDefault)
   }
 
@@ -581,8 +566,9 @@ class UserConfigurationSuite extends BaseSuite {
           |gradle-script                                string                         ""              Gradle script
           |maven-script                                 string                         ""              Maven script
           |mill-script                                  string                         ""              Mill script
-          |scalafmt-config-path                         string                         ""              Scalafmt config path
-          |scalafix-config-path                         string                         ""              Scalafix config path
+          |scalafmt-config-path                         string                         .scalafmt.conf  Scalafmt config path
+          |scalafix-config-path                         string                         .scalafix.conf  Scalafix config path
+          |symbol-prefixes                              string                         {}              Symbol prefixes
           |shim-globs                                   string                         `{}`.           Shim file globs
           |scalafix-rules-dependencies                  array                          []              Scalafix rules dependencies
           |scalafix-lint-enabled                        boolean                        false           Enable Scalafix lint diagnostics
@@ -591,6 +577,7 @@ class UserConfigurationSuite extends BaseSuite {
           |bloop-version                                string                         $bloopVersionPadded Version of Bloop
           |bloop-jvm-properties                         array                          ["-Xmx1G"]      Bloop JVM Properties
           |super-method-lenses-enabled                  boolean                        false           Should display lenses with links to super methods
+          |goto-test-lenses-enabled                     boolean                        false           Enable goto-test lenses
           |inlay-hints.inferred-types.enable            boolean                        false           Should display type annotations for inferred types
           |inlay-hints.named-parameters.enable          boolean                        false           Should display parameter names next to arguments
           |inlay-hints.by-name-parameters.enable        boolean                        false           Should display if a parameter is by-name at usage sites
@@ -600,35 +587,54 @@ class UserConfigurationSuite extends BaseSuite {
           |inlay-hints.hints-in-pattern-match.enable    boolean                        false           Should display type annotations in pattern matches
           |inlay-hints.hints-x-ray-mode.enable          boolean                        false           Should display type annotations for intermediate types of multi-line expressions
           |inlay-hints.closing-labels.enable            boolean                        false           Should display closing label hints for methods/classes/objects next to their closing braces
-          |enable-semantic-highlighting                 boolean                        true            Use semantic tokens highlight
+          |enable-strip-margin-on-type-formatting       boolean                        true            Enable strip margin on type formatting
           |enable-indent-on-paste                       boolean                        false           Indent snippets when pasted.
+          |range-formatting-providers                   array                          ["scalafmt"]    Range formatting providers
           |fallback-scala-version                       string                         $scala3Padded Default fallback Scala version
+          |worksheet-cancel-timeout                     number                         4               Worksheet cancel timeout
           |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
-          |java-format.eclipse-config-path              string                         ""              Eclipse Java formatter config path
-          |java-format.eclipse-profile                  string                         ""              Eclipse Java formatting profile
-          |java-formatter                               string                         empty string `""`. Java formatter
+          |eclipse-format.config-path                   boolean                        None            Eclipse Java formatter config path
+          |eclipse-format.profile                       boolean                        Some(GoogleStyle) Eclipse Java formatting profile
+          |java-formatter                               [Eclipse,GoogleJavaFormat,None] GoogleJavaFormat Java formatter
           |scala-cli-launcher                           string                         ""              Scala CLI launcher
+          |scala-cli-enabled                            boolean                        false           Enable Scala CLI
           |custom-project-root                          string                         ""              Custom project root
           |verbose-compilation                          boolean                        false           Show all compilation debugging information
-          |auto-import-builds                           [off,initial,all]              off             Import build when changes detected without prompting
-          |target-build-tool                            string                         ""              Preferred build tool when multiple are detected
+          |auto-import-build                            [Off,Initial,All]              Off             Import build when changes detected without prompting
+          |target-build-tool                            [sbt,gradle,mvn,mill,scala-cli,bazel,deder,none] none            Preferred build tool when multiple are detected
           |default-bsp-to-build-tool                    boolean                        false           Default to using build tool as your build server.
           |presentation-compiler-diagnostics            boolean                        true            [Experimental] Show diagnostics messages from the Scala presentation compiler
+          |build-changed-action                         [None,Prompt]                  None            Build changed action
           |build-on-change                              boolean                        true            Disable build-on-change
-          |build-on-focus                               boolean                        true            Disable build-on-focus
+          |build-on-focus                               boolean                        true            Enable or disable build-on-focus
           |preferred-build-server                       string                         empty string `""`. Preferred build server
           |use-source-path                              boolean                        true            Use presentation compiler source path
-          |workspace-symbol-provider                    string                         bsp             Workspace Symbol Provider
-          |additional-pc-checks                         array                          `[]`            Additional Presentation Compiler Checks
+          |workspace-symbol-provider                    [bsp,mbt]                      mbt             Workspace Symbol Provider
+          |definition-providers                         [MBT,Protobuf,All]             All             Definition providers
+          |java-symbol-loader                           [turbine-classpath,javac-sourcepath] turbine-classpath Java symbol loader
+          |java-turbine-recompile-delay                 string                         ""              Java turbine recompile delay
+          |java-turbine-cache                           boolean                        false           Java turbine cache
+          |javac-services-overrides.names               boolean                        true            Override names
+          |javac-services-overrides.attr                boolean                        true            Override attr
+          |javac-services-overrides.type-enter          boolean                        true            Override type enter
+          |javac-services-overrides.enter               boolean                        true            Override enter
+          |compiler-progress                            [Enabled,Disabled]             Enabled         Compiler progress
+          |reference-provider                           [BSP,MBT]                      MBT             Reference provider
+          |additional-pc-checks                         array                          `[]`            Additional presentation compiler checks to run
+          |scala-imports-placement                      [APPEND_LAST,SMART]            SMART           Scala imports placement
+          |batch-semanticdb-compiler-instances          number                         1               Batch semanticdb compiler instances
           |prompt-build-import                          boolean                        false           Prompt Build Import
+          |protobuf-lsp-enabled                         boolean                        true            Enabled Protobuf LSP
           |enable-best-effort                           boolean                        false           Use best effort compilation for Scala 3.
           |default-shell                                string                         ""              Full path to the shell executable to be used as the default
           |start-mcp-server                             boolean                        false           Start MCP server
           |mcp-client                                   string                         ""              MCP Client Name
-          |mbt.import-generated-sources                 boolean                        false           Import Generated Sources In MBT Builds
-          |mbt.semanticdb-cache-enabled                 boolean                        false           Enable MBT Semanticdb Cache
-          |mbt.semanticdb-cache-max-size                string                         ${Int.MaxValue.toString.padTo(15, ' ')} MBT Semanticdb In-Memory Cache Size Limit
-          |mbt.references-timeout                       string                         20              MBT Find References Timeout (seconds)""".stripMargin
+          |mbt.import-generated-sources                 boolean                        false           Import build tool generated sources.
+          |mbt.semanticdb-cache-enabled                 boolean                        false           Enable filesystem-based MBT Semanticdb cache
+          |mbt.semanticdb-cache-max-size                number                         2147483647      Semanticdb cache maximum size
+          |mbt.referencesTimeoutSeconds                 number                         20              Number of seconds to wait for references operations in MBT mode
+          |fallback-classpath                           [All3rdparty,Guessed,Mbt,Default,None] Default         Fallback classpath
+          |fallback-sourcepath                          [AllSources,None]              AllSources      Fallback sourcepath""".stripMargin
     assertNoDiff(obtained, expected)
   }
 
@@ -678,7 +684,7 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.targetBuildTool == Some("bazel"))
+    assert(obtained.targetBuildTool == TargetBuildTool.Bazel)
   }
 
   checkOK(
@@ -688,7 +694,7 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.targetBuildTool.isEmpty)
+    assert(obtained.targetBuildTool == TargetBuildTool.None)
   }
 
   checkOK(
@@ -699,7 +705,7 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.targetBuildTool.isEmpty)
+    assert(obtained.targetBuildTool == TargetBuildTool.None)
   }
 
   checkError(
@@ -709,7 +715,7 @@ class UserConfigurationSuite extends BaseSuite {
       | "target-build-tool": "invalid-tool"
       |}
     """.stripMargin,
-    "Invalid target-build-tool 'invalid-tool'. Valid values are: bazel, deder, gradle, mill, mvn, sbt, scala-cli",
+    "Invalid target-build-tool 'invalid-tool'. Valid values are: sbt, gradle, mvn, mill, scala-cli, bazel, deder, none",
   )
 
   checkOK(
@@ -720,22 +726,22 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.targetBuildTool == Some("sbt"))
+    assert(obtained.targetBuildTool == TargetBuildTool.Sbt)
   }
 
   checkOK(
-    "mbt-config-old-format",
+    "mbt-partly-defined",
     """
       |{
-      | "import-generated-sources-mbt": true,
-      | "mbt-semanticdb-cache": true,
-      | "mbt-semanticdb-cache-max-size": "500"
+      | "mbt": {
+      |   "importGeneratedSources": true
+      | }
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.mbtConfig.importGeneratedSources == true)
-    assert(obtained.mbtConfig.semanticdbCacheEnabled == true)
-    assert(obtained.mbtConfig.semanticdbCacheMaxSize == 500)
+    assert(obtained.mbt.importGeneratedSources == true)
+    assert(obtained.mbt.semanticdbCacheEnabled == false)
+    assert(obtained.mbt.semanticdbCacheMaxSize == Int.MaxValue)
   }
 
   checkOK(
@@ -743,15 +749,27 @@ class UserConfigurationSuite extends BaseSuite {
     """
       |{
       | "mbt": {
-      |   "import-generated-sources": true,
-      |   "semanticdb-cache-enabled": true,
-      |   "semanticdb-cache-max-size": "500"
+      |   "importGeneratedSources": true,
+      |   "semanticdbCacheEnabled": true,
+      |   "semanticdbCacheMaxSize": 500
       | }
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.mbtConfig.importGeneratedSources == true)
-    assert(obtained.mbtConfig.semanticdbCacheEnabled == true)
-    assert(obtained.mbtConfig.semanticdbCacheMaxSize == 500)
+    assert(obtained.mbt.importGeneratedSources == true)
+    assert(obtained.mbt.semanticdbCacheEnabled == true)
+    assert(obtained.mbt.semanticdbCacheMaxSize == 500)
   }
+
+  checkError(
+    "mbt-invalid-subfield",
+    """
+      |{
+      | "mbt": {
+      |   "semanticdbCacheMaxSize": "invalid"
+      | }
+      |}
+    """.stripMargin,
+    "Not a number: 'invalid'",
+  )
 }

@@ -8,8 +8,8 @@ import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.proto.codegen.java.JavaOutlineGenerator
 import scala.meta.internal.proto.diag.{SourceFile => ProtoSourceFile}
@@ -23,12 +23,12 @@ import org.eclipse.{lsp4j => l}
 
 final class MbtProtobufWorkspaceSymbolProvider(
     buffers: Buffers,
-    protobufLspConfig: () => ProtobufLspConfig,
+    userConfig: () => UserConfiguration,
     clearAllProtobufCaches: () => Unit,
 ) {
 
   def isJavaPackageIndexingEnabled: Boolean =
-    protobufLspConfig().definition
+    userConfig().protobufLspEnabled
 
   def listProtoJavaOutlinesForPackage(
       pkg: String,
@@ -65,9 +65,7 @@ final class MbtProtobufWorkspaceSymbolProvider(
     }
   }
   private def javaPackagePrefix(): String = {
-    if (protobufLspConfig().javaPackagePrefix.nonEmpty) {
-      protobufLspConfig().javaPackagePrefix
-    } else if (isGrpcShaded) {
+    if (isGrpcShaded) {
       // NOTE(olafurpg): This is not ideal because we can't guarantee the order
       // at which we get an onNewProjectClasspath callback to inform us that the
       // classpath needs to share Protobuf classes, and when we run protobuf

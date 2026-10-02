@@ -23,12 +23,12 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.RequestMonitorImpl
 import scala.meta.internal.metals.ServerLivenessMonitor
 import scala.meta.internal.metals.Trace
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.buildserver.BuildServerConnection.BspExtraBuildParams
 import scala.meta.internal.metals.buildserver.BuildServerConnection.InitializeBuildData
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.io.AbsolutePath
 

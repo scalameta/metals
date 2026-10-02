@@ -6,7 +6,7 @@ import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

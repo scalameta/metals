@@ -158,7 +158,7 @@ public interface PresentationCompilerConfig {
   }
 
   /** Returns the Protobuf LSP configuration. */
-  default ProtobufLspConfig protobufLspConfig() {
-    return ProtobufLspConfig.DISABLED;
+  default boolean protobufLspEnabled() {
+    return false;
   }
 }

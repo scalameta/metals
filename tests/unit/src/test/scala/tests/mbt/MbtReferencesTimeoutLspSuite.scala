@@ -1,9 +1,9 @@
 package tests.mbt
 
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs.MbtConfig
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.MbtConfig
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BuildInfo
@@ -19,8 +19,8 @@ class MbtReferencesTimeoutLspSuite
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
-      mbtConfig = MbtConfig(
+      autoImportBuild = AutoImportBuildKind.All,
+      mbt = MbtConfig(
         importGeneratedSources = false,
         semanticdbCacheEnabled = false,
         semanticdbCacheMaxSize = Int.MaxValue,

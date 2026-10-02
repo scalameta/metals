@@ -72,13 +72,13 @@ class BaseProtoDefinitionSuite extends BaseProtoPCSuite {
 
       // Create a new presentation compiler with the temp directory as import path
       import scala.meta.internal.pc.PresentationCompilerConfigImpl
-      import scala.meta.pc.ProtobufLspConfig
+
       val pc = new scala.meta.internal.protopc.ProtoPresentationCompiler()
         .withConfiguration(
           PresentationCompilerConfigImpl()
             .copy(
               emitDiagnostics = true,
-              protobufLspConfig = ProtobufLspConfig.ENABLED,
+              protobufLspEnabled = true,
             )
         )
         .newInstance("test", List(tmp.toNIO).asJava, Nil.asJava)

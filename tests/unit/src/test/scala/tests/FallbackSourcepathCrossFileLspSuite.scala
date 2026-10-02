@@ -1,8 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.FallbackSourcepathConfig
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.pc.SourcePathMode
 
@@ -11,7 +11,7 @@ class FallbackSourcepathCrossFileLspSuite
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
-      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       fallbackScalaVersion = Some(V.scala213),
       buildOnChange = false,
       buildOnFocus = false,

@@ -2,7 +2,7 @@ package tests.mcp
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import tests.BaseLspSuite
 

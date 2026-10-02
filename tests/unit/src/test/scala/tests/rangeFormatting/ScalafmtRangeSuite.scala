@@ -1,14 +1,13 @@
 package tests.rangeFormatting
 
-import scala.meta.internal.metals.Configs.RangeFormattingProviders
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import tests.BaseLspSuite
 
 class ScalafmtRangeSuite extends BaseLspSuite("ScalafmtRangeFormatting") {
 
   override def userConfig: UserConfiguration = super.userConfig.copy(
-    rangeFormattingProviders = RangeFormattingProviders(List("scalafmt"))
+    rangeFormattingProviders = List("scalafmt")
   )
 
   testLSP("basic") {

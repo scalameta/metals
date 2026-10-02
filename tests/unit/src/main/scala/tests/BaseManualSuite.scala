@@ -15,7 +15,7 @@ import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
 import scala.meta.internal.metals.Testing
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 abstract class BaseManualSuite extends munit.FunSuite {

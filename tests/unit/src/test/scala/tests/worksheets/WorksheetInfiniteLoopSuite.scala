@@ -3,7 +3,7 @@ package tests.worksheets
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite
@@ -20,8 +20,7 @@ class WorksheetInfiniteLoopSuite
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
-      worksheetScreenWidth = 40,
-      worksheetCancelTimeout = 1,
+      worksheetCancelTimeout = 1
     )
 
   override def serverConfig: MetalsServerConfig =

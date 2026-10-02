@@ -5,7 +5,7 @@ import java.nio.file.Files
 import scala.concurrent.ExecutionContext
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import munit.FunSuite

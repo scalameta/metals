@@ -14,8 +14,8 @@ import scala.meta.internal.metals.CancelableFuture
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.BspProvider
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -72,14 +72,13 @@ final class BspConfigGenerator(
       .showMessageRequest(
         BspProvider.params(buildTools),
         defaultTo = () => {
-          val tool = userConfig().targetBuildTool
-            .flatMap { tool =>
-              buildTools.find(_.buildServerName == tool)
-            }
-            .orElse(buildTools.headOption)
-            .getOrElse {
-              throw new IllegalStateException("No build tool found")
-            }
+          val tool =
+            buildTools
+              .find(_.executableName == userConfig().targetBuildTool.toString)
+              .orElse(buildTools.headOption)
+              .getOrElse {
+                throw new IllegalStateException("No build tool found")
+              }
           languageClient.showMessage(BspProvider.notificationParams(tool))
           new MessageActionItem(tool.executableName)
         },

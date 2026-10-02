@@ -40,6 +40,7 @@ import scala.meta.internal.metals.codelenses.GotoTestCodeLens
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.BuildTargetClassesFinder
 import scala.meta.internal.metals.debug.DebugDiscovery
@@ -359,20 +360,16 @@ abstract class MetalsLspService(
 
   protected val mbt2 = new MbtWorkspaceSymbolProvider(
     workspace = folder,
-    config = () => userConfig.workspaceSymbolProvider,
+    userConfig = () => userConfig,
     buffers = buffers,
     time = time,
     metrics = metrics,
     mtags = () => mtags,
     progress = workDoneProgress,
     onIndexingDone = restartFallbackCompilers,
-    javaSymbolLoader = () => userConfig.javaSymbolLoader,
     fallbackClasspaths = () => compilers.fallbackClasspaths,
     sleeper = sleeper,
-    turbineRecompileDelay = () => userConfig.javaTurbineRecompileDelay,
-    turbineCacheConfig = () => userConfig.javaTurbineCache,
     indexFilters = MbtIndexFilter.allFilters,
-    protobufLspConfig = () => userConfig.protobufLspConfig,
     metalsOutDir = Some(embedded.targetDir),
     mbtBuild = () => mbtBuild,
   )
@@ -405,9 +402,8 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     saveDefFileToDisk = !clientConfig.isVirtualDocumentSupported(),
     sourceMapper,
-    () => userConfig.definitionProviders,
+    () => userConfig,
     mbt2,
-    () => userConfig.protobufLspConfig,
   )
 
   val stacktraceAnalyzer: StacktraceAnalyzer = new StacktraceAnalyzer(
@@ -678,7 +674,7 @@ abstract class MetalsLspService(
     definitionProvider,
     symbolHierarchyOps,
     mbtSymbolSearch,
-    () => userConfig.protobufLspConfig,
+    () => userConfig,
   )
 
   protected val scalafixProvider: ScalafixProvider = ScalafixProvider(

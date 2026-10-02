@@ -9,7 +9,7 @@ import scala.concurrent.duration.Duration
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.builds.GradleBuildTool
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.io.AbsolutePath
 

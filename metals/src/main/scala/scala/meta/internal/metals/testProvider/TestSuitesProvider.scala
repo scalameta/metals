@@ -17,11 +17,11 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
-import scala.meta.internal.metals.TestUserInterfaceKind
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
+import scala.meta.internal.metals.config.TestUserInterfaceKind
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._

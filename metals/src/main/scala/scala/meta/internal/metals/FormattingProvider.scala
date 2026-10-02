@@ -27,6 +27,7 @@ import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.Messages.UpdateScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath

@@ -12,8 +12,8 @@ import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.internal.semanticdb.TypeRef
@@ -33,7 +33,7 @@ final class MbtProtobufReferenceProvider(
 ) {
 
   private def timeout: FiniteDuration =
-    userConfig().mbtConfig.referencesTimeoutSeconds.seconds
+    userConfig().mbt.referencesTimeoutSeconds.seconds
 
   def implementations[T](
       path: AbsolutePath,

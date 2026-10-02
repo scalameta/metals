@@ -18,8 +18,8 @@ import scala.meta.internal.metals.ReportFileName
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TimeFormatter
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.ZipReportsProvider
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.TargetsInfoProvider
 import scala.meta.io.AbsolutePath

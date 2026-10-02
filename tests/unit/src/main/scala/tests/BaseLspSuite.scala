@@ -13,9 +13,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.BuildChangedAction
-import scala.meta.internal.metals.Configs
-import scala.meta.internal.metals.Configs.TelemetryConfig
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.ExecuteClientCommandConfig
 import scala.meta.internal.metals.Icons
@@ -26,7 +23,12 @@ import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Trace
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.BuildChangedAction
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.TelemetryConfig
+import scala.meta.internal.metals.config.TurbineRecompileDelayConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.debug.DebugProtocol
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.io.AbsolutePath
@@ -48,7 +50,7 @@ abstract class BaseLspSuite(
   def userConfig: UserConfiguration =
     UserConfiguration(
       // "prompt" is the setting value that all the test cases have been written against.
-      buildChangedAction = BuildChangedAction.prompt,
+      buildChangedAction = BuildChangedAction.Prompt,
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       presentationCompilerDiagnostics = false,
 
@@ -56,14 +58,14 @@ abstract class BaseLspSuite(
       // update the tests to use the new defaults.
       buildOnChange = true,
       buildOnFocus = true,
-      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.bsp,
-      referenceProvider = Configs.ReferenceProviderConfig.bsp,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.BSP,
+      referenceProvider = ReferenceProviderConfig.BSP,
       javaTurbineRecompileDelay = turbineRecompileDelayConfig,
     )
 
   /** Override to customize the turbine recompile delay */
-  def turbineRecompileDelayConfig: Configs.TurbineRecompileDelayConfig =
-    Configs.TurbineRecompileDelayConfig.testing
+  def turbineRecompileDelayConfig: TurbineRecompileDelayConfig =
+    TurbineRecompileDelayConfig.testing
 
   def telemetryConfig: TelemetryConfig = new TelemetryConfig("disabled")
   def serverConfig: MetalsServerConfig = MetalsServerConfig.default

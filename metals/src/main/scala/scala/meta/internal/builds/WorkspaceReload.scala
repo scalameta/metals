@@ -4,7 +4,6 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.BuildChangedAction
 import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages.ImportBuildChanges
 import scala.meta.internal.metals.Messages.dontShowAgain
@@ -12,6 +11,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.BuildChangedAction
 import scala.meta.io.AbsolutePath
 
 /**
@@ -27,7 +27,7 @@ final class WorkspaceReload(
   private val notification = tables.dismissedNotifications.ImportChanges
 
   def oldReloadResult(digest: String): Option[WorkspaceLoadedStatus] = {
-    if (action().isNone) {
+    if (action() == BuildChangedAction.None) {
       return None
     }
     if (tables.dismissedNotifications.ImportChanges.isDismissed) {
@@ -45,7 +45,7 @@ final class WorkspaceReload(
       buildTool: BuildTool,
       progress: TaskProgress,
   ): Unit = {
-    if (action().isNone) {
+    if (action() == BuildChangedAction.None) {
       return
     }
     progress.message = s"persisting ${buildTool.toString()} checksum status"
@@ -58,7 +58,7 @@ final class WorkspaceReload(
       buildTool: BuildTool,
       digest: String,
   )(implicit ec: ExecutionContext): Future[Confirmation] = {
-    if (action().isNone) {
+    if (action() == BuildChangedAction.None) {
       // I'm not 100% sure when this gets called, but we don't have to spam the user
       // with a popup if it's triggered regularly behind the scenes. The logs
       // will have this message in case something is behaving unusually.

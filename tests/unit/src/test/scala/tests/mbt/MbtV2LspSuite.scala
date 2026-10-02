@@ -3,9 +3,9 @@ package tests.mbt
 import java.nio.file.Files
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.IndexedDocument
 import scala.meta.internal.mtags.Mtags
 
@@ -19,7 +19,7 @@ class MbtV2LspSuite extends tests.BaseLspSuite("mbt-v2") {
     presentationCompilerDiagnostics = true,
     buildOnChange = false,
     buildOnFocus = false,
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
   )
   override def initializeGitRepo: Boolean = true
 

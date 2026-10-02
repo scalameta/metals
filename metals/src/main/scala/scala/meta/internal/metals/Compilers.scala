@@ -96,7 +96,7 @@ class Compilers(
     workspace: AbsolutePath,
     config: ClientConfiguration,
     serverConfig: MetalsServerConfig,
-    userConfig: () => UserConfiguration,
+    userConfig: () => internal.metals.config.UserConfiguration,
     buildTargets: BuildTargets,
     buffers: Buffers,
     diagnostics: Diagnostics,
@@ -770,7 +770,7 @@ class Compilers(
   ): Future[SemanticTokens] = {
     val path = params.getTextDocument.getUri.toAbsolutePath
     val emptyTokens = ju.Collections.emptyList[Integer]();
-    if (!userConfig().enableSemanticHighlighting || path.isTwirlTemplate) {
+    if (path.isTwirlTemplate) {
       Future { new SemanticTokens(emptyTokens) }
     } else {
       loadCompiler(path)
@@ -888,7 +888,7 @@ class Compilers(
           token,
           outlineFilesProvider.getOutlineFiles(pc.buildTargetId()),
         )
-      val options = userConfig().inlayHintsOptions
+      val options = userConfig().inlayHints
       val pcParams = CompilerInlayHintsParams(
         rangeParams,
         inferredTypes = options.inferredType,
@@ -1793,7 +1793,7 @@ class Compilers(
     ).withConfiguration(
       config.initialConfig.compilers.copy(
         emitDiagnostics = true,
-        protobufLspConfig = userConfig().protobufLspConfig,
+        protobufLspEnabled = userConfig().protobufLspEnabled,
       )
     )
   }

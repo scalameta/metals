@@ -17,7 +17,6 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
 import scala.meta.internal.bsp.ConnectionBspStatus
-import scala.meta.internal.metals.BloopJvmProperties
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsBuildClient
@@ -26,10 +25,11 @@ import scala.meta.internal.metals.MetalsProjectDirectories
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.TaskProgress
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.BloopJvmProperties
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifle

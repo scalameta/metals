@@ -24,7 +24,6 @@ import scala.meta.pc.Node
 import scala.meta.pc.OffsetParams
 import scala.meta.pc.PresentationCompiler
 import scala.meta.pc.PresentationCompilerConfig
-import scala.meta.pc.ProtobufLspConfig
 import scala.meta.pc.RangeParams
 import scala.meta.pc.ReferencesRequest
 import scala.meta.pc.ReferencesResult
@@ -67,7 +66,7 @@ case class ProtoPresentationCompiler(
     config
   )
 
-  private def protoConfig: ProtobufLspConfig = config.protobufLspConfig()
+  private def protoEnabled: Boolean = config.protobufLspEnabled()
 
   private def request[T](default: T)(
       f: ProtoMetalsCompiler => T
@@ -90,7 +89,7 @@ case class ProtoPresentationCompiler(
   override def complete(
       params: OffsetParams
   ): CompletableFuture[CompletionList] =
-    if (!protoConfig.completions()) {
+    if (!protoEnabled) {
       CompletableFuture.completedFuture(new CompletionList())
     } else {
       request(new CompletionList()) { pc =>
@@ -112,7 +111,7 @@ case class ProtoPresentationCompiler(
   override def semanticTokens(
       params: VirtualFileParams
   ): CompletableFuture[util.List[Node]] =
-    if (!protoConfig.semanticTokens()) {
+    if (!protoEnabled) {
       CompletableFuture.completedFuture(util.Collections.emptyList[Node]())
     } else {
       request(util.Collections.emptyList[Node]()) { pc =>
@@ -123,7 +122,7 @@ case class ProtoPresentationCompiler(
   override def hover(
       params: OffsetParams
   ): CompletableFuture[Optional[HoverSignature]] =
-    if (!protoConfig.hover()) {
+    if (!protoEnabled) {
       CompletableFuture.completedFuture(Optional.empty[HoverSignature]())
     } else {
       request(Optional.empty[HoverSignature]()) { pc =>
@@ -144,7 +143,7 @@ case class ProtoPresentationCompiler(
   override def definition(
       params: OffsetParams
   ): CompletableFuture[DefinitionResult] =
-    if (!protoConfig.definition()) {
+    if (!protoEnabled) {
       CompletableFuture.completedFuture(DefinitionResultImpl.empty)
     } else {
       request(DefinitionResultImpl.empty) { pc =>
@@ -212,7 +211,7 @@ case class ProtoPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[util.List[Diagnostic]] =
-    if (!config.emitDiagnostics() || !protoConfig.diagnostics()) {
+    if (!config.emitDiagnostics() || !protoEnabled) {
       CompletableFuture.completedFuture(Nil.asJava)
     } else {
       request(util.Collections.emptyList[Diagnostic]()) { pc =>
@@ -226,7 +225,7 @@ case class ProtoPresentationCompiler(
       filename: URI,
       code: String
   ): CompletableFuture[Array[Byte]] = {
-    if (!protoConfig.semanticdb()) {
+    if (!protoEnabled) {
       CompletableFuture.completedFuture(Array.emptyByteArray)
     } else {
       CompletableFuture.supplyAsync(
@@ -272,7 +271,7 @@ case class ProtoPresentationCompiler(
       params: util.List[VirtualFileParams],
       timeout: java.time.Duration
   ): CompletableFuture[Array[Byte]] = {
-    if (params.isEmpty() || !protoConfig.semanticdb()) {
+    if (params.isEmpty() || !protoEnabled) {
       CompletableFuture.completedFuture(Array.emptyByteArray)
     } else {
       CompletableFuture.supplyAsync(

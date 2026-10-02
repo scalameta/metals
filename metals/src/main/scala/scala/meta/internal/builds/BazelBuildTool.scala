@@ -13,9 +13,10 @@ import scala.util.Using
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget
 import scala.meta.internal.metals.mbt.MbtTestCommand
@@ -37,12 +38,14 @@ case class BazelBuildTool(
     shellRunner: ShellRunner,
     ec: ExecutionContext,
     mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
+    metalsServerConfig: MetalsServerConfig,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
 ) extends BazelMbtImporter(
       projectRoot,
       shellRunner,
       userConfig,
+      metalsServerConfig,
       languageClient,
       tables,
       mbtWorkspaceSymbolProvider,

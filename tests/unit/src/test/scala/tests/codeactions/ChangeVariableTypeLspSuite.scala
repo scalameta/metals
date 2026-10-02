@@ -1,7 +1,7 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ChangeVariableType
+import scala.meta.internal.metals.config.UserConfiguration
 
 import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.Diagnostic

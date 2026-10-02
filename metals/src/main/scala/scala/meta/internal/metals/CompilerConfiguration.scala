@@ -19,8 +19,9 @@ import scala.util.control.NonFatal
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
-import scala.meta.internal.metals.Configs.SourcePathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.SourcePathConfig
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.GitVCS
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
@@ -77,7 +78,7 @@ class CompilerConfiguration(
    * This is controlled by the FULL_SOURCEPATH_FALLBACK_SCALA feature flag.
    */
   def shouldUseFullSourcepathForFallback: Boolean =
-    userConfig().fallbackSourcepath.enabled
+    userConfig().fallbackSourcepath.isAllSources
 
   /**
    * When `fallbackSourcepath` is enabled (see `shouldUseFullSourcepathForFallback`), supplies
@@ -147,7 +148,7 @@ class CompilerConfiguration(
       }
   }
   def shouldRunRefchecks: Boolean =
-    userConfig().additionalPcChecks.isRefchecks
+    userConfig().isRefchecksEnabled
 
   sealed trait MtagsPresentationCompiler {
     protected def awaitCompiler: PresentationCompiler
@@ -525,8 +526,8 @@ class CompilerConfiguration(
             javacServicesOverrides = userConfig().javacServicesOverrides,
             scalaImportsPlacement = userConfig().scalaImportsPlacement,
             batchSemanticdbCompilerInstances =
-              userConfig().batchSemanticdbCompilerInstances.instances,
-            protobufLspConfig = userConfig().protobufLspConfig,
+              userConfig().batchSemanticdbCompilerInstances,
+            protobufLspEnabled = userConfig().protobufLspEnabled,
           )
       }
 

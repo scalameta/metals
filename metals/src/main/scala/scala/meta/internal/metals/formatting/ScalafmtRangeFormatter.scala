@@ -14,7 +14,7 @@ import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.parsing.TokenEditDistance
 
 import org.eclipse.{lsp4j => l}
@@ -36,7 +36,7 @@ class ScalafmtRangeFormatter(
   override def contribute(
       params: RangeFormatterParams
   ): Option[List[l.TextEdit]] = {
-    if (!userConfig().rangeFormattingProviders.isScalafmt) {
+    if (!userConfig().isScalafmtRangeFormatterEnabled) {
       return None
     }
     val fullFormat: ju.List[l.TextEdit] =

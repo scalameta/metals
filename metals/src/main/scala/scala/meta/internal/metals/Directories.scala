@@ -32,6 +32,8 @@ object Directories {
     RelativePath(".bsp")
   def metalsSettings: RelativePath =
     RelativePath(".metals").resolve("settings.json")
+  def userConfig: RelativePath =
+    RelativePath(".metals").resolve("last-known-user-config.json")
   def javaHeaderCompiler: RelativePath =
     RelativePath(".metals").resolve("lib").resolve("java-header-compiler.jar")
   def outDir: RelativePath =

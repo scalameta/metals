@@ -12,7 +12,10 @@ import scala.meta.internal.infra.NoopFeatureFlagProvider
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.UserConfigurationOptions
+import scala.meta.internal.metals.config.option.ConfigurationOption
+import scala.meta.internal.metals.config.option.ObjectConfigurationOption
 import scala.meta.internal.metals.logging.MetalsLogger
 import scala.meta.internal.metals.mcp.Client
 import scala.meta.internal.metals.mcp.NoClient
@@ -54,23 +57,34 @@ object McpMain {
       case _ => false
     }
 
+  private val flattenedSettings: List[ConfigurationOption[_, _]] =
+    UserConfigurationOptions.settings.flatMap {
+      case o: ObjectConfigurationOption[_] =>
+        o.subFields
+      case other => List(other)
+    }
+
   /** Set of all config keys (kebab-case) for direct CLI parsing (e.g. --key value). */
   private val configKeys: Set[String] =
-    UserConfiguration.options
-      .map(_.key)
+    UserConfigurationOptions.settings
+      .flatMap {
+        case o: ObjectConfigurationOption[_] =>
+          o.subFields.map(field => o.key + "." + field.key)
+        case other => List(other.key)
+      }
       .toSet
       .filterNot(skippedConfigKeys)
 
   /** Config keys that are boolean; when value is omitted in CLI, treated as true. */
   private val booleanConfigKeys: Set[String] =
-    UserConfiguration.options
+    flattenedSettings
       .filter(o => o.isBoolean)
       .map(_.key)
       .toSet
       .filterNot(skippedConfigKeys)
 
   private val arrayConfigKeys: Set[String] =
-    UserConfiguration.options
+    flattenedSettings
       .filter(o => o.isArray)
       .map(_.key)
       .toSet

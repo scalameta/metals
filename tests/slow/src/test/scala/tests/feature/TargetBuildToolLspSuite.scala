@@ -3,7 +3,8 @@ package tests.feature
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.TargetBuildTool
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -28,11 +29,11 @@ class TargetBuildToolLspSuite extends BaseImportSuite("target-build-tool") {
   override def beforeEach(context: munit.BeforeEach): Unit = {
     // Set testConfig BEFORE the server is created
     if (context.test.name.contains("sbt")) {
-      testConfig = UserConfiguration(targetBuildTool = Some("sbt"))
+      testConfig = UserConfiguration(targetBuildTool = TargetBuildTool.Sbt)
     } else if (context.test.name.contains("mill")) {
-      testConfig = UserConfiguration(targetBuildTool = Some("mill"))
+      testConfig = UserConfiguration(targetBuildTool = TargetBuildTool.Mill)
     } else if (context.test.name.contains("not-found")) {
-      testConfig = UserConfiguration(targetBuildTool = Some("bazel"))
+      testConfig = UserConfiguration(targetBuildTool = TargetBuildTool.Bazel)
     }
     super.beforeEach(context)
   }

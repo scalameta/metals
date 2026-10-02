@@ -3,7 +3,7 @@ package tests.mcp
 import scala.concurrent.Promise
 import scala.util.Random
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.NoClient
 

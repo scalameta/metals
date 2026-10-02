@@ -2,10 +2,9 @@ package tests
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 class ReferenceLspSuite extends BaseRangesSuite("reference") {
 
@@ -15,7 +14,7 @@ class ReferenceLspSuite extends BaseRangesSuite("reference") {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = true,
-      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
+      additionalPcChecks = List("refchecks"),
     )
 
   override protected def initializationOptions: Option[InitializationOptions] =
