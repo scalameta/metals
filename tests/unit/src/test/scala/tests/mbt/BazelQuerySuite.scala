@@ -163,4 +163,22 @@ class BazelQuerySuite extends FunSuite {
       """deps(set("except" "in" "intersect" "let" "set" "union"))""",
     )
   }
+
+  test("source-files-location-query") {
+    val targets = List(
+      "//foo:bar",
+      "//foo/bar:baz",
+      "@repo//pkg:target",
+    )
+    val extensions = List(
+      "txt",
+      "java",
+      "tar.gz",
+    )
+    val query = BazelQuery.sourceFilesLocationQuery(targets, extensions)
+    assertEquals(
+      query.query,
+      "filter('.*\\.(txt|java|tar.gz)', kind('source file', deps(labels(srcs, set(//foo:bar //foo/bar:baz @repo//pkg:target)))))",
+    )
+  }
 }
