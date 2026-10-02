@@ -35,20 +35,38 @@ final class NotebookKernelInstaller(
       AlmondKernelInstaller.defaultAlmondVersion
     )
 
+  // A kernel that exists but no longer matches the classpath is refreshed
+  // in place rather than reported as missing: Bloop assigns its BSP
+  // client a fresh session-scoped class directory on every full restart,
+  // which otherwise looks identical to a real classpath change and would
+  // nag for permission to reinstall on every single restart. A kernel
+  // that was never installed still requires that permission, since it
+  // may need to download Almond itself for the first time.
   def isKernelUpToDate(ipynbPath: AbsolutePath): Future[Boolean] = {
     val resolved = for {
       target <- notebookProvider.bestTarget(ipynbPath)
       classpathFuture <- buildTargets.fullClasspath(target, Promise())
-    } yield classpathFuture.map { classpath =>
-      AlmondKernelInstaller.isUpToDate(
-        NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
-        classpath.map(_.toNIO),
+    } yield classpathFuture.flatMap { classpath =>
+      val kernelId =
+        NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion)
+      if (!AlmondKernelInstaller.exists(kernelId))
+        Future.successful(false)
+      else if (
+        AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
       )
+        Future.successful(true)
+      else install(ipynbPath, notifyOnSuccess = false).map(_ => true)
     }
     resolved.getOrElse(Future.successful(false))
   }
 
   def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
+    install(ipynbPath, notifyOnSuccess = true)
+
+  private def install(
+      ipynbPath: AbsolutePath,
+      notifyOnSuccess: Boolean,
+  ): Future[Unit] =
     notebookProvider.bestTarget(ipynbPath) match {
       case None =>
         languageClient.showMessage(
@@ -75,6 +93,7 @@ final class NotebookKernelInstaller(
             kernelId =
               NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
             displayName = s"Scala ($targetDisplayName, Almond $almondVersion)",
+            notifyOnSuccess = notifyOnSuccess,
           )
         }
         resolved.getOrElse {

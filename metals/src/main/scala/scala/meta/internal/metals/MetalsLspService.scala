@@ -942,11 +942,22 @@ abstract class MetalsLspService(
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
 
+  // Waits for build targets to be indexed first: right after a fresh
+  // start, bestTarget/fullClasspath can't resolve anything yet, which
+  // otherwise looks identical to "no kernel installed".
   def installNotebookKernel(notebookUri: String): Future[Unit] =
-    notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
+    for {
+      _ <- indexingPromise.future
+      _ <- notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
+    } yield ()
 
   def isNotebookKernelUpToDate(notebookUri: String): Future[Boolean] =
-    notebookKernelInstaller.isKernelUpToDate(notebookUri.toAbsolutePath)
+    for {
+      _ <- indexingPromise.future
+      upToDate <- notebookKernelInstaller.isKernelUpToDate(
+        notebookUri.toAbsolutePath
+      )
+    } yield upToDate
 
   override def didSave(
       params: DidSaveTextDocumentParams

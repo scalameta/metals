@@ -46,6 +46,7 @@ object AlmondKernelInstaller {
       classpath: List[Path],
       kernelId: String,
       displayName: String,
+      notifyOnSuccess: Boolean = true,
   )(implicit ec: ExecutionContext): Future[Unit] = {
     for {
       launcherClasspath <- Future {
@@ -64,10 +65,11 @@ object AlmondKernelInstaller {
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
       writeKernelSpec(kernelId, displayName, runCommand, classpath)
-      languageClient.showMessage(
-        MessageType.Info,
-        s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
-      )
+      if (notifyOnSuccess)
+        languageClient.showMessage(
+          MessageType.Info,
+          s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
+        )
     }
   }.recover { case NonFatal(e) =>
     scribe.error(s"failed to install Almond kernel '$kernelId'", e)
@@ -76,6 +78,9 @@ object AlmondKernelInstaller {
       s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
     )
   }
+
+  def exists(kernelId: String): Boolean =
+    Files.exists(userKernelsDir.resolve(kernelId).resolve("kernel.json"))
 
   private def writeKernelSpec(
       kernelId: String,
@@ -102,14 +107,22 @@ object AlmondKernelInstaller {
    */
   def isUpToDate(kernelId: String, classpath: List[Path]): Boolean = {
     val file = userKernelsDir.resolve(kernelId).resolve("kernel.json")
-    Try(ujson.read(Files.readString(file))).toOption
+    val result = Try(ujson.read(Files.readString(file))).toOption
       .exists(isUpToDateJson(_, classpath))
+    if (!result)
+      scribe.debug(
+        s"kernel '$kernelId' not up to date; file=$file exists=${Files.exists(file)} classpath=${classpath.map(_.toString)}"
+      )
+    result
   }
 
   def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
     Try {
-      kernelJson("metadata")("classpath").arr.map(_.str).toList ==
-        classpath.map(_.toString)
+      val stored = kernelJson("metadata")("classpath").arr.map(_.str).toList
+      val current = classpath.map(_.toString)
+      if (stored != current)
+        scribe.debug(s"stored classpath=$stored current classpath=$current")
+      stored == current
     }.getOrElse(false)
 
   // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
