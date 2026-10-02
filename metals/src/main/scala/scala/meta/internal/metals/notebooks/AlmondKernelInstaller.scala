@@ -10,6 +10,7 @@ import java.nio.file.Paths
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Properties
+import scala.util.Using
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Embedded
@@ -130,11 +131,8 @@ object AlmondKernelInstaller {
   // handle that must be closed explicitly, or it leaks a file descriptor
   // for the rest of this long-lived process.
   private def deleteRecursively(path: Path): Unit = {
-    if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS)) {
-      val children = Files.list(path)
-      try children.forEach(deleteRecursively)
-      finally children.close()
-    }
+    if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS))
+      Using.resource(Files.list(path))(_.forEach(deleteRecursively))
     Files.deleteIfExists(path)
   }
 
