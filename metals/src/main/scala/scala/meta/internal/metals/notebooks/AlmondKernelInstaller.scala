@@ -30,14 +30,6 @@ import org.eclipse.lsp4j.MessageType
  */
 object AlmondKernelInstaller {
 
-  /**
-   * Bumped from `0.14.5`: 0.15.0 publishes `scala-kernel-api` once per
-   * binary Scala version instead of per full version, so one release
-   * covers every patch instead of needing a re-pin each time.
-   *
-   * Trade-off: 0.15.0 only supports Scala 3.9.0 and 3.3.8 (LTS) — 3.4.x
-   * through 3.8.x notebooks will install a kernel that won't start.
-   */
   private val almondVersion = "0.15.0"
 
   def install(
@@ -106,8 +98,6 @@ object AlmondKernelInstaller {
       "env" -> ujson.Obj(),
     )
 
-  // NOFOLLOW_LINKS: a symlink is deleted, not traversed into. Using.resource
-  // closes Files.list's directory handle (it leaks otherwise).
   private def deleteRecursively(path: Path): Unit = {
     if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS))
       Using.resource(Files.list(path))(_.forEach(deleteRecursively))
