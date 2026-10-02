@@ -16,12 +16,8 @@ class AlmondKernelInstallerSuite extends BaseSuite {
     assertEquals(
       json("argv").arr.map(_.str).toList,
       List(
-        "java",
-        "-cp",
-        "launcher.jar",
-        "almond.launcher.Launcher",
-        "--connection-file",
-        "{connection_file}",
+        "java", "-cp", "launcher.jar", "almond.launcher.Launcher",
+        "--connection-file", "{connection_file}",
       ),
     )
     assert(json("env").obj.isEmpty)
