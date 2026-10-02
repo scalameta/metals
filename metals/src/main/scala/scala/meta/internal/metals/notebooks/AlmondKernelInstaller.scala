@@ -31,11 +31,12 @@ import org.eclipse.lsp4j.MessageType
  */
 object AlmondKernelInstaller {
 
-  private val almondVersion = "0.15.0"
+  val defaultAlmondVersion = "0.15.0"
 
   def install(
       languageClient: MetalsLanguageClient,
       javaHome: Option[String],
+      almondVersion: String,
       scalaVersion: String,
       classpath: List[Path],
       kernelId: String,
@@ -57,7 +58,13 @@ object AlmondKernelInstaller {
         scalaVersion,
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
-      writeKernelSpec(kernelId, displayName, runCommand, classpath)
+      writeKernelSpec(
+        kernelId,
+        displayName,
+        runCommand,
+        almondVersion,
+        classpath,
+      )
       languageClient.showMessage(
         MessageType.Info,
         s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
@@ -75,6 +82,7 @@ object AlmondKernelInstaller {
       kernelId: String,
       displayName: String,
       runCommand: List[String],
+      almondVersion: String,
       classpath: List[Path],
   ): Unit = {
     val dir = userKernelsDir.resolve(kernelId)
@@ -82,9 +90,8 @@ object AlmondKernelInstaller {
     Files.createDirectories(dir)
     Files.write(
       dir.resolve("kernel.json"),
-      kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
-        StandardCharsets.UTF_8
-      ),
+      kernelSpecJson(displayName, runCommand, almondVersion, classpath).toString
+        .getBytes(StandardCharsets.UTF_8),
     )
   }
 
@@ -95,13 +102,21 @@ object AlmondKernelInstaller {
    * looks identical to "not installed" to callers deciding whether to
    * offer a (re)install.
    */
-  def isUpToDate(kernelId: String, classpath: List[Path]): Boolean = {
+  def isUpToDate(
+      kernelId: String,
+      almondVersion: String,
+      classpath: List[Path],
+  ): Boolean = {
     val file = userKernelsDir.resolve(kernelId).resolve("kernel.json")
     Try(ujson.read(Files.readString(file))).toOption
-      .exists(isUpToDateJson(_, classpath))
+      .exists(isUpToDateJson(_, almondVersion, classpath))
   }
 
-  def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
+  def isUpToDateJson(
+      kernelJson: ujson.Value,
+      almondVersion: String,
+      classpath: List[Path],
+  ): Boolean =
     Try {
       val metadata = kernelJson("metadata")
       metadata("almondVersion").str == almondVersion &&
@@ -112,6 +127,7 @@ object AlmondKernelInstaller {
   def kernelSpecJson(
       displayName: String,
       runCommand: List[String],
+      almondVersion: String,
       classpath: List[Path],
   ): ujson.Obj =
     ujson.Obj(
