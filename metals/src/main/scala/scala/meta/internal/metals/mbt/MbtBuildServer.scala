@@ -15,6 +15,7 @@ import scala.build.bsp.WrappedSourcesResult
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.jdk.CollectionConverters._
 import scala.util.Failure
 import scala.util.Success
@@ -340,12 +341,14 @@ final class MbtBuildServer(
         if (targets.isEmpty) {
           result.complete(new CompileResult(StatusCode.OK))
         } else {
+          val cancel = cancellationOf(result)
           val futures = targets.map { target =>
             starter.compile(
               target,
               workspace,
               out = line => scribe.info(s"[mbt-compile] $line"),
               err = line => scribe.warn(s"[mbt-compile] $line"),
+              cancel,
             )
           }
           Future
@@ -391,6 +394,7 @@ final class MbtBuildServer(
           workspace,
           line => printOutput(originId, taskId, line, isError = false),
           line => printOutput(originId, taskId, line, isError = true),
+          cancellationOf(result),
         )
 
         outcome match {
@@ -496,6 +500,7 @@ final class MbtBuildServer(
           workspace,
           line => printOutput(originId, taskId, line, isError = false),
           line => printOutput(originId, taskId, line, isError = true),
+          cancellationOf(result),
         )
 
         outcome match {
@@ -660,16 +665,22 @@ final class MbtBuildServer(
             .toRight(s"debugSessionStart: no MBT target for $targetId")
         } yield target
 
+        val cancel = cancellationOf(result)
         val outcome: Either[String, Future[URI]] = targetEither.flatMap {
           target =>
             params.asScalaMainClass() match {
               case Right(mainClass) =>
-                Right(starter.start(target, mainClass, workspace))
+                Right(starter.start(target, mainClass, workspace, cancel))
               case Left(_) =>
                 params
                   .asScalaTestSuites()
                   .map(testSuites =>
-                    starter.startDebugTest(target, testSuites, workspace)
+                    starter.startDebugTest(
+                      target,
+                      testSuites,
+                      workspace,
+                      cancel,
+                    )
                   )
             }
         }
@@ -687,6 +698,20 @@ final class MbtBuildServer(
         }
     }
     result
+  }
+
+  /**
+   * Completed when the BSP request is cancelled, so the build-tool process
+   * and its progress notification can be stopped.
+   */
+  private def cancellationOf[T](
+      result: CompletableFuture[T]
+  ): Promise[Unit] = {
+    val cancel = Promise[Unit]()
+    result.whenComplete { (_, _) =>
+      if (result.isCancelled) cancel.trySuccess(())
+    }
+    cancel
   }
 
   override def buildTargetJvmRunEnvironment(
