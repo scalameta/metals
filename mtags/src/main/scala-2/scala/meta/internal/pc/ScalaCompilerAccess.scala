@@ -4,6 +4,7 @@ import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
 import scala.tools.nsc.Settings
+import scala.tools.nsc.interactive.MetalsGlobalThreadNoBackgroundCompilation
 import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 
@@ -29,7 +30,12 @@ class ScalaCompilerWrapper(global: MetalsGlobal)
     }
 
   override def stop(): Unit = {
-    global.askShutdown()
+    global.presentationCompilerThread match {
+      case thread: MetalsGlobalThreadNoBackgroundCompilation =>
+        thread.shutdown()
+      case _ =>
+        global.askShutdown()
+    }
   }
 
   override def isAlive(): Boolean = {

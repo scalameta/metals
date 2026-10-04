@@ -34,10 +34,14 @@ abstract class CompilerAccess[Reporter, Compiler](
 
   private val jobs = CompilerJobQueue(id)
   private var _compiler: CompilerWrapper[Reporter, Compiler] = _
+  private var isShutdown: Boolean = false
   private def isEmpty: Boolean = _compiler == null
   private def isDefined: Boolean = !isEmpty
   private def loadCompiler(): CompilerWrapper[Reporter, Compiler] =
     synchronized {
+      if (isShutdown) {
+        throw new CancellationException()
+      }
       if (_compiler == null) {
         _compiler = newCompiler()
       }
@@ -54,15 +58,34 @@ abstract class CompilerAccess[Reporter, Compiler](
   def isLoaded(): Boolean = _compiler != null
 
   def shutdown(): Unit = {
-    shutdownCurrentCompiler()
+    val compiler = synchronized {
+      isShutdown = true
+      detachCurrentCompiler()
+    }
+    stopCompiler(compiler)
     jobs.shutdown()
   }
 
   def shutdownCurrentCompiler(): Unit = {
-    val compiler = _compiler
+    // Detach under the same lock as loadCompiler so a concurrent load cannot
+    // obtain the compiler being stopped or be overwritten afterwards.
+    val compiler = synchronized {
+      detachCurrentCompiler()
+    }
+    stopCompiler(compiler)
+  }
+
+  private def detachCurrentCompiler(): CompilerWrapper[Reporter, Compiler] = {
+    val current = _compiler
+    _compiler = null
+    current
+  }
+
+  private def stopCompiler(
+      compiler: CompilerWrapper[Reporter, Compiler]
+  ): Unit = {
     if (compiler != null) {
       compiler.stop()
-      _compiler = null
       sh.foreach { scheduler =>
         scheduler.schedule[Unit](
           () => {
@@ -149,8 +172,11 @@ abstract class CompilerAccess[Reporter, Compiler](
   )(
       thunk: CompilerWrapper[Reporter, Compiler] => T
   )(implicit queryInfo: PcQueryContext): T = {
+    val compiler =
+      try loadCompiler()
+      catch { case _: CancellationException => return default }
     try {
-      thunk(loadCompiler())
+      thunk(compiler)
     } catch {
       case InterruptException() =>
         default
