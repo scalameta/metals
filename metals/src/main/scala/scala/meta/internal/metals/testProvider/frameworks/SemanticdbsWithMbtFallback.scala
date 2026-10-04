@@ -42,7 +42,7 @@ class SemanticdbsWithMbtFallback(
           Seq(path),
           EmptyCancelToken,
           timeout = java.time.Duration.ofSeconds(20),
-          useFallbackCompiler = true,
+          useFallbackCompiler = false,
           shouldPruneSemanticdb = true,
         ),
         20.seconds,
