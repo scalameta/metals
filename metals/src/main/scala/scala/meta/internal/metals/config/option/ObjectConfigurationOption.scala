@@ -46,7 +46,8 @@ case class ObjectConfigurationOption[A](
       field.get(value) match {
         case None => None
         case Some(value) => fromField(field, value.toString())
-        case value => fromField(field, value)
+        case value =>
+          fromField(field, value)
       }
 
     }

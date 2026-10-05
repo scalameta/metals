@@ -51,8 +51,7 @@ object OptionalPathConfigurationOption {
     val optionTitle = title
     val optionDescription = description
     new ConfigurationOptionWithLens[Option[AbsolutePath], C](getter, setter) {
-      override val isBoolean: Boolean = true
-      val default: String = defaultValue.toString
+      val default: String = defaultValue.map(_.toString).getOrElse("")
       def key: String = optionKey
       def example: String = optionExample
       def title: String = optionTitle

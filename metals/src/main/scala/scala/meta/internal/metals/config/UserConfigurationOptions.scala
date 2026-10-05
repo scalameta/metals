@@ -394,8 +394,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.inferredType,
+          (config, value) => config.copy(inferredType = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "named-parameters.enable",
@@ -408,8 +408,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.namedParameters,
+          (config, value) => config.copy(namedParameters = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "by-name-parameters.enable",
@@ -422,8 +422,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.byNameParameters,
+          (config, value) => config.copy(byNameParameters = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "implicit-arguments.enable",
@@ -436,8 +436,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.implicitArguments,
+          (config, value) => config.copy(implicitArguments = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "implicit-conversions.enable",
@@ -450,8 +450,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.implicitConversions,
+          (config, value) => config.copy(implicitConversions = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "type-parameters.enable",
@@ -464,8 +464,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.typeParameters,
+          (config, value) => config.copy(typeParameters = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "hints-in-pattern-match.enable",
@@ -478,8 +478,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.hintsInPatternMatch,
+          (config, value) => config.copy(hintsInPatternMatch = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "hints-x-ray-mode.enable",
@@ -492,8 +492,8 @@ object UserConfigurationOptions {
           defaultValue = false,
           example = "false",
         )(
-          _.closingLabels,
-          (config, value) => config.copy(closingLabels = value),
+          _.hintsXRayMode,
+          (config, value) => config.copy(hintsXRayMode = value),
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "closing-labels.enable",
@@ -638,18 +638,17 @@ object UserConfigurationOptions {
     /*
      * {
      *   "javaFormat": {
-     *     "eclipseConfigPath": "formatters/eclipse-formatter.xml",
-     *     "eclipseProfile": "GoogleStyle"
+     *     "configPath": "formatters/eclipse-formatter.xml",
+     *     "profile": "GoogleStyle"
      *   }
      * }
      */
     ObjectConfigurationOption[EclipseFormatConfig](
       key = "eclipse-format",
-      title = "Eclispe java format config",
-      description = "Eclipse Java formatter configuration.",
-      example =
-        """{ "eclipseConfigPath": "formatters/eclipse-formatter.xml" }""",
-      default = "{ eclipseProfile: \"GoogleStyle\" }",
+      title = "Eclipse java format config",
+      description = "Eclipse Java formatter configuration path and profile.",
+      example = """{ "configPath": "formatters/eclipse-formatter.xml" }""",
+      default = "{ profile: \"GoogleStyle\" }",
       defaultValue = EclipseFormatConfig.default,
       subFields = List(
         OptionalPathConfigurationOption.forConfig[EclipseFormatConfig](
@@ -659,7 +658,7 @@ object UserConfigurationOptions {
           description =
             """Optional custom path to the eclipse-formatter.xml file.
               |It should be a path (relative or absolute - though an absolute path is recommended) and use
-              |forward slashes `/` for file separators getter = (even on Windows).
+              |forward slashes `/` for file separators (even on Windows).
               |""".stripMargin,
           defaultValue = None,
         )(
@@ -692,14 +691,14 @@ object UserConfigurationOptions {
       key = "java-formatter",
       title = "Java formatter",
       description =
-        """|The Java formatter to use. Valid values are "eclipse", "google-java-format", or "none".
+        """|The Java formatter to use. Valid values are "eclipse", "googleJavaFormat", or "none".
            |If "none" is specified, Java formatting will be disabled. If not specified, defaults to "google-java-format".
            |""".stripMargin,
-      example = """"google-java-format"""",
+      example = """"googleJavaFormat"""",
       defaultValue = JavaFormatterConfig.GoogleJavaFormat,
       choices = List(
         "eclipse" -> JavaFormatterConfig.Eclipse,
-        "google-java-format" -> JavaFormatterConfig.GoogleJavaFormat,
+        "googleJavaFormat" -> JavaFormatterConfig.GoogleJavaFormat,
         "none" -> JavaFormatterConfig.None,
       ),
     )(

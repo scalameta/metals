@@ -39,8 +39,7 @@ object OptionalStringConfigurationOption {
     val optionTitle = title
     val optionDescription = description
     new ConfigurationOptionWithLens[Option[String], C](getter, setter) {
-      override val isBoolean: Boolean = true
-      val default: String = defaultValue.toString
+      val default: String = defaultValue.getOrElse("")
 
       def key: String = optionKey
       def example: String = optionExample

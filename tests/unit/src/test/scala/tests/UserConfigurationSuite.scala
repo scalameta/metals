@@ -443,19 +443,19 @@ class UserConfigurationSuite extends BaseSuite {
     "c"
   ],
   "superMethodLensesEnabled": true,
-  "gotoTestLensesEnabled": true,
+  "gotoTestLensesEnabled": false,
   "inlayHints": {
     "inferredTypes": {
-      "enable": false
+      "enable": true
     },
     "typeParameters": {
-      "enable": false
+      "enable": true
     },
     "implicitArguments": {
-      "enable": false
+      "enable": true
     },
     "hintsInPatternMatch": {
-      "enable": false
+      "enable": true
     },
     "hintsXRayMode": {
       "enable": false
@@ -464,7 +464,7 @@ class UserConfigurationSuite extends BaseSuite {
       "enable": false
     },
     "implicitConversions": {
-      "enable": false
+      "enable": true
     },
     "closingLabels": {
       "enable": false
@@ -495,8 +495,8 @@ class UserConfigurationSuite extends BaseSuite {
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
   "buildChangedAction": "none",
-  "buildOnChange": false,
-  "buildOnFocus": false,
+  "buildOnChange": true,
+  "buildOnFocus": true,
   "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
   "definitionProviders": "all",
@@ -549,8 +549,6 @@ class UserConfigurationSuite extends BaseSuite {
         clientConfig,
       )
       .getOrElse(fail("Failed to parse roundtrip json"))
-      // maps have a different order
-      .copy(inlayHints = nonDefault.inlayHints)
     assertEquals(roundtrip, nonDefault)
   }
 
@@ -593,8 +591,8 @@ class UserConfigurationSuite extends BaseSuite {
           |fallback-scala-version                       string                         $scala3Padded Default fallback Scala version
           |worksheet-cancel-timeout                     number                         4               Worksheet cancel timeout
           |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
-          |eclipse-format.config-path                   boolean                        None            Eclipse Java formatter config path
-          |eclipse-format.profile                       boolean                        Some(GoogleStyle) Eclipse Java formatting profile
+          |eclipse-format.config-path                   string                         ""              Eclipse Java formatter config path
+          |eclipse-format.profile                       string                         GoogleStyle     Eclipse Java formatting profile
           |java-formatter                               [Eclipse,GoogleJavaFormat,None] GoogleJavaFormat Java formatter
           |scala-cli-launcher                           string                         ""              Scala CLI launcher
           |scala-cli-enabled                            boolean                        false           Enable Scala CLI
