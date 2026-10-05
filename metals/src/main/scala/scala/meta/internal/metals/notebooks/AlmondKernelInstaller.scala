@@ -82,6 +82,10 @@ object AlmondKernelInstaller {
   def exists(kernelId: String): Boolean =
     Files.exists(userKernelsDir.resolve(kernelId).resolve("kernel.json"))
 
+  // Writes the replacement into a staging dir first and only deletes
+  // the existing one right before swapping it in, so a failure while
+  // writing (disk full, permissions) leaves the old kernel installed
+  // instead of neither.
   private def writeKernelSpec(
       kernelId: String,
       displayName: String,
@@ -89,14 +93,17 @@ object AlmondKernelInstaller {
       classpath: List[Path],
   ): Unit = {
     val dir = userKernelsDir.resolve(kernelId)
-    if (Files.exists(dir)) deleteRecursively(dir)
-    Files.createDirectories(dir)
+    val staging = userKernelsDir.resolve(s"$kernelId.tmp")
+    if (Files.exists(staging)) deleteRecursively(staging)
+    Files.createDirectories(staging)
     Files.write(
-      dir.resolve("kernel.json"),
+      staging.resolve("kernel.json"),
       kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
         StandardCharsets.UTF_8
       ),
     )
+    if (Files.exists(dir)) deleteRecursively(dir)
+    Files.move(staging, dir)
   }
 
   /**
