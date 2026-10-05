@@ -42,7 +42,8 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
       workspace(),
       userConfig = () =>
         UserConfiguration.default.copy(
-          workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT
+          workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+          protobufLspEnabled = false,
         ),
     )(munitExecutionContext)
 

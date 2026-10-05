@@ -684,7 +684,7 @@ object UserConfigurationOptions {
     ),
     /*
      * {
-     *   "javaFormatter": "google-java-format"
+     *   "javaFormatter": "googleJavaFormat"
      * }
      */
     ChoiceConfigurationOption[JavaFormatterConfig](
@@ -692,7 +692,7 @@ object UserConfigurationOptions {
       title = "Java formatter",
       description =
         """|The Java formatter to use. Valid values are "eclipse", "googleJavaFormat", or "none".
-           |If "none" is specified, Java formatting will be disabled. If not specified, defaults to "google-java-format".
+           |If "none" is specified, Java formatting will be disabled. If not specified, defaults to "googleJavaFormat".
            |""".stripMargin,
       example = """"googleJavaFormat"""",
       defaultValue = JavaFormatterConfig.GoogleJavaFormat,
