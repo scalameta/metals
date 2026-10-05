@@ -68,4 +68,23 @@ class NotebookKernelInstallerSuite extends BaseSuite {
       s"expected the notebook's own filename to appear in the id, got '$id'",
     )
   }
+
+  test("a very deep path still produces an id within filename limits") {
+    val deep = path((1 to 50).map(i => s"dir$i"): _*)
+    val id = NotebookKernelInstaller.kernelIdFor(deep, almondVersion)
+    assert(
+      id.length <= 200,
+      s"expected the id to stay within common filename limits, got ${id.length} chars",
+    )
+  }
+
+  test("deep paths sharing a truncated prefix are disambiguated by the hash") {
+    val commonPrefix = (1 to 50).map(i => s"dir$i")
+    val a = path(commonPrefix :+ "a.ipynb": _*)
+    val b = path(commonPrefix :+ "b.ipynb": _*)
+    assertNotEquals(
+      NotebookKernelInstaller.kernelIdFor(a, almondVersion),
+      NotebookKernelInstaller.kernelIdFor(b, almondVersion),
+    )
+  }
 }

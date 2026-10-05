@@ -3,6 +3,7 @@ package scala.meta.internal.metals.notebook
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -59,7 +60,12 @@ final class NotebookKernelInstaller(
           AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
         )
     }
-    resolved.getOrElse(Future.successful(false))
+    resolved
+      .getOrElse(Future.successful(false))
+      .recover { case NonFatal(e) =>
+        scribe.error(s"failed to check Almond kernel for '$ipynbPath'", e)
+        false
+      }
   }
 
   def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
@@ -114,8 +120,21 @@ object NotebookKernelInstaller {
   // can't collide (AlmondKernelInstaller force-overwrites an existing
   // kernel dir). Switching the Almond version installs a new kernel
   // instead of overwriting the old one.
-  def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String =
-    s"metals-${sanitize(ipynbPath.toString)}-${sanitize(almondVersion)}"
+  def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String = {
+    val versionPart = sanitize(almondVersion)
+    val full = s"metals-${sanitize(ipynbPath.toString)}-$versionPart"
+    if (full.length <= maxLength) full
+    else {
+      // A deep enough path can exceed common filesystem filename
+      // limits; fall back to a hash suffix only once that's a risk,
+      // rather than hashing (and losing traceability) for every path.
+      val hash = Integer.toHexString(ipynbPath.toString.hashCode)
+      val suffix = s"-$hash-$versionPart"
+      s"metals-${sanitize(ipynbPath.toString).take(maxLength - 7 - suffix.length)}$suffix"
+    }
+  }
+
+  private val maxLength = 200
 
   // Without escaping literal underscores first, "a/b" and "a_b" would
   // both sanitize to "a_b" and collide.
