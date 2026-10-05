@@ -50,6 +50,7 @@ object OptionalStringConfigurationOption {
         context
           .getString(key)
           .orElse(fromFeatureFlags(context.featureFlags))
+          .orElse(defaultValue)
       }
       def write(value: Option[String]): Option[Any] = value
       checkInvariants()

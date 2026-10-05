@@ -385,7 +385,7 @@ object UserConfigurationOptions {
       subFields = List(
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "inferred-types.enable",
-          title = "Should display type annotations for inferred types",
+          title = "Inlay hints for inferred types",
           description =
             """|When this option is enabled, each method that can have inferred types has them
                |displayed either as additional decorations if they are supported by the editor or
@@ -399,7 +399,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "named-parameters.enable",
-          title = "Should display parameter names next to arguments",
+          title = "Inlay hints for named parameters",
           description =
             """|When this option is enabled, each method has an added parameter name next to its arguments
                |displayed either as additional decorations if they are supported by the editor or 
@@ -413,7 +413,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "by-name-parameters.enable",
-          title = "Should display if a parameter is by-name at usage sites",
+          title = "Inlay hints for by-name parameters",
           description =
             """|When this option is enabled, each method that has by-name parameters has them 
                |displayed either as additional '=>' decorations if they are supported by the editor or 
@@ -427,7 +427,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "implicit-arguments.enable",
-          title = "Should display implicit parameter at usage sites",
+          title = "Inlay hints for implicit arguments",
           description =
             """|When this option is enabled, each method that has implicit arguments has them
                |displayed either as additional decorations if they are supported by the editor or
@@ -441,7 +441,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "implicit-conversions.enable",
-          title = "Should display implicit conversion at usage sites",
+          title = "Inlay hints for implicit conversions",
           description =
             """|When this option is enabled, each place where an implicit method or class is used has it
                |displayed either as additional decorations if they are supported by the editor or
@@ -455,7 +455,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "type-parameters.enable",
-          title = "Should display type annotations for type parameters",
+          title = "Inlay hints for type parameters",
           description =
             """|When this option is enabled, each place when a type parameter is applied has it
                |displayed either as additional decorations if they are supported by the editor or
@@ -469,7 +469,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "hints-in-pattern-match.enable",
-          title = "Should display type annotations in pattern matches",
+          title = "Inlay hints for pattern matches",
           description =
             """|When this option is enabled, each place when a type is inferred in a pattern match has it
                |displayed either as additional decorations if they are supported by the editor or
@@ -484,7 +484,7 @@ object UserConfigurationOptions {
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "hints-x-ray-mode.enable",
           title =
-            "Should display type annotations for intermediate types of multi-line expressions",
+            "Inlay hints for intermediate types of multi-line expressions",
           description =
             """|When this option is enabled, each method/attribute call in a multi-line chain will get
                | its own type annotation.
@@ -497,8 +497,7 @@ object UserConfigurationOptions {
         ),
         BooleanConfigurationOption.forConfig[InlayHintsOptions](
           key = "closing-labels.enable",
-          title =
-            "Should display closing label hints for methods/classes/objects next to their closing braces",
+          title = "Inlay hints for closing labels",
           description =
             """|When this option is enabled, each method/class/object definition that uses braces syntax,
                | will get a closing label hint next to the closing brace with the name of the definition.
@@ -653,7 +652,7 @@ object UserConfigurationOptions {
       subFields = List(
         OptionalPathConfigurationOption.forConfig[EclipseFormatConfig](
           key = "config-path",
-          example = "",
+          example = """"formatters/eclipse-formatter.xml"""",
           title = "Eclipse Java formatter config path",
           description =
             """Optional custom path to the eclipse-formatter.xml file.
@@ -667,7 +666,7 @@ object UserConfigurationOptions {
         ),
         OptionalStringConfigurationOption.forConfig[EclipseFormatConfig](
           key = "profile",
-          example = "",
+          example = """"GoogleStyle"""",
           title = "Eclipse Java formatting profile",
           description =
             """|If the Eclipse formatter file contains more than one profile, this option can be used to control which is used.

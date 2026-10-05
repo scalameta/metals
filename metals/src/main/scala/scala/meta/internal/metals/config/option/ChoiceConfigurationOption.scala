@@ -16,11 +16,15 @@ case class ChoiceConfigurationOption[A](
     getter: UserConfiguration => A,
     setter: (UserConfiguration, A) => UserConfiguration,
 ) extends LensConfigurationOption[A](getter, setter) {
-  override val values: Option[List[String]] = Some(
-    choices.map(_._2.toString())
-  )
+  private def keyOf(value: A): String =
+    choices
+      .collectFirst { case (name, v) if v == value => name }
+      .getOrElse(value.toString())
 
-  def default: String = defaultValue.toString
+  override val values: Option[List[String]] = Some(choices.map(_._1))
+
+  def default: String = keyOf(defaultValue)
+
   def read(context: ConfigContext): A =
     context.getString(key) match {
       case None => fromFeatureFlag(context.featureFlags).getOrElse(defaultValue)
@@ -40,7 +44,7 @@ case class ChoiceConfigurationOption[A](
         }
     }
 
-  def write(value: A): Option[Any] = Some(value.toString().toLowerCase())
+  def write(value: A): Option[Any] = Some(keyOf(value))
 
   checkInvariants()
 }

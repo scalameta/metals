@@ -271,13 +271,13 @@ class UserConfigurationSuite extends BaseSuite {
     )
   }
   checkOK(
-    "java format no setting",
+    "java-format-no-setting",
     """
       |{
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(obtained.eclipseFormat == EclipseFormatConfig.default)
+    assertEquals(obtained.eclipseFormat, EclipseFormatConfig.default)
   }
   checkOK(
     "java format no profile setting",
@@ -289,11 +289,14 @@ class UserConfigurationSuite extends BaseSuite {
       |}
     """.stripMargin,
   ) { obtained =>
-    assert(
-      obtained.eclipseFormat == EclipseFormatConfig(
+    assertEquals(
+      obtained.eclipseFormat,
+      EclipseFormatConfig(
         Some(AbsolutePath("path")),
-        None,
-      )
+        eclipseFormatProfile = Some(
+          value = "GoogleStyle"
+        ),
+      ),
     )
   }
 
@@ -527,7 +530,7 @@ class UserConfigurationSuite extends BaseSuite {
     "referencesTimeoutSeconds": 20
   },
   "fallbackClasspath": "all3rdparty",
-  "fallbackSourcepath": "allsources"
+  "fallbackSourcepath": "allSources"
 }""",
     )
     val roundtripJson = UserConfiguration.parse(json)
@@ -576,15 +579,15 @@ class UserConfigurationSuite extends BaseSuite {
           |bloop-jvm-properties                         array                          ["-Xmx1G"]      Bloop JVM Properties
           |super-method-lenses-enabled                  boolean                        false           Should display lenses with links to super methods
           |goto-test-lenses-enabled                     boolean                        false           Enable goto-test lenses
-          |inlay-hints.inferred-types.enable            boolean                        false           Should display type annotations for inferred types
-          |inlay-hints.named-parameters.enable          boolean                        false           Should display parameter names next to arguments
-          |inlay-hints.by-name-parameters.enable        boolean                        false           Should display if a parameter is by-name at usage sites
-          |inlay-hints.implicit-arguments.enable        boolean                        false           Should display implicit parameter at usage sites
-          |inlay-hints.implicit-conversions.enable      boolean                        false           Should display implicit conversion at usage sites
-          |inlay-hints.type-parameters.enable           boolean                        false           Should display type annotations for type parameters
-          |inlay-hints.hints-in-pattern-match.enable    boolean                        false           Should display type annotations in pattern matches
-          |inlay-hints.hints-x-ray-mode.enable          boolean                        false           Should display type annotations for intermediate types of multi-line expressions
-          |inlay-hints.closing-labels.enable            boolean                        false           Should display closing label hints for methods/classes/objects next to their closing braces
+          |inlay-hints.inferred-types.enable            boolean                        false           Inlay hints for inferred types
+          |inlay-hints.named-parameters.enable          boolean                        false           Inlay hints for named parameters
+          |inlay-hints.by-name-parameters.enable        boolean                        false           Inlay hints for by-name parameters
+          |inlay-hints.implicit-arguments.enable        boolean                        false           Inlay hints for implicit arguments
+          |inlay-hints.implicit-conversions.enable      boolean                        false           Inlay hints for implicit conversions
+          |inlay-hints.type-parameters.enable           boolean                        false           Inlay hints for type parameters
+          |inlay-hints.hints-in-pattern-match.enable    boolean                        false           Inlay hints for pattern matches
+          |inlay-hints.hints-x-ray-mode.enable          boolean                        false           Inlay hints for intermediate types of multi-line expressions
+          |inlay-hints.closing-labels.enable            boolean                        false           Inlay hints for closing labels
           |enable-strip-margin-on-type-formatting       boolean                        true            Enable strip margin on type formatting
           |enable-indent-on-paste                       boolean                        false           Indent snippets when pasted.
           |range-formatting-providers                   array                          ["scalafmt"]    Range formatting providers
@@ -593,22 +596,22 @@ class UserConfigurationSuite extends BaseSuite {
           |test-user-interface                          [code lenses,test explorer]    code lenses     Test UI used for tests and test suites
           |eclipse-format.config-path                   string                         ""              Eclipse Java formatter config path
           |eclipse-format.profile                       string                         GoogleStyle     Eclipse Java formatting profile
-          |java-formatter                               [Eclipse,GoogleJavaFormat,None] GoogleJavaFormat Java formatter
+          |java-formatter                               [eclipse,googleJavaFormat,none] googleJavaFormat Java formatter
           |scala-cli-launcher                           string                         ""              Scala CLI launcher
           |scala-cli-enabled                            boolean                        false           Enable Scala CLI
           |custom-project-root                          string                         ""              Custom project root
           |verbose-compilation                          boolean                        false           Show all compilation debugging information
-          |auto-import-build                            [Off,Initial,All]              Off             Import build when changes detected without prompting
+          |auto-import-build                            [off,initial,all]              off             Import build when changes detected without prompting
           |target-build-tool                            [sbt,gradle,mvn,mill,scala-cli,bazel,deder,none] none            Preferred build tool when multiple are detected
           |default-bsp-to-build-tool                    boolean                        false           Default to using build tool as your build server.
           |presentation-compiler-diagnostics            boolean                        true            [Experimental] Show diagnostics messages from the Scala presentation compiler
-          |build-changed-action                         [None,Prompt]                  None            Build changed action
+          |build-changed-action                         [none,prompt]                  none            Build changed action
           |build-on-change                              boolean                        true            Disable build-on-change
           |build-on-focus                               boolean                        true            Enable or disable build-on-focus
           |preferred-build-server                       string                         empty string `""`. Preferred build server
           |use-source-path                              boolean                        true            Use presentation compiler source path
           |workspace-symbol-provider                    [bsp,mbt]                      mbt             Workspace Symbol Provider
-          |definition-providers                         [MBT,Protobuf,All]             All             Definition providers
+          |definition-providers                         [mbt,protobuf,all]             all             Definition providers
           |java-symbol-loader                           [turbine-classpath,javac-sourcepath] turbine-classpath Java symbol loader
           |java-turbine-recompile-delay                 string                         ""              Java turbine recompile delay
           |java-turbine-cache                           boolean                        false           Java turbine cache
@@ -616,10 +619,10 @@ class UserConfigurationSuite extends BaseSuite {
           |javac-services-overrides.attr                boolean                        true            Override attr
           |javac-services-overrides.type-enter          boolean                        true            Override type enter
           |javac-services-overrides.enter               boolean                        true            Override enter
-          |compiler-progress                            [Enabled,Disabled]             Enabled         Compiler progress
-          |reference-provider                           [BSP,MBT]                      MBT             Reference provider
+          |compiler-progress                            [enabled,disabled]             enabled         Compiler progress
+          |reference-provider                           [bsp,mbt]                      mbt             Reference provider
           |additional-pc-checks                         array                          `[]`            Additional presentation compiler checks to run
-          |scala-imports-placement                      [APPEND_LAST,SMART]            SMART           Scala imports placement
+          |scala-imports-placement                      [append-last,smart]            smart           Scala imports placement
           |batch-semanticdb-compiler-instances          number                         1               Batch semanticdb compiler instances
           |prompt-build-import                          boolean                        false           Prompt Build Import
           |protobuf-lsp-enabled                         boolean                        true            Enabled Protobuf LSP
@@ -631,8 +634,8 @@ class UserConfigurationSuite extends BaseSuite {
           |mbt.semanticdb-cache-enabled                 boolean                        false           Enable filesystem-based MBT Semanticdb cache
           |mbt.semanticdb-cache-max-size                number                         2147483647      Semanticdb cache maximum size
           |mbt.referencesTimeoutSeconds                 number                         20              Number of seconds to wait for references operations in MBT mode
-          |fallback-classpath                           [All3rdparty,Guessed,Mbt,Default,None] Default         Fallback classpath
-          |fallback-sourcepath                          [AllSources,None]              AllSources      Fallback sourcepath""".stripMargin
+          |fallback-classpath                           [all3rdparty,guessed,mbt,default,none] default         Fallback classpath
+          |fallback-sourcepath                          [allSources,none]              allSources      Fallback sourcepath""".stripMargin
     assertNoDiff(obtained, expected)
   }
 

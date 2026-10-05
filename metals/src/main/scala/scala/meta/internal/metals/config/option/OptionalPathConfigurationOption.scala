@@ -61,6 +61,7 @@ object OptionalPathConfigurationOption {
         context
           .getString(camelCaseKey)
           .map(filePath => AbsolutePath(Paths.get(filePath)))
+          .orElse(defaultValue)
       }
       def write(value: Option[AbsolutePath]): Option[Any] =
         value.map(_.toString)

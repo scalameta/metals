@@ -32,11 +32,10 @@ class UserConfigurationModifier extends StringModifier {
     if (documentedButMissing.nonEmpty) {
       throw new RuntimeException(
         s"Options were documented but not used in UserConfiguration (UserConfiguration names must match key)" +
-          s": ${undocumentedOptions.mkString(", ")}"
+          s": ${documentedButMissing.mkString(", ")}"
       )
     }
   }
-  // TODO go over again over docs
   validateAllOptions()
 
   override def process(
@@ -51,11 +50,11 @@ class UserConfigurationModifier extends StringModifier {
     ): String = {
       val renderedExample = topFieldKey match {
         case Some(value) =>
-          s"""|    "${value}": {
-              |      "${option.key}": ${option.example}
+          s"""|    "$value": {
+              |${jsonExampleField(option.camelCaseKey, option.example, "      ")}
               |    }""".stripMargin
         case None =>
-          s"""    "${option.key}": ${option.example}"""
+          jsonExampleField(option.camelCaseKey, option.example, "    ")
       }
       s"""
          |### ${option.title}
@@ -84,11 +83,29 @@ class UserConfigurationModifier extends StringModifier {
       }
       .map { case (option, subFields) =>
         render(option, None) + "\n" + subFields
-          .map(render(_, Some(option.key)))
+          .map(render(_, Some(option.camelCaseKey)))
           .mkString("\n")
       }
       .mkString("\n")
   }
+
+  /**
+   * Dotted keys such as `inferred-types.enable` are read as nested objects.
+   * Undotted keys stay a single JSON field.
+   */
+  private def jsonExampleField(
+      key: String,
+      example: String,
+      indent: String,
+  ): String =
+    key.split("\\.") match {
+      case Array(objectKey, fieldKey) =>
+        s"""|$indent"$objectKey": {
+            |$indent  "$fieldKey": $example
+            |$indent}""".stripMargin
+      case _ =>
+        s"""$indent"$key": $example"""
+    }
 
   private def markdownDefault(option: ConfigurationOption[_, _]): String = {
     option.defaultDescription.getOrElse {
