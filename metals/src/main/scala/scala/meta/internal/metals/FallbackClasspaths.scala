@@ -109,8 +109,10 @@ class FallbackClasspaths(
       scalaVersionSelector.fallbackScalaVersion()
     ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
   }
-  def scalaCompilerClasspath(): Seq[Path] = {
-    val scalaBinaryVerion = fallbackScalaBinaryVersion()
+  def scalaCompilerClasspath(): Seq[Path] =
+    scalaCompilerClasspath(fallbackScalaBinaryVersion())
+
+  def scalaCompilerClasspath(scalaBinaryVerion: String): Seq[Path] = {
     fallbackCompilerClasspath(
       id =>
         // IMPORTANT: we must only include dependencies from targets that have a
