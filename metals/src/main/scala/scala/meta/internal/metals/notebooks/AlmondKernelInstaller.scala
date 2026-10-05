@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.UUID
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -85,7 +86,9 @@ object AlmondKernelInstaller {
   // Writes the replacement into a staging dir first and only deletes
   // the existing one right before swapping it in, so a failure while
   // writing (disk full, permissions) leaves the old kernel installed
-  // instead of neither.
+  // instead of neither. The staging dir is unique per call, so two
+  // concurrent installs of the same kernelId (e.g. a silent background
+  // refresh racing a manual install) can't clobber each other's files.
   private def writeKernelSpec(
       kernelId: String,
       displayName: String,
@@ -93,17 +96,22 @@ object AlmondKernelInstaller {
       classpath: List[Path],
   ): Unit = {
     val dir = userKernelsDir.resolve(kernelId)
-    val staging = userKernelsDir.resolve(s"$kernelId.tmp")
-    if (Files.exists(staging)) deleteRecursively(staging)
+    val staging = userKernelsDir.resolve(s"$kernelId.tmp-${UUID.randomUUID()}")
     Files.createDirectories(staging)
-    Files.write(
-      staging.resolve("kernel.json"),
-      kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
-        StandardCharsets.UTF_8
-      ),
-    )
-    if (Files.exists(dir)) deleteRecursively(dir)
-    Files.move(staging, dir)
+    try {
+      Files.write(
+        staging.resolve("kernel.json"),
+        kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
+          StandardCharsets.UTF_8
+        ),
+      )
+      if (Files.exists(dir)) deleteRecursively(dir)
+      Files.move(staging, dir)
+    } catch {
+      case NonFatal(e) =>
+        deleteRecursively(staging)
+        throw e
+    }
   }
 
   /**
