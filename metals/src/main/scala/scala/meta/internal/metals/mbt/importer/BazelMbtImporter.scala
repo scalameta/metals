@@ -52,22 +52,6 @@ abstract class BazelMbtImporter(
     for {
       outputBase <- queryOutputBase()
       bazelBin <- queryBazelBin()
-      mavenHubs = BazelMavenJsonImporter
-        .discoverMavenHubs(
-          BazelMavenJsonImporter.externalDirs(
-            projectRoot,
-            outputBase,
-          )
-        )
-      _ = scribe.info(
-        s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
-      )
-      mavenImportStart = System.nanoTime()
-      dependencyModules = BazelMavenJsonImporter
-        .importMaven(projectRoot, outputBase, mavenHubs)
-      _ = scribe.debug(
-        s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
-      )
       ruleKindsQueryOutput <- BazelQuery
         .buildRuleKindsQuery(patterns)
         .run(queryEnv)
@@ -114,6 +98,35 @@ abstract class BazelMbtImporter(
       reachableLabelsByTarget = targetsXmlDump.reachableLabels(targets)
       externalDeps =
         targetsXmlDump.externalDepsByTarget(reachableLabelsByTarget)
+      // Materialize the external repositories before the Maven lock file is
+      // matched against `external/`; on a cold output base the jars of a
+      // pinned rules_jvm_external hub do not exist until Bazel fetches them.
+      _ <- BazelFetch.externalDependencies(
+        externalDeps.values.flatten.toSet,
+        queryEnv,
+      )
+      mavenHubs = BazelMavenJsonImporter
+        .discoverMavenHubs(
+          BazelMavenJsonImporter.externalDirs(
+            projectRoot,
+            outputBase,
+          )
+        )
+      _ = scribe.info(
+        s"bazel-mbt: found maven hubs: ${mavenHubs.map(_.name.value).mkString(", ")}"
+      )
+      mavenImportStart = System.nanoTime()
+      dependencyModules = BazelMavenJsonImporter
+        .importMaven(projectRoot, outputBase, mavenHubs)
+      _ = scribe.debug(
+        s"bazel-mbt: importMaven took ${(System.nanoTime() - mavenImportStart) / 1_000_000}ms"
+      )
+      _ =
+        if (dependencyModules.isEmpty && externalDeps.values.exists(_.nonEmpty))
+          scribe.warn(
+            "bazel-mbt: targets depend on external artifacts but no Maven dependency module was resolved; " +
+              "check that the rules_jvm_external lock file is pinned and that `bazel fetch` succeeded"
+          )
       externalDepModules = BazelMavenJsonImporter.matchExternalDeps(
         externalDeps,
         dependencyModules,
