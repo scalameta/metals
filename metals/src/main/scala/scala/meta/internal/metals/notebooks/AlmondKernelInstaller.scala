@@ -31,7 +31,7 @@ import org.eclipse.lsp4j.MessageType
  *
  * `kernelId` already encodes the Almond version (see
  * `NotebookKernelInstaller.kernelIdFor`), so a different version never
- * collides with, or gets mistaken for up to date against, another one —
+ * collides with, or gets mistaken for up to date against, another one;
  * only the classpath needs comparing here.
  */
 object AlmondKernelInstaller {
@@ -54,7 +54,6 @@ object AlmondKernelInstaller {
       }
       javaBin = JavaBinary(javaHome)
       launcherClasspathStr = launcherClasspath.mkString(File.pathSeparator)
-      // Written into kernel.json's argv; Jupyter runs this to start the kernel.
       runCommand = List(
         javaBin,
         "-cp",
@@ -102,7 +101,7 @@ object AlmondKernelInstaller {
 
   /**
    * True only if a kernel is installed for `kernelId` AND it was installed
-   * against the same classpath as now — otherwise a stale install (the
+   * against the same classpath as now. Otherwise a stale install (the
    * project's classpath changed since) looks identical to "not installed"
    * to callers deciding whether to offer a (re)install.
    */
@@ -117,9 +116,8 @@ object AlmondKernelInstaller {
     result
   }
 
-  // Compared as sets: BSP gives no ordering guarantee across separate
-  // calls, so two calls returning the same entries in a different order
-  // must not be treated as a classpath change.
+  // BSP gives no ordering guarantee across separate calls, so a
+  // reordered-but-identical classpath must not look like a change.
   def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
     Try {
       val stored = kernelJson("metadata")("classpath").arr.map(_.str).toSet
@@ -145,9 +143,8 @@ object AlmondKernelInstaller {
       ),
     )
 
-  // Not AbsolutePath.deleteRecursively(): this one needs to guarantee it
-  // never follows a symlink into deleting outside the kernel directory,
-  // which requires checking NOFOLLOW_LINKS explicitly on every entry.
+  // Not AbsolutePath.deleteRecursively(): must guarantee it never
+  // follows a symlink out of the kernel directory.
   private def deleteRecursively(path: Path): Unit = {
     if (Files.isDirectory(path, LinkOption.NOFOLLOW_LINKS))
       Using.resource(Files.list(path))(_.forEach(deleteRecursively))
@@ -155,9 +152,8 @@ object AlmondKernelInstaller {
   }
 
   // Mirrors almond.kernel.util.JupyterPaths.userPath / Jupyter's own
-  // jupyter_core.paths.jupyter_data_dir, including the env var overrides
-  // real Jupyter honors (JUPYTER_DATA_DIR, XDG_DATA_HOME) — otherwise an
-  // installed kernel can silently not show up in Jupyter's own picker.
+  // jupyter_core.paths.jupyter_data_dir. Skipping JUPYTER_DATA_DIR or
+  // XDG_DATA_HOME would install a kernel Jupyter's own picker never sees.
   private def userKernelsDir: Path = {
     val home = Paths.get(sys.props("user.home"))
     val dataDir = sys.env
