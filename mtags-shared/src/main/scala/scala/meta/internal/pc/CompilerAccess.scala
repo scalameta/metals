@@ -172,11 +172,11 @@ abstract class CompilerAccess[Reporter, Compiler](
   )(
       thunk: CompilerWrapper[Reporter, Compiler] => T
   )(implicit queryInfo: PcQueryContext): T = {
-    val compiler =
-      try loadCompiler()
-      catch { case _: CancellationException => return default }
     try {
-      thunk(compiler)
+      val compiler =
+        try Right(loadCompiler())
+        catch { case _: CancellationException => Left(default) }
+      compiler.map(thunk).getOrElse(default)
     } catch {
       case InterruptException() =>
         default
