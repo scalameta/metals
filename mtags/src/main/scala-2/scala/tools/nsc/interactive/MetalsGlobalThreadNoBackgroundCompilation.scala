@@ -16,10 +16,21 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
       "Scala Presentation Compiler w/o backgroundCompile[" + name + "]"
     ) {
 
+  @volatile private var shutdownRequested = false
+
   lazy val logger: slf4j.Logger =
     org.slf4j.LoggerFactory.getLogger(
       classOf[MetalsGlobalThreadNoBackgroundCompilation]
     )
+
+  def shutdown(): Unit = synchronized {
+    if (shutdownRequested) {
+      interrupt()
+    } else {
+      shutdownRequested = true
+      compiler.askShutdown()
+    }
+  }
 
   /**
    * The presentation compiler loop.
@@ -53,6 +64,10 @@ final class MetalsGlobalThreadNoBackgroundCompilation(
 
         ex match {
           // + scalac deviation
+          case _: InterruptedException if shutdownRequested =>
+            logger.debug(s"Forcefully shutting down PC for $name")
+            compiler.log.close()
+            compiler = null
           case InterruptException() =>
             Thread.interrupted()
             logger.debug(s"Interrupted PC for $name")

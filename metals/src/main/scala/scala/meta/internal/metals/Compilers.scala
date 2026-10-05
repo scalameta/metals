@@ -1166,10 +1166,10 @@ class Compilers(
   ): Future[List[ReferencesResult]] = {
     val filteredFiles = searchFiles.filter(_.isScalaOrJava)
     val results =
-      if (symbols.isEmpty || filteredFiles.isEmpty) Nil
+      if (symbols.isEmpty || filteredFiles.isEmpty) Future.successful(Nil)
       else
         withUncachedCompilers(id) { case (scalaCompiler, javaCompiler) =>
-          for {
+          val references = for {
             searchFile <- filteredFiles
             if !isCancelled()
           } yield {
@@ -1199,12 +1199,11 @@ class Compilers(
                   .toList
               )
           }
+          Future.sequence(references).map(_.flatten)
         }
-          .getOrElse(Nil)
+          .map(_.getOrElse(Nil))
 
-    Future
-      .sequence(results)
-      .map(_.flatten)
+    results
       .map { res =>
         scribe.debug(
           s"PC references found: ${res.size}: ${res.mkString("\n")}"
@@ -1866,8 +1865,10 @@ class Compilers(
 
   private def withUncachedCompilers[T](
       targetId: BuildTargetIdentifier
-  )(f: (PresentationCompiler, PresentationCompiler) => T): Option[T] =
-    withKeyAndDefault(targetId) { case (key, getCompiler) =>
+  )(
+      f: (PresentationCompiler, PresentationCompiler) => Future[T]
+  ): Future[Option[T]] = {
+    val result = withKeyAndDefault(targetId) { case (key, getCompiler) =>
       val javaCompiler = loadJavaCompiler(targetId)
       val (out, shouldShutdown) = Option(jcache.get(key))
         .map((_, false))
@@ -1881,11 +1882,24 @@ class Compilers(
         }
       }
       if (shouldShutdown) {
-        compiler.foreach(_.shutdown())
-        javaCompiler.foreach(_.shutdown())
+        result match {
+          case Some(future) =>
+            future.onComplete { _ =>
+              compiler.foreach(_.shutdown())
+              javaCompiler.foreach(_.shutdown())
+            }
+          case None =>
+            compiler.foreach(_.shutdown())
+            javaCompiler.foreach(_.shutdown())
+        }
       }
       result
     }
+    result match {
+      case Some(future) => future.map(Some(_))
+      case None => Future.successful(None)
+    }
+  }
 
   private def withPCAndAdjustLsp[T](
       params: SelectionRangeParams
