@@ -472,25 +472,21 @@ object BazelMbtBuildSupport {
     val jvmSources = srcLabels.flatMap { label =>
       BazelLabels.fileLabelToWorkspaceRelativePath(label).filter(isJvmSource)
     }
-
-    jvmSources match {
-      case List(relativePath) =>
-        mbtWorkspaceSymbolProvider
-          .map(provider =>
-            provider
-              .classesForPath(relativePath)
-              .map(c =>
-                MbtTestClass(
-                  className = c.symbolToFullyQualifiedName,
-                  framework = framework,
-                  sourcePath = relativePath,
-                  configuration = configuration,
-                )
+    jvmSources.flatMap { relativePath =>
+      mbtWorkspaceSymbolProvider
+        .map { provider =>
+          provider
+            .classesForPath(relativePath)
+            .map(c =>
+              MbtTestClass(
+                className = c.symbolToFullyQualifiedName,
+                framework = framework,
+                sourcePath = relativePath,
+                configuration = configuration,
               )
-          )
-          .getOrElse(Nil)
-      case _ =>
-        Nil
+            )
+        }
+        .getOrElse(Nil)
     }
   }
 
