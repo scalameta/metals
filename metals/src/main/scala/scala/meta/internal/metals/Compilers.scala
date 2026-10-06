@@ -296,7 +296,7 @@ class Compilers(
 
   // A fallback compiler differentiated by a scala version, if it's known (needed to
   // get the matching classpath, since we filter it based on the scala version).
-  // Used for reuse/optiomisation purposes.
+  // Used for reuse/optimisation purposes.
   private def fallbackCompilerForTarget(
       path: AbsolutePath
   ): PresentationCompiler = {
