@@ -312,7 +312,9 @@ class Compilers(
           .map(_.scalaBinaryVersion)
       else None
     targetBinaryVersion match {
-      case Some(binaryVersion) if binaryVersion != fallbackBinaryVersion =>
+      case Some(binaryVersion)
+          if binaryVersion != fallbackBinaryVersion &&
+            ScalaVersions.isSupportedScalaBinaryVersion(binaryVersion) =>
         scalaFallbackCompiler(binaryVersion)
       case _ => fallbackCompiler(path)
     }
