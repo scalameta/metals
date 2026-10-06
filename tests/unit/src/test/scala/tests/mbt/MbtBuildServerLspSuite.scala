@@ -23,6 +23,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.TurbineCompiler
+import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 
 import com.google.turbine.diag.SourceFile
@@ -1081,6 +1082,90 @@ class MbtBuildServerLspSuite
            |val value: String
            |```
            |""".stripMargin.hover,
+      )
+    } yield ()
+  }
+
+  test("references-with-fallback-compiler-per-scala-binary-version") {
+    cleanWorkspace()
+    def jarUri(org: String, name: String, version: String): String =
+      Fetch
+        .create()
+        .withDependencies(
+          Dependency.of(org, name, version).withTransitive(false)
+        )
+        .fetch()
+        .asScala
+        .map(_.toPath.toUri.toString)
+        .head
+    val scala2Binary =
+      V.scala213.split("\\.").take(2).mkString(".")
+    val xmlId = s"org.scala-lang.modules:scala-xml_$scala2Binary:2.3.0"
+    val sourcecodeId = "com.lihaoyi:sourcecode_3:0.4.2"
+    // Each namespace has a dependency that is only on its own classpath. The
+    // fallback compiler is Scala 2.13 here and only gets the scala-xml jar, so
+    // the Scala 3 sources need their own fallback compiler, otherwise
+    // `MoreValues.scala` is indexed without `sourcecode` and its reference is
+    // missed.
+    val mbtJson =
+      s"""|{
+          |  "dependencyModules": [
+          |    {
+          |      "id": "$xmlId",
+          |      "jar": "${jarUri("org.scala-lang.modules", s"scala-xml_$scala2Binary", "2.3.0")}"
+          |    },
+          |    {
+          |      "id": "$sourcecodeId",
+          |      "jar": "${jarUri("com.lihaoyi", "sourcecode_3", "0.4.2")}"
+          |    }
+          |  ],
+          |  "namespaces": {
+          |    "scala2": {
+          |      "sources": ["scala2/**"],
+          |      "scalaVersion": "${V.scala213}",
+          |      "dependencyModules": ["$xmlId"]
+          |    },
+          |    "scala3": {
+          |      "sources": ["scala3/**"],
+          |      "scalaVersion": "${V.scala3}",
+          |      "dependencyModules": ["$sourcecodeId"]
+          |    }
+          |  }
+          |}""".stripMargin
+    val scala2File = "scala2/Nodes.scala"
+    val scala3File = "scala3/Values.scala"
+    val scala3Usage = "scala3/MoreValues.scala"
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |$mbtJson
+            |/$scala2File
+            |package a
+            |
+            |abstract class Nodes extends scala.xml.NodeSeq
+            |/$scala3File
+            |package b
+            |
+            |abstract class Values extends sourcecode.SourceValue[Int]
+            |/$scala3Usage
+            |package b
+            |
+            |abstract class MoreValues extends sourcecode.SourceValue[String]
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      _ <- server.didOpenAndFocus(scala3File)
+      _ <- server.assertReferencesSubquery(
+        scala3File,
+        "sourcecode.Source@@Value",
+        """|scala3/MoreValues.scala:3:46: reference
+           |abstract class MoreValues extends sourcecode.SourceValue[String]
+           |                                             ^^^^^^^^^^^
+           |scala3/Values.scala:3:42: reference
+           |abstract class Values extends sourcecode.SourceValue[Int]
+           |                                         ^^^^^^^^^^^
+           |""".stripMargin,
       )
     } yield ()
   }

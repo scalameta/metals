@@ -32,11 +32,32 @@ class ScalaVersionSelector(
           .getOrElse(BuildInfo.scala213)
     }
 
-    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(selected))
-      selected
-    else
-      ScalaVersions.recommendedVersion(selected)
+    supportedVersion(selected)
   }
+
+  /**
+   * Picks the latest scala version used in the workspace that shares
+   * the same minor as `scalaBinaryVersion`.
+   */
+  def fallbackScalaVersion(scalaBinaryVersion: String): String = {
+    val selected = buildTargets.allScala.toList
+      .map(_.scalaInfo.getScalaVersion)
+      .filter(version =>
+        ScalaVersions.scalaBinaryVersionFromFullVersion(
+          version
+        ) == scalaBinaryVersion
+      )
+      .sorted
+      .lastOption
+      .getOrElse(fallbackScalaVersion())
+    supportedVersion(selected)
+  }
+
+  private def supportedVersion(scalaVersion: String): String =
+    if (ScalaVersions.isSupportedAtReleaseMomentScalaVersion(scalaVersion))
+      scalaVersion
+    else
+      ScalaVersions.recommendedVersion(scalaVersion)
 
   def fallbackDialect(): Dialect = {
     ScalaVersions.dialectForScalaVersion(

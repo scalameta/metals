@@ -269,15 +269,9 @@ class Compilers(
                   lazyPc
                 } else {
                   presentationCompiler.shutdown()
-                  StandaloneCompiler(
+                  standaloneScalaCompiler(
                     scalaVersion,
-                    search,
                     fallbackClasspaths.scalaCompilerClasspath(),
-                    completionItemPriority(),
-                    fallbackPresentationCompilerSourcepathSupplier(
-                      scalaVersion
-                    ),
-                    serverConfig.compilers.sourcePathMode,
                   )
                 }
               }
@@ -289,13 +283,9 @@ class Compilers(
                   fallbackClasspaths.javaCompilerClasspath(),
                 )
               } else {
-                StandaloneCompiler(
+                standaloneScalaCompiler(
                   scalaVersion,
-                  search,
                   fallbackClasspaths.scalaCompilerClasspath(),
-                  completionItemPriority(),
-                  fallbackPresentationCompilerSourcepathSupplier(scalaVersion),
-                  serverConfig.compilers.sourcePathMode,
                 )
               }
           }
@@ -303,6 +293,74 @@ class Compilers(
       )
       .await
   }
+
+  // A fallback compiler differentiated by a scala version, if it's known (needed to
+  // get the matching classpath, since we filter it based on the scala version).
+  // Used for reuse/optimisation purposes.
+  private def fallbackCompilerForTarget(
+      path: AbsolutePath
+  ): PresentationCompiler = {
+    val fallbackBinaryVersion =
+      ScalaVersions.scalaBinaryVersionFromFullVersion(
+        scalaVersionSelector.fallbackScalaVersion()
+      )
+    val targetBinaryVersion =
+      if (path.isScalaFilename)
+        buildTargets
+          .inverseSources(path)
+          .flatMap(buildTargets.scalaTarget)
+          .map(_.scalaBinaryVersion)
+      else None
+    targetBinaryVersion match {
+      case Some(binaryVersion)
+          if binaryVersion != fallbackBinaryVersion &&
+            ScalaVersions.isSupportedScalaBinaryVersion(binaryVersion) =>
+        scalaFallbackCompiler(binaryVersion)
+      case _ => fallbackCompiler(path)
+    }
+  }
+
+  private def scalaFallbackCompiler(
+      scalaBinaryVersion: String
+  ): PresentationCompiler =
+    jcache
+      .compute(
+        PresentationCompilerKey.ScalaFallback(scalaBinaryVersion),
+        (_, value) => {
+          val scalaVersion =
+            scalaVersionSelector.fallbackScalaVersion(scalaBinaryVersion)
+          Option(value) match {
+            case Some(lazyPc) if lazyPc.await.scalaVersion() == scalaVersion =>
+              lazyPc
+            case existing =>
+              existing.foreach(_.await.shutdown())
+              standaloneScalaCompiler(
+                scalaVersion,
+                fallbackClasspaths.scalaCompilerClasspath(scalaBinaryVersion),
+              )
+          }
+        },
+      )
+      .await
+
+  private def standaloneScalaCompiler(
+      scalaVersion: String,
+      classpath: Seq[Path],
+  ): MtagsPresentationCompiler =
+    StandaloneCompiler(
+      scalaVersion,
+      search,
+      classpath,
+      completionItemPriority(),
+      fallbackPresentationCompilerSourcepathSupplier(scalaVersion),
+      serverConfig.compilers.sourcePathMode,
+    )
+
+  private def fallbackCompilerKeys: Iterable[PresentationCompilerKey] =
+    cache.keys.collect {
+      case key: PresentationCompilerKey.Default => key
+      case key: PresentationCompilerKey.ScalaFallback => key
+    }
 
   def loadedPresentationCompilerCount(): Int =
     cache.values.count(_.await.isLoaded())
@@ -578,24 +636,17 @@ class Compilers(
 
   def clearFallbackCompilerCache(): Unit = {
     for {
-      language <- List(s.Language.SCALA, s.Language.JAVA)
-    } yield {
-      val default = Option(
-        jcache.get(PresentationCompilerKey.Default(language))
-      )
-      default.foreach { pc =>
-        pc.await.shutdown()
-        jcache.remove(PresentationCompilerKey.Default(language))
-      }
+      key <- fallbackCompilerKeys.toList
+      pc <- Option(jcache.remove(key))
+    } {
+      pc.await.shutdown()
     }
   }
 
   def restartFallbackCompilers(): Unit = {
     for {
-      language <- List(s.Language.SCALA, s.Language.JAVA)
-      compiler <- Option(
-        jcache.get(PresentationCompilerKey.Default(language))
-      )
+      key <- fallbackCompilerKeys.toList
+      compiler <- Option(jcache.get(key))
     } {
       compiler.await.restart()
     }
@@ -2173,7 +2224,7 @@ class Compilers(
   ): Future[s.TextDocuments] = {
     def getCompiler(path: AbsolutePath): Option[PresentationCompiler] =
       if (useFallbackCompiler && path.isScalaOrJava)
-        Some(fallbackCompiler(path))
+        Some(fallbackCompilerForTarget(path))
       else
         loadCompiler(path)
 
@@ -2312,6 +2363,8 @@ object Compilers {
     final case class JavaBuildTarget(id: BuildTargetIdentifier)
         extends PresentationCompilerKey
     final case class Default(language: s.Language)
+        extends PresentationCompilerKey
+    final case class ScalaFallback(scalaBinaryVersion: String)
         extends PresentationCompilerKey
   }
 }
