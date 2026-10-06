@@ -200,6 +200,53 @@ class PCDiagnosticsWithSourcePath
     } yield ()
   }
 
+  test("dependency-error-cleared-on-close") {
+    cleanWorkspace()
+    for {
+      _ <- initialize(
+        """|
+           |/metals.json
+           |{
+           |  "a": {},
+           |  "b": {
+           |    "dependsOn": ["a"]
+           |  }
+           |}
+           |/a/src/main/scala/a/Library.scala
+           |package a
+           |
+           |object Library {
+           |  val n: Int = ""
+           |}
+           |/b/src/main/scala/b/Client.scala
+           |package b
+           |
+           |object Client {
+           |  val name: String = a.Library.n.toString
+           |}
+           |""".stripMargin
+      )
+      _ <- server.didOpen("b/src/main/scala/b/Client.scala")
+      _ <- server.didOpen("a/src/main/scala/a/Library.scala")
+      _ <- server.didFocus("a/src/main/scala/a/Library.scala")
+      _ = assertNoDiff(
+        client.pathDiagnostics("a/src/main/scala/a/Library.scala"),
+        """|a/src/main/scala/a/Library.scala:4:16: error: type mismatch;
+           | found   : String("")
+           | required: Int
+           |  val n: Int = ""
+           |               ^^
+           |""".stripMargin,
+      )
+      _ <- server.didClose("a/src/main/scala/a/Library.scala")
+      _ <- server.didFocus("b/src/main/scala/b/Client.scala")
+      _ = assertNoDiff(
+        client.pathDiagnostics("a/src/main/scala/a/Library.scala"),
+        "",
+      )
+    } yield ()
+  }
+
   test("cross-project-dependency-with-changes-java") {
     cleanWorkspace()
     for {
