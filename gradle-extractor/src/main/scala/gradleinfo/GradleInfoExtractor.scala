@@ -217,6 +217,8 @@ object GradleInfoExtractor {
       outputFile.toString.replace("\\", "\\\\").replace("'", "\\'")
     val script =
       s"""|gradle.projectsEvaluated {
+          |  if (gradle.parent != null) return
+          |
           |  def unwrap = { value ->
           |    if (value == null) {
           |      return null
@@ -265,40 +267,44 @@ object GradleInfoExtractor {
           |  }
           |  def result = [:]
           |  gradle.rootProject.allprojects { project ->
-          |    def sourceSets = project.extensions.findByName('sourceSets')
-          |    if (sourceSets != null) {
-          |      def main = sourceSets.findByName('main')
-          |      def test = sourceSets.findByName('test')
-          |      def testFixtures = sourceSets.findByName('testFixtures')
-          |      def outputs = [:]
-          |      if (main != null) {
-          |        outputs['classDirectories'] = main.output.classesDirs.files.collect { it.absolutePath }
-          |      }
-          |      if (test != null) {
-          |        outputs['testClassDirectory'] = test.output.classesDirs.files.collect { it.absolutePath }
-          |      }
-          |      if (testFixtures != null) {
-          |        outputs['testFixturesClassDirectories'] = testFixtures.output.classesDirs.files.collect { it.absolutePath }
-          |        outputs['testFixturesSources'] = testFixtures.allSource.srcDirs.findAll { it.exists() }.collect { it.absolutePath }
-          |        def tfConfig = project.configurations.findByName('testFixturesImplementation')
-          |        if (tfConfig != null) {
-          |          outputs['testFixturesProjectDeps'] = tfConfig.dependencies
-          |            .findAll { it instanceof org.gradle.api.artifacts.ProjectDependency }
-          |            .collect { it.name }
+          |    try {
+          |      def sourceSets = project.extensions.findByName('sourceSets')
+          |      if (sourceSets != null) {
+          |        def main = sourceSets.findByName('main')
+          |        def test = sourceSets.findByName('test')
+          |        def testFixtures = sourceSets.findByName('testFixtures')
+          |        def outputs = [:]
+          |        if (main != null) {
+          |          outputs['classDirectories'] = main.output.classesDirs.files.collect { it.absolutePath }
+          |        }
+          |        if (test != null) {
+          |          outputs['testClassDirectory'] = test.output.classesDirs.files.collect { it.absolutePath }
+          |        }
+          |        if (testFixtures != null) {
+          |          outputs['testFixturesClassDirectories'] = testFixtures.output.classesDirs.files.collect { it.absolutePath }
+          |          outputs['testFixturesSources'] = testFixtures.allSource.srcDirs.findAll { it.exists() }.collect { it.absolutePath }
+          |          def tfConfig = project.configurations.findByName('testFixturesImplementation')
+          |          if (tfConfig != null) {
+          |            outputs['testFixturesProjectDeps'] = tfConfig.dependencies
+          |              .findAll { it instanceof org.gradle.api.artifacts.ProjectDependency }
+          |              .collect { it.name }
+          |          }
+          |        }
+          |        try {
+          |          outputs['scalacOptions'] = scalacOptionsOf(project, 'compileScala')
+          |          outputs['testScalacOptions'] = scalacOptionsOf(project, 'compileTestScala')
+          |          outputs['testFixturesScalacOptions'] = scalacOptionsOf(project, 'compileTestFixturesScala')
+          |          outputs['javacOptions'] = javacOptionsOf(project, 'compileJava')
+          |          outputs['testJavacOptions'] = javacOptionsOf(project, 'compileTestJava')
+          |          outputs['testFixturesJavacOptions'] = javacOptionsOf(project, 'compileTestFixturesJava')
+          |        } catch (Exception ignored) {
+          |        }
+          |        if (!outputs.isEmpty()) {
+          |          result[project.path] = outputs
           |        }
           |      }
-          |      try {
-          |        outputs['scalacOptions'] = scalacOptionsOf(project, 'compileScala')
-          |        outputs['testScalacOptions'] = scalacOptionsOf(project, 'compileTestScala')
-          |        outputs['testFixturesScalacOptions'] = scalacOptionsOf(project, 'compileTestFixturesScala')
-          |        outputs['javacOptions'] = javacOptionsOf(project, 'compileJava')
-          |        outputs['testJavacOptions'] = javacOptionsOf(project, 'compileTestJava')
-          |        outputs['testFixturesJavacOptions'] = javacOptionsOf(project, 'compileTestFixturesJava')
-          |      } catch (Exception ignored) {
-          |      }
-          |      if (!outputs.isEmpty()) {
-          |        result[project.path] = outputs
-          |      }
+          |    } catch (Exception e) {
+          |      logger.warn("metals: could not extract the source sets for " + project.path, e)
           |    }
           |  }
           |  new File('$escapedPath').text = groovy.json.JsonOutput.toJson(result)
@@ -317,7 +323,12 @@ object GradleInfoExtractor {
         read[Map[String, SourceSetDirectories]](Files.readString(outputFile))
       else Map.empty
     } catch {
-      case NonFatal(_) => Map.empty
+      case NonFatal(e) =>
+        scribe.warn(
+          s"GradleInfoExtractor: Could not read the source sets from $outputFile",
+          e,
+        )
+        Map.empty
     }
 
   /**
