@@ -25,7 +25,6 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codelenses.CodeLens
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
-import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
@@ -75,12 +74,6 @@ final class TestSuitesProvider(
    * by [[MbtReferenceProvider]] (which also caches them).
    */
   private def parentTextDocument(path: AbsolutePath): Option[TextDocument] =
-    semanticdbs()
-      .textDocument(path)
-      .documentIncludingStale
-      .orElse(if (isMbt(path)) mbtTextDocument(path) else None)
-
-  private def mbtTextDocument(path: AbsolutePath): Option[TextDocument] =
     try {
       Some(mbtReferenceProvider().textDocument(path))
         .filter(_.symbols.nonEmpty)
@@ -89,12 +82,6 @@ final class TestSuitesProvider(
         scribe.warn(s"Failed to generate semanticdb for $path", e)
         None
     }
-
-  private def isMbt(path: AbsolutePath): Boolean =
-    buildTargets
-      .inverseSources(path)
-      .flatMap(buildTargets.buildServerOf)
-      .exists(connection => MbtBuildServer.isMbtServer(connection.name))
 
   private val junitTestFinder = new JunitTestFinder
   private val testNGTestFinder = new TestNGTestFinder
