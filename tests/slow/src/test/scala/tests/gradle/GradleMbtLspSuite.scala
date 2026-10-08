@@ -114,7 +114,10 @@ class GradleMbtLspSuite
             |        "src/main/java",
             |        "src/main/scala"
             |      ],
-            |      "scalacOptions": [],
+            |      "scalacOptions": [
+            |        "-deprecation",
+            |        "-unchecked"
+            |      ],
             |      "javacOptions": [
             |        "-source",
             |        "17",
@@ -139,7 +142,10 @@ class GradleMbtLspSuite
             |        "src/test/java",
             |        "src/test/scala"
             |      ],
-            |      "scalacOptions": [],
+            |      "scalacOptions": [
+            |        "-deprecation",
+            |        "-unchecked"
+            |      ],
             |      "javacOptions": [
             |        "-source",
             |        "17",
@@ -233,10 +239,12 @@ class GradleMbtLspSuite
             |    implementation 'org.scala-lang:scala-library:${V.scala213}'
             |}
             |tasks.named('compileScala', ScalaCompile) {
-            |    scalaCompileOptions.additionalParameters = ['-deprecation', '-feature']
+            |    scalaCompileOptions.additionalParameters = ['-feature']
             |}
             |tasks.named('compileTestScala', ScalaCompile) {
-            |    scalaCompileOptions.additionalParameters = ['-unchecked', '-Xsource:3']
+            |    scalaCompileOptions.deprecation = false
+            |    scalaCompileOptions.unchecked = false
+            |    scalaCompileOptions.additionalParameters = ['-Xsource:3']
             |}
             |tasks.named('compileJava', JavaCompile) {
             |    options.release = 11
@@ -280,6 +288,7 @@ class GradleMbtLspSuite
             |      ],
             |      "scalacOptions": [
             |        "-deprecation",
+            |        "-unchecked",
             |        "-feature"
             |      ],
             |      "javacOptions": [
@@ -304,7 +313,6 @@ class GradleMbtLspSuite
             |        "src/test/scala"
             |      ],
             |      "scalacOptions": [
-            |        "-unchecked",
             |        "-Xsource:3"
             |      ],
             |      "javacOptions": [
