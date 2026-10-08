@@ -4,6 +4,7 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.BaseCommand
@@ -24,6 +25,7 @@ import scala.meta.internal.metals.config.TestUserInterfaceKind
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
+import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.metals.testProvider.TestExplorerEvent._
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
@@ -59,19 +61,40 @@ final class TestSuitesProvider(
     folderName: String,
     folderUri: AbsolutePath,
     workDoneProgress: WorkDoneProgress,
+    mbtReferenceProvider: () => MbtReferenceProvider,
 )(implicit ec: ExecutionContext)
     extends SemanticdbFeatureProvider
     with CodeLens {
 
   private val index = new TestSuitesIndex
+
+  /**
+   * SemanticDB of a file defining a parent of a test suite. MBT doesn't write
+   * SemanticDB files to disk, so for MBT sources it's generated on demand
+   * by [[MbtReferenceProvider]] (which also caches them).
+   */
+  private def parentTextDocument(path: AbsolutePath): Option[TextDocument] =
+    try {
+      Some(mbtReferenceProvider().textDocument(path))
+        .filter(_.symbols.nonEmpty)
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(s"Failed to generate semanticdb for $path", e)
+        None
+    }
+
   private val junitTestFinder = new JunitTestFinder
   private val testNGTestFinder = new TestNGTestFinder
   private val munitTestFinder =
-    new MunitTestFinder(trees, symbolIndex, semanticdbs)
+    new MunitTestFinder(trees, symbolIndex, parentTextDocument)
   private val scalatestTestFinder =
-    new ScalatestTestFinder(trees, symbolIndex, semanticdbs)
+    new ScalatestTestFinder(trees, symbolIndex, parentTextDocument)
   private val weaverCatsEffect =
-    new WeaverCatsEffectTestFinder(trees, symbolIndex, semanticdbs)
+    new WeaverCatsEffectTestFinder(
+      trees,
+      symbolIndex,
+      parentTextDocument,
+    )
   private val zioTestFinder = new ZioTestFinder(trees)
 
   private def isExplorerEnabled = clientConfig.isTestExplorerProvider() &&
