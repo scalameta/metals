@@ -13,6 +13,7 @@ import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.io.AbsolutePath
 

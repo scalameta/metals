@@ -5,8 +5,8 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.TestUserInterfaceKind
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.TestUserInterfaceKind
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestCaseEntry
 import scala.meta.internal.metals.testProvider.TestExplorerEvent

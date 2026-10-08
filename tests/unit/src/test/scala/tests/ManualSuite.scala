@@ -2,8 +2,8 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.Configs._
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config._
+import scala.meta.pc.PresentationCompilerConfig
 
 // Uncomment to run this test manually locally
 @munit.IgnoreSuite
@@ -14,16 +14,17 @@ class ManualSuite extends BaseManualSuite {
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
       preferredBuildServer = Some("bloop"),
-      fallbackClasspath = FallbackClasspathConfig.mbt,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      javaSymbolLoader = JavaSymbolLoaderConfig.turbineClasspath,
+      fallbackClasspath = FallbackClasspathConfig.Mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      javaSymbolLoader = JavaSymbolLoaderConfig.TurbineClasspath,
       presentationCompilerDiagnostics = true,
-      fallbackSourcepath = FallbackSourcepathConfig.allSources,
-      compilerProgress = CompilerProgressConfig.enabled,
-      referenceProvider = ReferenceProviderConfig.mbt,
-      definitionProviders = DefinitionProviderConfig.protobuf,
-      scalaImportsPlacement = ScalaImportsPlacementConfig.smart,
-      rangeFormattingProviders = RangeFormattingProviders.scalafmt,
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
+      compilerProgress = CompilerProgressConfig.Enabled,
+      referenceProvider = ReferenceProviderConfig.MBT,
+      definitionProviders = DefinitionProviderConfig.Protobuf,
+      scalaImportsPlacement =
+        PresentationCompilerConfig.ScalaImportsPlacement.SMART,
+      rangeFormattingProviders = List("scalafmt"),
       javacServicesOverrides = JavacServicesOverrides.default,
       buildOnChange = false,
       buildOnFocus = false,

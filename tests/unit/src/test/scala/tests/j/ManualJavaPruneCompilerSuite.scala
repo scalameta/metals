@@ -6,11 +6,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 import scala.meta.internal.jpc.JavaPruneCompiler
 import scala.meta.internal.metals.CompilerVirtualFileParams
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.JavacServicesOverridesConfig
@@ -25,7 +26,10 @@ class ManualJavaPruneCompilerSuite extends munit.FunSuite {
     val embedded = new Embedded(root)
     val mbt = new MbtWorkspaceSymbolProvider(
       root,
-      config = () => WorkspaceSymbolProviderConfig.mbt,
+      userConfig = () =>
+        UserConfiguration.default.copy(
+          workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT
+        ),
     )
     mbt.onReindex().backgroundJobs.asJava.get()
     val pruneCompiler = new JavaPruneCompiler(

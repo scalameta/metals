@@ -59,8 +59,8 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.StatusType
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 import scala.meta.internal.metals.findfiles._

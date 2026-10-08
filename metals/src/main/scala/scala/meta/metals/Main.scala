@@ -8,8 +8,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Trace
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.logging.MetalsLogger
 
 import org.eclipse.lsp4j.jsonrpc.Launcher

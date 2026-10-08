@@ -6,7 +6,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.StdReportContext
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.parsing.Trees
 
 object TreeUtils {

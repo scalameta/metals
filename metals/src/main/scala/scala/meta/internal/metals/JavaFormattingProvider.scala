@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.meta.{inputs => m}
 
@@ -61,11 +62,11 @@ final class JavaFormattingProvider(
       range: m.Position,
   ): List[l.TextEdit] = {
     userConfig().javaFormatter match {
-      case Some(config) if config.isNone =>
+      case JavaFormatterConfig.None =>
         Nil // No-op: Java formatting disabled
-      case Some(config) if config.isEclipse =>
+      case JavaFormatterConfig.Eclipse =>
         eclipseFormatter.format(path, input, formattingOptions, range)
-      case _ => // Default to google-java-format (including None and "google-java-format")
+      case JavaFormatterConfig.GoogleJavaFormat => // Default to google-java-format (including None and "google-java-format")
         googleFormatter.format(input)
     }
   }

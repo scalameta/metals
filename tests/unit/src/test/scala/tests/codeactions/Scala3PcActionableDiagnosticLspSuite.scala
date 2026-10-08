@@ -3,7 +3,7 @@ package tests.codeactions
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.TextEdits
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import tests.BaseLspSuite
 

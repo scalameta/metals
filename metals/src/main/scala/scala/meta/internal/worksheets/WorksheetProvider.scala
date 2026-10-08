@@ -34,9 +34,9 @@ import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException

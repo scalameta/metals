@@ -10,6 +10,7 @@ import scala.concurrent.Promise
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.watcher.FileWatcher

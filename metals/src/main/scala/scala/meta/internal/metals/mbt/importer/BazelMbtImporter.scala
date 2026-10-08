@@ -9,9 +9,10 @@ import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
@@ -28,6 +29,7 @@ abstract class BazelMbtImporter(
     val projectRoot: AbsolutePath,
     shellRunner: ShellRunner,
     userConfig: () => UserConfiguration,
+    metalsServerConfig: MetalsServerConfig,
     languageClient: Option[MetalsLanguageClient] = None,
     tables: Option[Tables] = None,
     mbtWorkspaceSymbolProvider: Option[MbtWorkspaceSymbolProvider] = None,
@@ -63,7 +65,9 @@ abstract class BazelMbtImporter(
       targetsXmlDump = new BazelTargetsXmlDump(targetsXmlQueryOutput)
       srcs = targetsXmlDump.getLabels("srcs")
       (genSrcOutputsByTarget, genSrcLabels) <-
-        if (userConfig().mbtConfig.importGeneratedSources)
+        if (
+          userConfig().mbt.importGeneratedSources || metalsServerConfig.importGeneratedSourcesMbt
+        )
           queryGenSrcOutputsByTarget(srcs)
         else
           Future.successful(

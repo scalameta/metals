@@ -27,11 +27,11 @@ import scala.meta.internal.metals.MetalsBuildClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.QuietInputStream
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.buildserver.BuildServerConnectionFactory
 import scala.meta.internal.metals.buildserver.SocketConnection
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import bloop.rifle.BloopRifle

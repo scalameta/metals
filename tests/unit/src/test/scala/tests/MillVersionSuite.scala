@@ -1,7 +1,7 @@
 package scala.meta.internal.builds.tests
 
 import scala.meta.internal.builds.MillBuildTool
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import tests._
 

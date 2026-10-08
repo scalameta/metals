@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 
 import munit.Location
 

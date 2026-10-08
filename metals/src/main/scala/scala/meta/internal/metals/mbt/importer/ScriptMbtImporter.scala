@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath

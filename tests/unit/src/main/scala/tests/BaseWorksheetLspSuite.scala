@@ -6,10 +6,10 @@ import scala.concurrent.duration._
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.internal.semver.SemVer
 
@@ -26,7 +26,6 @@ abstract class BaseWorksheetLspSuite(
 
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
-      worksheetScreenWidth = 40,
       worksheetCancelTimeout = 1,
       fallbackScalaVersion = Some(scalaVersion),
     )

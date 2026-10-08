@@ -2,12 +2,11 @@ package tests.mbt
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs
-import scala.meta.internal.metals.Configs.ReferenceProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BaseLspSuite
@@ -22,11 +21,11 @@ class TurbineCacheSuite extends BaseLspSuite("turbine-cache") with TestHovers {
     presentationCompilerDiagnostics = true,
     buildOnChange = false,
     buildOnFocus = false,
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-    referenceProvider = ReferenceProviderConfig.mbt,
-    javaTurbineCache = Configs.TurbineCacheConfig.enabled,
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+    referenceProvider = ReferenceProviderConfig.MBT,
+    javaTurbineCache = true,
     preferredBuildServer = Some(MbtBuildServer.name),
-    automaticImportBuild = AutoImportBuildKind.All,
+    autoImportBuild = AutoImportBuildKind.All,
   )
 
   override def initializeGitRepo: Boolean = true

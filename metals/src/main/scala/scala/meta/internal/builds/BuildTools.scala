@@ -14,11 +14,12 @@ import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.importer.MbtImportProvider
 import scala.meta.internal.metals.mbt.importer.ScriptMbtImporter
@@ -43,6 +44,7 @@ final class BuildTools(
     workspace: AbsolutePath,
     bspGlobalDirectories: List[AbsolutePath],
     userConfig: () => UserConfiguration,
+    metalsServerConfig: MetalsServerConfig,
     explicitChoiceMade: () => Boolean,
     charset: Charset,
     shellRunner: ShellRunner,
@@ -244,6 +246,7 @@ final class BuildTools(
         shellRunner,
         ec,
         mbtWorkspaceSymbolProvider,
+        metalsServerConfig,
       ),
       DederBuildTool(userConfig, workspace),
     )
@@ -283,6 +286,7 @@ final class BuildTools(
         shellRunner,
         ec,
         mbtWorkspaceSymbolProvider,
+        metalsServerConfig,
         languageClient,
         tables,
       )
@@ -398,6 +402,7 @@ object BuildTools {
       workspace,
       Nil,
       () => UserConfiguration(),
+      metalsServerConfig = MetalsServerConfig.default,
       explicitChoiceMade = () => false,
       charset = StandardCharsets.UTF_8,
       shellRunner = new ShellRunner(

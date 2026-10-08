@@ -24,6 +24,7 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metap.DocumentPrinter
 import scala.meta.internal.metap.Main

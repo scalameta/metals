@@ -39,13 +39,13 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.StatusBar
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.LogForwarder
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.DiscoveryFailures._
 import scala.meta.internal.metals.debug.server.AttachRemoteDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger

@@ -1,6 +1,6 @@
 package tests.feature
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite

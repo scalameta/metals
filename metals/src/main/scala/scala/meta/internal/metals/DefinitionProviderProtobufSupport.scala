@@ -7,9 +7,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.dialects
 import scala.meta.internal.jmbt.Mbt
-import scala.meta.internal.metals.Configs.DefinitionProviderConfig
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
 import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
@@ -26,13 +25,12 @@ final class DefinitionProviderProtobufSupport(
     workspace: AbsolutePath,
     buffers: Buffers,
     mbt: MbtWorkspaceSymbolProvider,
-    definitionProviders: () => DefinitionProviderConfig,
-    protobufLspConfig: () => ProtobufLspConfig,
+    userConfig: () => UserConfiguration,
     mtags: () => Mtags,
 ) {
 
   def hasProtoJavaLocation(res: DefinitionResult): Boolean =
-    if (!protobufLspConfig().definition) false
+    if (!userConfig().protobufLspEnabled) false
     else {
       val it = res.locations.iterator()
       var found = false
@@ -45,7 +43,7 @@ final class DefinitionProviderProtobufSupport(
   def enhanceWithProtobufDefinition(
       result: DefinitionResult
   ): DefinitionResult = try {
-    if (!definitionProviders().isProtobuf) {
+    if (!userConfig().definitionProviders.isProtobuf) {
       return result
     }
     val protoLocation: Option[Location] = (for {

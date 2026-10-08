@@ -2,7 +2,7 @@ package docs
 
 import scala.meta.inputs.Input
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.Configs.GlobSyntaxConfig
+import scala.meta.internal.metals.config.GlobSyntaxConfig
 import scala.meta.io.AbsolutePath
 
 import com.google.gson.GsonBuilder

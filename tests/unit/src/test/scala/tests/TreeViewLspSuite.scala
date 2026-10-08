@@ -7,7 +7,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.JdkVersion
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.io.AbsolutePath
 

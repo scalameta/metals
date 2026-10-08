@@ -37,11 +37,6 @@ import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.BaseFallbackClasspaths
 import scala.meta.internal.metals.BaseWorkDoneProgress
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
-import scala.meta.internal.metals.Configs.TurbineCacheConfig
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyFallbackClasspaths
 import scala.meta.internal.metals.EmptyWorkDoneProgress
@@ -54,6 +49,7 @@ import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
@@ -87,35 +83,21 @@ object MbtWorkspaceSymbolProvider {
     file.endsWith(".proto") ||
     file.endsWith(".scala")
   }
-  def forTesting(): MbtWorkspaceSymbolProvider = {
-    val tmp = Files.createTempDirectory("mbt-workspace-symbol-provider")
-    tmp.toFile().deleteOnExit()
-    new MbtWorkspaceSymbolProvider(AbsolutePath(tmp))
-  }
 }
 
 class MbtWorkspaceSymbolProvider(
     val workspace: AbsolutePath,
-    config: () => WorkspaceSymbolProviderConfig = () =>
-      WorkspaceSymbolProviderConfig.mbt,
+    userConfig: () => UserConfiguration,
     buffers: Buffers = Buffers(),
     time: Time = Time.system,
     metrics: MonitoringClient = new NoopMonitoringClient(),
     mtags: () => Mtags = () => Mtags.testingSingleton,
     progress: BaseWorkDoneProgress = EmptyWorkDoneProgress,
     onIndexingDone: () => Unit = () => (),
-    javaSymbolLoader: () => JavaSymbolLoaderConfig = () =>
-      JavaSymbolLoaderConfig.default,
     fallbackClasspaths: () => BaseFallbackClasspaths = () =>
       EmptyFallbackClasspaths,
     sleeper: Sleeper = Sleeper.TestingSleeper,
-    turbineRecompileDelay: () => TurbineRecompileDelayConfig = () =>
-      TurbineRecompileDelayConfig.fromConfig(None),
-    turbineCacheConfig: () => TurbineCacheConfig = () =>
-      TurbineCacheConfig.default,
     indexFilters: List[MbtIndexFilter] = MbtIndexFilter.allFilters,
-    protobufLspConfig: () => ProtobufLspConfig = () =>
-      ProtobufLspConfig.default,
     metalsOutDir: Option[Path] = None,
     mbtBuild: () => MbtBuild = () => MbtBuild.empty,
 )(implicit
@@ -135,13 +117,13 @@ class MbtWorkspaceSymbolProvider(
   private val isIndexing: AtomicBoolean = new AtomicBoolean(false)
   private lazy val protobufWorkspace = new MbtProtobufWorkspaceSymbolProvider(
     buffers,
-    protobufLspConfig,
+    userConfig,
     clearAllProtobufCaches,
   )
 
   private def isProtoJavaPackageIndexingEnabled: Boolean =
     protobufWorkspace.isJavaPackageIndexingEnabled ||
-      javaSymbolLoader().isTurbineClasspath
+      userConfig().javaSymbolLoader.isTurbineClasspath
 
   /**
    * The Java outlines synthesized from the given `.proto` file (one per
@@ -153,8 +135,7 @@ class MbtWorkspaceSymbolProvider(
 
   private val turbineCache = new TurbineCache(
     workspace,
-    turbineCacheConfig,
-    turbineRecompileDelay,
+    userConfig,
     time,
   )
 
@@ -235,7 +216,7 @@ class MbtWorkspaceSymbolProvider(
       progress,
       // We don't need to re-compile the workspace super regularly because we can
       // load recently changed files from the sourcepath.
-      () => turbineRecompileDelay(),
+      () => userConfig().javaTurbineRecompileDelay,
       listProtoJavaOutlinesForPackage = pkg =>
         protobufWorkspace.listProtoJavaOutlinesForPackage(
           pkg,
@@ -302,7 +283,7 @@ class MbtWorkspaceSymbolProvider(
       file: AbsolutePath,
       doc: IndexedDocument,
   ): Unit = {
-    if (javaSymbolLoader().isTurbineClasspath) {
+    if (userConfig().javaSymbolLoader.isTurbineClasspath) {
       val binaryNames =
         ProtoOutlineTypes.declaredBy(doc.cachedJavaOutlines, mtags())
       if (binaryNames.nonEmpty) {
@@ -366,7 +347,7 @@ class MbtWorkspaceSymbolProvider(
   }
 
   private def onReindexInternal(): IndexingStats = {
-    if (!config().isMBT) {
+    if (!userConfig().workspaceSymbolProvider.isMBT) {
       scribe.warn(s"mbt-v2: config is not mbt-v2, skipping reindex")
       return IndexingStats.empty
     }
@@ -475,7 +456,7 @@ class MbtWorkspaceSymbolProvider(
               // can optimize.
               synchronizeWithGitStatus()
             },
-            if (javaSymbolLoader().isTurbineClasspath) {
+            if (userConfig().javaSymbolLoader.isTurbineClasspath) {
               turbineCompiler.compileNow()
             } else {
               Future.unit
@@ -527,7 +508,9 @@ class MbtWorkspaceSymbolProvider(
         // If Java file, treat deletion as a change to an empty file.
         // This adds an empty source to SOURCE_PATH so javac won't find the class.
         // We also track deleted binary names to exclude from CLASS_PATH.
-        if (doc.language.isJava && javaSymbolLoader().isTurbineClasspath) {
+        if (
+          doc.language.isJava && userConfig().javaSymbolLoader.isTurbineClasspath
+        ) {
           val binaryNames = doc.symbols
             .map(_.getSymbol())
             .filter(sym => Symbol(sym).isToplevel)
@@ -607,7 +590,7 @@ class MbtWorkspaceSymbolProvider(
       standardFileManager: StandardJavaFileManager,
       classpath: ju.List[Path],
   ): JavaFileManager = {
-    if (javaSymbolLoader().isJavacSourcepath) {
+    if (userConfig().javaSymbolLoader.isJavacSourcepath) {
       new JavacSourcepathFileManager(
         standardFileManager,
         (pkg) => {
@@ -638,11 +621,11 @@ class MbtWorkspaceSymbolProvider(
           }
         },
       )
-    } else if (javaSymbolLoader().isTurbineClasspath) {
+    } else if (userConfig().javaSymbolLoader.isTurbineClasspath) {
       turbineCompiler.createFileManager(standardFileManager, classpath)
     } else {
       throw new IllegalArgumentException(
-        s"unexpected javaSymbolLoader config: ${javaSymbolLoader()}"
+        s"unexpected javaSymbolLoader config: ${userConfig().javaSymbolLoader}"
       )
     }
   }
@@ -1034,7 +1017,7 @@ class MbtWorkspaceSymbolProvider(
       params: MbtWorkspaceSymbolSearchParams,
       visitor: SymbolSearchVisitor,
   ): SymbolSearch.Result = {
-    if (!config().isMBT) {
+    if (!userConfig().workspaceSymbolProvider.isMBT) {
       scribe.warn(
         s"mbt-v2: config is not mbt-v2, skipping workspace symbol search"
       )
@@ -1122,7 +1105,7 @@ class MbtWorkspaceSymbolProvider(
       if (
         updateDocumentKeys &&
         doc.language.isJava &&
-        javaSymbolLoader().isTurbineClasspath
+        userConfig().javaSymbolLoader.isTurbineClasspath
       ) {
         doc.semanticdbPackages.headOption match {
           case Some(pkg) =>
@@ -1138,7 +1121,7 @@ class MbtWorkspaceSymbolProvider(
       } else if (
         updateDocumentKeys &&
         doc.language.isProtobuf &&
-        javaSymbolLoader().isTurbineClasspath
+        userConfig().javaSymbolLoader.isTurbineClasspath
       ) {
         // Covers proto files changed outside the editor (e.g. git checkout);
         // for editor saves, didSave already invalidated before the outline

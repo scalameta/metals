@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import scala.concurrent.duration.Duration
 import scala.util.Try
 
-import scala.meta.internal.metals.Configs._
+import scala.meta.internal.metals.config._
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 
@@ -78,6 +78,10 @@ final case class MetalsServerConfig(
     ),
     isVerbose: Boolean = MetalsServerConfig.binaryOption(
       "metals.verbose",
+      default = false,
+    ),
+    importGeneratedSourcesMbt: Boolean = MetalsServerConfig.binaryOption(
+      "metals.import-generated-sources-mbt",
       default = false,
     ),
     openFilesOnRenames: Boolean = false,

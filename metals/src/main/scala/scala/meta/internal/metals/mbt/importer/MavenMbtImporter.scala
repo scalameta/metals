@@ -7,7 +7,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildInfo
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 

@@ -24,6 +24,8 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.BuildChangedAction
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -108,6 +110,7 @@ class ProjectMetalsLspService(
     folder,
     bspGlobalDirectories,
     () => userConfig,
+    serverInputs.initialServerConfig,
     () => tables.buildServers.selectedServer().nonEmpty,
     charset,
     shellRunner,
@@ -472,7 +475,7 @@ class ProjectMetalsLspService(
         connectionProvider.runMbtReimport(mbtImporters)
       else
         Future.unit
-    } else if (userConfig.buildChangedAction.isNone) {
+    } else if (userConfig.buildChangedAction == BuildChangedAction.None) {
       Future.unit
     } else {
       val changedBuilds = paths.flatMap(buildTools.isBuildRelated)
@@ -866,7 +869,7 @@ class ProjectMetalsLspService(
       } else Future.successful(())
 
     def resetDecorations =
-      if (userConfig.inlayHintsOptions != old.inlayHintsOptions) {
+      if (userConfig.inlayHints != old.inlayHints) {
         languageClient.refreshInlayHints().asScala
       } else Future.successful(())
 

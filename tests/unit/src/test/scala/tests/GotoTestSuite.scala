@@ -2,11 +2,15 @@ package tests
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ServerCommands
+import scala.meta.internal.metals.config.UserConfiguration
 
 class GotoTestSuite extends BaseLspSuite("goto-test") {
 
   override protected def initializationOptions: Option[InitializationOptions] =
     Some(TestingServer.TestDefault)
+
+  override def userConfig: UserConfiguration =
+    super.userConfig.copy(gotoTestLensesEnabled = true)
 
   test("source-to-test") {
     for {

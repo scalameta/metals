@@ -6,17 +6,17 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
-import scala.meta.internal.metals.Configs.ReferenceProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JsonParser._
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.{BuildInfo => V}
@@ -43,11 +43,11 @@ class BazelDapMbtLspSuite
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      javaSymbolLoader = JavaSymbolLoaderConfig.turbineClasspath,
-      referenceProvider = ReferenceProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      javaSymbolLoader = JavaSymbolLoaderConfig.TurbineClasspath,
+      referenceProvider = ReferenceProviderConfig.MBT,
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
     )
 
   override def initializeGitRepo: Boolean = true

@@ -13,12 +13,11 @@ import java.util.zip.ZipEntry
 import scala.util.Using
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.Configs.TurbineCacheConfig
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 
 import com.google.common.collect.ImmutableMap
@@ -43,8 +42,7 @@ import com.google.turbine.zip.Zip
  */
 class TurbineCache(
     workspace: AbsolutePath,
-    cacheConfig: () => TurbineCacheConfig,
-    recompileDelayConfig: () => TurbineRecompileDelayConfig,
+    userConfig: () => UserConfiguration,
     time: Time,
 ) {
   private val cachePath = workspace.resolve(Directories.turbineCache)
@@ -52,9 +50,9 @@ class TurbineCache(
 
   // we need to always compile on start
   private def isCacheEnabled: Boolean = {
-    val config = cacheConfig()
-    val recompileConfig = recompileDelayConfig()
-    config.enabled && !recompileConfig.isEffectivelyDisabled
+    val config = userConfig().javaTurbineCache
+    val recompileConfig = userConfig().javaTurbineRecompileDelay
+    config && !recompileConfig.isEffectivelyDisabled
   }
 
   /**

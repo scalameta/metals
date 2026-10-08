@@ -7,8 +7,9 @@ import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.ChooseBuildTool
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.TargetBuildTool
+import scala.meta.internal.metals.config.UserConfiguration
 
 import org.eclipse.lsp4j.MessageActionItem
 
@@ -44,8 +45,12 @@ final class BuildToolSelector(
 
                   // Check if user has configured a preferred build tool
                   userConfig().targetBuildTool match {
-                    case Some(preferredTool) =>
-                      buildTools.find(_.executableName == preferredTool) match {
+                    case TargetBuildTool.None =>
+                      requestBuildToolChoice(buildTools)
+                    case preferredTool =>
+                      buildTools.find(
+                        _.executableName == preferredTool.toString
+                      ) match {
                         case Some(buildTool) =>
                           tables.buildTool.chooseBuildTool(
                             buildTool.executableName
@@ -57,8 +62,6 @@ final class BuildToolSelector(
                           )
                           requestBuildToolChoice(buildTools)
                       }
-                    case None =>
-                      requestBuildToolChoice(buildTools)
                   }
               }
         }
@@ -71,14 +74,15 @@ final class BuildToolSelector(
       .showMessageRequest(
         ChooseBuildTool.params(buildTools),
         defaultTo = () => {
-          val tool = userConfig().targetBuildTool
-            .flatMap { tool =>
-              buildTools.find(_.executableName == tool)
-            }
-            .orElse(buildTools.headOption)
-            .getOrElse {
-              throw new IllegalStateException("No build tool found")
-            }
+          val tool =
+            buildTools
+              .find(_.executableName == userConfig().targetBuildTool.toString)
+              .orElse(buildTools.headOption)
+              .getOrElse {
+                throw new IllegalStateException(
+                  s"No build tool found for ${userConfig().targetBuildTool}"
+                )
+              }
           languageClient.showMessage(ChooseBuildTool.notificationParams(tool))
           new MessageActionItem(tool.executableName)
         },

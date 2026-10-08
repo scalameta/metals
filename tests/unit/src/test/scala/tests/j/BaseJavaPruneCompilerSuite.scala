@@ -9,12 +9,13 @@ import scala.meta.internal.jpc.JavaMetalsCompiler
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CompilerVirtualFileParams
-import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.PositionSyntax._
 import scala.meta.internal.metals.ReportLevel
+import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.pc.EmptySymbolSearch
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
@@ -64,7 +65,10 @@ abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
     val mbt = new MbtWorkspaceSymbolProvider(
       workspace = tmp(),
-      javaSymbolLoader = () => JavaSymbolLoaderConfig.javacSourcepath,
+      userConfig = () =>
+        UserConfiguration.default.copy(
+          javaSymbolLoader = JavaSymbolLoaderConfig.JavacSourcepath
+        ),
     )
     val dir = FileLayout.fromString(layout, root = tmp())
     mbt.onReindex().awaitBackgroundJobs()

@@ -12,7 +12,6 @@ import scala.meta.pc.JavacServicesOverridesConfig
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.PresentationCompilerConfig.OverrideDefFormat
 import scala.meta.pc.PresentationCompilerConfig.ScalaImportsPlacement
-import scala.meta.pc.ProtobufLspConfig
 import scala.meta.pc.SourcePathMode
 
 case class PresentationCompilerConfigImpl(
@@ -50,8 +49,7 @@ case class PresentationCompilerConfigImpl(
     override val scalaImportsPlacement: ScalaImportsPlacement =
       ScalaImportsPlacement.APPEND_LAST,
     override val batchSemanticdbCompilerInstances: Int = 1,
-    override val protobufLspConfig: ProtobufLspConfig =
-      ProtobufLspConfig.DISABLED
+    override val protobufLspEnabled: Boolean = false
 ) extends PresentationCompilerConfig {
 
   override def isStripMarginOnTypeFormattingEnabled(): Boolean =

@@ -19,10 +19,10 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.BatchedFunction
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
+import scala.meta.internal.metals.config.TurbineRecompileDelayConfig
 import scala.meta.pc.ProgressBars
 import scala.meta.pc.SemanticdbCompilationUnit
 

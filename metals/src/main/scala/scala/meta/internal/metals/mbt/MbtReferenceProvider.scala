@@ -32,9 +32,9 @@ import scala.meta.internal.metals.Synthetics
 import scala.meta.internal.metals.TaskProgress
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
@@ -65,8 +65,8 @@ class MbtReferenceProvider(
 )(implicit ec: ExecutionContext) {
   private val cache = new TextDocumentCache(
     workspace.resolve(Directories.semanticdbCache),
-    () => userConfig().mbtConfig.semanticdbCacheEnabled,
-    () => userConfig().mbtConfig.semanticdbCacheMaxSize,
+    () => userConfig().mbt.semanticdbCacheEnabled,
+    () => userConfig().mbt.semanticdbCacheMaxSize,
   )
 
   // When looking for usages of a method, we don't visit supermethods from these
@@ -132,7 +132,7 @@ class MbtReferenceProvider(
   // this timeout.
   private def timeout: FiniteDuration =
     if (sys.props.contains("metals.debug")) 20.minutes
-    else userConfig().mbtConfig.referencesTimeoutSeconds.seconds
+    else userConfig().mbt.referencesTimeoutSeconds.seconds
 
   private val protobufReferences = new MbtProtobufReferenceProvider(
     mbt,

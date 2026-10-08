@@ -1,7 +1,7 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.ImplementAbstractMembers
+import scala.meta.internal.metals.config.UserConfiguration
 
 class JavaImplementAbstractMembersLspSuite
     extends BaseCodeActionLspSuite("java-implement-abstract-members") {

@@ -1,12 +1,11 @@
 package tests
 
-import scala.meta.internal.metals.Configs.AdditionalPcChecksConfig
-import scala.meta.internal.metals.Configs.CompilersConfig
-import scala.meta.internal.metals.Configs.FallbackClasspathConfig
-import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.CompilersConfig
+import scala.meta.internal.metals.config.FallbackClasspathConfig
+import scala.meta.internal.metals.config.FallbackSourcepathConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.pc.SourcePathMode
 
 trait BaseSourcePathSuite extends BaseLspSuite {
@@ -16,10 +15,10 @@ trait BaseSourcePathSuite extends BaseLspSuite {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      fallbackClasspath = FallbackClasspathConfig.all3rdparty,
-      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      additionalPcChecks = AdditionalPcChecksConfig(List("refchecks")),
+      fallbackClasspath = FallbackClasspathConfig.All3rdparty,
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      additionalPcChecks = List("refchecks"),
     )
 
   override def serverConfig: MetalsServerConfig =

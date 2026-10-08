@@ -15,8 +15,8 @@ import scala.meta.internal.metals.Confirmation
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.Tables
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.io.AbsolutePath
 

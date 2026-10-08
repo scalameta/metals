@@ -1,8 +1,8 @@
 package tests
 
-import scala.meta.internal.metals.Configs.DefinitionProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.DefinitionProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 import org.eclipse.lsp4j.Location
 
@@ -11,8 +11,8 @@ class ProtobufDefinitionLspSuite
     with BaseSourcePathSuite {
   override def initializeGitRepo: Boolean = true
   override def userConfig: UserConfiguration = super.userConfig.copy(
-    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-    definitionProviders = DefinitionProviderConfig(List("protobuf")),
+    workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+    definitionProviders = DefinitionProviderConfig.Protobuf,
   )
 
   test("protobuf-definition") {

@@ -12,7 +12,7 @@ import scala.meta.internal.builds.GradleDigest
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
 import scala.meta.mbt.MbtExtractor
 

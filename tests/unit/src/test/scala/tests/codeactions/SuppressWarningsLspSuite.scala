@@ -1,7 +1,7 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.codeactions.SuppressWarnings
+import scala.meta.internal.metals.config.UserConfiguration
 
 import munit.Location
 import tests.MbtTestInitializer

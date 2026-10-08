@@ -2,7 +2,7 @@ package tests.mcp
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.NoClient
 

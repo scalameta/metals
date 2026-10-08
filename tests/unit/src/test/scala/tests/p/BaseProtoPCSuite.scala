@@ -1,9 +1,8 @@
 package tests.p
 
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
-import scala.meta.internal.metals.Configs.ReferenceProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 import tests.BaseLspSuite
 import tests.BuildInfo
@@ -16,9 +15,9 @@ abstract class BaseProtoPCSuite(name: String) extends BaseLspSuite(name) {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      protobufLspConfig = ProtobufLspConfig.enabled,
-      referenceProvider = ReferenceProviderConfig.mbt,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      protobufLspEnabled = true,
+      referenceProvider = ReferenceProviderConfig.MBT,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
     )
 
   override def initializeGitRepo: Boolean = true

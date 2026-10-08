@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.infra.NoopFeatureFlagProvider
-import scala.meta.internal.metals.Configs.DefinitionIndexStrategy
-import scala.meta.internal.metals.Configs.GlobSyntaxConfig
+import scala.meta.internal.metals.config.DefinitionIndexStrategy
 import scala.meta.internal.metals.config.DoctorFormat
+import scala.meta.internal.metals.config.GlobSyntaxConfig
 import scala.meta.internal.metals.config.StatusBarState
 import scala.meta.pc.ContentType
 

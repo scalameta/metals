@@ -9,7 +9,7 @@ import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
-import scala.meta.internal.metals.Configs.TelemetryConfig
+import scala.meta.internal.metals.config.TelemetryConfig
 import scala.meta.internal.metals.{BuildInfo => V}
 
 object TestingInfra {

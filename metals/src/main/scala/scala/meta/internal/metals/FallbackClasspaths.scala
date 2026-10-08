@@ -7,8 +7,8 @@ import java.nio.file.Paths
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.Configs.FallbackClasspathConfig
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.FallbackClasspathConfig
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.io.AbsolutePath
 
@@ -42,7 +42,7 @@ class FallbackClasspaths(
     workspace: AbsolutePath,
     buildTargets: BuildTargets = BuildTargets.empty,
     fallbackClasspathsConfig: () => FallbackClasspathConfig = () =>
-      FallbackClasspathConfig.default,
+      FallbackClasspathConfig.All3rdparty,
     scalaVersionSelector: ScalaVersionSelector = ScalaVersionSelector.default,
     mbtBuild: () => MbtBuild,
 ) extends BaseFallbackClasspaths {

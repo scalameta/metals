@@ -7,7 +7,6 @@ import scala.meta.internal.metals.mcp.McpConfig
 import scala.meta.internal.metals.mcp.McpMessages
 import scala.meta.internal.metals.mcp.MetalsMcpServer
 import scala.meta.internal.metals.mcp.NoClient
-import scala.meta.internal.metals.mcp.SymbolType
 
 import munit.Location
 import tests.BaseLspSuite
@@ -398,7 +397,6 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         "Hello",
         List("invalid_type", "another_invalid"),
       )
-      validTypes = SymbolType.values.map(_.name).mkString(", ")
       expectedError =
         "Tool (typed-glob-search) input validation failed: Validation failed: JSON schema validation errors: " +
           """[/symbolType/0: does not have a value in the enumeration ["package", "class", "object", "function", "method", "trait"], """ +

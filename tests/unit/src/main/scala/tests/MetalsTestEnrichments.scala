@@ -18,10 +18,10 @@ import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.SemanticdbDefinition
-import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkspaceSources
 import scala.meta.internal.metals.WorkspaceSymbolInformation
 import scala.meta.internal.metals.WorkspaceSymbolProvider
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.{semanticdb => s}

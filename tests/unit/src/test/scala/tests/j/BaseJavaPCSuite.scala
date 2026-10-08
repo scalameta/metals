@@ -1,8 +1,8 @@
 package tests.j
 
-import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 import munit.Location
 import munit.TestOptions
@@ -57,9 +57,9 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
     javaSymbolLoaderMode match {
       case None =>
         if (currentTest.tags(TurbineClasspath))
-          JavaSymbolLoaderConfig.turbineClasspath
+          JavaSymbolLoaderConfig.TurbineClasspath
         else
-          JavaSymbolLoaderConfig.javacSourcepath
+          JavaSymbolLoaderConfig.JavacSourcepath
       case Some(config) =>
         config
     }
@@ -71,7 +71,7 @@ abstract class BaseJavaPCSuite(name: String) extends BaseLspSuite(name) {
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
       javaSymbolLoader = resolvedJavaSymbolLoader,
     )
 

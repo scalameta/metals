@@ -14,6 +14,7 @@ import scala.meta.internal.infra.NoopMonitoringClient
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals._
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.mcp.Transport
 import scala.meta.io.AbsolutePath

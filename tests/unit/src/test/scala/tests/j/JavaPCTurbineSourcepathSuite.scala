@@ -2,8 +2,8 @@ package tests.j
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.Configs.JavaSymbolLoaderConfig
-import scala.meta.internal.metals.Configs.TurbineRecompileDelayConfig
+import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.config.TurbineRecompileDelayConfig
 
 /**
  * Tests that specifically stress the SOURCE_PATH fallback mode in turbine-classpath.
@@ -23,7 +23,7 @@ class JavaPCTurbineSourcepathSuite
 
   // Only test turbine-classpath with SOURCE_PATH fallback
   override def javaSymbolLoaderMode: Option[JavaSymbolLoaderConfig] =
-    Some(JavaSymbolLoaderConfig.turbineClasspath)
+    Some(JavaSymbolLoaderConfig.TurbineClasspath)
 
   // 1 hour delay effectively disables turbine recompilation
   override def turbineRecompileDelayConfig: TurbineRecompileDelayConfig =

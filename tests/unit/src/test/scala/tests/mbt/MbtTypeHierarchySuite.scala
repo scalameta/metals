@@ -1,9 +1,9 @@
 package tests.mbt
 
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs.ReferenceProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
 
 import tests.BuildInfo
@@ -18,10 +18,10 @@ class MbtTypeHierarchySuite
   override def userConfig: UserConfiguration =
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      referenceProvider = ReferenceProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      referenceProvider = ReferenceProviderConfig.MBT,
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
     )
 
 }

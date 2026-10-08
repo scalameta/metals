@@ -2,8 +2,10 @@ package tests.mbt
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.Configs
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 // Comment out to run manual tests
 @munit.IgnoreSuite
@@ -11,9 +13,9 @@ class TurbineManualSuite extends tests.BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt,
-      javaSymbolLoader = Configs.JavaSymbolLoaderConfig.turbineClasspath,
-      referenceProvider = Configs.ReferenceProviderConfig.mbt,
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      javaSymbolLoader = JavaSymbolLoaderConfig.TurbineClasspath,
+      referenceProvider = ReferenceProviderConfig.MBT,
     )
   def repo(name: String): String =
     Paths.get(System.getProperty("user.home"), name).toString()

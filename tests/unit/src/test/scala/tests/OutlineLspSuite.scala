@@ -1,6 +1,6 @@
 package tests
-import scala.meta.internal.metals.Configs.CompilersConfig
 import scala.meta.internal.metals.MetalsServerConfig
+import scala.meta.internal.metals.config.CompilersConfig
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.pc.SourcePathMode
 

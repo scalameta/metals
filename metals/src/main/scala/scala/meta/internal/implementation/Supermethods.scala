@@ -5,13 +5,13 @@ import scala.concurrent.Future
 
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.Configs.ProtobufLspConfig
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoJavaSymbolMapper
 import scala.meta.internal.mtags.Symbol
@@ -32,13 +32,13 @@ class Supermethods(
     definitionProvider: DefinitionProvider,
     symbolHierarchyOps: SymbolHierarchyOps,
     mbt: MbtWorkspaceSymbolProvider,
-    protobufLspConfig: () => ProtobufLspConfig,
+    userConfig: () => UserConfiguration,
 )(implicit
     ec: ExecutionContext,
     reports: ReportContext,
 ) {
   private def superMethodFallbacks: List[SuperMethodFallback] =
-    if (protobufLspConfig().definition) List(new ProtoSuperMethodFallback(mbt))
+    if (userConfig().protobufLspEnabled) List(new ProtoSuperMethodFallback(mbt))
     else Nil
 
   def getGoToSuperMethodCommand(

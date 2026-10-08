@@ -2,11 +2,11 @@ package tests.mbt
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.Configs
 import scala.meta.internal.metals.MetalsEnrichments.XtensionAbsolutePathBuffers
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 
 // Comment out to run manual tests
 @munit.IgnoreSuite
@@ -14,7 +14,7 @@ class MbtManualSuite extends tests.BaseManualSuite {
 
   override def defaultUserConfig: UserConfiguration =
     super.defaultUserConfig.copy(
-      workspaceSymbolProvider = Configs.WorkspaceSymbolProviderConfig.mbt
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT
     )
   override def defaultMetalsServerConfig: MetalsServerConfig =
     super.defaultMetalsServerConfig.copy(

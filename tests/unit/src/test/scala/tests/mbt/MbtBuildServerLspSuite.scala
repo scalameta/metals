@@ -11,15 +11,15 @@ import scala.concurrent.Future
 import scala.jdk.CollectionConverters._
 import scala.util.Properties
 
-import scala.meta.internal.metals.AutoImportBuildKind
-import scala.meta.internal.metals.Configs.FallbackClasspathConfig
-import scala.meta.internal.metals.Configs.FallbackSourcepathConfig
-import scala.meta.internal.metals.Configs.ReferenceProviderConfig
-import scala.meta.internal.metals.Configs.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.TestUserInterfaceKind
-import scala.meta.internal.metals.UserConfiguration
+import scala.meta.internal.metals.config.AutoImportBuildKind
+import scala.meta.internal.metals.config.FallbackClasspathConfig
+import scala.meta.internal.metals.config.FallbackSourcepathConfig
+import scala.meta.internal.metals.config.ReferenceProviderConfig
+import scala.meta.internal.metals.config.TestUserInterfaceKind
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.TurbineCompiler
@@ -55,11 +55,11 @@ class MbtBuildServerLspSuite
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      referenceProvider = ReferenceProviderConfig.mbt,
-      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      referenceProvider = ReferenceProviderConfig.MBT,
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
       testUserInterface = TestUserInterfaceKind.TestExplorer,
     )
 
@@ -1180,12 +1180,12 @@ class MbtTargetClasspathLspSuite
       presentationCompilerDiagnostics = true,
       buildOnChange = false,
       buildOnFocus = false,
-      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.mbt,
-      referenceProvider = ReferenceProviderConfig.mbt,
-      fallbackClasspath = FallbackClasspathConfig(Nil),
-      fallbackSourcepath = FallbackSourcepathConfig("all-sources"),
+      workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+      referenceProvider = ReferenceProviderConfig.MBT,
+      fallbackClasspath = FallbackClasspathConfig.None,
+      fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       preferredBuildServer = Some(MbtBuildServer.name),
-      automaticImportBuild = AutoImportBuildKind.All,
+      autoImportBuild = AutoImportBuildKind.All,
     )
 
   override def initializeGitRepo: Boolean = true

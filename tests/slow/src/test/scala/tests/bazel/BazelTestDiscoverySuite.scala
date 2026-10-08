@@ -11,6 +11,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Time
 import scala.meta.io.AbsolutePath
 
@@ -30,6 +31,8 @@ class BazelTestDiscoverySuite
     workspace,
     new ShellRunner(Time.system, EmptyWorkDoneProgress, () => userConfig),
     ExecutionContext.global,
+    mbtWorkspaceSymbolProvider = None,
+    MetalsServerConfig.default,
   )
 
   def buildFileWithToolchain(): String =

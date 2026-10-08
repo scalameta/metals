@@ -7,7 +7,8 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-import scala.meta.internal.metals.Configs
+import scala.meta.internal.metals.config.UserConfiguration
+import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.debug.TestFrameworkSymbolRegistry
 import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
@@ -39,7 +40,11 @@ class MbtWorkspaceSymbolSearchSuite extends munit.FunSuite {
   def newProvider(): MbtWorkspaceSymbolProvider =
     new MbtWorkspaceSymbolProvider(
       workspace(),
-      config = () => Configs.WorkspaceSymbolProviderConfig.mbt,
+      userConfig = () =>
+        UserConfiguration.default.copy(
+          workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
+          protobufLspEnabled = false,
+        ),
     )(munitExecutionContext)
 
   test("multi-language") {
@@ -439,7 +444,10 @@ message Dependency {}
     test(dir) {
       val provider = new MbtWorkspaceSymbolProvider(
         workspace = AbsolutePath(dir.name),
-        config = () => Configs.WorkspaceSymbolProviderConfig.mbt,
+        userConfig = () =>
+          UserConfiguration.default.copy(
+            workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT
+          ),
       )(munitExecutionContext)
       provider.onReindex()
       val result =

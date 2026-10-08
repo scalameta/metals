@@ -150,13 +150,12 @@ case class QuickBuild(
         )
       }
     val allDependencies = scalaDependencies ++ libraryDependencies
-    val additionalRepositories = repositories.map(MavenRepository.of)
     val allJars = QuickBuild.fetch(
       allDependencies,
-      additionalRepositories.toList,
       scalaVersion,
       binaryVersion,
       sources = !skipSources,
+      repositories = repositories,
     )
     def isSourceJar(jarFile: Path): Boolean = {
       jarFile.getFileName.toString.endsWith("-sources.jar")
@@ -182,7 +181,7 @@ case class QuickBuild(
     )
     val pluginJars = QuickBuild.fetchDependencies(
       pluginDependencies,
-      additionalRepositories.toList,
+      repositories = repositories,
     )
     val plugins = pluginJars.map(jar => s"-Xplugin:$jar")
     val allScalacOptions =
@@ -272,9 +271,9 @@ case class QuickBuild(
               scalaCompiler,
               "jline:jline:2.14.6",
             ),
-            additionalRepositories.toList,
             scalaVersion,
             binaryVersion,
+            repositories = repositories,
           ),
           None,
           setup = Some(
@@ -348,28 +347,28 @@ object QuickBuild {
     }
   def fetch(
       dependencies: Array[String],
-      repositories: List[Repository],
       scalaVersion: String,
       scalaBinaryVersion: String,
       sources: Boolean = false,
+      repositories: Seq[String] = Nil,
   ): List[Path] =
     fetchDependencies(
       dependencies.iterator
         .map(d => toDependency(d, scalaVersion, scalaBinaryVersion))
         .toList,
-      repositories,
       sources,
+      repositories,
     )
   def fetchDependencies(
       dependencies: List[Dependency],
-      additionalRepositories: List[Repository],
       sources: Boolean = false,
+      repositories: Seq[String] = Nil,
   ): List[Path] = {
     val classifiers =
       if (sources) Set("sources")
       else Set.empty[String]
 
-    val repositories =
+    val allRepositories =
       // Repository.defaults().asScala ++
       List(
         Repository.central(),
@@ -377,11 +376,11 @@ object QuickBuild {
         MavenRepository.of(
           "https://oss.sonatype.org/content/repositories/public"
         ),
-      )
+      ) ++ repositories.map(MavenRepository.of(_))
 
     Fetch
       .create()
-      .withRepositories(repositories.toSeq: _*)
+      .withRepositories(allRepositories: _*)
       .withDependencies(dependencies: _*)
       .withClassifiers(classifiers.asJava)
       .withMainArtifacts()
