@@ -936,25 +936,6 @@ object UserConfigurationOptions {
     ),
     /*
      * {
-     *   "useSourcePath": true
-     * }
-     */
-    BooleanConfigurationOption(
-      key = "use-source-path",
-      defaultValue = true,
-      example = "true",
-      title = "Use presentation compiler source path",
-      description =
-        """|If enabled, Metals will set the presentation compiler source path. This will enable
-           |the compiler to find types that have not been built yet from existing sources without
-           |requiring a full build.
-           |""".stripMargin,
-    )(
-      config => config.useSourcePath,
-      (config, value) => config.copy(useSourcePath = value),
-    ),
-    /*
-     * {
      *   "workspaceSymbolProvider": "mbt"
      * }
      */

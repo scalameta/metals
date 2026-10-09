@@ -92,7 +92,6 @@ case class UserConfiguration(
     buildOnChange: Boolean = true,
     buildOnFocus: Boolean = true,
     preferredBuildServer: Option[String] = None,
-    useSourcePath: Boolean = true,
     workspaceSymbolProvider: WorkspaceSymbolProviderConfig =
       WorkspaceSymbolProviderConfig.MBT,
     definitionProviders: DefinitionProviderConfig =
