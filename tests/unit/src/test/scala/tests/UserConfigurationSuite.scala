@@ -500,7 +500,6 @@ class UserConfigurationSuite extends BaseSuite {
   "buildChangedAction": "none",
   "buildOnChange": true,
   "buildOnFocus": true,
-  "useSourcePath": true,
   "workspaceSymbolProvider": "mbt",
   "definitionProviders": "all",
   "javaSymbolLoader": "turbine-classpath",
@@ -609,7 +608,6 @@ class UserConfigurationSuite extends BaseSuite {
           |build-on-change                              boolean                        true            Disable build-on-change
           |build-on-focus                               boolean                        true            Enable or disable build-on-focus
           |preferred-build-server                       string                         empty string `""`. Preferred build server
-          |use-source-path                              boolean                        true            Use presentation compiler source path
           |workspace-symbol-provider                    [bsp,mbt]                      mbt             Workspace Symbol Provider
           |definition-providers                         [mbt,protobuf,all]             all             Definition providers
           |java-symbol-loader                           [turbine-classpath,javac-sourcepath] turbine-classpath Java symbol loader
