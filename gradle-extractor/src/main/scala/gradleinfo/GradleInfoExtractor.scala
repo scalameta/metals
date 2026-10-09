@@ -241,7 +241,14 @@ object GradleInfoExtractor {
           |  def scalacOptionsOf = { project, taskName ->
           |    def task = project.tasks.findByName(taskName)
           |    if (task == null || !task.hasProperty('scalaCompileOptions')) return []
-          |    return asStringList(task.scalaCompileOptions?.additionalParameters)
+          |    def options = task.scalaCompileOptions
+          |    if (options == null) return []
+          |    // Gradle passes these flags itself, before the additional parameters
+          |    def opts = []
+          |    if (options.deprecation) opts.add('-deprecation')
+          |    if (options.unchecked) opts.add('-unchecked')
+          |    opts.addAll(asStringList(options.additionalParameters))
+          |    return opts
           |  }
           |  def javacOptionsOf = { project, taskName ->
           |    def task = project.tasks.findByName(taskName)
