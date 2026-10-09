@@ -1,9 +1,6 @@
 package tests
 
 import scala.meta.internal.builds.SbtBuildTool
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.config.UserConfiguration
 
 import munit.Location
