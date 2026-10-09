@@ -649,6 +649,7 @@ object UserConfigurationOptions {
       example = """{ "configPath": "formatters/eclipse-formatter.xml" }""",
       default = "{ profile: \"GoogleStyle\" }",
       defaultValue = EclipseFormatConfig.default,
+      oldNames = List("java-format"),
       subFields = List(
         OptionalPathConfigurationOption.forConfig[EclipseFormatConfig](
           key = "config-path",
@@ -660,6 +661,7 @@ object UserConfigurationOptions {
               |forward slashes `/` for file separators (even on Windows).
               |""".stripMargin,
           defaultValue = None,
+          oldNames = List("eclipse-config-path"),
         )(
           _.eclipseFormatConfigPath,
           (config, value) => config.copy(eclipseFormatConfigPath = value),
@@ -672,6 +674,7 @@ object UserConfigurationOptions {
             """|If the Eclipse formatter file contains more than one profile, this option can be used to control which is used.
                |""".stripMargin,
           defaultValue = Some("GoogleStyle"),
+          oldNames = List("eclipse-profile"),
         )(
           format => format.eclipseFormatProfile,
           (config, value) => config.copy(eclipseFormatProfile = value),
@@ -779,7 +782,7 @@ object UserConfigurationOptions {
      * }
      */
     ChoiceConfigurationOption[AutoImportBuildKind](
-      key = "auto-import-build",
+      key = "auto-import-builds",
       defaultValue = AutoImportBuildKind.Off,
       choices = List[(String, AutoImportBuildKind)](
         "off" -> AutoImportBuildKind.Off,
@@ -793,8 +796,8 @@ object UserConfigurationOptions {
            |only automatically import a build when a project is first opened, "all" will automate
            |build imports after subsequent changes as well.""".stripMargin,
     )(
-      config => config.autoImportBuild,
-      (config, value) => config.copy(autoImportBuild = value),
+      config => config.autoImportBuilds,
+      (config, value) => config.copy(autoImportBuilds = value),
     ),
     /*
      * {
@@ -1343,6 +1346,7 @@ object UserConfigurationOptions {
           None
         }
       },
+      oldNames = List("protobuf-lsp"),
     )(
       config => config.protobufLspEnabled,
       (config, value) => config.copy(protobufLspEnabled = value),

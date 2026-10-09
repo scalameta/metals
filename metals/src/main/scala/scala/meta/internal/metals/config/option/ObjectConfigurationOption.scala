@@ -12,6 +12,7 @@ case class ObjectConfigurationOption[A](
     val example: String,
     val default: String,
     val defaultValue: A,
+    val oldNames: List[String] = List.empty,
     val subFields: List[ConfigurationOption[_, A]],
 )(
     getter: UserConfiguration => A,
@@ -19,7 +20,10 @@ case class ObjectConfigurationOption[A](
 ) extends LensConfigurationOption[A](getter, setter) {
 
   def read(context: ConfigContext): A = {
-    val json = context.getObject(key).getOrElse(new JsonObject)
+    val json = context
+      .getObject(key)
+      .orElse(oldNames.flatMap(name => context.getObject(name)).headOption)
+      .getOrElse(new JsonObject)
     val nestedContext = context.nested(json, key)
     subFields.foldLeft(defaultValue) { (config, field) =>
       field.update(nestedContext, config)

@@ -18,7 +18,7 @@ class MbtScalaReferenceSuite
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 }
 
