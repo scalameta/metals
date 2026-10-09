@@ -631,6 +631,8 @@ abstract class MetalsLspService(
     scalaVersionSelector,
     clientConfig.icons(),
     clientConfig.isReadClipboardProvider(),
+    buildTargets,
+    trees,
     onCreate = path => {
       for {
         _ <- onCreate(path)
@@ -965,7 +967,6 @@ abstract class MetalsLspService(
       .foreach(languageClient.applyEdit)
 
     val parser = parseTrees(path)
-
     if (isDependencySource(path)) {
       Future
         .sequence(
@@ -1039,7 +1040,6 @@ abstract class MetalsLspService(
 
   private def isDependencySource(path: AbsolutePath): Boolean =
     path.isDependencySource(folder) ||
-      !path.isWorkspaceSource(folder) ||
       buildTargets.isDependencySource(path) ||
       buildTargets.checkIfGeneratedSource(path.toNIO)
 

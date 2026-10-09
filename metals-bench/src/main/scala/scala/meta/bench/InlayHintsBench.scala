@@ -1,9 +1,10 @@
-package bench
+package scala.meta.bench
 
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.concurrent.TimeUnit
 
+import scala.meta.bench.PcBenchmark
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.CompilerInlayHintsParams
 import scala.meta.internal.metals.CompilerRangeParams

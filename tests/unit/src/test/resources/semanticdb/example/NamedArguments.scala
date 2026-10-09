@@ -6,6 +6,7 @@
 //                ^ definition example/User#`<init>`().
        name: String = {
 //     ^^^^ definition example/User#name.
+//     ^^^^ definition example/User#`<init>`().(name)
 //           ^^^^^^ reference scala/Predef.String#
          // assert default values have occurrences
          Map.toString

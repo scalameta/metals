@@ -98,15 +98,19 @@ class NewProjectProvider(
       }
   }
 
+  private def hyphenate(s: String) = s.replaceAll("""(\s+|\\|/)+""", "-")
+  private def normalize(s: String) = hyphenate(s.toLowerCase)
+
   private def createNewProject(
       inputPath: AbsolutePath,
       template: String,
       projectName: String,
       javaHome: Option[String],
   ): Future[Unit] = {
-    val projectPath = inputPath.resolve(projectName.toLowerCase())
+    val normalizedName = normalize(projectName.toLowerCase())
+    val projectPath = inputPath.resolve(normalizedName)
     val parent = projectPath.parent
-    projectPath.createDirectories()
+    parent.createDirectories()
     val command = List(
       template,
       s"--name=${projectPath.filename}",

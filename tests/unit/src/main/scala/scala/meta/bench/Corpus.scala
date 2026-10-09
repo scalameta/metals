@@ -1,4 +1,4 @@
-package bench
+package scala.meta.bench
 
 import java.net.URL
 import java.nio.file.Files

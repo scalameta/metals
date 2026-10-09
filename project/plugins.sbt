@@ -2,15 +2,15 @@ addSbtPlugin("com.github.sbt" % "sbt-java-formatter" % "0.10.0")
 addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.8")
 addSbtPlugin("ch.epfl.scala" % "sbt-bloop" % "2.0.13")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.4.8")
-addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.7")
-addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.12.0")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.8")
+addSbtPlugin("com.github.sbt" % "sbt-ci-release" % "1.12.1")
 addSbtPlugin("org.scalameta" % "sbt-mdoc" % "2.9.2")
 addSbtPlugin("com.eed3si9n" % "sbt-buildinfo" % "0.13.1")
 
 addSbtPlugin("com.github.reibitto" % "sbt-welcome" % "0.6.0")
 
 // Mima used for mtags-interfaces
-addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.1.6")
+addSbtPlugin("com.typesafe" % "sbt-mima-plugin" % "1.2.0")
 
 libraryDependencies += "org.scala-sbt" %% "scripted-plugin" % sbtVersion.value
 

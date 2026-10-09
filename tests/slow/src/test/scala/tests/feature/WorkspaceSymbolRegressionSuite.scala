@@ -1,8 +1,8 @@
 package tests.feature
 
+import scala.meta.bench.Corpus
 import scala.meta.io.AbsolutePath
 
-import bench.Corpus
 import tests.BaseWorkspaceSymbolSuite
 
 abstract class WorkspaceSymbolRegressionSuite extends BaseWorkspaceSymbolSuite {
