@@ -173,7 +173,9 @@ final class Embedded(
       pathString.contains("scalameta") ||
       pathString.contains("metaconfig") ||
       pathString.contains("diffutils") ||
-      pathString.contains("scala-sbt")
+      pathString.contains("scala-sbt") ||
+      // Scala 3.10+ uses org.ow2.asm instead of org.scala-lang.modules:scala-asm
+      pathString.contains("ow2")
     }
     val urls = runtimeClasspath.iterator.map(_.toUri().toURL()).toArray
     new URLClassLoader(urls, parent)
@@ -375,8 +377,8 @@ object Embedded {
       else if (scalaVersion.exists(_.startsWith("3.0"))) "2.2.23"
       // from 2.4.0 mdoc is released with Scala LTS 3.3.x
       else if (
-        scalaVersion.exists(_.startsWith("3.1")) ||
-        scalaVersion.exists(_.startsWith("3.2"))
+        scalaVersion.exists(_.startsWith("3.1.")) ||
+        scalaVersion.exists(_.startsWith("3.2."))
       ) "2.3.8"
       // from 2.5.0 mdoc is released with JDK 11
       else if (jdkVersion.exists(_.major < 11)) "2.4.0"
