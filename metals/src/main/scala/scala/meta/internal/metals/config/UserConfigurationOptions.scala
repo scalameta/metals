@@ -24,7 +24,7 @@ import scala.meta.pc.PresentationCompilerConfig
  *
  * `documented` is the public list (`metals config`, MCP, website). `settings`
  * is what [[UserConfiguration.fromJson]] reads and [[UserConfiguration.toString]]
- * writes. Both are views of [[all]].
+ * writes. Both are views of [[settings]].
  */
 object UserConfigurationOptions {
 
@@ -1529,7 +1529,7 @@ object UserConfigurationOptions {
     ),
     /*
      * {
-     *   "fallbackSourcepath": "all-sources"
+     *   "fallbackSourcepath": "allSources"
      * }
      */
     ChoiceConfigurationOption[FallbackSourcepathConfig](
@@ -1537,7 +1537,7 @@ object UserConfigurationOptions {
       title = "Fallback sourcepath",
       description =
         """Fallback sourcepath to use for sources outside of existing build targets:
-          |- "all-sources": Use all sources in the workspace.
+          |- "allSources": Use all sources in the workspace.
           |- "none": Do not use any sources outside of existing build targets.
           |""".stripMargin,
       example = "\"none\"",
