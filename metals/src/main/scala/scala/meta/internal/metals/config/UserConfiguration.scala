@@ -82,7 +82,7 @@ case class UserConfiguration(
     scalafixLintEnabled: Boolean = false,
     customProjectRoot: Option[String] = None,
     verboseCompilation: Boolean = false,
-    autoImportBuild: AutoImportBuildKind = AutoImportBuildKind.Off,
+    autoImportBuilds: AutoImportBuildKind = AutoImportBuildKind.Off,
     targetBuildTool: TargetBuildTool = TargetBuildTool.None,
     scalaCliLauncher: Option[String] = None,
     scalaCliEnabled: Boolean = false,
@@ -138,7 +138,7 @@ case class UserConfiguration(
   }
 
   def shouldAutoImportNewProject: Boolean =
-    autoImportBuild != AutoImportBuildKind.Off
+    autoImportBuilds != AutoImportBuildKind.Off
 
   def currentBloopVersion: String =
     bloopVersion.getOrElse(BuildInfo.bloopVersion)

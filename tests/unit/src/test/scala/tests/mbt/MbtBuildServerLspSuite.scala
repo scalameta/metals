@@ -59,7 +59,7 @@ class MbtBuildServerLspSuite
       referenceProvider = ReferenceProviderConfig.MBT,
       fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
       testUserInterface = TestUserInterfaceKind.TestExplorer,
     )
 
@@ -1185,7 +1185,7 @@ class MbtTargetClasspathLspSuite
       fallbackClasspath = FallbackClasspathConfig.None,
       fallbackSourcepath = FallbackSourcepathConfig.AllSources,
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 
   override def initializeGitRepo: Boolean = true

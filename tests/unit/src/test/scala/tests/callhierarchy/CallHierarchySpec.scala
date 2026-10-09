@@ -24,7 +24,7 @@ class CallHierarchyMbtSuite extends CallHierarchySpec {
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
       referenceProvider = ReferenceProviderConfig.MBT,
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 }
 

@@ -19,7 +19,7 @@ class MbtReferenceSuite extends MbtReferenceSpec {
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 }
 
@@ -30,7 +30,7 @@ class MbtReferenceCacheSuite
     super.userConfig.copy(
       fallbackScalaVersion = Some(BuildInfo.scalaVersion),
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
       mbt = MbtConfig(
         importGeneratedSources = false,
         semanticdbCacheEnabled = true,

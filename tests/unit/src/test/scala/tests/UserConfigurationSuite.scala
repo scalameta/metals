@@ -142,6 +142,33 @@ class UserConfigurationSuite extends BaseSuite {
   ) { obtained => assert(obtained.javaHome == Some("home")) }
 
   checkOK(
+    "old-name",
+    """
+      |{
+      |  "javaFormat": {
+      |    "eclipseConfigPath": "formatters/eclipse-formatter.xml",
+      |    "eclipseProfile": "GoogleStyle"
+      |  }
+      |}
+    """.stripMargin,
+  ) { obtained =>
+    assert(
+      obtained.eclipseFormat == EclipseFormatConfig(
+        Some(AbsolutePath("formatters/eclipse-formatter.xml")),
+        Some("GoogleStyle"),
+      )
+    )
+  }
+  checkOK(
+    "old-name",
+    """
+      |{
+      |  "protobufLsp": false
+      |}
+    """.stripMargin,
+  ) { obtained => assert(obtained.protobufLspEnabled == false) }
+
+  checkOK(
     "conflict",
     """
       |{
@@ -396,7 +423,7 @@ class UserConfigurationSuite extends BaseSuite {
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
       javaTurbineRecompileDelay = TurbineRecompileDelayConfig.testing,
       verboseCompilation = true,
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
       scalaCliLauncher = Some("scala-cli"),
       scalaCliEnabled = true,
       defaultBspToBuildTool = true,
@@ -493,7 +520,7 @@ class UserConfigurationSuite extends BaseSuite {
   "scalaCliEnabled": true,
   "customProjectRoot": "customs",
   "verboseCompilation": true,
-  "autoImportBuild": "all",
+  "autoImportBuilds": "all",
   "targetBuildTool": "none",
   "defaultBspToBuildTool": true,
   "presentationCompilerDiagnostics": true,
@@ -600,7 +627,7 @@ class UserConfigurationSuite extends BaseSuite {
           |scala-cli-enabled                            boolean                        false           Enable Scala CLI
           |custom-project-root                          string                         ""              Custom project root
           |verbose-compilation                          boolean                        false           Show all compilation debugging information
-          |auto-import-build                            [off,initial,all]              off             Import build when changes detected without prompting
+          |auto-import-builds                           [off,initial,all]              off             Import build when changes detected without prompting
           |target-build-tool                            [sbt,gradle,mvn,mill,scala-cli,bazel,deder,none] none            Preferred build tool when multiple are detected
           |default-bsp-to-build-tool                    boolean                        false           Default to using build tool as your build server.
           |presentation-compiler-diagnostics            boolean                        true            [Experimental] Show diagnostics messages from the Scala presentation compiler

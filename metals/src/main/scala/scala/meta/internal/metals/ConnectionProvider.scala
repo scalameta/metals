@@ -467,7 +467,7 @@ class ConnectionProvider(
             scribe.info(s"Skipping reload with status '${status.name}'")
             Future.successful(BuildChange.None)
           case None =>
-            if (userConfig.autoImportBuild == AutoImportBuildKind.All) {
+            if (userConfig.autoImportBuilds == AutoImportBuildKind.All) {
               reloadAndIndex(session)
             } else {
               for {
