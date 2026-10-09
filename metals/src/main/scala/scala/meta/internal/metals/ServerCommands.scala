@@ -201,6 +201,30 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  val InstallNotebookKernel = new ParametrizedCommand[String](
+    "notebook-install-kernel",
+    "Install Jupyter kernel for notebook",
+    """|Installs a real Jupyter kernel (via Almond) for a `.ipynb` notebook,
+       |sharing the classpath of whichever build target its cells currently
+       |resolve against, so "Run" actually executes cells against the same
+       |dependencies its language features already see.
+       |""".stripMargin,
+    """|[uri], uri of the `.ipynb` notebook.
+       |""".stripMargin,
+  )
+
+  val NotebookKernelUpToDate = new ParametrizedCommand[String](
+    "notebook-kernel-up-to-date",
+    "Check if a notebook's Jupyter kernel is installed and up to date",
+    """|Returns whether a `.ipynb` notebook has an installed Jupyter kernel
+       |that still matches the current Almond version and project
+       |classpath, so a client can decide whether to offer a (re)install
+       |without guessing at Metals' own kernel id scheme or disk state.
+       |""".stripMargin,
+    """|[uri], uri of the `.ipynb` notebook.
+       |""".stripMargin,
+  )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -846,6 +870,8 @@ object ServerCommands {
       DisconnectBuildServer,
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
+      InstallNotebookKernel,
+      NotebookKernelUpToDate,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,

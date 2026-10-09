@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.collection.immutable.Nil
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -28,7 +27,6 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -36,11 +34,7 @@ import scala.meta.internal.metals.codeactions.CodeActionProvider
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
-import scala.meta.internal.metals.debug.BuildTargetClasses
-import scala.meta.internal.metals.debug.BuildTargetClassesFinder
-import scala.meta.internal.metals.debug.DebugDiscovery
-import scala.meta.internal.metals.debug.DebugProvider
-import scala.meta.internal.metals.debug.DiscoveryFailures
+import scala.meta.internal.metals.debug._
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -48,6 +42,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.notebook.NotebookKernelInstaller
 import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -119,7 +114,7 @@ abstract class MetalsLspService(
     with TextDocumentService
     with IndexProviders
     with ModulesService {
-  import serverInputs._
+  import serverInputs.*
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
   def shellRunner: ShellRunner
@@ -232,6 +227,14 @@ abstract class MetalsLspService(
     () => compilers,
     buildTargets,
   )(using ec)
+
+  val notebookKernelInstaller = new NotebookKernelInstaller(
+    notebookProvider,
+    buildTargets,
+    languageClient,
+    javaHome,
+    userConfig.notebookAlmondVersion,
+  )
 
   val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
@@ -938,6 +941,22 @@ abstract class MetalsLspService(
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
+
+  // Right after a fresh start, bestTarget/fullClasspath resolve nothing
+  // yet, which would otherwise look identical to no kernel installed.
+  def installNotebookKernel(notebookUri: String): Future[Unit] =
+    for {
+      _ <- indexingPromise.future
+      _ <- notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
+    } yield ()
+
+  def isNotebookKernelUpToDate(notebookUri: String): Future[Boolean] =
+    for {
+      _ <- indexingPromise.future
+      upToDate <- notebookKernelInstaller.isKernelUpToDate(
+        notebookUri.toAbsolutePath
+      )
+    } yield upToDate
 
   override def didSave(
       params: DidSaveTextDocumentParams
