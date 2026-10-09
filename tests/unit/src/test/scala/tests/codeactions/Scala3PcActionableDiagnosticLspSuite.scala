@@ -41,6 +41,7 @@ class Scala3PcActionableDiagnosticLspSuite
         file,
         "<<private private val x = 1>>\n",
         """|Remove repeated modifier: "private"
+           |Remove repeated modifier: "private"
            |""".stripMargin,
         kind = Nil,
         filterAction = _.getTitle.startsWith("Remove repeated modifier"),
@@ -79,6 +80,7 @@ class Scala3PcActionableDiagnosticLspSuite
            |private private val y = 2
            |""".stripMargin,
         """|Remove repeated modifier: "private"
+           |Remove repeated modifier: "private"
            |""".stripMargin,
         kind = Nil,
         filterAction = _.getTitle.startsWith("Remove repeated modifier"),

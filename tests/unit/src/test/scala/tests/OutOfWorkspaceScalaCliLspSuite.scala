@@ -2,6 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
+import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import org.eclipse.lsp4j.InitializeResult
@@ -19,6 +20,10 @@ import org.eclipse.lsp4j.InitializeResult
  */
 class OutOfWorkspaceScalaCliLspSuite
     extends BaseLspSuite("out-of-workspace-scala-cli") {
+
+  override def userConfig: UserConfiguration = super.userConfig.copy(
+    scalaCliEnabled = true
+  )
 
   private def projectLayout: String =
     s"""|/metals.json

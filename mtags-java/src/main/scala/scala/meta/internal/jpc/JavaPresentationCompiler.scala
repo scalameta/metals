@@ -80,6 +80,8 @@ case class JavaPresentationCompiler(
     progressBars: ProgressBars = ProgressBars.EMPTY
 ) extends PresentationCompiler {
 
+  override def isJava(): Boolean = true
+
   override def supportsBatchSemanticdbTextDocuments(): Boolean = true
 
   private val compiler = new JavaPresentationCompilerAccess(
