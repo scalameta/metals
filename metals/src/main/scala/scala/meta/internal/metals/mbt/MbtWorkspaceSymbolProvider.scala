@@ -51,10 +51,15 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.TestFrameworkSymbolRegistry
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.OverriddenSymbol
+import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
+import scala.meta.internal.{semanticdb => s}
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.MetalsLanguageServer
 import scala.meta.pc
@@ -63,6 +68,7 @@ import scala.meta.pc.SemanticdbFileManager
 import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
+import bloop.config.Config.TestFramework
 import com.google.turbine.diag.SourceFile
 import org.eclipse.{lsp4j => l}
 
@@ -84,6 +90,29 @@ object MbtWorkspaceSymbolProvider {
     file.endsWith(".proto") ||
     file.endsWith(".scala")
   }
+
+  private val AbstractModifier = "\\babstract\\b".r
+
+  /** A top-level type as parsed by the toplevel indexer. */
+  private case class DeclaredType(
+      symbol: String,
+      isObject: Boolean,
+      parentNames: List[String],
+      isAbstract: Boolean,
+  )
+
+  private case class ParsedFile(types: List[DeclaredType])
+
+  private case class TestFileSearch(
+      annotationFiles: Set[AbsolutePath],
+      subtypeFiles: Map[AbsolutePath, Option[ParsedFile]],
+  )
+
+  /** What a type's parents say about it being a test suite. */
+  private sealed trait Resolution
+  private case class Found(framework: TestFramework) extends Resolution
+  private case object Unknown extends Resolution
+  private case object NoFramework extends Resolution
 }
 
 class MbtWorkspaceSymbolProvider(
@@ -106,6 +135,7 @@ class MbtWorkspaceSymbolProvider(
     val rc: ReportContext = LoggerReportContext,
 ) extends SemanticdbFileManager
     with JavaFileManagerFactory {
+  import MbtWorkspaceSymbolProvider._
 
   private def logInfoInProdDebugInTests(message: => String): Unit = {
     if (scala.meta.internal.metals.MetalsServerConfig.isTesting)
@@ -783,8 +813,10 @@ class MbtWorkspaceSymbolProvider(
   private def transitiveReferenceFiles(
       references: Seq[String],
       implementations: Seq[String],
-  ): Set[AbsolutePath] = {
+  ): TestFileSearch = {
     val allMatchedPaths = scala.collection.mutable.HashSet.empty[AbsolutePath]
+    val subtypes =
+      scala.collection.mutable.HashMap.empty[AbsolutePath, Option[ParsedFile]]
     val annotationFiles =
       if (references.isEmpty) Set.empty[AbsolutePath]
       else
@@ -795,30 +827,34 @@ class MbtWorkspaceSymbolProvider(
 
     val initialImplementations =
       implementations ++ annotationFiles.flatMap(bfsSeedSymbols)
-    var frontier: Set[AbsolutePath] =
-      if (initialImplementations.isEmpty) Set.empty
+    var frontier: Map[AbsolutePath, Option[ParsedFile]] =
+      if (initialImplementations.isEmpty) Map.empty
       else subtypeFiles(initialImplementations) -- allMatchedPaths
 
     while (frontier.nonEmpty) {
-      allMatchedPaths ++= frontier
-      val nextBaseSymbols = frontier.flatMap(bfsSeedSymbols).toSeq
+      allMatchedPaths ++= frontier.keys
+      subtypes ++= frontier
+      val nextBaseSymbols = frontier.keys.flatMap(bfsSeedSymbols).toSeq
       frontier =
-        if (nextBaseSymbols.isEmpty) Set.empty
+        if (nextBaseSymbols.isEmpty) Map.empty
         else subtypeFiles(nextBaseSymbols) -- allMatchedPaths
     }
 
-    allMatchedPaths.toSet
+    TestFileSearch(annotationFiles, subtypes.toMap)
   }
 
   /**
-   * Files declaring a type whose parents include one of `baseSymbols`.
+   * Files declaring a type whose parents include one of `baseSymbols`, with
+   * their parsed top-level types (None if the file failed to parse).
    *
    * The bloom filter query is only a prefilter: with thousands of base
    * symbols, false positives compound until most of the workspace matches.
    * Keep a match only if one of its indexed symbols declares a parent with
    * the same simple name as a base symbol.
    */
-  private def subtypeFiles(baseSymbols: Seq[String]): Set[AbsolutePath] = {
+  private def subtypeFiles(
+      baseSymbols: Seq[String]
+  ): Map[AbsolutePath, Option[ParsedFile]] = {
     val baseNames = baseSymbols.map(Symbol(_).displayName).toSet
     val bloomMatches = possibleReferences(
       MbtPossibleReferencesParams(
@@ -826,13 +862,152 @@ class MbtWorkspaceSymbolProvider(
         toplevelImplementationsOnly = true,
       )
     )
-    bloomMatches.filter { path =>
-      documents
-        .get(path)
-        .exists(
-          _.symbols.exists(_.getParentNamesList().asScala.exists(baseNames))
-        )
+    ParArray
+      .fromSpecific(bloomMatches)
+      .filter { path =>
+        documents
+          .get(path)
+          .exists(
+            _.symbols.exists(_.getParentNamesList().asScala.exists(baseNames))
+          )
+      }
+      .map(path => path -> parseFile(path))
+      .seq
+      .toMap
+  }
+
+  private def parseFile(path: AbsolutePath): Option[ParsedFile] =
+    try {
+      val (doc, overrides, _) = mtags().extendedIndexing(path, dialects.Scala3)
+      val parentsByOwner = overrides.groupMapReduce(_._1)(
+        _._2.map(parentName)
+      )(_ ++ _)
+      val definitions = doc.occurrences.collect {
+        case occ if occ.role.isDefinition => occ.symbol -> occ.range
+      }.toMap
+      lazy val lines = doc.text.split('\n')
+      def isAbstract(info: s.SymbolInformation): Boolean =
+        info.kind.isTrait || info.kind.isInterface ||
+          definitions.get(info.symbol).flatten.exists { range =>
+            range.startLine < lines.length &&
+            AbstractModifier
+              .findFirstIn(lines(range.startLine).take(range.startCharacter))
+              .isDefined
+          }
+      val types = for {
+        info <- doc.symbols.toList
+        if isTypeKind(info.kind) && Symbol(info.symbol).isToplevel
+      } yield DeclaredType(
+        info.symbol,
+        info.kind.isObject,
+        parentsByOwner.getOrElse(info.symbol, Nil),
+        isAbstract(info),
+      )
+      Some(ParsedFile(types))
+    } catch {
+      case NonFatal(e) =>
+        scribe.debug(s"mbt-v2: failed to parse parents of ${path}", e)
+        None
     }
+
+  private def parentName(parent: OverriddenSymbol): String =
+    parent match {
+      case UnresolvedOverriddenSymbol(name) =>
+        name.substring(name.lastIndexOf('.') + 1)
+      case ResolvedOverriddenSymbol(symbol) => Symbol(symbol).displayName
+    }
+
+  private def isTypeKind(kind: s.SymbolInformation.Kind): Boolean =
+    kind.isClass || kind.isTrait || kind.isInterface || kind.isObject
+
+  /**
+   * Test frameworks of the concrete top-level Scala classes and objects in
+   * files found by the inheritance search, resolved by following parent names
+   * through the parsed types up to a framework base class. This avoids
+   * typechecking every candidate just to learn what it extends.
+   *
+   * A file maps to None when that's not conclusive: a parent name is also
+   * declared by a workspace type the search didn't reach, its declarations
+   * disagree, it names both a framework base and a workspace type, or it leads
+   * to a type that's only a test through annotations. Those files are still
+   * confirmed with semanticdb.
+   */
+  private def syntacticTestClasses(
+      search: TestFileSearch,
+      baseParentSymbols: Seq[String],
+  ): Map[AbsolutePath, Option[Map[String, TestFramework]]] = {
+    val frameworksByName = (for {
+      symbol <- baseParentSymbols
+      framework <- TestFrameworkSymbolRegistry.frameworkForSymbol(symbol)
+    } yield Symbol(symbol).displayName -> framework)
+      .groupMap(_._1)(_._2)
+      .view
+      .mapValues(_.distinct)
+      .toMap
+    val typesByName = (for {
+      parsed <- search.subtypeFiles.values.flatten
+      tpe <- parsed.types
+    } yield Symbol(tpe.symbol).displayName -> tpe).groupMap(_._1)(_._2)
+    val annotationNames =
+      search.annotationFiles.flatMap(bfsSeedSymbols).map(Symbol(_).displayName)
+    // Types with a parsed name that the search didn't reach make it ambiguous.
+    val indexedCounts = documentsKeys
+      .flatMap { path =>
+        documents.get(path).toList.flatMap { doc =>
+          doc.symbols.collect {
+            case info
+                if isClassLikeKind(info.getKind()) &&
+                  Symbol(info.getSymbol()).isToplevel &&
+                  typesByName.contains(Symbol(info.getSymbol()).displayName) =>
+              Symbol(info.getSymbol()).displayName
+          }
+        }
+      }
+      .seq
+      .groupMapReduce(identity)(_ => 1)(_ + _)
+
+    val resolvedNames =
+      scala.collection.mutable.HashMap.empty[String, Resolution]
+    def resolveName(name: String, visiting: Set[String]): Resolution =
+      resolvedNames.get(name) match {
+        case Some(resolution) => resolution
+        case None if visiting(name) => NoFramework
+        case None =>
+          val declarations = typesByName.getOrElse(name, Nil)
+          val resolution = frameworksByName.get(name) match {
+            case Some(Seq(framework)) if declarations.isEmpty =>
+              Found(framework)
+            case Some(_) => Unknown
+            case None if annotationNames(name) => Unknown
+            case None if declarations.size < indexedCounts.getOrElse(name, 0) =>
+              Unknown
+            case None =>
+              combine(declarations.map(resolveParents(_, visiting + name)))
+          }
+          resolvedNames(name) = resolution
+          resolution
+      }
+    def resolveParents(tpe: DeclaredType, visiting: Set[String]): Resolution =
+      combine(tpe.parentNames.map(resolveName(_, visiting)))
+
+    search.subtypeFiles.map {
+      case (path, Some(parsed)) if !path.isJava =>
+        val resolved =
+          parsed.types.map(tpe => tpe -> resolveParents(tpe, Set.empty))
+        val testClasses = resolved.collect {
+          case (tpe, Found(framework)) if tpe.isObject || !tpe.isAbstract =>
+            tpe.symbol -> framework
+        }
+        path -> Option
+          .when(!resolved.exists(_._2 == Unknown))(testClasses.toMap)
+      case (path, _) => path -> None
+    }
+  }
+
+  private def combine(resolutions: Iterable[Resolution]): Resolution = {
+    val found = resolutions.collect { case found: Found => found }.toSet
+    if (resolutions.exists(_ == Unknown) || found.size > 1) Unknown
+    else found.headOption.getOrElse(NoFramework)
   }
 
   private def bfsSeedSymbols(
@@ -910,7 +1085,8 @@ class MbtWorkspaceSymbolProvider(
 
   /**
    * Extracts potential test class candidates from the MBT index without loading semanticdb.
-   * Returns candidates that need to be confirmed via semanticdb before use.
+   * Candidates with a framework were resolved from their parents' names and
+   * are known test classes. The rest need to be confirmed via semanticdb.
    *
    * Candidates are identified by:
    * 1. Files referencing JUnit/TestNG annotation symbols (e.g., "org/junit/Test#")
@@ -929,30 +1105,42 @@ class MbtWorkspaceSymbolProvider(
       scala.collection.mutable.ArrayBuffer
         .empty[BuildTargetClasses.TestClassCandidate]
 
-    val allMatchedPaths = transitiveReferenceFiles(
+    val search = transitiveReferenceFiles(
       references = annotationSymbols,
       implementations = baseParentSymbols,
     )
+    val resolved = syntacticTestClasses(search, baseParentSymbols)
 
     for {
-      path <- allMatchedPaths
+      path <- search.annotationFiles ++ search.subtypeFiles.keySet
       if filterPath(path)
-      doc <- documents.get(path).toList
-    } {
-      // Add all class/object symbols as potential test class candidates
-      for (symbolInfo <- doc.symbols) {
-        val symbol = symbolInfo.getSymbol()
-        val kind = symbolInfo.getKind()
-        // Classes and objects that could be test suites
-        if (
-          kind == Semanticdb.SymbolInformation.Kind.CLASS ||
-          kind == Semanticdb.SymbolInformation.Kind.OBJECT
-        ) {
-          if (Symbol(symbol).isToplevel) {
-            candidates += BuildTargetClasses.TestClassCandidate(path, symbol)
+    } resolved.get(path).flatten match {
+      case Some(testClasses) =>
+        for ((symbol, framework) <- testClasses) {
+          candidates += BuildTargetClasses.TestClassCandidate(
+            path,
+            symbol,
+            Some(framework),
+          )
+        }
+      case None =>
+        // Add all class/object symbols as candidates to confirm with semanticdb
+        for {
+          doc <- documents.get(path)
+          symbolInfo <- doc.symbols
+        } {
+          val symbol = symbolInfo.getSymbol()
+          val kind = symbolInfo.getKind()
+          // Classes and objects that could be test suites
+          if (
+            kind == Semanticdb.SymbolInformation.Kind.CLASS ||
+            kind == Semanticdb.SymbolInformation.Kind.OBJECT
+          ) {
+            if (Symbol(symbol).isToplevel) {
+              candidates += BuildTargetClasses.TestClassCandidate(path, symbol)
+            }
           }
         }
-      }
     }
     candidates.toSeq
   }

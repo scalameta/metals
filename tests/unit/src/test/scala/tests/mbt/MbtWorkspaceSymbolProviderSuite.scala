@@ -14,6 +14,7 @@ import scala.meta.internal.metals.mbt.IndexingStats
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.io.AbsolutePath
 
+import bloop.config.Config.TestFramework
 import munit.AnyFixture
 import munit.TestOptions
 import org.eclipse.{lsp4j => l}
@@ -341,9 +342,82 @@ message Dependency {}
         Paths.get("example/SubTest.scala").toString(),
       ),
     )
+    // SubTest is only a test through BaseTest's annotations
     assertEquals(
-      candidates.map(_.candidateSymbol).toSet,
-      Set("example/BaseTest#", "example/SubTest#"),
+      candidates.map(c => c.candidateSymbol -> c.framework).toSet,
+      Set[(String, Option[TestFramework])](
+        "example/BaseTest#" -> None,
+        "example/SubTest#" -> None,
+      ),
+    )
+  }
+
+  test("candidate-test-classes-resolved-frameworks") {
+    FileLayout.fromString(
+      """|/example/MySuite.scala
+         |package example
+         |trait MySuite extends munit.FunSuite
+         |/example/AbstractTest.scala
+         |package example
+         |abstract class AbstractTest extends MySuite
+         |/example/FooTest.scala
+         |package example
+         |class FooTest extends AbstractTest
+         |object FooObjectTest extends MySuite
+         |class Helper
+         |/example/WordTest.scala
+         |package example
+         |import org.scalatest.wordspec.AnyWordSpec
+         |class WordTest extends AnyWordSpec with Helpers
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    assertEquals(
+      candidates.map(c => c.candidateSymbol -> c.framework).toSet,
+      Set[(String, Option[TestFramework])](
+        "example/FooTest#" -> Some(TestFramework.munit),
+        "example/FooObjectTest." -> Some(TestFramework.munit),
+        "example/WordTest#" -> Some(TestFramework.ScalaTest),
+      ),
+    )
+  }
+
+  test("candidate-test-classes-ambiguous-parent-name") {
+    FileLayout.fromString(
+      """|/example/Base.scala
+         |package example
+         |trait Base extends munit.FunSuite
+         |/other/Base.scala
+         |package other
+         |trait Base
+         |/example/FooTest.scala
+         |package example
+         |class FooTest extends Base
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    // `other.Base` wasn't reached by the search, so semanticdb decides
+    assertEquals(
+      candidates.map(c => c.candidateSymbol -> c.framework).toSet,
+      Set[(String, Option[TestFramework])]("example/FooTest#" -> None),
     )
   }
 
