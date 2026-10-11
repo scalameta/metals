@@ -30,6 +30,7 @@ object OptionalStringConfigurationOption {
       title: String,
       description: String,
       fromFeatureFlags: FeatureFlagProvider => Option[String] = _ => None,
+      oldNames: List[String] = List.empty,
   )(
       getter: C => Option[String],
       setter: (C, Option[String]) => C,
@@ -49,6 +50,7 @@ object OptionalStringConfigurationOption {
       def read(context: ConfigContext): Option[String] = {
         context
           .getString(key)
+          .orElse(oldNames.flatMap(name => context.getString(name)).headOption)
           .orElse(fromFeatureFlags(context.featureFlags))
           .orElse(defaultValue)
       }

@@ -24,7 +24,7 @@ class MbtRenameLspSuite extends BaseRenameLspSuite("mbt-rename") {
       workspaceSymbolProvider = WorkspaceSymbolProviderConfig.MBT,
       referenceProvider = ReferenceProviderConfig.MBT,
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 
   override def useMbt: Boolean = true

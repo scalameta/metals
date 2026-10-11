@@ -42,6 +42,7 @@ object OptionalPathConfigurationOption {
       example: String,
       title: String,
       description: String,
+      oldNames: List[String] = List.empty,
   )(
       getter: C => Option[AbsolutePath],
       setter: (C, Option[AbsolutePath]) => C,
@@ -60,6 +61,7 @@ object OptionalPathConfigurationOption {
       def read(context: ConfigContext): Option[AbsolutePath] = {
         context
           .getString(camelCaseKey)
+          .orElse(oldNames.flatMap(name => context.getString(name)).headOption)
           .map(filePath => AbsolutePath(Paths.get(filePath)))
           .orElse(defaultValue)
       }

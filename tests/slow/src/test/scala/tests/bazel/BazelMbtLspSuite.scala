@@ -50,7 +50,7 @@ class BazelMbtLspSuite
       javaSymbolLoader = JavaSymbolLoaderConfig.TurbineClasspath,
       referenceProvider = ReferenceProviderConfig.MBT,
       preferredBuildServer = Some(MbtBuildServer.name),
-      autoImportBuild = AutoImportBuildKind.All,
+      autoImportBuilds = AutoImportBuildKind.All,
     )
 
   override def initializeGitRepo: Boolean = true

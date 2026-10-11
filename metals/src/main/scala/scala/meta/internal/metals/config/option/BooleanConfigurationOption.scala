@@ -11,6 +11,7 @@ case class BooleanConfigurationOption(
     val title: String,
     val description: String,
     fromFeatureFlags: FeatureFlagProvider => Option[Boolean] = _ => None,
+    oldNames: List[String] = List.empty,
 )(
     getter: UserConfiguration => Boolean,
     setter: (UserConfiguration, Boolean) => UserConfiguration,
@@ -21,6 +22,7 @@ case class BooleanConfigurationOption(
   def read(context: ConfigContext): Boolean =
     context
       .getBoolean(key)
+      .orElse(oldNames.flatMap(name => context.getBoolean(name)).headOption)
       .orElse(fromFeatureFlags(context.featureFlags))
       .getOrElse(defaultValue)
 

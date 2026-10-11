@@ -25,7 +25,7 @@ class TurbineCacheSuite extends BaseLspSuite("turbine-cache") with TestHovers {
     referenceProvider = ReferenceProviderConfig.MBT,
     javaTurbineCache = true,
     preferredBuildServer = Some(MbtBuildServer.name),
-    autoImportBuild = AutoImportBuildKind.All,
+    autoImportBuilds = AutoImportBuildKind.All,
   )
 
   override def initializeGitRepo: Boolean = true
