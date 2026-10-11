@@ -453,6 +453,73 @@ message Dependency {}
     )
   }
 
+  test("candidate-test-classes-java-qualified-and-generic-parents") {
+    FileLayout.fromString(
+      """|/example/BaseTest.java
+         |package example;
+         |public abstract class BaseTest<T> extends junit.framework.TestCase {}
+         |/example/FooTest.java
+         |package example;
+         |public class FooTest extends example.BaseTest<String> {}
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      annotationSymbols = Nil,
+      baseParentSymbols = Seq("junit/framework/TestCase#"),
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(
+      relative,
+      List(
+        Paths.get("example/BaseTest.java").toString(),
+        Paths.get("example/FooTest.java").toString(),
+      ),
+    )
+  }
+
+  test("candidate-test-classes-ignore-java-local-classes") {
+    FileLayout.fromString(
+      """|/example/FooTest.java
+         |package example;
+         |public class FooTest extends junit.framework.TestCase {}
+         |/example/Helper.java
+         |package example;
+         |public class Helper {
+         |  void run() {
+         |    class Local extends junit.framework.TestCase {}
+         |  }
+         |}
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      annotationSymbols = Nil,
+      baseParentSymbols = Seq("junit/framework/TestCase#"),
+    )
+    val relative = candidates
+      .map(c => c.path.toRelative(workspace()).toString)
+      .distinct
+      .sorted
+    assertEquals(
+      relative,
+      List(Paths.get("example/FooTest.java").toString()),
+    )
+  }
+
   test("candidate-main-classes") {
     FileLayout.fromString(
       """|/com/Main.java

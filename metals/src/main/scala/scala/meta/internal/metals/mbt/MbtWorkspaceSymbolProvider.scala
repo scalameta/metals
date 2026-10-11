@@ -52,9 +52,7 @@ import scala.meta.internal.metals.WorkspaceSymbolQuery
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.mtags.Mtags
-import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.tokenizers.UnexpectedInputEndException
 import scala.meta.io.AbsolutePath
@@ -817,8 +815,8 @@ class MbtWorkspaceSymbolProvider(
    *
    * The bloom filter query is only a prefilter: with thousands of base
    * symbols, false positives compound until most of the workspace matches.
-   * Re-parse each match with the toplevel indexer and keep it only if a
-   * declared parent has the same simple name as a base symbol.
+   * Keep a match only if one of its indexed symbols declares a parent with
+   * the same simple name as a base symbol.
    */
   private def subtypeFiles(baseSymbols: Seq[String]): Set[AbsolutePath] = {
     val baseNames = baseSymbols.map(Symbol(_).displayName).toSet
@@ -828,33 +826,14 @@ class MbtWorkspaceSymbolProvider(
         toplevelImplementationsOnly = true,
       )
     )
-    ParArray
-      .fromSpecific(bloomMatches)
-      .filter(path => declaresParentIn(path, baseNames))
-      .seq
-      .toSet
-  }
-
-  private def declaresParentIn(
-      path: AbsolutePath,
-      baseNames: Set[String],
-  ): Boolean =
-    try {
-      val (_, overrides, _) = mtags().extendedIndexing(path, dialects.Scala3)
-      overrides.exists { case (_, parents) =>
-        parents.exists {
-          case UnresolvedOverriddenSymbol(name) =>
-            baseNames(name.substring(name.lastIndexOf('.') + 1))
-          case ResolvedOverriddenSymbol(symbol) =>
-            baseNames(Symbol(symbol).displayName)
-        }
-      }
-    } catch {
-      case NonFatal(e) =>
-        // Keep the file rather than silently dropping test classes.
-        scribe.debug(s"mbt-v2: failed to parse parents of ${path}", e)
-        true
+    bloomMatches.filter { path =>
+      documents
+        .get(path)
+        .exists(
+          _.symbols.exists(_.getParentNamesList().asScala.exists(baseNames))
+        )
     }
+  }
 
   private def bfsSeedSymbols(
       path: AbsolutePath

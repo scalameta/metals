@@ -22,6 +22,10 @@ message SymbolInformation {
   string symbol = 1;
   scala.meta.internal.semanticdb.SymbolInformation.Kind kind = 2;
   scala.meta.internal.semanticdb.Range definition_range = 3;
+  // Simple names, without qualifier or type arguments, of the types this
+  // symbol extends or implements. For example, "AnyFunSuite" for
+  // `class MySuite extends org.scalatest.funsuite.AnyFunSuite`.
+  repeated string parent_names = 4;
 }
 
 message IndexedDocument {
@@ -37,6 +41,7 @@ message IndexedDocument {
     V8 = 8;
     V9 = 9;
     V10 = 10;
+    V11 = 11;
   }
 
   enum Source {
