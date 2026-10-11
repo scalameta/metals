@@ -124,6 +124,7 @@ class OutOfWorkspaceScalaCliLspSuite
     for {
       _ <- initialize(Map.empty[String, String], expectError = false)
       _ <- server.didOpen("Orphan.scala")
+      _ <- server.didSave("Orphan.scala")
       _ = assert(
         server.fullServer.fallbackService.scalaCli.servers.nonEmpty,
         "Empty workspace folders must keep legacy Scala CLI auto-start",

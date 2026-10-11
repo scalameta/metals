@@ -162,12 +162,14 @@ class BestEffortCompilationSuite
            |  }
            |}
            |/b/src/main/scala/b/B.scala
+           |package b
            |object BCustomCorrectObject
            |object BCustomForcedError {
            |  def a: Int = "string" // error
            |}
            |
            |/a/src/main/scala/a/A.scala
+           |package a
            |object A {
            |  // @@
            |}
@@ -177,15 +179,16 @@ class BestEffortCompilationSuite
       _ <- server.didOpen("a/src/main/scala/a/A.scala")
       _ <- assertCompletion(
         "BCustom@@",
-        """|BCustomCorrectObject `<empty>`
-           |BCustomForcedError `<empty>`
+        """|BCustomCorrectObject - b
+           |BCustomForcedError - b
            |""".stripMargin,
         includeDetail = false,
       )
       // We replace the BCustomCorrectObject object with BCustomChangedObject,
       // and check if the completions were correctly updated
       _ <- server.didChange("b/src/main/scala/b/B.scala") { _ =>
-        s"""|object BCustomChangedObject
+        s"""|package b
+            |object BCustomChangedObject
             |object BCustomForcedError {
             |  def a: Int = "string" // error
             |}
@@ -194,8 +197,8 @@ class BestEffortCompilationSuite
       _ <- server.didSave("b/src/main/scala/b/B.scala")
       _ <- assertCompletion(
         "BCustom@@",
-        """|BCustomChangedObject `<empty>`
-           |BCustomForcedError `<empty>`
+        """|BCustomChangedObject - b
+           |BCustomForcedError - b
         """.stripMargin,
       )
     } yield ()
