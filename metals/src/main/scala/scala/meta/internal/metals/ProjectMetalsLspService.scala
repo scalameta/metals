@@ -303,6 +303,7 @@ class ProjectMetalsLspService(
       mcpSearch,
       () => mtags,
       folder,
+      initialServerConfig.maxMcpSearchResults,
     )
 
   lazy val mcpTestRunner =

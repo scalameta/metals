@@ -261,6 +261,33 @@ not exist yet.
 
 ```
 
+#### Automatic completion inside string interpolators
+
+Metals completes identifiers and members inside `$name` and `${ }` splices
+of interpolated strings such as `s"..."` or `sql"""..."""`. Whether the
+completion popup appears while you type is up to the client, not Metals.
+
+With Eglot and [Corfu](https://github.com/minad/corfu), the popup does not
+appear inside an empty `${ }` splice: Corfu auto-completes only after
+`corfu-auto-prefix` typed characters, and at `${|}` the prefix is empty.
+Teach Corfu the trigger characters for Scala buffers:
+
+```elisp
+(add-hook 'scala-mode-hook
+          (lambda () (setq-local corfu-auto-trigger ".${")))
+```
+
+`corfu-auto-trigger` is a global variable, so scope the setting to
+`scala-mode` to avoid popups on every `{` in other major modes.
+
+- `$` opens the popup the moment a splice starts, matching other editors.
+- `{` keeps the popup alive across the `${` opener. Drop it if popups on
+  plain `{` blocks bother you.
+- `.` completes members, as in `s"${foo.|}"`.
+
+Otherwise, type one character to trigger the popup, or call
+`completion-at-point` manually.
+
 ```scala mdoc:generic
 
 ```

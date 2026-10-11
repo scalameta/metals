@@ -8,6 +8,7 @@
 //                    ^^^^^^^^^^^^^^^^ definition example/SQLQueries#SQLStringContext#
 //                                    ^ definition example/SQLQueries#SQLStringContext#`<init>`().
 //                                     ^^ definition example/SQLQueries#SQLStringContext#sc.
+//                                     ^^ definition example/SQLQueries#SQLStringContext#`<init>`().(sc)
 //                                         ^^^^^^^^^^^^^ reference scala/StringContext#
            def sql(args: Any*): String = sc.s(args: _*)
 //             ^^^ definition example/SQLQueries#SQLStringContext#sql().

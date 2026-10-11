@@ -5550,9 +5550,9 @@ boxen@^7.0.0:
     wrap-ansi "^8.1.0"
 
 brace-expansion@^1.1.7:
-  version "1.1.16"
-  resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.16.tgz#723d3a30c0558c225abc9fc479a73e14e26c3c2f"
-  integrity sha512-IDw48K2/2kRkg9LdJxurvq3lV3aBgq0REY89duEqFRthjlPdXHKMj7EnQOXVckxzgisinf3nHfrcE2FufFLXMw==
+  version "1.1.18"
+  resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.18.tgz#3ce74d89885136be1535341f8c3d4425c29a5cab"
+  integrity sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==
   dependencies:
     balanced-match "^1.0.0"
     concat-map "0.0.1"
@@ -5907,9 +5907,9 @@ color-name@~1.1.4:
   integrity sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==
 
 colord@^2.9.3:
-  version "2.9.3"
-  resolved "https://registry.yarnpkg.com/colord/-/colord-2.9.3.tgz#4f8ce919de456f1d5c1c368c307fe20f3e59fb43"
-  integrity sha512-jeC1axXpnb0/2nn/Y1LPuLdgXBLH7aDcHu4KEKfqw3CUhX7ZpfBSlPKyqXE6btIgEzfWtrX3/tyBCaCvXvMkOw==
+  version "2.10.0"
+  resolved "https://registry.yarnpkg.com/colord/-/colord-2.10.0.tgz#56c9050e6b06b4b6c62ddec366a48d65ef57e860"
+  integrity sha512-AidJptpBJmjTclAp9BkLwJi0T93fo5epJnbaZslpg6QVzpHjAiveF55mE9AcUJiGMqRHgMDY8soMsQtuNYMHfw==
 
 colorette@^2.0.10:
   version "2.0.19"
@@ -8150,9 +8150,9 @@ jiti@^1.20.0:
   integrity sha512-gFqAIbuKyyso/3G2qhiO2OM6shY6EPP/R0+mkDbyspxKazh8BXDC5FiFsUjlczgdNz/vfra0da2y+aHrusLG/Q==
 
 joi@^17.9.2:
-  version "17.13.4"
-  resolved "https://registry.yarnpkg.com/joi/-/joi-17.13.4.tgz#ad6153d97ce558eb3a3b593e0d43eab51df1c474"
-  integrity sha512-1RuuER6kmt8K8I3nIWvPZKi5RQCb568ZPyY4Pwjlua+yo+63ZTmIwxLZH0heBmiKN4uxjvCiarDrjaeH84xicQ==
+  version "17.13.7"
+  resolved "https://registry.yarnpkg.com/joi/-/joi-17.13.7.tgz#92e212c50dbbbcb1a1592424f84083eb265cc778"
+  integrity sha512-MF80Dm5Y2veNy8QWVx9Bj3ui4mo7+VPSPsR1M+oaHXV0Gx6zGX9a2F+OZG3Blby9tOlzU9Rs5FUimlEhbKtfnQ==
   dependencies:
     "@hapi/hoek" "^9.3.0"
     "@hapi/topo" "^5.1.0"
@@ -8174,9 +8174,9 @@ js-yaml@^3.13.1:
     esprima "^4.0.0"
 
 js-yaml@^4.1.0:
-  version "4.1.0"
-  resolved "https://registry.yarnpkg.com/js-yaml/-/js-yaml-4.1.0.tgz#c1fb65f8f5017901cdd2c951864ba18458a10602"
-  integrity sha512-wpxZs9NoxZaJESJGIZTyDEaYpl0FKSA+FB9aJiyemKhMwkxQg63h4T1KJgUGHpTqPDNRcmmYLugrRjJlBtWvRA==
+  version "4.3.2"
+  resolved "https://registry.yarnpkg.com/js-yaml/-/js-yaml-4.3.2.tgz#8e44fb14a2643c59726bb15787b5f1512cb3d3fb"
+  integrity sha512-SFNOvSJ+Dgf/9An904Yx+CgSlIPCkIpao4qo51lpee25TIRejdH3rhR4EZMGoNx3/TP3O+wzWuiTFl4sqbltzA==
   dependencies:
     argparse "^2.0.1"
 
@@ -11707,9 +11707,9 @@ svg-parser@^2.0.4:
   integrity sha512-e4hG1hRwoOdRb37cIMSgzNsxyzKfayW6VOflrwvR+/bzrkyxY/31WkbgnQpgtrNp1SdpJvpUAGTa/ZoiPNDuRQ==
 
 svgo@^3.0.2, svgo@^3.2.0:
-  version "3.3.4"
-  resolved "https://registry.yarnpkg.com/svgo/-/svgo-3.3.4.tgz#fd2aa10ff585b3bd2b83ce3602f5582bc0718bb5"
-  integrity sha512-GsNRis4e8jxn2Y9ENz/8lbJ93CstG8svtMnuRaHbiF2LTJ5tK0/q3t/URPq9Zc7zVWBJnNnJMIp6bevK7bSmNg==
+  version "3.3.5"
+  resolved "https://registry.yarnpkg.com/svgo/-/svgo-3.3.5.tgz#8a3d9557ab2f386eca7e24760385849554985a1c"
+  integrity sha512-8SQMzdrvWaD8deUmrnYB+ASyxBVgWUOilg+A75nE/76WdLpj6LopCwiAVvkzkcqy/9b7t2Mg7faFLjg0ZRcZ3w==
   dependencies:
     commander "^7.2.0"
     css-select "^5.1.0"
@@ -11885,9 +11885,9 @@ undici-types@~7.16.0:
   integrity sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==
 
 undici@^6.19.5:
-  version "6.27.0"
-  resolved "https://registry.yarnpkg.com/undici/-/undici-6.27.0.tgz#41f9e48f7c5a40d27376caaead8c9a9fc7bca9c4"
-  integrity sha512-YmfV3YnEDzXRC5lZ2jWtWWHKGUm1zIt8AhesR1tens+HTNv+YZlN/dp6G727LOvMJ8xjP9Be7Y2Sdr96LDm+pg==
+  version "6.28.0"
+  resolved "https://registry.yarnpkg.com/undici/-/undici-6.28.0.tgz#9f0e385744fef5021d6596c5bccd783f61193c1c"
+  integrity sha512-LIY910g9TI13YS95lrMFrs8Rm/u/irgHeTWoKCoteeJ04CUJ92eEfj0rVn+7VKMPBpUPiUoBKfhNyLI23EE/KA==
 
 unicode-canonical-property-names-ecmascript@^2.0.0:
   version "2.0.0"

@@ -138,6 +138,18 @@ class ScalaVersions(
     }
   }
 
+  /** Scalameta dialect for `*.sbt` from an sbt version string. */
+  def dialectForSbtVersion(sbtVersion: Option[String]): Dialect =
+    sbtVersion match {
+      case Some(version) if isSbt2Version(version) =>
+        Scala3.withAllowToplevelTerms(true)
+      case _ =>
+        Sbt
+    }
+
+  def isSbt2Version(sbtVersion: String): Boolean =
+    sbtVersion.startsWith("2.")
+
   def fmtDialectForScalaVersion(
       scalaVersion: String,
       includeSource3: Boolean,

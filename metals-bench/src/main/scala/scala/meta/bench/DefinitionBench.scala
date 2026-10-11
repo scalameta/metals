@@ -1,8 +1,11 @@
-package bench
+package scala.meta.bench
 
 import java.util.concurrent.TimeUnit
 
-import org.eclipse.lsp4j.SignatureHelp
+import scala.meta.bench.PcBenchmark
+import scala.meta.bench.SourceRequest
+import scala.meta.pc.DefinitionResult
+
 import org.openjdk.jmh.annotations.Benchmark
 import org.openjdk.jmh.annotations.BenchmarkMode
 import org.openjdk.jmh.annotations.Mode
@@ -12,7 +15,7 @@ import org.openjdk.jmh.annotations.Scope
 import org.openjdk.jmh.annotations.State
 
 @State(Scope.Benchmark)
-class SignatureHelpBench extends PcBenchmark {
+class DefinitionBench extends PcBenchmark {
 
   var requests: Map[String, SourceRequest] = Map.empty
 
@@ -24,10 +27,10 @@ class SignatureHelpBench extends PcBenchmark {
            |
            |object Main{
            |  def foo(a: Int, bab: String, dbl: Double = 1.0)
-           |  foo(a = 12,)
+           |  foo(1, "")
            |}
            |""".stripMargin,
-        "  foo(a = 12,@@)",
+        "  f@@oo(1, \"\")",
       )
     )
   }
@@ -41,12 +44,12 @@ class SignatureHelpBench extends PcBenchmark {
   @Benchmark
   @BenchmarkMode(Array(Mode.SingleShotTime))
   @OutputTimeUnit(TimeUnit.MILLISECONDS)
-  def signatureHelp(): SignatureHelp = {
+  def definition(): DefinitionResult = {
     val pc = presentationCompiler(scalaVersion)
-    currentSignatureHelp.signatureHelp(pc)
+    currentDefinition.definition(pc)
   }
 
-  def currentSignatureHelp: SourceRequest = requests(
+  def currentDefinition: SourceRequest = requests(
     currentRequest
   )
 

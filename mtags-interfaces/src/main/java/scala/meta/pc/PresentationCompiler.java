@@ -395,6 +395,10 @@ public abstract class PresentationCompiler {
   /** Scala version for the current presentation compiler */
   public abstract String scalaVersion();
 
+  public boolean isJava() {
+    return false;
+  }
+
   public String buildTargetId() {
     return "";
   }

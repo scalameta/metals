@@ -12,7 +12,7 @@ Global / resolvers += "scala-nightlies" at
 
 // The OSS version of Metals that this Databricks-internal fork is based on.
 // Make sure to bump up this version when we merge with upstream.
-val forkBaseVersion = "1.6.8"
+val forkBaseVersion = "1.6.9"
 
 val currentVersion = "2.0.0"
 
@@ -324,6 +324,7 @@ lazy val interfaces = project
       "org.scalameta" % "mtags-interfaces" % "1.3.2",
       "org.scalameta" % "mtags-interfaces" % "1.4.2",
       "org.scalameta" % "mtags-interfaces" % "1.5.2",
+      "org.scalameta" % "mtags-interfaces" % "1.6.7",
     ),
     crossPaths := false,
     libraryDependencies ++= List(
@@ -661,7 +662,7 @@ lazy val metals = project
       "com.google.code.findbugs" % "jsr305" % "3.0.2", // for nullability annotations
       V.guava,
       "org.slf4j" % "slf4j-api" % "1.7.36",
-      "org.scalameta" %% "metaconfig-core" % "0.18.7",
+      "org.scalameta" %% "metaconfig-core" % "0.18.8",
       // for measuring memory footprint
       "org.openjdk.jol" % "jol-core" % "0.17",
       // for file watching
@@ -671,7 +672,7 @@ lazy val metals = project
       "org.jboss.xnio" % "xnio-nio" % "3.8.17.Final",
       // for persistent data like "dismissed notification"
       "org.flywaydb" % "flyway-core" % "12.10.0",
-      "com.h2database" % "h2" % "2.4.240",
+      "com.h2database" % "h2" % "2.5.250",
       // for BSP
       "org.scala-sbt.ipcsocket" % "ipcsocket" % "1.8.0",
       "ch.epfl.scala" % "bsp4j" % V.bsp,
@@ -722,7 +723,7 @@ lazy val metals = project
         scalaVersion.value
       )).cross(CrossVersion.full),
       "org.scalameta" %% "semanticdb-shared" % V.semanticdb(scalaVersion.value),
-      "org.scala-lang.modules" %% "scala-xml" % "2.4.0",
+      "org.scala-lang.modules" %% "scala-xml" % "2.5.0",
       ("org.virtuslab.scala-cli" % "scala-cli-bsp" % V.scalaCli)
         .exclude("ch.epfl.scala", "bsp4j"),
       "com.google.googlejavaformat" % "google-java-format" % "1.28.0",
@@ -1187,7 +1188,7 @@ lazy val docs = project
     publish / skip := true,
     moduleName := "metals-docs",
     mdoc := (Compile / run).evaluated,
-    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.7",
+    dependencyOverrides += "org.scalameta" %% "metaconfig-core" % "0.18.8",
     buildInfoPackage := "docs",
     buildInfoKeys := Seq[BuildInfoKey](
       "latestReleaseVersion" -> latestReleaseVersion
