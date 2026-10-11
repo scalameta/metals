@@ -32,6 +32,7 @@ import scala.meta.internal.mtags.ScalametaCommonEnrichments._
 import scala.meta.internal.semanticdb.Language
 import scala.meta.internal.{semanticdb => s}
 
+import com.sun.source.tree.AnnotatedTypeTree
 import com.sun.source.tree.AnnotationTree
 import com.sun.source.tree.BlockTree
 import com.sun.source.tree.CatchTree
@@ -48,6 +49,7 @@ import com.sun.source.tree.MethodInvocationTree
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.NewClassTree
 import com.sun.source.tree.PackageTree
+import com.sun.source.tree.ParameterizedTypeTree
 import com.sun.source.tree.Tree
 import com.sun.source.tree.Tree.Kind.INTERFACE
 import com.sun.source.tree.TryTree
@@ -119,6 +121,17 @@ class JavacMtags(
   private var isInsideLocalScope: Boolean = false
 
   def language: Language = Language.JAVA
+
+  override def overrides(): MtagsIndexer.AllOverrides = overridden.result()
+
+  private val overridden = List.newBuilder[(String, List[OverriddenSymbol])]
+
+  // Local classes get no symbol, so `currentOwner` is still the enclosing
+  // method and must not be credited with their parents.
+  private def addOverridden(symbols: List[OverriddenSymbol]): Unit =
+    if (!isInsideLocalScope)
+      overridden += ((currentOwner, symbols))
+
   def identifiers(): Seq[String] =
     _names.asScala.iterator.toIndexedSeq
 
@@ -577,6 +590,15 @@ class JavacMtags(
           extractTypeParamNames(node),
           getDocComment(node)
         )
+        val parents =
+          Option(node.getExtendsClause()).toList ++
+            node.getImplementsClause().asScala
+        mtags.addOverridden(
+          parents
+            .flatMap(parentName)
+            .distinct
+            .map(UnresolvedOverriddenSymbol(_))
+        )
         lazy val constructorCount = node.getMembers().asScala.count {
           case method: MethodTree =>
             val name = method.getName()
@@ -612,6 +634,16 @@ class JavacMtags(
           r
         }
       }
+    }
+
+    // The simple name of a parent type, without qualifier or type arguments.
+    private def parentName(tree: Tree): Option[String] = tree match {
+      case ident: IdentifierTree => Some(ident.getName().toString())
+      case select: MemberSelectTree => Some(select.getIdentifier().toString())
+      case applied: ParameterizedTypeTree => parentName(applied.getType())
+      case annotated: AnnotatedTypeTree =>
+        parentName(annotated.getUnderlyingType())
+      case _ => None
     }
 
     private var overrideName: Name = _

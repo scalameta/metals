@@ -74,6 +74,7 @@ case class MbtWorkspaceSymbolSearchParams(
 case class MbtPossibleReferencesParams(
     references: collection.Seq[String] = Nil,
     implementations: collection.Seq[String] = Nil,
+    toplevelImplementationsOnly: Boolean = false,
 )
 
 object MbtWorkspaceSymbolProvider {
@@ -796,25 +797,42 @@ class MbtWorkspaceSymbolProvider(
       implementations ++ annotationFiles.flatMap(bfsSeedSymbols)
     var frontier: Set[AbsolutePath] =
       if (initialImplementations.isEmpty) Set.empty
-      else
-        possibleReferences(
-          MbtPossibleReferencesParams(
-            implementations = initialImplementations
-          )
-        ) -- allMatchedPaths
+      else subtypeFiles(initialImplementations) -- allMatchedPaths
 
     while (frontier.nonEmpty) {
       allMatchedPaths ++= frontier
       val nextBaseSymbols = frontier.flatMap(bfsSeedSymbols).toSeq
       frontier =
         if (nextBaseSymbols.isEmpty) Set.empty
-        else
-          possibleReferences(
-            MbtPossibleReferencesParams(implementations = nextBaseSymbols)
-          ) -- allMatchedPaths
+        else subtypeFiles(nextBaseSymbols) -- allMatchedPaths
     }
 
     allMatchedPaths.toSet
+  }
+
+  /**
+   * Files declaring a type whose parents include one of `baseSymbols`.
+   *
+   * The bloom filter query is only a prefilter: with thousands of base
+   * symbols, false positives compound until most of the workspace matches.
+   * Keep a match only if one of its indexed symbols declares a parent with
+   * the same simple name as a base symbol.
+   */
+  private def subtypeFiles(baseSymbols: Seq[String]): Set[AbsolutePath] = {
+    val baseNames = baseSymbols.map(Symbol(_).displayName).toSet
+    val bloomMatches = possibleReferences(
+      MbtPossibleReferencesParams(
+        implementations = baseSymbols,
+        toplevelImplementationsOnly = true,
+      )
+    )
+    bloomMatches.filter { path =>
+      documents
+        .get(path)
+        .exists(
+          _.symbols.exists(_.getParentNamesList().asScala.exists(baseNames))
+        )
+    }
   }
 
   private def bfsSeedSymbols(
@@ -949,8 +967,10 @@ class MbtWorkspaceSymbolProvider(
         queries += s"${sym.displayName}():"
       } else if (sym.isType) {
         queries += s"${sym.displayName}:"
-        // this is needed for now because the Scala top-level mtags indexer does not emit ':'
-        queries += s"${sym.displayName}#"
+        // Top-level Scala and Java `extends` clauses emit ':', but anonymous
+        // and local Scala classes don't, so match any type reference too.
+        if (!params.toplevelImplementationsOnly)
+          queries += s"${sym.displayName}#"
       } else if (sym.isTerm) {
         queries += s"${sym.displayName}."
         // Scala vals and vars can be implemented via getters and setters

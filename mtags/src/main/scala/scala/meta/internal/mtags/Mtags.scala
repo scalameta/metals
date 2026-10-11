@@ -176,43 +176,55 @@ final class Mtags(val config: MtagsConfig = MtagsConfig.default)(implicit
       input: Input.VirtualFile,
       dialect: Dialect,
       includeReferences: Boolean = false
-  ): TextDocument = {
+  ): TextDocument =
+    indexMBTWithOverrides(language, input, dialect, includeReferences)._1
+
+  def indexMBTWithOverrides(
+      language: Semanticdb.Language,
+      input: Input.VirtualFile,
+      dialect: Dialect,
+      includeReferences: Boolean = false
+  ): (TextDocument, MtagsIndexer.AllOverrides) = {
     addLines(language, input.text)
-    val result =
+    val indexer: Option[MtagsIndexer] =
       if (language == Semanticdb.Language.JAVA) {
-        config
-          .javaInstance(
+        Some(
+          config.javaInstance(
             input,
             includeMembers = true,
             includeReferences = includeReferences
           )
-          .index()
+        )
       } else if (language == Semanticdb.Language.SCALA) {
-        new ScalaToplevelMtags(
-          input,
-          includeInnerClasses = true,
-          includeMembers = true,
-          dialect,
-          collectIdentifiers = includeReferences
-        ).index()
+        Some(
+          new ScalaToplevelMtags(
+            input,
+            includeInnerClasses = true,
+            includeMembers = true,
+            dialect,
+            collectIdentifiers = includeReferences
+          )
+        )
       } else if (language == Semanticdb.Language.PROTOBUF) {
-        config
-          .protoInstance(
+        Some(
+          config.protoInstance(
             input,
             includeGeneratedSymbols = true,
             includeFuzzyReferences = includeReferences
           )
-          .index()
+        )
       } else {
-        TextDocument()
+        None
       }
+    val result = indexer.fold(TextDocument())(_.index())
     symbolsCount += result.occurrences.length
-    result
+    val doc = result
       .withUri(input.path)
       .withText("")
       .withSchema(Schema.SEMANTICDB4)
       // NOTE: we loose the protobuf language here, can only recover it from the URI.
       .withLanguage(language.toLanguage)
+    (doc, indexer.fold(Nil: MtagsIndexer.AllOverrides)(_.overrides()))
   }
   private var symbolsCount: Long = 0L
   private val lineCounts = new ConcurrentHashMap[Semanticdb.Language, Long]

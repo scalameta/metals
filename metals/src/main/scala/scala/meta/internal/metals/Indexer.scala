@@ -29,6 +29,7 @@ import scala.meta.internal.metals.mbt.OnDidChangeSymbolsParams
 import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.MavenCoordinates
+import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.internal.semanticdb.Scala._
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.MetalsLanguageServer
@@ -842,6 +843,7 @@ case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
               allSymbols,
               references,
               methodSymbols.toSeq,
+              optMtags.fold(Nil: MtagsIndexer.AllOverrides)(_.overrides()),
               updateDocumentKeys,
             )
           )

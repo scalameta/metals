@@ -2,6 +2,7 @@ package scala.meta.internal.metals.mbt
 
 import scala.meta.inputs.Input
 import scala.meta.internal.metals.WorkspaceSymbolInformation
+import scala.meta.internal.mtags.MtagsIndexer
 import scala.meta.io.AbsolutePath
 
 case class OnDidChangeSymbolsParams(
@@ -10,5 +11,6 @@ case class OnDidChangeSymbolsParams(
     symbols: collection.Seq[WorkspaceSymbolInformation],
     references: collection.Seq[String],
     methodSymbols: collection.Seq[WorkspaceSymbolInformation],
+    overrides: MtagsIndexer.AllOverrides,
     updateDocumentKeys: Boolean = true,
 )

@@ -17,7 +17,10 @@ import scala.meta.internal.metals.Fuzzy
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.StringBloomFilter
 import scala.meta.internal.mtags.Mtags
+import scala.meta.internal.mtags.MtagsIndexer
+import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Symbol
+import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.mtags.proto.ProtoMtagsV2
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.SemanticdbCompilationUnit
@@ -95,7 +98,8 @@ case class IndexedDocument(
   }
   def toProto(): Mbt.IndexedDocument.Builder = {
     val bloomFilterVersion = language match {
-      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V11
+      case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V11
       case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V6
     }
@@ -126,12 +130,13 @@ object IndexedDocument {
       enableProtoJavaPackage: Boolean = false,
   ): IndexedDocument = {
     val input = file.toInputFromBuffers(buffers)
-    val sdoc = mtags.indexMBT(
+    val (sdoc, overrides) = mtags.indexMBTWithOverrides(
       file.toNIO.toJLanguage,
       input,
       dialect,
       includeReferences = true,
     )
+    val parents = parentNamesBySymbol(overrides)
     val symbols = for {
       info <- sdoc.symbols.iterator
       if !info.kind.isPackage
@@ -142,6 +147,7 @@ object IndexedDocument {
       .setSymbol(info.symbol)
       .setKind(info.kind.toJKind)
       .setDefinitionRange(range.toJRange)
+      .addAllParentNames(parents.getOrElse(info.symbol, Nil).asJava)
       .build()
 
     val definitions =
@@ -182,6 +188,17 @@ object IndexedDocument {
   // files more robust to estimation inaccuracies.
   private val MinBloomFilterSize = 256
 
+  private def parentNamesBySymbol(
+      overrides: MtagsIndexer.AllOverrides
+  ): Map[String, Seq[String]] =
+    overrides.groupMapReduce(_._1) { case (_, parents) =>
+      parents.map {
+        case UnresolvedOverriddenSymbol(name) =>
+          name.substring(name.lastIndexOf('.') + 1)
+        case ResolvedOverriddenSymbol(symbol) => Symbol(symbol).displayName
+      }
+    }(_ ++ _)
+
   private def bloomFilterMBT(
       definitions: View[String],
       references: View[String],
@@ -208,6 +225,7 @@ object IndexedDocument {
 
     val toplevels =
       params.symbols.map(info => Symbol(info.symbol)).filter(_.isToplevel)
+    val parents = parentNamesBySymbol(params.overrides)
     val semanticdbPackages = toplevels.map(_.owner).toSet match {
       case s if s.isEmpty => List(Symbol.EmptyPackage.value)
       case s => s.map(_.value).toList
@@ -238,6 +256,7 @@ object IndexedDocument {
                 .setEndCharacter(s.range.getEnd().getCharacter())
                 .build()
             )
+            .addAllParentNames(parents.getOrElse(s.symbol, Nil).asJava)
             .build()
         )
         .toSeq,
@@ -269,8 +288,9 @@ object IndexedDocument {
   // that language.
   def matchesCurrentVersion(doc: Mbt.IndexedDocument): Boolean =
     doc.getBloomFilterVersion().getNumber >= (doc.getLanguage() match {
-      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V7
-      case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V6
+      // V11: Includes parent names of each symbol for test discovery.
+      case Language.JAVA => Mbt.IndexedDocument.BloomFilterVersion.V11
+      case Language.SCALA => Mbt.IndexedDocument.BloomFilterVersion.V11
       // V10: Includes V9 option-block scanner fixes and Java packages for Turbine.
       case Language.PROTOBUF => Mbt.IndexedDocument.BloomFilterVersion.V10
       case _ => Mbt.IndexedDocument.BloomFilterVersion.V1
