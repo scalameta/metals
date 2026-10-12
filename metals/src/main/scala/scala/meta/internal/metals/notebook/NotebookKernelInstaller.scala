@@ -1,5 +1,7 @@
 package scala.meta.internal.metals.notebook
 
+import java.util.Locale
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -9,6 +11,7 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
+import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -50,77 +53,97 @@ final class NotebookKernelInstaller(
   def ensureKernel(
       ipynbPath: AbsolutePath,
       askBeforeInstall: Boolean,
-  ): Future[Option[NotebookKernel]] =
-    notebookProvider.bestTarget(ipynbPath) match {
+  ): Future[Option[NotebookKernel]] = {
+    def giveUp(tpe: MessageType, message: String) = {
+      if (!askBeforeInstall) languageClient.showMessage(tpe, message)
+      Future.successful(None)
+    }
+    val result = notebookProvider.bestTarget(ipynbPath) match {
       case None =>
-        if (!askBeforeInstall)
-          languageClient.showMessage(
-            MessageType.Warning,
-            "No build target found for this notebook.",
-          )
-        Future.successful(None)
+        giveUp(MessageType.Warning, "No build target found for this notebook.")
       case Some(target) =>
-        val targetDisplayName =
-          buildTargets
-            .info(target)
-            .map(_.getDisplayName)
-            .getOrElse(target.getUri)
+        val targetName = buildTargets
+          .info(target)
+          .map(_.getDisplayName)
+          .getOrElse(target.getUri)
         val resolved = for {
           scalaTarget <- buildTargets.scalaTarget(target)
-          classpathFuture <- buildTargets.fullClasspath(target, Promise())
-        } yield classpathFuture.flatMap { classpath =>
-          val kernel = NotebookKernel(
-            kernelIdFor(ipynbPath, almondVersion),
-            s"Scala ($targetDisplayName, Almond $almondVersion)",
-          )
-          val paths = classpath.map(_.toNIO)
-          def upToDate =
-            AlmondKernelInstaller.isUpToDate(kernel.kernelId, paths)
-          def install(fresh: Boolean): Future[Option[NotebookKernel]] =
-            AlmondKernelInstaller
-              .install(
-                languageClient,
+          classpath <- buildTargets.fullClasspath(target, Promise())
+        } yield
+          for {
+            paths <- classpath
+            // Not always part of the compile classpath.
+            classDirs = buildTargets
+              .targetClassDirectories(target)
+              .toAbsoluteClasspath
+              .toList
+            kernel = NotebookKernel(
+              kernelIdFor(ipynbPath, almondVersion),
+              s"Scala ($targetName, Almond $almondVersion)",
+            )
+            spec = () =>
+              AlmondKernelInstaller.kernelSpec(
                 javaHome(),
                 almondVersion,
                 scalaTarget.scalaVersion,
-                paths,
-                kernel.kernelId,
+                (classDirs ++ paths).map(_.toNIO),
                 kernel.displayName,
-                notify = fresh,
               )
-              // install() recovers failures into a successful Future so it
-              // can show its own error message.
-              .map { _ =>
-                if (upToDate) Some(kernel.copy(newlyInstalled = fresh))
-                // A failed refresh leaves the previous kernel installed.
-                else
-                  Option.when(
-                    !fresh && AlmondKernelInstaller.exists(kernel.kernelId)
-                  )(kernel)
-              }
-          if (upToDate) Future.successful(Some(kernel))
-          else if (AlmondKernelInstaller.exists(kernel.kernelId))
-            install(fresh = false)
-          else if (askBeforeInstall)
-            confirmInstall().flatMap { confirmed =>
-              if (confirmed) install(fresh = true)
-              else Future.successful(None)
-            }
-          else install(fresh = true)
-        }
-        resolved
-          .getOrElse {
-            if (!askBeforeInstall)
-              languageClient.showMessage(
-                MessageType.Error,
-                s"Could not resolve a classpath for '$targetDisplayName'.",
-              )
-            Future.successful(None)
-          }
-          .recover { case NonFatal(e) =>
-            scribe.error(s"failed to ensure Almond kernel for '$ipynbPath'", e)
-            None
-          }
+            ensured <- ensure(kernel, spec, askBeforeInstall)
+          } yield ensured
+        resolved.getOrElse(
+          giveUp(
+            MessageType.Error,
+            s"Could not resolve a classpath for '$targetName'.",
+          )
+        )
+    }
+    result.recover { case NonFatal(e) =>
+      scribe.error(s"failed to ensure Almond kernel for '$ipynbPath'", e)
+      None
+    }
+  }
+
+  private def ensure(
+      kernel: NotebookKernel,
+      spec: () => ujson.Obj,
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernel]] =
+    if (AlmondKernelInstaller.exists(kernel.kernelId))
+      Future {
+        val current = spec()
+        if (!AlmondKernelInstaller.isInstalled(kernel.kernelId, current))
+          AlmondKernelInstaller.install(kernel.kernelId, current)
+        Option(kernel)
+      }.recover { case NonFatal(e) =>
+        // The previous kernel is still installed.
+        scribe.warn(s"failed to refresh Almond kernel '${kernel.kernelId}'", e)
+        Some(kernel)
+      }
+    else
+      for {
+        confirmed <-
+          if (askBeforeInstall) confirmInstall()
+          else Future.successful(true)
+        installed <-
+          if (confirmed) installNew(kernel, spec)
+          else Future.successful(None)
+      } yield installed
+
+  private def installNew(
+      kernel: NotebookKernel,
+      spec: () => ujson.Obj,
+  ): Future[Option[NotebookKernel]] =
+    Future {
+      AlmondKernelInstaller.install(kernel.kernelId, spec())
+      Option(kernel.copy(newlyInstalled = true))
+    }.recover { case NonFatal(e) =>
+      scribe.error(s"failed to install Almond kernel '${kernel.kernelId}'", e)
+      languageClient.showMessage(
+        MessageType.Error,
+        s"Failed to install Jupyter kernel '${kernel.displayName}': ${e.getMessage}",
+      )
+      None
     }
 
   private def confirmInstall(): Future[Boolean] = {
@@ -154,28 +177,20 @@ object NotebookKernelInstaller {
   private val installAction = new MessageActionItem("Install kernel")
   private val notNowAction = new MessageActionItem("Not now")
 
-  // Not a hash, so two same-named notebooks in different directories
-  // can't collide (AlmondKernelInstaller force-overwrites an existing
-  // kernel dir). Switching the Almond version installs a new kernel
-  // instead of overwriting the old one.
+  /**
+   * `metals-<file name>-<path hash>-<Almond version>`, lower case because
+   * jupyter_client lower-cases kernelspec names. The hash keeps notebooks
+   * with the same name apart, and the name has no `-`, so the version
+   * can't make two ids collide.
+   */
   def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String = {
-    val versionPart = sanitize(almondVersion)
-    val full = s"metals-${sanitize(ipynbPath.toString)}-$versionPart"
-    if (full.length <= maxLength) full
-    else {
-      // A deep enough path can exceed common filesystem filename
-      // limits; fall back to a hash suffix only once that's a risk,
-      // rather than hashing (and losing traceability) for every path.
-      val hash = Integer.toHexString(ipynbPath.toString.hashCode)
-      val suffix = s"-$hash-$versionPart"
-      s"metals-${sanitize(ipynbPath.toString).take(maxLength - 7 - suffix.length)}$suffix"
-    }
+    val name = lower(ipynbPath.filename.stripSuffix(".ipynb"))
+      .replaceAll("[^a-z0-9]", "_")
+      .take(50)
+    val hash = lower(MD5.compute(ipynbPath.toString)).take(16)
+    val version = lower(almondVersion).replaceAll("[^a-z0-9.-]", "_")
+    s"metals-$name-$hash-$version"
   }
 
-  private val maxLength = 200
-
-  // Without escaping literal underscores first, "a/b" and "a_b" would
-  // both sanitize to "a_b" and collide.
-  private def sanitize(s: String): String =
-    s.replace("_", "__").replaceAll("[^A-Za-z0-9_-]", "_")
+  private def lower(s: String): String = s.toLowerCase(Locale.ROOT)
 }
