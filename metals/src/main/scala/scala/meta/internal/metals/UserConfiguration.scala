@@ -10,6 +10,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig
@@ -616,7 +617,7 @@ object UserConfiguration {
       UserConfigurationOption(
         "notebook-almond-version",
         "",
-        """"0.15.0"""",
+        s""""${AlmondKernelInstaller.defaultAlmondVersion}"""",
         "Notebook Almond version",
         """|Overrides the Almond version used to install a Jupyter kernel for a
            |notebook (`Metals: Install Jupyter kernel for notebook`). Almond's own
