@@ -16,14 +16,12 @@ import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.ShowMessageRequestParams
 
 /**
- * Installs a real Jupyter kernel (via Almond) sharing the classpath of
- * whichever build target a notebook's cells currently resolve against (see
- * [[NotebookProvider.bestTarget]]), so "Run" actually executes cells
- * against the same dependencies its language features already see.
+ * Installs a Jupyter kernel (via Almond) with the classpath of the build
+ * target a notebook's cells resolve against (see
+ * [[NotebookProvider.bestTarget]]).
  *
- * The kernel id encodes the Almond version too, so switching
- * `notebookAlmondVersion` installs a separate kernel rather than
- * overwriting the old one; both stay selectable in Jupyter's own picker.
+ * The kernel id includes the Almond version, so switching
+ * `notebookAlmondVersion` installs a second kernel next to the old one.
  */
 final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
@@ -40,16 +38,12 @@ final class NotebookKernelInstaller(
     )
 
   /**
-   * Makes sure the notebook has a kernel matching its current classpath
-   * and returns it, so the client can select it without the user having
-   * to.
+   * Installs or refreshes the notebook's kernel and returns it.
    *
-   * Bloop gives every BSP connection its own `classes-Metals-<uuid>`
-   * directory, so after a Metals restart an installed kernel points at a
-   * classes directory that no longer exists even if the project didn't
-   * change. Such a stale kernel is refreshed silently. A missing one is
-   * only installed after asking when `askBeforeInstall` is set, since
-   * installing it may download Almond itself.
+   * Bloop gives each BSP connection its own `classes-Metals-<uuid>`
+   * directory, so a Metals restart alone makes an installed kernel stale.
+   * Stale kernels get reinstalled silently. A missing kernel may need an
+   * Almond download, so with `askBeforeInstall` the user confirms first.
    *
    * @return None if no kernel is installed after this call
    */
@@ -142,9 +136,9 @@ object NotebookKernelInstaller {
 
   /**
    * @param kernelId the kernelspec's directory name, as Jupyter lists it
-   * @param newlyInstalled true if this call installed a kernel that didn't
-   *                       exist before. Jupyter only scans kernelspecs on
-   *                       startup, so the client has to make it rescan.
+   * @param newlyInstalled true if the kernel didn't exist before this call.
+   *                       Jupyter only scans kernelspecs on startup, so
+   *                       the client has to make it rescan.
    */
   final case class NotebookKernel(
       kernelId: String,
