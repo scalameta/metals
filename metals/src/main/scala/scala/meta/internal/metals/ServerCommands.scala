@@ -201,6 +201,30 @@ object ServerCommands {
        |""".stripMargin,
   )
 
+  final case class InstallNotebookKernelParams(
+      uri: String,
+      askBeforeInstall: Boolean = false,
+  )
+  val InstallNotebookKernel =
+    new ParametrizedCommand[InstallNotebookKernelParams](
+      "notebook-install-kernel",
+      "Install Jupyter kernel for notebook",
+      """|Install a Jupyter kernel (via Almond) for a `.ipynb` notebook, using
+         |the classpath of the build target its cells resolve against.
+         |
+         |Skips an up to date kernel and reinstalls a stale one. With
+         |`askBeforeInstall`, asks the user before installing a missing one.
+         |
+         |Returns `{ kernelId, displayName, newlyInstalled }`, or null if no
+         |kernel is installed.
+         |""".stripMargin,
+      """|Object with the notebook's uri and an optional `askBeforeInstall`:
+         |```json
+         |{ "uri": "file:///workspace/foo.ipynb", "askBeforeInstall": true }
+         |```
+         |""".stripMargin,
+    )
+
   val RunDoctor = new Command(
     "doctor-run",
     "Run doctor",
@@ -846,6 +870,7 @@ object ServerCommands {
       DisconnectBuildServer,
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
+      InstallNotebookKernel,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,
