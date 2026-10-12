@@ -11,21 +11,35 @@ class AlmondKernelInstallerSuite extends BaseSuite {
   private val classpath = List(Paths.get("/a.jar"), Paths.get("/b.jar"))
 
   test("kernel.json has the shape Jupyter expects") {
+    // Relative paths, so the expected JSON is the same on Windows.
     val json = AlmondKernelInstaller.kernelSpecJson(
       "Scala (a)",
       List("java", "-cp", "launcher.jar", "almond.launcher.Launcher"),
-      classpath,
+      List(Paths.get("a.jar"), Paths.get("b.jar")),
     )
-    assertEquals(json("display_name").str, "Scala (a)")
-    assertEquals(json("language").str, "scala")
-    assertEquals(
-      json("argv").arr.map(_.str).toList,
-      List(
-        "java", "-cp", "launcher.jar", "almond.launcher.Launcher",
-        "--connection-file", "{connection_file}",
-      ),
+    assertNoDiff(
+      ujson.write(json, indent = 2),
+      """|{
+         |  "argv": [
+         |    "java",
+         |    "-cp",
+         |    "launcher.jar",
+         |    "almond.launcher.Launcher",
+         |    "--connection-file",
+         |    "{connection_file}"
+         |  ],
+         |  "display_name": "Scala (a)",
+         |  "language": "scala",
+         |  "env": {},
+         |  "metadata": {
+         |    "classpath": [
+         |      "a.jar",
+         |      "b.jar"
+         |    ]
+         |  }
+         |}
+         |""".stripMargin,
     )
-    assert(json("env").obj.isEmpty)
   }
 
   test("isUpToDateJson accepts its own kernelSpecJson output") {
