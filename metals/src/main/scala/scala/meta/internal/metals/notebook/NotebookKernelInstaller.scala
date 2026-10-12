@@ -90,9 +90,14 @@ final class NotebookKernelInstaller(
               )
               // install() recovers failures into a successful Future so it
               // can show its own error message.
-              .map(_ =>
-                Option.when(upToDate)(kernel.copy(newlyInstalled = fresh))
-              )
+              .map { _ =>
+                if (upToDate) Some(kernel.copy(newlyInstalled = fresh))
+                // A failed refresh leaves the previous kernel installed.
+                else
+                  Option.when(
+                    !fresh && AlmondKernelInstaller.exists(kernel.kernelId)
+                  )(kernel)
+              }
           if (upToDate) Future.successful(Some(kernel))
           else if (AlmondKernelInstaller.exists(kernel.kernelId))
             install(fresh = false)
