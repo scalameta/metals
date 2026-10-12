@@ -10,81 +10,49 @@ class NotebookKernelInstallerSuite extends BaseSuite {
   private def path(parts: String*): AbsolutePath =
     AbsolutePath(java.nio.file.Paths.get("/workspace", parts: _*))
 
-  private val almondVersion = "0.15.0"
+  private def id(path: AbsolutePath, almondVersion: String = "0.15.0") =
+    NotebookKernelInstaller.kernelIdFor(path, almondVersion)
 
-  test("same-named notebooks in different directories get different ids") {
-    val a =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), almondVersion)
-    val b =
-      NotebookKernelInstaller.kernelIdFor(path("b", "foo.ipynb"), almondVersion)
-    assertNotEquals(a, b)
+  test("same-name-in-different-directories") {
+    assertNotEquals(id(path("a", "foo.ipynb")), id(path("b", "foo.ipynb")))
   }
 
-  test("the same notebook always gets the same id") {
-    val first =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), almondVersion)
-    val second =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), almondVersion)
-    assertEquals(first, second)
+  test("stable") {
+    assertEquals(id(path("a", "foo.ipynb")), id(path("a", "foo.ipynb")))
   }
 
-  test("different Almond versions get different ids") {
-    val a =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), "0.14.5")
-    val b =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), "0.15.0")
-    assertNotEquals(a, b)
-  }
-
-  test("sanitizes characters that aren't valid in a kernelspec id") {
-    val id = NotebookKernelInstaller.kernelIdFor(
-      path("a b", "my notebook!.ipynb"),
-      almondVersion,
-    )
-    assert(
-      id.matches("metals-[A-Za-z0-9_-]+"),
-      s"expected only filesystem-safe characters, got '$id'",
-    )
-  }
-
-  test(
-    "a literal underscore in the path can't collide with a sanitized separator"
-  ) {
-    val withSlash =
-      NotebookKernelInstaller.kernelIdFor(
-        path("a", "b", "x.ipynb"),
-        almondVersion,
-      )
-    val withUnderscore =
-      NotebookKernelInstaller.kernelIdFor(path("a_b", "x.ipynb"), almondVersion)
-    assertNotEquals(withSlash, withUnderscore)
-  }
-
-  test("the id stays traceable back to the notebook's own path") {
-    val id =
-      NotebookKernelInstaller.kernelIdFor(path("a", "foo.ipynb"), almondVersion)
-    assert(
-      id.contains("foo"),
-      s"expected the notebook's own filename to appear in the id, got '$id'",
-    )
-  }
-
-  test("a very deep path still produces an id within filename limits") {
-    val deep = path((1 to 50).map(i => s"dir$i"): _*)
-    val id = NotebookKernelInstaller.kernelIdFor(deep, almondVersion)
-    assert(
-      id.length <= 200,
-      s"expected the id to stay within common filename limits, got ${id.length} chars",
-    )
-  }
-
-  test("deep paths sharing a truncated prefix are disambiguated by the hash") {
-    val commonPrefix = (1 to 50).map(i => s"dir$i")
-    val a = path(commonPrefix :+ "a.ipynb": _*)
-    val b = path(commonPrefix :+ "b.ipynb": _*)
+  test("different-almond-versions") {
     assertNotEquals(
-      NotebookKernelInstaller.kernelIdFor(a, almondVersion),
-      NotebookKernelInstaller.kernelIdFor(b, almondVersion),
+      id(path("a", "foo.ipynb"), "0.14.5"),
+      id(path("a", "foo.ipynb"), "0.15.0"),
     )
+  }
+
+  test("valid-kernelspec-name") {
+    val kernelId = id(path("A b", "My notebook!.ipynb"), "0.15.0-RC1")
+    assert(
+      kernelId.matches("metals-[a-z0-9._-]+"),
+      s"expected a lower-case kernelspec name, got '$kernelId'",
+    )
+  }
+
+  test("paths-differing-only-in-case") {
+    assertNotEquals(id(path("a", "Foo.ipynb")), id(path("a", "foo.ipynb")))
+  }
+
+  test("version-with-dash-cannot-collide") {
+    assertNotEquals(
+      id(path("nb-1.ipynb"), "0"),
+      id(path("nb.ipynb"), "1-0"),
+    )
+  }
+
+  test("traceable-to-file-name") {
+    assert(id(path("a", "foo.ipynb")).startsWith("metals-foo-"))
+  }
+
+  test("deep-path-stays-short") {
+    val deep = path((1 to 50).map(i => s"dir$i") :+ "a.ipynb": _*)
+    assert(id(deep).length <= 100, id(deep))
   }
 }

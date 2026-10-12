@@ -2,14 +2,13 @@ package scala.meta.internal.metals.notebooks
 
 import java.io.File
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.UUID
 
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
 import scala.util.Properties
 import scala.util.Try
 import scala.util.Using
@@ -17,141 +16,108 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-
-import org.eclipse.lsp4j.MessageType
 
 /**
- * Installs a Jupyter kernelspec for a given Scala version + classpath.
+ * Builds and installs Jupyter kernelspecs that run Almond.
  *
  * Writes `kernel.json` directly instead of shelling out to Almond's
  * `almond.launcher.Launcher --install`: per its source
  * (`almond.kernel.install.Install.installIn`), `--install` does nothing
  * beyond resolving the kernels directory, force-overwriting an existing
  * one, and serializing this same JSON.
- *
- * `kernelId` already encodes the Almond version (see
- * `NotebookKernelInstaller.kernelIdFor`), so a different version never
- * collides with, or gets mistaken for up to date against, another one;
- * only the classpath needs comparing here.
  */
 object AlmondKernelInstaller {
 
   val defaultAlmondVersion = "0.15.0"
 
-  def install(
-      languageClient: MetalsLanguageClient,
+  /** Resolves the Almond launcher, so it may download it. */
+  def kernelSpec(
       javaHome: Option[String],
       almondVersion: String,
       scalaVersion: String,
       classpath: List[Path],
-      kernelId: String,
       displayName: String,
-      notify: Boolean = true,
-  )(implicit ec: ExecutionContext): Future[Unit] = {
-    for {
-      launcherClasspath <- Future {
-        Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion)
-      }
-      javaBin = JavaBinary(javaHome)
-      launcherClasspathStr = launcherClasspath.mkString(File.pathSeparator)
-      runCommand = List(
-        javaBin,
-        "-cp",
-        launcherClasspathStr,
-        "almond.launcher.Launcher",
-        "--scala",
-        scalaVersion,
-      ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
-    } yield {
-      writeKernelSpec(kernelId, displayName, runCommand, classpath)
-    }
-  }.recover { case NonFatal(e) =>
-    scribe.error(s"failed to install Almond kernel '$kernelId'", e)
-    if (notify)
-      languageClient.showMessage(
-        MessageType.Error,
-        s"Failed to install Jupyter kernel '$displayName': ${e.getMessage}",
-      )
+  ): ujson.Obj = {
+    val launcherClasspath =
+      Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion)
+    kernelSpecJson(
+      displayName,
+      argv(JavaBinary(javaHome), launcherClasspath, scalaVersion, classpath),
+    )
   }
 
-  def exists(kernelId: String): Boolean =
-    Files.exists(userKernelsDir.resolve(kernelId).resolve("kernel.json"))
-
-  // Writes the replacement into a staging dir first and only deletes
-  // the existing one right before swapping it in, so a failure while
-  // writing (disk full, permissions) leaves the old kernel installed
-  // instead of neither. The staging dir is unique per call, so two
-  // concurrent installs of the same kernelId (e.g. a silent background
-  // refresh racing a manual install) can't clobber each other's files.
-  private def writeKernelSpec(
-      kernelId: String,
-      displayName: String,
-      runCommand: List[String],
+  // BSP gives no ordering guarantee across separate calls, so the classpath
+  // is sorted to keep an unchanged one from looking stale.
+  def argv(
+      javaBin: String,
+      launcherClasspath: List[Path],
+      scalaVersion: String,
       classpath: List[Path],
-  ): Unit = {
-    val dir = userKernelsDir.resolve(kernelId)
-    val staging = userKernelsDir.resolve(s"$kernelId.tmp-${UUID.randomUUID()}")
+  ): List[String] =
+    List(
+      javaBin,
+      "-cp",
+      launcherClasspath.mkString(File.pathSeparator),
+      "almond.launcher.Launcher",
+      "--scala",
+      scalaVersion,
+    ) ++
+      classpath
+        .map(_.toString)
+        .distinct
+        .sorted
+        .flatMap(p => List("--extra-class-path", p)) ++
+      List("--connection-file", "{connection_file}")
+
+  // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
+  def kernelSpecJson(displayName: String, argv: List[String]): ujson.Obj =
+    ujson.Obj(
+      "argv" -> argv,
+      "display_name" -> displayName,
+      "language" -> "scala",
+      "env" -> ujson.Obj(),
+    )
+
+  def exists(kernelId: String): Boolean =
+    Files.exists(kernelJson(kernelId))
+
+  /**
+   * True if `kernelId` is installed with exactly this spec, so a changed
+   * classpath, Java binary, Scala version or launcher makes it stale.
+   */
+  def isInstalled(kernelId: String, spec: ujson.Value): Boolean =
+    Try(ujson.read(Files.readString(kernelJson(kernelId)))).toOption
+      .contains(spec)
+
+  /**
+   * Stages the kernel outside the kernels directory, so Jupyter never lists
+   * a half-written or leftover one, and swaps it in only once it's written.
+   * If a concurrent install of the same `kernelId` swaps its own in first,
+   * that one is kept.
+   */
+  def install(kernelId: String, spec: ujson.Value): Unit = {
+    val dir = kernelsDir.resolve(kernelId)
+    val staging = stagingDir.resolve(s"$kernelId-${UUID.randomUUID()}")
     Files.createDirectories(staging)
     try {
       Files.write(
         staging.resolve("kernel.json"),
-        kernelSpecJson(displayName, runCommand, classpath).toString.getBytes(
-          StandardCharsets.UTF_8
-        ),
+        spec.toString.getBytes(StandardCharsets.UTF_8),
       )
+      Files.createDirectories(kernelsDir)
       if (Files.exists(dir)) deleteRecursively(dir)
       Files.move(staging, dir)
     } catch {
+      case _: FileAlreadyExistsException =>
+        deleteRecursively(staging)
       case NonFatal(e) =>
         deleteRecursively(staging)
         throw e
     }
   }
 
-  /**
-   * True only if a kernel is installed for `kernelId` AND it was installed
-   * against the same classpath as now. Otherwise a stale install (the
-   * project's classpath changed since) looks identical to "not installed"
-   * to callers deciding whether to offer a (re)install.
-   */
-  def isUpToDate(kernelId: String, classpath: List[Path]): Boolean = {
-    val file = userKernelsDir.resolve(kernelId).resolve("kernel.json")
-    val result = Try(ujson.read(Files.readString(file))).toOption
-      .exists(isUpToDateJson(_, classpath))
-    if (!result)
-      scribe.debug(
-        s"kernel '$kernelId' not up to date; file=$file exists=${Files.exists(file)} classpath=${classpath.map(_.toString)}"
-      )
-    result
-  }
-
-  // BSP gives no ordering guarantee across separate calls, so a
-  // reordered-but-identical classpath must not look like a change.
-  def isUpToDateJson(kernelJson: ujson.Value, classpath: List[Path]): Boolean =
-    Try {
-      val stored = kernelJson("metadata")("classpath").arr.map(_.str).toSet
-      val current = classpath.map(_.toString).toSet
-      if (stored != current)
-        scribe.debug(s"stored classpath=$stored current classpath=$current")
-      stored == current
-    }.getOrElse(false)
-
-  // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
-  def kernelSpecJson(
-      displayName: String,
-      runCommand: List[String],
-      classpath: List[Path],
-  ): ujson.Obj =
-    ujson.Obj(
-      "argv" -> (runCommand ++ List("--connection-file", "{connection_file}")),
-      "display_name" -> displayName,
-      "language" -> "scala",
-      "env" -> ujson.Obj(),
-      "metadata" -> ujson.Obj(
-        "classpath" -> classpath.map(_.toString)
-      ),
-    )
+  private def kernelJson(kernelId: String): Path =
+    kernelsDir.resolve(kernelId).resolve("kernel.json")
 
   // Not AbsolutePath.deleteRecursively(): must guarantee it never
   // follows a symlink out of the kernel directory.
@@ -161,12 +127,18 @@ object AlmondKernelInstaller {
     Files.deleteIfExists(path)
   }
 
+  private def kernelsDir: Path = dataDir.resolve("kernels")
+
+  // Next to the kernels directory, so moving out of it stays on one
+  // filesystem.
+  private def stagingDir: Path = dataDir.resolve("metals-kernel-staging")
+
   // Mirrors almond.kernel.util.JupyterPaths.userPath / Jupyter's own
   // jupyter_core.paths.jupyter_data_dir. Skipping JUPYTER_DATA_DIR or
   // XDG_DATA_HOME would install a kernel Jupyter's own picker never sees.
-  private def userKernelsDir: Path = {
+  private def dataDir: Path = {
     val home = Paths.get(sys.props("user.home"))
-    val dataDir = sys.env
+    sys.env
       .get("JUPYTER_DATA_DIR")
       .map(Paths.get(_))
       .getOrElse {
@@ -185,6 +157,5 @@ object AlmondKernelInstaller {
             .getOrElse(home.resolve(".local").resolve("share"))
             .resolve("jupyter")
       }
-    dataDir.resolve("kernels")
   }
 }
