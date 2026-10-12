@@ -1023,17 +1023,12 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
-      case ServerCommands.InstallNotebookKernel(uri) =>
-        getServiceForOpt(uri)
+      case ServerCommands.InstallNotebookKernel(params) =>
+        getServiceForOpt(params.uri)
           .orElse(currentFolder)
           .getOrElse(fallbackService)
-          .installNotebookKernel(uri)
-          .asJavaObject
-      case ServerCommands.NotebookKernelUpToDate(uri) =>
-        getServiceForOpt(uri)
-          .orElse(currentFolder)
-          .getOrElse(fallbackService)
-          .isNotebookKernelUpToDate(uri)
+          .installNotebookKernel(params.uri, params.askBeforeInstall)
+          .map(_.orNull)
           .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(

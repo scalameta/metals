@@ -65,11 +65,6 @@ object AlmondKernelInstaller {
       ) ++ classpath.flatMap(p => List("--extra-class-path", p.toString))
     } yield {
       writeKernelSpec(kernelId, displayName, runCommand, classpath)
-      if (notify)
-        languageClient.showMessage(
-          MessageType.Info,
-          s"Installed Jupyter kernel '$displayName'. Select it from your editor's kernel/Run picker to execute this notebook.",
-        )
     }
   }.recover { case NonFatal(e) =>
     scribe.error(s"failed to install Almond kernel '$kernelId'", e)

@@ -232,8 +232,8 @@ abstract class MetalsLspService(
     notebookProvider,
     buildTargets,
     languageClient,
-    javaHome,
-    userConfig.notebookAlmondVersion,
+    () => javaHome,
+    () => userConfig.notebookAlmondVersion,
   )
 
   val sourceMapper: SourceMapper = SourceMapper(
@@ -944,19 +944,17 @@ abstract class MetalsLspService(
 
   // Right after a fresh start, bestTarget/fullClasspath resolve nothing
   // yet, which would otherwise look identical to no kernel installed.
-  def installNotebookKernel(notebookUri: String): Future[Unit] =
+  def installNotebookKernel(
+      notebookUri: String,
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernelInstaller.NotebookKernel]] =
     for {
       _ <- indexingPromise.future
-      _ <- notebookKernelInstaller.installKernel(notebookUri.toAbsolutePath)
-    } yield ()
-
-  def isNotebookKernelUpToDate(notebookUri: String): Future[Boolean] =
-    for {
-      _ <- indexingPromise.future
-      upToDate <- notebookKernelInstaller.isKernelUpToDate(
-        notebookUri.toAbsolutePath
+      kernel <- notebookKernelInstaller.ensureKernel(
+        notebookUri.toAbsolutePath,
+        askBeforeInstall,
       )
-    } yield upToDate
+    } yield kernel
 
   override def didSave(
       params: DidSaveTextDocumentParams
