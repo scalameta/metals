@@ -209,34 +209,18 @@ object ServerCommands {
     new ParametrizedCommand[InstallNotebookKernelParams](
       "notebook-install-kernel",
       "Install Jupyter kernel for notebook",
-      """|Makes sure a `.ipynb` notebook has a real Jupyter kernel (via Almond)
-         |sharing the classpath of whichever build target its cells currently
-         |resolve against, so "Run" actually executes cells against the same
-         |dependencies its language features already see.
+      """|Install a Jupyter kernel (via Almond) for a `.ipynb` notebook, using
+         |the classpath of the build target its cells resolve against.
          |
-         |An up to date kernel is left as is, a stale one (Almond version or
-         |classpath changed) is reinstalled silently. A missing one is
-         |installed right away, or only after asking the user if
-         |`askBeforeInstall` is set.
+         |Skips an up to date kernel and reinstalls a stale one. With
+         |`askBeforeInstall`, asks the user before installing a missing one.
          |
-         |Returns the installed kernel, or null if there is none, so the
-         |client can select it. `newlyInstalled` is true if the kernel didn't
-         |exist before this call:
-         |```json
-         |{
-         |  "kernelId": "metals-_workspace_foo_ipynb-0_15_0",
-         |  "displayName": "Scala (root, Almond 0.15.0)",
-         |  "newlyInstalled": true
-         |}
-         |```
+         |Returns `{ kernelId, displayName, newlyInstalled }`, or null if no
+         |kernel is installed.
          |""".stripMargin,
-      """|Object with the notebook's uri and whether to ask before
-         |installing a missing kernel:
+      """|Object with the notebook's uri and an optional `askBeforeInstall`:
          |```json
-         |{
-         |  "uri": "file:///workspace/foo.ipynb",
-         |  "askBeforeInstall": true
-         |}
+         |{ "uri": "file:///workspace/foo.ipynb", "askBeforeInstall": true }
          |```
          |""".stripMargin,
     )
