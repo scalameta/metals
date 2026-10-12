@@ -1,7 +1,9 @@
 package tests.codeactions
 
-import scala.meta.internal.metals.codeactions.FlatMapToForComprehensionCodeAction
-import scala.meta.internal.metals.codeactions.RewriteBracesParensCodeAction
+import scala.meta.internal.metals.codeactions.{
+  FlatMapToForComprehensionCodeAction,
+  RewriteBracesParensCodeAction,
+}
 
 class FlatMapToForComprehensionSuite
     extends BaseCodeActionLspSuite("forComprehension") {
@@ -273,6 +275,353 @@ class FlatMapToForComprehensionSuite
        |val res = List(1, 2, 3).map{multiply(_, _)}
        |}
        |""".stripMargin,
+    expectError = true,
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "overlapping-parameter-names",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |               .map(x => x + 1)
+       |               .m<<>>ap(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |                 generatedByMetals <- List(1, 2, 3)
+       |                 x = generatedByMetals + 1
+       |               } yield {
+       |                 x + 2
+       |               }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "nested-overlapping-parameter-names",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        for (x <- 1 to 5)
+       |           println(x)
+       |        x + 3
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          for (x <- 1 to 5) println(x)
+       |          generatedByMetals + 3
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-nested-for-comprehension",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        for (y <- 1 to 5;
+       |             m <- 1 to x if m + y == x;
+       |             p = x)
+       |           println(x + y + p)
+       |        x + 3
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          for (y <- 1 to 5; m <- 1 to generatedByMetals; if m + y == generatedByMetals; p = generatedByMetals) println(generatedByMetals + y + p)
+       |          generatedByMetals + 3
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-anonymous-and-partial-function",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        List(1, 2, 3).map(_ * x).foreach { case i => println(i + x) }
+       |        x
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          List(1, 2, 3).map(_ * generatedByMetals).foreach {
+       |            case i =>
+       |              println(i + generatedByMetals)
+       |          }
+       |          generatedByMetals
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-throw-interpolation",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        throw new java.lang.IllegalStateException(s"X: ${x}")
+       |        x
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          throw new java.lang.IllegalStateException(s"X: ${
+       |            generatedByMetals
+       |          }")
+       |          generatedByMetals
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-if-else",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        if (x < 2) println(x)
+       |        else println(x.toFloat)
+       |        x
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          if (generatedByMetals < 2) println(generatedByMetals) else println(generatedByMetals.toFloat)
+       |          generatedByMetals
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-match",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .flatM<<>>ap { x =>
+       |        Option(x).filter(_ != x % 2) match {
+       |          case Some(x) => Some(x + 5)
+       |          case _ => None
+       |        }
+       |      }.map { x =>
+       |        x match {
+       |          case 1 | 2 => x + 5
+       |          case a if x > 5 => x + 1
+       |          case b if b > 4 => x * 2
+       |          case x if x > 3 => x - 1
+       |          case x: Int => x
+       |        }
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toParens("flatMap")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals1 <- List(1, 2, 3)
+       |        generatedByMetals <- Option(generatedByMetals1).filter(_ != generatedByMetals1 % 2) match {
+       |          case Some(x) =>
+       |            Some(x + 5)
+       |          case _ =>
+       |            None
+       |        }
+       |        x = generatedByMetals match {
+       |          case 1 | 2 =>
+       |            generatedByMetals + 5
+       |          case a if generatedByMetals > 5 =>
+       |            generatedByMetals + 1
+       |          case b if b > 4 =>
+       |            generatedByMetals * 2
+       |          case x if x > 3 =>
+       |            x - 1
+       |          case x: Int =>
+       |            x
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-try-catch",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        try {
+       |          x / 0
+       |        } catch {
+       |          case e: java.lang.ArithmeticException => x
+       |        } finally {
+       |          println(x)
+       |        }
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toParens("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = try {
+       |          generatedByMetals / 0
+       |        } catch {
+       |          case e: java.lang.ArithmeticException => generatedByMetals
+       |        } finally {
+       |          println(generatedByMetals)
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-assignment",
+    """|object A {
+       |    var z = 0
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        z = x
+       |        x + 3
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    var z = 0
+       |    val res3 = for {
+       |        generatedByMetals <- List(1, 2, 3)
+       |        x = {
+       |          z = generatedByMetals
+       |          generatedByMetals + 3
+       |        }
+       |      } yield {
+       |        x + 2
+       |      }
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+  )
+
+  check(
+    "overlapping-parameter-names-unsupported-match",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .flatM<<>>ap { x =>
+       |        Option(Option(x)) match {
+       |          case Some(Some(x)) => Some(x + 5)
+       |          case _ => None
+       |        }
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toParens("flatMap")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .flatMap { x =>
+       |        Option(Option(x)) match {
+       |          case Some(Some(x)) => Some(x + 5)
+       |          case _ => None
+       |        }
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
+    expectError = true,
+    expectNoDiagnostics = false,
+  )
+
+  check(
+    "complex-overlapping-names-unsupported-val",
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .m<<>>ap { x =>
+       |        val x = 5
+       |        x + 3
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    s"""|${RewriteBracesParensCodeAction.toBraces("map")}
+        |${FlatMapToForComprehensionCodeAction.flatMapToForComprehension}
+        |""".stripMargin,
+    """|object A {
+       |    val res3 = List(1, 2, 3)
+       |      .map { x =>
+       |        val x = 5
+       |        x + 3
+       |      }.map(x => x + 2)
+       |}
+       |""".stripMargin,
+    selectedActionIndex = 1,
     expectError = true,
     expectNoDiagnostics = false,
   )
