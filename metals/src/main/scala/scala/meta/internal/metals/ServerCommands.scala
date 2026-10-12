@@ -201,29 +201,45 @@ object ServerCommands {
        |""".stripMargin,
   )
 
-  val InstallNotebookKernel = new ParametrizedCommand[String](
-    "notebook-install-kernel",
-    "Install Jupyter kernel for notebook",
-    """|Installs a real Jupyter kernel (via Almond) for a `.ipynb` notebook,
-       |sharing the classpath of whichever build target its cells currently
-       |resolve against, so "Run" actually executes cells against the same
-       |dependencies its language features already see.
-       |""".stripMargin,
-    """|[uri], uri of the `.ipynb` notebook.
-       |""".stripMargin,
+  final case class InstallNotebookKernelParams(
+      uri: String,
+      askBeforeInstall: Boolean = false,
   )
-
-  val NotebookKernelUpToDate = new ParametrizedCommand[String](
-    "notebook-kernel-up-to-date",
-    "Check if a notebook's Jupyter kernel is installed and up to date",
-    """|Returns whether a `.ipynb` notebook has an installed Jupyter kernel
-       |that still matches the current Almond version and project
-       |classpath, so a client can decide whether to offer a (re)install
-       |without guessing at Metals' own kernel id scheme or disk state.
-       |""".stripMargin,
-    """|[uri], uri of the `.ipynb` notebook.
-       |""".stripMargin,
-  )
+  val InstallNotebookKernel =
+    new ParametrizedCommand[InstallNotebookKernelParams](
+      "notebook-install-kernel",
+      "Install Jupyter kernel for notebook",
+      """|Makes sure a `.ipynb` notebook has a real Jupyter kernel (via Almond)
+         |sharing the classpath of whichever build target its cells currently
+         |resolve against, so "Run" actually executes cells against the same
+         |dependencies its language features already see.
+         |
+         |An up to date kernel is left as is, a stale one (Almond version or
+         |classpath changed) is reinstalled silently. A missing one is
+         |installed right away, or only after asking the user if
+         |`askBeforeInstall` is set.
+         |
+         |Returns the installed kernel, or null if there is none, so the
+         |client can select it. `newlyInstalled` is true if the kernel didn't
+         |exist before this call:
+         |```json
+         |{
+         |  "kernelId": "metals-_workspace_foo_ipynb-0_15_0",
+         |  "displayName": "Scala (root, Almond 0.15.0)",
+         |  "newlyInstalled": true
+         |}
+         |```
+         |""".stripMargin,
+      """|Object with the notebook's uri and whether to ask before
+         |installing a missing kernel:
+         |```json
+         |{
+         |  "uri": "file:///workspace/foo.ipynb",
+         |  "askBeforeInstall": true
+         |}
+         |```
+         |""".stripMargin,
+    )
 
   val RunDoctor = new Command(
     "doctor-run",
@@ -871,7 +887,6 @@ object ServerCommands {
       DisconnectBuildServerAndShutdown,
       ListBuildTargets,
       InstallNotebookKernel,
-      NotebookKernelUpToDate,
       ScanWorkspaceSources,
       StartDebugAdapter,
       StartMainClass,

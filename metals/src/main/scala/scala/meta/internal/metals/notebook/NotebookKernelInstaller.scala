@@ -6,11 +6,14 @@ import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.io.AbsolutePath
 
+import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
+import org.eclipse.lsp4j.ShowMessageRequestParams
 
 /**
  * Installs a real Jupyter kernel (via Almond) sharing the classpath of
@@ -26,62 +29,42 @@ final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
-    javaHome: => Option[String],
-    configuredAlmondVersion: => Option[String],
+    javaHome: () => Option[String],
+    configuredAlmondVersion: () => Option[String],
 )(implicit ec: ExecutionContext) {
+  import NotebookKernelInstaller._
 
   private def almondVersion: String =
-    configuredAlmondVersion.getOrElse(
+    configuredAlmondVersion().getOrElse(
       AlmondKernelInstaller.defaultAlmondVersion
     )
 
-  // Bloop assigns a fresh session-scoped class directory per BSP
-  // connection, so a plain restart alone can make an unchanged classpath
-  // look stale. A kernel that was never installed still asks first,
-  // since installing it may need to download Almond itself.
-  def isKernelUpToDate(ipynbPath: AbsolutePath): Future[Boolean] = {
-    val resolved = for {
-      target <- notebookProvider.bestTarget(ipynbPath)
-      classpathFuture <- buildTargets.fullClasspath(target, Promise())
-    } yield classpathFuture.flatMap { classpath =>
-      val kernelId =
-        NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion)
-      if (!AlmondKernelInstaller.exists(kernelId))
-        Future.successful(false)
-      else if (
-        AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
-      )
-        Future.successful(true)
-      else
-        // install() recovers failures into a successful Future (so it
-        // can show its own error message instead of crashing the
-        // caller), so a failed refresh would otherwise look up to date.
-        install(ipynbPath, notify = false).map(_ =>
-          AlmondKernelInstaller.isUpToDate(kernelId, classpath.map(_.toNIO))
-        )
-    }
-    resolved
-      .getOrElse(Future.successful(false))
-      .recover { case NonFatal(e) =>
-        scribe.error(s"failed to check Almond kernel for '$ipynbPath'", e)
-        false
-      }
-  }
-
-  def installKernel(ipynbPath: AbsolutePath): Future[Unit] =
-    install(ipynbPath, notify = true)
-
-  private def install(
+  /**
+   * Makes sure the notebook has a kernel matching its current classpath
+   * and returns it, so the client can select it without the user having
+   * to.
+   *
+   * Bloop gives every BSP connection its own `classes-Metals-<uuid>`
+   * directory, so after a Metals restart an installed kernel points at a
+   * classes directory that no longer exists even if the project didn't
+   * change. Such a stale kernel is refreshed silently. A missing one is
+   * only installed after asking when `askBeforeInstall` is set, since
+   * installing it may download Almond itself.
+   *
+   * @return None if no kernel is installed after this call
+   */
+  def ensureKernel(
       ipynbPath: AbsolutePath,
-      notify: Boolean,
-  ): Future[Unit] =
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernel]] =
     notebookProvider.bestTarget(ipynbPath) match {
       case None =>
-        languageClient.showMessage(
-          MessageType.Warning,
-          "No build target found for this notebook.",
-        )
-        Future.successful(())
+        if (!askBeforeInstall)
+          languageClient.showMessage(
+            MessageType.Warning,
+            "No build target found for this notebook.",
+          )
+        Future.successful(None)
       case Some(target) =>
         val targetDisplayName =
           buildTargets
@@ -92,29 +75,85 @@ final class NotebookKernelInstaller(
           scalaTarget <- buildTargets.scalaTarget(target)
           classpathFuture <- buildTargets.fullClasspath(target, Promise())
         } yield classpathFuture.flatMap { classpath =>
-          AlmondKernelInstaller.install(
-            languageClient,
-            javaHome,
-            almondVersion,
-            scalaTarget.scalaVersion,
-            classpath.map(_.toNIO),
-            kernelId =
-              NotebookKernelInstaller.kernelIdFor(ipynbPath, almondVersion),
-            displayName = s"Scala ($targetDisplayName, Almond $almondVersion)",
-            notify = notify,
+          val kernel = NotebookKernel(
+            kernelIdFor(ipynbPath, almondVersion),
+            s"Scala ($targetDisplayName, Almond $almondVersion)",
           )
+          val paths = classpath.map(_.toNIO)
+          def upToDate =
+            AlmondKernelInstaller.isUpToDate(kernel.kernelId, paths)
+          def install(fresh: Boolean): Future[Option[NotebookKernel]] =
+            AlmondKernelInstaller
+              .install(
+                languageClient,
+                javaHome(),
+                almondVersion,
+                scalaTarget.scalaVersion,
+                paths,
+                kernel.kernelId,
+                kernel.displayName,
+                notify = fresh,
+              )
+              // install() recovers failures into a successful Future so it
+              // can show its own error message.
+              .map(_ =>
+                Option.when(upToDate)(kernel.copy(newlyInstalled = fresh))
+              )
+          if (upToDate) Future.successful(Some(kernel))
+          else if (AlmondKernelInstaller.exists(kernel.kernelId))
+            install(fresh = false)
+          else if (askBeforeInstall)
+            confirmInstall().flatMap { confirmed =>
+              if (confirmed) install(fresh = true)
+              else Future.successful(None)
+            }
+          else install(fresh = true)
         }
-        resolved.getOrElse {
-          languageClient.showMessage(
-            MessageType.Error,
-            s"Could not resolve a classpath for '$targetDisplayName'.",
-          )
-          Future.successful(())
-        }
+        resolved
+          .getOrElse {
+            if (!askBeforeInstall)
+              languageClient.showMessage(
+                MessageType.Error,
+                s"Could not resolve a classpath for '$targetDisplayName'.",
+              )
+            Future.successful(None)
+          }
+          .recover { case NonFatal(e) =>
+            scribe.error(s"failed to ensure Almond kernel for '$ipynbPath'", e)
+            None
+          }
     }
+
+  private def confirmInstall(): Future[Boolean] = {
+    val params = new ShowMessageRequestParams()
+    params.setType(MessageType.Info)
+    params.setMessage(
+      "Install a Jupyter kernel (via Almond) to run this notebook's Scala cells?"
+    )
+    params.setActions(List(installAction, notNowAction).asJava)
+    languageClient
+      .showMessageRequest(params)
+      .asScala
+      .map(_ == installAction)
+  }
 }
 
 object NotebookKernelInstaller {
+
+  /**
+   * @param kernelId the kernelspec's directory name, as Jupyter lists it
+   * @param newlyInstalled true if this call installed a kernel that didn't
+   *                       exist before. Jupyter only scans kernelspecs on
+   *                       startup, so the client has to make it rescan.
+   */
+  final case class NotebookKernel(
+      kernelId: String,
+      displayName: String,
+      newlyInstalled: Boolean = false,
+  )
+
+  private val installAction = new MessageActionItem("Install kernel")
+  private val notNowAction = new MessageActionItem("Not now")
 
   // Not a hash, so two same-named notebooks in different directories
   // can't collide (AlmondKernelInstaller force-overwrites an existing
