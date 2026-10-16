@@ -804,6 +804,7 @@ object BuildServerConnection {
       userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
     val isBazel = serverName == BazelBuildTool.bspName
+    def isBloop = serverName == BloopServers.name
     val gson = new Gson
     val (data, dataKind) =
       if (isBazel)
@@ -838,9 +839,10 @@ object BuildServerConnection {
         workspace.toURI.toString,
         capabilities,
       )
-
-      params.setData(data)
-      params.setDataKind(dataKind)
+      if (isBloop) {
+        params.setData(data)
+        params.setDataKind(dataKind)
+      }
       params
     }
     // Block on the `build/initialize` request because it should respond instantly by Bloop
