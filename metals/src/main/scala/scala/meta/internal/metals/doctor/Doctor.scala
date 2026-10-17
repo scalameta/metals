@@ -570,12 +570,10 @@ final class Doctor(
     else {
       val scalaTargetMaybe = buildTargets.scalaTarget(targetId)
 
-      val dependenciesCompile =
-        scalaTargetMaybe.flatMap {
-          _.info.getDependencies().asScala.collectFirst { buildId =>
-            diagnostics.hasCompilationErrors(buildId)
-          }
-        }.isEmpty
+      val dependenciesCompile = !scalaTargetMaybe.exists { target =>
+        val dependencies = target.info.getDependencies().asScala
+        dependencies.exists(diagnostics.hasCompilationErrors)
+      }
 
       if (
         scalaTargetMaybe
