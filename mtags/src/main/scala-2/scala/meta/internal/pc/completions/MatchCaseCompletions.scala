@@ -210,7 +210,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
                     .map(member => s"${member.label.getOrElse("")} ???")
                     .mkString(
                       if (clientSupportsSnippets) {
-                        s"$newLine${head.label.getOrElse("")} ???$$0\n$addIndent"
+                        s"$newLine${head.label.getOrElse("")} $${1:???}$$0\n$addIndent"
                       } else {
                         s"$newLine${head.label.getOrElse("")} ???\n$addIndent"
                       },
@@ -329,7 +329,7 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
               .map(member => s"${member.label.getOrElse("")} ???")
               .mkString(
                 if (clientSupportsSnippets) {
-                  s"match {\n\t${head.label.getOrElse("")} ???$$0\n\t"
+                  s"match {\n\t${head.label.getOrElse("")} $${1:???}$$0\n\t"
                 } else {
                   s"match {\n\t${head.label.getOrElse("")} ???\n\t"
                 },
