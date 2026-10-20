@@ -120,9 +120,16 @@ object AlmondKernelInstaller {
       catch {
         case _: FileAlreadyExistsException if exists(kernelId) =>
         case NonFatal(e) =>
-          previous.foreach(p => Try(Files.move(p, dir)))
+          previous.foreach { p =>
+            if (Try(Files.move(p, dir)).isFailure)
+              scribe.warn(
+                s"could not restore Almond kernel '$kernelId' from $p"
+              )
+          }
           throw e
-      } finally previous.foreach(deleteRecursively)
+      }
+      // The new kernel is in place, and Jupyter doesn't see a leftover here.
+      previous.foreach(p => Try(deleteRecursively(p)))
     } finally deleteRecursively(staging)
   }
 
