@@ -373,9 +373,10 @@ class JavacMtags(
             case _ =>
           }
         }
+        val wasInsideLocalScope = isInsideLocalScope
         isInsideLocalScope = true
         try super.visitBlock(node, p)
-        finally isInsideLocalScope = false
+        finally isInsideLocalScope = wasInsideLocalScope
       }
     }
 
@@ -820,9 +821,10 @@ class JavacMtags(
         return r;
         r;
       } else {
+        val wasInsideLocalScope = isInsideLocalScope
         isInsideLocalScope = true
         try super.visitVariable(node, p)
-        finally isInsideLocalScope = false
+        finally isInsideLocalScope = wasInsideLocalScope
       }
     }
     override def visitAnnotation(node: AnnotationTree, p: Unit): TreePath = {
