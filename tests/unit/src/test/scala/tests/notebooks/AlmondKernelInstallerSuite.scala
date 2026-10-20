@@ -2,7 +2,7 @@ package tests.notebooks
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
+import scala.meta.internal.metals.notebook.AlmondKernelInstaller
 
 import tests.BaseSuite
 
@@ -17,9 +17,11 @@ class AlmondKernelInstallerSuite extends BaseSuite {
       classpath.map(Paths.get(_)).toList,
     )
 
+  private def spec(classpath: String*) =
+    AlmondKernelInstaller.kernelSpecJson("Scala (a)", argv(classpath: _*))
+
   test("kernel-json") {
-    val json =
-      AlmondKernelInstaller.kernelSpecJson("Scala (a)", argv("a.jar", "b"))
+    val json = spec("b", "a.jar", "b")
     assertNoDiff(
       ujson.write(json, indent = 2),
       """|{
@@ -31,9 +33,9 @@ class AlmondKernelInstallerSuite extends BaseSuite {
          |    "--scala",
          |    "2.13.18",
          |    "--extra-class-path",
-         |    "a.jar",
-         |    "--extra-class-path",
          |    "b",
+         |    "--extra-class-path",
+         |    "a.jar",
          |    "--connection-file",
          |    "{connection_file}"
          |  ],
@@ -45,7 +47,14 @@ class AlmondKernelInstallerSuite extends BaseSuite {
     )
   }
 
-  test("argv-ignores-classpath-order-and-duplicates") {
-    assertEquals(argv("b", "a.jar", "b"), argv("a.jar", "b"))
+  test("same-spec-ignores-classpath-order") {
+    assert(
+      AlmondKernelInstaller.sameSpec(spec("b", "a.jar"), spec("a.jar", "b"))
+    )
+  }
+
+  test("same-spec-detects-classpath-changes") {
+    assert(!AlmondKernelInstaller.sameSpec(spec("a.jar"), spec("a.jar", "b")))
+    assert(!AlmondKernelInstaller.sameSpec(spec("a.jar"), spec("c.jar")))
   }
 }
