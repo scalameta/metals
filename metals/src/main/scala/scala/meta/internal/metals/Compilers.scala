@@ -14,6 +14,8 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.duration.DurationInt
 import scala.concurrent.duration.FiniteDuration
+import scala.util.Failure
+import scala.util.Success
 import scala.util.control.NonFatal
 import scala.{meta => m}
 
@@ -428,18 +430,29 @@ class Compilers(
                 token,
               )
             }
-            .map { case (timer, result) =>
-              metrics.recordEvent(
-                Event
-                  .duration("diagnostics", timer.elapsed)
-                  .withLanguage(path.toJLanguage)
-              )
-              if (token.isCancelled) None
-              else Some(result)
+            .transformWith {
+              case Success((timer, result)) =>
+                metrics.recordEvent(
+                  Event
+                    .duration("diagnostics", timer.elapsed)
+                    .withLanguage(path.toJLanguage)
+                )
+                if (token.isCancelled) Future.successful(None)
+                else {
+                  diagnostics.publishDiagnosticsNotAdjusted(path, result)
+                  Future.successful(Some(result))
+                }
+              case Failure(_) if token.isCancelled =>
+                Future.successful(None)
+              case Failure(error) =>
+                Future.failed(error)
             }
         }
 
-    maybeDiagnostics.getOrElse(Future.successful(Some(List.empty)))
+    maybeDiagnostics.getOrElse {
+      diagnostics.publishDiagnosticsNotAdjusted(path, Nil)
+      Future.successful(Some(Nil))
+    }
   }
 
   private val inFlightDidChange =
@@ -468,18 +481,24 @@ class Compilers(
                 ) {
                   didChangePc(file, token = token)
                 }
-                .map { case (timer, reportedDiagnostics) =>
-                  if (!token.isCancelled) {
-                    diagnostics.publishDiagnosticsNotAdjusted(
-                      file,
-                      reportedDiagnostics.toList,
+                .transformWith {
+                  case Success((timer, reportedDiagnostics)) =>
+                    metrics.recordEvent(
+                      Event
+                        .duration("diagnostics", timer.elapsed)
+                        .withLanguage(file.toJLanguage)
                     )
-                  }
-                  metrics.recordEvent(
-                    Event
-                      .duration("diagnostics", timer.elapsed)
-                      .withLanguage(file.toJLanguage)
-                  )
+                    if (!token.isCancelled) {
+                      diagnostics.publishDiagnosticsNotAdjusted(
+                        file,
+                        reportedDiagnostics,
+                      )
+                    }
+                    Future.unit
+                  case Failure(_) if token.isCancelled =>
+                    Future.unit
+                  case Failure(error) =>
+                    Future.failed(error)
                 }
             }
           _ <- Future.sequence(futures)

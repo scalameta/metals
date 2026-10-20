@@ -7,6 +7,7 @@ import java.nio.file.Paths
 import java.time.Duration
 import java.util
 import java.util.Optional
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.ScheduledExecutorService
@@ -23,6 +24,7 @@ import scala.reflect.internal.FatalError
 import scala.reflect.io.VirtualDirectory
 import scala.tools.nsc.ParsedLogicalPackage
 import scala.tools.nsc.Settings
+import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 
 import scala.meta.internal.jdk.CollectionConverters._
@@ -280,7 +282,7 @@ case class ScalaPresentationCompiler(
   override def didChange(
       params: VirtualFileParams
   ): CompletableFuture[ju.List[Diagnostic]] = {
-    val noDiags = Seq[Diagnostic]().asJava
+    val noDiags: ju.List[Diagnostic] = new ju.ArrayList[Diagnostic]()
     if (
       params
         .uri()
@@ -288,25 +290,39 @@ case class ScalaPresentationCompiler(
         .endsWith(".scala") && (config.emitDiagnostics || params
         .shouldReturnDiagnostics())
     ) {
-      compilerAccess.withInterruptableCompiler(noDiags, EmptyCancelToken) {
-        pc =>
-          val mGlobal = pc.compiler()
-          pc.compiler().didChange(params.uri())
-          import mGlobal._
-          val sourceFile = new MetalsSourceFile(params)
-          metalsAsk[Unit](askReload(List(sourceFile), _))
+      compilerAccess
+        .withInterruptableCompiler(noDiags, params.token) { pc =>
+          try {
+            val mGlobal = pc.compiler()
+            pc.compiler().didChange(params.uri())
+            import mGlobal._
+            val sourceFile = new MetalsSourceFile(params)
+            metalsAsk[Unit](askReload(List(sourceFile), _))
 
-          val diagnostics =
-            if (config.emitDiagnostics)
-              // MetalsGlobalThreadNoBackgroundCompilation: safe to compile directly
-              mGlobal.diagnosticsOf(sourceFile)
-            else
-              // MetalsGlobalThread: delegate to the PC thread via askLoadedTyped to avoid race conditions
-              mGlobal.onDemandDiagnostics(sourceFile)
-
-          reportCompileErrorsForMbtIfAny(params.uri(), diagnostics, mGlobal)
-          diagnostics.asJava
-      }(emptyQueryContext)
+            val diagnostics =
+              if (config.emitDiagnostics)
+                // MetalsGlobalThreadNoBackgroundCompilation: safe to compile directly
+                mGlobal.diagnosticsOf(sourceFile)
+              else
+                // MetalsGlobalThread: delegate to the PC thread via askLoadedTyped to avoid race conditions
+                mGlobal.onDemandDiagnostics(sourceFile)
+            reportCompileErrorsForMbtIfAny(params.uri(), diagnostics, mGlobal)
+            diagnostics.asJava
+          } catch {
+            case InterruptException() =>
+              noDiags
+            case ShutdownReq =>
+              noDiags
+          }
+        }(emptyQueryContext)
+        .thenApply { diagnostics =>
+          if (params.token.isCanceled) {
+            throw new CancellationException(
+              s"diagnostics interrupted for ${params.uri()}"
+            )
+          }
+          diagnostics
+        }
     } else { CompletableFuture.completedFuture(noDiags) }
   }
 
