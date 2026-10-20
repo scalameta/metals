@@ -950,12 +950,16 @@ abstract class MetalsLspService(
 
   // Right after a fresh start, bestTarget/fullClasspath resolve nothing
   // yet, which would otherwise look identical to no kernel installed.
+  // Without a build server nothing gets indexed, so there's nothing to wait
+  // for.
   def installNotebookKernel(
       notebookUri: String,
       askBeforeInstall: Boolean,
   ): Future[Option[NotebookKernelInstaller.NotebookKernel]] =
     for {
-      _ <- indexingPromise.future
+      _ <- buildServerPromise.future
+      _ <-
+        if (bspSession.isDefined) indexingPromise.future else Future.unit
       kernel <- notebookKernelInstaller.ensureKernel(
         notebookUri.toAbsolutePath,
         askBeforeInstall,

@@ -115,13 +115,17 @@ final class NotebookKernelInstaller(
         if (stale) AlmondKernelInstaller.install(kernel.kernelId, current)
         Option(kernel.copy(newlyInstalled = stale))
       }.recover { case NonFatal(e) =>
-        // The previous kernel is still installed.
         scribe.warn(s"failed to refresh Almond kernel '${kernel.kernelId}'", e)
+        // Unless the swap failed and the previous kernel couldn't be restored.
+        val previousKept = AlmondKernelInstaller.exists(kernel.kernelId)
         languageClient.showMessage(
-          MessageType.Warning,
-          s"Failed to update Jupyter kernel '${kernel.displayName}', it may run with an outdated classpath: ${e.getMessage}",
+          if (previousKept) MessageType.Warning else MessageType.Error,
+          if (previousKept)
+            s"Failed to update Jupyter kernel '${kernel.displayName}', it may run with an outdated classpath: ${e.getMessage}"
+          else
+            s"Failed to update Jupyter kernel '${kernel.displayName}': ${e.getMessage}",
         )
-        Some(kernel)
+        Option.when(previousKept)(kernel)
       }
     else
       for {
