@@ -129,7 +129,7 @@ class JavacMtags(
   // Local classes get no symbol, so `currentOwner` is still the enclosing
   // method and must not be credited with their parents.
   private def addOverridden(symbols: List[OverriddenSymbol]): Unit =
-    if (!isInsideLocalScope)
+    if (!isInsideLocalScope && symbols.nonEmpty)
       overridden += ((currentOwner, symbols))
 
   def identifiers(): Seq[String] =
