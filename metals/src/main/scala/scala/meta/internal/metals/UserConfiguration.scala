@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.JsonParser.XtensionSerializedAsOption
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
+import scala.meta.internal.metals.notebook.AlmondKernelInstaller
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompilerConfig

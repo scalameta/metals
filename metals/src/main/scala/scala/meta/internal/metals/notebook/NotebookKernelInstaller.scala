@@ -10,7 +10,6 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
-import scala.meta.internal.metals.notebooks.AlmondKernelInstaller
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
@@ -23,8 +22,8 @@ import org.eclipse.lsp4j.ShowMessageRequestParams
  * target a notebook's cells resolve against (see
  * [[NotebookProvider.bestTarget]]).
  *
- * The kernel id includes the Almond version, so switching
- * `notebookAlmondVersion` installs a second kernel next to the old one.
+ * Each notebook gets one kernel. Switching `notebookAlmondVersion` changes
+ * its launcher, so the kernel gets reinstalled like any other stale one.
  */
 final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
@@ -78,7 +77,7 @@ final class NotebookKernelInstaller(
               .toAbsoluteClasspath
               .toList
             kernel = NotebookKernel(
-              kernelIdFor(ipynbPath, almondVersion),
+              kernelIdFor(ipynbPath),
               s"Scala ($targetName, Almond $almondVersion)",
             )
             spec = () =>
@@ -112,12 +111,16 @@ final class NotebookKernelInstaller(
     if (AlmondKernelInstaller.exists(kernel.kernelId))
       Future {
         val current = spec()
-        if (!AlmondKernelInstaller.isInstalled(kernel.kernelId, current))
-          AlmondKernelInstaller.install(kernel.kernelId, current)
-        Option(kernel)
+        val stale = !AlmondKernelInstaller.isInstalled(kernel.kernelId, current)
+        if (stale) AlmondKernelInstaller.install(kernel.kernelId, current)
+        Option(kernel.copy(newlyInstalled = stale))
       }.recover { case NonFatal(e) =>
         // The previous kernel is still installed.
         scribe.warn(s"failed to refresh Almond kernel '${kernel.kernelId}'", e)
+        languageClient.showMessage(
+          MessageType.Warning,
+          s"Failed to update Jupyter kernel '${kernel.displayName}', it may run with an outdated classpath: ${e.getMessage}",
+        )
         Some(kernel)
       }
     else
@@ -164,9 +167,9 @@ object NotebookKernelInstaller {
 
   /**
    * @param kernelId the kernelspec's directory name, as Jupyter lists it
-   * @param newlyInstalled true if the kernel didn't exist before this call.
-   *                       Jupyter only scans kernelspecs on startup, so
-   *                       the client has to make it rescan.
+   * @param newlyInstalled true if this call installed or updated the
+   *                       kernelspec. Jupyter only scans kernelspecs on
+   *                       startup, so the client has to make it rescan.
    */
   final case class NotebookKernel(
       kernelId: String,
@@ -178,18 +181,16 @@ object NotebookKernelInstaller {
   private val notNowAction = new MessageActionItem("Not now")
 
   /**
-   * `metals-<file name>-<path hash>-<Almond version>`, lower case because
-   * jupyter_client lower-cases kernelspec names. The hash keeps notebooks
-   * with the same name apart, and the name has no `-`, so the version
-   * can't make two ids collide.
+   * `metals-<file name>-<path hash>`, lower case because jupyter_client
+   * lower-cases kernelspec names. The hash keeps notebooks with the same
+   * name apart.
    */
-  def kernelIdFor(ipynbPath: AbsolutePath, almondVersion: String): String = {
+  def kernelIdFor(ipynbPath: AbsolutePath): String = {
     val name = lower(ipynbPath.filename.stripSuffix(".ipynb"))
       .replaceAll("[^a-z0-9]", "_")
       .take(50)
     val hash = lower(MD5.compute(ipynbPath.toString)).take(16)
-    val version = lower(almondVersion).replaceAll("[^a-z0-9.-]", "_")
-    s"metals-$name-$hash-$version"
+    s"metals-$name-$hash"
   }
 
   private def lower(s: String): String = s.toLowerCase(Locale.ROOT)

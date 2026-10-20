@@ -10,8 +10,8 @@ class NotebookKernelInstallerSuite extends BaseSuite {
   private def path(parts: String*): AbsolutePath =
     AbsolutePath(java.nio.file.Paths.get("/workspace", parts: _*))
 
-  private def id(path: AbsolutePath, almondVersion: String = "0.15.0") =
-    NotebookKernelInstaller.kernelIdFor(path, almondVersion)
+  private def id(path: AbsolutePath) =
+    NotebookKernelInstaller.kernelIdFor(path)
 
   test("same-name-in-different-directories") {
     assertNotEquals(id(path("a", "foo.ipynb")), id(path("b", "foo.ipynb")))
@@ -21,15 +21,8 @@ class NotebookKernelInstallerSuite extends BaseSuite {
     assertEquals(id(path("a", "foo.ipynb")), id(path("a", "foo.ipynb")))
   }
 
-  test("different-almond-versions") {
-    assertNotEquals(
-      id(path("a", "foo.ipynb"), "0.14.5"),
-      id(path("a", "foo.ipynb"), "0.15.0"),
-    )
-  }
-
   test("valid-kernelspec-name") {
-    val kernelId = id(path("A b", "My notebook!.ipynb"), "0.15.0-RC1")
+    val kernelId = id(path("A b", "My notebook!.ipynb"))
     assert(
       kernelId.matches("metals-[a-z0-9._-]+"),
       s"expected a lower-case kernelspec name, got '$kernelId'",
@@ -38,13 +31,6 @@ class NotebookKernelInstallerSuite extends BaseSuite {
 
   test("paths-differing-only-in-case") {
     assertNotEquals(id(path("a", "Foo.ipynb")), id(path("a", "foo.ipynb")))
-  }
-
-  test("version-with-dash-cannot-collide") {
-    assertNotEquals(
-      id(path("nb-1.ipynb"), "0"),
-      id(path("nb.ipynb"), "1-0"),
-    )
   }
 
   test("traceable-to-file-name") {

@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+import scala.collection.immutable.Nil
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
@@ -27,6 +28,7 @@ import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.ForwardingMetalsBuildClient
@@ -34,7 +36,11 @@ import scala.meta.internal.metals.codeactions.CodeActionProvider
 import scala.meta.internal.metals.codelenses.RunTestCodeLens
 import scala.meta.internal.metals.codelenses.SuperMethodCodeLens
 import scala.meta.internal.metals.codelenses.WorksheetCodeLens
-import scala.meta.internal.metals.debug._
+import scala.meta.internal.metals.debug.BuildTargetClasses
+import scala.meta.internal.metals.debug.BuildTargetClassesFinder
+import scala.meta.internal.metals.debug.DebugDiscovery
+import scala.meta.internal.metals.debug.DebugProvider
+import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
@@ -114,7 +120,7 @@ abstract class MetalsLspService(
     with TextDocumentService
     with IndexProviders
     with ModulesService {
-  import serverInputs.*
+  import serverInputs._
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
   def shellRunner: ShellRunner
