@@ -418,8 +418,7 @@ object BazelBuildTool {
       .orElse(dir.list.find(_.filename.endsWith(".bazelproject")))
 
   def enabledRules(projectRoot: AbsolutePath): List[String] = {
-    val scalaRules = getScalaRulesName(projectRoot)
-    List(scalaRules.getOrElse("rules_scala"), "rules_java", "rules_jvm")
+    getScalaRulesName(projectRoot).toList ++ List("rules_java", "rules_jvm")
   }
 
   def fallbackProjectView: String = {
