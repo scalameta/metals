@@ -391,6 +391,63 @@ message Dependency {}
     )
   }
 
+  test("candidate-test-classes-framework-name-from-other-package") {
+    FileLayout.fromString(
+      """|/example/IntegrationTest.scala
+         |package example
+         |import org.scalatest.Suite
+         |import org.scalatest.wordspec.AnyWordSpecLike
+         |trait IntegrationTest extends AnyWordSpecLike { this: Suite => }
+         |/example/FooTest.scala
+         |package example
+         |class FooTest extends IntegrationTest
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    // `Suite` isn't `munit.Suite` here, so semanticdb has to confirm it
+    assertEquals(
+      candidates.map(c => c.candidateSymbol -> c.framework).toSet,
+      Set[(String, Option[TestFramework])](
+        "example/FooTest#" -> None
+      ),
+    )
+  }
+
+  test("candidate-test-classes-unrelated-type-with-framework-name") {
+    FileLayout.fromString(
+      """|/example/MyCase.scala
+         |package example
+         |class MyCase extends com.acme.TestCase
+         |""".stripMargin,
+      root = workspace(),
+    )
+    val provider = newProvider()
+    workspace.executeCommand("git init -b main")
+    workspace.gitCommitAllChanges()
+    provider.onReindex().awaitBackgroundJobs()
+    val candidates = provider.candidateTestClasses(
+      _ => true,
+      TestFrameworkSymbolRegistry.annotationSymbols,
+      TestFrameworkSymbolRegistry.baseParentSymbols,
+    )
+    // Not `junit.framework.TestCase`, so semanticdb has to confirm it
+    assertEquals(
+      candidates.map(c => c.candidateSymbol -> c.framework).toSet,
+      Set[(String, Option[TestFramework])](
+        "example/MyCase#" -> None
+      ),
+    )
+  }
+
   test("candidate-test-classes-ambiguous-parent-name") {
     FileLayout.fromString(
       """|/example/Base.scala
