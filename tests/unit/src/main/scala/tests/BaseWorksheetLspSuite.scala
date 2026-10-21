@@ -384,7 +384,7 @@ abstract class BaseWorksheetLspSuite(
               |max(that: Long): Long
               |""".stripMargin,
           Map(
-            "3.10.0" ->
+            "3.10.1-RC1" ->
               s"""|MaxValue: 2147483647
                   |max(that: Int): Int
                   |""".stripMargin,
