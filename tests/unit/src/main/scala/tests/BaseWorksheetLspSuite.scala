@@ -384,12 +384,12 @@ abstract class BaseWorksheetLspSuite(
               |max(that: Long): Long
               |""".stripMargin,
           Map(
-            "3.10.0" ->
-              s"""|MaxValue: 2147483647
-                  |max(that: Int): Int
+            "3.3" ->
+              s"""|max(that: Int): Int
                   |""".stripMargin,
             "3" ->
-              s"""|max(that: Int): Int
+              s"""|MaxValue: 2147483647
+                  |max(that: Int): Int
                   |""".stripMargin,
           ),
           scalaVersion,
