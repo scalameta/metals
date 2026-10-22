@@ -201,19 +201,20 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
 
             sortedMembers match {
               case Nil => edits
-              case head :: tail =>
+              case list =>
                 val (newLine, addIndent) =
                   if (moveToNewLine) ("\n\t", "\t") else ("", "")
                 val newText = new l.TextEdit(
                   editRange,
-                  tail
-                    .map(_.label.getOrElse(""))
+                  list.zipWithIndex
+                    .map { case (member, index) =>
+                      val body =
+                        if (clientSupportsSnippets) s"$${${index + 1}:???}"
+                        else "???"
+                      s"${member.label.getOrElse("")} $body"
+                    }
                     .mkString(
-                      if (clientSupportsSnippets) {
-                        s"$newLine${head.label.getOrElse("")} $$0\n$addIndent"
-                      } else {
-                        s"$newLine${head.label.getOrElse("")}\n$addIndent"
-                      },
+                      newLine,
                       s"\n$addIndent",
                       if (addNewLineAfter) "\n" else ""
                     )
@@ -322,20 +323,17 @@ trait MatchCaseCompletions { this: MetalsGlobal =>
       )
       val result: List[Member] = members.toList match {
         case Nil => List(basicMatch)
-        case head :: tail =>
+        case list =>
           val newText = new l.TextEdit(
             editRange,
-            tail
-              .map(_.label.getOrElse(""))
-              .mkString(
-                if (clientSupportsSnippets) {
-                  s"match {\n\t${head.label.getOrElse("")} $$0\n\t"
-                } else {
-                  s"match {\n\t${head.label.getOrElse("")}\n\t"
-                },
-                "\n\t",
-                "\n}"
-              )
+            list.zipWithIndex
+              .map { case (member, index) =>
+                val body =
+                  if (clientSupportsSnippets) s"$${${index + 1}:???}"
+                  else "???"
+                s"${member.label.getOrElse("")} $body"
+              }
+              .mkString("match {\n\t", "\n\t", "\n}")
           )
           val detail =
             s" ${metalsToLongString(tpe, new ShortenedNames())} (${members.length} cases)"
