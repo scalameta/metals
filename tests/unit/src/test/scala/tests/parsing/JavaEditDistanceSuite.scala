@@ -70,4 +70,67 @@ class JavaEditDistanceSuite extends BaseSuite {
     )
 
   }
+
+  test("comparison-cutoff") {
+    val original = Input.VirtualFile(
+      "Main.java",
+      (0 until 40)
+        .map(i => s"  int a$i = $i;")
+        .mkString("class A {\n", "\n", "\n}\n"),
+    )
+    val revised = Input.VirtualFile(
+      "Main.java",
+      (0 until 40)
+        .map(i => s"  int b$i = ${i + 1};")
+        .mkString("class B {\n", "\n", "\n}\n"),
+    )
+
+    val cutoff = TokenEditDistance(
+      original,
+      revised,
+      scalaVersionSelector = null,
+      maxComparisons = 100,
+    )
+    assertEquals(cutoff, Right(TokenEditDistance.NoMatch))
+
+    val distance = TokenEditDistance(
+      original,
+      revised,
+      scalaVersionSelector = null,
+      maxComparisons = 100000,
+    )
+    assert(
+      distance.exists(_.toString().startsWith("Diff(")),
+      clue(distance),
+    )
+  }
+
+  test("one-sided-path-cutoff") {
+    val original = Input.VirtualFile("Main.java", "class A {}\n")
+    val revised = Input.VirtualFile(
+      "Main.java",
+      (0 until 1000)
+        .map(i => s"  int a$i;")
+        .mkString("class A {}\n", "\n", "\n"),
+    )
+
+    val cutoff = TokenEditDistance(
+      original,
+      revised,
+      scalaVersionSelector = null,
+      maxComparisons = 1000000,
+    )
+    assertEquals(cutoff, Right(TokenEditDistance.NoMatch))
+
+    val distance = TokenEditDistance(
+      original,
+      revised,
+      scalaVersionSelector = null,
+      maxComparisons = 100000000,
+    )
+    assert(
+      distance.exists(_.toString().startsWith("Diff(")),
+      clue(distance),
+    )
+  }
 }

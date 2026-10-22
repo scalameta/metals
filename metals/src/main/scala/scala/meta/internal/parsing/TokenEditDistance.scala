@@ -7,6 +7,7 @@ import scala.collection.compat.immutable.ArraySeq
 import scala.reflect.ClassTag
 import scala.util.Failure
 import scala.util.Success
+import scala.util.control.NoStackTrace
 
 import scala.meta.Input
 import scala.meta.Position
@@ -18,6 +19,7 @@ import scala.meta.tokenizers.Tokenized
 
 import ch.epfl.scala.{bsp4j => b}
 import difflib._
+import difflib.myers.Equalizer
 import org.eclipse.{lsp4j => l}
 
 /**
@@ -406,6 +408,27 @@ object TokenEditDistance {
   }
 
   /**
+   * Myers diff is quadratic in the edit distance and allocates a node on every
+   * diagonal step. Commenting out a large region of a file such as
+   * Parsers.scala makes that distance huge enough to peg a thread for minutes
+   * (scalameta/metals#8951). The equalizer is invoked on those steps, so once
+   * this many comparisons have run we stop and treat the snapshots as unrelated.
+   */
+  private val MaxTokenDiffComparisons = 2000000
+
+  private object TokenDiffCutoff extends RuntimeException with NoStackTrace
+
+  private class BudgetedEqualizer[A](underlying: Equalizer[A], budget: Int)
+      extends Equalizer[A] {
+    private var remaining = budget
+    override def equals(original: A, revised: A): Boolean = {
+      if (remaining <= 0) throw TokenDiffCutoff
+      remaining -= 1
+      underlying.equals(original, revised)
+    }
+  }
+
+  /**
    * Build utility to map offsets between two slightly different strings.
    *
    * @param original The original snapshot of a string, for example the latest
@@ -418,7 +441,8 @@ object TokenEditDistance {
       original: Array[A],
       revisedInput: Input.VirtualFile,
       revised: Array[A],
-  )(implicit ops: TokenOps[A]) = {
+      maxComparisons: Int,
+  )(implicit ops: TokenOps[A]): TokenEditDistance = {
     val buffer = Array.newBuilder[MatchingToken[A]]
     buffer.sizeHint(math.max(original.length, revised.length))
     @tailrec
@@ -451,26 +475,49 @@ object TokenEditDistance {
         }
       }
     }
-    val deltas = {
-      DiffUtils
-        .diff(
-          ArraySeq(original: _*).asJava,
-          ArraySeq(revised: _*).asJava,
-          ops.equalizer,
+    // Myers takes at least D^2/2 path steps with D >= |N - M|, and steps past
+    // the end of the shorter sequence never reach the equalizer.
+    val minEdits = math.abs(original.length - revised.length).toLong
+    val deltas =
+      if (minEdits * minEdits / 2 > maxComparisons) {
+        scribe.warn(
+          s"Skipped token diff for ${revisedInput.path} with at least $minEdits token edits"
         )
-        .getDeltas
-        .iterator()
-        .asScala
-        .toList
+        None
+      } else
+        try {
+          Some(
+            DiffUtils
+              .diff(
+                ArraySeq(original: _*).asJava,
+                ArraySeq(revised: _*).asJava,
+                new BudgetedEqualizer(ops.equalizer, maxComparisons),
+              )
+              .getDeltas
+              .iterator()
+              .asScala
+              .toList
+          )
+        } catch {
+          case TokenDiffCutoff =>
+            scribe.warn(
+              s"Skipped token diff for ${revisedInput.path} after $maxComparisons comparisons"
+            )
+            None
+        }
+    deltas match {
+      case None => NoMatch
+      case Some(ds) =>
+        loop(0, 0, ds)
+        new Diff(buffer.result(), originalInput, revisedInput)
     }
-    loop(0, 0, deltas)
-    new Diff(buffer.result(), originalInput, revisedInput)
   }
 
   def apply(
       originalInput: Input.VirtualFile,
       revisedInput: Input.VirtualFile,
       scalaVersionSelector: ScalaVersionSelector,
+      maxComparisons: Int = MaxTokenDiffComparisons,
   ): Either[String, TokenEditDistance] = {
     val isScala =
       originalInput.path.isScalaFilename &&
@@ -497,6 +544,7 @@ object TokenEditDistance {
               original,
               revisedInput,
               revised,
+              maxComparisons,
             )
           )
         case (err: Failure[_], _) => Left(err.exception.getMessage())
@@ -515,6 +563,7 @@ object TokenEditDistance {
               original.tokens,
               revisedInput,
               revised.tokens,
+              maxComparisons,
             )
           )
         case (err: Tokenized.Error, _) =>
