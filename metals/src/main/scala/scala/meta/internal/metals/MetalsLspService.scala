@@ -1103,7 +1103,7 @@ abstract class MetalsLspService(
             .compileFile(path)
             .map(_ => DidFocusResult.Compiled)
         case Some(_) =>
-          Future.successful(DidFocusResult.AlreadyCompiled)
+          Future.successful(DidFocusResult.Compiled)
         case None =>
           Future.successful(DidFocusResult.NoBuildTarget)
       }
