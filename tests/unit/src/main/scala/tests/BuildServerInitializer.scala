@@ -69,8 +69,8 @@ object QuickBuildInitializer extends BuildServerInitializer {
  * Set up your workspace by responding to an Import Build request which will
  * run Bloop Install via the build tool being used.
  */
-object BloopImportInitializer extends BuildServerInitializer {
-  this: BaseLspSuite =>
+case class BloopImportInitializer(importAutomatically: Boolean)
+    extends BuildServerInitializer {
   override def initialize(
       workspace: AbsolutePath,
       server: TestingServer,
@@ -82,17 +82,21 @@ object BloopImportInitializer extends BuildServerInitializer {
     for {
       initializeResult <- server.initialize(workspaceFolders)
       // Import build using Bloop
-      _ = client.importBuild = ImportBuild.yes
+      _ = client.importBuild =
+        if (importAutomatically) ImportBuild.yes else ImportBuild.notNow
       _ <- server.initialized()
       _ <- server.didChangeConfiguration(userConfig.toString())
     } yield {
-      if (!expectError) {
+      if (!expectError && importAutomatically) {
         server.assertBuildServerConnection()
       }
       initializeResult
     }
   }
 }
+
+object BloopImportInitializer
+    extends BloopImportInitializer(importAutomatically = true)
 
 /**
  * Assumes sbt is being used as a build tool and also for your BSP server.
