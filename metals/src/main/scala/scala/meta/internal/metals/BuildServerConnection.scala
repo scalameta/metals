@@ -804,8 +804,7 @@ object BuildServerConnection {
       userConfiguration: UserConfiguration,
   ): InitializeBuildResult = {
     val isBazel = serverName == BazelBuildTool.bspName
-    def isBloop = serverName == BloopServers.name
-    def isBloopOrBazel = isBloop || isBazel
+    def isSbt = serverName == SbtBuildTool.name
     val gson = new Gson
     val (data, dataKind) =
       if (isBazel)
@@ -840,7 +839,7 @@ object BuildServerConnection {
         workspace.toURI.toString,
         capabilities,
       )
-      if (isBloopOrBazel) {
+      if (!isSbt) {
         params.setData(data)
         params.setDataKind(dataKind)
       }

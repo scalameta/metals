@@ -86,6 +86,7 @@ class WorkspaceFolderSuite
       _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ <- server.didFocus("other-fake-folder/build.sbt")
       _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = server.assertBuildServerConnection()
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ <- server.fullServer
@@ -189,6 +190,7 @@ class WorkspaceFolderSuite
       )
       _ <- server.didFocus("main-folder/src/main/scala/a/Main.scala")
       _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = server.assertBuildServerConnection()
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertEquals(
@@ -255,6 +257,7 @@ class WorkspaceFolderSuite
       )
       _ <- server.didFocus("main-folder/src/main/scala/a/Main.scala")
       _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ = server.assertBuildServerConnection()
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertEquals(
