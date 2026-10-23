@@ -51,8 +51,8 @@ import org.eclipse.lsp4j.TextEdit
  * closed rather than reaching back out into the parsed-trees cache
  * themselves; the caller (`MetalsLspService`) owns that cache and feeds it.
  *
- * Deliberately out of scope: executing cells (same non-goal as the design
- * doc at https://github.com/scalameta/metals/issues/4434).
+ * Deliberately out of scope for this class: executing cells (see
+ * `NotebookKernelInstaller`).
  */
 final class NotebookProvider(
     buffers: Buffers,
@@ -176,9 +176,11 @@ final class NotebookProvider(
    * otherwise the highest-scored candidate across the workspace by
    * `BuildTargets.buildTargetsOrder` (same as `inferBuildTarget`). Recomputed
    * on every call rather than cached, so a build reload that adds, removes,
-   * or reorders targets is picked up automatically.
+   * or reorders targets is picked up automatically. Also consulted by
+   * `NotebookKernelInstaller` to know which classpath to install a kernel
+   * against.
    */
-  private def bestTarget(
+  private[notebook] def bestTarget(
       ipynbPath: AbsolutePath
   ): Option[b.BuildTargetIdentifier] =
     buildTargets
