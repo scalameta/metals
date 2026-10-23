@@ -286,9 +286,12 @@ class ScalaImportOrganizer(
         groupedImport,
         groupedImport.groupedNames.last
       )
+      // in case of a trailing comma, we need to insert after the comma even if last
+      val realLast =
+        if (text(lastNameEnd) == ',') lastNameEnd else lastNameEnd - 1
       Some(
         new l.TextEdit(
-          offsetToRange(lastNameEnd),
+          offsetToRange(realLast),
           s",\n$groupIndent$name"
         )
       )
@@ -333,7 +336,13 @@ class ScalaImportOrganizer(
           .isLetterOrDigit
 
       if (beforeOk && afterOk) {
-        return groupedImport.groupStartOffset + idx + name.length
+        var prevNameEnd = groupedImport.groupStartOffset + idx + name.length
+        while (
+          prevNameEnd < text.length &&
+          text(prevNameEnd) != ',' &&
+          text(prevNameEnd) != '}'
+        ) prevNameEnd += 1
+        return prevNameEnd
       }
 
       searchStart = idx + 1
