@@ -532,6 +532,120 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "grouped-rename-single",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => Buf}
+       |
+       |object A {
+       |  Buf
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => Buf, ListBuffer}
+       |
+       |object A {
+       |  Buf
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-middle",
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer => AB, Set => S}
+       |
+       |object A {
+       |  AB
+       |  S
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer => AB, ListBuffer, Set => S}
+       |
+       |object A {
+       |  AB
+       |  S
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-before",
+    """|package a
+       |
+       |import scala.collection.mutable.{ListBuffer => LB, Set}
+       |
+       |object A {
+       |  LB
+       |  Set
+       |  val l = <<ArrayBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer, ListBuffer => LB, Set}
+       |
+       |object A {
+       |  LB
+       |  Set
+       |  val l = ArrayBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-unimport",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => _, Set}
+       |
+       |object A {
+       |  Set
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => _, ListBuffer, Set}
+       |
+       |object A {
+       |  Set
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-as",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer as Buf}
+       |
+       |object A {
+       |  Buf
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer as Buf, ListBuffer}
+       |
+       |object A {
+       |  Buf
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   // ===== GROUPED IMPORTS: MULTILINE =====
 
   // Test inserting FIRST in multiline group
@@ -590,6 +704,38 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // Renamed selector in a multiline group keeps its alias.
+  checkEdit(
+    "grouped-rename-multiline",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer => Buf,
+       |  Set
+       |}
+       |
+       |object A {
+       |  Buf
+       |  Set
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer => Buf,
+       |  ListBuffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  Buf
+       |  Set
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   // Test inserting LAST in multiline group (handles comma insertion)
   checkEdit(
     "grouped-multiline-last",
@@ -610,6 +756,33 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |  ArrayBuffer,
        |  Buffer,
        |  ListBuffer
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-multiline-last-trailing-comma",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  ListBuffer,
        |}
        |
        |object A {
