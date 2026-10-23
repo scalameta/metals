@@ -5,6 +5,7 @@ import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.DelegateSetting
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 import scala.meta.io.AbsolutePath
 
@@ -12,12 +13,16 @@ import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import tests.BaseImportSuite
+import tests.BloopImportInitializer
 import tests.QuickBuild
 
-class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
+class WorkspaceFolderSuite
+    extends BaseImportSuite(
+      "sbt-workspace-suite",
+      BloopImportInitializer(importAutomatically = false),
+    ) {
 
   def projectRoot: AbsolutePath = workspace.resolve("main-folder")
-
   def buildTool: SbtBuildTool =
     SbtBuildTool(None, projectRoot, () => userConfig)
   override def currentDigest(workspace: AbsolutePath): Option[String] =
@@ -77,6 +82,10 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
         ),
         expectError = false,
       )
+      _ <- server.didFocus("main-folder/src/main/scala/a/Main.scala")
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
+      _ <- server.didFocus("other-fake-folder/build.sbt")
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ <- server.fullServer
@@ -178,6 +187,8 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
         ),
         expectError = false,
       )
+      _ <- server.didFocus("main-folder/src/main/scala/a/Main.scala")
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertEquals(
@@ -242,6 +253,8 @@ class WorkspaceFolderSuite extends BaseImportSuite("sbt-workspace-suite") {
         ),
         expectError = false,
       )
+      _ <- server.didFocus("main-folder/src/main/scala/a/Main.scala")
+      _ <- server.executeCommand(ServerCommands.ImportBuild)
       _ <- server.didOpen("main-folder/src/main/scala/a/Main.scala")
       _ = assertNoDiagnostics()
       _ = assertEquals(
