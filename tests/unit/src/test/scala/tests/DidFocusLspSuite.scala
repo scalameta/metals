@@ -67,7 +67,7 @@ class DidFocusLspSuite extends BaseLspSuite("did-focus") {
       didCompile <- server.didFocus("a/src/main/scala/a/A2.scala")
       // Note: the order in which projects are compiled is slightly different
       // due to changes on cascade compile and the likes, this was Compiled in OSS
-      _ = assert(didCompile == AlreadyCompiled, s"didCompile = $didCompile")
+      _ = assert(didCompile == Compiled, s"didCompile = $didCompile")
       didCompile <- server.didFocus("b/src/main/scala/b/B.scala")
       _ = assert(didCompile == Compiled, s"didCompile = $didCompile")
       _ = assertNoDiff(
