@@ -242,7 +242,6 @@ class ProjectMetalsLspService(
 
   lazy val mcpSearch = new McpSymbolSearch(
     definitionIndex,
-    buildTargets,
     workspaceSymbols,
   )
 

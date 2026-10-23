@@ -5,7 +5,6 @@ import java.nio.file.Path
 import scala.collection.mutable
 
 import scala.meta.Dialect
-import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Classfile
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.MetalsEnrichments._
@@ -27,7 +26,6 @@ import org.eclipse.lsp4j.SymbolKind
 
 class McpSymbolSearch(
     index: GlobalSymbolIndex,
-    buildTargets: BuildTargets,
     workspaceSearchProvider: WorkspaceSymbolProvider,
 ) {
 
@@ -54,7 +52,7 @@ class McpSymbolSearch(
   }
 
   /**
-   * Search the build target inferred from `path` first, falling back to
+   * Search the selected build target first, falling back to
    * every workspace build target when the symbol isn't found there (e.g. a
    * third-party dependency declared by a different module), or when every
    * match found there is a package sharing the query's name and has no
@@ -62,13 +60,19 @@ class McpSymbolSearch(
    */
   def exactSearch(
       query: String,
-      path: Option[AbsolutePath],
+      target: Option[BuildTargetIdentifier],
   ): Seq[SearchResult] =
-    exactSearchInTarget(query, singleBuildTarget(path)) match {
+    exactSearchInTarget(query, target) match {
       case results if results.forall(_.definitionPath.isEmpty) =>
         exactSearchAllTargets(query)
       case results => results
     }
+
+  def exactSearchInSelectedTarget(
+      query: String,
+      target: BuildTargetIdentifier,
+  ): Seq[SearchResult] =
+    exactSearchInTarget(query, Some(target))
 
   /** Search every workspace build target for an exact FQCN match. */
   def exactSearchAllTargets(query: String): Seq[SearchResult] =
@@ -88,25 +92,6 @@ class McpSymbolSearch(
       target,
     ).results
   }
-
-  /**
-   * The build target to search from: the first one owning `path`, or, without a
-   * path, the first target that is not a build meta-target (e.g. `root-build`,
-   * which has no project dependencies).
-   *
-   * Both picks depend on target iteration order.
-   */
-  private def singleBuildTarget(
-      path: Option[AbsolutePath]
-  ): Option[BuildTargetIdentifier] =
-    path
-      .flatMap(buildTargets.sourceBuildTargets)
-      .flatMap(_.headOption)
-      .orElse {
-        buildTargets.allBuildTargetIds
-          .filterNot(McpQueryEngine.isBuildMetaTarget(buildTargets, _))
-          .headOption
-      }
 
   private def search(
       wsQuery: WorkspaceSymbolQuery,
