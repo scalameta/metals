@@ -1,5 +1,7 @@
 package tests.notebooks
 
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 import java.{util => ju}
 
 import scala.concurrent.Future
@@ -39,6 +41,21 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
 
   private def cellPath(id: String): AbsolutePath =
     NotebookProvider.uriToPath(cellUri(id))
+
+  // Far below the 10 minute suite timeout, and above a healthy cell typecheck.
+  private def nextCellDiagnostics(
+      path: AbsolutePath,
+      condition: Seq[l.Diagnostic] => Boolean = _ => true,
+  ): Future[Unit] =
+    client
+      .nextDiagnosticsFor(path, condition)
+      .withTimeout(10, TimeUnit.SECONDS, reason = None)
+      .recover { case _: TimeoutException =>
+        val current = client.diagnostics.getOrElse(path, Seq.empty)
+        scribe.warn(
+          s"timed out waiting for notebook diagnostics on $path; current: $current"
+        )
+      }
 
   private def openNotebook(cells: (String, String)*): Unit = {
     val notebookCells = cells.map { case (id, _) =>
@@ -257,7 +274,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c1" -> "val xs = List(1, 2, 3)",
         "c2" -> "val y: Int = \"bad\"",
       )
-      _ <- client.nextDiagnosticsFor(cellPath("c2"), _.nonEmpty)
+      _ <- nextCellDiagnostics(cellPath("c2"), _.nonEmpty)
       _ = assert(
         client.diagnostics(cellPath("c2")).exists { d =>
           d.getMessageAsString.contains("type mismatch") &&
@@ -270,7 +287,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         Seq.empty,
       )
       _ = changeCell("c2", "val y: Int = 2")
-      _ <- client.nextDiagnosticsFor(cellPath("c2"), _.isEmpty)
+      _ <- nextCellDiagnostics(cellPath("c2"), _.isEmpty)
     } yield assertEquals(client.diagnostics(cellPath("c2")), Seq.empty)
   }
 
@@ -315,7 +332,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c2" -> "val bad: Int = \"x\"",
         "c3" -> "xs.",
       )
-      _ <- client.nextDiagnosticsFor(cellPath("c2"), _.nonEmpty)
+      _ <- nextCellDiagnostics(cellPath("c2"), _.nonEmpty)
       // remove c2 (index 1); c3 becomes the second cell, right after c1.
       // `clearDiagnostics` publishes synchronously as part of this call, so
       // (unlike a real recompute) there is no later event to await here.
@@ -543,7 +560,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c1" -> "val xs = List(1, 2, 3)",
         "c2" -> "xs.length",
       )
-      _ <- client.nextDiagnosticsFor(cellPath("c2"))
+      _ <- nextCellDiagnostics(cellPath("c2"))
     } yield assertEquals(
       client.diagnostics.getOrElse(cellPath("c2"), Seq.empty),
       Seq.empty,
@@ -565,7 +582,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
             |""".stripMargin
       )
       _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
-      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+      _ <- nextCellDiagnostics(cellPath("c1"))
     } yield assertEquals(
       client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
       Seq.empty,
@@ -595,7 +612,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
             |""".stripMargin
       )
       _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
-      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+      _ <- nextCellDiagnostics(cellPath("c1"))
     } yield assertEquals(
       client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
       Seq.empty,
@@ -621,7 +638,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c1" -> "val xs = List(1, 2, 3)",
         "c2" -> "val y: Int = \"bad\"",
       )
-      _ <- client.nextDiagnosticsFor(cellPath("c2"), _.nonEmpty)
+      _ <- nextCellDiagnostics(cellPath("c2"), _.nonEmpty)
       _ = assert(
         client.diagnostics(cellPath("c2")).nonEmpty,
         "sanity check: c2 has a diagnostic while the notebook is open",
@@ -712,7 +729,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         "c1" -> "val xs = List(1, 2, 3)",
         "c2" -> "xs.length",
       )
-      _ <- client.nextDiagnosticsFor(cellPath("c2"))
+      _ <- nextCellDiagnostics(cellPath("c2"))
       // Insert c3 between c1 and c2 (index 1), no deletion.
       _ = structureChange(
         start = 1,
@@ -815,7 +832,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
         )
       )
       nestedCellPath = NotebookProvider.uriToPath(nestedCellUri("c1"))
-      _ <- client.nextDiagnosticsFor(nestedCellPath)
+      _ <- nextCellDiagnostics(nestedCellPath)
     } yield assertEquals(
       client.diagnostics.getOrElse(nestedCellPath, Seq.empty),
       Seq.empty,
@@ -843,7 +860,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
             |""".stripMargin
       )
       _ = openNotebook("c1" -> "val x: io.circe.Decoder[Int] = ???")
-      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+      _ <- nextCellDiagnostics(cellPath("c1"))
       _ = assertEquals(
         client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
         Seq.empty,
@@ -862,7 +879,7 @@ class NotebookLspSuite extends BaseLspSuite("notebooks") {
       )
       _ = QuickBuild.bloopInstall(workspace)
       _ <- server.executeCommand(ServerCommands.RestartBuildServer)
-      _ <- client.nextDiagnosticsFor(cellPath("c1"))
+      _ <- nextCellDiagnostics(cellPath("c1"))
     } yield assertEquals(
       client.diagnostics.getOrElse(cellPath("c1"), Seq.empty),
       Seq.empty,

@@ -42,6 +42,7 @@ class MillServerCodeLensSuite
       _ <- server.executeCommand(ServerCommands.GenerateBspConfig)
       _ <- server.didOpen("a/src/Main.scala")
       _ <- server.didSave("a/src/Main.scala")
+      _ <- server.headServer.buildServerPromise.future
       _ = assertNoDiagnostics()
       _ <- assertCodeLenses(
         "a/src/Main.scala",
