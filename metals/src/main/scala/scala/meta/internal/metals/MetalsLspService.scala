@@ -1022,10 +1022,8 @@ abstract class MetalsLspService(
       } else {
         for {
           _ <- initialBuildTargetsReadyForDiagnostics
-          reportedDiagnostics <- compilers.didFocus(path)
-          _ = reportedDiagnostics.foreach(
-            diagnostics.publishDiagnosticsNotAdjusted(path, _)
-          )
+          // Publishes unless a newer diagnostic request cancelled this one.
+          _ <- compilers.didFocus(path)
           result <-
             if (recentlyOpenedFiles.isRecentlyActive(path)) {
               Future.successful(DidFocusResult.RecentlyActive)
@@ -1105,7 +1103,7 @@ abstract class MetalsLspService(
             .compileFile(path)
             .map(_ => DidFocusResult.Compiled)
         case Some(_) =>
-          Future.successful(DidFocusResult.AlreadyCompiled)
+          Future.successful(DidFocusResult.Compiled)
         case None =>
           Future.successful(DidFocusResult.NoBuildTarget)
       }
@@ -1187,12 +1185,7 @@ abstract class MetalsLspService(
     // rerun diagnostics for all open documents
     val futures =
       buffers.open.filter(isIncludedPath).map { path =>
-        for {
-          reportedDiagnostics <- compilers.didFocus(path)
-          _ = reportedDiagnostics.foreach(
-            diagnostics.publishDiagnosticsNotAdjusted(path, _)
-          )
-        } yield ()
+        compilers.didFocus(path).ignoreValue
       }
     Future.sequence(futures).map(_ => ())
   }
