@@ -764,6 +764,34 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // Closing brace may be indented, so the insertion point is the selector end.
+  checkEdit(
+    "grouped-multiline-last-indented-brace",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer
+       |  }
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  ListBuffer
+       |  }
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   checkEdit(
     "grouped-multiline-last-trailing-comma",
     """|package a

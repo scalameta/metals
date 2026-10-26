@@ -286,9 +286,18 @@ class ScalaImportOrganizer(
         groupedImport,
         groupedImport.groupedNames.last
       )
-      // in case of a trailing comma, we need to insert after the comma even if last
+      // A trailing comma stays the insertion point so it moves onto the new
+      // selector. Otherwise lastNameEnd is the closing brace, and the selector
+      // may be separated from it by whitespace.
       val realLast =
-        if (text(lastNameEnd) == ',') lastNameEnd else lastNameEnd - 1
+        if (text(lastNameEnd) == ',') lastNameEnd
+        else {
+          var end = lastNameEnd
+          while (
+            end > groupedImport.groupStartOffset && text(end - 1).isWhitespace
+          ) end -= 1
+          end
+        }
       Some(
         new l.TextEdit(
           offsetToRange(realLast),
