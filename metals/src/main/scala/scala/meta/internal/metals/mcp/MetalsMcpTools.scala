@@ -644,7 +644,7 @@ trait MetalsMcpTools extends Cancelable {
               CallToolResult
                 .builder()
                 .content(createContent(result.show))
-                .isError(false)
+                .isError(result.results.isEmpty)
                 .build()
             )
         }.toMono
