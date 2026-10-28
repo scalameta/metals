@@ -362,6 +362,15 @@ class ScalaImportOrganizer(
             } else {
               prevNameEnd += 1
             }
+          } else if (current == '/' && hasNext && next == '/') {
+            prevNameEnd += 2
+            while (
+              prevNameEnd < text.length &&
+              text(prevNameEnd) != '\n' &&
+              text(prevNameEnd) != '\r'
+            ) {
+              prevNameEnd += 1
+            }
           } else if (
             prevNameEnd >= nameEnd &&
             (current == ',' || current == '}')
@@ -508,7 +517,7 @@ object ScalaImportLine {
       val groupContent = text.substring(braceStart + 1, braceEnd)
       val isMultiline = groupContent.contains('\n')
 
-      val names = stripBlockComments(groupContent)
+      val names = stripComments(groupContent)
         .split(',')
         .map(_.trim)
         .filter(_.nonEmpty)
@@ -586,11 +595,11 @@ object ScalaImportLine {
   }
 
   /**
-   * Drop each block comment separately, including nested and multiline
+   * Drop each comment separately, including nested and multiline
    * comments. A greedy match would also delete selectors written between
    * comments.
    */
-  private def stripBlockComments(content: String): String = {
+  private def stripComments(content: String): String = {
     val result = new StringBuilder
     var i = 0
     var openedComments = 0
@@ -609,6 +618,18 @@ object ScalaImportLine {
           openedComments -= 1
           i += 2
         } else {
+          i += 1
+        }
+      } else if (
+        i + 1 < content.length &&
+        content.charAt(i) == '/' &&
+        content.charAt(i + 1) == '/'
+      ) {
+        while (
+          i < content.length &&
+          content.charAt(i) != '\n' &&
+          content.charAt(i) != '\r'
+        ) {
           i += 1
         }
       } else {

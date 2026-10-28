@@ -624,6 +624,35 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "grouped-single-line-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer // note,
+       |  // other, comment
+       |  ,Set // another comment,
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer // note,
+       |  // other, comment
+       |  ,
+       |  ListBuffer,Set // another comment,
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   test("grouped-comment-selector-already-present") {
     def assertAlreadyImported(text: String, name: String): Unit = {
       val organizer = new ScalaImportOrganizer(text, 0, text.length, "")
