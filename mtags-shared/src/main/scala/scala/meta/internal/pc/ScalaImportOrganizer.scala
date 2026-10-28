@@ -345,12 +345,33 @@ class ScalaImportOrganizer(
           .isLetterOrDigit
 
       if (beforeOk && afterOk) {
-        var prevNameEnd = groupedImport.groupStartOffset + idx + name.length
-        while (
-          prevNameEnd < text.length &&
-          text(prevNameEnd) != ',' &&
-          text(prevNameEnd) != '}'
-        ) prevNameEnd += 1
+        val nameEnd = groupedImport.groupStartOffset + idx + name.length
+        var prevNameEnd = groupedImport.groupStartOffset
+        var inBlockComment = false
+        while (prevNameEnd < text.length) {
+          val current = text(prevNameEnd)
+          val hasNext = prevNameEnd + 1 < text.length
+          val next = if (hasNext) text(prevNameEnd + 1) else 0.toChar
+
+          if (inBlockComment) {
+            if (current == '*' && hasNext && next == '/') {
+              inBlockComment = false
+              prevNameEnd += 2
+            } else {
+              prevNameEnd += 1
+            }
+          } else if (current == '/' && hasNext && next == '*') {
+            inBlockComment = true
+            prevNameEnd += 2
+          } else if (
+            prevNameEnd >= nameEnd &&
+            (current == ',' || current == '}')
+          ) {
+            return prevNameEnd
+          } else {
+            prevNameEnd += 1
+          }
+        }
         return prevNameEnd
       }
 
@@ -489,6 +510,8 @@ object ScalaImportLine {
       val isMultiline = groupContent.contains('\n')
 
       val names = groupContent
+        // replace comments
+        .replaceAll("\\s*\\/\\*.*\\*\\/", "")
         .split(',')
         .map(_.trim)
         .filter(_.nonEmpty)

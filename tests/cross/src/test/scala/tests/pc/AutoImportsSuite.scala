@@ -533,6 +533,26 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
   )
 
   checkEdit(
+    "grouped-single-line-last-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer /* comment, other */ , Buffer}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer /* comment, other */ , Buffer, ListBuffer}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
     "grouped-rename-single",
     """|package a
        |
