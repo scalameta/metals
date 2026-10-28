@@ -6,8 +6,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j
 
@@ -44,10 +42,8 @@ class UserConfigurationSync(
       folder => newConfig => folder.onUserConfigUpdate(newConfig),
     )
       .orElse {
-        val fullJson =
-          params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-        val metalsSection =
-          Option(fullJson.getAsJsonObject(section)).getOrElse(new JsonObject())
+        val fullJson = asConfigObject(params.getSettings)
+        val metalsSection = asConfigObject(fullJson.get(section))
         for {
           newConfig <- userConfigFrom(metalsSection)
         } yield Future
@@ -69,20 +65,31 @@ class UserConfigurationSync(
       }
       val params = new lsp4j.ConfigurationParams(items.asJava)
       for {
-        items <- languageClient.configuration(params).asScala
+        items <- languageClient
+          .configuration(params)
+          .asScala
+          .map(response =>
+            Option(response).map(_.asScala.toList).getOrElse(Nil)
+          )
+          .recover { case _ => Nil }
         res <- Future
           .sequence(
-            items.asScala.toList.zip(services).map {
-              case (_: JsonNull, _) => Future.successful(())
-              case (item, folder) =>
-                val json = item.asInstanceOf[JsonElement].getAsJsonObject()
-                userConfigFrom(json)
-                  .map(consume(folder))
-                  .getOrElse(Future.successful(()))
+            services.zipWithIndex.map { case (folder, index) =>
+              val config = items
+                .lift(index)
+                .flatMap(item => userConfigFrom(asConfigObject(item)))
+                .getOrElse(folder.userConfig)
+              consume(folder)(config)
             }
           )
           .ignoreValue
       } yield res
+    }
+
+  private def asConfigObject(value: Any): JsonObject =
+    value match {
+      case obj: JsonObject => obj
+      case _ => new JsonObject()
     }
 
   private def userConfigFrom(
