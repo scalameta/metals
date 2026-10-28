@@ -6,8 +6,6 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
-import com.google.gson.JsonElement
-import com.google.gson.JsonNull
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j
 
@@ -44,10 +42,8 @@ class UserConfigurationSync(
       folder => newConfig => folder.onUserConfigUpdate(newConfig),
     )
       .orElse {
-        val fullJson =
-          params.getSettings.asInstanceOf[JsonElement].getAsJsonObject
-        val metalsSection =
-          Option(fullJson.getAsJsonObject(section)).getOrElse(new JsonObject())
+        val fullJson = asConfigObject(params.getSettings)
+        val metalsSection = asConfigObject(fullJson.get(section))
         for {
           newConfig <- userConfigFrom(metalsSection)
         } yield Future
@@ -72,17 +68,20 @@ class UserConfigurationSync(
         items <- languageClient.configuration(params).asScala
         res <- Future
           .sequence(
-            items.asScala.toList.zip(services).map {
-              case (_: JsonNull, _) => Future.successful(())
-              case (item, folder) =>
-                val json = item.asInstanceOf[JsonElement].getAsJsonObject()
-                userConfigFrom(json)
-                  .map(consume(folder))
-                  .getOrElse(Future.successful(()))
+            items.asScala.toList.zip(services).map { case (item, folder) =>
+              val config = userConfigFrom(asConfigObject(item))
+                .getOrElse(folder.userConfig)
+              consume(folder)(config)
             }
           )
           .ignoreValue
       } yield res
+    }
+
+  private def asConfigObject(value: Any): JsonObject =
+    value match {
+      case obj: JsonObject => obj
+      case _ => new JsonObject()
     }
 
   private def userConfigFrom(

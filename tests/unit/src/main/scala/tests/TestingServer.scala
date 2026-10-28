@@ -565,6 +565,8 @@ final case class TestingServer(
     workspaceCapabilities.setInlayHint(
       new l.InlayHintWorkspaceCapabilities(true)
     )
+    if (client.supportsConfiguration)
+      workspaceCapabilities.setConfiguration(true)
     val textDocumentCapabilities = new TextDocumentClientCapabilities
     val windowCapabilities = new l.WindowClientCapabilities()
     windowCapabilities.setWorkDoneProgress(true)

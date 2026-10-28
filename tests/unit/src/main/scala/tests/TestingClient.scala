@@ -39,6 +39,7 @@ import com.google.gson.JsonObject
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeAction
+import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.ExecuteCommandParams
@@ -150,6 +151,14 @@ class TestingClient(workspace: AbsolutePath, val buffers: Buffers)
   var onMetalsStatus: MetalsStatusParams => Unit = { (_: MetalsStatusParams) =>
     ()
   }
+  var supportsConfiguration: Boolean = false
+  var configurationResponse: ConfigurationParams => java.util.List[Object] =
+    params => params.getItems.asScala.map(_ => new JsonObject(): Object).asJava
+
+  override def configuration(
+      params: ConfigurationParams
+  ): CompletableFuture[java.util.List[Object]] =
+    CompletableFuture.completedFuture(configurationResponse(params))
 
   private val refreshCount = new AtomicInteger
   var refreshModelHandler: Int => Unit = (_) => ()
