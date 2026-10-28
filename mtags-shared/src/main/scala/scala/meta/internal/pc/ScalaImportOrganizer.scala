@@ -347,22 +347,21 @@ class ScalaImportOrganizer(
       if (beforeOk && afterOk) {
         val nameEnd = groupedImport.groupStartOffset + idx + name.length
         var prevNameEnd = groupedImport.groupStartOffset
-        var inBlockComment = false
+        var inBlockComment = 0
         while (prevNameEnd < text.length) {
           val current = text(prevNameEnd)
           val hasNext = prevNameEnd + 1 < text.length
           val next = if (hasNext) text(prevNameEnd + 1) else 0.toChar
-
-          if (inBlockComment) {
+          if (current == '/' && hasNext && next == '*') {
+            inBlockComment += 1
+            prevNameEnd += 2
+          } else if (inBlockComment > 0) {
             if (current == '*' && hasNext && next == '/') {
-              inBlockComment = false
+              inBlockComment -= 1
               prevNameEnd += 2
             } else {
               prevNameEnd += 1
             }
-          } else if (current == '/' && hasNext && next == '*') {
-            inBlockComment = true
-            prevNameEnd += 2
           } else if (
             prevNameEnd >= nameEnd &&
             (current == ',' || current == '}')
@@ -509,9 +508,7 @@ object ScalaImportLine {
       val groupContent = text.substring(braceStart + 1, braceEnd)
       val isMultiline = groupContent.contains('\n')
 
-      val names = groupContent
-        // replace comments
-        .replaceAll("\\s*\\/\\*.*\\*\\/", "")
+      val names = stripBlockComments(groupContent)
         .split(',')
         .map(_.trim)
         .filter(_.nonEmpty)
@@ -586,6 +583,40 @@ object ScalaImportLine {
         )
       )
     }
+  }
+
+  /**
+   * Drop each block comment separately, including nested and multiline
+   * comments. A greedy match would also delete selectors written between
+   * comments.
+   */
+  private def stripBlockComments(content: String): String = {
+    val result = new StringBuilder
+    var i = 0
+    var openedComments = 0
+    while (i < content.length) {
+      if (
+        i + 1 < content.length && content.charAt(i) == '/' &&
+        content.charAt(i + 1) == '*'
+      ) {
+        openedComments += 1
+        i += 2
+      } else if (openedComments > 0) {
+        if (
+          i + 1 < content.length &&
+          content.charAt(i) == '*' && content.charAt(i + 1) == '/'
+        ) {
+          openedComments -= 1
+          i += 2
+        } else {
+          i += 1
+        }
+      } else {
+        result.append(content.charAt(i))
+        i += 1
+      }
+    }
+    result.toString
   }
 
   private def findBraceStart(text: String, from: Int, maxEnd: Int): Int = {

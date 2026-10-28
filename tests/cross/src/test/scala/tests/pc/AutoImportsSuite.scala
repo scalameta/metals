@@ -1,5 +1,7 @@
 package tests.pc
 
+import scala.meta.internal.pc.ScalaImportOrganizer
+
 import munit.Location
 import tests.BaseAutoImportsSuite
 
@@ -551,6 +553,101 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |}
        |""".stripMargin
   )
+
+  checkEdit(
+    "grouped-single-line-last-comment2",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer /* outer /* inner */ , tail */, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer /* outer /* inner */ , tail */, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-selectors-between-comments",
+    """|package a
+       |
+       |import scala.collection.mutable.{/* a */ ArrayBuffer /* b */, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{/* a */ ArrayBuffer /* b */, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-multiline-block-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer, /* note,
+       |  continues */
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  ListBuffer, /* note,
+       |  continues */
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  test("grouped-comment-selector-already-present") {
+    def assertAlreadyImported(text: String, name: String): Unit = {
+      val organizer = new ScalaImportOrganizer(text, 0, text.length, "")
+      assertEquals(
+        organizer.textEdit(s"scala.collection.mutable.$name"),
+        None
+      )
+    }
+
+    assertAlreadyImported(
+      "import scala.collection.mutable.{/* a */ ListBuffer /* b */, Set}\n",
+      "ListBuffer"
+    )
+    assertAlreadyImported(
+      """|import scala.collection.mutable.{
+         |  /* note,
+         |     continues */
+         |  ListBuffer,
+         |  Set
+         |}
+         |""".stripMargin,
+      "ListBuffer"
+    )
+  }
 
   checkEdit(
     "grouped-rename-single",
