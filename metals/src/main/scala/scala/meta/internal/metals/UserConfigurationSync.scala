@@ -65,11 +65,19 @@ class UserConfigurationSync(
       }
       val params = new lsp4j.ConfigurationParams(items.asJava)
       for {
-        items <- languageClient.configuration(params).asScala
+        items <- languageClient
+          .configuration(params)
+          .asScala
+          .map(response =>
+            Option(response).map(_.asScala.toList).getOrElse(Nil)
+          )
+          .recover { case _ => Nil }
         res <- Future
           .sequence(
-            items.asScala.toList.zip(services).map { case (item, folder) =>
-              val config = userConfigFrom(asConfigObject(item))
+            services.zipWithIndex.map { case (folder, index) =>
+              val config = items
+                .lift(index)
+                .flatMap(item => userConfigFrom(asConfigObject(item)))
                 .getOrElse(folder.userConfig)
               consume(folder)(config)
             }
