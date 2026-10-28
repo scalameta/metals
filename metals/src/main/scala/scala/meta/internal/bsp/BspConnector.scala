@@ -140,20 +140,28 @@ class BspConnector(
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
-          val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          val pluginsChanged = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          val sbtBuildTool = SbtBuildTool(projectRoot, userConfiguration)
+          // sbt 2 always runs a background server, which registers BSP handlers
+          // (like debugSession/start) only on startup, so a reload is not enough
+          val shouldShutdown = pluginsChanged && sbtBuildTool.isSbt2 &&
+            SbtBuildTool.isServerRunning(projectRoot)
           def restartSbtBuildServer() = currentConnection()
             .withFilter(_.isSbt)
             .map(_ => restartBspServer())
             .getOrElse(Future.successful(()))
           val connectionF =
             for {
-              _ <- SbtBuildTool(projectRoot, userConfiguration)
-                .ensureCorrectJavaVersion(
-                  shellRunner,
-                  projectRoot,
-                  client,
-                  restartSbtBuildServer,
-                )
+              _ <- sbtBuildTool.ensureCorrectJavaVersion(
+                shellRunner,
+                projectRoot,
+                client,
+                restartSbtBuildServer,
+              )
+              _ <-
+                if (shouldShutdown)
+                  sbtBuildTool.shutdownBspServer(shellRunner).future.ignoreValue
+                else Future.successful(())
               connection <- bspServers.newServer(
                 projectRoot,
                 bspTraceRoot,
@@ -161,7 +169,8 @@ class BspConnector(
                 bspStatusOpt,
               )
               _ <-
-                if (shouldReload) connection.workspaceReload()
+                if (pluginsChanged && !shouldShutdown)
+                  connection.workspaceReload()
                 else Future.successful(())
             } yield connection
           workDoneProgress

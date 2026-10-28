@@ -47,6 +47,9 @@ case class SbtBuildTool(
   }
 
   override def version: String = workspaceVersion.getOrElse(recommendedVersion)
+
+  def isSbt2: Boolean = workspaceVersion.exists(ScalaVersions.isSbt2Version)
+
   override def bloopInstallArgs(workspace: AbsolutePath): List[String] = {
     val bloopInstallArgs = List[String](
       "-Dbloop.export-jar-classifiers=sources",
@@ -452,6 +455,13 @@ object SbtBuildTool {
     val version = loadVersion(projectRoot).map(_.toString())
     SbtBuildTool(version, projectRoot, userConfig)
   }
+
+  def isServerRunning(projectRoot: AbsolutePath): Boolean =
+    projectRoot
+      .resolve("project")
+      .resolve("target")
+      .resolve("active.json")
+      .isFile
 
   def loadVersion(workspace: AbsolutePath): Option[String] = {
     val props = new Properties()
