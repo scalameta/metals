@@ -28,6 +28,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -150,6 +151,26 @@ class BspConnector(
             .withFilter(_.isSbt)
             .map(_ => restartBspServer())
             .getOrElse(Future.successful(()))
+          // A nonzero `sbt --client shutdown` must not be ignored: sbt 2 only
+          // registers the updated plugin's BSP handlers when the server starts.
+          def shutdownBeforeConnect(): Future[Unit] =
+            sbtBuildTool.shutdownBspServer(shellRunner).future.flatMap {
+              case ExitCodes.Cancel =>
+                Future.failed(MetalsCancelException)
+              case ExitCodes.Success =>
+                Future.successful(())
+              case code if !SbtBuildTool.isServerRunning(projectRoot) =>
+                scribe.warn(
+                  s"sbt shutdown exited with code $code, but the server is no longer running."
+                )
+                Future.successful(())
+              case code =>
+                Future.failed(
+                  new IllegalStateException(
+                    s"Failed to shut down the running sbt server (exit code $code). The updated Metals plugin is only loaded when sbt starts."
+                  )
+                )
+            }
           val connectionF =
             for {
               _ <- sbtBuildTool.ensureCorrectJavaVersion(
@@ -159,8 +180,7 @@ class BspConnector(
                 restartSbtBuildServer,
               )
               _ <-
-                if (shouldShutdown)
-                  sbtBuildTool.shutdownBspServer(shellRunner).future.ignoreValue
+                if (shouldShutdown) shutdownBeforeConnect()
                 else Future.successful(())
               connection <- bspServers.newServer(
                 projectRoot,
