@@ -94,9 +94,12 @@ final class NotebookKernelInstaller(
           )
         )
     }
-    result.recover { case NonFatal(e) =>
+    result.recoverWith { case NonFatal(e) =>
       scribe.error(s"failed to ensure Almond kernel for '$ipynbPath'", e)
-      None
+      giveUp(
+        MessageType.Error,
+        s"Failed to set up a Jupyter kernel for this notebook: ${e.getMessage}",
+      )
     }
   }
 
