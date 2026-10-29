@@ -27,61 +27,33 @@ import scala.meta.internal.metals.JavaBinary
  * (`almond.kernel.install.Install.installIn`), `--install` does nothing
  * beyond resolving the kernels directory, force-overwriting an existing
  * one, and serializing this same JSON.
+ *
+ * @param dataDir the Jupyter data directory, see [[AlmondKernelInstaller.jupyterDataDir]],
+ *                resolved on use so an invalid one only fails the install
+ * @param launcherClasspath resolves the Almond launcher for a version
  */
-object AlmondKernelInstaller {
+final class AlmondKernelInstaller private[notebook] (
+    dataDir: () => Path,
+    launcherClasspath: String => List[Path],
+) {
+  import AlmondKernelInstaller._
 
-  val defaultAlmondVersion = "0.15.0"
-
-  private val extraClassPath = "--extra-class-path"
-  private val launcherClasspaths = TrieMap.empty[String, List[Path]]
-
-  /** Resolves the Almond launcher on first use, so it may download it. */
+  /** Resolves the Almond launcher, so it may download it. */
   def kernelSpec(
       javaHome: Option[String],
       almondVersion: String,
       scalaVersion: String,
       classpath: List[Path],
       displayName: String,
-  ): ujson.Obj = {
-    val launcherClasspath = launcherClasspaths.getOrElseUpdate(
-      almondVersion,
-      Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion),
-    )
+  ): ujson.Obj =
     kernelSpecJson(
       displayName,
-      argv(JavaBinary(javaHome), launcherClasspath, scalaVersion, classpath),
-    )
-  }
-
-  // Keeps the classpath order, it decides which of two same-named classes
-  // the kernel loads.
-  def argv(
-      javaBin: String,
-      launcherClasspath: List[Path],
-      scalaVersion: String,
-      classpath: List[Path],
-  ): List[String] =
-    List(
-      javaBin,
-      "-cp",
-      launcherClasspath.mkString(File.pathSeparator),
-      "almond.launcher.Launcher",
-      "--scala",
-      scalaVersion,
-    ) ++
-      classpath
-        .map(_.toString)
-        .distinct
-        .flatMap(p => List(extraClassPath, p)) ++
-      List("--connection-file", "{connection_file}")
-
-  // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
-  def kernelSpecJson(displayName: String, argv: List[String]): ujson.Obj =
-    ujson.Obj(
-      "argv" -> argv,
-      "display_name" -> displayName,
-      "language" -> "scala",
-      "env" -> ujson.Obj(),
+      argv(
+        JavaBinary(javaHome),
+        launcherClasspath(almondVersion),
+        scalaVersion,
+        classpath,
+      ),
     )
 
   def exists(kernelId: String): Boolean =
@@ -96,9 +68,6 @@ object AlmondKernelInstaller {
   def isInstalled(kernelId: String, spec: ujson.Value): Boolean =
     readSpec(kernelId).exists(sameSpec(_, spec))
 
-  def sameSpec(a: ujson.Value, b: ujson.Value): Boolean =
-    withSortedClasspath(a) == withSortedClasspath(b)
-
   /**
    * Stages the kernel outside the kernels directory, so Jupyter never lists
    * a half-written or leftover one, and swaps it in only once it's written.
@@ -107,18 +76,21 @@ object AlmondKernelInstaller {
    * own in first, that one is kept.
    */
   def install(kernelId: String, spec: ujson.Value): Unit = {
-    val dir = kernelsDir.resolve(kernelId)
-    val staging = newStagingDir(kernelId)
+    // Resolved once, so staging and the kernel are on the same filesystem.
+    val base = dataDir()
+    val dir = kernelsDir(base).resolve(kernelId)
+    val staging = Files.createDirectories(stagingPath(base, kernelId))
     try {
       Files.write(
         staging.resolve("kernel.json"),
         spec.toString.getBytes(StandardCharsets.UTF_8),
       )
-      Files.createDirectories(kernelsDir)
-      val previous = moveAside(dir, kernelId)
+      Files.createDirectories(kernelsDir(base))
+      val previous = moveAside(dir, stagingPath(base, kernelId), kernelId)
       try Files.move(staging, dir)
       catch {
-        case _: FileAlreadyExistsException if exists(kernelId) =>
+        case _: FileAlreadyExistsException
+            if Files.exists(dir.resolve("kernel.json")) =>
         case NonFatal(e) =>
           previous.foreach { p =>
             if (Try(Files.move(p, dir)).isFailure)
@@ -136,21 +108,12 @@ object AlmondKernelInstaller {
   private def readSpec(kernelId: String): Option[ujson.Value] =
     Try(ujson.read(Files.readString(kernelJson(kernelId)))).toOption
 
-  private def withSortedClasspath(spec: ujson.Value): ujson.Value =
-    Try {
-      val (prefix, rest) =
-        spec("argv").arr.map(_.str).toList.span(_ != extraClassPath)
-      val (classpath, suffix) =
-        rest.grouped(2).toList.span(_.headOption.contains(extraClassPath))
-      val sorted = ujson.Obj.from(spec.obj)
-      sorted("argv") =
-        prefix ++ classpath.sortBy(_.last).flatten ++ suffix.flatten
-      sorted
-    }.getOrElse(spec)
-
-  private def moveAside(dir: Path, kernelId: String): Option[Path] =
+  private def moveAside(
+      dir: Path,
+      aside: Path,
+      kernelId: String,
+  ): Option[Path] =
     if (Files.exists(dir, LinkOption.NOFOLLOW_LINKS)) {
-      val aside = stagingPath(kernelId)
       try {
         Files.move(dir, aside)
         Some(aside)
@@ -163,14 +126,15 @@ object AlmondKernelInstaller {
       }
     } else None
 
-  private def newStagingDir(kernelId: String): Path =
-    Files.createDirectories(stagingPath(kernelId))
-
-  private def stagingPath(kernelId: String): Path =
-    stagingDir.resolve(s"$kernelId-${UUID.randomUUID()}")
+  // Next to the kernels directory, so moving out of it stays on one
+  // filesystem.
+  private def stagingPath(base: Path, kernelId: String): Path =
+    base
+      .resolve("metals-kernel-staging")
+      .resolve(s"$kernelId-${UUID.randomUUID()}")
 
   private def kernelJson(kernelId: String): Path =
-    kernelsDir.resolve(kernelId).resolve("kernel.json")
+    kernelsDir(dataDir()).resolve(kernelId).resolve("kernel.json")
 
   // Not AbsolutePath.deleteRecursively(): must guarantee it never
   // follows a symlink out of the kernel directory.
@@ -180,35 +144,104 @@ object AlmondKernelInstaller {
     Files.deleteIfExists(path)
   }
 
-  private def kernelsDir: Path = dataDir.resolve("kernels")
+  private def kernelsDir(base: Path): Path = base.resolve("kernels")
+}
 
-  // Next to the kernels directory, so moving out of it stays on one
-  // filesystem.
-  private def stagingDir: Path = dataDir.resolve("metals-kernel-staging")
+object AlmondKernelInstaller {
+
+  val defaultAlmondVersion = "0.15.0"
+
+  private val extraClassPath = "--extra-class-path"
+  private val launcherClasspaths = TrieMap.empty[String, List[Path]]
+
+  lazy val default: AlmondKernelInstaller = new AlmondKernelInstaller(
+    () =>
+      jupyterDataDir(
+        // System.getenv, unlike sys.env, ignores case on Windows like
+        // Python's os.environ.
+        name => Option(System.getenv(name)),
+        Paths.get(sys.props("user.home")),
+        Properties.isMac,
+        Properties.isWin,
+      ),
+    // Resolved on first use, so it may download the launcher.
+    almondVersion =>
+      launcherClasspaths.getOrElseUpdate(
+        almondVersion,
+        Embedded.downloadDependency("sh.almond", "launcher_3", almondVersion),
+      ),
+  )
+
+  // Keeps the classpath order, it decides which of two same-named classes
+  // the kernel loads.
+  private[notebook] def argv(
+      javaBin: String,
+      launcherClasspath: List[Path],
+      scalaVersion: String,
+      classpath: List[Path],
+  ): List[String] = List(
+    javaBin,
+    "-cp",
+    launcherClasspath.mkString(File.pathSeparator),
+    "almond.launcher.Launcher",
+    "--scala",
+    scalaVersion,
+  ) ++
+    classpath
+      .map(_.toString)
+      .distinct
+      .flatMap(p => List(extraClassPath, p)) ++
+    List("--connection-file", "{connection_file}")
+
+  // https://jupyter-client.readthedocs.io/en/5.2.3/kernels.html#kernel-specs
+  private[notebook] def kernelSpecJson(
+      displayName: String,
+      argv: List[String],
+  ): ujson.Obj = ujson.Obj(
+    "argv" -> argv,
+    "display_name" -> displayName,
+    "language" -> "scala",
+    "env" -> ujson.Obj(),
+  )
+
+  private[notebook] def sameSpec(a: ujson.Value, b: ujson.Value): Boolean =
+    withSortedClasspath(a) == withSortedClasspath(b)
+
+  private def withSortedClasspath(spec: ujson.Value): ujson.Value = try {
+    val (prefix, rest) =
+      spec("argv").arr.map(_.str).toList.span(_ != extraClassPath)
+    val (classpath, suffix) =
+      rest.grouped(2).toList.span(_.headOption.contains(extraClassPath))
+    val sorted = ujson.Obj.from(spec.obj)
+    sorted("argv") =
+      prefix ++ classpath.sortBy(_.last).flatten ++ suffix.flatten
+    sorted
+  } catch {
+    case NonFatal(_) => spec
+  }
 
   // Mirrors almond.kernel.util.JupyterPaths.userPath / Jupyter's own
   // jupyter_core.paths.jupyter_data_dir. Skipping JUPYTER_DATA_DIR or
   // XDG_DATA_HOME would install a kernel Jupyter's own picker never sees.
-  private def dataDir: Path = {
-    val home = Paths.get(sys.props("user.home"))
-    sys.env
-      .get("JUPYTER_DATA_DIR")
-      .map(Paths.get(_))
-      .getOrElse {
-        if (Properties.isMac)
-          home.resolve("Library").resolve("Jupyter")
-        else if (Properties.isWin)
-          sys.env
-            .get("APPDATA")
-            .map(Paths.get(_))
-            .getOrElse(home.resolve("AppData").resolve("Roaming"))
-            .resolve("jupyter")
-        else
-          sys.env
-            .get("XDG_DATA_HOME")
-            .map(Paths.get(_))
-            .getOrElse(home.resolve(".local").resolve("share"))
-            .resolve("jupyter")
-      }
+  private[notebook] def jupyterDataDir(
+      env: String => Option[String],
+      home: Path,
+      isMac: Boolean,
+      isWin: Boolean,
+  ): Path = {
+    // Like Jupyter, treats an empty variable as unset.
+    def dir(name: String) = env(name).filter(_.nonEmpty).map(Paths.get(_))
+    dir("JUPYTER_DATA_DIR").getOrElse {
+      if (isMac)
+        home.resolve("Library").resolve("Jupyter")
+      else if (isWin)
+        dir("APPDATA")
+          .getOrElse(home.resolve("AppData").resolve("Roaming"))
+          .resolve("jupyter")
+      else
+        dir("XDG_DATA_HOME")
+          .getOrElse(home.resolve(".local").resolve("share"))
+          .resolve("jupyter")
+    }
   }
 }

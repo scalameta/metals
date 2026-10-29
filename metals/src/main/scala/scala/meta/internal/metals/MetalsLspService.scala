@@ -48,6 +48,7 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.notebook.AlmondKernelInstaller
 import scala.meta.internal.metals.notebook.NotebookKernelInstaller
 import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
@@ -238,6 +239,7 @@ abstract class MetalsLspService(
     notebookProvider,
     buildTargets,
     languageClient,
+    AlmondKernelInstaller.default,
     () => javaHome,
     () => userConfig.notebookAlmondVersion,
   )

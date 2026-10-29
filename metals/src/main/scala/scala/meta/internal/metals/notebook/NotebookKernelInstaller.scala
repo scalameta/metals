@@ -28,6 +28,7 @@ final class NotebookKernelInstaller(
     notebookProvider: NotebookProvider,
     buildTargets: BuildTargets,
     languageClient: MetalsLanguageClient,
+    almond: AlmondKernelInstaller,
     javaHome: () => Option[String],
     configuredAlmondVersion: () => Option[String],
 )(implicit ec: ExecutionContext) {
@@ -62,7 +63,7 @@ final class NotebookKernelInstaller(
       case Some(target) =>
         val resolved = for {
           scalaTarget <- buildTargets.scalaTarget(target)
-          targetName = scalaTarget.info.getDisplayName()
+          targetName = scalaTarget.displayName
           classpath <- buildTargets.fullClasspath(target, Promise())
         } yield
           for {
@@ -77,7 +78,7 @@ final class NotebookKernelInstaller(
               s"Scala ($targetName, Almond $almondVersion)",
             )
             spec = () =>
-              AlmondKernelInstaller.kernelSpec(
+              almond.kernelSpec(
                 javaHome(),
                 almondVersion,
                 scalaTarget.scalaVersion,
@@ -99,21 +100,27 @@ final class NotebookKernelInstaller(
     }
   }
 
-  private def ensure(
+  /**
+   * Refreshes `kernel` if it's installed with a different spec, otherwise
+   * installs it, asking first with `askBeforeInstall`.
+   *
+   * @param spec builds the kernelspec, only called once it's needed
+   */
+  private[notebook] def ensure(
       kernel: NotebookKernel,
       spec: () => ujson.Obj,
       askBeforeInstall: Boolean,
   ): Future[Option[NotebookKernel]] =
-    if (AlmondKernelInstaller.exists(kernel.kernelId))
+    if (almond.exists(kernel.kernelId))
       Future {
         val current = spec()
-        val stale = !AlmondKernelInstaller.isInstalled(kernel.kernelId, current)
-        if (stale) AlmondKernelInstaller.install(kernel.kernelId, current)
+        val stale = !almond.isInstalled(kernel.kernelId, current)
+        if (stale) almond.install(kernel.kernelId, current)
         Option(kernel.copy(newlyInstalled = stale))
       }.recover { case NonFatal(e) =>
         scribe.warn(s"failed to refresh Almond kernel '${kernel.kernelId}'", e)
         // Unless the swap failed and the previous kernel couldn't be restored.
-        val previousKept = AlmondKernelInstaller.exists(kernel.kernelId)
+        val previousKept = almond.exists(kernel.kernelId)
         languageClient.showMessage(
           if (previousKept) MessageType.Warning else MessageType.Error,
           if (previousKept)
@@ -138,7 +145,7 @@ final class NotebookKernelInstaller(
       spec: () => ujson.Obj,
   ): Future[Option[NotebookKernel]] =
     Future {
-      AlmondKernelInstaller.install(kernel.kernelId, spec())
+      almond.install(kernel.kernelId, spec())
       Option(kernel.copy(newlyInstalled = true))
     }.recover { case NonFatal(e) =>
       scribe.error(s"failed to install Almond kernel '${kernel.kernelId}'", e)
