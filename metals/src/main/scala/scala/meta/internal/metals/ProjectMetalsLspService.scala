@@ -282,10 +282,13 @@ class ProjectMetalsLspService(
   def startMcpServer(): Future[Unit] =
     startMcpServer(useStdio = false)
 
-  def startMcpStdioServer(): Future[Unit] =
-    startMcpServer(useStdio = true)
+  def startMcpStdioServer(onStdinClosed: () => Unit = () => ()): Future[Unit] =
+    startMcpServer(useStdio = true, onStdinClosed = onStdinClosed)
 
-  private def startMcpServer(useStdio: Boolean): Future[Unit] =
+  private def startMcpServer(
+      useStdio: Boolean,
+      onStdinClosed: () => Unit = () => (),
+  ): Future[Unit] =
     Future {
       if (!isMcpServerRunning.getAndSet(true)) {
         if (useStdio) {
@@ -307,6 +310,7 @@ class ProjectMetalsLspService(
               scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
+              onStdinClosed,
             )
           ).run()
         } else {

@@ -21,6 +21,10 @@ import io.modelcontextprotocol.server.transport.StdioServerTransportProvider
  * for direct process integration with MCP clients like Claude Desktop.
  * Messages are exchanged as newline-delimited JSON-RPC messages.
  *
+ * `onStdinClosed` runs when the client closes stdin. Standalone `metals-mcp`
+ * uses it to exit the process. The callback is invoked off the stdin reader
+ * thread.
+ *
  * @see [[MetalsMcpServer]] for HTTP transport variant
  */
 class MetalsMcpStdioServer(
@@ -38,12 +42,15 @@ class MetalsMcpStdioServer(
     protected val scalafmtRunner: ScalafmtRunner,
     protected val scalafixLlmRuleProvider: ScalafixLlmRuleProvider,
     protected val indexingPromise: Promise[Unit],
+    onStdinClosed: () => Unit = () => (),
 )(implicit
     protected val ec: ExecutionContext
 ) extends MetalsMcpTools {
 
   def run(): Unit = {
-    val transportProvider = new StdioServerTransportProvider(jsonMapper)
+    val input = new EofAwareInputStream(System.in, onStdinClosed)
+    val transportProvider =
+      new StdioServerTransportProvider(jsonMapper, input, System.out)
 
     val serverName = s"$projectName-metals"
     val asyncServer = McpServer
