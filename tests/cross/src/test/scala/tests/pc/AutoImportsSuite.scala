@@ -1,5 +1,7 @@
 package tests.pc
 
+import scala.meta.internal.pc.ScalaImportOrganizer
+
 import munit.Location
 import tests.BaseAutoImportsSuite
 
@@ -532,6 +534,264 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  checkEdit(
+    "grouped-single-line-last-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer /* comment, other */ , Buffer}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer /* comment, other */ , Buffer, ListBuffer}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-single-line-last-comment2",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer /* outer /* inner */ , tail */, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer /* outer /* inner */ , tail */, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-selectors-between-comments",
+    """|package a
+       |
+       |import scala.collection.mutable.{/* a */ ArrayBuffer /* b */, Set}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{/* a */ ArrayBuffer /* b */, ListBuffer, Set}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-multiline-block-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer, /* note,
+       |  continues */
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  ListBuffer, /* note,
+       |  continues */
+       |  Set
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-single-line-comment",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer // note,
+       |  // other, comment
+       |  ,Set // another comment,
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer // note,
+       |  // other, comment
+       |  ,
+       |  ListBuffer,Set // another comment,
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  test("grouped-comment-selector-already-present") {
+    def assertAlreadyImported(text: String, name: String): Unit = {
+      val organizer = new ScalaImportOrganizer(text, 0, text.length, "")
+      assertEquals(
+        organizer.textEdit(s"scala.collection.mutable.$name"),
+        None
+      )
+    }
+
+    assertAlreadyImported(
+      "import scala.collection.mutable.{/* a */ ListBuffer /* b */, Set}\n",
+      "ListBuffer"
+    )
+    assertAlreadyImported(
+      """|import scala.collection.mutable.{
+         |  /* note,
+         |     continues */
+         |  ListBuffer,
+         |  Set
+         |}
+         |""".stripMargin,
+      "ListBuffer"
+    )
+  }
+
+  checkEdit(
+    "grouped-rename-single",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => Buf}
+       |
+       |object A {
+       |  Buf
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => Buf, ListBuffer}
+       |
+       |object A {
+       |  Buf
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-middle",
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer => AB, Set => S}
+       |
+       |object A {
+       |  AB
+       |  S
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer => AB, ListBuffer, Set => S}
+       |
+       |object A {
+       |  AB
+       |  S
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-before",
+    """|package a
+       |
+       |import scala.collection.mutable.{ListBuffer => LB, Set}
+       |
+       |object A {
+       |  LB
+       |  Set
+       |  val l = <<ArrayBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{ArrayBuffer, ListBuffer => LB, Set}
+       |
+       |object A {
+       |  LB
+       |  Set
+       |  val l = ArrayBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-unimport",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => _, Set}
+       |
+       |object A {
+       |  Set
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer => _, ListBuffer, Set}
+       |
+       |object A {
+       |  Set
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-rename-as",
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer as Buf}
+       |
+       |object A {
+       |  Buf
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{Buffer as Buf, ListBuffer}
+       |
+       |object A {
+       |  Buf
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   // ===== GROUPED IMPORTS: MULTILINE =====
 
   // Test inserting FIRST in multiline group
@@ -590,6 +850,38 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |""".stripMargin
   )
 
+  // Renamed selector in a multiline group keeps its alias.
+  checkEdit(
+    "grouped-rename-multiline",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer => Buf,
+       |  Set
+       |}
+       |
+       |object A {
+       |  Buf
+       |  Set
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  Buffer => Buf,
+       |  ListBuffer,
+       |  Set
+       |}
+       |
+       |object A {
+       |  Buf
+       |  Set
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
   // Test inserting LAST in multiline group (handles comma insertion)
   checkEdit(
     "grouped-multiline-last",
@@ -610,6 +902,61 @@ class AutoImportsSuite extends BaseAutoImportsSuite {
        |  ArrayBuffer,
        |  Buffer,
        |  ListBuffer
+       |}
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  // Closing brace may be indented, so the insertion point is the selector end.
+  checkEdit(
+    "grouped-multiline-last-indented-brace",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer
+       |  }
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  ListBuffer
+       |  }
+       |
+       |object A {
+       |  val l = ListBuffer(2)
+       |}
+       |""".stripMargin
+  )
+
+  checkEdit(
+    "grouped-multiline-last-trailing-comma",
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |}
+       |
+       |object A {
+       |  val l = <<ListBuffer>>(2)
+       |}
+       |""".stripMargin,
+    """|package a
+       |
+       |import scala.collection.mutable.{
+       |  ArrayBuffer,
+       |  Buffer,
+       |  ListBuffer,
        |}
        |
        |object A {

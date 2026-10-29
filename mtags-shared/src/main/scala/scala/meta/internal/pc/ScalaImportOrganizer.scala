@@ -286,9 +286,21 @@ class ScalaImportOrganizer(
         groupedImport,
         groupedImport.groupedNames.last
       )
+      // A trailing comma stays the insertion point so it moves onto the new
+      // selector. Otherwise lastNameEnd is the closing brace, and the selector
+      // may be separated from it by whitespace.
+      val realLast =
+        if (text(lastNameEnd) == ',') lastNameEnd
+        else {
+          var end = lastNameEnd
+          while (
+            end > groupedImport.groupStartOffset && text(end - 1).isWhitespace
+          ) end -= 1
+          end
+        }
       Some(
         new l.TextEdit(
-          offsetToRange(lastNameEnd),
+          offsetToRange(realLast),
           s",\n$groupIndent$name"
         )
       )
@@ -333,7 +345,42 @@ class ScalaImportOrganizer(
           .isLetterOrDigit
 
       if (beforeOk && afterOk) {
-        return groupedImport.groupStartOffset + idx + name.length
+        val nameEnd = groupedImport.groupStartOffset + idx + name.length
+        var prevNameEnd = groupedImport.groupStartOffset
+        var inBlockComment = 0
+        while (prevNameEnd < text.length) {
+          val current = text(prevNameEnd)
+          val hasNext = prevNameEnd + 1 < text.length
+          val next = if (hasNext) text(prevNameEnd + 1) else 0.toChar
+          if (current == '/' && hasNext && next == '*') {
+            inBlockComment += 1
+            prevNameEnd += 2
+          } else if (inBlockComment > 0) {
+            if (current == '*' && hasNext && next == '/') {
+              inBlockComment -= 1
+              prevNameEnd += 2
+            } else {
+              prevNameEnd += 1
+            }
+          } else if (current == '/' && hasNext && next == '/') {
+            prevNameEnd += 2
+            while (
+              prevNameEnd < text.length &&
+              text(prevNameEnd) != '\n' &&
+              text(prevNameEnd) != '\r'
+            ) {
+              prevNameEnd += 1
+            }
+          } else if (
+            prevNameEnd >= nameEnd &&
+            (current == ',' || current == '}')
+          ) {
+            return prevNameEnd
+          } else {
+            prevNameEnd += 1
+          }
+        }
+        return prevNameEnd
       }
 
       searchStart = idx + 1
@@ -470,7 +517,7 @@ object ScalaImportLine {
       val groupContent = text.substring(braceStart + 1, braceEnd)
       val isMultiline = groupContent.contains('\n')
 
-      val names = groupContent
+      val names = stripComments(groupContent)
         .split(',')
         .map(_.trim)
         .filter(_.nonEmpty)
@@ -545,6 +592,52 @@ object ScalaImportLine {
         )
       )
     }
+  }
+
+  /**
+   * Drop each comment separately, including nested and multiline
+   * comments. A greedy match would also delete selectors written between
+   * comments.
+   */
+  private def stripComments(content: String): String = {
+    val result = new StringBuilder
+    var i = 0
+    var openedComments = 0
+    while (i < content.length) {
+      if (
+        i + 1 < content.length && content.charAt(i) == '/' &&
+        content.charAt(i + 1) == '*'
+      ) {
+        openedComments += 1
+        i += 2
+      } else if (openedComments > 0) {
+        if (
+          i + 1 < content.length &&
+          content.charAt(i) == '*' && content.charAt(i + 1) == '/'
+        ) {
+          openedComments -= 1
+          i += 2
+        } else {
+          i += 1
+        }
+      } else if (
+        i + 1 < content.length &&
+        content.charAt(i) == '/' &&
+        content.charAt(i + 1) == '/'
+      ) {
+        while (
+          i < content.length &&
+          content.charAt(i) != '\n' &&
+          content.charAt(i) != '\r'
+        ) {
+          i += 1
+        }
+      } else {
+        result.append(content.charAt(i))
+        i += 1
+      }
+    }
+    result.toString
   }
 
   private def findBraceStart(text: String, from: Int, maxEnd: Int): Int = {
