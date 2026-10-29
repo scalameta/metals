@@ -151,6 +151,21 @@ class BspConnector(
             .withFilter(_.isSbt)
             .map(_ => restartBspServer())
             .getOrElse(Future.successful(()))
+
+          def waitUntilServerIsNotRunning(maxAttempts: Int = 5): Future[Unit] =
+            if (!SbtBuildTool.isServerRunning(projectRoot))
+              Future.successful(())
+            else if (maxAttempts <= 0) {
+              scribe.warn(
+                "Waited for 500ms for sbt server to shutdown, but it still seems to be running. " +
+                  "You might need to restart it manually in case of issues."
+              )
+              Future.successful(())
+            } else {
+              Thread.sleep(100)
+              waitUntilServerIsNotRunning(maxAttempts - 1)
+            }
+
           // A nonzero `sbt --client shutdown` must not be ignored: sbt 2 only
           // registers the updated plugin's BSP handlers when the server starts.
           def shutdownBeforeConnect(): Future[Unit] =
@@ -158,7 +173,7 @@ class BspConnector(
               case ExitCodes.Cancel =>
                 Future.failed(MetalsCancelException)
               case ExitCodes.Success =>
-                Future.successful(())
+                waitUntilServerIsNotRunning()
               case code if !SbtBuildTool.isServerRunning(projectRoot) =>
                 scribe.warn(
                   s"sbt shutdown exited with code $code, but the server is no longer running."
