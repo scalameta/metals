@@ -1048,6 +1048,20 @@ object Messages {
     }
   }
 
+  object InstallNotebookKernel {
+    val install: MessageActionItem = new MessageActionItem("Install kernel")
+    def params(): ShowMessageRequestParams = {
+      val params = new ShowMessageRequestParams(
+        List(install, notNow).asJava
+      )
+      params.setMessage(
+        "Install a Jupyter kernel (via Almond) to run this notebook's Scala cells?"
+      )
+      params.setType(MessageType.Info)
+      params
+    }
+  }
+
   object ResetWorkspace {
     val message: String =
       "Are you sure you want to clear all caches and compiled artifacts and reset workspace?"

@@ -7,6 +7,9 @@ import tests.BaseSuite
 
 class NotebookKernelInstallerSuite extends BaseSuite {
 
+  // The id hashes the absolute path, which has a drive letter on Windows.
+  override def munitIgnore: Boolean = isWindows
+
   private def path(parts: String*): AbsolutePath =
     AbsolutePath(java.nio.file.Paths.get("/workspace", parts: _*))
 
@@ -14,27 +17,20 @@ class NotebookKernelInstallerSuite extends BaseSuite {
     NotebookKernelInstaller.kernelIdFor(path)
 
   test("same-name-in-different-directories") {
-    assertNotEquals(id(path("a", "foo.ipynb")), id(path("b", "foo.ipynb")))
-  }
-
-  test("stable") {
-    assertEquals(id(path("a", "foo.ipynb")), id(path("a", "foo.ipynb")))
-  }
-
-  test("valid-kernelspec-name") {
-    val kernelId = id(path("A b", "My notebook!.ipynb"))
-    assert(
-      kernelId.matches("metals-[a-z0-9._-]+"),
-      s"expected a lower-case kernelspec name, got '$kernelId'",
-    )
+    assertNoDiff(id(path("a", "foo.ipynb")), "metals-foo-b8495f3b0c71d6b4")
+    assertNoDiff(id(path("b", "foo.ipynb")), "metals-foo-35b1a7a29eb051b4")
   }
 
   test("paths-differing-only-in-case") {
-    assertNotEquals(id(path("a", "Foo.ipynb")), id(path("a", "foo.ipynb")))
+    assertNoDiff(id(path("a", "Foo.ipynb")), "metals-foo-0099facbb1f237ab")
+    assertNoDiff(id(path("a", "foo.ipynb")), "metals-foo-b8495f3b0c71d6b4")
   }
 
-  test("traceable-to-file-name") {
-    assert(id(path("a", "foo.ipynb")).startsWith("metals-foo-"))
+  test("valid-kernelspec-name") {
+    assertNoDiff(
+      id(path("A b", "My notebook!.ipynb")),
+      "metals-my_notebook_-1432949e1219534c",
+    )
   }
 
   test("deep-path-stays-short") {

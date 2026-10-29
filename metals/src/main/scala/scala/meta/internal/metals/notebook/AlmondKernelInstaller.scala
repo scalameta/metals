@@ -145,7 +145,7 @@ object AlmondKernelInstaller {
       val sorted = ujson.Obj.from(spec.obj)
       sorted("argv") =
         prefix ++ classpath.sortBy(_.last).flatten ++ suffix.flatten
-      sorted: ujson.Value
+      sorted
     }.getOrElse(spec)
 
   private def moveAside(dir: Path, kernelId: String): Option[Path] =
@@ -155,8 +155,11 @@ object AlmondKernelInstaller {
         Files.move(dir, aside)
         Some(aside)
       } catch {
-        // A concurrent install moved it aside first.
-        case _: NoSuchFileException => None
+        case _: NoSuchFileException =>
+          scribe.warn(
+            s"Almond kernel '$kernelId' was moved aside by a concurrent install"
+          )
+          None
       }
     } else None
 

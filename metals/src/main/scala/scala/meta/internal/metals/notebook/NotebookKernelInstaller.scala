@@ -8,14 +8,13 @@ import scala.concurrent.Promise
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageType
-import org.eclipse.lsp4j.ShowMessageRequestParams
 
 /**
  * Installs a Jupyter kernel (via Almond) with the classpath of the build
@@ -61,12 +60,9 @@ final class NotebookKernelInstaller(
       case None =>
         giveUp(MessageType.Warning, "No build target found for this notebook.")
       case Some(target) =>
-        val targetName = buildTargets
-          .info(target)
-          .map(_.getDisplayName)
-          .getOrElse(target.getUri)
         val resolved = for {
           scalaTarget <- buildTargets.scalaTarget(target)
+          targetName = scalaTarget.info.getDisplayName()
           classpath <- buildTargets.fullClasspath(target, Promise())
         } yield
           for {
@@ -93,7 +89,7 @@ final class NotebookKernelInstaller(
         resolved.getOrElse(
           giveUp(
             MessageType.Error,
-            s"Could not resolve a classpath for '$targetName'.",
+            s"Could not resolve a classpath for '${target.getUri}'.",
           )
         )
     }
@@ -153,18 +149,11 @@ final class NotebookKernelInstaller(
       None
     }
 
-  private def confirmInstall(): Future[Boolean] = {
-    val params = new ShowMessageRequestParams()
-    params.setType(MessageType.Info)
-    params.setMessage(
-      "Install a Jupyter kernel (via Almond) to run this notebook's Scala cells?"
-    )
-    params.setActions(List(installAction, notNowAction).asJava)
+  private def confirmInstall(): Future[Boolean] =
     languageClient
-      .showMessageRequest(params)
+      .showMessageRequest(Messages.InstallNotebookKernel.params())
       .asScala
-      .map(_ == installAction)
-  }
+      .map(_ == Messages.InstallNotebookKernel.install)
 }
 
 object NotebookKernelInstaller {
@@ -180,9 +169,6 @@ object NotebookKernelInstaller {
       displayName: String,
       newlyInstalled: Boolean = false,
   )
-
-  private val installAction = new MessageActionItem("Install kernel")
-  private val notNowAction = new MessageActionItem("Not now")
 
   /**
    * `metals-<file name>-<path hash>`, lower case because jupyter_client
