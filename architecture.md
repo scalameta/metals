@@ -89,7 +89,7 @@ Scalafix support is implemented in the [ScalafixProvider.scala](https://github.c
 
 Metals downloads separate version of Scalafix for each binary version of Scala. It can also download additional dependencies for each of the used rules.
 
-## Debbugging
+## Debugging
 
 Debugging is handled by Debug Adapter Protocol, which is a complementary protocol to LSP.
 
