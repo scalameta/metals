@@ -1,1 +1,3 @@
 /.jvmopts eol=lf
+metals/src/main/resources/sbt-launchers/*/sbt eol=lf
+metals/src/main/resources/sbt-launchers/*/sbt.bat eol=crlf

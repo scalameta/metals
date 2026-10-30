@@ -219,9 +219,9 @@ object UserConfiguration {
         """"/usr/local/bin/sbt"""",
         "sbt script",
         """Optional absolute path to an `sbt` executable to use for running `sbt bloopInstall`.
-          |By default, Metals uses `java -jar sbt-launch.jar` with an embedded launcher while respecting
-          |`.jvmopts` and `.sbtopts`. Update this setting if your `sbt` script requires more customizations
-          |like using environment variables.
+          |By default, Metals uses the official sbt runner for the project's sbt series.
+          |sbt 2 uses a separate runner. The runner respects `.jvmopts`, `.sbtopts`, `SBT_OPTS`, and `JAVA_OPTS`.
+          |Update this setting if your `sbt` script requires further customizations.
           |""".stripMargin,
       ),
       UserConfigurationOption(

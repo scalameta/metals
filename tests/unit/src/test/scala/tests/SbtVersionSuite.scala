@@ -1,5 +1,7 @@
 package tests
 
+import scala.util.Properties
+
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.UserConfiguration
 
@@ -54,6 +56,35 @@ class SbtVersionSuite extends BaseSuite {
       SbtBuildTool.loadVersionForPath(root.resolve("project/plugins.sbt")),
       Some("2.0.4"),
     )
+  }
+
+  test("embedded-sbt-1-runner") {
+    checkEmbeddedRunner(Some("1.13.1"), "1")
+  }
+
+  test("embedded-sbt-2-runner") {
+    checkEmbeddedRunner(Some("2.0.11"), "2")
+  }
+
+  private def checkEmbeddedRunner(
+      version: Option[String],
+      series: String,
+  ): Unit = {
+    val root = FileLayout.fromString(
+      s"""|/project/build.properties
+          |sbt.version=${version.getOrElse("1.13.1")}
+          |""".stripMargin
+    )
+    val launcher =
+      SbtBuildTool(version, root, () => UserConfiguration())
+        .embeddedSbtLauncher()
+    val path = launcher.toNIO
+    val scriptName = if (Properties.isWin) "sbt.bat" else "sbt"
+    assertEquals(path.getFileName.toString, scriptName)
+    assertEquals(path.getParent.getFileName.toString, "bin")
+    assertEquals(path.getParent.getParent.getFileName.toString, series)
+    assert(path.getParent.resolve("sbt-launch.jar").toFile.isFile)
+    assert(path.toFile.canExecute)
   }
 
 }
