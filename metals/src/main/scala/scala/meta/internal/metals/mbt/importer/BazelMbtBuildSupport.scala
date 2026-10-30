@@ -208,7 +208,8 @@ object BazelMbtBuildSupport {
           )
         }
       } else {
-        val allSrcs = srcFilesByTarget.values.flatten.toSet
+        val allSrcs =
+          targetLabels.flatMap(srcFilesByTarget.getOrElse(_, Nil)).toSet
         val allExtDeps = externalDepsByTarget.values.flatten.toSet
         val allGenSrcOutputs = genSrcOutputsByTarget.values.flatten.toSeq
         val wsScalaVersion = BazelScalaVersionResolver
