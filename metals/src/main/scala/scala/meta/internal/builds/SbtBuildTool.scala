@@ -1,7 +1,6 @@
 package scala.meta.internal.builds
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
-import java.nio.file.Path
 import java.util.Properties
 
 import scala.annotation.tailrec
@@ -33,17 +32,37 @@ case class SbtBuildTool(
   import SbtBuildTool._
 
   /**
-   * Returns path to a local copy of sbt-launch.jar.
+   * Copies the official sbt runner into `.metals` and returns its path.
    *
-   * We use embedded sbt-launch.jar instead of user `sbt` command because we
-   * can't rely on `sbt` resolving correctly when using system processes, at
-   * least it failed on Windows when I tried it.
+   * sbt 1.x and sbt 2.x publish different runners, so each series has its own
+   * script and `sbt-launch.jar`. The script has to live in a directory named
+   * `bin` beside that jar, which is the layout of the official distribution.
+   *
+   * The embedded runner is used when `sbt` is not on `PATH`. On Windows it is
+   * always used, because `sbt` there is a batch file rather than an executable
+   * on `PATH`.
    */
-  def embeddedSbtLauncher(
-      outDir: Path
-  ): AbsolutePath = {
-    val out = BuildTool.copyFromResource(outDir, "sbt-launch.jar")
-    AbsolutePath(out)
+  def embeddedSbtLauncher(): AbsolutePath = {
+    val series = SbtBuildTool.launcherSeries(workspaceVersion)
+    val bin = projectRoot
+      .resolve(".metals")
+      .resolve("sbt-launcher")
+      .resolve(series)
+      .resolve("bin")
+      .toNIO
+    val scriptName = if (scala.util.Properties.isWin) "sbt.bat" else "sbt"
+    val script = BuildTool.copyFromResource(
+      bin,
+      s"sbt-launchers/$series/$scriptName",
+      destination = Some(scriptName),
+    )
+    script.toFile.setExecutable(true)
+    BuildTool.copyFromResource(
+      bin,
+      s"sbt-launchers/$series/sbt-launch.jar",
+      destination = Some("sbt-launch.jar"),
+    )
+    AbsolutePath(script)
   }
 
   override def version: String = workspaceVersion.getOrElse(recommendedVersion)
@@ -56,7 +75,7 @@ case class SbtBuildTool(
       "-Dbloop.export-meta-build=true",
       "bloopInstall",
     )
-    val allArgs = composeArgs(bloopInstallArgs, projectRoot, tempDir)
+    val allArgs = composeArgs(bloopInstallArgs)
     removeLegacyGlobalPlugin()
     writeBloopPlugin(projectRoot)
     allArgs
@@ -103,17 +122,14 @@ case class SbtBuildTool(
   override def createBspFileArgs(
       workspace: AbsolutePath
   ): Option[List[String]] =
-    Option.when(workspaceSupportsBsp(projectRoot)) {
-      val bspConfigArgs = List[String]("bspConfig")
-      val bspDir = workspace.resolve(Directories.bsp).toNIO
-      composeArgs(bspConfigArgs, projectRoot, bspDir)
+    Option.when(workspaceSupportsBsp(workspace)) {
+      composeArgs(List("bspConfig"))
     }
 
   def shutdownBspServer(
       shellRunner: ShellRunner
   ): CancelableFuture[Int] = {
-    val shutdownArgs =
-      composeArgs(List("--client", "shutdown"), projectRoot, projectRoot.toNIO)
+    val shutdownArgs = composeArgs(List("--client", "shutdown"))
     scribe.info(s"running ${shutdownArgs.mkString(" ")}")
     shellRunner.run(
       "Shutting down sbt server",
@@ -144,39 +160,37 @@ case class SbtBuildTool(
     }
   }
 
-  private def composeArgs(
-      sbtArgs: List[String],
-      workspace: AbsolutePath,
-      sbtLauncherOutDir: Path,
-  ): List[String] = {
+  private def composeArgs(sbtArgs: List[String]): List[String] = {
     val sbtScript = userConfig().sbtScript.orElse(findSbtInPath()).map(_.trim())
 
     sbtScript match {
       case Some(script) if script.nonEmpty =>
         script :: sbtArgs
       case _ =>
-        val javaArgs = List[String](
-          JavaBinary(userConfig().javaHome),
-          "-Djline.terminal=jline.UnsupportedTerminal",
-          "-Dsbt.log.noformat=true",
-          "-Dfile.encoding=UTF-8",
-        )
-        val jarArgs = List(
-          "-jar",
-          embeddedSbtLauncher(sbtLauncherOutDir).toString(),
-        )
-        val sbtVersion =
-          if (workspaceVersion.isEmpty) List(s"-Dsbt.version=$version") else Nil
-        List(
-          javaArgs,
-          sbtVersion,
-          SbtOpts.fromWorkspaceOrEnv(workspace),
-          JvmOpts.fromWorkspaceOrEnv(workspace).getOrElse(Nil),
-          jarArgs,
-          sbtArgs,
-        ).flatten
+        val isSbt2 = workspaceVersion.exists(ScalaVersions.isSbt2Version)
+        // sbt 2's runner starts the native client unless --server is set.
+        // --client later in the args (used for shutdown) still wins.
+        val serverArgs = if (isSbt2) List("--server") else Nil
+        embeddedSbtLauncher().toString() ::
+          javaHomeArg :::
+          serverArgs :::
+          List(
+            "--batch",
+            "--no-colors",
+            "-Djline.terminal=jline.UnsupportedTerminal",
+          ) :::
+          sbtArgs
     }
   }
+
+  private def javaHomeArg: List[String] =
+    JavaBinary
+      .path(userConfig().javaHome)
+      .map { binary =>
+        val home = binary.dealias.parent.dealias.parent
+        List("--java-home", home.toString())
+      }
+      .getOrElse(Nil)
 
   def workspaceSupportsBsp(workspace: AbsolutePath): Boolean = {
     loadVersion(workspace) match {
@@ -293,6 +307,16 @@ case class SbtBuildTool(
 object SbtBuildTool {
 
   val name = "sbt"
+
+  /**
+   * Official runner series vendored in `sbt-launchers/<series>/`.
+   * `1` is the sbt 1.13.1 runner and `2` is the sbt 2.0.11 runner.
+   */
+  def launcherSeries(version: Option[String]): String =
+    if (version.exists(ScalaVersions.isSbt2Version)) "2" else "1"
+
+  def launchJarResource(version: String): String =
+    s"sbt-launchers/${launcherSeries(Some(version))}/sbt-launch.jar"
 
   // Note: (ckipp01) first version was actually 1.4.0, but there is some issues
   // with bsp discovery with it. So we instead are going with 1.4.1 being the
