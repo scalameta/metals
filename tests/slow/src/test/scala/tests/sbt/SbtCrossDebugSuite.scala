@@ -1,5 +1,6 @@
 package tests.sbt
 
+import tests.BaseSbtServerSuite
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.feature.BaseCrossDebugSuite
@@ -10,3 +11,4 @@ class SbtCrossDebugSuite
       SbtServerInitializer,
       SbtBuildLayout,
     )
+    with BaseSbtServerSuite

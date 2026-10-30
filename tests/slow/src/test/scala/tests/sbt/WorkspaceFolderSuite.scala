@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
 import org.eclipse.lsp4j.WorkspaceFolder
 import org.eclipse.lsp4j.WorkspaceFoldersChangeEvent
 import tests.BaseImportSuite
+import tests.BaseSbtServerSuite
 import tests.BloopImportInitializer
 import tests.QuickBuild
 
@@ -20,7 +21,8 @@ class WorkspaceFolderSuite
     extends BaseImportSuite(
       "sbt-workspace-suite",
       BloopImportInitializer(importAutomatically = false),
-    ) {
+    )
+    with BaseSbtServerSuite {
 
   def projectRoot: AbsolutePath = workspace.resolve("main-folder")
   def buildTool: SbtBuildTool =

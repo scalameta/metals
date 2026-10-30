@@ -3,11 +3,13 @@ package tests.sbt
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import tests.BaseLspSuite
+import tests.BaseSbtServerSuite
 import tests.BloopImportInitializer
 import tests.SbtBuildLayout
 
 class ActivePlatformsSuite
-    extends BaseLspSuite("active-platforms", BloopImportInitializer) {
+    extends BaseLspSuite("active-platforms", BloopImportInitializer)
+    with BaseSbtServerSuite {
 
   private val crossProjectLayout: String =
     s"""|/project/build.properties

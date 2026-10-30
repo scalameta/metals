@@ -19,6 +19,7 @@ import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind
 import ch.epfl.scala.bsp4j.ScalaMainClass
 import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
+import tests.BaseSbtServerSuite
 import tests.JavaHomeChangeTest
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
@@ -31,7 +32,8 @@ import tests.TestSemanticTokens
 class SbtServerSuite
     extends BaseImportSuite("sbt-server", SbtServerInitializer)
     with ScriptsAssertions
-    with JavaHomeChangeTest {
+    with JavaHomeChangeTest
+    with BaseSbtServerSuite {
 
   val preBspVersion = "1.3.13"
   val supportedMetaBuildVersion = "1.9.0"
@@ -96,11 +98,12 @@ class SbtServerSuite
 
   test("too-old") {
     cleanWorkspace()
+    // sbt 1.3.13 has no serverIdleTimeout. Including it makes `sbt shutdown`
+    // fail to load the build and hang on the retry prompt.
     writeLayout(
       s"""|/project/build.properties
           |sbt.version=$preBspVersion
           |/build.sbt
-          |${SbtBuildLayout.commonSbtSettings}
           |scalaVersion := "${V.scala213}"
           |""".stripMargin
     )
