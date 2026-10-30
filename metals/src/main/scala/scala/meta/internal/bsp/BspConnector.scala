@@ -28,6 +28,7 @@ import scala.meta.internal.metals.UserConfiguration
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.scalacli.ScalaCli
+import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 
@@ -140,20 +141,62 @@ class BspConnector(
         case ResolvedBspOne(details)
             if details.getName() == SbtBuildTool.name =>
           tables.buildServers.chooseServer(SbtBuildTool.name)
-          val shouldReload = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          val pluginsChanged = SbtBuildTool.writeSbtMetalsPlugins(projectRoot)
+          val sbtBuildTool = SbtBuildTool(projectRoot, userConfiguration)
+          // sbt 2 always runs a background server, which registers BSP handlers
+          // (like debugSession/start) only on startup, so a reload is not enough
+          val shouldShutdown = pluginsChanged && sbtBuildTool.isSbt2 &&
+            SbtBuildTool.isServerRunning(projectRoot)
           def restartSbtBuildServer() = currentConnection()
             .withFilter(_.isSbt)
             .map(_ => restartBspServer())
             .getOrElse(Future.successful(()))
+
+          def waitUntilServerIsNotRunning(maxAttempts: Int = 5): Future[Unit] =
+            if (!SbtBuildTool.isServerRunning(projectRoot))
+              Future.successful(())
+            else if (maxAttempts <= 0) {
+              scribe.warn(
+                "Waited for 500ms for sbt server to shutdown, but it still seems to be running. " +
+                  "You might need to restart it manually in case of issues."
+              )
+              Future.successful(())
+            } else {
+              Thread.sleep(100)
+              waitUntilServerIsNotRunning(maxAttempts - 1)
+            }
+
+          // A nonzero `sbt --client shutdown` must not be ignored: sbt 2 only
+          // registers the updated plugin's BSP handlers when the server starts.
+          def shutdownBeforeConnect(): Future[Unit] =
+            sbtBuildTool.shutdownBspServer(shellRunner).future.flatMap {
+              case ExitCodes.Cancel =>
+                Future.failed(MetalsCancelException)
+              case ExitCodes.Success =>
+                waitUntilServerIsNotRunning()
+              case code if !SbtBuildTool.isServerRunning(projectRoot) =>
+                scribe.warn(
+                  s"sbt shutdown exited with code $code, but the server is no longer running."
+                )
+                Future.successful(())
+              case code =>
+                Future.failed(
+                  new IllegalStateException(
+                    s"Failed to shut down the running sbt server (exit code $code). The updated Metals plugin is only loaded when sbt starts."
+                  )
+                )
+            }
           val connectionF =
             for {
-              _ <- SbtBuildTool(projectRoot, userConfiguration)
-                .ensureCorrectJavaVersion(
-                  shellRunner,
-                  projectRoot,
-                  client,
-                  restartSbtBuildServer,
-                )
+              _ <- sbtBuildTool.ensureCorrectJavaVersion(
+                shellRunner,
+                projectRoot,
+                client,
+                restartSbtBuildServer,
+              )
+              _ <-
+                if (shouldShutdown) shutdownBeforeConnect()
+                else Future.successful(())
               connection <- bspServers.newServer(
                 projectRoot,
                 bspTraceRoot,
@@ -161,7 +204,8 @@ class BspConnector(
                 bspStatusOpt,
               )
               _ <-
-                if (shouldReload) connection.workspaceReload()
+                if (pluginsChanged && !shouldShutdown)
+                  connection.workspaceReload()
                 else Future.successful(())
             } yield connection
           workDoneProgress

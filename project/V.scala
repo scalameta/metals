@@ -80,7 +80,7 @@ object V {
 
   val scribe = "3.19.0"
 
-  val sbt2Version = "2.0.3"
+  val sbt2Version = "2.0.12"
 
   val guava = "com.google.guava" % "guava" % "33.7.2-jre"
 

@@ -2,7 +2,10 @@ package tests.sbt
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.concurrent.duration._
+import scala.util.Properties
 
+import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.CreateSession
@@ -427,6 +430,81 @@ class SbtServerSuite
       _ <- debugger.shutdown
       output <- debugger.allOutput
     } yield assertNoDiff(output, "FooBarFoo")
+  }
+
+  test("debug-sbt2") {
+    cleanWorkspace()
+    val mainClass = new ScalaMainClass(
+      "a.Main",
+      List("Bar").asJava,
+      List("-Dproperty=Foo").asJava,
+    )
+    mainClass.setEnvironmentVariables(List("HELLO=Foo").asJava)
+    writeLayout(
+      s"""|/project/build.properties
+          |sbt.version=${V.sbt2Version}
+          |/build.sbt
+          |scalaVersion := "$scalaVersion"
+          |val a = project.in(file("a"))
+          |/a/src/main/scala/a/Main.scala
+          |package a
+          |object Main {
+          |  def main(args: Array[String]) = {
+          |    val foo = sys.props.getOrElse("property", "")
+          |    val bar = args(0)
+          |    val env = sys.env.get("HELLO")
+          |    print(foo + bar)
+          |    env.foreach(print)
+          |    System.exit(0)
+          |  }
+          |}
+          |""".stripMargin
+    )
+    // simulate a server started in the background by the sbt 2 thin client
+    // before Metals plugins were added, e.g. by `sbt bspConfig`
+    startSbtServerWithoutPlugins()
+    for {
+      _ <- initialize("")
+      debugger <- server.startDebugging(
+        "a",
+        DebugSessionParamsDataKind.SCALA_MAIN_CLASS,
+        mainClass,
+      )
+      _ <- debugger.initialize
+      _ <- debugger.launch
+      _ <- debugger.configurationDone
+      _ <- debugger.shutdown
+      output <- debugger.allOutput
+    } yield assertNoDiff(output, "FooBarFoo")
+  }
+
+  private def startSbtServerWithoutPlugins(): Unit = {
+    val sbtLauncher =
+      BuildTool.copyFromResource(
+        workspace.resolve(".sbt-launcher").toNIO,
+        "sbt-launch.jar",
+      )
+    new ProcessBuilder(
+      s"${Properties.javaHome}/bin/java",
+      "-jar",
+      sbtLauncher.toString,
+      "--detach-stdio",
+      "--server",
+    ).directory(workspace.toFile)
+      .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+      .redirectError(ProcessBuilder.Redirect.DISCARD)
+      .start()
+    val deadline = System.currentTimeMillis() + 3.minutes.toMillis
+    while (
+      !SbtBuildTool.isServerRunning(workspace) &&
+      System.currentTimeMillis() < deadline
+    ) Thread.sleep(500)
+    assert(
+      SbtBuildTool.isServerRunning(workspace),
+      "sbt server didn't start in time",
+    )
+    // the server writes its own sbt.json pointing to the `sbt` script on PATH
+    workspace.resolve(".bsp").resolve("sbt.json").deleteIfExists()
   }
 
   // this test fails if semantidb is not enabled
