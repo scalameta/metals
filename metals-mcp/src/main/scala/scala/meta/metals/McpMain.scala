@@ -295,9 +295,16 @@ object McpMain {
       service.startAndBlock()
     } catch {
       case NonFatal(e) =>
-        scribe.error("Fatal error in MCP server", e)
-        e.printStackTrace(System.err)
-        sys.exit(1)
+        if (service.wasStdinClosed) {
+          scribe.info("Exiting after stdin closed", e)
+        } else {
+          scribe.error("Fatal error in MCP server", e)
+          e.printStackTrace(System.err)
+          sys.exit(1)
+        }
+    }
+    if (config.transport == Transport.Stdio) {
+      sys.exit(0)
     }
   }
 

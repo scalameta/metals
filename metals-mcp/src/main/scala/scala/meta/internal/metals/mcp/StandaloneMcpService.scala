@@ -57,6 +57,7 @@ class StandaloneMcpService(
   )
   private val cancelables = new MutableCancelable()
   private val isCancelled = new AtomicBoolean(false)
+  private val stdinClosed = new AtomicBoolean(false)
 
   private val time: Time = Time.system
 
@@ -145,7 +146,10 @@ class StandaloneMcpService(
     scribe.info("Starting MCP server...")
 
     if (transport == Transport.Stdio) {
-      Await.result(projectMetalsLspService.startMcpStdioServer(), 2.minutes)
+      Await.result(
+        projectMetalsLspService.startMcpStdioServer(() => notifyStdinClosed()),
+        2.minutes,
+      )
     } else {
       Await.result(projectMetalsLspService.startMcpServer(), 2.minutes)
     }
@@ -172,6 +176,22 @@ class StandaloneMcpService(
       }
     }
     scribe.info("MCP server started successfully")
+  }
+
+  def wasStdinClosed: Boolean = stdinClosed.get()
+
+  /**
+   * Stop the server because the stdio client closed stdin.
+   *
+   * Invoked off the stdin reader thread. Exits the process so a client that
+   * closes the pipe does not leave `metals-mcp` running. `System.exit` also
+   * unblocks startup awaits on the main thread.
+   */
+  private def notifyStdinClosed(): Unit = {
+    stdinClosed.set(true)
+    scribe.info("stdin closed, shutting down Metals MCP server")
+    cancel()
+    sys.exit(0)
   }
 
   override def cancel(): Unit = {
