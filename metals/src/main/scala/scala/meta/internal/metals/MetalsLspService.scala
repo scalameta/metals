@@ -48,6 +48,8 @@ import scala.meta.internal.metals.findfiles._
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.newScalaFile.NewFileProvider
+import scala.meta.internal.metals.notebook.AlmondKernelInstaller
+import scala.meta.internal.metals.notebook.NotebookKernelInstaller
 import scala.meta.internal.metals.notebook.NotebookProvider
 import scala.meta.internal.metals.scalacli.ScalaCli
 import scala.meta.internal.metals.scalacli.ScalaCliServers
@@ -232,6 +234,15 @@ abstract class MetalsLspService(
     () => compilers,
     buildTargets,
   )(using ec)
+
+  val notebookKernelInstaller = new NotebookKernelInstaller(
+    notebookProvider,
+    buildTargets,
+    languageClient,
+    AlmondKernelInstaller.default,
+    () => javaHome,
+    () => userConfig.notebookAlmondVersion,
+  )
 
   val sourceMapper: SourceMapper = SourceMapper(
     buildTargets,
@@ -938,6 +949,24 @@ abstract class MetalsLspService(
 
   def notebookDidSave(params: DidSaveNotebookDocumentParams): Unit =
     notebookProvider.didSave(params)
+
+  // Right after a fresh start, bestTarget/fullClasspath resolve nothing
+  // yet, which would otherwise look identical to no kernel installed.
+  // Without a build server nothing gets indexed, so there's nothing to wait
+  // for.
+  def installNotebookKernel(
+      notebookUri: String,
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernelInstaller.NotebookKernel]] =
+    for {
+      _ <- buildServerPromise.future
+      _ <-
+        if (bspSession.isDefined) indexingPromise.future else Future.unit
+      kernel <- notebookKernelInstaller.ensureKernel(
+        notebookUri.toAbsolutePath,
+        askBeforeInstall,
+      )
+    } yield kernel
 
   override def didSave(
       params: DidSaveTextDocumentParams

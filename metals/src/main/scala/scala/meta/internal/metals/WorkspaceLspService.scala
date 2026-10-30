@@ -1023,6 +1023,21 @@ class WorkspaceLspService(
             )
             .asJava
         }.asJavaObject
+      case ServerCommands.InstallNotebookKernel(params) if params.uri == null =>
+        Future
+          .failed(
+            new IllegalArgumentException(
+              s"${ServerCommands.InstallNotebookKernel.id} requires a uri"
+            )
+          )
+          .asJavaObject
+      case ServerCommands.InstallNotebookKernel(params) =>
+        getServiceForOpt(params.uri)
+          .orElse(currentFolder)
+          .getOrElse(fallbackService)
+          .installNotebookKernel(params.uri, params.askBeforeInstall)
+          .map(_.orNull)
+          .asJavaObject
       case ServerCommands.BspSwitch() =>
         onCurrentFolder(
           _.switchBspServer().ignoreValue,

@@ -1,0 +1,197 @@
+package scala.meta.internal.metals.notebook
+
+import java.util.Locale
+
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.util.control.NonFatal
+
+import scala.meta.internal.metals.BuildTargets
+import scala.meta.internal.metals.Messages
+import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.clients.language.MetalsLanguageClient
+import scala.meta.internal.mtags.MD5
+import scala.meta.io.AbsolutePath
+
+import org.eclipse.lsp4j.MessageType
+
+/**
+ * Installs a Jupyter kernel (via Almond) with the classpath of the build
+ * target a notebook's cells resolve against (see
+ * [[NotebookProvider.bestTarget]]).
+ *
+ * Each notebook gets one kernel. Switching `notebookAlmondVersion` changes
+ * its launcher, so the kernel gets reinstalled like any other stale one.
+ */
+final class NotebookKernelInstaller(
+    notebookProvider: NotebookProvider,
+    buildTargets: BuildTargets,
+    languageClient: MetalsLanguageClient,
+    almond: AlmondKernelInstaller,
+    javaHome: () => Option[String],
+    configuredAlmondVersion: () => Option[String],
+)(implicit ec: ExecutionContext) {
+  import NotebookKernelInstaller._
+
+  private def almondVersion: String =
+    configuredAlmondVersion().getOrElse(
+      AlmondKernelInstaller.defaultAlmondVersion
+    )
+
+  /**
+   * Installs or refreshes the notebook's kernel and returns it.
+   *
+   * Bloop gives each BSP connection its own `classes-Metals-<uuid>`
+   * directory, so a Metals restart alone makes an installed kernel stale.
+   * Stale kernels get reinstalled silently. A missing kernel may need an
+   * Almond download, so with `askBeforeInstall` the user confirms first.
+   *
+   * @return None if no kernel is installed after this call
+   */
+  def ensureKernel(
+      ipynbPath: AbsolutePath,
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernel]] = {
+    def giveUp(tpe: MessageType, message: String) = {
+      if (!askBeforeInstall) languageClient.showMessage(tpe, message)
+      Future.successful(None)
+    }
+    val result = notebookProvider.bestTarget(ipynbPath) match {
+      case None =>
+        giveUp(MessageType.Warning, "No build target found for this notebook.")
+      case Some(target) =>
+        val resolved = for {
+          scalaTarget <- buildTargets.scalaTarget(target)
+          targetName = scalaTarget.displayName
+          classpath <- buildTargets.fullClasspath(target, Promise())
+        } yield
+          for {
+            paths <- classpath
+            // Not always part of the compile classpath.
+            classDirs = buildTargets
+              .targetClassDirectories(target)
+              .toAbsoluteClasspath
+              .toList
+            kernel = NotebookKernel(
+              kernelIdFor(ipynbPath),
+              s"Scala ($targetName, Almond $almondVersion)",
+            )
+            spec = () =>
+              almond.kernelSpec(
+                javaHome(),
+                almondVersion,
+                scalaTarget.scalaVersion,
+                (classDirs ++ paths).map(_.toNIO),
+                kernel.displayName,
+              )
+            ensured <- ensure(kernel, spec, askBeforeInstall)
+          } yield ensured
+        resolved.getOrElse(
+          giveUp(
+            MessageType.Error,
+            s"Could not resolve a classpath for '${target.getUri}'.",
+          )
+        )
+    }
+    result.recoverWith { case NonFatal(e) =>
+      scribe.error(s"failed to ensure Almond kernel for '$ipynbPath'", e)
+      giveUp(
+        MessageType.Error,
+        s"Failed to set up a Jupyter kernel for this notebook: ${e.getMessage}",
+      )
+    }
+  }
+
+  /**
+   * Refreshes `kernel` if it's installed with a different spec, otherwise
+   * installs it, asking first with `askBeforeInstall`.
+   *
+   * @param spec builds the kernelspec, only called once it's needed
+   */
+  private[notebook] def ensure(
+      kernel: NotebookKernel,
+      spec: () => ujson.Obj,
+      askBeforeInstall: Boolean,
+  ): Future[Option[NotebookKernel]] =
+    if (almond.exists(kernel.kernelId))
+      Future {
+        val current = spec()
+        val stale = !almond.isInstalled(kernel.kernelId, current)
+        if (stale) almond.install(kernel.kernelId, current)
+        Option(kernel.copy(newlyInstalled = stale))
+      }.recover { case NonFatal(e) =>
+        scribe.warn(s"failed to refresh Almond kernel '${kernel.kernelId}'", e)
+        // Unless the swap failed and the previous kernel couldn't be restored.
+        val previousKept = almond.exists(kernel.kernelId)
+        languageClient.showMessage(
+          if (previousKept) MessageType.Warning else MessageType.Error,
+          if (previousKept)
+            s"Failed to update Jupyter kernel '${kernel.displayName}', it may run with an outdated classpath: ${e.getMessage}"
+          else
+            s"Failed to update Jupyter kernel '${kernel.displayName}': ${e.getMessage}",
+        )
+        Option.when(previousKept)(kernel)
+      }
+    else
+      for {
+        confirmed <-
+          if (askBeforeInstall) confirmInstall()
+          else Future.successful(true)
+        installed <-
+          if (confirmed) installNew(kernel, spec)
+          else Future.successful(None)
+      } yield installed
+
+  private def installNew(
+      kernel: NotebookKernel,
+      spec: () => ujson.Obj,
+  ): Future[Option[NotebookKernel]] =
+    Future {
+      almond.install(kernel.kernelId, spec())
+      Option(kernel.copy(newlyInstalled = true))
+    }.recover { case NonFatal(e) =>
+      scribe.error(s"failed to install Almond kernel '${kernel.kernelId}'", e)
+      languageClient.showMessage(
+        MessageType.Error,
+        s"Failed to install Jupyter kernel '${kernel.displayName}': ${e.getMessage}",
+      )
+      None
+    }
+
+  private def confirmInstall(): Future[Boolean] =
+    languageClient
+      .showMessageRequest(Messages.InstallNotebookKernel.params())
+      .asScala
+      .map(_ == Messages.InstallNotebookKernel.install)
+}
+
+object NotebookKernelInstaller {
+
+  /**
+   * @param kernelId the kernelspec's directory name, as Jupyter lists it
+   * @param newlyInstalled true if this call installed or updated the
+   *                       kernelspec. Jupyter only scans kernelspecs on
+   *                       startup, so the client has to make it rescan.
+   */
+  final case class NotebookKernel(
+      kernelId: String,
+      displayName: String,
+      newlyInstalled: Boolean = false,
+  )
+
+  /**
+   * `metals-<file name>-<path hash>`, lower case because jupyter_client
+   * lower-cases kernelspec names. The hash keeps notebooks with the same
+   * name apart.
+   */
+  def kernelIdFor(ipynbPath: AbsolutePath): String = {
+    val name = lower(ipynbPath.filename.stripSuffix(".ipynb"))
+      .replaceAll("[^a-z0-9]", "_")
+      .take(50)
+    val hash = lower(MD5.compute(ipynbPath.toString)).take(16)
+    s"metals-$name-$hash"
+  }
+
+  private def lower(s: String): String = s.toLowerCase(Locale.ROOT)
+}
