@@ -465,7 +465,7 @@ class SbtServerSuite
     )
     // simulate a server started in the background by the sbt 2 thin client
     // before Metals plugins were added, e.g. by `sbt bspConfig`
-    startSbtServerWithoutPlugins()
+    startSbtServerWithoutPlugins(isSbt2 = true)
     for {
       _ <- initialize("")
       debugger <- server.startDebugging(
@@ -481,11 +481,12 @@ class SbtServerSuite
     } yield assertNoDiff(output, "FooBarFoo")
   }
 
-  private def startSbtServerWithoutPlugins(): Unit = {
+  private def startSbtServerWithoutPlugins(isSbt2: Boolean): Unit = {
+    val launcherVersion = if (isSbt2) "2" else "1"
     val sbtLauncher =
       BuildTool.copyFromResource(
         workspace.resolve(".sbt-launcher").toNIO,
-        "sbt-launch.jar",
+        s"sbt-launchers/${launcherVersion}/sbt-launch.jar",
       )
     new ProcessBuilder(
       s"${Properties.javaHome}/bin/java",

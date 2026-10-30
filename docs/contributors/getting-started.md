@@ -404,17 +404,18 @@ This ensures that Metals is able to launch the necessary build tool in any works
 even if the tool isn't present on the users `$PATH`. 
 You can see their usages in `<BuildToolName>BuildTool.scala`.
 
-### Updating sbt-launcher
+### Updating the sbt runner
 
-The easiest way to update the sbt-launcher is with the following coursier
-command:
+Metals vendors the official sbt runner, separately for sbt 1.x and sbt 2.x:
 
-```sh
-cp "$(cs fetch org.scala-sbt:sbt-launch:<version>)" sbt-launch.jar
-```
+- `metals/src/main/resources/sbt-launchers/1/` from the latest sbt 1.x universal package
+- `metals/src/main/resources/sbt-launchers/2/` from the latest sbt 2.x universal package
 
-This will allow you to skip some of the manual steps with the launcher
-properties file that are listed [here](https://github.com/sbt/launcher).
+Download `sbt-<version>.tgz` from the [sbt releases](https://github.com/sbt/sbt/releases)
+and copy `bin/sbt`, `bin/sbt.bat`, and `bin/sbt-launch.jar` into the matching
+directory. Keep the script and the jar from the same release. At runtime Metals
+copies them into a `bin` directory, which is where the runner looks for
+`sbt-launch.jar`.
 
 ### Updating maven wrappers
 

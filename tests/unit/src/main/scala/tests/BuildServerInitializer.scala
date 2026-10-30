@@ -161,7 +161,11 @@ object SbtServerInitializer extends BuildServerInitializer {
     if (!sbtJson.isFile) {
       // we create bsp/sbt.json file manually because `sbt bspConfig` takes too long
       val sbtLaunchJar =
-        BuildTool.copyFromResource(bspFolder.toNIO, "sbt-launch.jar")
+        BuildTool.copyFromResource(
+          bspFolder.toNIO,
+          SbtBuildTool.launchJarResource(sbtVersion),
+          destination = Some("sbt-launch.jar"),
+        )
       val argv = List(
         s"${Properties.javaHome}/bin/java",
         "-Xms100m",
