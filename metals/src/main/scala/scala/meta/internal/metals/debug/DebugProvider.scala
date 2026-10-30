@@ -432,9 +432,32 @@ class DebugProvider(
       id: BuildTargetIdentifier,
       testClasses: b.ScalaTestSuites,
   ): Future[Map[Config.TestFramework, List[Discovered]]] = {
+    val classNames =
+      testClasses.getSuites().asScala.map(_.getClassName()).toList
     scribe.debug(
-      s"Discovering tests for build target: $id, test classes: ${testClasses.getSuites().asScala.map(_.getClassName()).mkString(", ")}"
+      s"Discovering tests for build target: $id, test classes: ${classNames.mkString(", ")}"
     )
+    val indexed = classNames.forall { name =>
+      buildTargetClasses.getTestClasses(name, id).nonEmpty
+    }
+    // Mill 1.3 runs buildTarget/scalaTestClasses concurrently with compile, so
+    // the index can still be empty when a debug session starts. Refresh it
+    // before asking the presentation compiler.
+    if (indexed) discoverIndexedTests(id, testClasses)
+    else {
+      scribe.debug(
+        s"Test classes ${classNames.mkString(", ")} are not indexed yet for $id"
+      )
+      buildTargetClasses
+        .rebuildIndex(List(id))
+        .flatMap(_ => discoverIndexedTests(id, testClasses))
+    }
+  }
+
+  private def discoverIndexedTests(
+      id: BuildTargetIdentifier,
+      testClasses: b.ScalaTestSuites,
+  ): Future[Map[Config.TestFramework, List[Discovered]]] = {
     val symbolInfosList =
       for {
         selection <- testClasses.getSuites().asScala.toList
