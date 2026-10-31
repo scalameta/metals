@@ -5,9 +5,11 @@ import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.{BuildInfo => V}
 
 import ch.epfl.scala.bsp4j.StatusCode
+import tests.BaseSbtServerSuite
 
 class CancelCompileSuite
-    extends BaseLspSuite("compile-cancel", SbtServerInitializer) {
+    extends BaseLspSuite("compile-cancel", SbtServerInitializer)
+    with BaseSbtServerSuite {
 
   override def serverConfig: MetalsServerConfig =
     MetalsServerConfig.default.copy(loglevel = "debug")

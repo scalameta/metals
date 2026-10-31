@@ -21,13 +21,15 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
 import org.eclipse.lsp4j.MessageActionItem
 import tests.BaseImportSuite
+import tests.BaseSbtServerSuite
 import tests.JavaHomeChangeTest
 import tests.ScriptsAssertions
 
 class SbtBloopLspSuite
     extends BaseImportSuite("sbt-bloop-import")
     with ScriptsAssertions
-    with JavaHomeChangeTest {
+    with JavaHomeChangeTest
+    with BaseSbtServerSuite {
 
   override def serverConfig: MetalsServerConfig =
     super.serverConfig.copy(askToRestartBloop = true)
