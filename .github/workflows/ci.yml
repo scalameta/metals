@@ -35,11 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: coursier/setup-action@v3
-      - uses: actions/setup-java@v6.0.1
+      - uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-      - uses: coursier/cache-action@v8
+      - uses: coursier/cache-action@v9
         with:
           ignoreJob: true
           ignoreMatrix: true
@@ -186,11 +186,11 @@ jobs:
             java: "21"
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v6.0.1
+      - uses: actions/setup-java@v6.1.0
         with:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
-      - uses: coursier/cache-action@v8
+      - uses: coursier/cache-action@v9
         with:
           ignoreJob: true
           ignoreMatrix: true

@@ -24,7 +24,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           run-id: ${{ github.event.workflow_run.id }}
       - name: Create the aggregated test report
-        uses: dorny/test-reporter@e432d9eb1656cd7e1b3800a1e9c5d2fb8182f5ee
+        uses: dorny/test-reporter@b94dfe179d7ff66342276f4bd6b82c3c0f659f52
         with:
           name: Aggregated test report
           path: "artifacts/**/target/test-reports/*.xml"
