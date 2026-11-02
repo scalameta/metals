@@ -1,5 +1,6 @@
 package tests.sbt
 
+import tests.BaseSbtServerSuite
 import tests.SbtBuildLayout
 import tests.SbtServerInitializer
 import tests.debug.BaseBreakpointDapSuite
@@ -10,3 +11,4 @@ class SbtBreakpointDapSuite
       SbtServerInitializer,
       SbtBuildLayout,
     )
+    with BaseSbtServerSuite

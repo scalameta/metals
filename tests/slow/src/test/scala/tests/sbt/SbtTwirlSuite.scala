@@ -3,9 +3,13 @@ package tests.sbt
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
 
+import tests.BaseSbtServerSuite
 import tests.CompletionsAssertions
 
-class SbtTwirlSuite extends SbtServerSuite with CompletionsAssertions {
+class SbtTwirlSuite
+    extends SbtServerSuite
+    with CompletionsAssertions
+    with BaseSbtServerSuite {
 
   val twirlVersion = "2.0.9"
   val playVersion = "3.0.10"
