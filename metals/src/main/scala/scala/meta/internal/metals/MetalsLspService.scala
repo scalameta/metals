@@ -1800,12 +1800,13 @@ abstract class MetalsLspService(
           path.isWorksheet
         }
       }
-      .fold(Future.successful(()))(
-        worksheetProvider.evaluateAndPublish(_, EmptyCancelToken)
-      )
-      .flatMap { _ =>
-        // we need to refresh tokens for worksheets since dependencies could have been added
-        languageClient.refreshSemanticTokens().asScala.map(_ => ())
+      .fold(Future.successful(())) { path =>
+        val evaluated =
+          worksheetProvider.evaluateAndPublish(path, EmptyCancelToken)
+        evaluated.foreach { _ =>
+          val _ = languageClient.refreshSemanticTokens()
+        }
+        evaluated
       }
   }
 

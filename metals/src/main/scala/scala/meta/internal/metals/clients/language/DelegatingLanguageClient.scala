@@ -110,6 +110,14 @@ class DelegatingLanguageClient(var underlying: MetalsLanguageClient)
   override def refreshModel(): CompletableFuture[Unit] =
     underlying.refreshModel()
 
+  // These LSP4J methods are default methods that throw. Forward them so a
+  // wrapper such as MetalsHttpClient does not hit that default implementation.
+  override def refreshCodeLenses(): CompletableFuture[Void] =
+    underlying.refreshCodeLenses()
+
+  override def refreshSemanticTokens(): CompletableFuture[Void] =
+    underlying.refreshSemanticTokens()
+
   override def refreshInlayHints(): CompletableFuture[Void] = {
     underlying.refreshInlayHints()
   }
