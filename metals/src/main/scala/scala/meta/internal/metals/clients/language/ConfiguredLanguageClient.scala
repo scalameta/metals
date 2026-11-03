@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
+import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
@@ -193,7 +194,11 @@ final class ConfiguredLanguageClient(
 
   override def refreshModel(): CompletableFuture[Unit] = {
     if (clientConfig.codeLenseRefreshSupport())
-      underlying.refreshCodeLenses.thenApply(_ => ())
+      safely(
+        underlying.refreshCodeLenses().thenApply(_ => ()),
+        (),
+        "refreshing code lenses",
+      )
     else if (
       clientConfig.isExecuteClientCommandProvider() &&
       (clientConfig.isDebuggingProvider() || clientConfig.isRunProvider())
@@ -204,31 +209,49 @@ final class ConfiguredLanguageClient(
   }
 
   override def refreshSemanticTokens(): CompletableFuture[Void] = {
-    if (clientConfig.semanticTokensRefreshSupport()) {
-      underlying
-        .refreshSemanticTokens()
-        .handle { (msg, ex) =>
-          if (ex != null)
-            scribe.warn(s"Error while refreshing semantic tokens: $msg", ex)
-          msg
-        }
-    } else CompletableFuture.allOf()
+    if (clientConfig.semanticTokensRefreshSupport())
+      safely(
+        underlying.refreshSemanticTokens(),
+        null,
+        "refreshing semantic tokens",
+      )
+    else CompletableFuture.allOf()
   }
 
   override def refreshInlayHints(): CompletableFuture[Void] = {
     if (
       clientConfig.isInlayHintsEnabled() && clientConfig
         .isInlayHintsRefreshEnabled()
-    ) {
-      underlying
-        .refreshInlayHints()
-        .handle { (msg, ex) =>
-          if (ex != null)
-            scribe.warn(s"Error while refreshing inlayHints: $msg", ex)
-          msg
-        }
-    } else CompletableFuture.allOf()
+    )
+      safely(underlying.refreshInlayHints(), null, "refreshing inlay hints")
+    else CompletableFuture.allOf()
   }
+
+  /**
+   * LSP4J's default methods throw synchronously, and `.handle` only runs once a
+   * future exists. A client that advertises refresh support can therefore fail
+   * the caller before any request is sent.
+   */
+  private def safely[A](
+      request: => CompletableFuture[A],
+      fallback: A,
+      what: String,
+  ): CompletableFuture[A] =
+    try {
+      val future = request
+      if (future == null) CompletableFuture.completedFuture(fallback)
+      else
+        future.handle { (value, error) =>
+          if (error != null) {
+            scribe.warn(s"Error while $what", error)
+            fallback
+          } else value
+        }
+    } catch {
+      case NonFatal(error) =>
+        scribe.warn(s"Error while $what", error)
+        CompletableFuture.completedFuture(fallback)
+    }
 
   override def metalsExecuteClientCommand(
       params: ExecuteCommandParams
