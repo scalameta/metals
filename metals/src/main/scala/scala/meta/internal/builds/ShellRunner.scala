@@ -1,5 +1,7 @@
 package scala.meta.internal.builds
 
+import java.util.concurrent.TimeoutException
+
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Promise
@@ -146,6 +148,7 @@ object ShellRunner {
       propagateError: Boolean = false,
       maybeJavaHome: Option[String] = None,
       timeout: Duration = 10.seconds,
+      cancelOnTimeout: Boolean = false,
   )(implicit ec: ExecutionContext): Option[String] = {
 
     val sbOut = new StringBuilder()
@@ -163,7 +166,13 @@ object ShellRunner {
       propagateError,
     )
 
-    val exit = Await.result(ps.complete, timeout)
+    val exit =
+      try Await.result(ps.complete, timeout)
+      catch {
+        case e: TimeoutException =>
+          if (cancelOnTimeout) ps.cancel
+          throw e
+      }
 
     if (exit == 0) {
       Some(sbOut.toString())

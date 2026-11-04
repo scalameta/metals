@@ -26,6 +26,7 @@ trait BaseSbtServerSuite extends BaseLspSuite {
           workspace,
           redirectErrorOutput = false,
           timeout = 30.seconds,
+          cancelOnTimeout = true,
         )
       } {
         scribe.info(s"Killed sbt server running in $workspace")
