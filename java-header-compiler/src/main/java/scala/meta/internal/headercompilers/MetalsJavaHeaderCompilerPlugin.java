@@ -13,6 +13,7 @@ import com.sun.tools.javac.code.Symbol.ClassSymbol;
 import com.sun.tools.javac.code.TypeTag;
 import com.sun.tools.javac.tree.JCTree;
 import com.sun.tools.javac.tree.JCTree.*;
+import com.sun.tools.javac.tree.TreeInfo;
 import com.sun.tools.javac.tree.TreeMaker;
 import com.sun.tools.javac.tree.TreeTranslator;
 import com.sun.tools.javac.util.Context;
@@ -174,7 +175,18 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
 
       boolean isConstructor = methodDecl.getName().toString().equals("<init>");
       if (isConstructor) {
-        methodDecl.body = treeMaker.Block(0, List.nil());
+        // Dropping an explicit this(...) or super(...) invents an implicit
+        // super(), which can make a valid dependency fail attribution. Keep
+        // only that invocation, including its arguments and original positions.
+        if (methodDecl.body == null) {
+          methodDecl.body = treeMaker.Block(0, List.nil());
+        } else {
+          List<JCStatement> statements = methodDecl.body.stats;
+          methodDecl.body.stats =
+              statements.nonEmpty() && TreeInfo.isSelfCall(statements.head)
+                  ? List.of(statements.head)
+                  : List.nil();
+        }
         executableLevel++;
         try {
           super.visitMethodDef(methodDecl);
