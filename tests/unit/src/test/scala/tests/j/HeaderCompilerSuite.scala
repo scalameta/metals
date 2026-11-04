@@ -261,6 +261,65 @@ class HeaderCompilerSuite extends munit.FunSuite {
        |""".stripMargin,
   )
 
+  checkNoErrors(
+    "incompatible-constant-literals-remain-pruned",
+    """|/example/Constants.java
+       |package example;
+       |public interface Constants {
+       |  int TEXT = "text";
+       |  String NUMBER = 42;
+       |  boolean INTEGER = 1;
+       |  int BOOLEAN = true;
+       |  int LONG = 1L;
+       |  float DOUBLE = 1.0;
+       |  byte OVERFLOW = 256;
+       |}
+       |/example/Dependency.java
+       |package example;
+       |public class Dependency {
+       |  static final int BROKEN = ("text");
+       |}
+       |""".stripMargin,
+  )
+
+  test("compatible-constant-literals-retain-their-values") {
+    val layout = """|/example/Constants.java
+                    |package example;
+                    |public interface Constants {
+                    |  byte BYTE = 1;
+                    |  short SHORT = 2;
+                    |  char CHAR = 3;
+                    |  int INT = 'a';
+                    |  long LONG = 4;
+                    |  float FLOAT = 5L;
+                    |  double DOUBLE = 6.0f;
+                    |  boolean BOOLEAN = true;
+                    |  String TEXT = "text";
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  int use(int n) {
+                    |    return switch (n) {
+                    |      case Constants.BYTE -> 1;
+                    |      case Constants.SHORT -> 2;
+                    |      case Constants.CHAR -> 3;
+                    |      case Constants.INT -> 4;
+                    |      default -> 0;
+                    |    };
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(
+        layout,
+        options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+      ),
+      Nil,
+    )
+  }
+
   test("real-duplicate-constructor-case-labels-remain-errors") {
     val layout = """|/example/Base.java
                     |package example;
