@@ -44,7 +44,7 @@ class TurbineProjectClasspathSuite extends munit.FunSuite {
     ) ++ (if (withFallback)
             List("OnlyGlobal" -> "package fixture; public class OnlyGlobal {}")
           else Nil)
-    val paths = sources.map { case (className, text) =>
+    val paths = for ((className, text) <- sources) yield {
       val path = root.resolve(s"$className.java")
       Files.writeString(path, text)
       path.toString
@@ -54,11 +54,11 @@ class TurbineProjectClasspathSuite extends munit.FunSuite {
       ToolProvider.getSystemJavaCompiler().run(null, null, null, arguments: _*),
       0,
     )
-    val classes = sources.map { case (className, _) =>
+    val classes = (for ((className, _) <- sources) yield {
       s"fixture.$className" -> Files
         .readAllBytes(output.resolve(s"fixture/$className.class"))
         .toVector
-    }.toMap
+    }).toMap
     val path = root.resolve(s"$name.jar")
     val archive = new JarOutputStream(Files.newOutputStream(path))
     try
@@ -115,7 +115,7 @@ class TurbineProjectClasspathSuite extends munit.FunSuite {
       val grouped = classes.groupBy(file =>
         manager.inferBinaryName(StandardLocation.CLASS_PATH, file)
       )
-      grouped.map { case (name, entries) =>
+      for ((name, entries) <- grouped) yield {
         assertEquals(entries.size, 1, clues(name))
         val stream = entries.head.openInputStream()
         try name -> stream.readAllBytes().toVector
