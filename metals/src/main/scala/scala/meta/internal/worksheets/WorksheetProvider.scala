@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.security.MessageDigest
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -187,17 +188,29 @@ class WorksheetProvider(
       path: AbsolutePath,
       token: CancelToken,
   ): Future[List[InlayHint]] = if (path.isWorksheet) {
+    def hintsOf(
+        evaluated: Future[EvaluatedWorksheetSnapshot]
+    ): Future[List[InlayHint]] =
+      evaluated
+        .map(worksheet => toInlayHints(path, Some(worksheet)))
+        .recover { case _ =>
+          Nil
+        }
     exportableEvaluations.get(path) match {
       case Some(value) if value.isCompleted =>
-        value.future.map(worksheet => toInlayHints(path, Some(worksheet)))
+        hintsOf(value.future)
       case Some(value) =>
         if (clientConfig.isInlayHintsRefreshEnabled()) {
-          value.future.map { _ =>
-            languageClient.refreshInlayHints()
-            Nil
-          }
+          value.future
+            .map { _ =>
+              languageClient.refreshInlayHints()
+              Nil
+            }
+            .recover { case _ =>
+              Nil
+            }
         } else {
-          value.future.map(worksheet => toInlayHints(path, Some(worksheet)))
+          hintsOf(value.future)
         }
       case None =>
         evaluateAndPublish(
@@ -323,11 +336,24 @@ class WorksheetProvider(
       )
       token.checkCanceled()
       val promise = Promise[EvaluatedWorksheetSnapshot]()
-      exportableEvaluations.update(path, promise)
+      exportableEvaluations.put(path, promise).foreach { previous =>
+        previous.tryFailure(
+          new CancellationException("worksheet evaluation superseded")
+        )
+      }
+      // A cancelled or failed run used to leave this promise pending. Inlay
+      // hints wait on it, so the editor (and the cancel test) hung until the
+      // request timed out.
+      result.asScala.onComplete { _ =>
+        promise.tryFailure(
+          new CancellationException("worksheet evaluation cancelled")
+        )
+      }
       // NOTE(olafurpg) Run evaluation in a custom thread so that we can
-      // `Thread.stop()` it in case of infinite loop. I'm not aware of any
-      // other JVM APIs that allow killing a runnable even in the face of
-      // infinite loops.
+      // interrupt it, with `Thread.stop()` as a last resort for tight loops
+      // on JDKs that still implement it. JDK 20+ makes `Thread.stop()` throw
+      // UnsupportedOperationException, so non-interruptible code cannot be
+      // killed in-process.
       val thread = new Thread(s"Evaluating Worksheet ${path.filename}") {
         override def run(): Unit = {
           result.complete(
@@ -337,18 +363,11 @@ class WorksheetProvider(
         }
       }
       val cancellable = toCancellable(thread, result)
+      cancelables.add(cancellable)
       interruptThreadOnCancel(path, result, cancellable)
 
       thread.start()
-      val timeout = serverConfig.worksheetTimeout * 1000
-      thread.join(timeout)
-      if (!result.isDone()) {
-        cancellable.cancel()
-        languageClient.showMessage(
-          MessageType.Warning,
-          Messages.worksheetTimeout,
-        )
-      }
+      awaitEvaluation(thread, result, cancellable)
     }
     jobs.submit(
       result,
@@ -364,6 +383,47 @@ class WorksheetProvider(
     result.asScala.recover(onError)
   }
 
+  /**
+   * Wait until the evaluation thread finishes or the worksheet timeout elapses.
+   *
+   * Once cancellation has completed the result, only wait long enough for
+   * interrupt/`Thread.stop` to take effect. A non-interruptible thread must
+   * not keep the single worksheet queue blocked for the whole timeout, or the
+   * next evaluation cannot start.
+   */
+  private def awaitEvaluation(
+      thread: Thread,
+      result: CompletableFuture[_],
+      cancellable: Cancelable,
+  ): Unit = {
+    val deadline =
+      System.currentTimeMillis() + serverConfig.worksheetTimeout * 1000L
+    var finished = false
+    while (
+      !finished && thread.isAlive() && System.currentTimeMillis() < deadline
+    ) {
+      val slice =
+        if (result.isDone()) 500L
+        else {
+          val remaining = deadline - System.currentTimeMillis()
+          math.min(200L, math.max(remaining, 1L))
+        }
+      thread.join(slice)
+      if (!thread.isAlive()) finished = true
+      else if (result.isDone()) {
+        thread.join(4000L)
+        finished = true
+      }
+    }
+    if (!result.isDone()) {
+      cancellable.cancel()
+      languageClient.showMessage(
+        MessageType.Warning,
+        Messages.worksheetTimeout,
+      )
+    }
+  }
+
   private def toCancellable(
       thread: Thread,
       result: CompletableFuture[Option[EvaluatedWorksheetSnapshot]],
@@ -372,8 +432,15 @@ class WorksheetProvider(
     val stopThread = new Runnable {
       def run(): Unit = {
         if (thread.isAlive()) {
-          scribe.warn(s"thread stop: ${thread.getName()}")
-          thread.stop()
+          try {
+            scribe.warn(s"thread stop: ${thread.getName()}")
+            thread.stop()
+          } catch {
+            case _: UnsupportedOperationException =>
+              scribe.warn(
+                s"thread stop is unsupported on this JDK, so '${thread.getName()}' keeps running until it handles the interrupt"
+              )
+          }
         }
       }
     }
