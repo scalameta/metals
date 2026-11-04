@@ -1,15 +1,30 @@
 package tests.sbt
 
+import scala.meta.internal.builds.BuildTool
+import scala.meta.internal.builds.SbtBuildTool
+import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.io.AbsolutePath
 
+import tests.BaseImportSuite
 import tests.BaseSbtServerSuite
 import tests.CompletionsAssertions
+import tests.SbtServerInitializer
+import tests.ScriptsAssertions
 
 class SbtTwirlSuite
-    extends SbtServerSuite
+    extends BaseImportSuite("sbt-server", SbtServerInitializer)
     with CompletionsAssertions
+    with ScriptsAssertions
     with BaseSbtServerSuite {
+
+  override def buildTool: BuildTool =
+    SbtBuildTool(None, workspace, () => userConfig)
+
+  override def currentDigest(
+      workspace: AbsolutePath
+  ): Option[String] = SbtDigest.current(workspace)
 
   val twirlVersion = "2.0.9"
   val playVersion = "3.0.10"
