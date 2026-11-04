@@ -239,17 +239,50 @@ object PackageIndex {
       if Files.isRegularFile(entry)
     } yield entry
 
-  private def findJar(name: String) = {
-    System
-      .getProperty("java.class.path")
-      .split(java.io.File.pathSeparator)
-      .iterator
-      .map(Paths.get(_))
-      .filter(path =>
-        Files.exists(path) && path.getFileName.toString.contains(name)
-      )
-      .toSeq
+  /**
+   * Classpath of the classloader that loaded Metals, plus `java.class.path`.
+   *
+   * sbt 2 runs forked tests in a worker JVM whose `java.class.path` contains
+   * only the worker jars. The project classpath is installed on a nested
+   * URLClassLoader, so callers that need scala-library or the test classes
+   * have to read that loader.
+   */
+  def runtimeClasspath: Seq[Path] = {
+    val fromLoader = classLoaderClasspath(classOf[PackageIndex].getClassLoader)
+    val fromProperty = Option(System.getProperty("java.class.path"))
+      .filter(_.nonEmpty)
+      .toList
+      .flatMap { classpath =>
+        classpath
+          .split(java.io.File.pathSeparator)
+          .iterator
+          .map(Paths.get(_))
+          .toList
+      }
+    (fromLoader ++ fromProperty).distinct.filter(Files.exists(_))
   }
+
+  private def classLoaderClasspath(loader: ClassLoader): List[Path] = {
+    if (loader == null) Nil
+    else {
+      val current = loader match {
+        case urlLoader: java.net.URLClassLoader =>
+          urlLoader.getURLs.toList.flatMap { url =>
+            try Some(Paths.get(url.toURI))
+            catch { case NonFatal(_) => None }
+          }
+        case _ =>
+          Nil
+      }
+      current ++ classLoaderClasspath(loader.getParent)
+    }
+  }
+
+  private def findJar(name: String): Seq[Path] =
+    runtimeClasspath.filter { path =>
+      val fileName = path.getFileName
+      fileName != null && fileName.toString.contains(name)
+    }
 
   def scalaLibrary: Seq[Path] = findJar("scala-library")
 

@@ -449,11 +449,7 @@ object Bill {
   }
 
   def myClasspath: Seq[Path] =
-    System
-      .getProperty("java.class.path")
-      .split(java.io.File.pathSeparator)
-      .map(Paths.get(_))
-      .toSeq
+    scala.meta.internal.metals.PackageIndex.runtimeClasspath
 
   def cwd: Path = Paths.get(System.getProperty("user.dir"))
 

@@ -17,6 +17,7 @@ object InputProperties extends AutoPlugin {
       resourceName: String,
   ): Def.Initialize[Task[Seq[File]]] =
     Def.task {
+      val converter = fileConverter.value
       val out =
         (Compile / managedResourceDirectories).value.head / s"$resourceName.properties"
       val props = new java.util.Properties()
@@ -44,7 +45,7 @@ object InputProperties extends AutoPlugin {
       props.put(
         "classpath",
         (input / Test / fullClasspath).value
-          .map(_.data)
+          .map(entry => converter.toPath(entry.data).toAbsolutePath.toString)
           .mkString(File.pathSeparator),
       )
       props.put(
