@@ -131,6 +131,71 @@ class DefinitionLspSuite
     } yield ()
   }
 
+  for (
+    (callerVersion, transitiveVersion) <-
+      List(("3.14.0", "3.12.0"), ("3.12.0", "3.14.0"))
+  ) {
+    test(s"dependency-sources-from-caller-target-$callerVersion") {
+      cleanWorkspace()
+      for {
+        _ <- initialize(
+          s"""|/metals.json
+              |{
+              |  "a": {
+              |    "libraryDependencies": [
+              |      "org.apache.commons:commons-lang3:$transitiveVersion"
+              |    ]
+              |  },
+              |  "b": {
+              |    "dependsOn": ["a"],
+              |    "libraryDependencies": [
+              |      "org.apache.commons:commons-lang3:$callerVersion"
+              |    ]
+              |  }
+              |}
+              |/a/src/main/scala/a/A.scala
+              |package a
+              |import org.apache.commons.lang3.StringUtils
+              |object A { val empty = StringUtils.isEmpty("") }
+              |/b/src/main/scala/b/B.scala
+              |package b
+              |import org.apache.commons.lang3.StringUtils
+              |object B { val empty = StringUtils.isEmpty("") && a.A.empty }
+              |""".stripMargin
+        )
+        _ <- server.didOpen("a/src/main/scala/a/A.scala")
+        _ <- server.didOpen("b/src/main/scala/b/B.scala")
+        _ = assertNoDiagnostics()
+        _ <- server.assertDefinition(
+          "b/src/main/scala/b/B.scala",
+          "StringUtils.isEm@@pty",
+          s"""|.metals/readonly/dependencies/commons-lang3-$callerVersion-sources.jar/org/apache/commons/lang3/StringUtils.java:LINE:COLUMN: definition
+              |    public static boolean isEmpty(final CharSequence cs) {
+              |                          ^^^^^^^
+              |""".stripMargin,
+          redactLineNumbers = true,
+        )
+        _ <- server.assertDefinition(
+          "a/src/main/scala/a/A.scala",
+          "StringUtils.isEm@@pty",
+          s"""|.metals/readonly/dependencies/commons-lang3-$transitiveVersion-sources.jar/org/apache/commons/lang3/StringUtils.java:LINE:COLUMN: definition
+              |    public static boolean isEmpty(final CharSequence cs) {
+              |                          ^^^^^^^
+              |""".stripMargin,
+          redactLineNumbers = true,
+        )
+        _ <- server.assertDefinition(
+          "b/src/main/scala/b/B.scala",
+          "a.A.em@@pty",
+          """|a/src/main/scala/a/A.scala:3:16: definition
+             |object A { val empty = StringUtils.isEmpty("") }
+             |               ^^^^^
+             |""".stripMargin,
+        )
+      } yield ()
+    }
+  }
+
   // This test makes sure that textDocument/definition returns reference locations
   // instead of definition location if the symbol at the given text document position
   // represents a definition itself.
