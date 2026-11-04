@@ -39,6 +39,9 @@ class HeaderCompilerSuite extends munit.FunSuite {
     FileLayout.fromString(layout, root = tmp())
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
     val allOptions = List(
+      // Match JavaPruneCompiler: unrelated host annotation processors must
+      // not participate in the header-compilation task.
+      "-proc:none",
       "-classpath",
       embedded.javaHeaderCompiler.toNIO.toString,
     ) ++ options
@@ -147,6 +150,79 @@ class HeaderCompilerSuite extends munit.FunSuite {
        |}
        |""".stripMargin,
   )
+
+  test("explicit-constructor-invocations-remain-valid") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base {
+                    |  public Base(String value) {}
+                    |  public Base(String value, Throwable cause) {}
+                    |}
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) { super(value); }
+                    |  public Derived(String value, Throwable cause) {
+                    |    super(value, cause);
+                    |  }
+                    |  public Derived() { this("default"); }
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  public Derived create() { return new Derived(); }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.map(_.getCode), Nil)
+  }
+
+  test("qualified-super-constructor-remains-valid") {
+    val layout = """|/example/Outer.java
+                    |package example;
+                    |public class Outer {
+                    |  public class Inner { public Inner(String value) {} }
+                    |}
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Outer.Inner {
+                    |  public Derived(Outer outer) { outer.super("value"); }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
+  }
+
+  test("kept-caller-constructor-errors-remain-errors") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(String value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) { super(value); }
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  public Derived create() { return new Derived(42); }
+                    |}
+                    |""".stripMargin
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.size, 1)
+    assert(errors.head.getSource.getName.endsWith("Caller.java"))
+    assertEquals(errors.head.getCode, "compiler.err.prob.found.req")
+  }
 
   checkNoErrors(
     "interface",
