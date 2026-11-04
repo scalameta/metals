@@ -263,34 +263,38 @@ class WorksheetProvider(
     exportableEvaluations.get(path) match {
       case None => Future.successful(None)
       case Some(worksheetPromise) =>
-        worksheetPromise.future.map { worksheetSnapshot =>
-          val toExport = new StringBuilder
-          val originalLines = input.value.split("\n").toBuffer.zipWithIndex
+        worksheetPromise.future
+          .map { worksheetSnapshot =>
+            val toExport = new StringBuilder
+            val originalLines = input.value.split("\n").toBuffer.zipWithIndex
 
-          originalLines.foreach { case (lineContent, lineNumber) =>
-            val lineHasOutput = worksheetSnapshot.evaluatedWorksheet
-              .statements()
-              .asScala
-              .find(_.position.endLine() == lineNumber)
+            originalLines.foreach { case (lineContent, lineNumber) =>
+              val lineHasOutput = worksheetSnapshot.evaluatedWorksheet
+                .statements()
+                .asScala
+                .find(_.position.endLine() == lineNumber)
 
-            lineHasOutput match {
-              case Some(statement) =>
-                val detailLines = statement
-                  .prettyDetails()
-                  .split("\n")
-                  .map { line =>
-                    // println in worksheets already come with //
-                    if (line.trim().startsWith("//")) line
-                    else s"// ${line}"
-                  }
-                  .mkString("\n")
+              lineHasOutput match {
+                case Some(statement) =>
+                  val detailLines = statement
+                    .prettyDetails()
+                    .split("\n")
+                    .map { line =>
+                      // println in worksheets already come with //
+                      if (line.trim().startsWith("//")) line
+                      else s"// ${line}"
+                    }
+                    .mkString("\n")
 
-                toExport.append(s"\n${lineContent}\n${detailLines}")
-              case None => toExport.append(s"\n${lineContent}")
+                  toExport.append(s"\n${lineContent}\n${detailLines}")
+                case None => toExport.append(s"\n${lineContent}")
+              }
             }
+            Some(toExport.result())
           }
-          Some(toExport.result())
-        }
+          .recover { case _: CancellationException =>
+            None
+          }
 
     }
   }
@@ -397,7 +401,8 @@ class WorksheetProvider(
       cancellable: Cancelable,
   ): Unit = {
     val deadline =
-      System.currentTimeMillis() + serverConfig.worksheetTimeout * 1000L
+      if (serverConfig.worksheetTimeout == 0) Long.MaxValue
+      else System.currentTimeMillis() + serverConfig.worksheetTimeout * 1000L
     var finished = false
     while (
       !finished && thread.isAlive() && System.currentTimeMillis() < deadline
