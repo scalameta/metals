@@ -1,8 +1,79 @@
 package tests
 
+import java.time.Duration
+
+import scala.meta.internal.metals.EmptyCancelToken
+
 class PCDiagnosticsSuite
     extends BaseLspSuite("pc-diagnostics")
     with BaseSourcePathSuite {
+
+  for (ownerFirst <- List(false, true))
+    test(s"semanticdb-binary-source-owner-first-$ownerFirst") {
+      cleanWorkspace()
+      val owner = "a/src/main/scala/sample/Envelope.scala"
+      val dependency = "a/src/main/scala/sample/Payload.scala"
+      val first = if (ownerFirst) owner else dependency
+      val second = if (ownerFirst) dependency else owner
+      for {
+        _ <- initialize(
+          """|/metals.json
+             |{"a": {}}
+             |/a/src/main/scala/sample/Envelope.scala
+             |package sample
+             |trait Envelope {
+             |  def payload: Payload
+             |  def discard(): Envelope.Result = payload.discard()
+             |}
+             |object Envelope {
+             |  final class Result
+             |  val completed: Result = new Result
+             |}
+             |/a/src/main/scala/sample/Payload.scala
+             |package sample
+             |class Payload {
+             |  def discard(): Envelope.Result = Envelope.completed
+             |}
+             |""".stripMargin
+        )
+        // Populate the class directory before typing either source with the PC.
+        _ <- server.server.compilations.compileFile(server.toPath(dependency))
+        _ = assertNoDiagnostics()
+        firstDocs <- server.server.compilers.batchSemanticdbTextDocuments(
+          List(server.toPath(first)),
+          EmptyCancelToken,
+          Duration.ofSeconds(15),
+          useFallbackCompiler = false,
+        )
+        _ = assertEquals(firstDocs.documents.size, 1)
+        _ = assertEquals(
+          firstDocs.documents.head.uri,
+          server.toPath(first).toURI.toString,
+        )
+        _ = assert(firstDocs.documents.head.occurrences.nonEmpty)
+        _ = assertEquals(firstDocs.documents.flatMap(_.diagnostics), Nil)
+        secondDocs <- server.server.compilers.batchSemanticdbTextDocuments(
+          List(server.toPath(second)),
+          EmptyCancelToken,
+          Duration.ofSeconds(15),
+          useFallbackCompiler = false,
+        )
+        _ = assertEquals(secondDocs.documents.size, 1)
+        _ = assertEquals(
+          secondDocs.documents.head.uri,
+          server.toPath(second).toURI.toString,
+        )
+        _ = assert(secondDocs.documents.head.occurrences.nonEmpty)
+        _ = assertEquals(secondDocs.documents.flatMap(_.diagnostics), Nil)
+        repeated <- server.server.compilers.batchSemanticdbTextDocuments(
+          List(server.toPath(second)),
+          EmptyCancelToken,
+          Duration.ofSeconds(15),
+          useFallbackCompiler = false,
+        )
+        _ = assertEquals(repeated, secondDocs)
+      } yield ()
+    }
 
   test("no-errors") {
     cleanWorkspace()
@@ -45,6 +116,14 @@ class PCDiagnosticsSuite
            |}
            |""".stripMargin
       )
+      docs <- server.server.compilers.batchSemanticdbTextDocuments(
+        List(server.toPath("a/src/main/scala/a/TypeErrors.scala")),
+        EmptyCancelToken,
+        Duration.ofSeconds(15),
+        useFallbackCompiler = false,
+      )
+      _ = assertEquals(docs.documents.size, 1)
+      _ = assertEquals(docs.documents.head.diagnostics.size, 2)
       _ <- server.didOpen("a/src/main/scala/a/TypeErrors.scala")
       _ <- server.didFocus("a/src/main/scala/a/TypeErrors.scala")
       // diagnostics are sent asynchronously and we don't have a future to await here
