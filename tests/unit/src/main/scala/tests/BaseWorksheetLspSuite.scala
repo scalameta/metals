@@ -223,14 +223,14 @@ abstract class BaseWorksheetLspSuite(
            |{"a": {"scalaVersion": "$scalaVersion"}}
            |/a/src/main/scala/Main.worksheet.sc
            |println(42)
-           |Stream.from(10).last
+           |while (true) Thread.sleep(60000)
            |""".stripMargin
       )
       _ <- server.didOpen("a/src/main/scala/Main.worksheet.sc")
       _ <- cancelled.future.withTimeout(10.seconds, reason = None)
       _ = client.onWorkDoneProgressStart = (_, _) => {}
       _ <- server.didChange("a/src/main/scala/Main.worksheet.sc")(
-        _.replace("Stream", "// Stream")
+        _.replace("while", "// while")
       )
       _ <- server.didSave("a/src/main/scala/Main.worksheet.sc")
       _ <- server.didChange("a/src/main/scala/Main.worksheet.sc")(
@@ -241,7 +241,7 @@ abstract class BaseWorksheetLspSuite(
         "a/src/main/scala/Main.worksheet.sc",
         """|
            |println(43)/* // 43*/
-           |// Stream.from(10).last
+           |// while (true) Thread.sleep(60000)
            |""".stripMargin,
       )
     } yield ()
