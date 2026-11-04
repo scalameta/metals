@@ -88,17 +88,11 @@ class JavaSemanticdbProvider(
     visitor.uri = compiler.guessOriginalUri(cu.getSourceFile())
     val textDocument = visitor.buildTextDocumentBuilder(cu);
     compile.listener.diagnostics.foreach { d =>
-      val line = (d.getLineNumber() - 1).toInt
-      val column = (d.getColumnNumber() - 1).toInt
-      val range = Semanticdb.Range
-        .newBuilder()
-        .setStartLine(line)
-        .setStartCharacter(column)
-        .setEndLine(line.toInt)
-        .setEndCharacter(column)
-        .build()
-      textDocument.addDiagnostics(
-        Semanticdb.Diagnostic
+      val source = d.getSource()
+      if (source == null || source.getName() == cu.getSourceFile().getName()) {
+        // Source-less diagnostics describe the compilation as a whole. Keep
+        // them visible, but do not attach another source's diagnostic here.
+        val diagnostic = Semanticdb.Diagnostic
           .newBuilder()
           .setSeverity(d.getKind() match {
             case ERROR =>
@@ -112,8 +106,24 @@ class JavaSemanticdbProvider(
           })
           .setCode(d.getCode())
           .setMessage(d.getMessage(null))
-          .setRange(range)
-      )
+        // javac also reports diagnostics without positions. SemanticDB's range
+        // is optional; NOPOS must not become a negative document coordinate.
+        if (
+          source != null && d.getLineNumber() > 0 && d.getColumnNumber() > 0
+        ) {
+          val line = (d.getLineNumber() - 1).toInt
+          val column = (d.getColumnNumber() - 1).toInt
+          diagnostic.setRange(
+            Semanticdb.Range
+              .newBuilder()
+              .setStartLine(line)
+              .setStartCharacter(column)
+              .setEndLine(line)
+              .setEndCharacter(column)
+          )
+        }
+        textDocument.addDiagnostics(diagnostic)
+      }
     }
     textDocument.build()
   }
