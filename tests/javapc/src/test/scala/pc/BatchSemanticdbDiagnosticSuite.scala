@@ -64,11 +64,11 @@ class BatchSemanticdbDiagnosticSuite extends BaseJavaSemanticdbSuite {
       s"two-broken-same-basename-keep-their-own-diagnostics-reversed-$reversed"
     ) {
       val params = List(broken, otherBroken)
-      val expected = params.map { param =>
+      val expected = (for (param <- params) yield {
         val document = textDocument(param.text, param.uri)
         assert(document.getDiagnosticsCount > 0)
         param.uri.toString -> document.getDiagnosticsList
-      }.toMap
+      }).toMap
       val documents =
         batchTextDocuments(if (reversed) params.reverse else params)
       assertEquals(documents.size, 2)
