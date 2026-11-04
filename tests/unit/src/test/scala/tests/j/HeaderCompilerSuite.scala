@@ -181,6 +181,114 @@ class HeaderCompilerSuite extends munit.FunSuite {
     assertEquals(errors.map(_.getCode), Nil)
   }
 
+  test("retained-constructor-switch-preserves-constant-labels") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  static final int A = 1;
+                    |  static final int B = A + 1;
+                    |  public Derived(int value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.map(_.getCode), Nil)
+  }
+
+  test("retained-constructor-preserves-imported-interface-string-constants") {
+    val layout = """|/example/Labels.java
+                    |package example;
+                    |public interface Labels {
+                    |  String A = "a";
+                    |  String B = A + "b";
+                    |}
+                    |/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |import static example.Labels.A;
+                    |import static example.Labels.B;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
+  }
+
+  checkNoErrors(
+    "unrelated-nonconstant-initializers-remain-pruned",
+    """|/example/Base.java
+       |package example;
+       |public class Base { public Base(int value) {} }
+       |/example/Derived.java
+       |package example;
+       |public class Derived extends Base {
+       |  static final int A = (int) (1L << 1);
+       |  static final int B = true ? +A + 1 : -A;
+       |  static final int UNUSED = method("bad argument");
+       |  static int method(int value) { return value; }
+       |  public Derived(int value) {
+       |    super(switch (value) {
+       |      case A -> 1;
+       |      case B -> 2;
+       |      default -> 0;
+       |    });
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  test("real-duplicate-constructor-case-labels-remain-errors") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  static final int A = 1;
+                    |  static final int B = 1;
+                    |  public Derived(int value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(
+      errors.map(_.getCode),
+      List("compiler.err.duplicate.case.label"),
+    )
+  }
+
   test("qualified-super-constructor-remains-valid") {
     val layout = """|/example/Outer.java
                     |package example;
