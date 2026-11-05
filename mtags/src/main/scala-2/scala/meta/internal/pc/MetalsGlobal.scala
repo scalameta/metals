@@ -351,7 +351,9 @@ class MetalsGlobal(
     ) {
       val name0: sym.NameType = sym.rawname
       val name: Name = name0.newName(Identifier.backtickWrap(name0))
-      sym.setName(name)
+      // Rendering must not rename compiler-owned symbols. Keep an already
+      // escaped display copy so existential references retain their binder.
+      if (name == name0) sym else sym.cloneSymbol.setName(name)
     } else sym
 
   /**
@@ -568,9 +570,21 @@ class MetalsGlobal(
           case AnnotatedType(annotations, underlying) =>
             AnnotatedType(annotations, loop(underlying, None))
           case ExistentialType(quantified, underlying) =>
+            // Quantified declarations and their references must share the same
+            // display copies; otherwise Java wildcards print as free type names.
+            val displayQuantified =
+              quantified.map(sym => backtickify(sym.cloneSymbol))
+            for ((original, display) <- quantified.zip(displayQuantified)) {
+              display.setInfo(
+                loop(
+                  original.info.substSym(quantified, displayQuantified),
+                  None
+                )
+              )
+            }
             ExistentialType(
-              quantified.map(sym => sym.setInfo(loop(sym.info, None))),
-              loop(underlying, None)
+              displayQuantified,
+              loop(underlying.substSym(quantified, displayQuantified), None)
             )
           case PolyType(typeParams, resultType) =>
             resultType.map(t => loop(t, None)) match {
