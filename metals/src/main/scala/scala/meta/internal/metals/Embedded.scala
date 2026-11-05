@@ -46,7 +46,7 @@ import scalafix.interfaces.ScalafixException
 /**
  * Wrapper around software that is embedded with Metals.
  *
- * - sbt-launch.jar
+ * - official sbt 1.x and sbt 2.x runners
  * - mdoc
  */
 final class Embedded(

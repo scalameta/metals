@@ -1,5 +1,8 @@
 package tests
 
+import scala.concurrent.duration.DurationInt
+import scala.util.control.NonFatal
+
 import scala.meta.internal.builds.ShellRunner
 
 /**
@@ -15,15 +18,22 @@ trait BaseSbtServerSuite extends BaseLspSuite {
   }
 
   private def killSbtServers(): Unit = if (!isWindows) {
-    scribe.info(s"Killing sbt server running in $workspace")
-    for {
-      _ <- ShellRunner.runSync(
-        List("sbt", "shutdown"),
-        workspace,
-        redirectErrorOutput = false,
-      )
-    } {
-      scribe.info(s"Killed sbt server running in $workspace")
+    try {
+      scribe.info(s"Killing sbt server running in $workspace")
+      for {
+        _ <- ShellRunner.runSync(
+          List("sbt", "shutdown"),
+          workspace,
+          redirectErrorOutput = false,
+          timeout = 30.seconds,
+          cancelOnTimeout = true,
+        )
+      } {
+        scribe.info(s"Killed sbt server running in $workspace")
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Failed to kill sbt server running in $workspace", e)
     }
   }
 }

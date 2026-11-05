@@ -485,7 +485,7 @@ class SbtServerSuite
     val sbtLauncher =
       BuildTool.copyFromResource(
         workspace.resolve(".sbt-launcher").toNIO,
-        "sbt-launch.jar",
+        SbtBuildTool.launchJarResource,
       )
     new ProcessBuilder(
       s"${Properties.javaHome}/bin/java",

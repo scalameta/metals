@@ -49,8 +49,8 @@ class TextEditorModifier extends StringModifier {
        |
        |### Custom sbt launcher
        |
-       |By default, Metals runs an embedded `sbt-launch.jar` launcher that respects `.sbtopts` and `.jvmopts`.
-       |However, the environment variables `SBT_OPTS` and `JAVA_OPTS` are not respected.
+       |By default, Metals runs the official sbt runner for the project's sbt series.
+       |sbt 2 uses a separate runner. The runner respects `.sbtopts`, `.jvmopts`, `SBT_OPTS`, and `JAVA_OPTS`.
        |
        |$sbtLauncher
        |
