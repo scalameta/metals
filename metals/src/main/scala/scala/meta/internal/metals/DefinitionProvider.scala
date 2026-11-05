@@ -481,28 +481,55 @@ class DestinationProvider(
       symbol: String,
       source: Option[AbsolutePath],
   ): Option[SymbolDefinition] = {
-    val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    definition(symbol, targets)
+    val caller = source.flatMap(buildTargets.inverseSources)
+    val targets = caller
+      .map(buildTargets.buildTargetTransitiveDependencies(_).toSet)
+      .getOrElse(Set.empty)
+    definition(symbol, targets, caller)
   }
 
   def definition(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
+  ): Option[SymbolDefinition] =
+    definition(symbol, allowedBuildTargets, None)
+
+  private def definition(
+      symbol: String,
+      allowedBuildTargets: Set[BuildTargetIdentifier],
+      caller: Option[BuildTargetIdentifier],
   ): Option[SymbolDefinition] = {
     val definitions = index.definitions(Symbol(symbol)).filter(_.path.exists)
     val result =
       if (allowedBuildTargets.isEmpty)
         definitions.headOption
       else {
-        val matched = definitions.find { defn =>
-          sourceBuildTargets(defn.path).exists(id =>
-            allowedBuildTargets.contains(id)
-          )
-        }
+        val matches = for {
+          defn <- definitions
+          targets = sourceBuildTargets(defn.path)
+          if targets.exists(allowedBuildTargets.contains)
+        } yield (defn, targets)
+        val matched = matches.headOption.map(_._1)
+        // A transitive project may still use an evicted dependency version.
+        // Prefer the caller's own source registration for the same semantic
+        // definition; candidate iteration order must not select that older
+        // version. Preserve the index's choice of exact versus alternative
+        // symbol, and retain transitive workspace navigation when no such
+        // caller registration exists.
+        val callerMatch = for {
+          id <- caller
+          selected <- matched
+          preferred <- matches.collectFirst {
+            case (defn, targets)
+                if defn.definitionSymbol == selected.definitionSymbol &&
+                  targets.contains(id) =>
+              defn
+          }
+        } yield preferred
         // Fallback to any definition - it's needed for worksheets
         // They might have dynamic `import $dep` and these sources jars
         // aren't registered in buildTargets
-        matched.orElse(definitions.headOption)
+        callerMatch.orElse(matched).orElse(definitions.headOption)
       }
     result.orElse(definitionFromMbt(symbol))
   }
@@ -554,61 +581,53 @@ class DestinationProvider(
   def fromSymbol(
       symbol: String,
       allowedBuildTargets: Set[BuildTargetIdentifier],
-  ): Option[DefinitionResult] = {
-    definition(symbol, allowedBuildTargets).flatMap { defn =>
-      val destinationPath =
-        if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
-        else defn.path
-      val uri = destinationPath.toURI.toString
+  ): Option[DefinitionResult] =
+    definition(symbol, allowedBuildTargets).flatMap(toDefinitionResult)
 
-      defn.range match {
-        // read only source - no need to adjust positions
-        case Some(range) if defn.path.isJarFileSystem =>
-          Some(
-            DefinitionResult(
-              ju.Collections.singletonList(range.toLocation(uri)),
-              defn.definitionSymbol.value,
-              Some(defn.path),
-              None,
-              defn.querySymbol.value,
-            )
-          )
-        case _ =>
-          val destinationDoc = bestTextDocument(defn)
-          val destinationDistance =
-            buffers.tokenEditDistance(
-              destinationPath,
-              destinationDoc.text,
-              scalaVersionSelector,
-            )
-          DefinitionDestination(
-            destinationDoc,
-            destinationDistance,
+  private def toDefinitionResult(
+      defn: SymbolDefinition
+  ): Option[DefinitionResult] = {
+    val destinationPath =
+      if (saveSymbolFileToDisk) defn.path.toFileOnDisk(workspace)
+      else defn.path
+    val uri = destinationPath.toURI.toString
+
+    defn.range match {
+      // read only source - no need to adjust positions
+      case Some(range) if defn.path.isJarFileSystem =>
+        Some(
+          DefinitionResult(
+            ju.Collections.singletonList(range.toLocation(uri)),
             defn.definitionSymbol.value,
-            Some(destinationPath),
-            uri,
+            Some(defn.path),
+            None,
             defn.querySymbol.value,
-          ).toResult
-      }
+          )
+        )
+      case _ =>
+        val destinationDoc = bestTextDocument(defn)
+        val destinationDistance =
+          buffers.tokenEditDistance(
+            destinationPath,
+            destinationDoc.text,
+            scalaVersionSelector,
+          )
+        DefinitionDestination(
+          destinationDoc,
+          destinationDistance,
+          defn.definitionSymbol.value,
+          Some(destinationPath),
+          uri,
+          defn.querySymbol.value,
+        ).toResult
     }
   }
 
   def fromSymbol(
       symbol: String,
       source: Option[AbsolutePath],
-  ): Option[DefinitionResult] = {
-    val targets = source.map(sourceToAllowedBuildTargets).getOrElse(Set.empty)
-    fromSymbol(symbol, targets)
-  }
-
-  private def sourceToAllowedBuildTargets(
-      source: AbsolutePath
-  ): Set[BuildTargetIdentifier] = {
-    buildTargets.inverseSources(source) match {
-      case None => Set.empty
-      case Some(id) => buildTargets.buildTargetTransitiveDependencies(id).toSet
-    }
-  }
+  ): Option[DefinitionResult] =
+    definition(symbol, source).flatMap(toDefinitionResult)
 }
 
 class DefinitionProviderReportBuilder(
