@@ -163,7 +163,7 @@ object SbtServerInitializer extends BuildServerInitializer {
       val sbtLaunchJar =
         BuildTool.copyFromResource(
           bspFolder.toNIO,
-          SbtBuildTool.launchJarResource(sbtVersion),
+          SbtBuildTool.launchJarResource,
           destination = Some("sbt-launch.jar"),
         )
       val argv = List(

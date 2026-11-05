@@ -34,9 +34,10 @@ case class SbtBuildTool(
   /**
    * Copies the official sbt runner into `.metals` and returns its path.
    *
-   * sbt 1.x and sbt 2.x publish different runners, so each series has its own
-   * script and `sbt-launch.jar`. The script has to live in a directory named
-   * `bin` beside that jar, which is the layout of the official distribution.
+   * sbt 1.x and sbt 2.x publish different runner scripts, so each series has
+   * its own `sbt` and `sbt.bat`. Both scripts use the same `sbt-launch.jar`.
+   * The script has to live in a directory named `bin` beside that jar, which
+   * is the layout of the official distribution.
    *
    * The embedded runner is used when `sbt` is not on `PATH`. On Windows it is
    * always used, because `sbt` there is a batch file rather than an executable
@@ -59,7 +60,7 @@ case class SbtBuildTool(
     script.toFile.setExecutable(true)
     BuildTool.copyFromResource(
       bin,
-      s"sbt-launchers/$series/sbt-launch.jar",
+      SbtBuildTool.launchJarResource,
       destination = Some("sbt-launch.jar"),
     )
     AbsolutePath(script)
@@ -310,13 +311,13 @@ object SbtBuildTool {
 
   /**
    * Official runner series vendored in `sbt-launchers/<series>/`.
-   * `1` is the sbt 1.13.1 runner and `2` is the sbt 2.0.11 runner.
+   * `1` is the sbt 1.13.1 runner script and `2` is the sbt 2.0.11 runner
+   * script. Both series share `sbt-launchers/sbt-launch.jar`.
    */
   def launcherSeries(version: Option[String]): String =
     if (version.exists(ScalaVersions.isSbt2Version)) "2" else "1"
 
-  def launchJarResource(version: String): String =
-    s"sbt-launchers/${launcherSeries(Some(version))}/sbt-launch.jar"
+  val launchJarResource: String = "sbt-launchers/sbt-launch.jar"
 
   // Note: (ckipp01) first version was actually 1.4.0, but there is some issues
   // with bsp discovery with it. So we instead are going with 1.4.1 being the

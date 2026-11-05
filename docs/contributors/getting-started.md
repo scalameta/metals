@@ -406,16 +406,19 @@ You can see their usages in `<BuildToolName>BuildTool.scala`.
 
 ### Updating the sbt runner
 
-Metals vendors the official sbt runner, separately for sbt 1.x and sbt 2.x:
+Metals vendors the official sbt runner scripts separately for sbt 1.x and sbt 2.x, and one `sbt-launch.jar` shared by both:
 
-- `metals/src/main/resources/sbt-launchers/1/` from the latest sbt 1.x universal package
-- `metals/src/main/resources/sbt-launchers/2/` from the latest sbt 2.x universal package
+- `metals/src/main/resources/sbt-launchers/1/` — `sbt` and `sbt.bat` from the latest sbt 1.x universal package
+- `metals/src/main/resources/sbt-launchers/2/` — `sbt` and `sbt.bat` from the latest sbt 2.x universal package
+- `metals/src/main/resources/sbt-launchers/sbt-launch.jar` — the launcher jar from the latest sbt 1.x universal package
+
+The launcher jars from sbt 1.x and sbt 2.x contain the same classes. `sbt/sbt.boot.properties` inside the jar sets the fallback version used when `project/build.properties` has no `sbt.version`. The shared jar keeps the sbt 1.x fallback (`1.13.1`). Each script still carries its own `init_sbt_version`.
 
 Download `sbt-<version>.tgz` from the [sbt releases](https://github.com/sbt/sbt/releases)
-and copy `bin/sbt`, `bin/sbt.bat`, and `bin/sbt-launch.jar` into the matching
-directory. Keep the script and the jar from the same release. At runtime Metals
-copies them into a `bin` directory, which is where the runner looks for
-`sbt-launch.jar`.
+and copy `bin/sbt` and `bin/sbt.bat` into the matching directory. Copy
+`bin/sbt-launch.jar` from the sbt 1.x package to `sbt-launchers/sbt-launch.jar`.
+At runtime Metals copies the chosen script and the shared jar into a `bin`
+directory, which is where the runner looks for `sbt-launch.jar`.
 
 ### Updating maven wrappers
 
