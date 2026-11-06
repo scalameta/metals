@@ -619,8 +619,9 @@ final class BuildTargetClasses(
 
   /**
    * Populates candidate test classes from the MBT index WITHOUT loading semanticdb.
-   * The candidates are stored in `candidateTestClasses` and will be confirmed
-   * lazily when:
+   * Candidates whose framework was resolved from the index are stored directly
+   * as test classes. The rest are stored in `candidateTestClasses` and will be
+   * confirmed lazily when:
    * - A file is opened (for code lenses or test explorer)
    * - User explicitly requests test discovery (test explorer opened)
    *
@@ -644,23 +645,28 @@ final class BuildTargetClasses(
           baseParentSymbols = TestFrameworkSymbolRegistry.baseParentSymbols,
         )
 
-        // Group candidates by path
-        val candidatesByPath = candidates
-          .groupBy(_.path)
-          .view
-          .mapValues(
-            _.map(c =>
-              BuildTargetClasses.TestClassCandidate(c.path, c.candidateSymbol)
-            )
-          )
-          .toMap
+        val candidatesByPath = candidates.groupBy(_.path)
 
         // Store candidates in the appropriate target classes
         for {
           (path, pathCandidates) <- candidatesByPath
           targetId <- buildTargets.inverseSourcesAll(path).filter(targetSet)
         } {
-          classes(targetId).appendCandidateTestClasses(path, pathCandidates)
+          val (resolved, unresolved) =
+            pathCandidates.partition(_.framework.isDefined)
+          for {
+            candidate <- resolved
+            framework <- candidate.framework
+          } {
+            val className = symbolToClassName(candidate.candidateSymbol)
+            classes(targetId).putTestClass(
+              candidate.candidateSymbol,
+              TestSymbolInfo(className, framework),
+              path,
+            )
+          }
+          if (unresolved.nonEmpty)
+            classes(targetId).appendCandidateTestClasses(path, unresolved)
         }
 
         scribe.debug(
@@ -1221,12 +1227,13 @@ object BuildTargetClasses {
 
   /**
    * Represents a candidate test class that has been discovered from the MBT index
-   * without loading semanticdb. The candidate needs to be confirmed before being
-   * added to testClasses.
+   * without loading semanticdb. Without a `framework`, the candidate needs to be
+   * confirmed before being added to testClasses.
    */
   final case class TestClassCandidate(
       path: AbsolutePath,
       candidateSymbol: String,
+      framework: Option[TestFramework] = None,
   )
 
   final class Classes {
