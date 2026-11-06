@@ -110,6 +110,12 @@ abstract class BaseJavaCompletionSuite extends BaseJavaPCSuite {
       cancelToken,
     )
 
-    presentationCompiler.complete(offsetParams).get().getItems.asScala.toList
+    val items =
+      presentationCompiler.complete(offsetParams).get().getItems.asScala.toList
+    val sortTexts = items.map(_.getSortText)
+    assert(sortTexts.forall(text => text != null && text.nonEmpty))
+    assertEquals(sortTexts.distinct.length, sortTexts.length)
+    assertEquals(items.sortBy(_.getSortText), items)
+    items
   }
 }
