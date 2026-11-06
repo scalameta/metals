@@ -867,15 +867,37 @@ class MetalsGlobal(
           ) && (isOutline || fullyCompiled(filename)) && !forceNew =>
         value
       case maybeOldUnit =>
+        // A new source can replace symbols loaded from classfiles. Advance the
+        // typer run so signatures in already typed dependencies are revalidated.
+        if (maybeOldUnit.isEmpty) {
+          val previousRun = currentRun
+          newTyperRun()
+          // Namer uses Run.compiles(owner) to avoid recursively initializing
+          // retained source owners while completing their nested companions.
+          currentRun.symSource ++= previousRun.symSource
+        }
         unitOfFile(richUnit.source.file) = richUnit
 
-        maybeOldUnit.foreach { _ =>
-          currentRun.symSource.foreach { case (sym, _) =>
+        maybeOldUnit.foreach { oldUnit =>
+          def unlinkStale(sym: Symbol): Unit = {
             // otherwise we seem to be getting stale symbol completions for toplevels
-            if (sym.owner.hasPackageFlag && sym.isStale) {
+            if (
+              sym != null && sym != NoSymbol && sym.owner.hasPackageFlag && sym.isStale
+            ) {
               sym.owner.info.decls unlink sym
             }
           }
+          currentRun.symSource.keys.foreach(unlinkStale)
+          // New source requests can advance the typer run without retyping this
+          // unit. Its old declarations may no longer occur in symSource.
+          def unlinkDeclarations(tree: Tree): Unit = tree match {
+            case PackageDef(_, stats) => stats.foreach(unlinkDeclarations)
+            case definition: ImplDef => unlinkStale(definition.symbol)
+            case _ =>
+          }
+          unlinkDeclarations(oldUnit.body)
+          if (oldUnit.lastBody ne oldUnit.body)
+            unlinkDeclarations(oldUnit.lastBody)
         }
 
         if (!isOutline) {
