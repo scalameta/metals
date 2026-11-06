@@ -82,6 +82,10 @@ object V {
 
   val sbt2Version = "2.0.12"
 
+  // sbt 1 version recommended to users and used to generate test builds.
+  // The Metals build itself is sbt 2; see project/build.properties.
+  val sbtVersion = "1.13.0"
+
   val guava = "com.google.guava" % "guava" % "33.8.0-jre"
 
   val lsp4j = "org.eclipse.lsp4j" % "org.eclipse.lsp4j" % lsp4jV

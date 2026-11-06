@@ -206,7 +206,9 @@ object TestMcpStdioClient {
   def apply(
       workspacePath: Path
   )(implicit ec: ExecutionContext): TestMcpStdioClient = {
-    val classpath = System.getProperty("java.class.path")
+    val classpath =
+      scala.meta.internal.metals.PackageIndex.runtimeClasspath
+        .mkString(java.io.File.pathSeparator)
     new TestMcpStdioClient(workspacePath, classpath)
   }
 
