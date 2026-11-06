@@ -3,6 +3,70 @@ package tests.j
 class GoogleJavaFormatLspSuite
     extends BaseJavaPCSuite("google-java-format-lsp") {
 
+  testLSP("range-preserves-other-method-and-imports") {
+    cleanWorkspace()
+    val example = "a/src/main/java/a/Example.java"
+    val query =
+      """|package a;
+         |
+         |import java.util.Map;
+         |import java.util.ArrayList;
+         |
+         |public class Example {
+         |  void untouched( ){System.out.println("old");}
+         |<<  void changed( ){System.out.println("new");}>>
+         |}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |/$example
+            |""".stripMargin + query.replace("<<", "").replace(">>", "")
+      )
+      _ <- server.didOpen(example)
+      _ <- server.rangeFormatting(
+        example,
+        query,
+        """|package a;
+           |
+           |import java.util.Map;
+           |import java.util.ArrayList;
+           |
+           |public class Example {
+           |  void untouched( ){System.out.println("old");}
+           |
+           |  void changed() {
+           |    System.out.println("new");
+           |  }
+           |}
+           |""".stripMargin,
+      )
+    } yield ()
+  }
+
+  testLSP("whole-document-range-preserves-imports") {
+    cleanWorkspace()
+    val example = "a/src/main/java/a/Example.java"
+    val code =
+      """|package a;
+         |
+         |import java.util.Map;
+         |
+         |public class Example {}
+         |""".stripMargin
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |/$example
+            |""".stripMargin + code
+      )
+      _ <- server.didOpen(example)
+      _ <- server.rangeFormatting(example, s"<<$code>>", code)
+    } yield ()
+  }
+
   testLSP("basic") {
     cleanWorkspace()
     val example = "a/src/main/java/a/Example.java"
