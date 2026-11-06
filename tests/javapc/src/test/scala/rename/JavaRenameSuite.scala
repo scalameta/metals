@@ -15,6 +15,50 @@ import tests.pc.BaseJavaPCSuite
 class JavaRenameSuite extends BaseJavaPCSuite with RangeReplace {
 
   check(
+    "var-named-var",
+    """|class A {
+       |    void run() {
+       |        var <<v@@ar>> = "value";
+       |        System.out.println(<<var>>);
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "var-definition",
+    """|class A {
+       |    void run() {
+       |        var <<res@@ult>> = new java.util.ArrayList<String>();
+       |        <<result>>.add("value");
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  checkPrepare(
+    "var-definition-prepare",
+    """|class A {
+       |    void run() {
+       |        var <<res@@ult>> = new java.util.ArrayList<String>();
+       |        result.add("value");
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
+    "var-reference",
+    """|class A {
+       |    void run() {
+       |        var <<result>> = new java.util.ArrayList<String>();
+       |        <<res@@ult>>.add("value");
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "basic",
     """|class A {
        |    private static int <<NUMBER>> = 42;

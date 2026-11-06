@@ -5,6 +5,21 @@ import tests.pc.BaseJavaDefinitionSuite
 
 class DefinitionSuite extends BaseJavaDefinitionSuite {
 
+  check(
+    "var-reference",
+    """|class A {
+       |    void run() {
+       |        var result = new java.util.ArrayList<String>();
+       |        res@@ult.add("value");
+       |    }
+       |}
+       |""".stripMargin,
+    """|Definition.java:4:13: info: definition
+       |        var result = new java.util.ArrayList<String>();
+       |            ^^^^^^
+       |""".stripMargin,
+  )
+
   override protected def extraDependencies: Seq[Dependency] = List(
     Dependency.of("com.google.guava", "guava", "31.1-jre")
   )
