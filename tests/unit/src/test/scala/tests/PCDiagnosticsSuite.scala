@@ -1,5 +1,7 @@
 package tests
 
+import org.eclipse.lsp4j.DiagnosticSeverity
+
 class PCDiagnosticsSuite
     extends BaseLspSuite("pc-diagnostics")
     with BaseSourcePathSuite {
@@ -183,9 +185,16 @@ class PCDiagnosticsSuite
            |                  ^^^^^^^
            |""".stripMargin,
       )
+      // A compile-triggered focus can supersede didChange diagnostics.
+      // Wait for publication, not just completion of the superseded request.
+      nextDiagnostics = client.nextDiagnosticsFor(
+        server.toPath(file),
+        _.exists(_.getSeverity == DiagnosticSeverity.Error),
+      )
       _ <- server.didChange(file)(
         _.replace("val text: String = \"hello\"", "val text: String = 123")
       )
+      _ <- nextDiagnostics
       _ = assertNoDiff(
         client.workspaceDiagnostics,
         """|a/src/main/scala/a/Mixed.scala:2:19: warning: Unused import
