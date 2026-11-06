@@ -190,10 +190,46 @@ class MetalsGlobal(
 
   def semanticdbSymbol(symbol: Symbol): String = {
     import semanticdbOps._
-    val semantic = symbol.toSemantic
-    if (symbol == null) ""
-    else if (semantic.isEmpty()) symbol.nameString
-    else semantic
+    val canonical = Option(symbol).flatMap(currentOverload)
+    canonical.fold("") { current =>
+      val semantic = current.toSemantic
+      if (semantic.isEmpty()) current.nameString
+      else semantic
+    }
+  }
+
+  private def currentOverload(selected: Symbol): Option[Symbol] = {
+    import semanticdbOps._
+    if (
+      !selected.isMethod || selected.isOverloaded || !selected.isSemanticdbGlobal
+    ) Some(selected)
+    else {
+      val peers = selected.owner.info
+        .decl(selected.name)
+        .alternatives
+        .filter(peer => peer.isMethod && !peer.isValMethod)
+      if (peers.size > 1 && !peers.contains(selected)) {
+        // Typing dependency source can replace the owner's declarations while
+        // cached caller trees retain a binary method symbol. Rebind only
+        // through unique compiler type equality in the same owner.
+        try {
+          val selectedType = selected.info
+          val matching = peers.filter { peer =>
+            val currentType = peer.info
+            selectedType.isDefined && currentType.isDefined &&
+            (selectedType =:= currentType)
+          }
+          matching match {
+            case current :: Nil => Some(current)
+            case _ => None
+          }
+        } catch {
+          // An unprovable orphan must not reach SemanticDB's first-overload
+          // fallback. Owner/declaration lookup failures remain visible above.
+          case NonFatal(_) => None
+        }
+      } else Some(selected)
+    }
   }
 
   def pretty(pos: Position): String = {
