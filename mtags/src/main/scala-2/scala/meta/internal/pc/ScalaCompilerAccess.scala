@@ -3,11 +3,13 @@ package scala.meta.internal.pc
 import java.util.concurrent.ScheduledExecutorService
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.reflect.internal.FatalError
 import scala.tools.nsc.Settings
 import scala.tools.nsc.interactive.MetalsGlobalThreadNoBackgroundCompilation
 import scala.tools.nsc.interactive.ShutdownReq
 import scala.util.control.NonFatal
 
+import scala.meta.internal.metals.PcQueryContext
 import scala.meta.pc.PresentationCompilerConfig
 import scala.meta.pc.VirtualFileParams
 
@@ -65,6 +67,37 @@ class ScalaCompilerAccess(
     ) {
 
   def newReporter = new MetalsReporter(new Settings())
+
+  override def withSharedCompiler[T](default: T)(
+      thunk: CompilerWrapper[MetalsReporter, MetalsGlobal] => T
+  )(implicit queryInfo: PcQueryContext): T =
+    super.withSharedCompiler(default) { wrapper =>
+      val global = wrapper.compiler()
+      def requireValidCoreTypes(): Unit = {
+        val any = global.definitions.AnyClass
+        val invalidRoot = any.hasCompleteInfo && {
+          any.rawInfo match {
+            case global.ErrorType => true
+            // The compiler-defined Any is parentless. Re-entering its source
+            // can introduce an Any/Object cycle without producing ErrorType.
+            // Inspect raw parents; a subtype query can itself encounter it.
+            case global.ClassInfoType(parents, _, _) => parents.nonEmpty
+            case _ => false
+          }
+        }
+        if (invalidRoot)
+          throw new FatalError(
+            "presentation compiler core type scala.Any has invalid info"
+          )
+      }
+      // Source typing can damage a fundamental symbol without throwing. Use
+      // CompilerAccess's existing single clean retry, checking both an instance
+      // retained from an earlier request and the result of the current one.
+      requireValidCoreTypes()
+      val result = thunk(wrapper)
+      requireValidCoreTypes()
+      result
+    }
 
   protected def handleSharedCompilerException(
       t: Throwable
