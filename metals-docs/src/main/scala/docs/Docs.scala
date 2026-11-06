@@ -55,7 +55,9 @@ object Docs {
 
   lazy val stableVersion: String = V.metalsVersion.replaceFirst("\\+.*", "")
   def main(args: Array[String]): Unit = {
-    val target = Paths.get("website", "target")
+    // sbt 2 may start this process outside the build root. Docusaurus reads
+    // website/target/docs relative to that root, so resolve it explicitly.
+    val target = websiteRoot.resolve("target")
 
     val dataOut = target.resolve("data")
     val docsOut = target.resolve("docs")
@@ -92,5 +94,14 @@ object Docs {
     if (exitCode != 0) {
       sys.exit(exitCode)
     }
+  }
+
+  private def websiteRoot: java.nio.file.Path = {
+    var dir = Paths.get("").toAbsolutePath.normalize()
+    while (dir != null && !Files.isDirectory(dir.resolve("website"))) {
+      dir = dir.getParent
+    }
+    if (dir == null) Paths.get("website").toAbsolutePath
+    else dir.resolve("website")
   }
 }

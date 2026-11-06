@@ -170,7 +170,7 @@ jobs:
             os: ubuntu-latest
             java: "21"
           - type: scalafix
-            command: sbt 'scalafixCheck; docs/docusaurusCreateSite'
+            command: sbt 'scalafixCheck; docs/run; docs/docusaurusCreateSite'
             name: Scalafix and docs
             os: ubuntu-latest
             java: "21"

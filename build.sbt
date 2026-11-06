@@ -82,7 +82,9 @@ Global / onLoad ~= { old =>
 }
 Global / cancelable := true
 Global / excludeLintKeys += scalafixConfig
-crossScalaVersions := Nil
+// Bare settings apply to every project on sbt 2. Scope this to the root so
+// subprojects keep their own crossScalaVersions and `+` still publishes them.
+LocalRootProject / crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all Compile/scalafix Test/scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; Test/scalafix --check")
@@ -222,8 +224,6 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   },
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
-
-publish / skip := true
 
 lazy val interfaces = project
   .in(file("mtags-interfaces"))
