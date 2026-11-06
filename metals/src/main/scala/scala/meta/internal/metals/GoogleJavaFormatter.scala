@@ -5,6 +5,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.{inputs => m}
 
+import com.google.common.collect.Range
 import com.google.googlejavaformat.java.Formatter
 import com.google.googlejavaformat.java.FormatterException
 import com.google.googlejavaformat.java.ImportOrderer
@@ -15,13 +16,7 @@ import org.eclipse.{lsp4j => l}
 
 final class GoogleJavaFormatter(client: () => l.services.LanguageClient) {
   def format(input: m.Input.VirtualFile): List[l.TextEdit] = {
-    val options = JavaFormatterOptions
-      .builder()
-      .style(Style.GOOGLE)
-      .build()
-    val formatter = new Formatter(options)
-
-    try {
+    withFormatter(input) { formatter =>
       val withOrganizedImports = ImportOrderer.reorderImports(
         RemoveUnusedImports.removeUnusedImports(input.text)
       )
@@ -32,6 +27,46 @@ final class GoogleJavaFormatter(client: () => l.services.LanguageClient) {
       } else {
         Nil
       }
+    }
+  }
+
+  def formatRange(
+      input: m.Input.VirtualFile,
+      range: m.Position,
+  ): List[l.TextEdit] = {
+    withFormatter(input) { formatter =>
+      // Keep imports untouched so replacements refer to the original input.
+      val replacements = formatter.getFormatReplacements(
+        input.text,
+        List(Range.closedOpen(Int.box(range.start), Int.box(range.end))).asJava,
+      )
+      for {
+        replacement <- replacements.asScala.toList
+        start = replacement.getReplaceRange.lowerEndpoint().intValue()
+        end = replacement.getReplaceRange.upperEndpoint().intValue()
+        if input.text.substring(start, end) != replacement.getReplacementString
+      } yield {
+        val position = m.Position.Range(
+          input,
+          start,
+          end,
+        )
+        new l.TextEdit(position.toLsp, replacement.getReplacementString)
+      }
+    }
+  }
+
+  private def withFormatter(input: m.Input.VirtualFile)(
+      format: Formatter => List[l.TextEdit]
+  ): List[l.TextEdit] = {
+    val options = JavaFormatterOptions
+      .builder()
+      .style(Style.GOOGLE)
+      .build()
+    val formatter = new Formatter(options)
+
+    try {
+      format(formatter)
     } catch {
       case _: IllegalAccessError =>
         client().showMessage(
