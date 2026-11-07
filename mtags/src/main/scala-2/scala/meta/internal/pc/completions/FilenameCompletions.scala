@@ -23,13 +23,13 @@ trait FilenameCompletions { this: MetalsGlobal =>
    *
    * @param toplevel the toplevel class, trait or object definition.
    * @param pkg the enclosing package definition.
-   * @param pos the completion position.
+   * @param source the editor document URI, independent of compiler file identity.
    * @param editRange the range to replace in the completion.
    */
   case class FilenameCompletion(
       toplevel: DefTree,
       pkg: PackageDef,
-      pos: Position,
+      source: URI,
       editRange: l.Range
   ) extends CompletionPosition {
     val query: String = toplevel.name.toString().stripSuffix(CURSOR)
@@ -37,7 +37,7 @@ trait FilenameCompletions { this: MetalsGlobal =>
     override def contribute: List[Member] = {
       try {
         val name = Paths
-          .get(URI.create(pos.source.file.name))
+          .get(source)
           .getFileName()
           .toString()
           .stripSuffix(".scala")

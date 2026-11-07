@@ -809,8 +809,9 @@ class MbtBuildServerLspSuite
         "core.GeneratedObject",
       )
       _ <- server.didOpen(generatedFile)
+      _ <- server.didOpen("src/core/Main.scala")
       _ <- server.assertHover(
-        generatedFile,
+        "src/core/Main.scala",
         """|package core
            |
            |object Main {
@@ -865,8 +866,9 @@ class MbtBuildServerLspSuite
         "core.GeneratedObject",
       )
       _ <- server.didOpen(generatedFile)
+      _ <- server.didOpen("src/core/Main.scala")
       _ <- server.assertHover(
-        generatedFile,
+        "src/core/Main.scala",
         """|package core
            |
            |object Main {
