@@ -14,6 +14,13 @@ class CompletionFilenameSuite extends BaseCompletionSuite {
   )
 
   check(
+    "escaped-directory",
+    "class M@@",
+    "class Main",
+    filename = "folder with spaces/Main.scala"
+  )
+
+  check(
     "companion-class",
     """|object Main
        |class M@@

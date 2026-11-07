@@ -590,7 +590,7 @@ trait Completions { this: MetalsGlobal =>
         )
       case (c: DefTree) :: (p: PackageDef) :: _
           if c.namePosition.includes(pos) =>
-        FilenameCompletion(c, p, pos, editRange)
+        FilenameCompletion(c, p, source, editRange)
       case OverrideExtractor(name, template, start, isCandidate) =>
         OverrideCompletion(
           name,

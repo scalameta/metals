@@ -1,6 +1,8 @@
 package scala.meta.internal.pc
 
 import java.net.URI
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets.UTF_8
 import java.nio.file.Paths
 
 import scala.util.Properties
@@ -68,8 +70,13 @@ class SemanticdbTextDocumentProvider(
       }
 
       import semanticdbOps._
-      // This cache is never updated in semanticdb and will contain the old source
-      gSourceFileInputCache.remove(unit.source)
+      // Physical file identity must not make SemanticDB reread disk or require
+      // this editor buffer to live beneath scalac's sourceroot. Retain the same
+      // virtual input/URI representation as the original VirtualFile path.
+      gSourceFileInputCache(unit.source) = scala.meta.Input.VirtualFile(
+        URLEncoder.encode(uri.toString, UTF_8.name()),
+        unit.source.content.mkString
+      )
       semanticdbOps.config = SemanticdbConfig.parse(
         semanticdbCompilerOptions,
         _ => (),
@@ -119,6 +126,7 @@ class SemanticdbTextDocumentProvider(
     } finally {
       if (shouldPrune) {
         PruneLateSourcesComponent.loadedFromSource.remove(unit.source.file)
+        semanticdbOps.gSourceFileInputCache.remove(unit.source)
         removeAfterUsing(uri.toString())
       }
     }

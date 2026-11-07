@@ -203,10 +203,9 @@ final class InferredMethodProvider(
     }
   }
 
-  private def getPositionUri(position: Position): String = scala.util
-    .Try(position.source.toString()) // in tests this is undefined
-    .toOption
-    .getOrElse(params.uri().toString())
+  private def isCurrentSource(position: Position): Boolean = scala.util
+    .Try(position.source.file == unit.source.file) // in tests this is undefined
+    .getOrElse(true)
 
   private def unimplemented(
       name: String
@@ -444,7 +443,7 @@ final class InferredMethodProvider(
       val templateFileUri = template.pos.source.content
         .map(_.toString)
         .mkString
-      if (params.uri().toString() != getPositionUri(insertPos)) {
+      if (!isCurrentSource(insertPos)) {
         Left(
           "Inferring method only works in the current file, cannot add method to types outside of it."
         )
