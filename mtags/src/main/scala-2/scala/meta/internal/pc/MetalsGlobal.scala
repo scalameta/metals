@@ -15,7 +15,6 @@ import scala.reflect.internal.util.ScriptSourceFile
 import scala.reflect.internal.util.SourceFile
 import scala.reflect.internal.{Flags => gf}
 import scala.reflect.io.AbstractFile
-import scala.reflect.io.VirtualFile
 import scala.tools.nsc.LogicalPackage
 import scala.tools.nsc.MetalsJavaPlatform
 import scala.tools.nsc.Mode
@@ -789,10 +788,9 @@ class MetalsGlobal(
   /**
    * Drop a closed editor buffer from the presentation compiler.
    *
-   * Open files are keyed by a virtual file whose path is the URI string.
-   * The same source loaded from the sourcepath is keyed by its filesystem
-   * path, so removing only the virtual file leaves the dependency unit and
-   * its problems in place.
+   * Match both the local file identity used by the source-path loader and
+   * legacy or non-file URI identities, so no dependency unit or its problems
+   * remain after the editor buffer closes.
    */
   def forgetClosedSource(uri: URI): Unit = {
     val uriString = uri.toString
@@ -823,7 +821,7 @@ class MetalsGlobal(
   private def remove(filename: String): Unit = {
     if (!richCompilationCache.contains(filename)) {
       fullyCompiled.remove(filename)
-      toBeRemoved.add(new VirtualFile(filename))
+      toBeRemoved.add(MetalsSourceFile.file(filename))
     }
   }
 
@@ -855,6 +853,12 @@ class MetalsGlobal(
         ScriptSourceFile(unit.source.file, unit.source.content)
       else unit.source
     val richUnit = new RichCompilationUnit(source)
+    // An explicitly queried document must be fully typed even when an earlier
+    // request loaded and pruned it through the source path. A pruned SemanticDB
+    // request re-registers the unit after addCompilationUnit returns.
+    if (!isOutline) {
+      PruneLateSourcesComponent.loadedFromSource.remove(source.file)
+    }
     if (!isOutline && !willBeRemovedAfterUsing) {
       compileUnitsCache.didGetUnit(filename).foreach(remove)
     }
@@ -878,6 +882,12 @@ class MetalsGlobal(
           }
         }
 
+        // A source-path unit can have symbols without an interactive unit.
+        // Re-enter generated companions when replacing its source.
+        val replacedSymbols = currentRun.symSource.collect {
+          case (sym, file) if file == source.file => sym
+        }
+        replacedSymbols.foreach(currentRun.symSource.remove)
         if (!isOutline) {
           fullyCompiled += filename
         } else {
