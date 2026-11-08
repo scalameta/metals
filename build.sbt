@@ -441,8 +441,8 @@ lazy val metals = project
       V.dap4j,
       "ch.epfl.scala" %% "scala-debug-adapter" % V.debugAdapter,
       // for finding paths of global log/cache directories
-      "io.get-coursier.util" % "directories" % "0.1.4",
-      "io.get-coursier.util" % "directories-jni" % "0.1.4",
+      "io.get-coursier.util" % "directories" % "0.2.0",
+      "io.get-coursier.util" % "directories-jni" % "0.2.0",
       // ==================
       // Scala dependencies
       // ==================
