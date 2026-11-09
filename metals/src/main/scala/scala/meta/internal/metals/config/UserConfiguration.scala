@@ -78,6 +78,7 @@ case class UserConfiguration(
     testUserInterface: TestUserInterfaceKind = TestUserInterfaceKind.CodeLenses,
     eclipseFormat: EclipseFormatConfig = EclipseFormatConfig.default,
     javaFormatter: JavaFormatterConfig = JavaFormatterConfig.GoogleJavaFormat,
+    googleJavaFormatStyle: GoogleJavaFormatStyle = GoogleJavaFormatStyle.Google,
     scalafixRulesDependencies: List[String] = Nil,
     scalafixLintEnabled: Boolean = false,
     customProjectRoot: Option[String] = None,

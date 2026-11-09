@@ -3,6 +3,7 @@ package scala.meta.internal.metals
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.config.GoogleJavaFormatStyle
 import scala.meta.{inputs => m}
 
 import com.google.common.collect.Range
@@ -14,11 +15,15 @@ import com.google.googlejavaformat.java.JavaFormatterOptions.Style
 import com.google.googlejavaformat.java.RemoveUnusedImports
 import org.eclipse.{lsp4j => l}
 
-final class GoogleJavaFormatter(client: () => l.services.LanguageClient) {
+final class GoogleJavaFormatter(
+    client: () => l.services.LanguageClient,
+    style: () => GoogleJavaFormatStyle,
+) {
   def format(input: m.Input.VirtualFile): List[l.TextEdit] = {
-    withFormatter(input) { formatter =>
+    withFormatter(input) { (formatter, style) =>
       val withOrganizedImports = ImportOrderer.reorderImports(
-        RemoveUnusedImports.removeUnusedImports(input.text)
+        RemoveUnusedImports.removeUnusedImports(input.text),
+        style,
       )
       val formatted = formatter.formatSource(withOrganizedImports)
       if (formatted != input.text) {
@@ -34,7 +39,7 @@ final class GoogleJavaFormatter(client: () => l.services.LanguageClient) {
       input: m.Input.VirtualFile,
       range: m.Position,
   ): List[l.TextEdit] = {
-    withFormatter(input) { formatter =>
+    withFormatter(input) { (formatter, _) =>
       // Keep imports untouched so replacements refer to the original input.
       val replacements = formatter.getFormatReplacements(
         input.text,
@@ -57,16 +62,16 @@ final class GoogleJavaFormatter(client: () => l.services.LanguageClient) {
   }
 
   private def withFormatter(input: m.Input.VirtualFile)(
-      format: Formatter => List[l.TextEdit]
+      format: (Formatter, Style) => List[l.TextEdit]
   ): List[l.TextEdit] = {
     val options = JavaFormatterOptions
       .builder()
-      .style(Style.GOOGLE)
+      .style(style().toJavaStyle)
       .build()
     val formatter = new Formatter(options)
 
     try {
-      format(formatter)
+      format(formatter, options.style())
     } catch {
       case _: IllegalAccessError =>
         client().showMessage(
