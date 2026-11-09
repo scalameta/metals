@@ -46,8 +46,8 @@ class JavaCompilerNamesSuite extends munit.FunSuite {
     try {
       val firstNames = names(first, 1)
       val secondNames = names(second, 2)
-      assertEquals(firstNames eq secondNames, true)
-      assertEquals(firstNames.table eq secondNames.table, true)
+      assertEquals(firstNames eq secondNames, false)
+      assertEquals(firstNames.table eq secondNames.table, false)
     } finally {
       first.close()
       second.close()
@@ -75,8 +75,8 @@ class JavaCompilerNamesSuite extends munit.FunSuite {
     val replacement = newCompiler()
     try {
       val current = names(replacement, 2)
-      assertEquals(previous eq current, true)
-      assertEquals(previous.table eq current.table, true)
+      assertEquals(previous eq current, false)
+      assertEquals(previous.table eq current.table, false)
       assertEquals(identifier.toString, "WorkspaceEntity")
     } finally replacement.close()
   }

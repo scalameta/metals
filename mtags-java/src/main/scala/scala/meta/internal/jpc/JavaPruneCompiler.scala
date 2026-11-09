@@ -49,6 +49,14 @@ class JavaPruneCompiler(
 
   private val isDebugEnabled = reportsLevel == ReportLevel.Debug
 
+  /*
+   * javac mutates its name table. Only tasks on this compiler's queue may
+   * share it.
+   */
+  private lazy val sharedNames: Names = new Names(new Context()) {
+    override def dispose(): Unit = ()
+  }
+
   // Only used for testing purposes
   var isCacheEnabled = true
 
@@ -216,7 +224,7 @@ class JavaPruneCompiler(
       // Only register SharedNames before getTask() - this is safe because
       // Names doesn't depend on classpath configuration
       if (servicesOverrides.names()) {
-        context.put(Names.namesKey, JavaPruneCompiler.sharedNames)
+        context.put(Names.namesKey, sharedNames)
       }
     } catch {
       case _: IllegalAccessError =>
@@ -386,10 +394,4 @@ class JavaPruneCompiler(
     options.result()
   }
 
-}
-
-object JavaPruneCompiler {
-  val sharedNames: Names = new Names(new Context()) {
-    override def dispose(): Unit = ()
-  }
 }
