@@ -280,7 +280,9 @@ case class JavaPresentationCompiler(
   override def inlayHints(
       params: InlayHintsParams
   ): CompletableFuture[util.List[lsp4j.InlayHint]] =
-    CompletableFuture.completedFuture(Nil.asJava)
+    request(params, util.Collections.emptyList[lsp4j.InlayHint]()) { pc =>
+      new JavaInlayHintsProvider(pc, params).inlayHints().asJava
+    }
 
   override def didChange(
       params: VirtualFileParams
