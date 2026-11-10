@@ -57,7 +57,7 @@ class JavaCompletionProvider(
       else false
     val completionText =
       if (betweenDots)
-        /* javac drops the receiver in `Service..method()` without an identifier.
+        /* javac drops the receiver in `Box..getValue()` without an identifier.
          * Keep the member select in the temporary source used for completion.
          */
         text.substring(0, offset) + "$metals$completion" + text.substring(

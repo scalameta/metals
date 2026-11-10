@@ -4,28 +4,28 @@ import tests.pc.BaseJavaCompletionSuite
 
 class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
 
-  for ((name, prefix) <- List("empty" -> "", "prefix" -> "s")) {
+  for ((name, prefix) <- List("empty" -> "", "prefix" -> "D")) {
     check(
       s"static-field-before-existing-select-$name",
       s"""|class A {
           |  void run() {
-          |    Service.$prefix@@.updatePartial(0);
+          |    Box.$prefix@@.getValue();
           |  }
           |}
-          |class Service {
-          |  public static final Service singleton = new Service();
-          |  public void updatePartial(int value) {}
+          |class Box {
+          |  public static final Box DEFAULT = new Box();
+          |  public int getValue() { return 0; }
           |}
           |""".stripMargin,
-      "singleton\n",
+      "DEFAULT\n",
       editedFile = """|class A {
                       |  void run() {
-                      |    Service.singleton.updatePartial(0);
+                      |    Box.DEFAULT.getValue();
                       |  }
                       |}
-                      |class Service {
-                      |  public static final Service singleton = new Service();
-                      |  public void updatePartial(int value) {}
+                      |class Box {
+                      |  public static final Box DEFAULT = new Box();
+                      |  public int getValue() { return 0; }
                       |}
                       |""".stripMargin,
     )
