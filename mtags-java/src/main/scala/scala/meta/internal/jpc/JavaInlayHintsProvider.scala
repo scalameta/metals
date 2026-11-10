@@ -1,18 +1,28 @@
 package scala.meta.internal.jpc
 
-import com.sun.source.tree.*
-import com.sun.source.util.{TreePath, TreePathScanner, Trees}
-import org.eclipse.lsp4j.{InlayHint, InlayHintKind, Range}
-
 import java.util.concurrent.CancellationException
-import javax.lang.model.`type`.*
-import javax.lang.model.element.{ExecutableElement, NestingKind, TypeElement}
+import javax.lang.model.`type`._
+import javax.lang.model.element.ExecutableElement
+import javax.lang.model.element.NestingKind
+import javax.lang.model.element.TypeElement
+
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.jdk.CollectionConverters.*
-import scala.meta.internal.pc.{InlayHintOrigin, InlayHints, LabelPart}
-import scala.meta.pc.InlayHintsParams
+import scala.jdk.CollectionConverters._
 import scala.util.control.NonFatal
+
+import scala.meta.internal.pc.InlayHintOrigin
+import scala.meta.internal.pc.InlayHints
+import scala.meta.internal.pc.LabelPart
+import scala.meta.pc.InlayHintsParams
+
+import com.sun.source.tree._
+import com.sun.source.util.TreePath
+import com.sun.source.util.TreePathScanner
+import com.sun.source.util.Trees
+import org.eclipse.lsp4j.InlayHint
+import org.eclipse.lsp4j.InlayHintKind
+import org.eclipse.lsp4j.Range
 
 /**
  * Computes inlay hints for Java sources:
