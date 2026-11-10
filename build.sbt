@@ -82,9 +82,6 @@ Global / onLoad ~= { old =>
 }
 Global / cancelable := true
 Global / excludeLintKeys += scalafixConfig
-// Bare settings apply to every project on sbt 2. Scope this to the root so
-// subprojects keep their own crossScalaVersions and `+` still publishes them.
-LocalRootProject / crossScalaVersions := Nil
 
 addCommandAlias("scalafixAll", "all Compile/scalafix Test/scalafix")
 addCommandAlias("scalafixCheck", "; scalafix --check ; Test/scalafix --check")
@@ -645,11 +642,18 @@ def publishAllMtags(
 }
 
 def publishBinaryMtags =
-  (interfaces / publishLocal)
-    .dependsOn(
-      `mtags-java` / publishLocal,
-      publishAllMtags(V.quickPublishScalaVersions),
-    )
+  Def.sequential(
+    interfaces / publishLocal,
+    `mtags-java` / publishLocal,
+    publishAllMtags(V.quickPublishScalaVersions),
+  )
+
+// sbt-metals publish must finish before the session reload inside publishBinaryMtags.
+def publishForSlowTests =
+  Def.sequential(
+    `sbt-metals` / publishLocal,
+    publishBinaryMtags,
+  )
 
 lazy val mtest = project
   .in(file("tests/mtest"))
@@ -810,10 +814,10 @@ lazy val slow = project
       )
     ),
     Test / testOnly := (Test / testOnly)
-      .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
+      .dependsOn(publishForSlowTests)
       .evaluated,
     Test / test := (Test / test)
-      .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
+      .dependsOn(publishForSlowTests)
       .evaluated,
   )
   .dependsOn(unit, `metals-mcp`)
