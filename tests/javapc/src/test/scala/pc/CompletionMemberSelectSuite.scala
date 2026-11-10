@@ -4,6 +4,82 @@ import tests.pc.BaseJavaCompletionSuite
 
 class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
 
+  for ((name, prefix) <- List("empty" -> "", "prefix" -> "s")) {
+    check(
+      s"static-field-before-existing-select-$name",
+      s"""|class A {
+          |  void run() {
+          |    Service.$prefix@@.updatePartial(0);
+          |  }
+          |}
+          |class Service {
+          |  public static final Service singleton = new Service();
+          |  public void updatePartial(int value) {}
+          |}
+          |""".stripMargin,
+      if (prefix.isEmpty)
+        """|new
+           |assert
+           |try
+           |catch
+           |finally
+           |throw
+           |return
+           |break
+           |case
+           |continue
+           |default
+           |do
+           |while
+           |for
+           |switch
+           |if
+           |else
+           |instanceof
+           |var
+           |final
+           |class
+           |void
+           |boolean
+           |int
+           |long
+           |float
+           |double
+           |char
+           |byte
+           |short
+           |""".stripMargin
+      else "singleton\n",
+      editedFile =
+        if (prefix.isEmpty) ""
+        else """|class A {
+               |  void run() {
+               |    Service.singleton.updatePartial(0);
+               |  }
+               |}
+               |class Service {
+               |  public static final Service singleton = new Service();
+               |  public void updatePartial(int value) {}
+               |}
+               |""".stripMargin,
+    )
+  }
+
+  check(
+    "instance-field-before-existing-select",
+    """|class A {
+       |  void run(Config config) {
+       |    config.@@.trim();
+       |  }
+       |}
+       |class Config {
+       |  public String value;
+       |}
+       |""".stripMargin,
+    "",
+    filterItem = _.getLabel == "value",
+  )
+
   check(
     "member-sort-text",
     """|class A {
