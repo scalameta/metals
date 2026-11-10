@@ -17,51 +17,17 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
           |  public void updatePartial(int value) {}
           |}
           |""".stripMargin,
-      if (prefix.isEmpty)
-        """|new
-           |assert
-           |try
-           |catch
-           |finally
-           |throw
-           |return
-           |break
-           |case
-           |continue
-           |default
-           |do
-           |while
-           |for
-           |switch
-           |if
-           |else
-           |instanceof
-           |var
-           |final
-           |class
-           |void
-           |boolean
-           |int
-           |long
-           |float
-           |double
-           |char
-           |byte
-           |short
-           |""".stripMargin
-      else "singleton\n",
-      editedFile =
-        if (prefix.isEmpty) ""
-        else """|class A {
-               |  void run() {
-               |    Service.singleton.updatePartial(0);
-               |  }
-               |}
-               |class Service {
-               |  public static final Service singleton = new Service();
-               |  public void updatePartial(int value) {}
-               |}
-               |""".stripMargin,
+      "singleton\n",
+      editedFile = """|class A {
+                      |  void run() {
+                      |    Service.singleton.updatePartial(0);
+                      |  }
+                      |}
+                      |class Service {
+                      |  public static final Service singleton = new Service();
+                      |  public void updatePartial(int value) {}
+                      |}
+                      |""".stripMargin,
     )
   }
 
@@ -76,7 +42,16 @@ class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
        |  public String value;
        |}
        |""".stripMargin,
-    "",
+    "value\n",
+    editedFile = """|class A {
+                    |  void run(Config config) {
+                    |    config.value.trim();
+                    |  }
+                    |}
+                    |class Config {
+                    |  public String value;
+                    |}
+                    |""".stripMargin,
     filterItem = _.getLabel == "value",
   )
 

@@ -46,22 +46,32 @@ class JavaCompletionProvider(
 
   lazy val identifier = extractIdentifier.toLowerCase
   def completions(): CompletionList = {
+    val text = params.text()
+    val offset = params.offset()
+    val betweenDots =
+      offset > 0 && offset < text.length &&
+        text.charAt(offset - 1) == '.' && text.charAt(offset) == '.'
     val nextIsWhitespace =
-      if (params.offset() < params.text().length())
-        params.text().charAt(params.offset()).isWhitespace
+      if (offset < text.length)
+        text.charAt(offset).isWhitespace
       else false
-    val textWithSemicolon =
-      if (nextIsWhitespace)
-        params.text().substring(0, params.offset()) +
-          ";" +
-          params.text().substring(params.offset())
-      else params.text()
+    val completionText =
+      if (betweenDots)
+        /* javac drops the receiver in `Service..method()` without an identifier.
+         * Keep the member select in the temporary source used for completion.
+         */
+        text.substring(0, offset) + "$metals$completion" + text.substring(
+          offset
+        )
+      else if (nextIsWhitespace)
+        text.substring(0, offset) + ";" + text.substring(offset)
+      else text
     val compile =
       compiler
         .compilationTask(
           CompilerVirtualFileParams(
             params.uri(),
-            textWithSemicolon,
+            completionText,
             params.token()
           )
         )
