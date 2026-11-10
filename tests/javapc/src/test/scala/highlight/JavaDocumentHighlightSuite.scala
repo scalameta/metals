@@ -15,6 +15,17 @@ import tests.pc.BaseJavaPCSuite
 class JavaDocumentHighlightSuite extends BaseJavaPCSuite with RangeReplace {
 
   check(
+    "var-definition",
+    """|class A {
+       |    void run() {
+       |        var <<res@@ult>> = new java.util.ArrayList<String>();
+       |        <<result>>.add("value");
+       |    }
+       |}
+       |""".stripMargin,
+  )
+
+  check(
     "basic",
     """|class A {
        |    public static int <<NUMBER>> = 42;

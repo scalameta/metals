@@ -89,6 +89,9 @@ class JavaCompletionProvider(
           case _ =>
             keywords(n)
         }
+        items.zipWithIndex.foreach { case (item, idx) =>
+          item.setSortText(f"${idx}%05d")
+        }
         new CompletionList(items.asJava)
       case None => new CompletionList()
     }

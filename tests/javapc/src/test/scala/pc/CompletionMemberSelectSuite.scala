@@ -3,6 +3,28 @@ package pc
 import tests.pc.BaseJavaCompletionSuite
 
 class CompletionMemberSelectSuite extends BaseJavaCompletionSuite {
+
+  check(
+    "member-sort-text",
+    """|class A {
+       |  void run(Config config) {
+       |    config.@@
+       |  }
+       |}
+       |class Config {
+       |  public String roundType;
+       |  public int roundUnit;
+       |}
+       |""".stripMargin,
+    """|roundType
+       |roundUnit
+       |equals(java.lang.Object obj)
+       |""".stripMargin,
+    filterItem = item =>
+      Set("roundType", "roundUnit").contains(item.getLabel) ||
+        item.getLabel.startsWith("equals("),
+  )
+
   check(
     "static field member",
     """

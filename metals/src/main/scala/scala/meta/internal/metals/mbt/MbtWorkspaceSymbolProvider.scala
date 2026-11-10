@@ -1231,7 +1231,9 @@ class MbtWorkspaceSymbolProvider(
   }
 
   private def normalizePackageName(packageName: String): String = {
-    packageName.stripSuffix("/").replace("/", ".")
+    // javac represents the unnamed package as an empty string.
+    if (packageName == Symbol.EmptyPackage.value) ""
+    else packageName.stripSuffix("/").replace("/", ".")
   }
 
   // Reads .metals/index.mbt, which is a serialized Mbt.Index protobuf payload,

@@ -699,7 +699,11 @@ class Compilers(
     // Restart PC for all build targets that depend on this target
     for {
       target <- buildTargets.allInverseDependencies(target)
-      compiler <- buildTargetPCFromCache(target)
+      key <- List(
+        PresentationCompilerKey.ScalaBuildTarget(target),
+        PresentationCompilerKey.JavaBuildTarget(target),
+      )
+      compiler <- cache.get(key).map(_.await)
     } {
       scribe.debug(s"Restarting PC for target ${target.getUri}")
       compiler.restart()

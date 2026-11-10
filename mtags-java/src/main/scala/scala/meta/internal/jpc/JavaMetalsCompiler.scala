@@ -33,12 +33,12 @@ import scala.meta.pc.VirtualFileParams
 import com.sun.source.tree.CompilationUnitTree
 import com.sun.source.tree.MethodTree
 import com.sun.source.tree.Tree
-import com.sun.source.tree.VariableTree
 import com.sun.source.util.JavacTask
 import com.sun.source.util.SourcePositions
 import com.sun.source.util.TreePath
 import com.sun.source.util.Trees
 import com.sun.tools.javac.api.JavacTaskImpl
+import com.sun.tools.javac.tree.JCTree.JCVariableDecl
 import org.eclipse.lsp4j.Position
 import org.slf4j.Logger
 
@@ -273,8 +273,11 @@ class JavaMetalsCompiler(
       val declarationStart = leaf match {
         case mt: MethodTree if mt.getReturnType() != null =>
           sourcePositions.getEndPosition(root, mt.getReturnType())
-        case vt: VariableTree =>
-          sourcePositions.getEndPosition(root, vt.getType())
+        case vt: JCVariableDecl =>
+          val typeEnd = sourcePositions.getEndPosition(root, vt.getType())
+          // javac replaces `var` with an inferred type without source positions.
+          // The variable's preferred position still points to its source name.
+          if (typeEnd < 0) vt.pos.toLong else typeEnd
         case _ =>
           originalStart
       }

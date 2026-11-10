@@ -29,6 +29,76 @@ class JavaPCTurbineSourcepathSuite
   override def turbineRecompileDelayConfig: TurbineRecompileDelayConfig =
     TurbineRecompileDelayConfig.disabled
 
+  test("rename-default-package-method") {
+    cleanWorkspace()
+    val calculator = "a/src/main/java/Calculator.java"
+    val main = "a/src/main/java/Main.java"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |/$calculator
+            |public class Calculator {
+            |  public static int value() { return 1; }
+            |}
+            |/$main
+            |public class Main {
+            |  public static int run() { return Calculator.value(); }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(calculator)
+      _ <- server.didOpen(main)
+      _ = assertNoDiagnostics()
+
+      _ <- server.didChange(calculator)(_.replace("value()", "renamedValue()"))
+      _ <- server.didSave(calculator)
+      _ <- server.didChange(main)(_.replace("value()", "renamedValue()"))
+      _ <- server.didSave(main)
+      _ = assertNoDiagnostics()
+      references <- server.referencesSubquery(calculator, "int renamed@@Value")
+      _ = assertEquals(references.size, 2)
+      _ = assertEquals(
+        references.map(_.getUri()).toSet,
+        Set(
+          workspace.resolve(calculator).toURI.toString(),
+          workspace.resolve(main).toURI.toString(),
+        ),
+      )
+    } yield ()
+  }
+
+  test("rename-open-files-before-saving") {
+    cleanWorkspace()
+    val calculator = "a/src/main/java/a/Calculator.java"
+    val main = "a/src/main/java/a/Main.java"
+    for {
+      _ <- initialize(
+        s"""|/metals.json
+            |{"a": {}}
+            |/$calculator
+            |package a;
+            |public class Calculator {
+            |  public static int value() { return 1; }
+            |}
+            |/$main
+            |package a;
+            |public class Main {
+            |  public static int run() { return Calculator.value(); }
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(calculator)
+      _ <- server.didOpen(main)
+      _ = assertNoDiagnostics()
+      _ <- server.didChange(calculator)(_.replace("value()", "renamedValue()"))
+      _ <- server.didChange(main)(_.replace("value()", "renamedValue()"))
+      _ <- server.didSave(calculator)
+      _ <- server.didSave(main)
+      _ = assertNoDiagnostics()
+    } yield ()
+  }
+
   // Tests that modifying an existing class (adding a method) is visible via SOURCE_PATH.
   // This is the basic case: an already-indexed file changes, and javac should see
   // the updated source instead of stale turbine-compiled classfiles.

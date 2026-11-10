@@ -21,7 +21,7 @@ final class JavaFormattingProvider(
   private lazy val eclipseFormatter =
     new EclipseJavaFormatter(buffers, userConfig, buildTargets)
   private lazy val googleFormatter =
-    new GoogleJavaFormatter(client)
+    new GoogleJavaFormatter(client, () => userConfig().googleJavaFormatStyle)
 
   private def fromLSP(input: m.Input): m.Position.Range =
     m.Position.Range(input, 0, input.chars.length)
@@ -33,7 +33,7 @@ final class JavaFormattingProvider(
       val options = params.getOptions
       val path = params.getTextDocument.getUri.toAbsolutePath
       val input = path.toInputFromBuffers(buffers)
-      runFormat(path, input, options, fromLSP(input)).asJava
+      runFormat(path, input, options, None).asJava
     }
   }
 
@@ -46,7 +46,7 @@ final class JavaFormattingProvider(
     val input = path.toInputFromBuffers(buffers)
     range.toMeta(input) match {
       case Some(rng: m.Position) =>
-        runFormat(path, input, options, rng).asJava
+        runFormat(path, input, options, Some(rng)).asJava
       case None =>
         scribe.debug(s"range $range was not found in $path")
         Nil.asJava
@@ -59,15 +59,23 @@ final class JavaFormattingProvider(
       path: AbsolutePath,
       input: m.Input.VirtualFile,
       formattingOptions: l.FormattingOptions,
-      range: m.Position,
+      range: Option[m.Position],
   ): List[l.TextEdit] = {
     userConfig().javaFormatter match {
       case JavaFormatterConfig.None =>
         Nil // No-op: Java formatting disabled
       case JavaFormatterConfig.Eclipse =>
-        eclipseFormatter.format(path, input, formattingOptions, range)
+        eclipseFormatter.format(
+          path,
+          input,
+          formattingOptions,
+          range.getOrElse(fromLSP(input)),
+        )
       case JavaFormatterConfig.GoogleJavaFormat => // Default to google-java-format (including None and "google-java-format")
-        googleFormatter.format(input)
+        range match {
+          case Some(range) => googleFormatter.formatRange(input, range)
+          case None => googleFormatter.format(input)
+        }
     }
   }
 }
