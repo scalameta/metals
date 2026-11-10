@@ -1,43 +1,18 @@
 package scala.meta.internal.jpc
 
-import java.util.concurrent.CancellationException
-import javax.lang.model.`type`.DeclaredType
-import javax.lang.model.`type`.ErrorType
-import javax.lang.model.`type`.TypeKind
-import javax.lang.model.`type`.TypeMirror
-import javax.lang.model.`type`.TypeVariable
-import javax.lang.model.element.ExecutableElement
-import javax.lang.model.element.NestingKind
-import javax.lang.model.element.TypeElement
+import com.sun.source.tree.*
+import com.sun.source.util.{TreePath, TreePathScanner, Trees}
+import org.eclipse.lsp4j.{InlayHint, InlayHintKind, Range}
 
+import java.util.concurrent.CancellationException
+import javax.lang.model.`type`.*
+import javax.lang.model.element.{ExecutableElement, NestingKind, TypeElement}
 import scala.annotation.tailrec
 import scala.collection.mutable
-import scala.jdk.CollectionConverters._
-import scala.util.control.NonFatal
-
-import scala.meta.internal.pc.InlayHintOrigin
-import scala.meta.internal.pc.InlayHints
-import scala.meta.internal.pc.LabelPart
+import scala.jdk.CollectionConverters.*
+import scala.meta.internal.pc.{InlayHintOrigin, InlayHints, LabelPart}
 import scala.meta.pc.InlayHintsParams
-
-import com.sun.source.tree.CompilationUnitTree
-import com.sun.source.tree.ExpressionTree
-import com.sun.source.tree.IdentifierTree
-import com.sun.source.tree.LiteralTree
-import com.sun.source.tree.MemberSelectTree
-import com.sun.source.tree.MethodInvocationTree
-import com.sun.source.tree.NewArrayTree
-import com.sun.source.tree.NewClassTree
-import com.sun.source.tree.ParenthesizedTree
-import com.sun.source.tree.Tree
-import com.sun.source.tree.TypeCastTree
-import com.sun.source.tree.VariableTree
-import com.sun.source.util.TreePath
-import com.sun.source.util.TreePathScanner
-import com.sun.source.util.Trees
-import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.InlayHintKind
-import org.eclipse.lsp4j.Range
+import scala.util.control.NonFatal
 
 /**
  * Computes inlay hints for Java sources:
@@ -204,33 +179,40 @@ final class JavaInlayHintsProvider(
       case method: ExecutableElement if arguments.nonEmpty =>
         val parameters = method.getParameters.asScala.toIndexedSeq
         val lastIndex = parameters.length - 1
-        arguments.zipWithIndex.foreach { case (argument, index) =>
-          // Only the first variable argument gets a hint.
-          val isExtraVarArg = method.isVarArgs && index > lastIndex
-          if (index <= lastIndex && !isExtraVarArg) {
-            val name = parameters(index).getSimpleName.toString
-            val start = positions.getStartPosition(cu, argument).toInt
+        for {
+          case (argument, index) <- arguments.zipWithIndex
+          // Extra arguments passed to a varargs parameter get no hints of
+          // their own, only the first one does.
+          if index <= lastIndex
+          name = parameters(index).getSimpleName.toString
+          // The name is known only to the compiler (`arg0`, `x0`) or too
+          // short to tell anything.
+          if isInformativeName(name)
+          // `setName(name)`: the method name already says it all.
+          if parameters.length != 1 || !methodNameEndsWith(method, name)
+          start = positions.getStartPosition(cu, argument).toInt
+          // Synthetic arguments have no position and the hint has to be in
+          // the requested range.
+          if start >= 0 && inRequestedRange(start)
+          // Walks the argument tree, so it goes last: `foo(value)` for a
+          // parameter named `value` doesn't need a hint either.
+          if !argumentMatchesName(argument, name)
+        } {
+          params.checkCanceled()
+          // `...values: 1, 2` marks where the varargs start, unless the
+          // caller passes an array directly.
+          val prefix =
             if (
-              start >= 0 && inRequestedRange(start) &&
-              isInformativeName(name) &&
-              !argumentMatchesName(argument, name) &&
-              !(parameters.length == 1 && methodNameEndsWith(method, name))
-            ) {
-              params.checkCanceled()
-              val prefix =
-                if (
-                  method.isVarArgs && index == lastIndex &&
-                  !isArrayArgument(argument)
-                ) "..."
-                else ""
-              addHint(
-                start,
-                List(LabelPart(s"$prefix$name: ")),
-                InlayHintKind.Parameter,
-                InlayHintOrigin.NamedParameters
-              )
-            }
-          }
+              method.isVarArgs && index == lastIndex &&
+              !isArrayArgument(argument)
+            ) "..."
+            else ""
+          addHint(
+            start,
+            List(LabelPart(s"$prefix$name: ")),
+            InlayHintKind.Parameter,
+            InlayHintOrigin.NamedParameters
+          )
         }
       case _ =>
     }
@@ -240,8 +222,7 @@ final class JavaInlayHintsProvider(
         .exists(_.getKind == TypeKind.ARRAY)
 
     private def isInformativeName(name: String): Boolean =
-      name
-        .length() > 1 && !SyntheticParameterName.pattern.matcher(name).matches()
+      name.length > 1 && !SyntheticParameterName.matches(name)
 
     @tailrec
     private def argumentMatchesName(
