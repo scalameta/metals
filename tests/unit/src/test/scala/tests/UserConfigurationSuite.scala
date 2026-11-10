@@ -18,6 +18,7 @@ import scala.meta.internal.metals.config.BloopJvmProperties
 import scala.meta.internal.metals.config.EclipseFormatConfig
 import scala.meta.internal.metals.config.FallbackClasspathConfig
 import scala.meta.internal.metals.config.FallbackSourcepathConfig
+import scala.meta.internal.metals.config.GoogleJavaFormatStyle
 import scala.meta.internal.metals.config.JavacServicesOverrides
 import scala.meta.internal.metals.config.MbtConfig
 import scala.meta.internal.metals.config.TargetBuildTool
@@ -377,6 +378,37 @@ class UserConfigurationSuite extends BaseSuite {
     assertEquals(obtained.mbt.referencesTimeoutSeconds, 5)
   }
 
+  checkOK("google-java-format-style-default", "{}") { obtained =>
+    assertEquals(obtained.googleJavaFormatStyle, GoogleJavaFormatStyle.Google)
+  }
+
+  checkOK(
+    "google-java-format-style-aosp",
+    """{"googleJavaFormatStyle": "aosp"}""",
+  ) { obtained =>
+    assertEquals(obtained.googleJavaFormatStyle, GoogleJavaFormatStyle.Aosp)
+  }
+
+  checkOK(
+    "google-java-format-style-google",
+    """{"google-java-format-style": "google"}""",
+  ) { obtained =>
+    assertEquals(obtained.googleJavaFormatStyle, GoogleJavaFormatStyle.Google)
+  }
+
+  checkOK(
+    "google-java-format-style-case-insensitive",
+    """{"googleJavaFormatStyle": " AOSP "}""",
+  ) { obtained =>
+    assertEquals(obtained.googleJavaFormatStyle, GoogleJavaFormatStyle.Aosp)
+  }
+
+  checkError(
+    "google-java-format-style-invalid",
+    """{"googleJavaFormatStyle": "custom"}""",
+    "Invalid google-java-format-style 'custom'. Valid values are: google, aosp",
+  )
+
   test("check-print") {
     val fakePath = AbsolutePath(Paths.get("./.scalafmt.conf"))
     val fakePathString = fakePath.toString().replace("\\", "\\\\")
@@ -390,6 +422,7 @@ class UserConfigurationSuite extends BaseSuite {
       scalafmtConfigPath = Some(fakePath),
       scalafixConfigPath = Some(fakePath),
       javaFormatter = JavaFormatterConfig.Eclipse,
+      googleJavaFormatStyle = GoogleJavaFormatStyle.Aosp,
       symbolPrefixes = Map("java/util/" -> "hello."),
       shimGlobs = Map(
         "default" -> List("shims.scala", "**/shims/*.scala"),
@@ -516,6 +549,7 @@ class UserConfigurationSuite extends BaseSuite {
     "profile": "profile"
   },
   "javaFormatter": "eclipse",
+  "googleJavaFormatStyle": "aosp",
   "scalaCliLauncher": "scala-cli",
   "scalaCliEnabled": true,
   "customProjectRoot": "customs",
@@ -623,6 +657,7 @@ class UserConfigurationSuite extends BaseSuite {
           |eclipse-format.config-path                   string                         ""              Eclipse Java formatter config path
           |eclipse-format.profile                       string                         GoogleStyle     Eclipse Java formatting profile
           |java-formatter                               [eclipse,googleJavaFormat,none] googleJavaFormat Java formatter
+          |google-java-format-style                     [google,aosp]                  google          Google Java Format style
           |scala-cli-launcher                           string                         ""              Scala CLI launcher
           |scala-cli-enabled                            boolean                        false           Enable Scala CLI
           |custom-project-root                          string                         ""              Custom project root

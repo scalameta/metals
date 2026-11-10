@@ -5,6 +5,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.GoogleJavaFormatter
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.TextEdits
+import scala.meta.internal.metals.config.GoogleJavaFormatStyle
 import scala.meta.{inputs => m}
 
 import munit.Location
@@ -13,7 +14,10 @@ import tests.TestingClient
 
 class GoogleJavaFormatterSuite extends BaseSuite {
   private val client = new TestingClient(PathIO.workingDirectory, Buffers())
-  private val formatter = new GoogleJavaFormatter(() => client)
+  private val formatter = new GoogleJavaFormatter(
+    () => client,
+    () => GoogleJavaFormatStyle.Google,
+  )
 
   private val original =
     """|import java.util.Map;
@@ -39,6 +43,88 @@ class GoogleJavaFormatterSuite extends BaseSuite {
        |""".stripMargin
 
   checkRange("method-and-preserve-imports", original, expected)
+
+  checkRange(
+    "aosp-method-and-preserve-imports",
+    original,
+    """|import java.util.Map;
+       |import java.util.ArrayList;
+       |
+       |public class Example {
+       |  void untouched( ){System.out.println("old");}
+       |
+       |    void changed() {
+       |        System.out.println("new");
+       |    }
+       |}
+       |""".stripMargin,
+    GoogleJavaFormatStyle.Aosp,
+  )
+
+  test("aosp-whole-document-import-order") {
+    val code =
+      """|import java.util.List;
+         |import com.example.Thing;
+         |import android.view.View;
+         |
+         |class Example {
+         |List<Thing> things;
+         |View view;
+         |}
+         |""".stripMargin
+    val formatter = new GoogleJavaFormatter(
+      () => client,
+      () => GoogleJavaFormatStyle.Aosp,
+    )
+    val input = m.Input.VirtualFile("Example.java", code)
+    assertNoDiff(
+      TextEdits.applyEdits(code, formatter.format(input)),
+      """|import android.view.View;
+         |
+         |import com.example.Thing;
+         |
+         |import java.util.List;
+         |
+         |class Example {
+         |    List<Thing> things;
+         |    View view;
+         |}
+         |""".stripMargin,
+    )
+  }
+
+  test("style-is-read-on-each-request") {
+    var style: GoogleJavaFormatStyle = GoogleJavaFormatStyle.Google
+    var reads = 0
+    val formatter = new GoogleJavaFormatter(
+      () => client,
+      () => {
+        reads += 1
+        style
+      },
+    )
+    val code = "class Example {\nint value;\n}\n"
+    val input = m.Input.VirtualFile("Example.java", code)
+    val range = m.Position.Range(input, 0, code.length)
+    val google = "class Example {\n  int value;\n}\n"
+    val aosp = "class Example {\n    int value;\n}\n"
+    assertNoDiff(TextEdits.applyEdits(code, formatter.format(input)), google)
+    assertEquals(reads, 1)
+    style = GoogleJavaFormatStyle.Aosp
+    assertNoDiff(TextEdits.applyEdits(code, formatter.format(input)), aosp)
+    assertEquals(reads, 2)
+    assertNoDiff(
+      TextEdits.applyEdits(code, formatter.formatRange(input, range)),
+      aosp,
+    )
+    assertEquals(reads, 3)
+    style = GoogleJavaFormatStyle.Google
+    assertNoDiff(
+      TextEdits.applyEdits(code, formatter.formatRange(input, range)),
+      google,
+    )
+    assertEquals(reads, 4)
+  }
 
   checkRange(
     "crlf",
@@ -144,7 +230,12 @@ class GoogleJavaFormatterSuite extends BaseSuite {
     )
   }
 
-  private def checkRange(name: String, query: String, expected: String)(implicit
+  private def checkRange(
+      name: String,
+      query: String,
+      expected: String,
+      style: GoogleJavaFormatStyle = GoogleJavaFormatStyle.Google,
+  )(implicit
       loc: Location
   ): Unit = {
     test(name) {
@@ -152,6 +243,7 @@ class GoogleJavaFormatterSuite extends BaseSuite {
       val end = query.indexOf(">>") - 2
       val code = query.replace("<<", "").replace(">>", "")
       val input = m.Input.VirtualFile("Example.java", code)
+      val formatter = new GoogleJavaFormatter(() => client, () => style)
       val edits =
         formatter.formatRange(input, m.Position.Range(input, start, end))
       assert(edits.nonEmpty)

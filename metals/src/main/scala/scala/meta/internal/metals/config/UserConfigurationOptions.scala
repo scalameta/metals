@@ -709,6 +709,29 @@ object UserConfigurationOptions {
     ),
     /*
      * {
+     *   "googleJavaFormatStyle": "aosp"
+     * }
+     */
+    ChoiceConfigurationOption[GoogleJavaFormatStyle](
+      key = "google-java-format-style",
+      title = "Google Java Format style",
+      description =
+        """|The style to use when `javaFormatter` is `googleJavaFormat`.
+           |Valid values are "google" (default) and "aosp".
+           |Applies to both whole-document and range formatting. Whole-document import ordering also follows the selected style.
+           |""".stripMargin,
+      example = """"aosp"""",
+      defaultValue = GoogleJavaFormatStyle.Google,
+      choices = List(
+        "google" -> GoogleJavaFormatStyle.Google,
+        "aosp" -> GoogleJavaFormatStyle.Aosp,
+      ),
+    )(
+      config => config.googleJavaFormatStyle,
+      (config, value) => config.copy(googleJavaFormatStyle = value),
+    ),
+    /*
+     * {
      *   "scalaCliLauncher": "/usr/local/bin/scala-cli"
      * }
      */

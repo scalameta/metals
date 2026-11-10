@@ -21,7 +21,7 @@ final class JavaFormattingProvider(
   private lazy val eclipseFormatter =
     new EclipseJavaFormatter(buffers, userConfig, buildTargets)
   private lazy val googleFormatter =
-    new GoogleJavaFormatter(client)
+    new GoogleJavaFormatter(client, () => userConfig().googleJavaFormatStyle)
 
   private def fromLSP(input: m.Input): m.Position.Range =
     m.Position.Range(input, 0, input.chars.length)
