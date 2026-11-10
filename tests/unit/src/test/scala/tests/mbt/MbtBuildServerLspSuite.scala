@@ -343,6 +343,86 @@ class MbtBuildServerLspSuite
     } yield ()
   }
 
+  test("java-target-dependency-versions") {
+    cleanWorkspace()
+    def gsonJar(version: String) =
+      Fetch
+        .create()
+        .withDependencies(
+          Dependency
+            .of("com.google.code.gson", "gson", version)
+            .withTransitive(false)
+        )
+        .fetch()
+        .asScala
+        .head
+        .toPath
+
+    val oldJar = gsonJar("2.7")
+    val newJar = gsonJar("2.13.1")
+    val oldId = "com.google.code.gson:gson:2.7"
+    val newId = "com.google.code.gson:gson:2.13.1"
+    val newSource = "new/src/NewMain.java"
+    val oldSource = "old/src/OldMain.java"
+    assert(userConfig.javaSymbolLoader.isTurbineClasspath)
+
+    for {
+      _ <- initialize(
+        s"""|/.metals/mbt.json
+            |{
+            |  "dependencyModules": [
+            |    {"id": "$oldId", "jar": "${oldJar.toUri}"},
+            |    {"id": "$newId", "jar": "${newJar.toUri}"}
+            |  ],
+            |  "namespaces": {
+            |    "old": {"sources": ["old/src/**"], "dependencyModules": ["$oldId"]},
+            |    "new": {"sources": ["new/src/**"], "dependencyModules": ["$newId"]}
+            |  }
+            |}
+            |/$newSource
+            |package newer;
+            |import com.google.gson.JsonParser;
+            |public class NewMain {
+            |  Object result = JsonParser.parseString("{}");
+            |}
+            |/$oldSource
+            |package older;
+            |import com.google.gson.JsonParser;
+            |public class OldMain {
+            |  Object result = JsonParser.parseString("{}");
+            |}
+            |""".stripMargin
+      )
+      _ = assertConnectedToBuildServer("MBT")
+      // The global fallback contains both versions; each target must use its own.
+      _ = assertEquals(
+        server.server.compilers.fallbackClasspaths
+          .javaCompilerClasspath()
+          .toSet,
+        Set(oldJar, newJar),
+      )
+      _ <- server.didOpen(newSource)
+      _ <- server.didFocus(newSource)
+      _ = assert(
+        client.diagnostics.contains(workspace.resolve(newSource)),
+        s"No diagnostics published for $newSource",
+      )
+      _ = assertNoDiff(client.pathDiagnostics(newSource), "")
+      _ <- server.didOpen(oldSource)
+      _ <- server.didFocus(oldSource)
+      _ = assert(
+        client.diagnostics.contains(workspace.resolve(oldSource)),
+        s"No diagnostics published for $oldSource",
+      )
+      oldDiagnostics = client.pathDiagnostics(oldSource)
+      _ = assert(
+        oldDiagnostics.contains("cannot find symbol") &&
+          oldDiagnostics.contains("parseString"),
+        s"Expected Gson 2.7 to reject parseString; got:\n$oldDiagnostics",
+      )
+    } yield ()
+  }
+
   test("two-targets-hover-definition-completion") {
     cleanWorkspace()
     val scalaLibJarUri =
