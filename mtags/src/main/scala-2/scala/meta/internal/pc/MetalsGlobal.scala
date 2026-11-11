@@ -873,21 +873,17 @@ class MetalsGlobal(
       case maybeOldUnit =>
         unitOfFile(richUnit.source.file) = richUnit
 
-        maybeOldUnit.foreach { _ =>
-          currentRun.symSource.foreach { case (sym, _) =>
-            // otherwise we seem to be getting stale symbol completions for toplevels
-            if (sym.owner.hasPackageFlag && sym.isStale) {
-              sym.owner.info.decls unlink sym
-            }
-          }
-        }
-
         // A source-path unit can have symbols without an interactive unit.
-        // Re-enter generated companions when replacing its source.
-        val replacedSymbols = currentRun.symSource.collect {
-          case (sym, file) if file == source.file => sym
+        // Re-enter generated companions when replacing its source, and unlink
+        // stale interactive declarations in the same pass.
+        currentRun.symSource.retain { (sym, file) =>
+          if (
+            maybeOldUnit.nonEmpty && sym.owner.hasPackageFlag && sym.isStale
+          ) {
+            sym.owner.info.decls unlink sym
+          }
+          file != source.file
         }
-        replacedSymbols.foreach(currentRun.symSource.remove)
         if (!isOutline) {
           fullyCompiled += filename
         } else {
