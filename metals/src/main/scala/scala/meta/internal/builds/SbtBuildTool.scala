@@ -340,7 +340,10 @@ object SbtBuildTool {
     val writtenPlugin =
       writePlugins(mainMeta, metalsPluginDetails, debugAdapterPluginDetails)
     val isSbt2 =
-      SbtBuildTool.loadVersion(projectRoot).exists(ScalaVersions.isSbt2Version)
+      SbtBuildTool
+        .loadVersion(projectRoot)
+        .map(ScalaVersions.isSbt2Version)
+        .getOrElse(true)
     if (isSbt2) {
       val writtenMeta = writePlugins(
         metaMeta,
