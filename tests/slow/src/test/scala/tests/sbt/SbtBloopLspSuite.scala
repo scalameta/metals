@@ -542,6 +542,8 @@ class SbtBloopLspSuite
       _ <- initialize(
         s"""|/build.sbt
             |scalaVersion := "$scalaVersion"
+            |/project/build.properties
+            |sbt.version=${V.sbtVersion}
          """.stripMargin
       )
       hoverRes <- assertHoverAtPos("build.sbt", 0, 2)
@@ -759,6 +761,8 @@ class SbtBloopLspSuite
                        |scalaVersion := "$scalaVersion"
                        |val a = project.in(file("a"))
                        |$fileContent
+                       |/project/build.properties
+                       |sbt.version=${V.sbtVersion}
                        |""".stripMargin,
     errorMessage =
       """|a/src/main/scala/a/A.scala:2:8: error: object random is not a member of package java.util

@@ -99,6 +99,7 @@ abstract class H2ConnectionProvider(
       scribe.info(s"Deleting old database format $oldDbfile")
       oldDbfile.delete()
     }
+    ensureDriverLoaded()
     Files.createDirectories(dbfile.toNIO.getParent)
     System.setProperty(
       "h2.bindAddress",
@@ -110,8 +111,10 @@ abstract class H2ConnectionProvider(
   }
 
   private def tryUrl(url: String): Connection = {
+    ensureDriverLoaded()
     val flyway =
-      Flyway.configure
+      Flyway
+        .configure(jdbcClassLoader)
         .dataSource(url, user, null)
         .locations(s"classpath:$migrations")
         .cleanDisabled(false)
@@ -119,6 +122,12 @@ abstract class H2ConnectionProvider(
     migrateOrRestart(flyway)
     DriverManager.getConnection(url, user, null)
   }
+
+  private def ensureDriverLoaded(): Unit =
+    Class.forName("org.h2.Driver", true, jdbcClassLoader)
+
+  private def jdbcClassLoader: ClassLoader =
+    classOf[H2ConnectionProvider].getClassLoader
 
   /**
    * Between h2 "2.1.x" and "2.2.x" write/read formats in MVStore changed

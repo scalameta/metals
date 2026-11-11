@@ -49,12 +49,13 @@ inThisBuild(
     scalaVersion := V.scala213,
     crossScalaVersions := List(V.scala213),
     organization := "org.scalameta",
-    licenses := Seq(
-      "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0")
-    ),
-    homepage := Some(url("https://github.com/scalameta/metals")),
+    licenses := Seq(License.Apache2),
+    homepage := Some(uri("https://github.com/scalameta/metals")),
     developers := metalsDevs,
     testFrameworks := List(),
+    // Keep class directories on the classpath. sbt 2 defaults to JARs, which
+    // breaks tests that read SemanticDB and class files from the input project.
+    exportJars := false,
     dependencyOverrides += V.guava,
     // faster publishLocal:
     packageDoc / publishArtifact := sys.env.contains("CI"),
@@ -81,10 +82,9 @@ Global / onLoad ~= { old =>
 }
 Global / cancelable := true
 Global / excludeLintKeys += scalafixConfig
-crossScalaVersions := Nil
 
-addCommandAlias("scalafixAll", "all compile:scalafix test:scalafix")
-addCommandAlias("scalafixCheck", "; scalafix --check ; test:scalafix --check")
+addCommandAlias("scalafixAll", "all Compile/scalafix Test/scalafix")
+addCommandAlias("scalafixCheck", "; scalafix --check ; Test/scalafix --check")
 addCommandAlias(
   "downloadDependencies",
   "+publishLocal; metals/runMain scala.meta.metals.DownloadDependencies ",
@@ -110,27 +110,9 @@ def configureMtagsScalaVersionDynamically(
     )
 }
 
-def crossTestDyn(state: State, scalaV: String): State = {
-  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
-  val (out, _) =
-    Project
-      .extract(configured)
-      .runTask(cross / Test / test, configured)
-  out
-}
-
-def crossTestDynOnly(state: State, scalaV: String, testName: String): State = {
-  val configured = configureMtagsScalaVersionDynamically(state, scalaV)
-  val (out, _) =
-    Project
-      .extract(configured)
-      .runInputTask(cross / Test / testOnly, testName, configured)
-  out
-}
-
 commands ++= Seq(
   Command.command("save-expect") { s =>
-    "unit/test:runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/test:runMain tests.feature.SlowSaveExpect" :: s
+    "unit/Test/runMain tests.SaveExpect" :: "quick-publish-local" :: "slow/Test/runMain tests.feature.SlowSaveExpect" :: s
   },
   Command.command("quick-publish-local") { s =>
     val publishMtags = V.quickPublishScalaVersions.foldLeft(s) { case (st, v) =>
@@ -140,9 +122,6 @@ commands ++= Seq(
       s"++${V.scala213} metals/publishLocal" ::
       "mtags-java/publishLocal" ::
       publishMtags
-  },
-  Command.single("test-mtags-dyn") { (s, scalaV) =>
-    crossTestDyn(s, scalaV)
   },
 )
 
@@ -242,8 +221,6 @@ val sharedSettings = sharedJavacOptions ++ sharedScalacOptions ++ List(
   },
   scalacOptions ++= lintingOptions(scalaVersion.value),
 )
-
-publish / skip := true
 
 lazy val interfaces = project
   .in(file("mtags-interfaces"))
@@ -489,7 +466,7 @@ lazy val metals = project
       "metalsVersion" -> version.value,
       "mdocVersion" -> V.mdoc,
       "bspVersion" -> V.bsp,
-      "sbtVersion" -> sbtVersion.value,
+      "sbtVersion" -> V.sbtVersion,
       "bloopVersion" -> V.bloop,
       "bloopConfigVersion" -> V.bloopConfig,
       "bloopNightlyVersion" -> V.bloop,
@@ -589,7 +566,6 @@ lazy val input3 = project
   .settings(
     sharedSettings,
     scalaVersion := V.scala3,
-    target := (ThisBuild / baseDirectory).value / "tests" / "input" / "target" / "target3",
     Compile / unmanagedSourceDirectories := Seq(
       (input / baseDirectory).value / "src" / "main" / "scala",
       (input / baseDirectory).value / "src" / "main" / "scala-3",
@@ -603,7 +579,7 @@ lazy val input3 = project
   )
   .disablePlugins(ScalafixPlugin)
 
-lazy val testSettings: Seq[Def.Setting[_]] = List(
+lazy val testSettings: Seq[Def.Setting[?]] = List(
   Test / parallelExecution := false,
   publish / skip := true,
   fork := true,
@@ -666,11 +642,18 @@ def publishAllMtags(
 }
 
 def publishBinaryMtags =
-  (interfaces / publishLocal)
-    .dependsOn(
-      `mtags-java` / publishLocal,
-      publishAllMtags(V.quickPublishScalaVersions),
-    )
+  Def.sequential(
+    interfaces / publishLocal,
+    `mtags-java` / publishLocal,
+    publishAllMtags(V.quickPublishScalaVersions),
+  )
+
+// sbt-metals publish must finish before the session reload inside publishBinaryMtags.
+def publishForSlowTests =
+  Def.sequential(
+    `sbt-metals` / publishLocal,
+    publishBinaryMtags,
+  )
 
 lazy val mtest = project
   .in(file("tests/mtest"))
@@ -795,13 +778,14 @@ lazy val unit = project
     buildInfoPackage := "tests",
     Compile / resourceGenerators += InputProperties
       .resourceGenerator(input, input3),
-    Compile / compile :=
+    Compile / compile := Def.uncached(
       (Compile / compile)
         .dependsOn(
           input / Test / compile,
           input3 / Test / compile,
         )
-        .value,
+        .value
+    ),
     buildInfoKeys := Seq[BuildInfoKey](
       "sourceroot" -> (ThisBuild / baseDirectory).value,
       "targetDirectory" -> (Test / target).value,
@@ -830,11 +814,11 @@ lazy val slow = project
       )
     ),
     Test / testOnly := (Test / testOnly)
-      .dependsOn((`sbt-metals` / publishLocal), publishBinaryMtags)
+      .dependsOn(publishForSlowTests)
       .evaluated,
     Test / test := (Test / test)
-      .dependsOn(`sbt-metals` / publishLocal, publishBinaryMtags)
-      .value,
+      .dependsOn(publishForSlowTests)
+      .evaluated,
   )
   .dependsOn(unit, `metals-mcp`)
 
