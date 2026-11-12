@@ -270,7 +270,6 @@ and within Metals itself in the
 ### Tools Not Working
 
 - Ensure the project has been imported (`import-build`)
-- Wait for indexing to complete before using search tools
 - Check compilation status with `compile-full`
 
 ## Release History

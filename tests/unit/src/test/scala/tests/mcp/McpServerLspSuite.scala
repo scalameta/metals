@@ -1,6 +1,9 @@
 package tests.mcp
 
+import scala.concurrent.Await
 import scala.concurrent.Future
+import scala.concurrent.Promise
+import scala.concurrent.duration._
 
 import scala.meta.internal.metals.mcp.CursorEditor
 import scala.meta.internal.metals.mcp.McpConfig
@@ -116,6 +119,98 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         """|Available modules (build targets):
            |- a
            |""".stripMargin,
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("glob-search-no-build-tool") {
+    cleanWorkspace()
+    for {
+      // No `.scala` files, otherwise Metals sets up scala-cli.
+      _ <- initialize(
+        """|/src/Hello.java
+           |class Hello {}
+           |""".stripMargin,
+        expectError = true,
+      )
+      client <- startMcpServer()
+      result <- client.globSearch("Hello")
+      _ = assertNoDiff(
+        result,
+        "No build imported yet. Run `import-build` first.",
+      )
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("glob-search-waits-for-import") {
+    cleanWorkspace()
+    val releaseImport = Promise[Unit]()
+    for {
+      _ <- initialize(
+        """|/src/Hello.java
+           |class Hello {}
+           |""".stripMargin,
+        expectError = true,
+      )
+      client <- startMcpServer()
+      // Holds a connect request open before the first index completes.
+      _ = server.headServer.connectionProvider.index(() =>
+        Await.result(releaseImport.future, 30.seconds)
+      )
+      searchResult = client.globSearchWithProgress("Hello", "progress-token")
+      firstEvent <- Future.firstCompletedOf(
+        List(
+          client.firstProgressNotification.map(Some(_)),
+          searchResult.map(_ => None),
+        )
+      )
+      _ = releaseImport.success(())
+      result <- searchResult
+      progress = firstEvent.getOrElse(
+        fail("Expected a progress ping before the tool result")
+      )
+      _ = assertEquals(progress.progressToken(), "progress-token": Object)
+      _ = assertNoDiff(
+        progress.message(),
+        "Waiting for build import to finish (0s)",
+      )
+      _ = assertNoDiff(result, "No symbols found.")
+      _ <- client.shutdown()
+    } yield ()
+  }
+
+  test("compile-full-waits-for-import") {
+    cleanWorkspace()
+    val releaseImport = Promise[Unit]()
+    for {
+      _ <- initialize(
+        """|/src/Hello.java
+           |class Hello {}
+           |""".stripMargin,
+        expectError = true,
+      )
+      client <- startMcpServer()
+      _ = server.headServer.connectionProvider.index(() =>
+        Await.result(releaseImport.future, 30.seconds)
+      )
+      compileResult = client.compileFullWithProgress("progress-token")
+      firstEvent <- Future.firstCompletedOf(
+        List(
+          client.firstProgressNotification.map(Some(_)),
+          compileResult.map(_ => None),
+        )
+      )
+      _ = releaseImport.success(())
+      result <- compileResult
+      _ = assert(
+        firstEvent.isDefined,
+        "Expected a progress ping before the tool result",
+      )
+      _ = assertNoDiff(
+        result,
+        "Error: no modules found, try running `import-build`.",
       )
       _ <- client.shutdown()
     } yield ()

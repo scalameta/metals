@@ -9,6 +9,7 @@ import java.time.Duration
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.Promise
 import scala.jdk.CollectionConverters._
 
 import scala.meta.internal.metals.MetalsEnrichments.XtensionJavaFuture
@@ -19,7 +20,9 @@ import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTranspor
 import io.modelcontextprotocol.json.jackson3.JacksonMcpJsonMapper
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.InitializeResult
+import io.modelcontextprotocol.spec.McpSchema.ProgressNotification
 import io.modelcontextprotocol.spec.McpSchema.TextContent
+import reactor.core.publisher.Mono
 import tools.jackson.databind.json.JsonMapper
 
 class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
@@ -31,8 +34,19 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
     .builder(url)
     .endpoint(MetalsMcpServer.mcpEndpoint)
     .build()
+  private val firstProgress = Promise[ProgressNotification]()
   private val client =
-    McpClient.async(transport).requestTimeout(Duration.ofMinutes(5)).build()
+    McpClient
+      .async(transport)
+      .requestTimeout(Duration.ofMinutes(5))
+      .progressConsumer { notification =>
+        firstProgress.trySuccess(notification)
+        Mono.empty[Void]()
+      }
+      .build()
+
+  def firstProgressNotification: Future[ProgressNotification] =
+    firstProgress.future
 
   def sendRawInitialize(
       requestBody: String
@@ -53,13 +67,18 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
   override protected def callTool(
       toolName: String,
       params: tools.jackson.databind.node.ObjectNode,
+  ): Future[List[String]] = callTool(toolName, params, progressToken = None)
+
+  private def callTool(
+      toolName: String,
+      params: tools.jackson.databind.node.ObjectNode,
+      progressToken: Option[String],
   ): Future[List[String]] = {
-    val callToolRequest =
-      new CallToolRequest(
-        jsonMapper,
-        toolName,
-        objectMapper.writeValueAsString(params),
-      )
+    val requestBuilder = CallToolRequest
+      .builder(toolName)
+      .arguments(jsonMapper, objectMapper.writeValueAsString(params))
+    progressToken.foreach(requestBuilder.progressToken)
+    val callToolRequest = requestBuilder.build()
     client
       .callTool(callToolRequest)
       .toFuture()
@@ -90,6 +109,23 @@ class TestMcpClient(url: String, val port: Int)(implicit ec: ExecutionContext)
     params.set("symbolType", symbolTypeArray)
     callTool("typed-glob-search", params).map(_.mkString)
   }
+
+  def globSearchWithProgress(
+      query: String,
+      progressToken: String,
+  ): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("query", query)
+    callTool("glob-search", params, Some(progressToken)).map(_.mkString)
+  }
+
+  def compileFullWithProgress(progressToken: String): Future[String] =
+    callTool(
+      "compile-full",
+      objectMapper.createObjectNode(),
+      Some(progressToken),
+    )
+      .map(_.mkString)
 
   def typedGlobSearch(
       query: String,
