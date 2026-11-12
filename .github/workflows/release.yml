@@ -26,9 +26,14 @@ jobs:
           PGP_SECRET: ${{ secrets.PGP_SECRET }}
           SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
           SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          # sbt 2 keeps the server started in the first step. If that process
+          # does not have GIT_DEPLOY_KEY, the next step will fail.
+          GIT_USER: scalameta@scalameta.org
+          GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
       - name: Publish Documentation
         if: ${{ !contains(github.ref_name, '@') }}
-        run: sbt 'docs/run; docs/docusaurusPublishGhpages'
+        run: |
+          sbt 'docs/run; docs/docusaurusPublishGhpages'
         env:
           GIT_USER: scalameta@scalameta.org
           GIT_DEPLOY_KEY: ${{ secrets.GIT_DEPLOY_KEY }}
