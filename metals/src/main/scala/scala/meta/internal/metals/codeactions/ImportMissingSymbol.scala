@@ -4,13 +4,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.jpc.JavacDiagnostic
-import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.ScalacDiagnostic
-import scala.meta.internal.metals.codeactions.CodeAction
+import scala.meta.internal.metals._
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
@@ -268,12 +263,13 @@ class SourceAddMissingImports(
   ): Seq[l.Diagnostic] = {
     val uri = params.getTextDocument().getUri()
     val file = uri.toAbsolutePath
-    this.diagnostics.getFileDiagnostics(file).toSeq
+    this.diagnostics.getFileAndPcDiagnostics(file)
   }
 
   override val kind: String = SourceAddMissingImports.kind
   override protected val allSymbolsTitle: String = SourceAddMissingImports.title
   override protected def isImportAllSourceAction: Boolean = true
+  override def isJava: Boolean = true
 
   /**
    * Override the filtering method to only keep unambiguous imports.

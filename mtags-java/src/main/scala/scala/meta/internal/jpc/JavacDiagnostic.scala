@@ -27,15 +27,18 @@ object JavacDiagnostic {
       """cannot find symbol(?m)\s+symbol:\s+([^ ]+)\s+(.*)(?m)\s+location:\s+(.*)""".r
     private val WithoutLocation =
       """cannot find symbol(?m)\s+symbol:\s+([^ ]+)\s+(.*)""".r
+    private def hasStringCode(d: l.Diagnostic): Boolean =
+      d.getCode != null && d.getCode.isLeft
+
     def unapply(d: l.Diagnostic): Option[CannotFindSymbol] =
       d.getMessageAsString.trim() match {
-        case WithLocation(kind, symbol, location) if d.getCode().isLeft() =>
+        case WithLocation(kind, symbol, location) if hasStringCode(d) =>
           Some(
-            new CannotFindSymbol(d.getCode().getLeft(), kind, symbol, location)
+            new CannotFindSymbol(d.getCode.getLeft, kind, symbol, location)
           )
-        case WithoutLocation(kind, symbol) if d.getCode().isLeft() =>
+        case WithoutLocation(kind, symbol) if hasStringCode(d) =>
           Some(
-            new CannotFindSymbol(d.getCode().getLeft(), kind, symbol, "")
+            new CannotFindSymbol(d.getCode.getLeft, kind, symbol, "")
           )
         case _ => None
       }
