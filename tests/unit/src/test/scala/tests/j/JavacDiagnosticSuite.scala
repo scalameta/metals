@@ -2,6 +2,8 @@ package tests.j
 
 import scala.meta.internal.jpc.JavacDiagnostic
 
+import org.eclipse.{lsp4j => l}
+
 class JavacDiagnosticSuite extends BaseJavaPruneCompilerSuite {
   def checkSymbolsNotFound(
       name: munit.TestOptions,
@@ -72,4 +74,13 @@ class JavacDiagnosticSuite extends BaseJavaPruneCompilerSuite {
     "a/A.java",
     "class - FileVisitResult - NO LOCATION",
   )
+
+  test("cannot-find-symbol-without-code") {
+    val diagnostic = new l.Diagnostic(
+      new l.Range(new l.Position(0, 0), new l.Position(0, 1)),
+      "cannot find symbol\n  symbol:   class Foo\n  location: class a.A",
+    )
+    assertEquals(diagnostic.getCode, null)
+    assert(JavacDiagnostic.CannotFindSymbol.unapply(diagnostic).isEmpty)
+  }
 }
