@@ -9,7 +9,12 @@ import scala.util.control.NonFatal
 object JdbcEnrichments {
   implicit class XtensionConnection(conn: Connection) {
     private val errorMessage =
-      "You might need to remove .metals/metals.mv.db file and restart Metals."
+      "You might need to remove the metals.mv.db file and restart Metals."
+
+    private def handleError(e: Throwable): Unit =
+      if (!H2ConnectionProvider.recoverIfBroken(conn, e))
+        scribe.error(errorMessage, e)
+
     def update[T](
         query: String
     )(updateStatement: PreparedStatement => Unit): Int = try {
@@ -28,10 +33,7 @@ object JdbcEnrichments {
       }
     } catch {
       case NonFatal(e) =>
-        scribe.error(
-          errorMessage,
-          e,
-        )
+        handleError(e)
         0
     }
 
@@ -58,10 +60,7 @@ object JdbcEnrichments {
       }
     } catch {
       case NonFatal(e) =>
-        scribe.error(
-          errorMessage,
-          e,
-        )
+        handleError(e)
         Nil
     }
   }
