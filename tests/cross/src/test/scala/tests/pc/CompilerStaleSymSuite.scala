@@ -5,6 +5,36 @@ import tests.BaseCompletionSuite
 
 class CompilerStaleSymSuite extends BaseCompletionSuite {
 
+  for {
+    name <- List("plain", "form-data", "type")
+    kind <- List("object", "class")
+  } test(s"display-shortening-preserves-compiler-symbol-$kind-$name") {
+    val resultType =
+      if (kind == "object") s"Tokens.`$name`.type" else s"Tokens.`$name`"
+    val model = s"""|package sample
+                    |object Tokens { $kind `$name` { def marker: Int = 42 } }
+                    |object Model {
+                    |  def token: $resultType = ???
+                    |  tok@@
+                    |}
+                    |""".stripMargin
+    assert(getItems(model, "Model.scala").nonEmpty)
+    assert(getItems(model, "Model.scala", restart = false).nonEmpty)
+    val value =
+      if (kind == "object") s"Tokens.`$name`" else s"new Tokens.`$name`"
+    val items = getItems(
+      s"""|package sample
+          |object Caller {
+          |  val token = $value
+          |  token.mar@@
+          |}
+          |""".stripMargin,
+      "Caller.scala",
+      restart = false
+    )
+    assertNoDiff(items.map(_.getLabel).mkString("\n"), "marker: Int")
+  }
+
   checkRenamedTopelevel(
     "multiple-requests",
     "Metals",

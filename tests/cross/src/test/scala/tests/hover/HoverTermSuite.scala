@@ -4,6 +4,27 @@ import tests.pc.BaseHoverSuite
 
 class HoverTermSuite extends BaseHoverSuite {
 
+  if (!scalaVersion.startsWith("3.")) {
+    check(
+      "display-shortening-preserves-escaped-existential-binding",
+      """|object Tokens {
+         |  def pair: (`odd-name`, `odd-name`) forSome { type `odd-name` <: CharSequence } = ???
+         |  <<pa@@ir>>
+         |}
+         |""".stripMargin,
+      """|**Expression type**:
+         |```scala
+         |(`odd-name`, `odd-name`)
+         |```
+         |**Symbol signature**:
+         |```scala
+         |def pair: (`odd-name`, `odd-name`) forSome { type `odd-name` <: CharSequence }
+         |```
+         |""".stripMargin,
+      repeat = 2
+    )
+  }
+
   check(
     "map",
     """object a {
