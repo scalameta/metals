@@ -5,6 +5,7 @@ import java.sql.Connection
 import java.sql.DriverManager
 import java.sql.SQLException
 import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
 import scala.util.Try
@@ -17,6 +18,7 @@ import scala.meta.io.AbsolutePath
 
 import org.flywaydb.core.Flyway
 import org.flywaydb.core.api.FlywayException
+import org.h2.api.ErrorCode
 import org.h2.mvstore.DataUtils
 import org.h2.mvstore.MVStoreException
 import org.h2.tools.Upgrade
@@ -42,6 +44,13 @@ abstract class H2ConnectionProvider(
       case empty @ ConnectionState.Empty =>
         if (ref.compareAndSet(empty, ConnectionState.InProgress)) {
           val conn = tryAutoServer()
+          val isFileBacked =
+            Try(conn.getMetaData().getURL().startsWith("jdbc:h2:file:"))
+              .getOrElse(false)
+          H2ConnectionProvider.connections.put(
+            conn,
+            H2ConnectionProvider.Registration(this, isFileBacked),
+          )
           ref.set(ConnectionState.Connected(conn))
           conn
         } else
@@ -147,12 +156,13 @@ abstract class H2ConnectionProvider(
                 e.getMessage().startsWith(formatVersionChangedMessage) =>
             val info: Properties = new Properties()
             info.put("user", user)
+            val reason = "failed database upgrade"
             try {
               val didUpgrade = Upgrade.upgrade(url, info, oldVersion)
               if (didUpgrade) scribe.info(s"Upgraded H2 database.")
-              else deleteDatabase()
+              else deleteDatabase(reason)
             } catch {
-              case NonFatal(_) => deleteDatabase()
+              case NonFatal(_) => deleteDatabase(reason)
             }
 
           case e => throw e
@@ -173,16 +183,51 @@ abstract class H2ConnectionProvider(
     }
   }
 
-  private def deleteDatabase() =
+  private def deleteDatabase(reason: String): Unit =
     optDirectory.foreach { directory =>
       val dbFile = directory.resolve("metals.mv.db")
       if (dbFile.exists) {
         scribe.warn(
-          s"Deleting old database, due to failed database upgrade. Non-default build tool and build server choices will be lost."
+          s"Deleting database $dbFile, due to $reason. Non-default build tool and build server choices will be lost."
         )
-        dbFile.delete()
+        try dbFile.delete()
+        catch {
+          case NonFatal(e) =>
+            scribe.error(s"Failed to delete database $dbFile", e)
+        }
       }
     }
+
+  /**
+   * H2 closes the database when it detects corruption at runtime, after which
+   * every statement fails, but the connection still reports as valid.
+   * Since the database is only a cache, drop it and reconnect to a fresh one.
+   */
+  private def recoverFromBrokenDatabase(
+      conn: Connection,
+      error: Throwable,
+      isFileBacked: Boolean,
+  ): Unit = {
+    ref.get() match {
+      case v @ ConnectionState.Connected(current) if current eq conn =>
+        if (ref.compareAndSet(v, ConnectionState.InProgress)) {
+          try {
+            H2ConnectionProvider.connections.remove(conn)
+            scribe.warn(
+              s"H2 database in ${optDirectory.getOrElse(name)} is broken, recreating it",
+              error,
+            )
+            try conn.close()
+            catch { case NonFatal(_) => }
+            // the on-disk file may be owned by another Metals instance
+            if (isFileBacked) deleteDatabase("database corruption")
+          } finally {
+            ref.set(ConnectionState.Empty)
+          }
+        }
+      case _ =>
+    }
+  }
 
   def databaseExists(): Boolean =
     databasePath.exists(_.exists)
@@ -191,6 +236,7 @@ abstract class H2ConnectionProvider(
     ref.get() match {
       case v @ ConnectionState.Connected(conn) =>
         if (ref.compareAndSet(v, ConnectionState.Empty)) {
+          H2ConnectionProvider.connections.remove(conn)
           conn.close()
         }
       case ConnectionState.InProgress =>
@@ -200,4 +246,48 @@ abstract class H2ConnectionProvider(
     }
   }
 
+}
+
+object H2ConnectionProvider {
+
+  private case class Registration(
+      provider: H2ConnectionProvider,
+      isFileBacked: Boolean,
+  )
+
+  private val connections =
+    new ConcurrentHashMap[Connection, Registration]()
+
+  def isDatabaseBroken(error: Throwable): Boolean =
+    error match {
+      case e: SQLException
+          if e.getErrorCode() == ErrorCode.DATABASE_IS_CLOSED ||
+            e.getErrorCode() == ErrorCode.FILE_CORRUPTED_1 =>
+        true
+      case e: MVStoreException
+          if e.getErrorCode() == DataUtils.ERROR_FILE_CORRUPT ||
+            e.getErrorCode() == DataUtils.ERROR_CLOSED =>
+        true
+      case _ =>
+        val cause = error.getCause()
+        cause != null && (cause ne error) && isDatabaseBroken(cause)
+    }
+
+  /**
+   * @return true if the error means the database is unusable, in which case
+   *         the provider owning the connection deletes it and reconnects on next use.
+   */
+  def recoverIfBroken(conn: Connection, error: Throwable): Boolean = {
+    val isBroken = isDatabaseBroken(error)
+    if (isBroken) {
+      Option(connections.get(conn)).foreach { registration =>
+        registration.provider.recoverFromBrokenDatabase(
+          conn,
+          error,
+          registration.isFileBacked,
+        )
+      }
+    }
+    isBroken
+  }
 }
