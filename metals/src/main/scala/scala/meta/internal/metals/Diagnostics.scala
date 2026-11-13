@@ -303,6 +303,12 @@ final class Diagnostics(
     }
   }
 
+  /** Build server diagnostics together with presentation compiler ones (e.g. Java). */
+  def getFileAndPcDiagnostics(path: AbsolutePath): List[Diagnostic] =
+    (getFileDiagnostics(path).flatMap(toFreshDiagnostic(path, _)) ++
+      pcDiagnostics.getOrElse(path, Nil))
+      .distinctBy(d => (d.getRange, d.getMessageAsString))
+
   private def publishDiagnostics(path: AbsolutePath): Unit = {
     publishDiagnostics(
       path,

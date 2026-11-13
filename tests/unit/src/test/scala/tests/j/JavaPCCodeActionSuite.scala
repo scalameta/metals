@@ -2,6 +2,7 @@ package tests.j
 
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.InlineValueCodeAction
+import scala.meta.internal.metals.codeactions.SourceAddMissingImports
 
 class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
 
@@ -46,6 +47,7 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |}
             |""".stripMargin,
         s"""|${ImportMissingSymbol.title("SimpleFileVisitor", "java.nio.file")}
+            |${SourceAddMissingImports.title}
             |""".stripMargin,
         Nil,
       )
@@ -93,6 +95,43 @@ class JavaPCCodeActionSuite extends BaseJavaPCSuite("java-pc-code-action") {
             |""".stripMargin,
         "", // No suggestions for non-exact matches
         InlineValueCodeAction.genericTitle :: Nil,
+      )
+    } yield ()
+  }
+
+  testLSP("source-add-missing-imports") {
+    cleanWorkspace()
+    val path = "a/src/main/java/a/Example.java"
+    for {
+      _ <- initialize(
+        s"""|
+            |/metals.json
+            |{
+            |  "a": {}
+            |}
+            |/$path
+            |package a;
+            |
+            |public class Example {
+            |  public static Path path = null;
+            |  public static Instant now = null;
+            |}
+            |""".stripMargin
+      )
+      _ <- server.didOpen(path)
+      _ <- server.didFocus(path)
+      _ <- server.assertCodeAction(
+        path,
+        s"""|package a;
+            |
+            |public class <<Example>> {
+            |  public static Path path = null;
+            |  public static Instant now = null;
+            |}
+            |""".stripMargin,
+        s"""|${SourceAddMissingImports.title}
+            |""".stripMargin,
+        List(SourceAddMissingImports.kind),
       )
     } yield ()
   }
