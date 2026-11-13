@@ -6,6 +6,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContextExecutorService
 
 import tests.BaseSuite
+import tests.FileLayout
 
 class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
   def suiteName: String = "mcp-stdio-suite"
@@ -125,6 +126,33 @@ class McpStdioSuite extends BaseSuite with StdioMcpTestHelper {
           s"Import build should succeed, got: $importBuildResult",
         )
       }
+    }
+  }
+
+  test("stdio-usages-of-code-compiled-after-start") {
+    withStdioWorkspace("stdio-usages-after-start") { (client, workspace) =>
+      for {
+        _ <- client.initialize()
+        // get-usages waits for the startup indexing, which would otherwise read the new SemanticDB too.
+        _ <- client.getUsages("com.example.Hello.add", module = Some("a"))
+        _ = FileLayout.fromString(
+          """|/a/src/main/scala/com/example/User.scala
+             |package com.example
+             |
+             |object User {
+             |  def sum: Int = Hello.add(1, 2)
+             |}
+             |""".stripMargin,
+          workspace,
+        )
+        _ <- client.compileModule("a")
+        _ <- client.waitForUsages(
+          "com.example.Hello.add",
+          "User.scala",
+          module = Some("a"),
+        )
+        _ <- client.shutdown()
+      } yield ()
     }
   }
 }

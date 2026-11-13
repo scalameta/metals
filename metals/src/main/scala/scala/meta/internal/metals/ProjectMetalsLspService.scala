@@ -132,8 +132,8 @@ class ProjectMetalsLspService(
     )
 
   override val fileWatcher: FileWatcher =
-    if (Testing.isEnabled && !Testing.isFileWatchingDisabled)
-      // Only use file watcher when running tests. A lot of our tests rely on file watching notifications to pass.
+    if (watchFiles || (Testing.isEnabled && !Testing.isFileWatchingDisabled))
+      // Use the file watcher when no LSP client sends file events (standalone MCP server), and in tests that rely on them.
       register(
         new ProjectFileWatcher(
           initialServerConfig,

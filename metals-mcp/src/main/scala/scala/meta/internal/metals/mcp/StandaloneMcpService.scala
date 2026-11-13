@@ -105,7 +105,9 @@ class StandaloneMcpService(
 
   private val serverInputs: MetalsServerInputs =
     MetalsServerInputs.productionConfiguration.copy(
-      initialUserConfig = initialUserConfig.getOrElse(UserConfiguration.default)
+      initialUserConfig =
+        initialUserConfig.getOrElse(UserConfiguration.default),
+      watchFiles = true,
     )
 
   lazy val projectMetalsLspService = new ProjectMetalsLspService(

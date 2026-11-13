@@ -4,6 +4,7 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
+import java.util.concurrent.TimeoutException
 
 import scala.compat.java8.FutureConverters._
 import scala.concurrent.ExecutionContext
@@ -156,29 +157,48 @@ class TestMcpStdioClient(
       expectedModule: String,
       maxAttempts: Int = 60,
       delayMs: Long = 500,
+  ): Future[Unit] =
+    pollUntil[String](
+      () => listModules(),
+      _.linesIterator.map(_.trim).contains(s"- $expectedModule"),
+      maxAttempts,
+      delayMs,
+      _ =>
+        s"Indexing timeout: module '$expectedModule' not found after ${maxAttempts * delayMs}ms",
+    )
+
+  /** Polls get-usages until it lists `expected` (file changes reach the index asynchronously). */
+  def waitForUsages(
+      fqcn: String,
+      expected: String,
+      module: Option[String] = None,
+      maxAttempts: Int = 40,
+      delayMs: Long = 500,
+  ): Future[Unit] =
+    pollUntil[String](
+      () => getUsages(fqcn, module = module),
+      _.contains(expected),
+      maxAttempts,
+      delayMs,
+      usages =>
+        s"get-usages of $fqcn did not list '$expected' after ${maxAttempts * delayMs}ms, got: $usages",
+    )
+
+  private def pollUntil[T](
+      call: () => Future[T],
+      done: T => Boolean,
+      maxAttempts: Int,
+      delayMs: Long,
+      failure: T => String,
   ): Future[Unit] = {
-    def poll(attempt: Int): Future[Unit] = {
-      if (attempt >= maxAttempts) {
-        Future.failed(
-          new java.util.concurrent.TimeoutException(
-            s"Indexing timeout: module '$expectedModule' not found after ${maxAttempts * delayMs}ms"
-          )
-        )
-      } else {
-        listModules().flatMap { modules =>
-          if (
-            modules.linesIterator.map(_.trim).contains(s"- $expectedModule")
-          ) {
-            Future.successful(())
-          } else {
-            Future {
-              Thread.sleep(delayMs)
-            }.flatMap(_ => poll(attempt + 1))
-          }
-        }
+    def poll(attempt: Int): Future[Unit] =
+      call().flatMap { result =>
+        if (done(result)) Future.successful(())
+        else if (attempt >= maxAttempts)
+          Future.failed(new TimeoutException(failure(result)))
+        else Future { Thread.sleep(delayMs) }.flatMap(_ => poll(attempt + 1))
       }
-    }
-    poll(0)
+    poll(1)
   }
 
   def runTest(
