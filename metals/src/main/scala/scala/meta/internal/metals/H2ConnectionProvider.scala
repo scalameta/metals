@@ -44,7 +44,13 @@ abstract class H2ConnectionProvider(
       case empty @ ConnectionState.Empty =>
         if (ref.compareAndSet(empty, ConnectionState.InProgress)) {
           val conn = tryAutoServer()
-          H2ConnectionProvider.connections.put(conn, this)
+          val isFileBacked =
+            Try(conn.getMetaData().getURL().startsWith("jdbc:h2:file:"))
+              .getOrElse(false)
+          H2ConnectionProvider.connections.put(
+            conn,
+            H2ConnectionProvider.Registration(this, isFileBacked),
+          )
           ref.set(ConnectionState.Connected(conn))
           conn
         } else
@@ -200,6 +206,7 @@ abstract class H2ConnectionProvider(
   private def recoverFromBrokenDatabase(
       conn: Connection,
       error: Throwable,
+      isFileBacked: Boolean,
   ): Unit = {
     ref.get() match {
       case v @ ConnectionState.Connected(current) if current eq conn =>
@@ -212,7 +219,8 @@ abstract class H2ConnectionProvider(
             )
             try conn.close()
             catch { case NonFatal(_) => }
-            deleteDatabase("database corruption")
+            // the on-disk file may be owned by another Metals instance
+            if (isFileBacked) deleteDatabase("database corruption")
           } finally {
             ref.set(ConnectionState.Empty)
           }
@@ -242,8 +250,13 @@ abstract class H2ConnectionProvider(
 
 object H2ConnectionProvider {
 
+  private case class Registration(
+      provider: H2ConnectionProvider,
+      isFileBacked: Boolean,
+  )
+
   private val connections =
-    new ConcurrentHashMap[Connection, H2ConnectionProvider]()
+    new ConcurrentHashMap[Connection, Registration]()
 
   def isDatabaseBroken(error: Throwable): Boolean =
     error match {
@@ -267,9 +280,13 @@ object H2ConnectionProvider {
   def recoverIfBroken(conn: Connection, error: Throwable): Boolean = {
     val isBroken = isDatabaseBroken(error)
     if (isBroken) {
-      Option(connections.get(conn)).foreach(
-        _.recoverFromBrokenDatabase(conn, error)
-      )
+      Option(connections.get(conn)).foreach { registration =>
+        registration.provider.recoverFromBrokenDatabase(
+          conn,
+          error,
+          registration.isFileBacked,
+        )
+      }
     }
     isBroken
   }
