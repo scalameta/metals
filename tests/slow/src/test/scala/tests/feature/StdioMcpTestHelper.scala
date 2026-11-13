@@ -39,11 +39,18 @@ trait StdioMcpTestHelper extends WorkspaceHelper { self: munit.FunSuite =>
       name: String
   )(f: TestMcpStdioClient => Future[T])(implicit
       ec: ExecutionContext
+  ): Future[T] =
+    withStdioWorkspace(name)((client, _) => f(client))
+
+  protected def withStdioWorkspace[T](
+      name: String
+  )(f: (TestMcpStdioClient, AbsolutePath) => Future[T])(implicit
+      ec: ExecutionContext
   ): Future[T] = {
     val workspacePath = createTestWorkspace(name)
     val client = TestMcpStdioClient(workspacePath.toNIO)
 
-    f(client)
+    f(client, workspacePath)
       .andThen { case _ =>
         client.cleanup()
       }
