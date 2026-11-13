@@ -39,6 +39,9 @@ class HeaderCompilerSuite extends munit.FunSuite {
     FileLayout.fromString(layout, root = tmp())
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
     val allOptions = List(
+      // Match JavaPruneCompiler: unrelated host annotation processors must
+      // not participate in the header-compilation task.
+      "-proc:none",
       "-classpath",
       embedded.javaHeaderCompiler.toNIO.toString,
     ) ++ options
@@ -147,6 +150,246 @@ class HeaderCompilerSuite extends munit.FunSuite {
        |}
        |""".stripMargin,
   )
+
+  test("explicit-constructor-invocations-remain-valid") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base {
+                    |  public Base(String value) {}
+                    |  public Base(String value, Throwable cause) {}
+                    |}
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) { super(value); }
+                    |  public Derived(String value, Throwable cause) {
+                    |    super(value, cause);
+                    |  }
+                    |  public Derived() { this("default"); }
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  public Derived create() { return new Derived(); }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.map(_.getCode), Nil)
+  }
+
+  test("retained-constructor-switch-preserves-constant-labels") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  static final int A = 1;
+                    |  static final int B = A + 1;
+                    |  public Derived(int value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.map(_.getCode), Nil)
+  }
+
+  test("retained-constructor-preserves-imported-interface-string-constants") {
+    val layout = """|/example/Labels.java
+                    |package example;
+                    |public interface Labels {
+                    |  String A = "a";
+                    |  String B = A + "b";
+                    |}
+                    |/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |import static example.Labels.A;
+                    |import static example.Labels.B;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
+  }
+
+  checkNoErrors(
+    "unrelated-nonconstant-initializers-remain-pruned",
+    """|/example/Base.java
+       |package example;
+       |public class Base { public Base(int value) {} }
+       |/example/Derived.java
+       |package example;
+       |public class Derived extends Base {
+       |  static final int A = (int) (1L << 1);
+       |  static final int B = true ? +A + 1 : -A;
+       |  static final int UNUSED = method("bad argument");
+       |  static int method(int value) { return value; }
+       |  public Derived(int value) {
+       |    super(switch (value) {
+       |      case A -> 1;
+       |      case B -> 2;
+       |      default -> 0;
+       |    });
+       |  }
+       |}
+       |""".stripMargin,
+  )
+
+  checkNoErrors(
+    "incompatible-constant-literals-remain-pruned",
+    """|/example/Constants.java
+       |package example;
+       |public interface Constants {
+       |  int TEXT = "text";
+       |  String NUMBER = 42;
+       |  boolean INTEGER = 1;
+       |  int BOOLEAN = true;
+       |  int LONG = 1L;
+       |  float DOUBLE = 1.0;
+       |  byte OVERFLOW = 256;
+       |}
+       |/example/Dependency.java
+       |package example;
+       |public class Dependency {
+       |  static final int BROKEN = ("text");
+       |}
+       |""".stripMargin,
+  )
+
+  test("compatible-constant-literals-retain-their-values") {
+    val layout = """|/example/Constants.java
+                    |package example;
+                    |public interface Constants {
+                    |  byte BYTE = 1;
+                    |  short SHORT = 2;
+                    |  char CHAR = 3;
+                    |  int INT = 'a';
+                    |  long LONG = 4;
+                    |  float FLOAT = 5L;
+                    |  double DOUBLE = 6.0f;
+                    |  boolean BOOLEAN = true;
+                    |  String TEXT = "text";
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  int use(int n) {
+                    |    return switch (n) {
+                    |      case Constants.BYTE -> 1;
+                    |      case Constants.SHORT -> 2;
+                    |      case Constants.CHAR -> 3;
+                    |      case Constants.INT -> 4;
+                    |      default -> 0;
+                    |    };
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(
+        layout,
+        options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+      ),
+      Nil,
+    )
+  }
+
+  test("real-duplicate-constructor-case-labels-remain-errors") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(int value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  static final int A = 1;
+                    |  static final int B = 1;
+                    |  public Derived(int value) {
+                    |    super(switch (value) {
+                    |      case A -> 1;
+                    |      case B -> 2;
+                    |      default -> 0;
+                    |    });
+                    |  }
+                    |}
+                    |""".stripMargin
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(
+      errors.map(_.getCode),
+      List("compiler.err.duplicate.case.label"),
+    )
+  }
+
+  test("qualified-super-constructor-remains-valid") {
+    val layout = """|/example/Outer.java
+                    |package example;
+                    |public class Outer {
+                    |  public class Inner { public Inner(String value) {} }
+                    |}
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Outer.Inner {
+                    |  public Derived(Outer outer) { outer.super("value"); }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
+  }
+
+  test("kept-caller-constructor-errors-remain-errors") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(String value) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  public Derived(String value) { super(value); }
+                    |}
+                    |/example/Caller.java
+                    |package example;
+                    |public class Caller {
+                    |  public Derived create() { return new Derived(42); }
+                    |}
+                    |""".stripMargin
+    val errors = compileFiles(
+      layout,
+      options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
+    ).filter(_.getKind == Diagnostic.Kind.ERROR)
+    assertEquals(errors.size, 1)
+    assert(errors.head.getSource.getName.endsWith("Caller.java"))
+    assertEquals(errors.head.getCode, "compiler.err.prob.found.req")
+  }
 
   checkNoErrors(
     "interface",
