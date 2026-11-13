@@ -288,6 +288,14 @@ val sharedScalacOptions = List(
   }
 )
 
+// Modules built only on Scala 2.13 (with -Xsource:3) use the Scala 3 import
+// syntax, so OrganizeImports must not rewrite `*` / `as` back to `_` / `=>`.
+val scala213OnlyScalafix = Seq(
+  scalafixConfig := Some(
+    (ThisBuild / baseDirectory).value / ".scalafix-scala213.conf"
+  )
+)
+
 val sharedSettings = sharedScalacOptions ++ List(
   Compile / doc / sources := Seq.empty,
   Compile / resourceGenerators += Def.task {
@@ -626,6 +634,7 @@ lazy val `mtags-protobuf` = project
   .dependsOn(interfaces, mtagsShared, `semanticdb-protoc`)
 
 lazy val `gradle-extractor` = project
+  .settings(scala213OnlyScalafix)
   .in(file("gradle-extractor"))
   .settings(sharedSettings)
   .settings(
@@ -646,6 +655,7 @@ lazy val `gradle-extractor` = project
   .dependsOn(interfaces)
 
 lazy val metals = project
+  .settings(scala213OnlyScalafix)
   .settings(
     sharedSettings,
     Compile / run / fork := true,
@@ -787,6 +797,7 @@ lazy val metals = project
   .enablePlugins(BuildInfoPlugin)
 
 lazy val `metals-mcp` = project
+  .settings(scala213OnlyScalafix)
   .in(file("metals-mcp"))
   .settings(
     sharedSettings,
@@ -1099,6 +1110,7 @@ lazy val metalsDependencies = project
   .disablePlugins(ScalafixPlugin)
 
 lazy val unit = project
+  .settings(scala213OnlyScalafix)
   .in(file("tests/unit"))
   .settings(
     testSettings,
@@ -1130,6 +1142,7 @@ lazy val unit = project
   .enablePlugins(BuildInfoPlugin)
 
 lazy val slow = project
+  .settings(scala213OnlyScalafix)
   .in(file("tests/slow"))
   .settings(
     testSettings,
