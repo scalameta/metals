@@ -1,6 +1,7 @@
 package scala.meta.internal.metals.mcp
 
 import java.nio.file.Path
+import java.time.Duration
 import java.util.Arrays
 import java.util.function.BiFunction
 import java.util.{List => JList}
@@ -10,6 +11,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.reflect.ClassTag
+import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
@@ -37,8 +39,10 @@ import io.modelcontextprotocol.server.McpServerFeatures.AsyncToolSpecification
 import io.modelcontextprotocol.spec.McpSchema.CallToolRequest
 import io.modelcontextprotocol.spec.McpSchema.CallToolResult
 import io.modelcontextprotocol.spec.McpSchema.Content
+import io.modelcontextprotocol.spec.McpSchema.ProgressNotification
 import io.modelcontextprotocol.spec.McpSchema.TextContent
 import io.modelcontextprotocol.spec.McpSchema.Tool
+import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
 import tools.jackson.databind.DeserializationFeature
 import tools.jackson.databind.json.JsonMapper
@@ -156,7 +160,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, _) =>
+      withImportWait { (_, _) =>
         val allTargets = buildTargets.allBuildTargetIds
         if (allTargets.isEmpty)
           Future
@@ -216,7 +220,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val path = arguments.getFileInFocus
         if (path.exists) {
           compilations
@@ -318,7 +322,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val module = arguments.getAs[String]("module")
         val targets = (buildTargets.allScala ++ buildTargets.allJava).toList
         targets.find(_.displayName == module) match {
@@ -446,7 +450,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val testClass = arguments.getAs[String]("testClass")
         val optPath = arguments
           .getOptAs[String]("testFile")
@@ -509,19 +513,18 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val query = arguments.getAs[String]("query")
-        indexingPromise.future.flatMap { _ =>
-          queryEngine
-            .globSearch(query, Set.empty)
-            .map(result =>
-              CallToolResult
-                .builder()
-                .content(createContent(result.show))
-                .isError(false)
-                .build()
-            )
-        }.toMono
+        queryEngine
+          .globSearch(query, Set.empty)
+          .map(result =>
+            CallToolResult
+              .builder()
+              .content(createContent(result.show))
+              .isError(false)
+              .build()
+          )
+          .toMono
       },
     )
   }
@@ -558,7 +561,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val query = arguments.getAs[String]("query")
         val symbolTypes = arguments.getAsList[String]("symbolType")
 
@@ -572,17 +575,16 @@ trait MetalsMcpTools extends Cancelable {
         val symbolTypesSet =
           symbolTypes.flatMap(s => SymbolType.values.find(_.name == s)).toSet
 
-        indexingPromise.future.flatMap { _ =>
-          queryEngine
-            .globSearch(query, symbolTypesSet)
-            .map(result =>
-              CallToolResult
-                .builder()
-                .content(createContent(result.show))
-                .isError(false)
-                .build()
-            )
-        }.toMono
+        queryEngine
+          .globSearch(query, symbolTypesSet)
+          .map(result =>
+            CallToolResult
+              .builder()
+              .content(createContent(result.show))
+              .isError(false)
+              .build()
+          )
+          .toMono
       },
     )
   }
@@ -630,24 +632,23 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
         val searchAllTargets = arguments
           .getOptAs[Boolean]("searchAllTargets")
           .getOrElse(false)
-        indexingPromise.future.flatMap { _ =>
-          queryEngine
-            .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
-            .map(result =>
-              CallToolResult
-                .builder()
-                .content(createContent(result.show))
-                .isError(result.results.isEmpty)
-                .build()
-            )
-        }.toMono
+        queryEngine
+          .inspect(fqcn, pathOpt, moduleOpt, searchAllTargets)
+          .map(result =>
+            CallToolResult
+              .builder()
+              .content(createContent(result.show))
+              .isError(result.results.isEmpty)
+              .build()
+          )
+          .toMono
       },
     )
   }
@@ -689,11 +690,11 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
-        indexingPromise.future.map { _ =>
+        Future {
           queryEngine.getDocumentation(fqcn, pathOpt, moduleOpt) match {
             case Some(result) =>
               CallToolResult
@@ -750,11 +751,11 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (exchange, arguments) =>
+      withImportWait { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
-        indexingPromise.future.map { _ =>
+        Future {
           val result = queryEngine.getUsages(fqcn, pathOpt, moduleOpt)
           CallToolResult
             .builder()
@@ -897,7 +898,7 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (_, _) =>
+      withImportWait { (_, _) =>
         Future {
           val modules =
             buildTargets.allBuildTargetIds.flatMap(
@@ -1263,12 +1264,12 @@ trait MetalsMcpTools extends Cancelable {
       .build()
     new AsyncToolSpecification(
       tool,
-      withErrorHandling { (_, arguments) =>
+      withImportWait { (_, arguments) =>
         val fqcn = arguments.getFqcn
         val pathOpt = arguments.getFileInFocusOpt
         val moduleOpt = arguments.getOptNoEmptyString("module")
         val detailed = arguments.getOptAs[Boolean]("detailed").getOrElse(false)
-        indexingPromise.future.map { _ =>
+        Future {
           queryEngine.getSource(fqcn, pathOpt, moduleOpt, detailed) match {
             case Some((_, content)) =>
               CallToolResult
@@ -1323,6 +1324,71 @@ trait MetalsMcpTools extends Cancelable {
       .build()
 
   // Helper methods
+
+  /** Like `withErrorHandling`, but waits for the first build import to finish. */
+  protected def withImportWait(
+      f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
+  ): BiFunction[
+    McpAsyncServerExchange,
+    CallToolRequest,
+    Mono[CallToolResult],
+  ] = {
+    val handler = withErrorHandling(f)
+    (exchange, request) => {
+      val runIfImported = Mono.defer[CallToolResult] { () =>
+        if (indexingPromise.isCompleted) handler(exchange, request)
+        else errorResult("No build imported yet. Run `import-build` first.")
+      }
+      val runningImport =
+        if (indexingPromise.isCompleted) None
+        else connectionProvider.Connect.getOngoingRequest()
+      runningImport match {
+        case None => runIfImported
+        case Some(connectRequest) =>
+          // The request also compiles open files after indexing.
+          val importDone = Future
+            .firstCompletedOf(
+              List(indexingPromise.future, connectRequest.promise.future)
+            )
+            .transform(_ => Success(()))
+            .toMono
+          val waiting = Option(request.progressToken()) match {
+            case None => importDone.`then`()
+            case Some(progressToken) =>
+              Flux
+                .interval(Duration.ZERO, importProgressInterval)
+                .takeUntilOther(importDone)
+                .concatMap { tick =>
+                  val seconds = tick * importProgressInterval.getSeconds
+                  exchange
+                    .progressNotification(
+                      ProgressNotification
+                        .builder(progressToken, seconds.toDouble)
+                        .message(
+                          s"Waiting for build import to finish (${seconds}s)"
+                        )
+                        .build()
+                    )
+                    .onErrorResume(_ => Mono.empty[Void]())
+                }
+                .`then`()
+          }
+          waiting.`then`(runIfImported)
+      }
+    }
+  }
+
+  private val importProgressInterval = Duration.ofSeconds(5)
+
+  private def errorResult(message: String): Mono[CallToolResult] =
+    Mono.just(
+      CallToolResult
+        .builder()
+        .content(createContent(message))
+        .isError(true)
+        .build()
+    )
+
   protected def withErrorHandling(
       f: (McpAsyncServerExchange, JMap[String, Object]) => Mono[CallToolResult]
   ): BiFunction[

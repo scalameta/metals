@@ -103,12 +103,6 @@ class TestMcpStdioClient(
     callTool("typed-glob-search", params).map(_.mkString)
   }
 
-  def globSearch(query: String): Future[String] = {
-    val params = objectMapper.createObjectNode()
-    params.put("query", query)
-    callTool("glob-search", params).map(_.mkString)
-  }
-
   def inspect(
       fqcn: String,
       fileInFocus: Option[String] = None,

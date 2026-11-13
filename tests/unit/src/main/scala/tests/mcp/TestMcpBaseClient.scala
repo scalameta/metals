@@ -48,6 +48,12 @@ abstract class TestMcpBaseClient(implicit protected val ec: ExecutionContext) {
     callTool("compile-full", params).map(_.mkString)
   }
 
+  def globSearch(query: String): Future[String] = {
+    val params = objectMapper.createObjectNode()
+    params.put("query", query)
+    callTool("glob-search", params).map(_.mkString)
+  }
+
   def listModules(): Future[String] = {
     val params = objectMapper.createObjectNode()
     callTool("list-modules", params).map(_.mkString)
