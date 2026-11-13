@@ -269,6 +269,63 @@ class DetectionSuite extends BaseSuite {
   )
 
   /**
+   * ------------ Scala CLI ------------*
+   */
+  def checkScalaCliRoot(
+      name: String,
+      layout: String,
+      expectedRoot: AbsolutePath => Option[AbsolutePath],
+  )(implicit loc: Location): Unit = {
+    test(s"scala-cli-$name") {
+      val workspace = FileLayout.fromString(layout)
+      workspace.toFile.deleteOnExit()
+      assertEquals(
+        BuildTools.default(workspace).scalaCliProject.map(_.toNIO.toRealPath()),
+        expectedRoot(workspace).map(_.toNIO.toRealPath()),
+      )
+    }
+  }
+
+  private val scalaCliBspJson =
+    """|/.bsp/scala-cli.json
+       |{"name":"scala-cli","argv":["scala-cli","bsp","--json-options",".scala-build/ide-options-v2.json","."],"version":"1.18.0","bspVersion":"2.1.0-M4","languages":["scala","java"]}
+       |""".stripMargin
+
+  checkScalaCliRoot(
+    "root-project-scala",
+    """|/project.scala
+       |//> using scala 3.3.6
+       |""".stripMargin,
+    ws => Some(ws),
+  )
+
+  checkScalaCliRoot(
+    "subdirectory-project-scala",
+    """|/sub/project.scala
+       |//> using scala 3.3.6
+       |""".stripMargin,
+    ws => Some(ws.resolve("sub")),
+  )
+
+  checkScalaCliRoot(
+    "bsp-root",
+    scalaCliBspJson,
+    ws => Some(ws),
+  )
+
+  checkScalaCliRoot(
+    "bsp-root-with-subdirectory-project-scala",
+    s"""|$scalaCliBspJson
+        |/sub/project.scala
+        |//> using scala 3.3.6
+        |/toy/A.scala
+        |package p
+        |object A
+        |""".stripMargin,
+    ws => Some(ws),
+  )
+
+  /**
    * ------------ Multiple Build Files ------------*
    */
   def checkMulti(name: String, layout: String, isTrue: Boolean = true)(implicit
