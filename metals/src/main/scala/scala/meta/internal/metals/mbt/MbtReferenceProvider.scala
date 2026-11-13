@@ -5,7 +5,7 @@ import java.time.Duration
 import java.util.Collections
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
-import java.util.{LinkedHashMap => JLinkedHashMap}
+import java.util.LinkedHashMap as JLinkedHashMap
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -25,7 +25,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.ImplementationsResult
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.Synthetics
@@ -39,16 +39,16 @@ import scala.meta.internal.metals.noAdjustRange
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TypeRef
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.ReferenceParams
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
+import org.eclipse.lsp4j as l
 
 class MbtReferenceProvider(
     mbt: MbtWorkspaceSymbolProvider,

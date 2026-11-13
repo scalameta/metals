@@ -4,9 +4,9 @@ import java.net.URI
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.semver.SemVer
 import scala.meta.io.AbsolutePath
 

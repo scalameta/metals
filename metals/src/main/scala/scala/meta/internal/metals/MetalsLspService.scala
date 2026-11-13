@@ -1,7 +1,7 @@
 package scala.meta.internal.metals
 
 import java.net.URI
-import java.nio.file._
+import java.nio.file.*
 import java.util
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ScheduledExecutorService
@@ -14,7 +14,7 @@ import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.TimeoutException
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -30,7 +30,7 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.implementation.ImplementationProvider
 import scala.meta.internal.implementation.Supermethods
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.StdReportContext
 import scala.meta.internal.metals.callHierarchy.CallHierarchyProvider
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
@@ -49,7 +49,7 @@ import scala.meta.internal.metals.debug.DiscoveryFailures
 import scala.meta.internal.metals.doctor.Doctor
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
-import scala.meta.internal.metals.findfiles._
+import scala.meta.internal.metals.findfiles.*
 import scala.meta.internal.metals.formatting.OnTypeFormattingProvider
 import scala.meta.internal.metals.formatting.RangeFormattingProvider
 import scala.meta.internal.metals.mbt.MbtBuild
@@ -64,7 +64,7 @@ import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.metals.testProvider.TestSuitesProvider
 import scala.meta.internal.metals.typeHierarchy.TypeHierarchyProvider
 import scala.meta.internal.metals.watcher.FileWatcher
-import scala.meta.internal.mtags._
+import scala.meta.internal.mtags.*
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.internal.parsing.DocumentLinksProvider
 import scala.meta.internal.parsing.DocumentSymbolProvider
@@ -82,12 +82,12 @@ import scala.meta.pc.CancelToken
 import scala.meta.tokenizers.TokenizeException
 
 import ch.epfl.scala.bsp4j.CompileReport
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.common.collect.HashBiMap
 import org.eclipse.lsp4j.ExecuteCommandParams
-import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
+import org.eclipse.lsp4j as l
 
 /**
  * Metals implementation of the Scala Language Service.
@@ -134,7 +134,7 @@ abstract class MetalsLspService(
     with TextDocumentService
     with IndexProviders
     with ModulesService {
-  import serverInputs._
+  import serverInputs.*
 
   def focusedDocument: Option[AbsolutePath] = getFocusedDocument()
   def shellRunner: ShellRunner

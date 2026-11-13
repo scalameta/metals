@@ -33,7 +33,7 @@ import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JavaTarget
 import scala.meta.internal.metals.Messages.CheckDoctor
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.PopupChoiceReset
 import scala.meta.internal.metals.Report
@@ -50,7 +50,7 @@ import scala.meta.internal.metals.utils.TimestampedFile
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Helps the user figure out what is mis-configured in the build through the "Run doctor" command.
@@ -173,7 +173,7 @@ final class Doctor(
   }
 
   private def selectedImportBuildMessage(): Option[String] = {
-    import scala.concurrent.duration._
+    import scala.concurrent.duration.*
     tables.dismissedNotifications.ImportChanges.whenExpires().map {
       expiration =>
         val whenString =

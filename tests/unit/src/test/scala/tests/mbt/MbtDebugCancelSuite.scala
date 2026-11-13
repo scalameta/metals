@@ -7,7 +7,7 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Properties
 
 import scala.meta.internal.builds.BuildTool

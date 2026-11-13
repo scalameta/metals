@@ -2,7 +2,7 @@ package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
 
-import scala.meta.internal.tvp._
+import scala.meta.internal.tvp.*
 
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.MessageActionItem

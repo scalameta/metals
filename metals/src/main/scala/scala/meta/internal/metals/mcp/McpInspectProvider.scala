@@ -3,13 +3,13 @@ package scala.meta.internal.metals.mcp
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Random
-import scala.util.chaining._
+import scala.util.chaining.*
 
 import scala.meta.internal.metals.CompilerOffsetParams
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

@@ -6,16 +6,16 @@ import scala.meta.internal.implementation.MethodImplementation
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.SymbolDefinition
-import scala.meta.internal.mtags.{Symbol => MSymbol}
-import scala.meta.internal.search.SymbolHierarchyOps._
+import scala.meta.internal.mtags.Symbol as MSymbol
+import scala.meta.internal.search.SymbolHierarchyOps.*
 import scala.meta.internal.semanticdb.ClassSignature
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.TextDocument

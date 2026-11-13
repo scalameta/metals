@@ -6,7 +6,7 @@ import scala.util.Try
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ScalaVersions
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.semver.SemVer
 
 import coursierapi.Dependency

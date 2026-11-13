@@ -20,7 +20,7 @@ import scala.meta.internal.bsp.ConnectionBspStatus
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsProjectDirectories
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
@@ -57,7 +57,7 @@ final class BloopServers(
     sh: ScheduledExecutorService,
 )(implicit ec: ExecutionContextExecutorService) {
 
-  import BloopServers._
+  import BloopServers.*
 
   private val bloopWorkingDir = createBloopWorkingDir
   private val bloopDaemonDir = bloopWorkingDir.resolve("daemon")

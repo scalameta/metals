@@ -4,14 +4,14 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class PatternMatchRefactor(trees: Trees) extends CodeAction {
 

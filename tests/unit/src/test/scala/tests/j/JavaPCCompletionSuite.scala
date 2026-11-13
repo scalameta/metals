@@ -1,6 +1,6 @@
 package tests.j
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.TextEdits
 

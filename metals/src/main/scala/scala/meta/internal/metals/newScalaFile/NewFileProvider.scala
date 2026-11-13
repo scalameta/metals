@@ -14,14 +14,14 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.PackageProvider
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
-import scala.meta.internal.metals.newScalaFile.NewFileTypes._
+import scala.meta.internal.metals.newScalaFile.NewFileTypes.*
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
 import scala.meta.io.AbsolutePath

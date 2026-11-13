@@ -1,7 +1,7 @@
 package tests
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsPasteParams
 import scala.meta.internal.metals.ServerCommands
 

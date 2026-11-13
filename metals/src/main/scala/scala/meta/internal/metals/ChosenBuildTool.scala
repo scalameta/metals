@@ -3,7 +3,7 @@ package scala.meta.internal.metals
 import java.sql.Connection
 import java.util.concurrent.atomic.AtomicReference
 
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 
 class ChosenBuildTool(conn: () => Connection) {
 

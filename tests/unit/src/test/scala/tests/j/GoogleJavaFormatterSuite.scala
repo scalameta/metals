@@ -3,10 +3,10 @@ package tests.j
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.GoogleJavaFormatter
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.config.GoogleJavaFormatStyle
-import scala.meta.{inputs => m}
+import scala.meta.inputs as m
 
 import munit.Location
 import tests.BaseSuite

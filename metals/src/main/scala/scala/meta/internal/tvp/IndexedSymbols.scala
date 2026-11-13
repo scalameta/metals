@@ -5,12 +5,12 @@ import java.io.UncheckedIOException
 import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
-import scala.meta._
+import scala.meta.*
 import scala.meta.inputs.Input
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer

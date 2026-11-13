@@ -7,7 +7,7 @@ import java.nio.file.Paths
 import scala.util.Try
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.FallbackClasspathConfig
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.io.AbsolutePath

@@ -3,7 +3,7 @@ package classFinder
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.parsing.ClassFinderGranularity
 import scala.meta.io.AbsolutePath
 

@@ -12,8 +12,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspConfigGenerationStatus.BspConfigGenerationStatus
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.*
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
@@ -31,7 +31,7 @@ case class SbtBuildTool(
     with BuildServerProvider
     with VersionRecommendation {
 
-  import SbtBuildTool._
+  import SbtBuildTool.*
 
   /**
    * Returns path to a local copy of sbt-launch.jar.

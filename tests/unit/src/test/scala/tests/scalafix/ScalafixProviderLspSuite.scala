@@ -3,10 +3,10 @@ package tests.scalafix
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalafixProvider
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier

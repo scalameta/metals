@@ -3,7 +3,7 @@ package tests.codeactions
 import scala.meta.internal.metals.codeactions.RemoveRedundantCast
 import scala.meta.internal.metals.config.UserConfiguration
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.MbtTestInitializer
 
 class RemoveRedundantCastLspSuite

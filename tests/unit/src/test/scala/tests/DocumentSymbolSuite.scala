@@ -1,13 +1,13 @@
 package tests
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.DocumentSymbolProvider
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 
-import tests.MetalsTestEnrichments._
+import tests.MetalsTestEnrichments.*
 
 /**
  * Checks the positions of document symbols inside a document

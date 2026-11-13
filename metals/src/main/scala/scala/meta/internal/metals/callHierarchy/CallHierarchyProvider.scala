@@ -4,9 +4,9 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Defn
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.*
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.internal.parsing.Trees
@@ -24,7 +24,7 @@ import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final case class CallHierarchyProvider(
     workspace: AbsolutePath,

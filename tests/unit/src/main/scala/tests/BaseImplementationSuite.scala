@@ -2,7 +2,7 @@ package tests
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 abstract class BaseImplementationSuite(name: String)
     extends BaseRangesSuite(name) {

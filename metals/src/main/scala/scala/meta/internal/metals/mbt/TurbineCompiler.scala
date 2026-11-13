@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.util.Optional
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
-import java.{util => ju}
+import java.util as ju
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager
@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 import scala.util.control.NonFatal
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.internal.metals.BatchedFunction
 import scala.meta.internal.metals.PcQueryContext
 import scala.meta.internal.metals.ReportContext

@@ -13,8 +13,8 @@ import scala.meta.inputs.Input
 import scala.meta.internal.jpc.JavaDiagnostics
 import scala.meta.internal.jpc.Positions
 import scala.meta.internal.jpc.SourceJavaFileObject
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.*
 import scala.meta.io.AbsolutePath
 
 import com.sun.source.tree.AnnotationTree
@@ -34,13 +34,13 @@ import com.sun.tools.javac.tree.JCTree.JCClassDecl
 import com.sun.tools.javac.tree.JCTree.JCMethodDecl
 import com.sun.tools.javac.tree.JCTree.JCVariableDecl
 import com.sun.tools.javac.tree.JCTree.Tag
-import com.sun.tools.javac.tree.{JCTree => JavacJCTree}
+import com.sun.tools.javac.tree.JCTree as JavacJCTree
 import com.sun.tools.javac.util.Context
 import com.sun.tools.javac.util.Log
 import com.sun.tools.javac.util.Name
 import com.sun.tools.javac.util.Options
-import com.sun.tools.javac.util.{Position => JavacPosition}
-import org.eclipse.{lsp4j => l}
+import com.sun.tools.javac.util.Position as JavacPosition
+import org.eclipse.lsp4j as l
 
 class JavaTrees(buffers: Buffers) {
 
@@ -244,7 +244,7 @@ class JavaTrees(buffers: Buffers) {
       context.put(Log.errKey, silentWriter)
       val diagnostics = new DiagnosticCollector[JavaFileObject]()
       context.put(
-        classOf[javax.tools.DiagnosticListener[_]],
+        classOf[javax.tools.DiagnosticListener[?]],
         diagnostics,
       )
       val fileManager =

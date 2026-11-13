@@ -17,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.internal.metals.AdjustLspData
 import scala.meta.internal.metals.AdjustedLspData
 import scala.meta.internal.metals.Buffers
@@ -28,7 +28,7 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -40,7 +40,7 @@ import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.pc.CompilerJobQueue
 import scala.meta.internal.pc.InterruptException
-import scala.meta.internal.worksheets.MdocEnrichments._
+import scala.meta.internal.worksheets.MdocEnrichments.*
 import scala.meta.internal.worksheets.WorksheetProvider.MdocKey
 import scala.meta.internal.worksheets.WorksheetProvider.MdocRef
 import scala.meta.io.AbsolutePath
@@ -432,7 +432,7 @@ class WorksheetProvider(
   ): List[Path] = {
     Fetch
       .create()
-      .withDependencies(dependencies: _*)
+      .withDependencies(dependencies*)
       .addClassifiers("sources")
       .fetchResult()
       .getFiles()

@@ -9,21 +9,21 @@ import scala.meta.Tree
 import scala.meta.XtensionSyntax
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class ConvertToNamedArguments(
     trees: Trees,
     compilers: Compilers,
 ) extends CodeAction {
 
-  import ConvertToNamedArguments._
+  import ConvertToNamedArguments.*
 
   case class ConvertToNamedArgsData(
       position: l.TextDocumentPositionParams,

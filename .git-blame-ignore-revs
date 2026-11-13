@@ -29,3 +29,6 @@ cb3a4275b4536030d133d19be4fd1d4b1aa9135b
 
 # Scala Steward: Reformat with scalafmt 3.10.4
 21ca58ca75a49432249952da607ccc404491d9be
+
+# Reformat 2.13-only modules to Scala 3 import syntax
+54785c359ba8e9663841c6b13c6b1a4487b07c7c

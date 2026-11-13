@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import java.sql.Connection
 
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier

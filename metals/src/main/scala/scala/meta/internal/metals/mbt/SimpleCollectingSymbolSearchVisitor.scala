@@ -1,12 +1,12 @@
 package scala.meta.internal.metals.mbt
 
 import java.nio.file.Path
-import java.{util => ju}
+import java.util as ju
 
 import scala.meta.internal.mtags.Symbol
 import scala.meta.pc.SymbolSearchVisitor
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class SimpleCollectingSymbolSearchVisitor extends SymbolSearchVisitor {
   var results = new ju.concurrent.ConcurrentLinkedQueue[l.SymbolInformation]()

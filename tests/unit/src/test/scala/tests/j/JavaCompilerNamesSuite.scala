@@ -17,7 +17,7 @@ import org.slf4j.LoggerFactory
 
 class JavaCompilerNamesSuite extends munit.FunSuite {
   private val tmp = new tests.TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[munit.AnyFixture[_]] = List(tmp)
+  override def munitFixtures: Seq[munit.AnyFixture[?]] = List(tmp)
 
   private def newCompiler(reuseNames: Boolean = true): JavaPruneCompiler =
     new JavaPruneCompiler(

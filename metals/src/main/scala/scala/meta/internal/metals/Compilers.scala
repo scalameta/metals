@@ -6,7 +6,7 @@ import java.time.Duration
 import java.util.concurrent.ScheduledExecutorService
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
+import java.util as ju
 
 import scala.annotation.nowarn
 import scala.collection.concurrent.TrieMap
@@ -17,7 +17,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Failure
 import scala.util.Success
 import scala.util.control.NonFatal
-import scala.{meta => m}
+import scala.meta as m
 
 import scala.meta.infra.Event
 import scala.meta.infra.FeatureFlagProvider
@@ -29,7 +29,7 @@ import scala.meta.internal.async.CompletableCancelToken
 import scala.meta.internal.metals.CompilerOffsetParamsUtils
 import scala.meta.internal.metals.CompilerRangeParamsUtils
 import scala.meta.internal.metals.Compilers.PresentationCompilerKey
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.decompile.DecompileBytecode
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
@@ -41,7 +41,7 @@ import scala.meta.internal.pc.PcSymbolInformation
 import scala.meta.internal.protopc.ProtoPresentationCompiler
 import scala.meta.internal.worksheets.WorksheetPcData
 import scala.meta.internal.worksheets.WorksheetProvider
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.CancelToken
@@ -82,11 +82,11 @@ import org.eclipse.lsp4j.SignatureHelp
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.lsp4j.{Position => LspPosition}
-import org.eclipse.lsp4j.{Range => LspRange}
-import org.eclipse.lsp4j.{debug => d}
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
+import org.eclipse.lsp4j.Position as LspPosition
+import org.eclipse.lsp4j.Range as LspRange
+import org.eclipse.lsp4j.debug as d
+import org.eclipse.lsp4j as l
 
 /**
  * Manages lifecycle for presentation compilers in all build targets.
@@ -151,7 +151,7 @@ class Compilers(
   )
   def fallbackClasspaths = compilerConfiguration.fallbackClasspaths
 
-  import compilerConfiguration._
+  import compilerConfiguration.*
 
   private val outlineFilesProvider =
     new OutlineFilesProvider(buildTargets, buffers)
@@ -229,7 +229,7 @@ class Compilers(
   }
 
   @nowarn("cat=unused")
-  private val idleCompilerEvictionTask: ScheduledFuture[_] =
+  private val idleCompilerEvictionTask: ScheduledFuture[?] =
     sh.scheduleAtFixedRate(
       (() => evictIdleCompilers()): Runnable,
       10,

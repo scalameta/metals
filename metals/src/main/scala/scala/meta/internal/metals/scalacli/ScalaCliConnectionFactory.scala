@@ -8,7 +8,7 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.ClosableOutputStream
 import scala.meta.internal.metals.DismissedNotifications
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.internal.metals.buildserver.BuildServerConnectionFactory

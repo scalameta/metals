@@ -10,17 +10,17 @@ import scala.util.Properties
 import scala.util.matching.Regex
 
 import scala.meta.internal.io.FileIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.Timer
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
 import bloop.config.Tag
-import bloop.config.{Config => C}
+import bloop.config.Config as C
 import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
@@ -383,8 +383,8 @@ object QuickBuild {
 
     Fetch
       .create()
-      .withRepositories(allRepositories: _*)
-      .withDependencies(dependencies: _*)
+      .withRepositories(allRepositories*)
+      .withDependencies(dependencies*)
       .withClassifiers(classifiers.asJava)
       .withMainArtifacts()
       .fetch()

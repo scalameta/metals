@@ -4,7 +4,7 @@ import java.util
 
 import scala.collection.mutable.Buffer
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.TextEdits
 
 import org.eclipse.lsp4j.Location

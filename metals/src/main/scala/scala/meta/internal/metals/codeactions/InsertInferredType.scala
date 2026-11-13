@@ -8,7 +8,7 @@ import scala.meta.Enumerator
 import scala.meta.Pat
 import scala.meta.Term
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -18,7 +18,7 @@ import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class InsertInferredType(
     trees: Trees,
@@ -31,7 +31,7 @@ class InsertInferredType(
   override def command: Option[ActionCommand] =
     Some(ServerCommands.InsertInferredType)
 
-  import InsertInferredType._
+  import InsertInferredType.*
   override def kind: String = l.CodeActionKind.QuickFix
 
   override def handleCommand(

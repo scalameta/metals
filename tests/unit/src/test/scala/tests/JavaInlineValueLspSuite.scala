@@ -2,9 +2,9 @@ package tests
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class JavaInlineValueLspSuite extends BaseLspSuite("java-inline-value") {
 

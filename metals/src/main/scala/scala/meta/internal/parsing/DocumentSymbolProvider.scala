@@ -4,10 +4,10 @@ import java.util
 
 import scala.collection.mutable
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.io.AbsolutePath
@@ -16,7 +16,7 @@ import scala.meta.trees.Origin
 
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.SymbolKind
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  *  Retrieves all the symbols defined in a document

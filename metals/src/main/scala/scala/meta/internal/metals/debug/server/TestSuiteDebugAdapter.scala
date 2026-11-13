@@ -5,7 +5,7 @@ import java.net.URLClassLoader
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.server.testing.FingerprintInfo
 import scala.meta.internal.metals.debug.server.testing.LoggingEventHandler
 import scala.meta.internal.metals.debug.server.testing.TestInternals

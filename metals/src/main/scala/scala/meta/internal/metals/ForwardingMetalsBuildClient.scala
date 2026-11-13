@@ -16,7 +16,7 @@ import scala.meta.internal.metals.ClientConfiguration
 import scala.meta.internal.metals.ConcurrentHashSet
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ModuleStatus
 import scala.meta.internal.metals.StatusBar
 import scala.meta.internal.metals.TaskProgress
@@ -25,10 +25,10 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.WorkDoneProgress
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonObject
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Used to forward messages from the build server. Messages might

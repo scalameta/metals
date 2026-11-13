@@ -3,7 +3,7 @@ package tests
 import scala.concurrent.Future
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 
 import ch.epfl.scala.bsp4j.DebugSessionParams

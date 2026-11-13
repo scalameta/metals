@@ -2,26 +2,26 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ForkJoinPool
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
+import java.util as ju
 
 import scala.build.bsp.WrappedSourceItem
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-import scala.collection.parallel.CollectionConverters._
+import scala.collection.parallel.CollectionConverters.*
 import scala.collection.parallel.ForkJoinTaskSupport
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
 import scala.meta.Dialect
-import scala.meta.dialects._
+import scala.meta.dialects.*
 import scala.meta.infra.Event
 import scala.meta.inputs.Input
 import scala.meta.internal.bsp.BspSession
 import scala.meta.internal.builds.WorkspaceReload
 import scala.meta.internal.metals.AdjustedLspData.LineColumn
 import scala.meta.internal.metals.Indexer.BackgroundJob
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.SemanticdbDefinition
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer
@@ -30,13 +30,13 @@ import scala.meta.internal.mtags.DependencyModule
 import scala.meta.internal.mtags.IndexingResult
 import scala.meta.internal.mtags.MavenCoordinates
 import scala.meta.internal.mtags.MtagsIndexer
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
 import scala.meta.metals.MetalsLanguageServer
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.Position
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 // todo https://github.com/scalameta/metals/issues/4788
 // clean () =>, use plain values
@@ -48,7 +48,7 @@ import org.eclipse.{lsp4j => l}
 case class Indexer(indexProviders: IndexProviders, mbtBuild: () => MbtBuild)(
     implicit rc: ReportContext
 ) {
-  import indexProviders._
+  import indexProviders.*
 
   private implicit def ec: ExecutionContextExecutorService = executionContext
   val sharedIndices: SqlSharedIndices = new SqlSharedIndices

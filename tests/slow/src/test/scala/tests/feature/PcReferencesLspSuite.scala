@@ -1,7 +1,7 @@
 package tests.feature
 
 import scala.meta.internal.metals
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import munit.TestOptions
 import org.eclipse.lsp4j.Location

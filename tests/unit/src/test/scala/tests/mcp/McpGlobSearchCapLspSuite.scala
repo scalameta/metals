@@ -1,7 +1,7 @@
 package tests.mcp
 
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.McpPrinter.*
 import scala.meta.internal.metals.mcp.SymbolType
 
 import tests.BaseLspSuite

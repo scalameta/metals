@@ -5,7 +5,7 @@ import java.util.concurrent.ConcurrentLinkedQueue
 
 import scala.collection.mutable
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
@@ -18,7 +18,7 @@ import scala.meta.pc.SymbolSearchVisitor
 
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * A symbol search visitor for `workspace/symbol`.

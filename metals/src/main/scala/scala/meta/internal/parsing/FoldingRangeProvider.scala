@@ -4,9 +4,9 @@ import java.util
 import java.util.Collections
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.parsing.FoldingRangeProvider._
+import scala.meta.internal.parsing.FoldingRangeProvider.*
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.FoldingRange

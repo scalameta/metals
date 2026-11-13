@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.implementation.TextDocumentWithPath
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 trait CodeLens {
   def isEnabled: Boolean

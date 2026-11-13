@@ -2,8 +2,8 @@ package tests.inlayHints
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import munit.Location
 import munit.TestOptions

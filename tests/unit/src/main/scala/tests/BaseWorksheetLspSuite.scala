@@ -1,16 +1,16 @@
 package tests
 
 import scala.concurrent.Promise
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.codeactions.CreateNewSymbol
 import scala.meta.internal.metals.codeactions.ExplainDiagnostic
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.semver.SemVer
 
 abstract class BaseWorksheetLspSuite(

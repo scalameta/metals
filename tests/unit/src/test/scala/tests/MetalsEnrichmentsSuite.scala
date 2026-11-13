@@ -5,7 +5,7 @@ import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.util.zip.ZipOutputStream
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 

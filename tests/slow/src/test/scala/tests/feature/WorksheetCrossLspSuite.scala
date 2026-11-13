@@ -1,7 +1,7 @@
 package tests.feature
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.internal.semver.SemVer
 
 import coursierapi.Complete

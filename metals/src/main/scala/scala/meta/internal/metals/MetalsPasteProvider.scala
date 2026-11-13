@@ -3,8 +3,8 @@ package scala.meta.internal.metals
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.MissingSymbolDiagnostic
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath

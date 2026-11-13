@@ -4,7 +4,7 @@ import java.net.URI
 import java.nio.file.ProviderMismatchException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicReference
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -22,8 +22,8 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.jsemanticdb.Semanticdb
 import scala.meta.internal.metals.DidFocusResult
 import scala.meta.internal.metals.HoverExtParams
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
@@ -55,7 +55,7 @@ import scala.meta.metals.lsp.ScalaLspService
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.Gson
 import com.google.gson.JsonElement
 import com.google.gson.JsonPrimitive
@@ -124,7 +124,7 @@ class WorkspaceLspService(
     metrics: MonitoringClient,
     featureFlags: FeatureFlagProvider,
 ) extends ScalaLspService {
-  import serverInputs._
+  import serverInputs.*
   implicit val ex: ExecutionContextExecutorService = ec
   implicit val rc: ReportContext = LoggerReportContext
   private val cancelables = new MutableCancelable()

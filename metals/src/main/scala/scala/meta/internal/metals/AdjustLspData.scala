@@ -1,11 +1,11 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.meta.internal.metals.AdjustedLspData.LineColumn
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.MD5
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.pc
 import scala.meta.pc.AutoImportsResult
 import scala.meta.pc.HoverSignature
@@ -17,7 +17,7 @@ import org.eclipse.lsp4j.Hover
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.{Range => LspRange}
+import org.eclipse.lsp4j.Range as LspRange
 
 trait AdjustLspData {
 

@@ -8,7 +8,7 @@ import scala.util.control.NonFatal
 import scala.xml.Node
 import scala.xml.XML
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.TestResult

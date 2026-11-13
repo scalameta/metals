@@ -4,7 +4,7 @@ import java.net.URI
 
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
@@ -14,7 +14,7 @@ import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.JdkSources
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
@@ -23,7 +23,7 @@ import scala.meta.internal.metals.StatusBarConfig
 import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

@@ -1,7 +1,7 @@
 package tests.scalacli
 
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 
 import tests.BaseDapSuite
 import tests.QuickBuildInitializer

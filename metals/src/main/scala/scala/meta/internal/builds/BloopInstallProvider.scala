@@ -2,7 +2,7 @@ package scala.meta.internal.builds
 import java.io.IOException
 
 import scala.meta.internal.metals.CancelableFuture
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 /**

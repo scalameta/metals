@@ -1,14 +1,14 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position.Range
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.mtags.GlobalSymbolIndex
@@ -22,7 +22,7 @@ import scala.meta.internal.parsing.Trees
 import scala.meta.internal.semanticdb
 import scala.meta.internal.semanticdb.IdTree
 import scala.meta.internal.semanticdb.OriginalTree
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic

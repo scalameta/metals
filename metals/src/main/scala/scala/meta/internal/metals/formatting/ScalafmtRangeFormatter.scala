@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.formatting
 
 import java.util.concurrent.TimeoutException
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.Await
 import scala.concurrent.duration.DurationInt
@@ -12,12 +12,12 @@ import scala.meta.inputs.Input
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.FormattingProvider
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.parsing.TokenEditDistance
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Formats the requested range with Scalafmt.

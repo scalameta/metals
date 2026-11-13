@@ -4,9 +4,9 @@ import java.util.Collections.emptyList
 
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
-import scala.meta.internal.metals.debug.DebugStep._
+import scala.meta.internal.metals.debug.DebugStep.*
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 import scala.meta.internal.metals.debug.Stoppage

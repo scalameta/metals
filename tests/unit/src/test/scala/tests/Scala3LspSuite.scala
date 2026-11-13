@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.codeactions.ExplainDiagnostic
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.RelativePath
 
 import tests.BaseLspSuite

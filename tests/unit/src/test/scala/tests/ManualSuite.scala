@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Paths
 
-import scala.meta.internal.metals.config._
+import scala.meta.internal.metals.config.*
 import scala.meta.pc.PresentationCompilerConfig
 
 // Uncomment to run this test manually locally

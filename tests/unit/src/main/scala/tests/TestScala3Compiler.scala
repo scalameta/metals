@@ -7,10 +7,10 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.io.PathIO
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.Embedded
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MtagsBinaries
 import scala.meta.internal.metals.WorkDoneProgress
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.PresentationCompiler
 

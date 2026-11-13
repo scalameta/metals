@@ -1,10 +1,10 @@
 package scala.meta.internal.metals.mcp
 
 import java.util.concurrent.CompletableFuture
-import java.{util => ju}
+import java.util as ju
 
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.TextEdits
 import scala.meta.internal.metals.clients.language.MetalsCreateTerminalParams
 import scala.meta.internal.metals.clients.language.MetalsEndTerminalParams

@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.scalacli
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 /**

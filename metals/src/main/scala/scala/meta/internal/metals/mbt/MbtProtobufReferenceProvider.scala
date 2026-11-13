@@ -2,11 +2,11 @@ package scala.meta.internal.metals.mbt
 
 import scala.collection.mutable
 import scala.collection.mutable.Buffer
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ImplementationsResult
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.SymbolAlternatives
 import scala.meta.internal.metals.TaskProgress
@@ -15,13 +15,13 @@ import scala.meta.internal.metals.Timer
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.TypeRef
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
+import org.eclipse.lsp4j as l
 
 final class MbtProtobufReferenceProvider(
     mbt: MbtWorkspaceSymbolProvider,

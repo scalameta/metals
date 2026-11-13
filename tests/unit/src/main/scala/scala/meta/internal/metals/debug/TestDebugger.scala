@@ -13,7 +13,7 @@ import scala.util.Failure
 import scala.util.Success
 
 import scala.meta.internal.metals.Debug
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import ch.epfl.scala.debugadapter.TestResultEvent
 import ch.epfl.scala.debugadapter.testing.SingleTestResult
@@ -172,7 +172,7 @@ final class TestDebugger(
   }
 
   override def onEvent(event: NotificationMessage): Unit = {
-    import DapJsonParser._
+    import DapJsonParser.*
     if (event.getMethod() == "testResult") {
       Debug.printEnclosing()
       event.getParams match {
@@ -186,7 +186,7 @@ final class TestDebugger(
 
   override def onOutput(event: OutputEventArguments): Unit = {
     Debug.printEnclosing()
-    import org.eclipse.lsp4j.debug.{OutputEventArgumentsCategory => Category}
+    import org.eclipse.lsp4j.debug.OutputEventArgumentsCategory as Category
     event.getCategory match {
       case Category.STDOUT =>
         output.append(event.getOutput)
@@ -260,7 +260,7 @@ final class TestDebugger(
       event: StoppedEventArguments,
       frame: StackFrame,
   ): Future[Stoppage.Cause] = {
-    import org.eclipse.lsp4j.debug.{StoppedEventArgumentsReason => Reason}
+    import org.eclipse.lsp4j.debug.StoppedEventArgumentsReason as Reason
     event.getReason match {
       case Reason.BREAKPOINT =>
         breakpoints.byStackFrame(frame) match {

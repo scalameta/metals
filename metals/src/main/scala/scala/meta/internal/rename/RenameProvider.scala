@@ -17,7 +17,7 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
 import scala.meta.internal.metals.DefinitionResult
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.metals.ReferencesResult
 import scala.meta.internal.metals.ReportContext
@@ -28,12 +28,12 @@ import scala.meta.internal.mtags.DefinitionAlternatives.GlobalSymbol
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SelectTree
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.Token.Ident
@@ -54,8 +54,8 @@ import org.eclipse.lsp4j.TextDocumentPositionParams
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => LSPEither}
-import org.eclipse.lsp4j.{Range => LSPRange}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as LSPEither
+import org.eclipse.lsp4j.Range as LSPRange
 
 final class RenameProvider(
     mbtReferenceProvider: MbtReferenceProvider,

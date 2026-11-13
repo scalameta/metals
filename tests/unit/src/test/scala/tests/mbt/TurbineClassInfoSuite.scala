@@ -1,7 +1,7 @@
 package tests.mbt
 
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
@@ -17,7 +17,7 @@ import tests.TemporaryDirectoryFixture
 
 class TurbineClassInfoSuite extends munit.FunSuite {
   val workspace = new TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] = List(workspace)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(workspace)
   override def munitExecutionContext: ExecutionContext = ExecutionContext.global
 
   def newProvider(): MbtWorkspaceSymbolProvider =

@@ -5,12 +5,12 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
 
-import scala.compat.java8.FutureConverters._
+import scala.compat.java8.FutureConverters.*
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import io.modelcontextprotocol.client.McpClient
 import io.modelcontextprotocol.client.transport.ServerParameters

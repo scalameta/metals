@@ -30,7 +30,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Properties
 import scala.util.Try
 import scala.util.control.NonFatal
-import scala.{meta => m}
+import scala.meta as m
 
 import scala.meta.Template
 import scala.meta.Term
@@ -47,20 +47,20 @@ import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.internal.semanticdb.Scala.Symbols
 import scala.meta.internal.tokenizers.LegacyScanner
 import scala.meta.internal.tokenizers.LegacyTokenData
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 import scala.meta.trees.Origin
 import scala.meta.trees.Origin.Parsed
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.Gson
 import fansi.ErrorMode
 import io.undertow.server.HttpServerExchange
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * One stop shop for all extension methods that are used in the metals build.
@@ -114,7 +114,7 @@ object MetalsEnrichments
 
   implicit class XtensionScanner(scanner: LegacyScanner) {
 
-    import scala.meta.internal.tokenizers.LegacyToken._
+    import scala.meta.internal.tokenizers.LegacyToken.*
 
     def foreach(f: LegacyTokenData => Unit): Unit = {
       scanner.initialize()
@@ -1351,7 +1351,7 @@ object MetalsEnrichments
   }
 
   implicit class XtensionTreeTokenStream(tree: Tree) {
-    import scala.meta._
+    import scala.meta.*
 
     def leadingTokens: Iterator[Token] =
       tree.origin match {

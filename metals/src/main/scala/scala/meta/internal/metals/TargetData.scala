@@ -3,19 +3,19 @@ package scala.meta.internal.metals
 import java.nio.file.Path
 import java.util
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.{util => ju}
+import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.{Map => MMap}
+import scala.collection.mutable.Map as MMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
 import scala.util.Properties
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.io.AbsolutePath
 
@@ -31,7 +31,7 @@ import ch.epfl.scala.bsp4j.SourceItem
 import ch.epfl.scala.bsp4j.SourceItemKind.DIRECTORY
 import ch.epfl.scala.bsp4j.SourceItemKind.FILE
 import ch.epfl.scala.bsp4j.WorkspaceBuildTargetsResult
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final class TargetData() {
 

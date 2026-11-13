@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import munit.Location
 import munit.TestOptions

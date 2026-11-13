@@ -2,10 +2,10 @@ package tests
 
 import java.util
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 
 import org.eclipse.lsp4j.TextEdit
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object RangesTextEdits {
   def fromFoldingRanges(ranges: util.List[l.FoldingRange]): List[l.TextEdit] = {

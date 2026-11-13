@@ -3,17 +3,17 @@ package scala.meta.internal.metals
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.{meta => m}
+import scala.meta as m
 
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.newScalaFile.NewFileTemplate
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.pc.Identifier
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -25,7 +25,7 @@ import org.eclipse.lsp4j.TextDocumentEdit
 import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 
 class PackageProvider(
     buildTargets: BuildTargets,
@@ -35,7 +35,7 @@ class PackageProvider(
     defProvider: DefinitionProvider,
     mtags: () => Mtags,
 ) {
-  import PackageProvider._
+  import PackageProvider.*
 
   def workspaceEdit(
       path: AbsolutePath,

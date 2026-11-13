@@ -5,7 +5,7 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Diagnostics
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalacDiagnostic
 import scala.meta.internal.metals.ScalafixProvider
@@ -15,7 +15,7 @@ import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 sealed abstract class OrganizeImports(
     scalafixProvider: ScalafixProvider,

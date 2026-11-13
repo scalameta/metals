@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.DidFocusResult._
+import scala.meta.internal.metals.DidFocusResult.*
 import scala.meta.internal.metals.Time
 
 class DidFocusLspSuite extends BaseLspSuite("did-focus") {

@@ -9,7 +9,7 @@ import scala.meta.Term
 import scala.meta.Tree
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
@@ -19,7 +19,7 @@ import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Location
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * It creates braceless or braceful companion objects for classes, traits, and enums

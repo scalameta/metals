@@ -7,7 +7,7 @@ import scala.meta.internal.metals.codeactions.ExtractValueCodeAction
 import scala.meta.internal.metals.codeactions.ImportMissingSymbol
 import scala.meta.internal.metals.codeactions.ImportMissingSymbolQuickFix
 import scala.meta.internal.metals.codeactions.SourceAddMissingImports
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import org.eclipse.lsp4j.CodeActionKind
 import tests.codeactions.BaseCodeActionLspSuite

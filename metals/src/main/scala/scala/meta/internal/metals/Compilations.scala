@@ -11,7 +11,7 @@ import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
@@ -21,7 +21,7 @@ import scala.meta.internal.metals.utils.Timeout
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 final class Compilations(
     buildTargets: BuildTargets,

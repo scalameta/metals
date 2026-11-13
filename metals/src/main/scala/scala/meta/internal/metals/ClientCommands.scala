@@ -6,8 +6,8 @@ import scala.meta.internal.metals.clients.language.MetalsOpenWindowParams
 import scala.meta.internal.metals.doctor.DoctorResults
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 
-import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j as l
 
 /**
  * Optional commands that metals expects the client to implement.

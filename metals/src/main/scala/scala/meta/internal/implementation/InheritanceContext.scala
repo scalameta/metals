@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
 
 class InheritanceContext(inheritance: Map[String, Set[ClassLocation]]) {

@@ -2,7 +2,7 @@ package tests.index
 
 import scala.meta.dialects.Scala213
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.PositionSyntax.XtensionPositionsScalafix
 import scala.meta.internal.mtags.ClasspathDefinitionIndex
 import scala.meta.internal.mtags.Mtags
@@ -15,7 +15,7 @@ class ClasspathDefinitionIndexSuite extends munit.FunSuite {
   val xnio = new LibraryFixture("xnio", () => Library.xnio)
   val xnio2 = new LibraryFixture("xnio2", () => Library.xnio2)
   val scala2 = new LibraryFixture("scala2", () => Library.allScala2Library)
-  override def munitFixtures: Seq[AnyFixture[_]] = List(xnio, xnio2, scala2)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(xnio, xnio2, scala2)
   def defaultLibs: Library = xnio() ++ scala2()
   val buffers: Buffers = Buffers()
 

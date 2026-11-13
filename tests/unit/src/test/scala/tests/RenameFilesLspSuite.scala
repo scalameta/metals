@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class RenameFilesLspSuite extends BaseRenameFilesLspSuite("rename_files") {
   private val prefix = "a/src/main/scala"

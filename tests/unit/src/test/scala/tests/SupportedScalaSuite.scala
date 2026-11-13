@@ -1,8 +1,8 @@
 package tests
 
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.metals.Main
 
 import munit.IgnoreSuite

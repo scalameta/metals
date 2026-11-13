@@ -1,7 +1,7 @@
 package tests.codeactions
 
 import scala.meta.internal.metals.codeactions.SourceOrganizeImports
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class OrganizeImports212Suite
     extends BaseCodeActionLspSuite("OrganizeImports") {

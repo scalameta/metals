@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.debug
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.debug.Source

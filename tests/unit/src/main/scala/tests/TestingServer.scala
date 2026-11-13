@@ -12,7 +12,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.util
 import java.util.Collections
 import java.util.concurrent.ScheduledExecutorService
-import java.util.{List => juList}
+import java.util.List as juList
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
@@ -21,11 +21,11 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Failure
 import scala.util.Success
 import scala.util.matching.Regex
-import scala.{meta => m}
+import scala.meta as m
 
 import scala.meta.Input
 import scala.meta.internal.implementation.Supermethods.formatMethodSymbolForQuickPick
@@ -46,13 +46,13 @@ import scala.meta.internal.metals.ExcludedPackagesHandler
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsLspService
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.MetalsServerInputs
 import scala.meta.internal.metals.MtagsResolver
 import scala.meta.internal.metals.ParametrizedCommand
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.ProgressTicks
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ServerCommands
@@ -63,20 +63,20 @@ import scala.meta.internal.metals.clients.language.StatusType
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
-import scala.meta.internal.metals.findfiles._
+import scala.meta.internal.metals.findfiles.*
 import scala.meta.internal.metals.testProvider.BuildTargetUpdate
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.semanticdb.Scala.Symbols
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.tvp.TreeViewChildrenParams
 import scala.meta.internal.tvp.TreeViewNodeCollapseDidChangeParams
 import scala.meta.internal.tvp.TreeViewProvider
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.io.RelativePath
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonElement
 import com.google.gson.JsonObject
 import munit.Tag
@@ -129,9 +129,9 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFolder
-import org.eclipse.{lsp4j => l}
-import tests.MetalsTestEnrichments._
-import tests.TestOrderings._
+import org.eclipse.lsp4j as l
+import tests.MetalsTestEnrichments.*
+import tests.TestOrderings.*
 
 /**
  * Wrapper around `MetalsLanguageServer` with helpers methods for testing purposes.
@@ -159,7 +159,7 @@ final case class TestingServer(
     clientName: String,
     onStartCompilation: () => Unit = () => (),
 )(implicit ex: ExecutionContextExecutorService) {
-  import scala.meta.internal.metals.JsonParser._
+  import scala.meta.internal.metals.JsonParser.*
 
   val languageServer = new scala.meta.metals.MetalsLanguageServer(
     ex,
@@ -744,7 +744,7 @@ final case class TestingServer(
   ): Future[Any] = {
     Debug.printEnclosing()
     scribe.debug(s"Executing command [${command.id}]")
-    fullServer.executeCommand(command.toExecuteCommandParams(param: _*)).asScala
+    fullServer.executeCommand(command.toExecuteCommandParams(param*)).asScala
   }
 
   def executeCommand[T](command: Command): Future[Any] = {

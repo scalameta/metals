@@ -5,8 +5,8 @@ import java.util.concurrent.TimeUnit
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.DebugDiscoveryParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
 

@@ -6,12 +6,12 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WorkspaceSymbolParams
-import tests.MetalsTestEnrichments._
+import tests.MetalsTestEnrichments.*
 
 class WorkspaceSymbolLspSuite extends BaseLspSuite("workspace-symbol") {
 

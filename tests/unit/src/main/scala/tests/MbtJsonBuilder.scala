@@ -2,7 +2,7 @@ package tests
 
 import java.util.LinkedHashMap
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtDependencyModule

@@ -11,8 +11,8 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.CompilerVirtualFileParams
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyWorkDoneProgress
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.ReportLevel
 import scala.meta.internal.metals.config.JavaSymbolLoaderConfig
 import scala.meta.internal.metals.config.UserConfiguration
@@ -22,14 +22,14 @@ import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.ProgressBars
 
 import munit.AnyFixture
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import tests.FileLayout
 
 abstract class BaseJavaPruneCompilerSuite extends munit.FunSuite {
   val tmp = new tests.TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] = List(tmp)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(tmp)
 
   val logger: Logger = LoggerFactory.getLogger(classOf[JavaPruneCompilerSuite])
   def compileFilesWithFormattedDiagnostics(

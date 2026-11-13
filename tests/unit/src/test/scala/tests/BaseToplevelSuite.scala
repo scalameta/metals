@@ -5,7 +5,7 @@ import java.nio.file.Files
 import scala.meta.Dialect
 import scala.meta.dialects
 import scala.meta.internal.metals.EmptyReporter
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Reporter
 import scala.meta.internal.mtags.Mtags

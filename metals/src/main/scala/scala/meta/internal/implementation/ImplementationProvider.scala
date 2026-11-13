@@ -15,7 +15,7 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DefinitionProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -28,11 +28,11 @@ import scala.meta.internal.mtags.ResolvedOverriddenSymbol
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
 import scala.meta.internal.pc.PcSymbolInformation
-import scala.meta.internal.search.SymbolHierarchyOps._
+import scala.meta.internal.search.SymbolHierarchyOps.*
 import scala.meta.internal.semanticdb.ClassSignature
 import scala.meta.internal.semanticdb.IntersectionType
 import scala.meta.internal.semanticdb.Scala.Descriptor.Method
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.Scope
 import scala.meta.internal.semanticdb.Signature
 import scala.meta.internal.semanticdb.StructuralType
@@ -63,7 +63,7 @@ final class ImplementationProvider(
     mtags: () => Mtags,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
-  import ImplementationProvider._
+  import ImplementationProvider.*
   private val implementationsInPath =
     new ConcurrentHashMap[Path, Map[String, Set[ClassLocation]]]
   private val implementationsInDependencySources =

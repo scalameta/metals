@@ -6,14 +6,14 @@ import scala.annotation.tailrec
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeKind._
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j.FoldingRangeKind.*
+import org.eclipse.lsp4j as l
 
 final class FoldingRangeExtractor(
     distance: TokenEditDistance,

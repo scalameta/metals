@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class HoverLspSuite extends BaseLspSuite("hover-") with TestHovers {
 

@@ -8,11 +8,11 @@ import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.io.InputStreamIO
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Messages.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.Time
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.DebugSessionParamsDataKind

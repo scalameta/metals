@@ -7,7 +7,7 @@ import java.net.Socket
 import java.net.URI
 import java.util.Collections.singletonList
 import java.util.concurrent.TimeUnit
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -26,12 +26,12 @@ import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.DebugSession
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.JvmOpts
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.Messages.UnresolvedDebugSessionParams
 import scala.meta.internal.metals.MetalsBuildClient
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.ScalaTestSuitesDebugRequest
@@ -46,7 +46,7 @@ import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 import scala.meta.internal.metals.config.RunType
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.DiscoveryFailures.*
 import scala.meta.internal.metals.debug.server.AttachRemoteDebugAdapter
 import scala.meta.internal.metals.debug.server.DebugLogger
 import scala.meta.internal.metals.debug.server.DebugeeParamsCreator
@@ -66,8 +66,8 @@ import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import ch.epfl.scala.bsp4j.DebugSessionParams
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import ch.epfl.scala.{bsp4j => b}
-import ch.epfl.scala.{debugadapter => dap}
+import ch.epfl.scala.bsp4j as b
+import ch.epfl.scala.debugadapter as dap
 import com.google.common.net.InetAddresses
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.MessageParams
@@ -97,7 +97,7 @@ class DebugProvider(
     extends Cancelable
     with LogForwarder {
 
-  import DebugProvider._
+  import DebugProvider.*
 
   val debugConfigCreator = new DebugeeParamsCreator(buildTargetClasses)
 

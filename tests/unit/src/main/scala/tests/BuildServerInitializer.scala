@@ -9,11 +9,11 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages.GenerateBspAndConnect
 import scala.meta.internal.metals.Messages.ImportBuild
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtBuildServer
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails

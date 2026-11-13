@@ -3,10 +3,10 @@ package tests.mill
 import scala.meta.internal.builds.MillBuildTool
 import scala.meta.internal.builds.MillDigest
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatusBarConfig
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import tests.BaseImportSuite

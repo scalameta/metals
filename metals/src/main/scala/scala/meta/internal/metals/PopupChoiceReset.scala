@@ -4,7 +4,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.bsp.BuildChange
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 
 import org.eclipse.lsp4j.MessageActionItem
@@ -18,7 +18,7 @@ class PopupChoiceReset(
     slowConnect: () => Future[BuildChange],
     switchBspServer: () => Future[BuildChange],
 ) {
-  import PopupChoiceReset._
+  import PopupChoiceReset.*
 
   def reset(value: String)(implicit ec: ExecutionContext): Future[Unit] = {
     val result = if (value == BuildTool || value == All) {

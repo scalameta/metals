@@ -1,6 +1,6 @@
 package tests.feature
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.BaseDapSuite
 import tests.BuildServerInitializer

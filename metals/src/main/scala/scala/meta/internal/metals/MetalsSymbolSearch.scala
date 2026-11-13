@@ -2,17 +2,17 @@ package scala.meta.internal.metals
 
 import java.net.URI
 import java.util.Optional
-import java.{util => ju}
+import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
 import scala.meta.io.AbsolutePath
-import scala.meta.pc._
+import scala.meta.pc.*
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Location

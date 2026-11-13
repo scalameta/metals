@@ -4,13 +4,13 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
-import scala.meta.tokens.Token._
+import scala.meta.tokens.Token.*
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class MillifyDependencyCodeAction(buffers: Buffers) extends CodeAction {
   override def kind: String = l.CodeActionKind.RefactorRewrite

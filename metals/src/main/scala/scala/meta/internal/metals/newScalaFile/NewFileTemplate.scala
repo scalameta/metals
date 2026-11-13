@@ -1,14 +1,14 @@
 package scala.meta.internal.metals.newScalaFile
 
-import scala.{meta => m}
+import scala.meta as m
 
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 
 /**
  * File template which allows specifying the cursor position using @@
  */
 final case class NewFileTemplate(template: String) {
-  import NewFileTemplate._
+  import NewFileTemplate.*
 
   lazy val fileContent: String = template.replace(cursorMarker, "")
 

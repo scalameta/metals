@@ -11,7 +11,7 @@ import java.util.Comparator
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
-import java.{util => ju}
+import java.util as ju
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 import javax.tools.StandardJavaFileManager
@@ -42,7 +42,7 @@ import scala.meta.internal.metals.EmptyFallbackClasspaths
 import scala.meta.internal.metals.EmptyWorkDoneProgress
 import scala.meta.internal.metals.FingerprintedCharSequence
 import scala.meta.internal.metals.LoggerReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.Sleeper
 import scala.meta.internal.metals.StringBloomFilter
@@ -64,7 +64,7 @@ import scala.meta.pc.SymbolSearch
 import scala.meta.pc.SymbolSearchVisitor
 
 import com.google.turbine.diag.SourceFile
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 case class MbtWorkspaceSymbolSearchParams(
     query: String,

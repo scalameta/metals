@@ -4,7 +4,7 @@ import java.sql.Connection
 import java.sql.Timestamp
 
 import scala.meta.internal.builds.Digest.Status
-import scala.meta.internal.metals.JdbcEnrichments._
+import scala.meta.internal.metals.JdbcEnrichments.*
 import scala.meta.internal.metals.Time
 
 /**

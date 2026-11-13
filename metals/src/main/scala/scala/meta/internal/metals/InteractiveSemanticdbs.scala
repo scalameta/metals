@@ -8,13 +8,13 @@ import scala.util.Try
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.scalacli.ScalaCliServers
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.mtags.Shebang
 import scala.meta.internal.mtags.TextDocumentLookup
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
 /**

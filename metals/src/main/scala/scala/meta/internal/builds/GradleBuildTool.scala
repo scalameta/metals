@@ -10,7 +10,7 @@ import scala.util.Properties
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.Embedded
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtDebugLauncher
 import scala.meta.internal.metals.mbt.MbtTarget

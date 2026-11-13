@@ -3,7 +3,7 @@ package scala.meta.internal.metals.mbt
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.mtags.proto.ProtoMtagsV2
 import scala.meta.io.AbsolutePath

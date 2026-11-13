@@ -1,14 +1,14 @@
 package scala.meta.internal.metals.config
 
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 
 final case class GlobSyntaxConfig(value: String) {
-  import GlobSyntaxConfig._
+  import GlobSyntaxConfig.*
   def isUri: Boolean = this == uri
   def isPath: Boolean = this == path
   def registrationOptions(

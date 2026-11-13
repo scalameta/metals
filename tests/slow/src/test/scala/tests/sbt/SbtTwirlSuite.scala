@@ -1,7 +1,7 @@
 package tests.sbt
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.CompletionsAssertions
 

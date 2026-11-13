@@ -10,7 +10,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.Metric
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.metals.config.TelemetryConfig
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 object TestingInfra {
   val metrics: mutable.ArrayBuffer[Metric] = mutable.ArrayBuffer[Metric]()

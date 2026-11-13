@@ -3,7 +3,7 @@ import scala.meta.internal.metals.config.DoctorFormat
 import scala.meta.internal.metals.config.StatusBarState
 
 import com.google.gson.JsonObject
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * While all these values can be set here, they are here only for
@@ -35,7 +35,7 @@ final case class ClientExperimentalCapabilities(
 }
 
 object ClientExperimentalCapabilities {
-  import scala.meta.internal.metals.JsonParser._
+  import scala.meta.internal.metals.JsonParser.*
   val Default: ClientExperimentalCapabilities = ClientExperimentalCapabilities(
     None,
     None,

@@ -3,8 +3,8 @@ package scala.meta.internal.metals.mcp
 import java.nio.file.Path
 import java.util.Arrays
 import java.util.function.BiFunction
-import java.util.{List => JList}
-import java.util.{Map => JMap}
+import java.util.List as JList
+import java.util.Map as JMap
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -20,12 +20,12 @@ import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.ConnectionProvider
 import scala.meta.internal.metals.Diagnostics
 import scala.meta.internal.metals.FormattingProvider
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MutableCancelable
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.TaskProgress
-import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.McpPrinter.*
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolType
 import scala.meta.internal.mtags.CoursierComplete
@@ -1068,7 +1068,7 @@ trait MetalsMcpTools extends Cancelable {
     new AsyncToolSpecification(
       tool,
       withErrorHandling { (_, arguments) =>
-        import scala.meta._
+        import scala.meta.*
         val ruleImplementation = arguments.getAs[String]("ruleImplementation")
         val description = arguments.getAs[String]("description")
         val sampleCode = arguments.getOptAs[String]("sampleCode")
@@ -1416,7 +1416,7 @@ trait MetalsMcpTools extends Cancelable {
               .readValue(value, classOf[JList[T]])
               .asScala
               .toList
-          case value: JList[_] =>
+          case value: JList[?] =>
             value.asScala.collect { case value: T => value }.toList
         }
       } catch {

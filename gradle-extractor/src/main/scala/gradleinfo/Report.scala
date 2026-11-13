@@ -1,6 +1,6 @@
 package gradleinfo
 
-import upickle.default._
+import upickle.default.*
 
 /** A single external (third-party) library a module depends on. */
 final case class ExternalDependency(

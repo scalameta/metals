@@ -4,8 +4,8 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.SbtDigest
 import scala.meta.internal.metals.DelegateSetting
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams

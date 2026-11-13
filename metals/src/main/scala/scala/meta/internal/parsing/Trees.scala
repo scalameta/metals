@@ -6,11 +6,11 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.reflect.ClassTag
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Report
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ScalaVersionSelector
@@ -21,7 +21,7 @@ import scala.meta.tokens.Tokens
 
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DiagnosticSeverity
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Manages parsing of Scala source files into Scalameta syntax trees.
@@ -244,7 +244,7 @@ final class Trees(
                 tokens.foreach(tokens => tokenized(path) = tokens)
                 err
             }
-          case succes: Parsed.Success[_] =>
+          case succes: Parsed.Success[?] =>
             tokenized.remove(path)
             succes
         }

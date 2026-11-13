@@ -5,12 +5,12 @@ import java.util
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.io.AbsolutePath
-import scala.meta.{inputs => m}
+import scala.meta.inputs as m
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final class JavaFormattingProvider(
     buffers: Buffers,

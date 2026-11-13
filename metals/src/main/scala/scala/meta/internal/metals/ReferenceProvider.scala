@@ -14,17 +14,17 @@ import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
 import scala.meta.Importee
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ResolvedSymbolOccurrence
 import scala.meta.internal.mtags.Semanticdbs
 import scala.meta.internal.parsing.TokenEditDistance
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.internal.semanticdb.Synthetic
 import scala.meta.internal.semanticdb.TextDocument
 import scala.meta.internal.semanticdb.TextDocuments
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CompletionItemPriority
 

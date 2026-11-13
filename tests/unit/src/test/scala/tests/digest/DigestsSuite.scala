@@ -1,7 +1,7 @@
 package tests
 package digest
 import scala.meta.internal.builds.Digest
-import scala.meta.internal.builds.Digest.Status._
+import scala.meta.internal.builds.Digest.Status.*
 import scala.meta.internal.builds.Digests
 
 class DigestsSuite extends BaseTablesSuite {

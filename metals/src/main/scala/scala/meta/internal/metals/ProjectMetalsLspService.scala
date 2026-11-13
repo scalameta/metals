@@ -21,7 +21,7 @@ import scala.meta.internal.builds.BuildServerProvider
 import scala.meta.internal.builds.BuildTools
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.config.BuildChangedAction
@@ -49,7 +49,7 @@ import scala.meta.internal.parsing.ClassFinder
 import scala.meta.internal.tvp.FolderTreeViewProvider
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
@@ -100,7 +100,7 @@ class ProjectMetalsLspService(
 
   private val SemanticdbExecutionContext =
     ExecutionContext.fromExecutor(Executors.newFixedThreadPool(10))
-  import serverInputs._
+  import serverInputs.*
 
   override val shellRunner: ShellRunner = register {
     new ShellRunner(time, workDoneProgress, () => userConfig)
