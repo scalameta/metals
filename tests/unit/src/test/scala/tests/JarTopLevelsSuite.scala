@@ -7,6 +7,7 @@ import java.sql.Statement
 
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.io.PlatformFileIO
+import scala.meta.internal.metals.JarIndexingInfo
 import scala.meta.internal.metals.JarTopLevels
 import scala.meta.internal.mtags.ToplevelMember
 import scala.meta.internal.mtags.UnresolvedOverriddenSymbol
@@ -138,5 +139,16 @@ class JarTopLevelsSuite extends BaseTablesSuite {
     val obtainedToplevelMembers = jarSymbols.getToplevelMembers(jar1)
     assert(obtainedToplevelMembers.nonEmpty)
     assert(obtainedToplevelMembers.get == toplevelMembers)
+  }
+
+  test("failedTypeHierarchyWrite") {
+    val conn = tables.connect()
+    tables.cancel()
+    val indexingInfo = new JarIndexingInfo(() => conn)
+    val fs = PlatformFileIO.newJarFileSystem(jar1, create = false)
+    val filePath = AbsolutePath(fs.getPath("/foo.scala"))
+    val overrides =
+      List((filePath, "foo/Hello#", UnresolvedOverriddenSymbol("AnyVal")))
+    assertEquals(indexingInfo.addTypeHierarchyInfo(jar1, overrides), 0)
   }
 }

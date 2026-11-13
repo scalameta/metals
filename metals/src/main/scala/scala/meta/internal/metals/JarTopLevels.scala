@@ -9,6 +9,8 @@ import java.sql.Statement
 import java.util.zip.ZipError
 import java.util.zip.ZipException
 
+import scala.util.control.NonFatal
+
 import scala.meta.internal.io.PlatformFileIO
 import scala.meta.internal.metals.JarTopLevels.getFileSystem
 import scala.meta.internal.metals.JdbcEnrichments._
@@ -220,10 +222,15 @@ class JarIndexingInfo(conn: () => Connection) {
   def addTypeHierarchyInfo(
       path: AbsolutePath,
       type_hierarchy: List[(AbsolutePath, String, OverriddenSymbol)],
-  ): Int = {
-    val jar = addOrUpdateJar(path, "type_hierarchy_indexed")
-    jar.map(putTypeHierarchyInfo(_, type_hierarchy)).getOrElse(0)
-  }
+  ): Int =
+    try {
+      val jar = addOrUpdateJar(path, "type_hierarchy_indexed")
+      jar.map(putTypeHierarchyInfo(_, type_hierarchy)).getOrElse(0)
+    } catch {
+      case NonFatal(e) =>
+        scribe.error(s"Failed to cache type hierarchy for $path", e)
+        0
+    }
 
   protected def addOrUpdateJar(
       path: AbsolutePath,
