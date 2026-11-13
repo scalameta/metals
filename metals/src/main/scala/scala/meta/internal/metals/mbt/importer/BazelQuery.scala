@@ -9,7 +9,7 @@ import scala.util.Try
 
 import scala.meta.internal.builds.BazelProjectViewTargets
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.process.ExitCodes
 import scala.meta.internal.process.ProcessOutput
 import scala.meta.io.AbsolutePath
@@ -48,7 +48,7 @@ object BazelQuery {
     case object CQuery extends QueryType("cquery")
   }
 
-  import OutputMode._
+  import OutputMode.*
 
   def buildRuleKindsQuery(patterns: List[String]): BazelQuery = {
     val ps =
@@ -111,13 +111,13 @@ case class BazelQuery(
     extraArgs: List[String] = Nil,
     queryType: BazelQuery.QueryType = BazelQuery.QueryType.Query,
 ) {
-  import BazelQuery._
+  import BazelQuery.*
 
   def run(
       env: Env,
       mbtJavaHome: Option[String] = None,
   )(implicit ec: ExecutionContext): Future[String] = {
-    import env._
+    import env.*
     val buf = new StringBuilder()
     val (queryArgs, queryFile) = prepareQueryArgs(query)
     shellRunner

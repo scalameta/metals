@@ -5,11 +5,11 @@ import java.util.concurrent.CompletableFuture
 
 import scala.meta.internal.metals.HoverExtParams
 
-import org.eclipse.lsp4j._
-import org.eclipse.lsp4j.jsonrpc.messages.{Either => JEither}
+import org.eclipse.lsp4j.*
+import org.eclipse.lsp4j.jsonrpc.messages.Either as JEither
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * Interface which describes text document LSP requests and notifications which are

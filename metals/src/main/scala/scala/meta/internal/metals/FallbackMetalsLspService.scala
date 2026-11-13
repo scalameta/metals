@@ -13,7 +13,7 @@ import scala.meta.infra.FeatureFlagProvider
 import scala.meta.infra.MonitoringClient
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.Indexer.BuildTool
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo

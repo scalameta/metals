@@ -8,7 +8,7 @@ import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.Promise
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
@@ -18,8 +18,8 @@ import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.EmptyCancelToken
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.SourceMapper
 import scala.meta.internal.metals.StacktraceAnalyzer
 import scala.meta.internal.metals.Trace
@@ -34,7 +34,7 @@ import scala.meta.internal.metals.debug.DebugProtocol.OutputNotification
 import scala.meta.internal.metals.debug.DebugProtocol.SetBreakpointRequest
 import scala.meta.internal.metals.debug.DebugProtocol.TerminateRequest
 import scala.meta.internal.metals.debug.DebugProtocol.TestResults
-import scala.meta.internal.metals.debug.DebugProxy._
+import scala.meta.internal.metals.debug.DebugProxy.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
@@ -257,7 +257,7 @@ private[debug] final class DebugProxy(
     // output window gets refreshed resulting in stale messages being printed on top, before
     // any actual logs from the restarted process
     case response @ DebugProtocol.StackTraceResponse(args) =>
-      import DapJsonParser._
+      import DapJsonParser.*
       for {
         stackFrame <- args.getStackFrames
         frameSource <- Option(stackFrame.getSource)

@@ -25,7 +25,7 @@ import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Messages.MissingScalafmtConf
 import scala.meta.internal.metals.Messages.MissingScalafmtVersion
 import scala.meta.internal.metals.Messages.UpdateScalafmtConf
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.semver.SemVer
@@ -35,7 +35,7 @@ import scala.meta.io.RelativePath
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import coursierapi.error.DownloadingArtifactsError
 import org.eclipse.lsp4j.jsonrpc.CancelChecker
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import org.scalafmt.dynamic.ScalafmtDynamicError
 import org.scalafmt.interfaces.PositionException
 import org.scalafmt.interfaces.Scalafmt
@@ -58,7 +58,7 @@ final class FormattingProvider(
 )(implicit ec: ExecutionContext)
     extends Cancelable {
 
-  import FormattingProvider._
+  import FormattingProvider.*
 
   override def cancel(): Unit = {
     scalafmt.clear()

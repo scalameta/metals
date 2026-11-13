@@ -2,16 +2,16 @@ package scala.meta.internal.metals
 
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
-import java.{util => ju}
+import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.util.Try
 
 import scala.meta.inputs.Input
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.parsing.TokenEditDistance
@@ -22,7 +22,7 @@ import ch.epfl.scala.bsp4j.BuildTargetIdentifier
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.services.LanguageClient
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 private final case class CompilationStatus(
     code: bsp4j.StatusCode,

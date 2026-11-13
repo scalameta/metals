@@ -100,7 +100,7 @@ class ServerLivenessMonitor(
 
   def lastPingOk: Boolean = now - lastPing < (pingInterval.toMillis * 2)
 
-  val scheduled: ScheduledFuture[_ <: Object] = scheduler.scheduleAtFixedRate(
+  val scheduled: ScheduledFuture[? <: Object] = scheduler.scheduleAtFixedRate(
     runnable(),
     pingInterval.toMillis,
     pingInterval.toMillis,

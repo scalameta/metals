@@ -3,7 +3,7 @@ package tests
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.config.UserConfiguration
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import org.eclipse.lsp4j.InitializeResult
 

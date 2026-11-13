@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.internal.metals.newScalaFile.BracelessSyntax
 
 class BracelessSyntaxSuite extends munit.FunSuite {

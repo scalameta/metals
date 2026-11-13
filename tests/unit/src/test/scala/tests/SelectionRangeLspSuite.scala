@@ -1,5 +1,5 @@
 package tests
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 /**
  *  Suite for testing selection ranges. Note that this takes some liberty

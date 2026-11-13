@@ -8,7 +8,7 @@ import java.io.OutputStream
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Properties
 
 import scala.meta.internal.process.ProcessOutput

@@ -7,7 +7,7 @@ import java.util.concurrent.TimeUnit
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsStatusParams
 
@@ -37,7 +37,7 @@ final class StatusBar(
     addMessage(MetalsStatusParams(message))
   }
 
-  private var scheduledFuture: ScheduledFuture[_] = _
+  private var scheduledFuture: ScheduledFuture[?] = _
 
   def start(
       sh: ScheduledExecutorService,

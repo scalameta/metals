@@ -2,8 +2,8 @@ package scala.meta.internal.metals.newScalaFile
 
 import scala.annotation.tailrec
 
-import scala.meta._
-import scala.meta.tokens.{Token => T}
+import scala.meta.*
+import scala.meta.tokens.Token as T
 
 /**
  * Detects whether a Scala source prefers the optional-braces

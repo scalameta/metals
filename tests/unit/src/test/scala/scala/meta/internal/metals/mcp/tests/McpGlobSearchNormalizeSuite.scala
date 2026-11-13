@@ -2,7 +2,7 @@ package scala.meta.internal.metals.mcp.tests
 
 import scala.util.Random
 
-import scala.meta.internal.metals.mcp.McpPrinter._
+import scala.meta.internal.metals.mcp.McpPrinter.*
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.SymbolSearchResult
 import scala.meta.internal.metals.mcp.SymbolType

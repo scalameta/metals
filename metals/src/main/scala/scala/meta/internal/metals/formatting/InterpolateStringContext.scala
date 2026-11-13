@@ -3,7 +3,7 @@ package scala.meta.internal.metals.formatting
 import scala.meta
 
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.Range

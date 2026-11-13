@@ -11,16 +11,16 @@ import scala.collection.mutable.ArrayBuffer
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.EmptyWorkDoneProgress
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import com.sun.source.util.JavacTask
 import munit.AnyFixture
 import tests.FileLayout
 
 class JavaStoreDiagnosticListener extends DiagnosticListener[JavaFileObject] {
-  val diagnostics: ArrayBuffer[Diagnostic[_ <: JavaFileObject]] =
-    ArrayBuffer.empty[Diagnostic[_ <: JavaFileObject]]
-  override def report(diagnostic: Diagnostic[_ <: JavaFileObject]): Unit = {
+  val diagnostics: ArrayBuffer[Diagnostic[? <: JavaFileObject]] =
+    ArrayBuffer.empty[Diagnostic[? <: JavaFileObject]]
+  override def report(diagnostic: Diagnostic[? <: JavaFileObject]): Unit = {
     diagnostics += diagnostic
   }
 }
@@ -30,12 +30,12 @@ class HeaderCompilerSuite extends munit.FunSuite {
   val fileManager: StandardJavaFileManager =
     COMPILER.getStandardFileManager(null, null, null)
   val tmp = new tests.TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] = List(tmp)
+  override def munitFixtures: Seq[AnyFixture[?]] = List(tmp)
 
   def compileFiles(
       layout: String,
       options: List[String] = List(),
-  ): List[Diagnostic[_ <: JavaFileObject]] = {
+  ): List[Diagnostic[? <: JavaFileObject]] = {
     FileLayout.fromString(layout, root = tmp())
     val embedded = new Embedded(tmp(), EmptyWorkDoneProgress)
     val allOptions = List(

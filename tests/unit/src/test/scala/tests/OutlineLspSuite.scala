@@ -1,7 +1,7 @@
 package tests
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.config.CompilersConfig
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.pc.SourcePathMode
 
 class OutlineLspSuite extends BaseNonCompilingLspSuite("outline") {

@@ -9,7 +9,7 @@ import scala.concurrent.Promise
 import scala.meta.internal.ansi.AnsiFilter
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.DebugProvider
 import scala.meta.internal.metals.debug.server.TestSuiteDebugAdapter
@@ -18,7 +18,7 @@ import scala.meta.io.AbsolutePath
 import ch.epfl.scala.debugadapter.DebuggeeListener
 import ch.epfl.scala.debugadapter.testing.SingleTestResult
 import ch.epfl.scala.debugadapter.testing.TestSuiteSummary
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 class McpTestRunner(
     debugProvider: DebugProvider,

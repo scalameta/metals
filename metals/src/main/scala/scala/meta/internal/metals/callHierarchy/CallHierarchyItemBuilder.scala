@@ -7,13 +7,13 @@ import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.HoverExtParams
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.CancelToken
 import scala.meta.pc.HoverSignature
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 private[callHierarchy] final class CallHierarchyItemBuilder(
     workspace: AbsolutePath,

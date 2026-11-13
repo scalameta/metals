@@ -2,7 +2,7 @@ package scala.meta.internal.ansi
 
 import scala.collection.mutable
 
-import scala.meta.internal.ansi.AnsiStateMachine._
+import scala.meta.internal.ansi.AnsiStateMachine.*
 
 /**
  * Filters out ANSI code from string

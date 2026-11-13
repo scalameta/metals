@@ -1,6 +1,6 @@
 package tests
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 object TestOrderings {
   implicit val lspRange: Ordering[l.Range] = new Ordering[l.Range] {

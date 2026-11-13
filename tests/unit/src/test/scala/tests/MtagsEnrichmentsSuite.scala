@@ -1,10 +1,10 @@
 package tests
 
 import scala.meta.inputs.Input
-import scala.meta.internal.mtags.MtagsEnrichments._
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.mtags.MtagsEnrichments.*
+import scala.meta.internal.semanticdb as s
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class MtagsEnrichmentsSuite extends BaseSuite {
 

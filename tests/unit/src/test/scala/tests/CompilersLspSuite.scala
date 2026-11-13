@@ -2,7 +2,7 @@ package tests
 
 import java.util.concurrent.TimeUnit
 
-import scala.collection.JavaConverters._
+import scala.collection.JavaConverters.*
 import scala.concurrent.Future
 
 import scala.meta.internal.metals.MetalsServerConfig

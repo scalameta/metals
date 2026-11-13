@@ -13,7 +13,7 @@ import tests.TemporaryDirectoryFixture
 
 class MbtLogicalPackageProviderSuite extends munit.FunSuite {
   val workspace = new TemporaryDirectoryFixture()
-  override def munitFixtures: Seq[AnyFixture[_]] =
+  override def munitFixtures: Seq[AnyFixture[?]] =
     List(
       workspace,
       CustomLoggingFixture.showWarnings(),

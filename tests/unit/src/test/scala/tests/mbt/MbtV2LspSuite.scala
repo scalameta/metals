@@ -3,13 +3,13 @@ package tests.mbt
 import java.nio.file.Files
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.IndexedDocument
 import scala.meta.internal.mtags.Mtags
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.BuildInfo
 import tests.FileLayout
 

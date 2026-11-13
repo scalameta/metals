@@ -1,10 +1,10 @@
 package tests.j
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import coursierapi.Dependency
 import coursierapi.Fetch
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class JavaPCDiagnosticsSuite extends BaseJavaPCSuite("java-pc-diagnostics") {
 

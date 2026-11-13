@@ -1,6 +1,6 @@
 package scala.meta.internal.metals.logging
 
-import scribe._
+import scribe.*
 import scribe.modify.LogModifier
 
 object MetalsSingletonLogFilter extends MetalsFilter()

@@ -4,14 +4,14 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
-import scala.meta.internal.metals.testProvider.TestExplorerEvent._
+import scala.meta.internal.metals.testProvider.TestExplorerEvent.*
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
 import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j as l
 
 final case class FullyQualifiedName(value: String) extends AnyVal
 final case class ClassName(value: String) extends AnyVal

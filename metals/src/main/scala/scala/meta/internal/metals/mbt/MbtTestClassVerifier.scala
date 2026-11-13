@@ -4,7 +4,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.dialects.Scala3
 import scala.meta.internal.metals.EmptyReportContext
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags
 import scala.meta.internal.semanticdb.XtensionSemanticdbSymbolInformation
 import scala.meta.io.AbsolutePath

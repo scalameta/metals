@@ -1,7 +1,7 @@
 package tests.debug
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.debug.DebugStep._
+import scala.meta.internal.metals.debug.DebugStep.*
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.StepNavigator
 

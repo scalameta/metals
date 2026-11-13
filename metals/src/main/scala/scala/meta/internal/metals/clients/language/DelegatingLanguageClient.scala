@@ -1,9 +1,9 @@
 package scala.meta.internal.metals.clients.language
 
 import java.util.concurrent.CompletableFuture
-import java.{util => ju}
+import java.util as ju
 
-import scala.meta.internal.tvp._
+import scala.meta.internal.tvp.*
 
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse

@@ -2,7 +2,7 @@ package scala.meta.internal.metals
 
 import scala.util.Try
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import ujson.Value

@@ -4,7 +4,7 @@ import javax.annotation.Nullable
 
 import scala.meta.internal.metals.newScalaFile.NewFileTypes
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.JsonElement
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position

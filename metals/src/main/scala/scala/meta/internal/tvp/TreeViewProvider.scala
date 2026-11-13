@@ -2,7 +2,7 @@ package scala.meta.internal.tvp
 
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 trait TreeViewProvider {
   val Project = TreeViewProvider.Project

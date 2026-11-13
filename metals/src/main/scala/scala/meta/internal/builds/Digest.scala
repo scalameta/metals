@@ -13,7 +13,7 @@ import scala.xml.Node
 
 import scala.meta.internal.builds.Digest.Status
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.MD5
 import scala.meta.internal.parsing.Trees
 import scala.meta.io.AbsolutePath
@@ -36,7 +36,7 @@ object Digest {
   sealed abstract class Status(val value: Int)
       extends Product
       with Serializable {
-    import Status._
+    import Status.*
     def isRequested: Boolean = this == Requested
     def isStarted: Boolean = this == Started
     def isRejected: Boolean = this == Rejected

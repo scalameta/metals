@@ -5,13 +5,13 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.Compilers
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.logging
 import scala.meta.internal.parsing.JavaTrees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class JavaExtractMethodCodeAction(
     javaTrees: JavaTrees,

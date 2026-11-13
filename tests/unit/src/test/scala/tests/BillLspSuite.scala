@@ -4,12 +4,12 @@ import scala.concurrent.Future
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.io.AbsolutePath
 
-import bill._
+import bill.*
 import ch.epfl.scala.bsp4j.StatusCode
 
 class BillLspSuite extends BaseLspSuite("bill") {

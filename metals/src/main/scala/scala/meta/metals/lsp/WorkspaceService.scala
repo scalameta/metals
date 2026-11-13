@@ -3,7 +3,7 @@ package scala.meta.metals.lsp
 import java.util
 import java.util.concurrent.CompletableFuture
 
-import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 

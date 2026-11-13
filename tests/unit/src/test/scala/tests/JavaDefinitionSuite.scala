@@ -8,13 +8,13 @@ import scala.util.Properties
 import scala.meta.internal.io.FileIO
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.io.AbsolutePath
 
 import munit.Location
 import munit.TestOptions
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class JavaDefinitionSuite extends BaseLspSuite("java-definition") {
 

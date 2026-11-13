@@ -8,18 +8,18 @@ import scala.collection.concurrent.TrieMap
 import scala.util.control.NonFatal
 
 import scala.meta.internal.metals.Buffers
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.proto.codegen.java.JavaOutlineGenerator
-import scala.meta.internal.proto.diag.{SourceFile => ProtoSourceFile}
-import scala.meta.internal.proto.parse.{Parser => ProtoParser}
+import scala.meta.internal.proto.diag.SourceFile as ProtoSourceFile
+import scala.meta.internal.proto.parse.Parser as ProtoParser
 import scala.meta.io.AbsolutePath
 import scala.meta.pc
 
 import com.google.turbine.binder.ClassPath
 import com.google.turbine.binder.sym.ClassSymbol
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final class MbtProtobufWorkspaceSymbolProvider(
     buffers: Buffers,

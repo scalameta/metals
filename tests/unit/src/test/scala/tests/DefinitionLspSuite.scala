@@ -5,7 +5,7 @@ import scala.concurrent.Future
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.StatisticsConfig
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class DefinitionLspSuite
     extends BaseLspSuite("definition")
@@ -517,7 +517,7 @@ class DefinitionLspSuite
   }
 
   test("jar-with-plus", withoutVirtualDocs = true) {
-    import scala.meta.internal.metals.MetalsEnrichments._
+    import scala.meta.internal.metals.MetalsEnrichments.*
     val testCase =
       """|package a
          |

@@ -1,6 +1,6 @@
 package tests.debug
 
-import scala.meta.internal.metals.debug.DotEnvFileParser._
+import scala.meta.internal.metals.debug.DotEnvFileParser.*
 
 import tests.BaseSuite
 

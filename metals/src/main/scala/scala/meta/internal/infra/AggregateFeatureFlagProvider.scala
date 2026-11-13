@@ -7,7 +7,7 @@ import scala.util.control.NonFatal
 
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
-import scala.meta.internal.jdk.CollectionConverters._
+import scala.meta.internal.jdk.CollectionConverters.*
 
 class AggregateFeatureFlagProvider(val underlying: List[FeatureFlagProvider])
     extends FeatureFlagProvider {

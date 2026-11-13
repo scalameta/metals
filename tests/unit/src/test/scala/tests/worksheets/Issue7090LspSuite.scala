@@ -1,7 +1,7 @@
 package tests.worksheets
 
 import scala.meta.internal.metals.InitializationOptions
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.TestingServer
 

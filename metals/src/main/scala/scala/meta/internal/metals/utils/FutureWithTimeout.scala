@@ -14,7 +14,7 @@ import scala.util.Try
 
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.CancelableFuture
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 object FutureWithTimeout {
 

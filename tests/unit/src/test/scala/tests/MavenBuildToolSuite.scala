@@ -10,7 +10,7 @@ import scala.util.Properties
 import scala.meta.internal.builds.MavenBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.EmptyWorkDoneProgress
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.Time
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtTarget

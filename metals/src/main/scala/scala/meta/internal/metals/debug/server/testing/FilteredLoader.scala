@@ -14,7 +14,7 @@ final class FilteredLoader(parent: ClassLoader, filter: IncludeClassFilter)
   override final def loadClass(
       className: String,
       resolve: Boolean,
-  ): Class[_] = {
+  ): Class[?] = {
     if (filter.include(className))
       super.loadClass(className, resolve)
     else

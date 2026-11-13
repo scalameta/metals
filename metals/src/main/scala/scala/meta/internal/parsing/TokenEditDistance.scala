@@ -8,15 +8,15 @@ import scala.util.Success
 
 import scala.meta.inputs.Input
 import scala.meta.inputs.Position
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
-import scala.meta.internal.parsing.TokenOps.syntax._
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.parsing.TokenOps.syntax.*
+import scala.meta.internal.semanticdb as s
 import scala.meta.tokenizers.Tokenized
 
-import ch.epfl.scala.{bsp4j => b}
-import difflib._
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import difflib.*
+import org.eclipse.lsp4j as l
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -454,8 +454,8 @@ object TokenEditDistance {
     val deltas = {
       DiffUtils
         .diff(
-          ArraySeq(original: _*).asJava,
-          ArraySeq(revised: _*).asJava,
+          ArraySeq(original*).asJava,
+          ArraySeq(revised*).asJava,
           ops.equalizer,
         )
         .getDeltas
@@ -499,8 +499,8 @@ object TokenEditDistance {
               revised,
             )
           )
-        case (err: Failure[_], _) => Left(err.exception.getMessage())
-        case (_, err: Failure[_]) => Left(err.exception.getMessage())
+        case (err: Failure[?], _) => Left(err.exception.getMessage())
+        case (_, err: Failure[?]) => Left(err.exception.getMessage())
       }
     } else {
       val path = revisedInput.path.toAbsolutePath

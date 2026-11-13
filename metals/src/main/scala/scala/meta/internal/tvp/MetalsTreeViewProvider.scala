@@ -7,23 +7,23 @@ import scala.collection.concurrent.TrieMap
 
 import scala.meta.Dialect
 import scala.meta.dialects
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig.MetalsClientType
 import scala.meta.internal.metals.ReportContext
-import scala.meta.internal.metals._
+import scala.meta.internal.metals.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolOccurrence
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.BuildTargetIdentifier
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class MetalsTreeViewProvider(
     getFolderTreeViewProviders: () => List[FolderTreeViewProvider],
@@ -32,7 +32,7 @@ class MetalsTreeViewProvider(
 )(implicit rc: ReportContext)
     extends TreeViewProvider {
   private val ticks =
-    TrieMap.empty[String, ScheduledFuture[_]]
+    TrieMap.empty[String, ScheduledFuture[?]]
 
   override def init(): Unit = {
     languageClient.metalsTreeViewDidChange(

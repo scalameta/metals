@@ -1,7 +1,7 @@
 package scala.meta.internal.metals.formatting
 import scala.util.matching.Regex
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 
 import org.eclipse.lsp4j.Position
@@ -22,7 +22,7 @@ case class IndentOnPaste(userConfig: () => UserConfiguration)
       opts: FmtOptions,
       firstLineStart: Option[Int] = None,
   ): String = {
-    import opts._
+    import opts.*
     val (prePasted, pastedLine) = line.splitAt(firstLineStart.getOrElse(0))
     codeStartPosition(pastedLine).filter(_ > 0) match {
       case Some(codeStartPos) =>

@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 /**
  * A BSP client interface that uses lsp4j data structures where applicable.

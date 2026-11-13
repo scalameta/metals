@@ -13,8 +13,8 @@ import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.ClientConfiguration
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTestSuiteSelection
 import scala.meta.internal.metals.ScalaTestSuites
 import scala.meta.internal.metals.SemanticdbFeatureProvider
@@ -26,7 +26,7 @@ import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.internal.metals.debug.TestFrameworkUtils
 import scala.meta.internal.metals.mbt.MbtReferenceProvider
-import scala.meta.internal.metals.testProvider.TestExplorerEvent._
+import scala.meta.internal.metals.testProvider.TestExplorerEvent.*
 import scala.meta.internal.metals.testProvider.frameworks.JunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.MunitTestFinder
 import scala.meta.internal.metals.testProvider.frameworks.ScalatestTestFinder
@@ -45,8 +45,8 @@ import scala.meta.io.AbsolutePath
 import bloop.config.Config
 import ch.epfl.scala.bsp4j.BuildTarget
 import ch.epfl.scala.bsp4j.ScalaPlatform
-import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j as l
 
 final class TestSuitesProvider(
     buildTargets: BuildTargets,
@@ -323,7 +323,7 @@ final class TestSuitesProvider(
   private def updateClientIfNonEmpty(updates: Seq[BuildTargetUpdate]): Unit =
     if (updates.nonEmpty) {
       val params =
-        ClientCommands.UpdateTestExplorer.toExecuteCommandParams(updates: _*)
+        ClientCommands.UpdateTestExplorer.toExecuteCommandParams(updates*)
       client.metalsExecuteClientCommand(params)
     }
 

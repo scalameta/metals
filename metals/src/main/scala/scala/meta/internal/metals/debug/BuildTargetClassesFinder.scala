@@ -2,20 +2,20 @@ package scala.meta.internal.metals.debug
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Failure
 import scala.util.Success
 import scala.util.Try
 
 import scala.meta.internal.metals.BuildTargets
-import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.DiscoveryFailures.*
 import scala.meta.internal.mtags.OnDemandSymbolIndex
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.Scala.Descriptor
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 class BuildTargetClassesFinder(
     buildTargets: BuildTargets,

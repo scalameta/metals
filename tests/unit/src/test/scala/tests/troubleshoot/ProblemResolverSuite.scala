@@ -7,7 +7,7 @@ import scala.concurrent.ExecutionContext
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JavaInfo
 import scala.meta.internal.metals.JdkVersion
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.doctor.DeprecatedRemovedSbtVersion

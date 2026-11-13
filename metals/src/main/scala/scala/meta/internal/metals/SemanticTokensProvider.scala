@@ -12,19 +12,19 @@ import scala.util.Try
 import scala.util.control.NonFatal
 import scala.util.matching.Regex
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsers.SoftKeywords
 import scala.meta.internal.parsing.Trees
-import scala.meta.internal.pc.SemanticTokens._
+import scala.meta.internal.pc.SemanticTokens.*
 import scala.meta.io.AbsolutePath
 import scala.meta.pc.Node
 import scala.meta.pc.VirtualFileParams
-import scala.meta.tokens._
+import scala.meta.tokens.*
 
 import org.eclipse.lsp4j.SemanticTokenModifiers
 import org.eclipse.lsp4j.SemanticTokenTypes
 import org.eclipse.lsp4j.SemanticTokens
-import org.eclipse.lsp4j.{Position => LspPosition}
+import org.eclipse.lsp4j.Position as LspPosition
 
 /**
  *  Provides semantic tokens of file

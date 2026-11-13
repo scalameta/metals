@@ -8,10 +8,10 @@ import scala.concurrent.Future
 import scala.util.Random
 
 import scala.meta.internal.metals.DebugDiscoveryParams
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
-import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.DiscoveryFailures.*
 import scala.meta.internal.metals.debug.DotEnvFileParser.InvalidEnvFileException
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.io.AbsolutePath
@@ -182,7 +182,7 @@ class DebugDiscoverySuite
   }
 
   test("discover-class-run") {
-    import scala.meta.internal.metals.JsonParser._
+    import scala.meta.internal.metals.JsonParser.*
     for {
       _ <- initialize(
         s"""/metals.json
@@ -224,7 +224,7 @@ class DebugDiscoverySuite
         "Shell command should be available in response for discovery",
       )
     } yield {
-      import scala.sys.process._
+      import scala.sys.process.*
       val output = mainClass.get.shellCommand.!!
       val expected =
         if (isWindows) "oranges are nice Hello Wo$rld"

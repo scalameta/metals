@@ -1,6 +1,6 @@
 package tests
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import munit.TestOptions
 

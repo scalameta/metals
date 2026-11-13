@@ -30,9 +30,9 @@ import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.builds.ScalaCliBuildTool
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.builds.WorkspaceLoadedStatus
-import scala.meta.internal.metals.Interruptable._
+import scala.meta.internal.metals.Interruptable.*
 import scala.meta.internal.metals.Messages.IncompatibleBloopVersion
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.bloop.BloopServers
 import scala.meta.internal.metals.clients.language.MetalsSyncModesParams
 import scala.meta.internal.metals.config.AutoImportBuildKind
@@ -77,7 +77,7 @@ class ConnectionProvider(
     with Cancelable {
 
   import Connect.connect
-  import indexProviders._
+  import indexProviders.*
 
   def resolveBsp(): bsp.BspResolvedResult =
     bspConnector.resolve(buildToolProvider.buildTool)

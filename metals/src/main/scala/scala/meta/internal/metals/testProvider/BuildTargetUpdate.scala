@@ -1,10 +1,10 @@
 package scala.meta.internal.metals.testProvider
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.BuildTarget
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final case class BuildTargetUpdate(
     targetName: String,

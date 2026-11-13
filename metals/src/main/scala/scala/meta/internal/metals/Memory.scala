@@ -34,9 +34,9 @@ object Memory {
       case index: OnDemandSymbolIndex =>
         val n = index.mtags().totalLinesOfScala
         s" (${format(n)} lines Scala)"
-      case i: TrieMap[_, _] =>
+      case i: TrieMap[?, ?] =>
         val elements = i.values.foldLeft(0L) {
-          case (n, b: BloomFilter[_]) =>
+          case (n, b: BloomFilter[?]) =>
             n + b.approximateElementCount()
           case (n, i: IdentifierIndex.IndexEntry) =>
             n + i.bloom.approximateElementCount()

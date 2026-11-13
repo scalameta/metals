@@ -1,9 +1,9 @@
 package scala.meta.internal.metals
 
-import java.lang.{Iterable => JIterable}
+import java.lang.Iterable as JIterable
 import java.net.URLClassLoader
 import java.nio.file.Path
-import java.{util => ju}
+import java.util as ju
 
 import scala.annotation.tailrec
 import scala.collection.mutable
@@ -16,7 +16,7 @@ import scala.meta.internal.bsp.sync.SyncMode
 import scala.meta.internal.bsp.sync.WorkspaceSyncParams
 import scala.meta.internal.bsp.sync.WorkspaceSyncResult
 import scala.meta.internal.io.PathIO
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.buildserver.BuildServerConnection
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semver.SemVer.Version

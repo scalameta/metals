@@ -1,7 +1,7 @@
 package tests.mbt
 
 import scala.collection.parallel.mutable.ParArray
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.EmptyReportContext
 import scala.meta.internal.metals.ReportContext
@@ -10,8 +10,8 @@ import scala.meta.internal.metals.mbt.TurbineCompiler
 import scala.meta.internal.metals.mbt.VirtualTextDocument
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.proto.codegen.java.JavaOutlineGenerator
-import scala.meta.internal.proto.diag.{SourceFile => ProtoSourceFile}
-import scala.meta.internal.proto.parse.{Parser => ProtoParser}
+import scala.meta.internal.proto.diag.SourceFile as ProtoSourceFile
+import scala.meta.internal.proto.parse.Parser as ProtoParser
 import scala.meta.pc
 import scala.meta.pc.ProgressBars
 

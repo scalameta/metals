@@ -5,7 +5,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
-import java.{util => ju}
+import java.util as ju
 
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
@@ -16,8 +16,8 @@ import scala.util.Success
 import scala.util.Try
 import scala.util.control.NonFatal
 
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.clients.language.MetalsQuickPickItem
 import scala.meta.internal.metals.clients.language.MetalsQuickPickParams
@@ -32,7 +32,7 @@ import com.typesafe.config.ConfigFactory
 import coursier.Dependency
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import scalafix.interfaces.Scalafix
 import scalafix.interfaces.ScalafixDiagnostic
 import scalafix.interfaces.ScalafixEvaluation
@@ -57,7 +57,7 @@ case class ScalafixProvider(
     statusBar: StatusBar,
 )(implicit ec: ExecutionContext, rc: ReportContext)
     extends SemanticdbFeatureProvider {
-  import ScalafixProvider._
+  import ScalafixProvider.*
   private val scalafixCache = TrieMap.empty[ScalaVersion, Scalafix]
   private val rulesClassloaderCache =
     TrieMap.empty[ScalafixRulesClasspathKey, URLClassLoader]

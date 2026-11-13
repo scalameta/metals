@@ -3,8 +3,8 @@ package tests.feature
 import java.nio.file.Files
 import java.util.UUID
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 import scala.meta.io.AbsolutePath
 
 import tests.BaseLspSuite

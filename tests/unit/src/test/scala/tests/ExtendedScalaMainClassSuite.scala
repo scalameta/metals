@@ -2,7 +2,7 @@ package tests
 
 import java.nio.file.Files
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.debug.ExtendedScalaMainClass
 import scala.meta.io.AbsolutePath
 

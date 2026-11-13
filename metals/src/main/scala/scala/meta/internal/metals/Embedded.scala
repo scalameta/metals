@@ -19,7 +19,7 @@ import scala.util.Properties
 import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.ShellRunner
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.pc.ScalaPresentationCompiler
 import scala.meta.internal.semver.SemVer
 import scala.meta.internal.semver.SemVer.Version
@@ -359,7 +359,7 @@ object Embedded {
           case _ => true
         }
     Fetch(fileCache)
-      .addRepositories(repositoriesToUse: _*)
+      .addRepositories(repositoriesToUse*)
       .withDependencies(Seq(dep))
       .withResolutionParams(resolutionWithOverride)
       .withMainArtifacts()
@@ -470,7 +470,7 @@ object Embedded {
   ): List[Path] = try {
     val settings =
       fetchSettings(dep, scalaVersion, resolution, useMavenLocal)
-        .addClassifiers(classifiers.map(Classifier(_)): _*)
+        .addClassifiers(classifiers.map(Classifier(_))*)
     val withPossibleSnapshotRepo =
       // Scala 3.4.x series depends on mtags snapshot versions
       if (scalaVersion.exists(_.startsWith("3.4"))) {
@@ -490,7 +490,7 @@ object Embedded {
       } else settings
 
     withPossibleSnapshotRepo
-      .addRepositories(additionalRepositories: _*)
+      .addRepositories(additionalRepositories*)
       .run()
       .map(_.toPath())
       .toList

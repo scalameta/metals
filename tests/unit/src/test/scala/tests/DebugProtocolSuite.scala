@@ -7,7 +7,7 @@ import java.util.Collections.emptyList
 import java.util.Collections.singletonList
 
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.util.Random
 
 import scala.meta.internal.builds.ShellRunner
@@ -17,11 +17,11 @@ import scala.meta.internal.metals.DebugUnresolvedAttachRemoteParams
 import scala.meta.internal.metals.DebugUnresolvedMainClassParams
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
 import scala.meta.internal.metals.JdkSources
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.ServerCommands.StartAttach
-import scala.meta.internal.metals.debug.DiscoveryFailures._
+import scala.meta.internal.metals.debug.DiscoveryFailures.*
 import scala.meta.internal.metals.debug.Stoppage
 import scala.meta.internal.metals.debug.TestDebugger
 

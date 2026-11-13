@@ -5,7 +5,7 @@ import java.net.URI
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.util.zip.ZipOutputStream
-import java.{util => ju}
+import java.util as ju
 
 import scala.meta.internal.metals.debug.DebugWorkspaceLayout
 import scala.meta.internal.metals.debug.FileBreakpoints

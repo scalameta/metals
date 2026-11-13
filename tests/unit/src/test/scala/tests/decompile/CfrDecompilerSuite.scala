@@ -4,7 +4,7 @@ import java.net.URI
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.decompile.CfrDecompiler
 import scala.meta.internal.mtags.BuildInfo
 

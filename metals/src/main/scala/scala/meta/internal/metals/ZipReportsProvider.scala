@@ -5,7 +5,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 import scala.meta.internal.metals.doctor.TargetsInfoProvider
-import scala.meta.internal.mtags.MtagsEnrichments._
+import scala.meta.internal.mtags.MtagsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 case class FolderReportsZippper(

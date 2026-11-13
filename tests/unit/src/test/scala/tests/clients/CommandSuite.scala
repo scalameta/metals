@@ -5,7 +5,7 @@ import java.net.URLEncoder
 import scala.meta.internal.metals.CommandHTMLFormat
 import scala.meta.internal.metals.ServerCommands
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.BaseSuite
 
 class CommandSuite extends BaseSuite {

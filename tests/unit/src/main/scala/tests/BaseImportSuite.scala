@@ -2,7 +2,7 @@ package tests
 
 import scala.meta.internal.builds.BuildTool
 import scala.meta.internal.builds.Digest
-import scala.meta.internal.metals.Messages._
+import scala.meta.internal.metals.Messages.*
 import scala.meta.io.AbsolutePath
 
 import munit.Location

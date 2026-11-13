@@ -15,7 +15,7 @@ import scala.meta.internal.tvp.TreeViewParentParams
 import scala.meta.internal.tvp.TreeViewParentResult
 import scala.meta.internal.tvp.TreeViewVisibilityDidChangeParams
 
-import org.eclipse.lsp4j._
+import org.eclipse.lsp4j.*
 import org.eclipse.lsp4j.jsonrpc.services.JsonNotification
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 

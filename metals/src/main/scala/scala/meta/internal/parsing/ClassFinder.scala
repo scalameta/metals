@@ -12,14 +12,14 @@ import scala.meta.Self
 import scala.meta.Tree
 import scala.meta.Type
 import scala.meta.XtensionClassifiable
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.parsing.Trees
 import scala.meta.internal.parsing.finder.ClassKind
 import scala.meta.internal.parsing.finder.MangledClassName
 import scala.meta.internal.parsing.finder.ShortClassName
 import scala.meta.io.AbsolutePath
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final case class ClassArtifact(
     kind: ClassKind,
@@ -247,7 +247,7 @@ class ClassFinder(trees: Trees) {
 }
 
 sealed trait ClassFinderGranularity {
-  import ClassFinderGranularity._
+  import ClassFinderGranularity.*
 
   def isTasty: Boolean = this match {
     case ClassFiles => false

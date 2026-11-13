@@ -4,7 +4,7 @@ import scala.meta.internal.metals.CompilerInlayHintsParams
 import scala.meta.internal.metals.CompilerRangeParams
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.metals.InlayHintCompat
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.pc.PresentationCompiler
 
 abstract class BaseInlayHintsExpectSuite(

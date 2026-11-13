@@ -1,6 +1,6 @@
 package tests.scalacli
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 class ScalaCliDefinitionSuite extends BaseScalaCliSuite(V.latestScala3Next) {
   test("script-definition") {

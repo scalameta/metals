@@ -7,7 +7,7 @@ import scala.meta.internal.io.PathIO
 import scala.meta.io.AbsolutePath
 import scala.meta.io.Classpath
 
-import tests.MetalsTestEnrichments._
+import tests.MetalsTestEnrichments.*
 
 case class InputProperties(
     sourceroot: AbsolutePath,

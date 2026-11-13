@@ -7,7 +7,7 @@ import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.MetalsServerConfig
 
 import munit.Location
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 import tests.BaseCompletionLspSuite
 import tests.ScriptsAssertions
 

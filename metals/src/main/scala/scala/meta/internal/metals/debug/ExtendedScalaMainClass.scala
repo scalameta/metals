@@ -8,12 +8,12 @@ import scala.util.Try
 
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.ManifestJar
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.MD5
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j.ScalaMainClass
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 /**
  * Wrapper around the bsp4j.ScalaMainClass to provide additional information which may be used by client.

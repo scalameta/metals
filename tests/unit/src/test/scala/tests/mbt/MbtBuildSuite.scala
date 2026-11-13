@@ -5,7 +5,7 @@ import java.nio.file.Paths
 
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.JsonParser.XtensionSerializableToJson
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.mbt.MbtBuild
 import scala.meta.internal.metals.mbt.MbtBuildServer

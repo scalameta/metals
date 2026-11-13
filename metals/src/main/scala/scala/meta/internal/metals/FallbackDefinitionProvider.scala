@@ -4,8 +4,8 @@ import scala.util.control.NonFatal
 
 import scala.meta.Term
 import scala.meta.Type
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags
 import scala.meta.internal.mtags.GlobalSymbolIndex
 import scala.meta.internal.parsing.Trees
@@ -14,7 +14,7 @@ import scala.meta.tokens.Token
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.{Range => LspRange}
+import org.eclipse.lsp4j.Range as LspRange
 
 class FallbackDefinitionProvider(
     trees: Trees,

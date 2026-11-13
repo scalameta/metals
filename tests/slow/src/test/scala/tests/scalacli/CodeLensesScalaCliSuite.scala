@@ -1,7 +1,7 @@
 package tests.scalacli
 
 import scala.meta.internal.metals.scalacli.ScalaCli
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.BaseCodeLensLspSuite
 

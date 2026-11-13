@@ -10,7 +10,7 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.mcp.StandaloneMcpService
 import scala.meta.internal.metals.mcp.Transport
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.BaseLspSuite
 import tests.FileLayout

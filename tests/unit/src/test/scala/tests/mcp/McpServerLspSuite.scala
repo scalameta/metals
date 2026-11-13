@@ -303,7 +303,7 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
   }
 
   test("generate-scalafix-rule-error") {
-    import scala.meta._
+    import scala.meta.*
     cleanWorkspace()
     val sampleCode = "a.filter(x => x > 10).map(x => x + 1)"
     for {

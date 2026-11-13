@@ -12,7 +12,7 @@ import scala.util.Using
 
 import scala.meta.internal.metals.Embedded
 import scala.meta.internal.metals.JavaBinary
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.MetalsServerConfig
 import scala.meta.internal.metals.Tables
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient

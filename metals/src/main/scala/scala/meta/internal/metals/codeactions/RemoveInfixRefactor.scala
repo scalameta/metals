@@ -4,15 +4,15 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
 import scala.meta.Term
-import scala.meta._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 import scala.meta.tokens.TokenExtensions
 
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class RemoveInfixRefactor(trees: Trees) extends CodeAction {
 

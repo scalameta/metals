@@ -1,7 +1,7 @@
 package tests
 
 import scala.meta.internal.metals.Messages
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 
 import ch.epfl.scala.bsp4j.BspConnectionDetails
 import munit.Location

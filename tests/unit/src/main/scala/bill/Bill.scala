@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.reflect.internal.util.BatchSourceFile
-import scala.reflect.internal.{util => r}
+import scala.reflect.internal.util as r
 import scala.reflect.io.AbstractFile
 import scala.reflect.io.VirtualFile
 import scala.tools.nsc
@@ -32,14 +32,14 @@ import scala.util.control.NonFatal
 import scala.meta.internal.metals.BuildInfo
 import scala.meta.internal.metals.CoursierHelpers
 import scala.meta.internal.metals.Directories
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.mtags
 import scala.meta.io.AbsolutePath
 
-import ch.epfl.scala.bsp4j._
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j.*
+import ch.epfl.scala.bsp4j as b
 import com.google.gson.GsonBuilder
 import coursierapi.Dependency
 import org.eclipse.lsp4j.jsonrpc.Launcher
@@ -243,7 +243,7 @@ object Bill {
         val sources = coursierapi.Fetch
           .create()
           .withDependencies(scalaLib)
-          .addRepositories(CoursierHelpers.defaultRepositories: _*)
+          .addRepositories(CoursierHelpers.defaultRepositories*)
           .fetch()
           .map(_.toPath)
           .asScala
@@ -543,7 +543,7 @@ object Bill {
 
   def handleCompile(wd: Path): Unit = {
     import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.meta.internal.metals.MetalsEnrichments._
+    import scala.meta.internal.metals.MetalsEnrichments.*
     val server = new Server()
     val client = new BuildClient {
 

@@ -3,12 +3,12 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalacDiagnostic.DiagnosticData
 import scala.meta.pc.CancelToken
 
-import ch.epfl.scala.{bsp4j => b}
-import org.eclipse.{lsp4j => l}
+import ch.epfl.scala.bsp4j as b
+import org.eclipse.lsp4j as l
 
 class ActionableDiagnostic() extends CodeAction {
   override def kind: String = l.CodeActionKind.QuickFix

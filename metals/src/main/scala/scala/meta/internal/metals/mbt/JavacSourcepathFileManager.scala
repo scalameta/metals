@@ -3,12 +3,12 @@ package scala.meta.internal.metals.mbt
 import java.lang
 import java.nio.file.ClosedFileSystemException
 import java.util.concurrent.atomic.AtomicBoolean
-import java.{util => ju}
+import java.util as ju
 import javax.tools.ForwardingJavaFileManager
 import javax.tools.JavaFileManager
 import javax.tools.JavaFileObject
 
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.control.NonFatal
 
 import scala.meta.pc.SemanticdbCompilationUnit

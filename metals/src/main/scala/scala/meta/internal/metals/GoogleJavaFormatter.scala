@@ -2,9 +2,9 @@ package scala.meta.internal.metals
 
 import scala.util.control.NonFatal
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.GoogleJavaFormatStyle
-import scala.meta.{inputs => m}
+import scala.meta.inputs as m
 
 import com.google.common.collect.Range
 import com.google.googlejavaformat.java.Formatter
@@ -13,7 +13,7 @@ import com.google.googlejavaformat.java.ImportOrderer
 import com.google.googlejavaformat.java.JavaFormatterOptions
 import com.google.googlejavaformat.java.JavaFormatterOptions.Style
 import com.google.googlejavaformat.java.RemoveUnusedImports
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 final class GoogleJavaFormatter(
     client: () => l.services.LanguageClient,

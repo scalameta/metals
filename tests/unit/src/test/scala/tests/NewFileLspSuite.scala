@@ -8,14 +8,14 @@ import scala.util.Properties
 import scala.meta.internal.metals.InitializationOptions
 import scala.meta.internal.metals.ListParametrizedCommand
 import scala.meta.internal.metals.Messages.NewScalaFile
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.RecursivelyDelete
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsInputBoxParams
 import scala.meta.internal.metals.clients.language.RawMetalsInputBoxResult
 import scala.meta.internal.metals.clients.language.RawMetalsReadClipboardResult
-import scala.meta.internal.metals.newScalaFile.NewFileTypes._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.newScalaFile.NewFileTypes.*
+import scala.meta.internal.metals.BuildInfo as V
 
 import munit.Location
 import munit.TestOptions
@@ -858,7 +858,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedFilePath: String,
       expectedContent: String,
       existingFiles: String = "",
-      expectedException: List[Class[_]] = Nil,
+      expectedException: List[Class[?]] = Nil,
       javaMinVersion: Option[String] = None,
   )(implicit loc: Location): Unit = if (
     Properties.isJavaAtLeast(javaMinVersion.getOrElse("1.8"))
@@ -882,7 +882,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedFilePath: String,
       expectedContent: String,
       existingFiles: String = "",
-      expectedException: List[Class[_]] = Nil,
+      expectedException: List[Class[?]] = Nil,
       scalaVersion: Option[String] = None,
       expectedSnippet: Option[String] = None,
       scalacOptions: List[String] = Nil,
@@ -912,7 +912,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
       expectedContent: String,
       command: ListParametrizedCommand[String],
       existingFiles: String,
-      expectedException: List[Class[_]],
+      expectedException: List[Class[?]],
       scalaVersion: Option[String],
       expectedSnippet: Option[String] = None,
       scalacOptions: List[String] = Nil,
@@ -1004,7 +1004,7 @@ class NewFileLspSuite extends BaseLspSuite("new-file") {
           """.stripMargin
         )
         _ <- server.didFocus("focusedDoc.txt")
-        _ <- server.executeCommand(command, args: _*)
+        _ <- server.executeCommand(command, args*)
         _ = {
           assertNoDiff(
             client.workspaceMessageRequests,

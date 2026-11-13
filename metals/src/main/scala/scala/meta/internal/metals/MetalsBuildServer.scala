@@ -4,7 +4,7 @@ import scala.build.bsp.ScalaScriptBuildServer
 
 import scala.meta.internal.bsp.sync.SyncBuildServer
 
-import ch.epfl.scala.{bsp4j => b}
+import ch.epfl.scala.bsp4j as b
 
 trait MetalsBuildServer
     extends b.BuildServer

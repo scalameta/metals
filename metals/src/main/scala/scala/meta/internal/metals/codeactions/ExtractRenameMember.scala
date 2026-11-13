@@ -18,7 +18,7 @@ import scala.meta.XtensionCollectionLikeUI
 import scala.meta.inputs.Position
 import scala.meta.internal.metals.Buffers
 import scala.meta.internal.metals.ClientCommands
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsLanguageClient
 import scala.meta.internal.metals.codeactions.CodeAction
@@ -32,7 +32,7 @@ import scala.meta.transversers.SimpleTraverser
 
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.WorkspaceEdit
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class ExtractRenameMember(
     trees: Trees,

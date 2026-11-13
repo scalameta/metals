@@ -3,10 +3,10 @@ package tests.maven
 import java.util.concurrent.TimeUnit
 
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 
 import scala.meta.internal.metals.DebugUnresolvedTestClassParams
-import scala.meta.internal.metals.JsonParser._
+import scala.meta.internal.metals.JsonParser.*
 import scala.meta.internal.metals.Messages
 import scala.meta.internal.metals.config.AutoImportBuildKind
 import scala.meta.internal.metals.config.JavaSymbolLoaderConfig

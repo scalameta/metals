@@ -7,7 +7,7 @@ import scala.concurrent.Future
 import scala.concurrent.Promise
 
 import scala.meta.internal.metals.JvmTarget
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaTarget
 import scala.meta.internal.metals.debug.BuildTargetClasses
 import scala.meta.io.AbsolutePath

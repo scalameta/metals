@@ -1,7 +1,7 @@
 package tests
 
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.Messages.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ServerCommands
 
 import bill.Bill

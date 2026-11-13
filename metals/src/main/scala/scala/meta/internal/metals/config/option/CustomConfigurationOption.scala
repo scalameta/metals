@@ -15,7 +15,7 @@ case class CustomConfigurationOption[A](
     override val values: Option[List[String]] = None,
     override val defaultDescription: Option[String] = None,
     serializationKeyOverride: Option[String] = None,
-    subFields: List[UserConfigurationOption[_]] = Nil,
+    subFields: List[UserConfigurationOption[?]] = Nil,
 )(
     getter: UserConfiguration => A,
     setter: (UserConfiguration, A) => UserConfiguration,

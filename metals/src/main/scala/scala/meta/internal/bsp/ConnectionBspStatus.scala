@@ -6,7 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.meta.internal.metals.BspStatus
 import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ReportContext
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.clients.language.MetalsStatusParams

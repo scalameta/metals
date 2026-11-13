@@ -19,9 +19,9 @@ import scala.meta.internal.metals.ClientCommands
 import scala.meta.internal.metals.Debug
 import scala.meta.internal.metals.FileOutOfScalaCliBspScope
 import scala.meta.internal.metals.Icons
-import scala.meta.internal.metals.Messages._
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.PositionSyntax._
+import scala.meta.internal.metals.Messages.*
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.PositionSyntax.*
 import scala.meta.internal.metals.ScalacDiagnostic.gson
 import scala.meta.internal.metals.ServerCommands
 import scala.meta.internal.metals.TextEdits
@@ -62,8 +62,8 @@ import org.eclipse.lsp4j.WorkDoneProgressCancelParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures
-import org.eclipse.{lsp4j => l}
-import tests.TestOrderings._
+import org.eclipse.lsp4j as l
+import tests.TestOrderings.*
 import tests.TestingClient.normalizeData
 
 /**

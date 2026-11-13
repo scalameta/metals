@@ -8,7 +8,7 @@ import java.util.zip.ZipOutputStream
 
 import scala.collection.parallel.mutable.ParArray
 import scala.concurrent.Future
-import scala.jdk.CollectionConverters._
+import scala.jdk.CollectionConverters.*
 import scala.util.Properties
 
 import scala.meta.internal.metals.EmptyWorkDoneProgress
@@ -23,8 +23,8 @@ import scala.meta.internal.metals.config.WorkspaceSymbolProviderConfig
 import scala.meta.internal.metals.mbt.MbtBuildServer
 import scala.meta.internal.metals.mbt.MbtDependencyModule
 import scala.meta.internal.metals.mbt.TurbineCompiler
-import scala.meta.internal.metals.{BuildInfo => V}
-import scala.meta.internal.mtags.ScalametaCommonEnrichments._
+import scala.meta.internal.metals.BuildInfo as V
+import scala.meta.internal.mtags.ScalametaCommonEnrichments.*
 
 import com.google.turbine.diag.SourceFile
 import coursierapi.Dependency

@@ -12,7 +12,7 @@ import scala.concurrent.Promise
 import scala.concurrent.duration.Duration
 import scala.concurrent.duration.FiniteDuration
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.utils.FutureWithTimeout
 import scala.meta.internal.metals.utils.Timeout
 import scala.meta.internal.metals.utils.Timeouts

@@ -2,8 +2,8 @@ package scala.meta.internal.metals.typeHierarchy
 
 import scala.annotation.tailrec
 
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.semanticdb.Scala._
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.semanticdb.Scala.*
 import scala.meta.internal.semanticdb.SymbolInformation
 import scala.meta.io.AbsolutePath
 

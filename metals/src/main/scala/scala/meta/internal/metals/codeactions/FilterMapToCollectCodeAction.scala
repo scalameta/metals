@@ -3,17 +3,17 @@ package scala.meta.internal.metals.codeactions
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.internal.metals.Compilers
-import scala.meta.internal.metals.JsonParser._
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.JsonParser.*
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.codeactions.CodeAction
 import scala.meta.internal.metals.codeactions.CodeActionBuilder
 import scala.meta.internal.parsing.Trees
 import scala.meta.pc.CancelToken
 
 import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.{lsp4j => l}
+import org.eclipse.lsp4j as l
 
 class FilterMapToCollectCodeAction(trees: Trees, compilers: Compilers)
     extends CodeAction {

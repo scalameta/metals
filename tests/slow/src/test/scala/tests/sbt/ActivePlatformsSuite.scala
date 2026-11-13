@@ -1,6 +1,6 @@
 package tests.sbt
 
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.BuildInfo as V
 
 import tests.BaseLspSuite
 import tests.BloopImportInitializer

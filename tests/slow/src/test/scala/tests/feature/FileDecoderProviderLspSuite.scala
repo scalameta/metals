@@ -4,8 +4,8 @@ import java.net.URLEncoder
 import java.nio.file.Path
 
 import scala.meta.internal.metals.FileDecoderProvider
-import scala.meta.internal.metals.MetalsEnrichments._
-import scala.meta.internal.metals.{BuildInfo => V}
+import scala.meta.internal.metals.MetalsEnrichments.*
+import scala.meta.internal.metals.BuildInfo as V
 
 import munit.TestOptions
 import tests.BaseLspSuite

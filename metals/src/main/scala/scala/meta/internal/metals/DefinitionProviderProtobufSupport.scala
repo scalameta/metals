@@ -1,13 +1,13 @@
 package scala.meta.internal.metals
 
-import java.{util => ju}
+import java.util as ju
 
 import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.dialects
 import scala.meta.internal.jmbt.Mbt
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.MbtWorkspaceSymbolProvider
 import scala.meta.internal.metals.mbt.ProtoGeneratedJavaFiles
@@ -16,7 +16,7 @@ import scala.meta.internal.metals.mbt.ProtoJavaVirtualFile
 import scala.meta.internal.mtags.Mtags
 import scala.meta.internal.mtags.Symbol
 import scala.meta.internal.semanticdb.SymbolOccurrence
-import scala.meta.internal.{semanticdb => s}
+import scala.meta.internal.semanticdb as s
 import scala.meta.io.AbsolutePath
 
 import org.eclipse.lsp4j.Location

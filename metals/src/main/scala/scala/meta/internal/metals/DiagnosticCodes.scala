@@ -1,6 +1,6 @@
 package scala.meta.internal.metals
 
-import scala.meta.internal.mtags.CommonMtagsEnrichments._
+import scala.meta.internal.mtags.CommonMtagsEnrichments.*
 
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 

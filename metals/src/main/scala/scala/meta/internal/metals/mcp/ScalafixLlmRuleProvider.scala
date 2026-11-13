@@ -3,15 +3,15 @@ package scala.meta.internal.metals.mcp
 import scala.collection.concurrent.TrieMap
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
-import scala.meta._
+import scala.meta.*
 import scala.meta.internal.builds.ShellRunner
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Compilations
 import scala.meta.internal.metals.Directories
 import scala.meta.internal.metals.Embedded
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.ScalaVersionSelector
 import scala.meta.internal.metals.ScalaVersions
 import scala.meta.internal.metals.ScalafixProvider

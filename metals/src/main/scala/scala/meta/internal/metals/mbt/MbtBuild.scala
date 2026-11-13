@@ -4,10 +4,10 @@ import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
-import java.{util => ju}
+import java.util as ju
 import javax.annotation.Nullable
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.io.AbsolutePath
 
 import ch.epfl.scala.bsp4j
@@ -155,7 +155,7 @@ case class MbtBuild(
       .filter(_.nonEmpty)
       .takeWhile(segment => !isGlob(segment))
     literalSegments match {
-      case head +: tail => Some(Paths.get(head, tail: _*))
+      case head +: tail => Some(Paths.get(head, tail*))
       case _ => None
     }
   }

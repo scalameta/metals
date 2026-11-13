@@ -5,7 +5,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ScheduledExecutorService
 import java.util.function.Supplier
-import java.{util => ju}
+import java.util as ju
 
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContextExecutorService
@@ -19,7 +19,7 @@ import scala.util.control.NonFatal
 import scala.meta.infra.FeatureFlag
 import scala.meta.infra.FeatureFlagProvider
 import scala.meta.internal.jpc.JavaPresentationCompiler
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.metals.config.SourcePathConfig
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.GitVCS

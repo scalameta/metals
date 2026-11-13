@@ -9,7 +9,7 @@ import java.util.jar.Manifest
 import scala.concurrent.ExecutionContext
 import scala.util.Using
 
-import scala.meta.internal.metals.MetalsEnrichments._
+import scala.meta.internal.metals.MetalsEnrichments.*
 import scala.meta.internal.mtags.URIEncoderDecoder
 import scala.meta.internal.process.SystemProcess
 import scala.meta.io.AbsolutePath
