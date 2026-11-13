@@ -48,6 +48,10 @@ import scala.meta.io.AbsolutePath
  * @param charset
  *  The mapping between sequences of sixteen-bit Unicode codes and sequences of bytes
  *  that should be used for interpreting the files.
+ * @param watchFiles
+ *  If the server watches files itself instead of relying on the client's
+ *  `workspace/didChangeWatchedFiles` notifications. Set for clients that send none,
+ *  like the standalone MCP server.
  */
 final case class MetalsServerInputs(
     buffers: Buffers,
@@ -62,6 +66,7 @@ final case class MetalsServerInputs(
     isReliableFileWatcher: Boolean,
     classpathSearchIndexer: ClasspathSearch.Indexer,
     charset: Charset,
+    watchFiles: Boolean = false,
 )
 
 object MetalsServerInputs {
