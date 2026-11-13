@@ -38,13 +38,22 @@ class JavaSourceOrganizeImports(buffers: Buffers) extends CodeAction {
     else
       for {
         text <- buffers.get(path).orElse(path.readTextOpt).toSeq
-        organized <- organizeImports(text).toSeq
-        edit <- minimalEdit(path, text, organized).toSeq
-      } yield CodeActionBuilder.build(
-        title,
-        kind,
-        changes = Seq(path -> Seq(edit)),
-      )
+        action <- organizeImports(text) match {
+          case Left(reason) =>
+            Seq(
+              CodeActionBuilder
+                .build(title, kind, disabledReason = Some(reason))
+            )
+          case Right(organized) =>
+            for {
+              edit <- minimalEdit(path, text, organized).toSeq
+            } yield CodeActionBuilder.build(
+              title,
+              kind,
+              changes = Seq(path -> Seq(edit)),
+            )
+        }
+      } yield action
   }
 }
 
@@ -52,22 +61,35 @@ object JavaSourceOrganizeImports {
   final val kind: String = l.CodeActionKind.SourceOrganizeImports
   final val title: String = "Organize imports"
 
-  private def organizeImports(text: String): Option[String] =
+  private val missingVmOptionsReason: String =
+    """|Missing VM options required by Google Java Format. Add the following to your settings:
+       |"metals.serverProperties": [
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.api=ALL-UNNAMED",
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.code=ALL-UNNAMED",
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.file=ALL-UNNAMED",
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.parser=ALL-UNNAMED",
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.tree=ALL-UNNAMED",
+       |  "--add-exports=jdk.compiler/com.sun.tools.javac.util=ALL-UNNAMED",
+       |]""".stripMargin
+
+  /**
+   * Left is the reason why organizing is unavailable, Right is the organized
+   * text (unchanged if the file can't be organized, e.g. due to syntax errors).
+   */
+  private def organizeImports(text: String): Either[String, String] =
     try {
-      Some(
+      Right(
         ImportOrderer.reorderImports(
           RemoveUnusedImports.removeUnusedImports(text),
           Style.GOOGLE,
         )
       )
     } catch {
-      // Syntax errors, the file can't be organized
-      case _: FormatterException => None
-      // Missing --add-exports for javac internals
-      case _: LinkageError => None
+      case _: FormatterException => Right(text)
+      case _: LinkageError => Left(missingVmOptionsReason)
       case NonFatal(e) =>
         scribe.warn("Failed to organize Java imports", e)
-        None
+        Right(text)
     }
 
   /**
