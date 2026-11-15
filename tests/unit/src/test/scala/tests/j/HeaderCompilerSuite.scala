@@ -261,27 +261,6 @@ class HeaderCompilerSuite extends munit.FunSuite {
        |""".stripMargin,
   )
 
-  checkNoErrors(
-    "incompatible-constant-literals-remain-pruned",
-    """|/example/Constants.java
-       |package example;
-       |public interface Constants {
-       |  int TEXT = "text";
-       |  String NUMBER = 42;
-       |  boolean INTEGER = 1;
-       |  int BOOLEAN = true;
-       |  int LONG = 1L;
-       |  float DOUBLE = 1.0;
-       |  byte OVERFLOW = 256;
-       |}
-       |/example/Dependency.java
-       |package example;
-       |public class Dependency {
-       |  static final int BROKEN = ("text");
-       |}
-       |""".stripMargin,
-  )
-
   test("compatible-constant-literals-retain-their-values") {
     val layout = """|/example/Constants.java
                     |package example;

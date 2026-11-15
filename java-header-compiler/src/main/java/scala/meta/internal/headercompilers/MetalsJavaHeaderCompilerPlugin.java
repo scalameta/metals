@@ -180,8 +180,9 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
       boolean isConstructor = methodDecl.getName().toString().equals("<init>");
       if (isConstructor) {
         // Dropping an explicit this(...) or super(...) invents an implicit
-        // super(), which can make a valid dependency fail attribution. Keep
-        // only that invocation, including its arguments and original positions.
+        // super(), which can make a valid dependency fail attribution and stop
+        // flow analysis before javac reports errors in kept callers. Keep only
+        // that invocation, including its arguments and original positions.
         if (methodDecl.body == null) {
           methodDecl.body = treeMaker.Block(0, List.nil());
         } else {
@@ -262,15 +263,15 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
       if (isFieldContext && !isParameter && !isEnumConstant) {
         // Constant values remain part of the header: retained constructor
         // arguments and kept callers can use them as switch labels. This runs
-        // before attribution, so javac still resolves names and validates the
-        // constant-expression candidates. Keep pruning nonconstant initializers.
+        // before attribution: this is only a syntactic filter, and javac owns
+        // name resolution and type checking, including errors in invalid source.
+        // Keep pruning nonconstant initializers.
         boolean staticFinal =
             (varDecl.mods.flags & (Flags.STATIC | Flags.FINAL)) == (Flags.STATIC | Flags.FINAL);
         boolean constantCandidate =
             (staticFinal || interfaceContext)
                 && isConstantTypeSyntax(varDecl.getType())
-                && hasConstantExpressionSyntax(varDecl.init)
-                && !hasIncompatibleLiteralType(varDecl.getType(), varDecl.init);
+                && hasConstantExpressionSyntax(varDecl.init);
         if (!constantCandidate) {
           TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
           varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
@@ -284,50 +285,6 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
         return isConstantTypeSyntax(annotated.underlyingType);
       }
       return tree instanceof PrimitiveTypeTree || (tree != null && isStringType(tree));
-    }
-
-    private boolean hasIncompatibleLiteralType(Tree declaredType, JCExpression expression) {
-      if (declaredType instanceof JCAnnotatedType annotated) {
-        return hasIncompatibleLiteralType(annotated.underlyingType, expression);
-      }
-      if (!(TreeInfo.skipParens(expression) instanceof JCLiteral literal)) {
-        // Names and compound expressions still require javac attribution. Only
-        // reject literal assignments whose incompatibility is known at ENTER.
-        return false;
-      }
-      TypeKind target = getTypeKindFromTree(declaredType);
-      switch (literal.getKind()) {
-        case STRING_LITERAL:
-          return target != TypeKind.DECLARED;
-        case BOOLEAN_LITERAL:
-          return target != TypeKind.BOOLEAN;
-        case INT_LITERAL:
-        case CHAR_LITERAL:
-          long value = ((Number) literal.value).longValue();
-          switch (target) {
-            case BYTE:
-              return value < Byte.MIN_VALUE || value > Byte.MAX_VALUE;
-            case SHORT:
-              return value < Short.MIN_VALUE || value > Short.MAX_VALUE;
-            case CHAR:
-              return value < Character.MIN_VALUE || value > Character.MAX_VALUE;
-            case INT:
-            case LONG:
-            case FLOAT:
-            case DOUBLE:
-              return false;
-            default:
-              return true;
-          }
-        case LONG_LITERAL:
-          return target != TypeKind.LONG && target != TypeKind.FLOAT && target != TypeKind.DOUBLE;
-        case FLOAT_LITERAL:
-          return target != TypeKind.FLOAT && target != TypeKind.DOUBLE;
-        case DOUBLE_LITERAL:
-          return target != TypeKind.DOUBLE;
-        default:
-          return false;
-      }
     }
 
     private boolean hasConstantExpressionSyntax(JCExpression expression) {
