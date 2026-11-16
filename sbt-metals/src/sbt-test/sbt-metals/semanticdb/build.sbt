@@ -82,7 +82,11 @@ def assertSemanticdbForScala2 = Def.task {
   assertOption(sOptions, "-Yrangepos")
   assertOption(sOptions, "-P:semanticdb:synthetics:on")
   assertOption(sOptions, "-P:semanticdb:failures:warning")
-  assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
+  assertOptionValue(
+    sOptions,
+    "-P:semanticdb:sourceroot",
+    optionPath(sourceRoot, virtual, converter),
+  )
   assertOptionValue(
     sOptions,
     "-P:semanticdb:targetroot",
@@ -90,7 +94,7 @@ def assertSemanticdbForScala2 = Def.task {
   )
   assertContains(
     jOptions,
-    javacPluginOption(sourceRoot, javacTargetRoot, virtual = false, converter),
+    javacPluginOption(sourceRoot, javacTargetRoot, virtual, converter),
   )
 }
 
@@ -118,12 +122,7 @@ def assertSemanticdbForScala3 = Def.taskDyn {
         )
         assertContains(
           jOptions,
-          javacPluginOption(
-            sourceRoot,
-            javacTargetRoot,
-            virtual = false,
-            converter,
-          ),
+          javacPluginOption(sourceRoot, javacTargetRoot, virtual, converter),
         )
       }
   }
