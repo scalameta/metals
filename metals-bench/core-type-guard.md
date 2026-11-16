@@ -136,6 +136,8 @@ python3 -m unittest discover -s metals-bench -p 'test_core_type_guard.py'
 
 ## Initial fixed-history comparison
 
+The initial measurements below cover the original Any-only guard.
+
 A predeclared 48-fork comparison used Scala 2.13.18, JMH 1.37, and Zulu JDK
 21.0.5 on Linux (Ryzen 9 9950X, unpinned CPUs), with the resource limits and
 protocol above. All forks and batches were retained. Each row uses twelve
