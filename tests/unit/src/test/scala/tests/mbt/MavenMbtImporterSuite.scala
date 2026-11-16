@@ -41,12 +41,18 @@ class MavenMbtImporterSuite extends BaseSuite {
         shellRunner = null,
         userConfig = () => UserConfiguration(),
       ) {
+    var lastEnvOverrides: Map[String, String] = Map.empty
     override def mavenBaseCommand(): List[String] = baseCommand
     override protected def pluginVersion: String = version
     override protected def environment: Map[String, String] = env
     override protected def defaultUserHome: String = userHomeDir.toString
-    override protected def runExport(args: List[String]): Future[Int] =
+    override protected def runExport(
+        args: List[String],
+        envOverrides: Map[String, String] = Map.empty,
+    ): Future[Int] = {
+      lastEnvOverrides = envOverrides
       onRun(args, root)
+    }
     override def isBuildRelated(path: AbsolutePath): Boolean =
       Option(path.toNIO.getFileName).exists(_.toString == "pom.xml")
     override def digest(workspace: AbsolutePath): Option[String] =
@@ -214,7 +220,7 @@ class MavenMbtImporterSuite extends BaseSuite {
     ) {
       override protected def createSnapshotSettings(
           baseArgs: List[String]
-      ): (List[String], Path) =
+      ): MavenMbtImporter.SnapshotSettingsPlan =
         throw new IOException("temp dir full")
     }
     val settingsFailFuture = settingsFailImporter.extract(workspaceSettingsFail)
@@ -485,6 +491,102 @@ class MavenMbtImporterSuite extends BaseSuite {
     assert(recordedArgs.contains("-gs"))
     assert(recordedArgs.contains("/corp/cli-global.xml"))
     assert(capturedXml.contains("maven-config-mirror"))
+    assert(capturedXml.contains(MavenMbtImporter.centralSnapshotsUrl))
+
+    // Also verify `--settings=` in `.mvn/maven.config` keeps paths containing `" -"` whole
+    val dashDir = mvnDir.resolve("Company - CI")
+    Files.createDirectories(dashDir)
+    Files.writeString(
+      dashDir.resolve("settings.xml"),
+      """|<settings>
+         |  <servers>
+         |    <server><id>company-dash-ci-server</id></server>
+         |  </servers>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+    Files.writeString(
+      mvnDir.resolve("maven.config"),
+      "--settings=.mvn/Company - CI/settings.xml\n",
+      StandardCharsets.UTF_8,
+    )
+    val dashXml = MavenMbtImporter.buildSnapshotUserSettingsXml(
+      List("mvn"),
+      workspace,
+      Map.empty,
+      Files.createTempDirectory("empty-uh").toString,
+    )
+    assert(dashXml.contains("company-dash-ci-server"))
+    assert(dashXml.contains(MavenMbtImporter.centralSnapshotsUrl))
+  }
+
+  test("snapshot-version-merges-and-clears-maven-args-settings") {
+    val workspace =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-maven-args"))
+    val ciDir = workspace.resolve("ci").toNIO
+    Files.createDirectories(ciDir)
+    Files.writeString(
+      ciDir.resolve("from-maven-args.xml"),
+      """|<settings>
+         |  <servers>
+         |    <server><id>maven-args-server</id></server>
+         |  </servers>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+    Files.writeString(
+      ciDir.resolve("from-cli.xml"),
+      """|<settings>
+         |  <servers>
+         |    <server><id>cli-server</id></server>
+         |  </servers>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    var recordedArgs: List[String] = Nil
+    var capturedXml: String = ""
+    var capturedTempSettings: String = ""
+
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      baseCommand = List("mvn", "-s", "ci/from-cli.xml"),
+      env = Map("MAVEN_ARGS" -> "-B -s ci/from-maven-args.xml"),
+      onRun = { (args, ws) =>
+        recordedArgs = args
+        val sIdx = args.indexOf("--settings")
+        capturedTempSettings = args(sIdx + 1)
+        capturedXml = Files.readString(
+          Paths.get(capturedTempSettings),
+          StandardCharsets.UTF_8,
+        )
+        val out = ws.resolve(".metals/mbt-maven.json").toNIO
+        Files.writeString(out, "{}", StandardCharsets.UTF_8)
+        Future.successful(ExitCodes.Success)
+      },
+    )
+
+    Await.result(importer.extract(workspace), Duration.Inf)
+
+    assertEquals(importer.lastEnvOverrides, Map("MAVEN_ARGS" -> ""))
+    assertEquals(
+      recordedArgs,
+      List(
+        "mvn",
+        "-B",
+        "--settings",
+        capturedTempSettings,
+        "--quiet",
+        "org.scalameta:metals-maven-plugin:2.0.0-RC1-22-d02f337b-SNAPSHOT:export",
+        s"-DmbtOutputFile=${importer.outputPath(workspace)}",
+      ),
+    )
+    assert(capturedXml.contains("maven-args-server"))
+    assert(!capturedXml.contains("cli-server"))
     assert(capturedXml.contains(MavenMbtImporter.centralSnapshotsUrl))
   }
 

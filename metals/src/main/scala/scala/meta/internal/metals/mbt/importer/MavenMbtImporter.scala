@@ -55,7 +55,12 @@ abstract class MavenMbtImporter(
   private def pluginCoordinates: String =
     s"org.scalameta:metals-maven-plugin:$pluginVersion:export"
 
-  protected def runExport(args: List[String]): Future[Int] =
+  protected def runExport(
+      args: List[String],
+      envOverrides: Map[String, String] = Map.empty,
+  ): Future[Int] = {
+    val baseEnv: Map[String, String] =
+      if (environment eq sys.env) Map.empty else environment
     shellRunner
       .run(
         "maven-export",
@@ -63,13 +68,14 @@ abstract class MavenMbtImporter(
         projectRoot,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,
-        additionalEnv = if (environment eq sys.env) Map.empty else environment,
+        additionalEnv = baseEnv ++ envOverrides,
       )
       .future
+  }
 
   protected def createSnapshotSettings(
       baseArgs: List[String]
-  ): (List[String], Path) =
+  ): MavenMbtImporter.SnapshotSettingsPlan =
     MavenMbtImporter.writeSnapshotUserSettings(
       baseArgs,
       projectRoot,
@@ -85,28 +91,27 @@ abstract class MavenMbtImporter(
           val out = outputPath(workspace)
           Files.createDirectories(out.toNIO.getParent)
           val baseArgs = mavenBaseCommand()
-          val effectiveBaseArgs =
+          val (effectiveBaseArgs, envOverrides) =
             if (MavenMbtImporter.isSnapshotPlugin(pluginVersion)) {
-              val (strippedArgs, settingsPath) =
-                createSnapshotSettings(baseArgs)
-              createdSettings = Some(settingsPath)
-              strippedArgs
-            } else baseArgs
+              val plan = createSnapshotSettings(baseArgs)
+              createdSettings = Some(plan.settingsFile)
+              (plan.effectiveBaseArgs, plan.envOverrides)
+            } else (baseArgs, Map.empty[String, String])
           val args = MavenMbtImporter.buildExportCommand(
             effectiveBaseArgs,
             createdSettings,
             pluginCoordinates,
             out,
           )
-          (out, args, createdSettings)
+          (out, args, createdSettings, envOverrides)
         }.recoverWith { case NonFatal(e) =>
           createdSettings.foreach(path => Try(Files.deleteIfExists(path)))
           scala.util.Failure(e)
         }
       )
-      .flatMap { case (out, args, snapshotSettings) =>
+      .flatMap { case (out, args, snapshotSettings, envOverrides) =>
         val exportFuture =
-          try runExport(args)
+          try runExport(args, envOverrides)
           catch {
             case NonFatal(e) => Future.failed(e)
           }
@@ -211,11 +216,17 @@ object MavenMbtImporter {
     }
   }
 
+  final case class SnapshotSettingsPlan(
+      effectiveBaseArgs: List[String],
+      settingsFile: Path,
+      envOverrides: Map[String, String] = Map.empty,
+  )
+
   /**
    * Writes a temporary Maven `--settings` file enabling the Central Portal
    * Snapshots `<pluginRepository>` while preserving any existing user settings
-   * (explicit `-s` / `--settings` in `baseArgs` or `.mvn/maven.config`, or
-   * default `${user.home}/.m2/settings.xml`).
+   * (explicit `-s` / `--settings` in `MAVEN_ARGS`, `baseArgs`, or
+   * `.mvn/maven.config`, or default `${user.home}/.m2/settings.xml`).
    *
    * Passing `--settings` rather than `--global-settings` lets Maven natively
    * load `${maven.conf}/settings.xml` (for installed `mvn`, `./mvnw`, and
@@ -227,13 +238,13 @@ object MavenMbtImporter {
       projectRoot: AbsolutePath = AbsolutePath(Paths.get(".")),
       env: Map[String, String] = sys.env,
       userHome: String = System.getProperty("user.home"),
-  ): (List[String], Path) = {
-    val (strippedBaseArgs, xml) =
+  ): SnapshotSettingsPlan = {
+    val (strippedBaseArgs, envOverrides, xml) =
       prepareSnapshotUserSettingsXml(baseArgs, projectRoot, env, userHome)
     val tempFile = createSecureTempSettingsFile()
     try {
       Files.writeString(tempFile, xml, StandardCharsets.UTF_8)
-      (strippedBaseArgs, tempFile)
+      SnapshotSettingsPlan(strippedBaseArgs, tempFile, envOverrides)
     } catch {
       case NonFatal(e) =>
         Try(Files.deleteIfExists(tempFile))
@@ -247,25 +258,44 @@ object MavenMbtImporter {
       env: Map[String, String] = sys.env,
       userHome: String = System.getProperty("user.home"),
   ): String =
-    prepareSnapshotUserSettingsXml(baseArgs, projectRoot, env, userHome)._2
+    prepareSnapshotUserSettingsXml(baseArgs, projectRoot, env, userHome)._3
 
   private def prepareSnapshotUserSettingsXml(
       baseArgs: List[String],
       projectRoot: AbsolutePath,
       env: Map[String, String],
       userHome: String,
-  ): (List[String], String) = {
+  ): (List[String], Map[String, String], String) = {
     val (launcherPrefix, jvmArgs, mavenCliArgs, isJavaWrapper) =
       splitCommandArgs(baseArgs)
-    val (strippedMavenCliArgs, cliSettingsOpt) =
-      stripAndExtractSettingsOption(mavenCliArgs)
+    val mavenArgsTokens =
+      if (isJavaWrapper) Nil
+      else env.get("MAVEN_ARGS").map(tokenizeLine).getOrElse(Nil)
+    val foldMavenArgsIntoCli = mavenArgsTokens.exists(t =>
+      t == "--" || t == "-s" || t == "--settings" ||
+        t.startsWith("--settings=") || (t.startsWith("-s") && t.length > 2)
+    )
+    val (strippedMavenCliArgs, cliSettingsOpt, envOverrides) =
+      if (foldMavenArgsIntoCli) {
+        val (stripped, settingsOpt) =
+          stripAndExtractSettingsOption(mavenArgsTokens ::: mavenCliArgs)
+        (stripped, settingsOpt, Map("MAVEN_ARGS" -> ""))
+      } else {
+        val (stripped, settingsOpt) =
+          stripAndExtractSettingsOption(mavenCliArgs)
+        (stripped, settingsOpt, Map.empty[String, String])
+      }
+    val definesCliArgs =
+      if (foldMavenArgsIntoCli) strippedMavenCliArgs
+      else mavenArgsTokens ::: strippedMavenCliArgs
+
     val multiModuleDir =
       resolveMultiModuleDir(jvmArgs, isJavaWrapper, projectRoot, env)
     val mavenConfigTokens =
       readMavenConfigTokens(multiModuleDir.resolve(".mvn/maven.config"))
     val effectiveUserHome = resolveEffectiveUserHome(
       jvmArgs = jvmArgs,
-      mavenCliArgs = strippedMavenCliArgs,
+      mavenCliArgs = definesCliArgs,
       mavenConfigTokens = mavenConfigTokens,
       multiModuleDir = multiModuleDir,
       isJavaWrapper = isJavaWrapper,
@@ -296,7 +326,7 @@ object MavenMbtImporter {
       case Some(file) => mergeSnapshotSettingsFile(file)
       case None => snapshotPluginSettingsXml
     }
-    (launcherPrefix ::: strippedMavenCliArgs, xml)
+    (launcherPrefix ::: strippedMavenCliArgs, envOverrides, xml)
   }
 
   private def createSecureTempSettingsFile(): Path = {
@@ -445,11 +475,10 @@ object MavenMbtImporter {
           } else if (expectingArg && !trimmed.startsWith("-")) {
             parseLines(idx + 1, false, stripQuotes(trimmed) :: accRev)
           } else if (
-            (trimmed.startsWith("--settings=") ||
-              (trimmed.startsWith("-s") &&
-                trimmed.length > 2 &&
-                !trimmed.charAt(2).isWhitespace)) &&
-            !trimmed.contains(" -")
+            trimmed.startsWith("--settings=") ||
+            (trimmed.startsWith("-s") &&
+              trimmed.length > 2 &&
+              !trimmed.charAt(2).isWhitespace)
           ) {
             parseLines(idx + 1, false, trimmed :: accRev)
           } else {
