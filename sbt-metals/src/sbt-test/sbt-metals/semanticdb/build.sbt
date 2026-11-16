@@ -73,6 +73,7 @@ def assertSemanticdbForScala2 = Def.task {
   val project = thisProject.value
   val config = configuration.value
   val jOptions = (compile / javacOptions).value
+  val javacTargetRoot = (Compile / semanticdbTargetRoot).value
   val virtual = virtualPathsInOptions.value
   val converter = fileConverter.value
 
@@ -87,10 +88,9 @@ def assertSemanticdbForScala2 = Def.task {
     "-P:semanticdb:targetroot",
     optionPath(targetRoot, virtual, converter),
   )
-
-  assert(
-    jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
-    "no javac-semanticdb plugin",
+  assertContains(
+    jOptions,
+    javacPluginOption(sourceRoot, javacTargetRoot, virtual = false, converter),
   )
 }
 
@@ -102,8 +102,11 @@ def assertSemanticdbForScala3 = Def.taskDyn {
         val enabled = semanticdbEnabled.value
         val sOptions = scalacOptions.value
         val targetRoot = semanticdbTargetRoot.value
+        val sourceRoot = (ThisBuild / baseDirectory).value
         val project = thisProject.value
         val config = configuration.value
+        val jOptions = (compile / javacOptions).value
+        val javacTargetRoot = (Compile / semanticdbTargetRoot).value
         val virtual = virtualPathsInOptions.value
         val converter = fileConverter.value
         assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
@@ -112,6 +115,15 @@ def assertSemanticdbForScala3 = Def.taskDyn {
           sOptions,
           s"-semanticdb-target",
           optionPath(targetRoot, virtual, converter),
+        )
+        assertContains(
+          jOptions,
+          javacPluginOption(
+            sourceRoot,
+            javacTargetRoot,
+            virtual = false,
+            converter,
+          ),
         )
       }
   }
@@ -131,6 +143,17 @@ def optionPath(
 ): String =
   if (virtual) converter.toVirtualFile(file.toPath).id
   else file.toString
+
+def javacPluginOption(
+    sourceRoot: File,
+    targetRoot: File,
+    virtual: Boolean,
+    converter: xsbti.FileConverter,
+): String = {
+  val source = optionPath(sourceRoot, virtual, converter)
+  val target = optionPath(targetRoot, virtual, converter)
+  s"-Xplugin:semanticdb -sourceroot:$source -targetroot:$target -build-tool:sbt"
+}
 
 def assertSemanticdbDisabled = Def.task {
   val enabled = semanticdbEnabled.value
@@ -170,6 +193,12 @@ def assertOption(scalacOptions: Seq[String], expectedOption: String): Unit = {
     case _ => throw new Exception(s"duplicated $expectedOption")
   }
 }
+
+def assertContains(options: Seq[String], expectedOption: String): Unit =
+  assert(
+    options.contains(expectedOption),
+    s"missing $expectedOption in ${options.mkString(" ")}",
+  )
 
 def assertOptionValue(
     scalacOptions: Seq[String],
