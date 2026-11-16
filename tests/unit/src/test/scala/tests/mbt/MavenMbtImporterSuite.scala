@@ -1,7 +1,9 @@
 package tests.mbt
 
 import java.io.ByteArrayInputStream
+import java.io.IOException
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -11,22 +13,25 @@ import scala.concurrent.Await
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
+import scala.util.Try
 
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
 import scala.meta.internal.process.ExitCodes
 import scala.meta.io.AbsolutePath
 
+import org.w3c.dom.Document
 import tests.BaseSuite
 
 class MavenMbtImporterSuite extends BaseSuite {
 
   private implicit val ec: ExecutionContext = ExecutionContext.global
 
-  private final class TestMavenMbtImporter(
+  private class TestMavenMbtImporter(
       root: AbsolutePath,
       version: String,
       baseCommand: List[String] = List("mvn"),
+      env: Map[String, String] = Map.empty,
       onRun: (List[String], AbsolutePath) => Future[Int],
   ) extends MavenMbtImporter(
         root,
@@ -35,12 +40,26 @@ class MavenMbtImporterSuite extends BaseSuite {
       ) {
     override def mavenBaseCommand(): List[String] = baseCommand
     override protected def pluginVersion: String = version
+    override protected def environment: Map[String, String] = env
     override protected def runExport(args: List[String]): Future[Int] =
       onRun(args, root)
     override def isBuildRelated(path: AbsolutePath): Boolean =
-      path.toNIO.getFileName.toString == "pom.xml"
+      Option(path.toNIO.getFileName).exists(_.toString == "pom.xml")
     override def digest(workspace: AbsolutePath): Option[String] =
       Some(workspace.toString)
+  }
+
+  private def parseXml(xml: String): Document = {
+    val dbf = DocumentBuilderFactory.newInstance()
+    dbf.setNamespaceAware(true)
+    dbf
+      .newDocumentBuilder()
+      .parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)))
+  }
+
+  private def tagValues(doc: Document, tag: String): List[String] = {
+    val nodes = doc.getElementsByTagName(tag)
+    List.tabulate(nodes.getLength)(i => nodes.item(i).getTextContent.trim)
   }
 
   test("release-version-omits-global-settings") {
@@ -118,19 +137,14 @@ class MavenMbtImporterSuite extends BaseSuite {
       ),
     )
 
-    val doc = DocumentBuilderFactory
-      .newInstance()
-      .newDocumentBuilder()
-      .parse(
-        new ByteArrayInputStream(capturedXml.getBytes(StandardCharsets.UTF_8))
-      )
+    val doc = parseXml(capturedXml)
     assertEquals(
-      doc.getElementsByTagName("url").item(0).getTextContent,
-      MavenMbtImporter.centralSnapshotsUrl,
+      tagValues(doc, "url"),
+      List(MavenMbtImporter.centralSnapshotsUrl),
     )
     assertEquals(
-      doc.getElementsByTagName("activeProfile").item(0).getTextContent,
-      "metals-snapshots",
+      tagValues(doc, "activeProfile"),
+      List("metals-snapshots"),
     )
   }
 
@@ -159,6 +173,232 @@ class MavenMbtImporterSuite extends BaseSuite {
       !Files.exists(settingsPath),
       s"expected temporary global settings file to be deleted on failure: $settingsPath",
     )
+  }
+
+  test("setup-failures-return-failed-future-without-throwing-synchronously") {
+    val workspaceWithFileMetals =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-dir-fail"))
+    Files.writeString(
+      workspaceWithFileMetals.resolve(".metals").toNIO,
+      "not-a-directory",
+      StandardCharsets.UTF_8,
+    )
+    val dirFailImporter = new TestMavenMbtImporter(
+      workspaceWithFileMetals,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      onRun = (_, _) => Future.successful(ExitCodes.Success),
+    )
+    val dirFailFuture = dirFailImporter.extract(workspaceWithFileMetals)
+    intercept[FileAlreadyExistsException] {
+      Await.result(dirFailFuture, Duration.Inf)
+    }
+
+    val workspaceSettingsFail =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-settings-fail"))
+    val settingsFailImporter = new TestMavenMbtImporter(
+      workspaceSettingsFail,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      onRun = (_, _) => Future.successful(ExitCodes.Success),
+    ) {
+      override protected def createSnapshotGlobalSettings(
+          baseArgs: List[String]
+      ): Path =
+        throw new IOException("temp dir full")
+    }
+    val settingsFailFuture = settingsFailImporter.extract(workspaceSettingsFail)
+    intercept[IOException] {
+      Await.result(settingsFailFuture, Duration.Inf)
+    }
+
+    val workspaceSyncRunFail =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-sync-run-fail"))
+    var createdSettings: Option[Path] = None
+    val syncRunFailImporter = new TestMavenMbtImporter(
+      workspaceSyncRunFail,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      onRun = { (args, _) =>
+        val gsIdx = args.indexOf("--global-settings")
+        createdSettings = Some(Paths.get(args(gsIdx + 1)))
+        throw new IllegalStateException("launch failed synchronously")
+      },
+    )
+    val syncRunFailFuture = syncRunFailImporter.extract(workspaceSyncRunFail)
+    intercept[IllegalStateException] {
+      Await.result(syncRunFailFuture, Duration.Inf)
+    }
+    val cleanedPath = createdSettings.getOrElse(
+      fail("expected settings path before synchronous launch failure")
+    )
+    assert(
+      !Files.exists(cleanedPath),
+      s"expected temporary global settings file to be deleted: $cleanedPath",
+    )
+  }
+
+  test("snapshot-version-merges-maven-home-global-settings") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt-home"))
+    val mavenHome = Files.createTempDirectory("fake-maven-home")
+    val confDir = mavenHome.resolve("conf")
+    Files.createDirectories(confDir)
+    val nsUri = "http://maven.apache.org/SETTINGS/1.2.0"
+    Files.writeString(
+      confDir.resolve("settings.xml"),
+      s"""|<?xml version="1.0" encoding="UTF-8"?>
+          |<settings xmlns="$nsUri">
+          |  <proxies>
+          |    <proxy>
+          |      <id>corp-proxy</id>
+          |      <host>proxy.corp.example</host>
+          |      <port>8080</port>
+          |    </proxy>
+          |  </proxies>
+          |  <mirrors>
+          |    <mirror>
+          |      <id>corp-mirror</id>
+          |      <url>https://repo.corp.example/maven2</url>
+          |      <mirrorOf>central</mirrorOf>
+          |    </mirror>
+          |  </mirrors>
+          |  <profiles>
+          |    <profile>
+          |      <id>corp-profile</id>
+          |    </profile>
+          |  </profiles>
+          |  <activeProfiles>
+          |    <activeProfile>corp-profile</activeProfile>
+          |  </activeProfiles>
+          |</settings>
+          |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    var capturedXml: String = ""
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      env = Map("MAVEN_HOME" -> mavenHome.toString),
+      onRun = { (args, ws) =>
+        val gsIdx = args.indexOf("--global-settings")
+        capturedXml =
+          Files.readString(Paths.get(args(gsIdx + 1)), StandardCharsets.UTF_8)
+        val out = ws.resolve(".metals/mbt-maven.json").toNIO
+        Files.writeString(out, "{}", StandardCharsets.UTF_8)
+        Future.successful(ExitCodes.Success)
+      },
+    )
+
+    Await.result(importer.extract(workspace), Duration.Inf)
+
+    val doc = parseXml(capturedXml)
+    assertEquals(tagValues(doc, "host"), List("proxy.corp.example"))
+    assertEquals(
+      tagValues(doc, "url"),
+      List(
+        "https://repo.corp.example/maven2",
+        MavenMbtImporter.centralSnapshotsUrl,
+      ),
+    )
+    assertEquals(
+      tagValues(doc, "activeProfile"),
+      List("corp-profile", "metals-snapshots"),
+    )
+    val profileNodes = doc.getElementsByTagName("profile")
+    assertEquals(profileNodes.getLength, 2)
+    for (i <- 0 until profileNodes.getLength) {
+      assertEquals(profileNodes.item(i).getNamespaceURI, nsUri)
+    }
+  }
+
+  test("snapshot-version-resolves-mvn-on-path-for-global-settings") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt-path"))
+    val mavenDist = Files.createTempDirectory("fake-maven-dist")
+    val distBin = mavenDist.resolve("bin")
+    val distConf = mavenDist.resolve("conf")
+    Files.createDirectories(distBin)
+    Files.createDirectories(distConf)
+    val mvnScript = distBin.resolve(if (isWindows) "mvn.cmd" else "mvn")
+    Files.writeString(mvnScript, "#!/bin/sh\n", StandardCharsets.UTF_8)
+    mvnScript.toFile.setExecutable(true)
+    Files.writeString(
+      distConf.resolve("settings.xml"),
+      """|<settings>
+         |  <servers>
+         |    <server>
+         |      <id>corp-server</id>
+         |      <username>alice</username>
+         |    </server>
+         |  </servers>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    val linkDir = Files.createTempDirectory("fake-path-bin")
+    val pathEntry =
+      Try {
+        val link = linkDir.resolve(mvnScript.getFileName)
+        Files.createSymbolicLink(link, mvnScript)
+        linkDir
+      }.getOrElse(distBin)
+
+    var capturedXml: String = ""
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      env = Map("PATH" -> pathEntry.toString),
+      onRun = { (args, ws) =>
+        val gsIdx = args.indexOf("--global-settings")
+        capturedXml =
+          Files.readString(Paths.get(args(gsIdx + 1)), StandardCharsets.UTF_8)
+        val out = ws.resolve(".metals/mbt-maven.json").toNIO
+        Files.writeString(out, "{}", StandardCharsets.UTF_8)
+        Future.successful(ExitCodes.Success)
+      },
+    )
+
+    Await.result(importer.extract(workspace), Duration.Inf)
+
+    val doc = parseXml(capturedXml)
+    assertEquals(tagValues(doc, "username"), List("alice"))
+    assertEquals(
+      tagValues(doc, "url"),
+      List(MavenMbtImporter.centralSnapshotsUrl),
+    )
+    assertEquals(tagValues(doc, "activeProfile"), List("metals-snapshots"))
+  }
+
+  test("snapshot-version-falls-back-when-global-settings-has-doctype") {
+    val workspace = AbsolutePath(Files.createTempDirectory("maven-mbt-xxe"))
+    val mavenHome = Files.createTempDirectory("fake-maven-xxe")
+    val confDir = mavenHome.resolve("conf")
+    Files.createDirectories(confDir)
+    Files.writeString(
+      confDir.resolve("settings.xml"),
+      """|<?xml version="1.0" encoding="UTF-8"?>
+         |<!DOCTYPE settings [ <!ENTITY xxe "disallowed"> ]>
+         |<settings/>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    var capturedXml: String = ""
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      env = Map("MAVEN_HOME" -> mavenHome.toString),
+      onRun = { (args, ws) =>
+        val gsIdx = args.indexOf("--global-settings")
+        capturedXml =
+          Files.readString(Paths.get(args(gsIdx + 1)), StandardCharsets.UTF_8)
+        val out = ws.resolve(".metals/mbt-maven.json").toNIO
+        Files.writeString(out, "{}", StandardCharsets.UTF_8)
+        Future.successful(ExitCodes.Success)
+      },
+    )
+
+    Await.result(importer.extract(workspace), Duration.Inf)
+
+    assertEquals(capturedXml, MavenMbtImporter.snapshotPluginSettingsXml)
   }
 
   test("snapshot-version-preserves-explicit-global-settings") {
