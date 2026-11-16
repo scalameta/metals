@@ -68,34 +68,29 @@ def assertSemanticdbForScala2 = Def.task {
   val enabled = semanticdbEnabled.value
   val sOptions = scalacOptions.value
   val targetRoot = semanticdbTargetRoot.value
-  val converter = fileConverter.value
   val sourceRoot = (ThisBuild / baseDirectory).value
   val sv = scalaVersion.value
   val project = thisProject.value
   val config = configuration.value
   val jOptions = (compile / javacOptions).value
+  val javacTargetRoot = (Compile / semanticdbTargetRoot).value
+  val virtual = virtualPathsInOptions.value
+  val converter = fileConverter.value
 
   assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
   assertPlugin(sOptions, s"semanticdb-scalac", sv, BuildInfo.semanticdbVersion)
   assertOption(sOptions, "-Yrangepos")
   assertOption(sOptions, "-P:semanticdb:synthetics:on")
   assertOption(sOptions, "-P:semanticdb:failures:warning")
-  assertOptionValue(
-    sOptions,
-    "-P:semanticdb:sourceroot",
-    sourceRoot.toString,
-    converter,
-  )
+  assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
   assertOptionValue(
     sOptions,
     "-P:semanticdb:targetroot",
-    targetRoot.toString,
-    converter,
+    optionPath(targetRoot, virtual, converter),
   )
-
-  assert(
-    jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
-    "no javac-semanticdb plugin",
+  assertContains(
+    jOptions,
+    javacPluginOption(sourceRoot, javacTargetRoot, virtual = false, converter),
   )
 }
 
@@ -107,19 +102,57 @@ def assertSemanticdbForScala3 = Def.taskDyn {
         val enabled = semanticdbEnabled.value
         val sOptions = scalacOptions.value
         val targetRoot = semanticdbTargetRoot.value
-        val converter = fileConverter.value
+        val sourceRoot = (ThisBuild / baseDirectory).value
         val project = thisProject.value
         val config = configuration.value
+        val jOptions = (compile / javacOptions).value
+        val javacTargetRoot = (Compile / semanticdbTargetRoot).value
+        val virtual = virtualPathsInOptions.value
+        val converter = fileConverter.value
         assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
         assertOption(sOptions, "-Xsemanticdb")
         assertOptionValue(
           sOptions,
           s"-semanticdb-target",
-          targetRoot.toString,
-          converter,
+          optionPath(targetRoot, virtual, converter),
+        )
+        assertContains(
+          jOptions,
+          javacPluginOption(
+            sourceRoot,
+            javacTargetRoot,
+            virtual = false,
+            converter,
+          ),
         )
       }
   }
+}
+
+// sbt 2.1 and later write virtual paths, such as ${OUT}/..., in options
+def virtualPathsInOptions = Def.setting {
+  CrossVersion.partialVersion((ThisBuild / sbtVersion).value).exists {
+    case (major, minor) => major > 2 || (major == 2 && minor >= 1)
+  }
+}
+
+def optionPath(
+    file: File,
+    virtual: Boolean,
+    converter: xsbti.FileConverter,
+): String =
+  if (virtual) converter.toVirtualFile(file.toPath).id
+  else file.toString
+
+def javacPluginOption(
+    sourceRoot: File,
+    targetRoot: File,
+    virtual: Boolean,
+    converter: xsbti.FileConverter,
+): String = {
+  val source = optionPath(sourceRoot, virtual, converter)
+  val target = optionPath(targetRoot, virtual, converter)
+  s"-Xplugin:semanticdb -sourceroot:$source -targetroot:$target -build-tool:sbt"
 }
 
 def assertSemanticdbDisabled = Def.task {
@@ -161,11 +194,16 @@ def assertOption(scalacOptions: Seq[String], expectedOption: String): Unit = {
   }
 }
 
+def assertContains(options: Seq[String], expectedOption: String): Unit =
+  assert(
+    options.contains(expectedOption),
+    s"missing $expectedOption in ${options.mkString(" ")}",
+  )
+
 def assertOptionValue(
     scalacOptions: Seq[String],
     expectedOption: String,
     expectedValue: String,
-    converter: xsbti.FileConverter,
 ): Unit = {
   val options = scalacOptions.filter(_.startsWith(expectedOption))
   options.size match {
@@ -177,10 +215,7 @@ def assertOptionValue(
         if (expectedOption == option) scalacOptions.dropWhile(_ != option)(1)
         else option.stripPrefix(expectedOption).stripPrefix(":")
       assert(
-        converter
-          .toPath(xsbti.VirtualFileRef.of(value))
-          .toFile
-          .getCanonicalFile == file(expectedValue).getCanonicalFile,
+        value == expectedValue,
         s"wrong value for $expectedOption (actual: $value, expected: $expectedValue)",
       )
     case _ =>
