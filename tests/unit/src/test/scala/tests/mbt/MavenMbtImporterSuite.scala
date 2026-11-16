@@ -1,15 +1,20 @@
 package tests.mbt
 
 import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.io.IOException
+import java.net.InetAddress
+import java.net.ServerSocket
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.concurrent.atomic.AtomicInteger
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import javax.tools.ToolProvider
 import javax.xml.parsers.DocumentBuilderFactory
 
 import scala.concurrent.Await
@@ -650,5 +655,309 @@ class MavenMbtImporterSuite extends BaseSuite {
     )
     assert(zipXml.contains("cached-zip-proxy"))
     assert(zipXml.contains(MavenMbtImporter.centralSnapshotsUrl))
+  }
+
+  private def buildStubClassworldsJar(): Array[Byte] = {
+    val compiler = ToolProvider.getSystemJavaCompiler()
+    assert(compiler != null, "Expected JDK system Java compiler in unit tests")
+    val srcDir = Files.createTempDirectory("stub-classworlds-src")
+    val pkgDir =
+      srcDir.resolve("org/codehaus/plexus/classworlds/launcher")
+    Files.createDirectories(pkgDir)
+    val javaFile = pkgDir.resolve("Launcher.java")
+    Files.writeString(
+      javaFile,
+      """|package org.codehaus.plexus.classworlds.launcher;
+         |public class Launcher {
+         |  public static void main(String[] args) {}
+         |}
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+    val compileCode = compiler.run(
+      null,
+      null,
+      null,
+      "--release",
+      "8",
+      javaFile.toString,
+    )
+    assertEquals(compileCode, 0)
+    val classBytes = Files.readAllBytes(pkgDir.resolve("Launcher.class"))
+    val baos = new ByteArrayOutputStream()
+    Using.resource(new ZipOutputStream(baos)) { zos =>
+      zos.putNextEntry(
+        new ZipEntry(
+          "org/codehaus/plexus/classworlds/launcher/Launcher.class"
+        )
+      )
+      zos.write(classBytes)
+      zos.closeEntry()
+    }
+    baos.toByteArray
+  }
+
+  test("snapshot-version-bootstraps-uncached-custom-wrapper-distribution") {
+    val workspace =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-uncached-wrapper"))
+    val tempLauncherDir =
+      Files.createTempDirectory("maven-mbt-uncached-launcher")
+    val wrapperJar = tempLauncherDir.resolve("maven-wrapper.jar")
+    val wrapperRes = Option(getClass.getResourceAsStream("/maven-wrapper.jar"))
+    wrapperRes match {
+      case Some(in) =>
+        Using.resource(in) { stream =>
+          Files.copy(stream, wrapperJar)
+        }
+      case None =>
+        val repoJar = Paths.get("metals/src/main/resources/maven-wrapper.jar")
+        Files.copy(repoJar, wrapperJar)
+    }
+
+    val launcherJarBytes = buildStubClassworldsJar()
+    val distZipBytes = {
+      val baos = new ByteArrayOutputStream()
+      Using.resource(new ZipOutputStream(baos)) { zos =>
+        zos.putNextEntry(
+          new ZipEntry(
+            "apache-maven-3.9.9-corp/boot/plexus-classworlds-2.8.0.jar"
+          )
+        )
+        zos.write(launcherJarBytes)
+        zos.closeEntry()
+
+        zos.putNextEntry(new ZipEntry("apache-maven-3.9.9-corp/bin/m2.conf"))
+        zos.write(
+          "main is org.apache.maven.cli.MavenCli from plexus.core\n".getBytes(
+            StandardCharsets.UTF_8
+          )
+        )
+        zos.closeEntry()
+
+        zos.putNextEntry(new ZipEntry("apache-maven-3.9.9-corp/bin/mvn"))
+        zos.write("#!/bin/sh\n".getBytes(StandardCharsets.UTF_8))
+        zos.closeEntry()
+
+        zos.putNextEntry(
+          new ZipEntry("apache-maven-3.9.9-corp/conf/settings.xml")
+        )
+        zos.write(
+          """|<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+             |  <proxies>
+             |    <proxy>
+             |      <id>uncached-remote-proxy</id>
+             |      <active>true</active>
+             |      <protocol>http</protocol>
+             |      <host>proxy.uncached.internal</host>
+             |      <port>3128</port>
+             |    </proxy>
+             |  </proxies>
+             |  <mirrors>
+             |    <mirror>
+             |      <id>uncached-remote-mirror</id>
+             |      <mirrorOf>external:*</mirrorOf>
+             |      <url>https://artifactory.uncached.internal/maven/</url>
+             |    </mirror>
+             |  </mirrors>
+             |  <profiles>
+             |    <profile>
+             |      <id>uncached-remote-repo-profile</id>
+             |    </profile>
+             |  </profiles>
+             |  <activeProfiles>
+             |    <activeProfile>uncached-remote-repo-profile</activeProfile>
+             |  </activeProfiles>
+             |</settings>
+             |""".stripMargin.getBytes(StandardCharsets.UTF_8)
+        )
+        zos.closeEntry()
+      }
+      baos.toByteArray
+    }
+
+    val downloads = new AtomicInteger(0)
+    val server = new ServerSocket(0, 50, InetAddress.getByName("127.0.0.1"))
+    val serverThread = new Thread(() => {
+      var running = true
+      while (running && !server.isClosed) {
+        Try(server.accept()).toOption match {
+          case None =>
+            running = false
+          case Some(client) =>
+            Try {
+              Using.resource(client) { sock =>
+                val in = sock.getInputStream
+                val headerBuf = new ByteArrayOutputStream()
+                var matchedEnd = false
+                while (!matchedEnd) {
+                  val b = in.read()
+                  if (b == -1) matchedEnd = true
+                  else {
+                    headerBuf.write(b)
+                    val arr = headerBuf.toByteArray
+                    val len = arr.length
+                    if (
+                      len >= 4 &&
+                      arr(len - 4) == '\r' &&
+                      arr(len - 3) == '\n' &&
+                      arr(len - 2) == '\r' &&
+                      arr(len - 1) == '\n'
+                    ) matchedEnd = true
+                  }
+                }
+                downloads.incrementAndGet()
+                val out = sock.getOutputStream
+                val headers =
+                  s"HTTP/1.1 200 OK\r\nContent-Type: application/zip\r\nContent-Length: ${distZipBytes.length}\r\nConnection: close\r\n\r\n"
+                out.write(headers.getBytes(StandardCharsets.US_ASCII))
+                out.write(distZipBytes)
+                out.flush()
+              }
+            }
+        }
+      }
+    })
+    serverThread.setDaemon(true)
+    serverThread.start()
+
+    try {
+      val port = server.getLocalPort
+      val distUrl =
+        s"http://127.0.0.1:$port/maven2/org/apache/maven/apache-maven/3.9.9-corp/apache-maven-3.9.9-corp-bin.zip"
+      Files.writeString(
+        tempLauncherDir.resolve("maven-wrapper.properties"),
+        s"distributionUrl=$distUrl\n",
+        StandardCharsets.UTF_8,
+      )
+
+      val mavenUserHome =
+        Files.createTempDirectory("maven-mbt-uncached-user-home")
+      assert(!Files.exists(mavenUserHome.resolve("wrapper")))
+
+      val javaBin = Paths
+        .get(
+          System.getProperty("java.home"),
+          "bin",
+          if (isWindows) "java.exe" else "java",
+        )
+        .toString
+      val wrapperBaseCommand = List(
+        javaBin,
+        "-Dfile.encoding=UTF-8",
+        s"-Dmaven.multiModuleProjectDirectory=$workspace",
+        s"-Dmaven.home=$tempLauncherDir",
+        "-cp",
+        wrapperJar.toString,
+        "org.apache.maven.wrapper.MavenWrapperMain",
+      )
+      val testEnv = Map("MAVEN_USER_HOME" -> mavenUserHome.toString)
+
+      assert(
+        MavenMbtImporter.needsWrapperBootstrap(
+          wrapperBaseCommand,
+          workspace,
+          testEnv,
+        )
+      )
+
+      var recordedCommands: List[List[String]] = Nil
+      var capturedXml: String = ""
+      val importer = new TestMavenMbtImporter(
+        workspace,
+        version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+        baseCommand = wrapperBaseCommand,
+        env = testEnv,
+        onRun = { (args, ws) =>
+          recordedCommands = recordedCommands :+ args
+          if (args.contains("--version")) {
+            assert(!args.contains("--global-settings"))
+            val pb = new ProcessBuilder(args*)
+            pb.directory(ws.toNIO.toFile)
+            pb.environment().put("MAVEN_USER_HOME", mavenUserHome.toString)
+            pb.redirectErrorStream(true)
+            val proc = pb.start()
+            Using.resource(proc.getInputStream)(_.readAllBytes())
+            Future.successful(proc.waitFor())
+          } else {
+            val gsIdx = args.indexOf("--global-settings")
+            assert(gsIdx >= 0, s"Expected --global-settings in $args")
+            capturedXml = Files.readString(
+              Paths.get(args(gsIdx + 1)),
+              StandardCharsets.UTF_8,
+            )
+            val out = ws.resolve(".metals/mbt-maven.json").toNIO
+            Files.writeString(out, "{}", StandardCharsets.UTF_8)
+            Future.successful(ExitCodes.Success)
+          }
+        },
+      )
+
+      Await.result(importer.extract(workspace), Duration.Inf)
+
+      assertEquals(downloads.get(), 1)
+      assertEquals(recordedCommands.length, 2)
+      assertEquals(recordedCommands.head, wrapperBaseCommand :+ "--version")
+
+      val doc = parseXml(capturedXml)
+      assert(capturedXml.contains("uncached-remote-proxy"))
+      assert(capturedXml.contains("uncached-remote-mirror"))
+      assertEquals(
+        tagValues(doc, "url"),
+        List(
+          "https://artifactory.uncached.internal/maven/",
+          MavenMbtImporter.centralSnapshotsUrl,
+        ),
+      )
+      assertEquals(
+        tagValues(doc, "activeProfile"),
+        List("uncached-remote-repo-profile", "metals-snapshots"),
+      )
+
+      // Once unpacked in wrapper/dists, subsequent imports skip bootstrap and reuse cached settings.
+      assert(
+        !MavenMbtImporter.needsWrapperBootstrap(
+          wrapperBaseCommand,
+          workspace,
+          testEnv,
+        )
+      )
+      Await.result(importer.extract(workspace), Duration.Inf)
+      assertEquals(downloads.get(), 1)
+      assertEquals(recordedCommands.length, 3)
+    } finally {
+      Try(server.close())
+    }
+  }
+
+  test("snapshot-version-fails-when-uncached-wrapper-bootstrap-fails") {
+    val workspace =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-bootstrap-fail"))
+    val wrapperProps =
+      workspace.resolve(".mvn/wrapper/maven-wrapper.properties").toNIO
+    Files.createDirectories(wrapperProps.getParent)
+    Files.writeString(
+      wrapperProps,
+      "distributionUrl=https://unreachable.corp.internal/apache-maven-3.9.9-corp-bin.zip\n",
+      StandardCharsets.UTF_8,
+    )
+    val emptyM2 = Files.createTempDirectory("maven-mbt-empty-m2")
+
+    var recordedCommands: List[List[String]] = Nil
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      baseCommand = List("./mvnw"),
+      env = Map("MAVEN_USER_HOME" -> emptyM2.toString),
+      onRun = { (args, _) =>
+        recordedCommands = recordedCommands :+ args
+        Future.successful(1)
+      },
+    )
+
+    val err = intercept[Exception] {
+      Await.result(importer.extract(workspace), Duration.Inf)
+    }
+    assert(err.getMessage.contains("mbt-maven-wrapper-bootstrap"))
+    assertEquals(recordedCommands, List(List("./mvnw", "--version")))
   }
 }

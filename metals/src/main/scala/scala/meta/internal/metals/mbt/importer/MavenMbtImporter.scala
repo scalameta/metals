@@ -63,8 +63,24 @@ abstract class MavenMbtImporter(
         projectRoot,
         redirectErrorOutput = false,
         javaHome = userConfig().javaHome,
+        additionalEnv = if (environment eq sys.env) Map.empty else environment,
       )
       .future
+
+  protected def runWrapperBootstrap(baseArgs: List[String]): Future[Int] =
+    if (shellRunner != null)
+      shellRunner
+        .run(
+          "maven-wrapper-bootstrap",
+          baseArgs :+ "--version",
+          projectRoot,
+          redirectErrorOutput = false,
+          javaHome = userConfig().javaHome,
+          additionalEnv =
+            if (environment eq sys.env) Map.empty else environment,
+        )
+        .future
+    else runExport(baseArgs :+ "--version")
 
   protected def createSnapshotGlobalSettings(baseArgs: List[String]): Path =
     MavenMbtImporter.writeSnapshotGlobalSettings(
@@ -79,54 +95,94 @@ abstract class MavenMbtImporter(
         val out = outputPath(workspace)
         Files.createDirectories(out.toNIO.getParent)
         val baseArgs = mavenBaseCommand()
-        val snapshotSettings =
+        val needsSettings = MavenMbtImporter.needsSnapshotGlobalSettings(
+          pluginVersion,
+          baseArgs,
+          projectRoot,
+        )
+        (out, baseArgs, needsSettings)
+      })
+      .flatMap { case (out, baseArgs, needsSettings) =>
+        val bootstrapFuture =
           if (
-            MavenMbtImporter.needsSnapshotGlobalSettings(
-              pluginVersion,
+            needsSettings &&
+            MavenMbtImporter.needsWrapperBootstrap(
               baseArgs,
               projectRoot,
+              environment,
             )
-          )
-            Some(createSnapshotGlobalSettings(baseArgs))
-          else None
-        val settingsArgs = snapshotSettings match {
-          case Some(settingsPath) =>
-            List("--global-settings", settingsPath.toString)
-          case None => Nil
+          ) {
+            val rawBootstrap =
+              try runWrapperBootstrap(baseArgs)
+              catch {
+                case NonFatal(e) => Future.failed(e)
+              }
+            rawBootstrap.flatMap { code =>
+              if (code == ExitCodes.Cancel)
+                Future.failed(
+                  new java.util.concurrent.CancellationException(
+                    "mbt-maven-wrapper-bootstrap was cancelled"
+                  )
+                )
+              else if (code == ExitCodes.Success)
+                Future.unit
+              else
+                Future.failed(
+                  new Exception(
+                    s"mbt-maven-wrapper-bootstrap failed with exit code $code"
+                  )
+                )
+            }
+          } else Future.unit
+
+        bootstrapFuture.flatMap { _ =>
+          Future
+            .fromTry(Try {
+              val snapshotSettings =
+                if (needsSettings)
+                  Some(createSnapshotGlobalSettings(baseArgs))
+                else None
+              val settingsArgs = snapshotSettings match {
+                case Some(settingsPath) =>
+                  List("--global-settings", settingsPath.toString)
+                case None => Nil
+              }
+              val args = baseArgs ::: settingsArgs ::: List(
+                "--quiet",
+                pluginCoordinates,
+                s"-DmbtOutputFile=${out}",
+              )
+              (args, snapshotSettings)
+            })
+            .flatMap { case (args, snapshotSettings) =>
+              val exportFuture =
+                try runExport(args)
+                catch {
+                  case NonFatal(e) => Future.failed(e)
+                }
+              exportFuture
+                .andThen { case _ =>
+                  snapshotSettings
+                    .foreach(path => Try(Files.deleteIfExists(path)))
+                }
+                .flatMap { code =>
+                  if (code == ExitCodes.Cancel)
+                    Future.failed(
+                      new java.util.concurrent.CancellationException(
+                        "mbt-maven-export was cancelled"
+                      )
+                    )
+                  else if (code == ExitCodes.Success && Files.exists(out.toNIO))
+                    Future.successful(())
+                  else
+                    Future.failed(
+                      new Exception(
+                        s"mbt-maven-export failed with exit code $code"
+                      )
+                    )
+                }
+            }
         }
-        val args = baseArgs ::: settingsArgs ::: List(
-          "--quiet",
-          pluginCoordinates,
-          s"-DmbtOutputFile=${out}",
-        )
-        (out, args, snapshotSettings)
-      })
-      .flatMap { case (out, args, snapshotSettings) =>
-        val exportFuture =
-          try runExport(args)
-          catch {
-            case NonFatal(e) => Future.failed(e)
-          }
-        exportFuture
-          .andThen { case _ =>
-            snapshotSettings.foreach(path => Try(Files.deleteIfExists(path)))
-          }
-          .flatMap { code =>
-            if (code == ExitCodes.Cancel)
-              Future.failed(
-                new java.util.concurrent.CancellationException(
-                  "mbt-maven-export was cancelled"
-                )
-              )
-            else if (code == ExitCodes.Success && Files.exists(out.toNIO))
-              Future.successful(())
-            else
-              Future.failed(
-                new Exception(
-                  s"mbt-maven-export failed with exit code $code"
-                )
-              )
-          }
       }
 
 }
@@ -561,8 +617,60 @@ object MavenMbtImporter {
       distributionPath: String,
       zipStoreBase: String,
       zipStorePath: String,
+      alwaysDownload: Boolean,
+      alwaysUnpack: Boolean,
       mavenConfOverride: Option[Path],
   )
+
+  def needsWrapperBootstrap(
+      baseArgs: List[String],
+      projectRoot: AbsolutePath,
+      env: Map[String, String] = sys.env,
+  ): Boolean =
+    if (!isMavenWrapperCommand(baseArgs)) false
+    else {
+      val allTokens = collectMavenTokens(baseArgs, projectRoot)
+      val hasExplicitMavenConf =
+        (for {
+          rawConf <- extractSystemProperty(allTokens, "maven.conf")
+          confDir <- resolvePath(projectRoot, rawConf)
+          settings = confDir.resolve("settings.xml")
+          if Files.isRegularFile(settings)
+        } yield settings).isDefined
+
+      if (hasExplicitMavenConf) false
+      else
+        resolveWrapperSpec(baseArgs, allTokens, projectRoot, env) match {
+          case None => false
+          case Some(spec) =>
+            val hasOverrideConf =
+              spec.mavenConfOverride.exists(confDir =>
+                Files.isRegularFile(confDir.resolve("settings.xml"))
+              )
+            if (hasOverrideConf) false
+            else if (spec.alwaysDownload || spec.alwaysUnpack) true
+            else !isWrapperDistributionCached(spec, projectRoot)
+        }
+    }
+
+  private def isWrapperDistributionCached(
+      spec: WrapperSpec,
+      projectRoot: AbsolutePath,
+  ): Boolean = {
+    val hasUnpackedHome =
+      (for {
+        baseDir <- resolveWrapperBaseDir(
+          spec.distributionBase,
+          spec.mavenUserHome,
+          projectRoot,
+        )
+        distsRoot = baseDir.resolve(spec.distributionPath)
+        home <- findUnpackedWrapperHome(distsRoot, spec.effectiveUri)
+      } yield home).isDefined
+
+    hasUnpackedHome ||
+    resolveWrapperZipCandidates(spec, projectRoot).exists(isReadableZipDist)
+  }
 
   private def resolveWrapperGlobalSettingsFile(
       baseArgs: List[String],
@@ -586,10 +694,44 @@ object MavenMbtImporter {
             projectRoot,
           )
           distsRoot = baseDir.resolve(spec.distributionPath)
-          settings <- findUnpackedWrapperSettings(distsRoot, spec.effectiveUri)
+          home <- findUnpackedWrapperHome(distsRoot, spec.effectiveUri)
+          settings = home.resolve("conf").resolve("settings.xml")
+          if Files.isRegularFile(settings)
         } yield settings
       }
     }
+
+  private def resolveWrapperZipCandidates(
+      spec: WrapperSpec,
+      projectRoot: AbsolutePath,
+  ): List[Path] = {
+    val uriPath = Option(spec.effectiveUri.getPath).getOrElse("")
+    val archiveName =
+      Option(Paths.get(uriPath).getFileName).map(_.toString).getOrElse("")
+    val isZipArchive = archiveName.toLowerCase.endsWith(".zip")
+    val distName = removeLastExtension(archiveName)
+    val uriHash = Integer.toHexString(spec.effectiveUri.hashCode())
+    val cachedZip =
+      for {
+        zipBaseDir <- resolveWrapperBaseDir(
+          spec.zipStoreBase,
+          spec.mavenUserHome,
+          projectRoot,
+        )
+        if isZipArchive && distName.nonEmpty && archiveName.nonEmpty
+      } yield zipBaseDir
+        .resolve(spec.zipStorePath)
+        .resolve(distName)
+        .resolve(uriHash)
+        .resolve(archiveName)
+
+    val fileUriZip =
+      if (isZipArchive && "file".equalsIgnoreCase(spec.effectiveUri.getScheme))
+        Try(Paths.get(spec.effectiveUri)).toOption
+      else None
+
+    List(cachedZip, fileUriZip).flatten.distinct
+  }
 
   private def resolveWrapperGlobalSettingsZip(
       baseArgs: List[String],
@@ -598,31 +740,7 @@ object MavenMbtImporter {
       env: Map[String, String],
   ): Option[(Path, String)] =
     resolveWrapperSpec(baseArgs, allTokens, projectRoot, env).flatMap { spec =>
-      val uriPath = Option(spec.effectiveUri.getPath).getOrElse("")
-      val archiveName =
-        Option(Paths.get(uriPath).getFileName).map(_.toString).getOrElse("")
-      val distName = removeLastExtension(archiveName)
-      val uriHash = Integer.toHexString(spec.effectiveUri.hashCode())
-      val cachedZip =
-        for {
-          zipBaseDir <- resolveWrapperBaseDir(
-            spec.zipStoreBase,
-            spec.mavenUserHome,
-            projectRoot,
-          )
-          if distName.nonEmpty && archiveName.nonEmpty
-        } yield zipBaseDir
-          .resolve(spec.zipStorePath)
-          .resolve(distName)
-          .resolve(uriHash)
-          .resolve(archiveName)
-
-      val fileUriZip =
-        if ("file".equalsIgnoreCase(spec.effectiveUri.getScheme))
-          Try(Paths.get(spec.effectiveUri)).toOption
-        else None
-
-      val candidates = List(cachedZip, fileUriZip).flatten.distinct
+      val candidates = resolveWrapperZipCandidates(spec, projectRoot)
       val matches = for {
         zipPath <- candidates
         if Files.isRegularFile(zipPath)
@@ -644,15 +762,6 @@ object MavenMbtImporter {
         projectRoot,
       )
       wrapperProps <- loadJavaProperties(propertiesFile)
-      rawDistUrl <- Option(wrapperProps.getProperty("distributionUrl"))
-        .map(_.trim)
-        .filter(_.nonEmpty)
-      effectiveUri <- computeWrapperDistributionUri(
-        propertiesFile,
-        rawDistUrl,
-        allTokens,
-        env,
-      )
       wrapperRootDir = Option(
         propertiesFile.toAbsolutePath.normalize().getParent
       )
@@ -669,6 +778,18 @@ object MavenMbtImporter {
         wrapperRootDir
           .map(r => readWrapperSystemProperties(r.resolve("maven.properties")))
           .getOrElse(Map.empty[String, String])
+      rawDistUrl <- resolveWrapperProperty(
+        "distributionUrl",
+        allTokens,
+        extraSysProps,
+        wrapperProps,
+      )
+      effectiveUri <- computeWrapperDistributionUri(
+        propertiesFile,
+        rawDistUrl,
+        allTokens,
+        env,
+      )
       mavenUserHome <- extractSystemProperty(allTokens, "maven.user.home")
         .orElse(extraSysProps.get("maven.user.home"))
         .flatMap(resolvePath(projectRoot, _))
@@ -681,25 +802,57 @@ object MavenMbtImporter {
       WrapperSpec(
         effectiveUri = effectiveUri,
         mavenUserHome = mavenUserHome,
-        distributionBase = Option(wrapperProps.getProperty("distributionBase"))
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .getOrElse("MAVEN_USER_HOME"),
-        distributionPath = Option(wrapperProps.getProperty("distributionPath"))
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .getOrElse("wrapper/dists"),
-        zipStoreBase = Option(wrapperProps.getProperty("zipStoreBase"))
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .getOrElse("MAVEN_USER_HOME"),
-        zipStorePath = Option(wrapperProps.getProperty("zipStorePath"))
-          .map(_.trim)
-          .filter(_.nonEmpty)
-          .getOrElse("wrapper/dists"),
+        distributionBase = resolveWrapperProperty(
+          "distributionBase",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).getOrElse("MAVEN_USER_HOME"),
+        distributionPath = resolveWrapperProperty(
+          "distributionPath",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).getOrElse("wrapper/dists"),
+        zipStoreBase = resolveWrapperProperty(
+          "zipStoreBase",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).getOrElse("MAVEN_USER_HOME"),
+        zipStorePath = resolveWrapperProperty(
+          "zipStorePath",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).getOrElse("wrapper/dists"),
+        alwaysDownload = resolveWrapperProperty(
+          "alwaysDownload",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).exists(_.equalsIgnoreCase("true")),
+        alwaysUnpack = resolveWrapperProperty(
+          "alwaysUnpack",
+          allTokens,
+          extraSysProps,
+          wrapperProps,
+        ).exists(_.equalsIgnoreCase("true")),
         mavenConfOverride = mavenConfOverride,
       )
     }
+
+  private def resolveWrapperProperty(
+      key: String,
+      allTokens: List[String],
+      extraSysProps: Map[String, String],
+      wrapperProps: java.util.Properties,
+  ): Option[String] =
+    extractSystemProperty(allTokens, key)
+      .orElse(extraSysProps.get(key))
+      .orElse(Option(wrapperProps.getProperty(key)))
+      .map(_.trim)
+      .filter(_.nonEmpty)
 
   private def findWrapperPropertiesFile(
       baseArgs: List[String],
@@ -856,7 +1009,7 @@ object MavenMbtImporter {
       case _ => None
     }
 
-  private def findUnpackedWrapperSettings(
+  private def findUnpackedWrapperHome(
       distsRoot: Path,
       effectiveUri: URI,
   ): Option[Path] = {
@@ -882,15 +1035,19 @@ object MavenMbtImporter {
       distName <- distNames
       hash <- hashes
       hashDir = distsRoot.resolve(distName).resolve(hash)
-      settings <- settingsInWrapperHashDir(hashDir)
-    } yield settings
+      home <- wrapperHomeInHashDir(hashDir)
+    } yield home
     candidates.headOption
   }
 
-  private def settingsInWrapperHashDir(hashDir: Path): Option[Path] = {
-    val direct = hashDir.resolve("conf").resolve("settings.xml")
-    if (Files.isRegularFile(direct)) Some(direct)
-    else if (!Files.isDirectory(hashDir)) None
+  private def isUnpackedMavenHome(dir: Path): Boolean =
+    Files.isDirectory(dir.resolve("bin")) ||
+      Files.isDirectory(dir.resolve("boot")) ||
+      Files.isRegularFile(dir.resolve("conf").resolve("settings.xml"))
+
+  private def wrapperHomeInHashDir(hashDir: Path): Option[Path] =
+    if (!Files.isDirectory(hashDir)) None
+    else if (isUnpackedMavenHome(hashDir)) Some(hashDir)
     else {
       val subdirs = Try {
         Using.resource(Files.list(hashDir)) { stream =>
@@ -899,30 +1056,40 @@ object MavenMbtImporter {
             .filter(Files.isDirectory(_))
         }
       }.getOrElse(Array.empty[Path])
-      if (subdirs.length == 1) {
-        val nested = subdirs(0).resolve("conf").resolve("settings.xml")
-        if (Files.isRegularFile(nested)) Some(nested) else None
-      } else None
+      if (subdirs.length == 1 && isUnpackedMavenHome(subdirs(0)))
+        Some(subdirs(0))
+      else None
     }
+
+  private def isReadableZipDist(zipPath: Path): Boolean =
+    Files.isRegularFile(zipPath) &&
+      Try {
+        Using.resource(new ZipFile(zipPath.toFile)) { zip =>
+          val entries = zip.stream().toArray(n => new Array[ZipEntry](n))
+          zipSingleTopDir(entries).isDefined
+        }
+      }.getOrElse(false)
+
+  private def zipSingleTopDir(entries: Array[ZipEntry]): Option[String] = {
+    val topDirs = entries.flatMap { entry =>
+      val normalized = entry.getName.stripPrefix("/")
+      val slash = normalized.indexOf('/')
+      if (slash > 0) Some(normalized.substring(0, slash))
+      else if (entry.isDirectory && normalized.nonEmpty) Some(normalized)
+      else None
+    }.distinct
+    if (topDirs.length == 1) Some(topDirs(0)) else None
   }
 
   private def findSettingsEntryInZip(zipPath: Path): Option[String] =
     Try {
       Using.resource(new ZipFile(zipPath.toFile)) { zip =>
         val entries = zip.stream().toArray(n => new Array[ZipEntry](n))
-        val topDirs = entries.flatMap { entry =>
-          val normalized = entry.getName.stripPrefix("/")
-          val slash = normalized.indexOf('/')
-          if (slash > 0) Some(normalized.substring(0, slash))
-          else if (entry.isDirectory && normalized.nonEmpty) Some(normalized)
-          else None
-        }.distinct
-        if (topDirs.length == 1) {
-          val candidate = s"${topDirs(0)}/conf/settings.xml"
-          Option(zip.getEntry(candidate))
-            .filter(!_.isDirectory)
-            .map(_.getName)
-        } else None
+        for {
+          topDir <- zipSingleTopDir(entries)
+          entry <- Option(zip.getEntry(s"$topDir/conf/settings.xml"))
+          if !entry.isDirectory
+        } yield entry.getName
       }
     }.toOption.flatten
 
