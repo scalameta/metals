@@ -2,7 +2,6 @@ package tests.pc
 
 import java.net.URI
 
-import scala.meta.internal.jdk.CollectionConverters._
 import scala.meta.internal.metals.EmptyCancelToken
 import scala.meta.internal.pc.PresentationCompilerConfigImpl
 import scala.meta.pc.CancelToken
@@ -47,17 +46,13 @@ class DiagnosticsSuite extends BasePCSuite {
         override def shouldReturnDiagnostics(): Boolean = true
       }
 
-      val diags = presentationCompiler
-        .didChange(params)
-        .get
-        .asScala
+      val diags = diagnosticsFor(params)
         .map { diag =>
           val start = diag.getRange().getStart()
           val end = diag.getRange().getEnd()
           val message = diag.getMessage().getLeft()
           s"${start.getLine()}:${start.getCharacter()}-${end.getLine()}:${end.getCharacter()} - $message"
         }
-        .toList
 
       assertNoDiff(diags.mkString("\n"), expected)
     }
