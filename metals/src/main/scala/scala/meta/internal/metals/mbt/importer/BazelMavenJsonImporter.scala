@@ -350,6 +350,9 @@ object BazelMavenJsonImporter {
    * Match Bazel external dep labels to resolved Maven module ids by coordinate
    * suffix, using the hub when one coordinate maps to several module versions.
    *
+   * Labels belonging to [[internalHubNames]] are skipped because their lock
+   * files are excluded from [[discoverMavenHubs]].
+   *
    * @param externalDeps target -> external dep labels (`@<hub>//:<coord>`)
    * @param modules      resolved Maven modules
    * @param hubs         materialized hubs, providing per-hub `coordinate -> version`
@@ -364,12 +367,17 @@ object BazelMavenJsonImporter {
       modules.toList.groupBy(m => sanitizeCoordinate(m.organization, m.name))
     val hubVersions: Map[HubName, Map[String, String]] =
       hubs.map(hub => hub.name -> hubCoordinateVersions(hub)).toMap
+    val resolvedByLabel = TrieMap.empty[String, Option[String]]
 
-    def pick(label: String, coord: String): Option[String] = {
+    def pick(
+        label: String,
+        hubOpt: Option[HubName],
+        coord: String,
+    ): Option[String] = {
       val candidates = modulesBySuffix.getOrElse(coord, Nil)
       if (candidates.sizeIs <= 1) candidates.headOption.map(_.id)
       else {
-        val wanted = labelHubName(label)
+        val wanted = hubOpt
           .flatMap(hubVersions.get)
           .flatMap(_.get(coord))
         val chosen = wanted
@@ -388,13 +396,21 @@ object BazelMavenJsonImporter {
       }
     }
 
+    def resolveLabel(label: String): Option[String] =
+      resolvedByLabel.getOrElseUpdate(
+        label, {
+          val hubOpt = labelHubName(label)
+          if (hubOpt.exists(internalHubNames.contains)) None
+          else
+            for {
+              coord <- labelCoordinate(label)
+              id <- pick(label, hubOpt, coord)
+            } yield id
+        },
+      )
+
     externalDeps.map { case (target, labels) =>
-      val matched = for {
-        label <- labels
-        coord <- labelCoordinate(label).toList
-        id <- pick(label, coord).toList
-      } yield id
-      target -> matched.distinct
+      target -> labels.flatMap(resolveLabel).distinct
     }
   }
 
