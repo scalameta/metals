@@ -47,7 +47,7 @@ object MetalsPlugin extends AutoPlugin {
           "-P:semanticdb:synthetics:on",
           // Don't fail compilation in case of Scalameta crash during SemanticDB generation.
           "-P:semanticdb:failures:warning",
-          s"-P:semanticdb:sourceroot:${(ThisBuild / baseDirectory).value}",
+          s"-P:semanticdb:sourceroot:${optionPath.value((ThisBuild / baseDirectory).value)}",
         )
     },
     javaSemanticdbEnabled := bspEnabled.value,
@@ -123,6 +123,40 @@ object MetalsPlugin extends AutoPlugin {
     sbtVersion.value.startsWith("2.")
   }
 
+  /*
+   * sbt 2.1 and later resolve virtual paths, such as `${OUT}/...`, in
+   * compiler options. A virtual path keeps the compile cache key the same
+   * in every checkout. The pre-releases of sbt 2.1.0 before RC3 do not
+   * resolve them in `javacOptions` (sbt/sbt#10029).
+   */
+  def optionPath: Def.Initialize[File => String] = Def.setting {
+    val converter = fileConverter.value
+    val version = sbtVersion.value
+    val virtual = CrossVersion.partialVersion(version).exists {
+      case (major, minor) => major > 2 || (major == 2 && minor >= 1)
+    } && (!version.startsWith("2.1.0-") || version == "2.1.0-RC3")
+    (path: File) =>
+      if (virtual) virtualPath(converter, path.toPath)
+      else path.toString
+  }
+
+  /*
+   * `toVirtualFile` lists a directory to hash its content, but
+   * `toVirtualFileRef` does not read the file system. The plugin compiles
+   * against sbt versions without `toVirtualFileRef`, so it calls the method
+   * by reflection.
+   */
+  private def virtualPath(
+      converter: xsbti.FileConverter,
+      path: java.nio.file.Path,
+  ): String =
+    Try(
+      converter.getClass
+        .getMethod("toVirtualFileRef", classOf[java.nio.file.Path])
+    ).map(_.invoke(converter, path).asInstanceOf[xsbti.VirtualFileRef])
+      .getOrElse(converter.toVirtualFile(path))
+      .id
+
   def javaSemanticdbOptions: Def.Initialize[Seq[String]] = {
     def exportsFlags(version: JdkVersion): List[String] = {
       if (version.major >= 12) {
@@ -141,8 +175,9 @@ object MetalsPlugin extends AutoPlugin {
       JdkVersion.inferJavaVersion(explicit) match {
         case None => Seq.empty
         case Some(version) =>
-          val sourceRoot = (ThisBuild / baseDirectory).value
-          val targetRoot = (Compile / semanticdbTargetRoot).value
+          val sourceRoot = optionPath.value((ThisBuild / baseDirectory).value)
+          val targetRoot =
+            optionPath.value((Compile / semanticdbTargetRoot).value)
           val pluginOption =
             s"-Xplugin:semanticdb -sourceroot:${sourceRoot} -targetroot:${targetRoot} -build-tool:sbt"
           pluginOption :: exportsFlags(version)
