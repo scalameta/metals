@@ -17,3 +17,12 @@ case class MbtGlobMatcher(
         value.startsWith(relativeDirectory)
     }
 }
+
+object MbtGlobMatcher {
+  def normalizeSlashes(s: String): String = s.trim.replace('\\', '/')
+
+  def isPatternGlob(pattern: String): Boolean =
+    normalizeSlashes(pattern).exists(c =>
+      c == '*' || c == '?' || c == '[' || c == '{'
+    )
+}

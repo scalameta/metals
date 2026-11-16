@@ -37,6 +37,9 @@ trait MbtImportProvider {
   /**
    * Returns `true` when the given path is a build file that, if modified,
    * should trigger a re-import (e.g. `pom.xml` for Maven).
+   *
+   * Files a build additionally declares under `watchedFiles` in its output are
+   * tracked by [[scala.meta.internal.metals.mbt.MbtWatchedFiles]], not here.
    */
   def isBuildRelated(path: AbsolutePath): Boolean
 
