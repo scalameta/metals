@@ -1,7 +1,10 @@
 package scala.meta.internal.metals.mbt.importer
 
+import java.util.concurrent.CancellationException
+
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.util.control.NonFatal
 
 import scala.meta.internal.builds.BazelBuildTool
 import scala.meta.internal.builds.BazelDigest
@@ -539,12 +542,13 @@ abstract class BazelMbtImporter(
               xmlJavac ++ parsed.getOrElse("javacopts", Map.empty),
             )
           }
-          .recover { case e =>
-            scribe.warn(
-              "bazel-mbt: failed to query unflattened compiler options, falling back to XML",
-              e,
-            )
-            (xmlScalac, xmlJavac)
+          .recover {
+            case NonFatal(e) if !e.isInstanceOf[CancellationException] =>
+              scribe.warn(
+                "bazel-mbt: failed to query unflattened compiler options, falling back to XML",
+                e,
+              )
+              (xmlScalac, xmlJavac)
           }
     }
   }

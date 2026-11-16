@@ -174,13 +174,16 @@ object BazelQuery {
           entry <- jsonArray(elem.getAsJsonObject, "entries")
           if entry.isJsonObject
           entryObj = entry.getAsJsonObject
-          if jsonString(entryObj, "label").contains(defaultConditionLabel)
+          if jsonString(entryObj, "label").exists(isDefaultCondition)
           value <- stringListValues(entryObj)
         } yield value
         values.toList
       case _ =>
         Nil
     }
+
+  private def isDefaultCondition(label: String): Boolean =
+    label.stripPrefix("@@").stripPrefix("@") == defaultConditionLabel
 
   private def stringListValues(obj: JsonObject): List[String] = {
     val values = for {

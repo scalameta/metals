@@ -92,6 +92,32 @@ class BazelSelectOptsSuite extends FunSuite {
     assertEquals(mergedScalac("//pkg:with_select"), List("-deprecation"))
   }
 
+  test("parse-canonical-main-repo-default-condition-labels") {
+    val jsonproto = List(
+      """{"type":"RULE","rule":{"name":"@//pkg:single_at","ruleClass":"java_library","attribute":[{"name":"javacopts","type":"SELECTOR_LIST","selectorList":{"type":"STRING_LIST","elements":[{"entries":[{"label":"@//conditions:default","stringListValue":["-g"]}]},{"entries":[{"label":"@//pkg:use_ecj","stringListValue":["-err:all"]},{"label":"@//conditions:default","stringListValue":["-Xlint:all"]}]}]}}]}}""",
+      """{"type":"RULE","rule":{"name":"@@//pkg:double_at","ruleClass":"java_library","attribute":[{"name":"javacopts","type":"SELECTOR_LIST","selectorList":{"type":"STRING_LIST","elements":[{"entries":[{"label":"@@//conditions:default","stringListValue":["-g"]}]},{"entries":[{"label":"@@//pkg:use_ecj","stringListValue":["-err:all"]},{"label":"@@//conditions:default","stringListValue":["-Werror"]}]}]}}]}}""",
+      """{"type":"RULE","rule":{"name":"@@//pkg:external_cond","ruleClass":"java_library","attribute":[{"name":"javacopts","type":"SELECTOR_LIST","selectorList":{"type":"STRING_LIST","elements":[{"entries":[{"label":"@@other_repo+//conditions:default","stringListValue":["-err:all"]}]}]}}]}}""",
+    ).mkString("\n")
+
+    val parsed = BazelQuery.parseUnflattenedStringLists(
+      jsonproto,
+      Set("javacopts"),
+    )
+
+    assertEquals(
+      parsed("javacopts")("@//pkg:single_at"),
+      List("-g", "-Xlint:all"),
+    )
+    assertEquals(
+      parsed("javacopts")("@@//pkg:double_at"),
+      List("-g", "-Werror"),
+    )
+    assertEquals(
+      parsed("javacopts")("@@//pkg:external_cond"),
+      Nil,
+    )
+  }
+
   test("parse-empty-output-preserves-xml-fallback") {
     assertEquals(
       BazelQuery.parseUnflattenedStringLists(
