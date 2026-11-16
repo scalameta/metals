@@ -88,6 +88,8 @@ class HeaderCompilerSuite extends munit.FunSuite {
     }
   }
 
+  // Final constant-expression initializers remain in headers for javac to typecheck.
+  // Exercise pruning of invalid non-final fields and method bodies here.
   checkNoErrors(
     "class",
     """|
@@ -95,15 +97,15 @@ class HeaderCompilerSuite extends munit.FunSuite {
        |package a;
        |
        |public class Example {
-       | public final int myIntField = "42";
-       | public final double myDoubleField = "42";
-       | public final float myFloatField = "42";
-       | public final long myLongField = "42";
-       | public final short myShortField = "42";
-       | public final byte myByteField = "42";
-       | public final char myCharField = "42";
-       | public final boolean myBooleanField = "42";
-       | public final String myStringField = "42";
+       | public int myIntField = "42";
+       | public double myDoubleField = "42";
+       | public float myFloatField = "42";
+       | public long myLongField = "42";
+       | public short myShortField = "42";
+       | public byte myByteField = "42";
+       | public char myCharField = "42";
+       | public boolean myBooleanField = "42";
+       | public String myStringField = "42";
        | public final int myIntMethod() { return "42"; }
        | public final double myDoubleMethod() { return "42"; }
        | public final float myFloatMethod() { return "42"; }
@@ -179,6 +181,106 @@ class HeaderCompilerSuite extends munit.FunSuite {
       options = List("-Xplugin:MetalsHeaderCompiler -keep-bodies:Caller.java"),
     ).filter(_.getKind == Diagnostic.Kind.ERROR)
     assertEquals(errors.map(_.getCode), Nil)
+  }
+
+  private val nonconstantPrimitiveFields = List(
+    ("boolean", "Boolean.getBoolean(\"run\")", "RUN"),
+    ("byte", "(byte) Integer.parseInt(\"1\")", "RUN != 0"),
+    ("short", "(short) Integer.parseInt(\"1\")", "RUN != 0"),
+    ("char", "(char) Integer.parseInt(\"1\")", "RUN != 0"),
+    ("int", "Integer.parseInt(\"1\")", "RUN != 0"),
+    ("long", "Long.parseLong(\"1\")", "RUN != 0"),
+    ("float", "Float.parseFloat(\"1\")", "RUN != 0"),
+    ("double", "Double.parseDouble(\"1\")", "RUN != 0"),
+  ).map { case (kind, initializer, condition) =>
+    (kind, s"static final $kind RUN = $initializer;", condition)
+  }
+
+  for (
+    (name, declarations, condition) <- nonconstantPrimitiveFields ++ List(
+      (
+        "blank-final",
+        "static final boolean RUN; static { RUN = Boolean.getBoolean(\"run\"); }",
+        "RUN",
+      ),
+      (
+        "interface",
+        "interface Flags { boolean RUN = Boolean.getBoolean(\"run\"); }",
+        "Flags.RUN",
+      ),
+      (
+        "annotated",
+        """@java.lang.annotation.Target(java.lang.annotation.ElementType.TYPE_USE)
+          |@interface Flag {}
+          |static final @Flag boolean RUN = Boolean.getBoolean("run");""".stripMargin,
+        "RUN",
+      ),
+      ("non-final", "static boolean RUN = Boolean.getBoolean(\"run\");", "RUN"),
+      (
+        "string",
+        "static final String RUN = System.getProperty(\"run\");",
+        "RUN != null",
+      ),
+    )
+  ) test(s"field-initializer-nonconstant-$name") {
+    val layout =
+      s"""|/example/Base.java
+          |package example;
+          |public class Base {
+          |  public Base() {}
+          |  public Base(Runnable work) {}
+          |}
+          |/example/Derived.java
+          |package example;
+          |public class Derived extends Base {
+          |  $declarations
+          |  public Derived() { super(() -> { while ($condition) {} }); }
+          |}
+          |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
+  }
+
+  test("field-initializer-real-constant-remains-unreachable") {
+    val layout = """|/example/Base.java
+                    |package example;
+                    |public class Base { public Base(Runnable work) {} }
+                    |/example/Derived.java
+                    |package example;
+                    |public class Derived extends Base {
+                    |  static final boolean RUN = false;
+                    |  public Derived() { super(() -> { while (RUN) {} }); }
+                    |}
+                    |""".stripMargin
+    for (options <- List(Nil, List("-Xplugin:MetalsHeaderCompiler"))) {
+      val errors = compileFiles(layout, options)
+        .filter(_.getKind == Diagnostic.Kind.ERROR)
+      assertEquals(errors.map(_.getCode), List("compiler.err.unreachable.stmt"))
+    }
+  }
+
+  test("field-initializer-instance-constants-retain-values") {
+    val layout = """|/example/Example.java
+                    |package example;
+                    |public class Example {
+                    |  final int A = 1;
+                    |  final int B = 2;
+                    |  {
+                    |    switch (0) {
+                    |      case A: break;
+                    |      case B: break;
+                    |    }
+                    |  }
+                    |}
+                    |""".stripMargin
+    assertEquals(compileFiles(layout), Nil)
+    assertEquals(
+      compileFiles(layout, options = List("-Xplugin:MetalsHeaderCompiler")),
+      Nil,
+    )
   }
 
   test("retained-constructor-switch-preserves-constant-labels") {

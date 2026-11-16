@@ -266,18 +266,40 @@ public class MetalsJavaHeaderCompilerPlugin implements Plugin {
         // before attribution: this is only a syntactic filter, and javac owns
         // name resolution and type checking, including errors in invalid source.
         // Keep pruning nonconstant initializers.
-        boolean staticFinal =
-            (varDecl.mods.flags & (Flags.STATIC | Flags.FINAL)) == (Flags.STATIC | Flags.FINAL);
+        boolean isFinal = (varDecl.mods.flags & Flags.FINAL) != 0 || interfaceContext;
         boolean constantCandidate =
-            (staticFinal || interfaceContext)
+            isFinal
                 && isConstantTypeSyntax(varDecl.getType())
                 && hasConstantExpressionSyntax(varDecl.init);
         if (!constantCandidate) {
-          TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
-          varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
+          if (isFinal
+              && TreeInfo.typeIn(varDecl.vartype) instanceof JCPrimitiveTypeTree primitive) {
+            varDecl.init = getNonconstantPrimitiveDefault(primitive, varDecl);
+          } else {
+            TypeKind fieldTypeKind = getTypeKindFromTree(varDecl.getType());
+            varDecl.init = getDefaultValue(varDecl.getType(), fieldTypeKind);
+          }
         }
       }
       super.visitVarDef(varDecl);
+    }
+
+    private JCExpression getNonconstantPrimitiveDefault(
+        JCPrimitiveTypeTree primitive, JCVariableDecl field) {
+      // A literal would turn a final runtime value into a constant variable,
+      // changing reachability in retained code. (new T[1])[0] has the same
+      // default value and primitive type without being a constant expression
+      // or referencing helper methods or wrapper classes.
+      int previousPosition = treeMaker.pos;
+      treeMaker.at(field.init == null ? field.pos : field.init.pos);
+      try {
+        return treeMaker.Indexed(
+            treeMaker.NewArray(
+                treeMaker.TypeIdent(primitive.typetag), List.of(treeMaker.Literal(1)), null),
+            treeMaker.Literal(0));
+      } finally {
+        treeMaker.at(previousPosition);
+      }
     }
 
     private boolean isConstantTypeSyntax(Tree tree) {
