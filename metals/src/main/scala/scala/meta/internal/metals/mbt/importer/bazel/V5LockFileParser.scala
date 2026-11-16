@@ -2,7 +2,6 @@ package scala.meta.internal.metals.mbt.importer.bazel
 
 import scala.meta.internal.metals.MetalsEnrichments._
 import scala.meta.internal.metals.mbt.MbtDependencyModule
-import scala.meta.internal.metals.mbt.importer.BazelMavenJsonImporter
 import scala.meta.internal.metals.mbt.importer.BazelMavenJsonImporter.ScannedExtDir
 
 import com.google.gson.JsonElement
@@ -26,20 +25,25 @@ class V5LockFileParser private[bazel] (artifacts: JsonObject)
 
   override def parse(
       repositoryNames: Seq[String],
-      extDirs: Seq[BazelMavenJsonImporter.ScannedExtDir],
+      extDirs: Seq[ScannedExtDir],
+      extensionPrefix: Option[String],
   ): Seq[MbtDependencyModule] = {
-    artifacts.entrySet().asScala.toSeq.flatMap { entry =>
-      val coordKey = entry.getKey // e.g., "com.google.guava:guava"
-      val artifactInfo = entry.getValue
-      if (!artifactInfo.isJsonObject) None
-      else
-        parseArtifact(
-          coordKey,
-          artifactInfo,
+    val results =
+      for {
+        entry <- artifacts.entrySet().asScala.toSeq
+        if entry.getValue.isJsonObject
+        result <- parseArtifact(
+          entry.getKey,
+          entry.getValue,
           repositoryNames,
           extDirs,
+          extensionPrefix,
         )
-    }
+      } yield result
+
+    val (missingIds, modules) = results.partitionMap(identity)
+    logMissingJars(missingIds)
+    modules
   }
 
   private def parseArtifact(
@@ -47,7 +51,8 @@ class V5LockFileParser private[bazel] (artifacts: JsonObject)
       artifactInfo: JsonElement,
       repositoryNames: Seq[String],
       extDirs: Seq[ScannedExtDir],
-  ): Option[MbtDependencyModule] = {
+      extensionPrefix: Option[String],
+  ): Option[Either[String, MbtDependencyModule]] = {
     val info = artifactInfo.getAsJsonObject
 
     // Get version
@@ -68,23 +73,39 @@ class V5LockFileParser private[bazel] (artifacts: JsonObject)
 
           // Find JAR file path
           val jarPath =
-            findJarPath(groupId, artifactId, v, repositoryNames, extDirs)
-
-          jarPath.map { jar =>
-            val sourcesPath =
-              findSourcesPath(
-                groupId,
-                artifactId,
-                v,
-                repositoryNames,
-                extDirs,
-              )
-
-            MbtDependencyModule(
-              id = id,
-              jar = jar,
-              sources = sourcesPath.orNull,
+            findJarPath(
+              groupId,
+              artifactId,
+              v,
+              repositoryNames,
+              extDirs,
+              extensionPrefix,
             )
+
+          jarPath match {
+            case Some(jar) =>
+              val sourcesPath =
+                findSourcesPath(
+                  groupId,
+                  artifactId,
+                  v,
+                  repositoryNames,
+                  extDirs,
+                  extensionPrefix,
+                )
+
+              Some(
+                Right(
+                  MbtDependencyModule(
+                    id = id,
+                    jar = jar,
+                    sources = sourcesPath.orNull,
+                  )
+                )
+              )
+            case None =>
+              scribe.debug(s"bazel-mbt: JAR not found locally for $id")
+              Some(Left(id))
           }
         }
       }
