@@ -445,6 +445,10 @@ class MavenLockFileParserTest extends BaseSuite {
              |      "shasums": { "jar": "555" },
              |      "version": "9999.0-empty-to-avoid-conflict-with-guava"
              |    },
+             |    "org.example:plus-build": {
+             |      "shasums": { "jar": "888", "sources": "999" },
+             |      "version": "1.0+build"
+             |    },
              |    "org.unused:unused-lib": {
              |      "shasums": { "jar": "666", "sources": "777" },
              |      "version": "1.0.0"
@@ -453,7 +457,8 @@ class MavenLockFileParserTest extends BaseSuite {
              |  "dependencies": {
              |    "io.grpc:grpc-okhttp": [
              |      "io.grpc:grpc-core",
-             |      "com.google.guava:listenablefuture"
+             |      "com.google.guava:listenablefuture",
+             |      "org.example:plus-build"
              |    ]
              |  }
              |}
@@ -492,6 +497,85 @@ class MavenLockFileParserTest extends BaseSuite {
           "@@+maven_wrapper+io_grpc_grpc_okhttp_sources_1_82_0",
           "@@+maven_wrapper+io_grpc_grpc_core_sources_1_82_0",
           "@@+maven_wrapper+com_google_guava_listenablefuture_9999_0_empty_to_avoid_conflict_with_guava",
+          "@@+maven_wrapper+org_example_plus_build_1_0_build",
+          "@@+maven_wrapper+org_example_plus_build_sources_1_0_build",
+        ),
+      )
+
+      // Also verify hub BUILD filtering matches escaped '+' build metadata
+      hubDir
+        .resolve("BUILD")
+        .writeText(
+          """|jvm_import(
+             |  name = "org_example_plus_build",
+             |  jars = ["@@+maven_wrapper+org_example_plus_build_1_0_build//file"],
+             |  srcjar = "@@+maven_wrapper+org_example_plus_build_jar_sources_1_0_build//file",
+             |)
+             |""".stripMargin
+        )
+      val missingWithBuild = BazelMavenJsonImporter.missingArtifactRepos(
+        Set("@maven//:org_example_plus_build"),
+        hubs,
+      )
+      assertEquals(
+        missingWithBuild,
+        Set(
+          "@@+maven_wrapper+org_example_plus_build_1_0_build",
+          "@@+maven_wrapper+org_example_plus_build_jar_sources_1_0_build",
+        ),
+      )
+    } finally {
+      workspaceRoot.deleteRecursively()
+    }
+  }
+
+  test("preferred-extension-prefix-across-sources-variants") {
+    val workspaceRoot =
+      AbsolutePath(Files.createTempDirectory("preferred-sources-variant-test"))
+    try {
+      val extDir = workspaceRoot.resolve("external")
+      val binaryJar = extDir.resolve(
+        "+mine+org_example_alpha_1_0/file/v1/org/example/alpha/1.0/alpha-1.0.jar"
+      )
+      // Other extension uses the first naming variant (_sources_), while preferred
+      // extension (+mine+) uses the second naming variant (_jar_sources_).
+      val otherSources = extDir.resolve(
+        "+other+org_example_alpha_sources_1_0/file/v1/org/example/alpha/1.0/alpha-1.0-sources.jar"
+      )
+      val mineJarSources = extDir.resolve(
+        "+mine+org_example_alpha_jar_sources_1_0/file/v1/org/example/alpha/1.0/alpha-1.0-sources.jar"
+      )
+      Seq(binaryJar, otherSources, mineJarSources).foreach(
+        _.writeBytes(Array.emptyByteArray)
+      )
+
+      val lockJson = gson.fromJson(
+        """|{
+           |  "artifacts": {
+           |    "org.example:alpha": {
+           |      "shasums": { "jar": "aaa", "sources": "bbb" },
+           |      "version": "1.0"
+           |    }
+           |  }
+           |}
+           |""".stripMargin,
+        classOf[JsonObject],
+      )
+
+      val scanned = ScannedExtDir(extDir, extDir.list.toList)
+      val modules = MavenLockFileParser
+        .create(lockJson)
+        .get
+        .parse(Seq("maven"), Seq(scanned), Some("+mine+"))
+
+      assertEquals(
+        modules,
+        Seq(
+          MbtDependencyModule(
+            "org.example:alpha:1.0",
+            binaryJar.toURI.toString,
+            mineJarSources.toURI.toString,
+          )
         ),
       )
     } finally {

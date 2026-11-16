@@ -35,7 +35,15 @@ object MavenLockFileParser {
   }
 
   private def sanitizeBzlmodSegment(s: String): String =
-    s.replace('.', '_').replace('-', '_').replace(':', '_')
+    s.replace('.', '_')
+      .replace('-', '_')
+      .replace(':', '_')
+      .replace('/', '_')
+      .replace('+', '_')
+      .replace('$', '_')
+      .replace("[", "")
+      .replace("]", "")
+      .takeWhile(_ != ',')
 
   /**
    * Convert artifact coordinates to Bzlmod directory name format.
@@ -209,7 +217,7 @@ trait MavenLockFileParser {
       .flatMap { scanned =>
         findBzlmodJar(
           scanned,
-          bzlmodArtifactDir,
+          Seq(bzlmodArtifactDir),
           groupPath,
           artifactId,
           version,
@@ -269,19 +277,15 @@ trait MavenLockFileParser {
 
     extDirs.view
       .flatMap { scanned =>
-        bzlmodSourcesDirs.view
-          .flatMap(
-            findBzlmodJar(
-              scanned,
-              _,
-              groupPath,
-              artifactId,
-              version,
-              sourcesJarName,
-              extensionPrefix,
-            )
-          )
-          .headOption
+        findBzlmodJar(
+          scanned,
+          bzlmodSourcesDirs,
+          groupPath,
+          artifactId,
+          version,
+          sourcesJarName,
+          extensionPrefix,
+        )
           .orElse(
             findInExternalRepositories(
               scanned,
@@ -330,21 +334,24 @@ trait MavenLockFileParser {
    */
   private def findBzlmodJar(
       scanned: ScannedExtDir,
-      artifactDir: String,
+      artifactDirs: Seq[String],
       groupPath: String,
       artifactId: String,
       version: String,
       jarName: String,
       extensionPrefix: Option[String],
   ): Option[AbsolutePath] = {
-    val matches = scanned.bzlmodEntriesBySuffix.getOrElse(artifactDir, Nil)
+    val matches =
+      artifactDirs.flatMap(dir =>
+        scanned.bzlmodEntriesBySuffix.getOrElse(dir, Nil)
+      )
     val candidates = extensionPrefix match {
       case Some(prefix) =>
         val (preferred, others) =
           matches.partition(_.filename.startsWith(prefix))
-        preferred ++ others
+        (preferred ++ others).distinct
       case None =>
-        matches
+        matches.distinct
     }
 
     candidates.collectFirst(
