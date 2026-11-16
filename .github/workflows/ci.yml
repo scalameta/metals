@@ -129,6 +129,11 @@ jobs:
             name: sbt-metals/scripted (Sbt 2)
             os: ubuntu-latest
             java: "21"
+          - type: sbt-metals Sbt 2.0
+            command: bin/test.sh '++3.x; set `sbt-metals` / scriptedSbt := V.sbt2Version; sbt-metals/scripted'
+            name: sbt-metals/scripted (Sbt 2.0)
+            os: ubuntu-latest
+            java: "21"
           - type: maven
             command: bin/test.sh 'slow/testOnly -- tests.maven.*'
             name: Maven integration

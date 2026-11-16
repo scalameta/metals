@@ -73,6 +73,8 @@ def assertSemanticdbForScala2 = Def.task {
   val project = thisProject.value
   val config = configuration.value
   val jOptions = (compile / javacOptions).value
+  val virtual = virtualPathsInOptions.value
+  val converter = fileConverter.value
 
   assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
   assertPlugin(sOptions, s"semanticdb-scalac", sv, BuildInfo.semanticdbVersion)
@@ -80,7 +82,11 @@ def assertSemanticdbForScala2 = Def.task {
   assertOption(sOptions, "-P:semanticdb:synthetics:on")
   assertOption(sOptions, "-P:semanticdb:failures:warning")
   assertOptionValue(sOptions, "-P:semanticdb:sourceroot", sourceRoot.toString)
-  assertOptionValue(sOptions, "-P:semanticdb:targetroot", targetRoot.toString)
+  assertOptionValue(
+    sOptions,
+    "-P:semanticdb:targetroot",
+    optionPath(targetRoot, virtual, converter),
+  )
 
   assert(
     jOptions.exists(_.startsWith("-Xplugin:semanticdb")),
@@ -98,12 +104,33 @@ def assertSemanticdbForScala3 = Def.taskDyn {
         val targetRoot = semanticdbTargetRoot.value
         val project = thisProject.value
         val config = configuration.value
+        val virtual = virtualPathsInOptions.value
+        val converter = fileConverter.value
         assert(enabled, s"semanticdb is disabled in ${project.id}/${config.id}")
         assertOption(sOptions, "-Xsemanticdb")
-        assertOptionValue(sOptions, s"-semanticdb-target", targetRoot.toString)
+        assertOptionValue(
+          sOptions,
+          s"-semanticdb-target",
+          optionPath(targetRoot, virtual, converter),
+        )
       }
   }
 }
+
+// sbt 2.1 and later write virtual paths, such as ${OUT}/..., in options
+def virtualPathsInOptions = Def.setting {
+  CrossVersion.partialVersion((ThisBuild / sbtVersion).value).exists {
+    case (major, minor) => major > 2 || (major == 2 && minor >= 1)
+  }
+}
+
+def optionPath(
+    file: File,
+    virtual: Boolean,
+    converter: xsbti.FileConverter,
+): String =
+  if (virtual) converter.toVirtualFile(file.toPath).id
+  else file.toString
 
 def assertSemanticdbDisabled = Def.task {
   val enabled = semanticdbEnabled.value
