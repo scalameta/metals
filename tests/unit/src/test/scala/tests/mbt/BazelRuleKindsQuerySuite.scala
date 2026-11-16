@@ -186,14 +186,14 @@ class BazelRuleKindsQuerySuite extends FunSuite {
   test("importer-aborts-on-failed-discovery-query-without-running-deps") {
     val workspace =
       AbsolutePath(Files.createTempDirectory("bazel-importer-fail"))
-    val runner = new StubShellRunner { (cmdRun, _) =>
+    val runner = new StubShellRunner((cmdRun, _) =>
       if (cmdRun == "bazel-mbt-query")
         StubResponse(
           exitCode = 2,
           stderr = List("ERROR: query syntax error"),
         )
       else StubResponse(exitCode = 0)
-    }
+    )
     val importer = new BazelMbtImporter(
       workspace,
       runner,
