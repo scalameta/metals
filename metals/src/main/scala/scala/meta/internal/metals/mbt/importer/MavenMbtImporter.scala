@@ -1,11 +1,16 @@
 package scala.meta.internal.metals.mbt.importer
 
 import java.io.File
+import java.io.InputStream
 import java.io.StringWriter
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.security.MessageDigest
+import java.util.zip.ZipEntry
+import java.util.zip.ZipFile
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
@@ -196,7 +201,20 @@ object MavenMbtImporter {
   ): String =
     resolveInstallationGlobalSettings(baseArgs, projectRoot, env) match {
       case Some(existing) => mergeSnapshotGlobalSettingsXml(existing)
-      case None => snapshotPluginSettingsXml
+      case None =>
+        if (isMavenWrapperCommand(baseArgs)) {
+          val allTokens = collectMavenTokens(baseArgs, projectRoot)
+          resolveWrapperGlobalSettingsZip(
+            baseArgs,
+            allTokens,
+            projectRoot,
+            env,
+          ) match {
+            case Some((zipPath, entryName)) =>
+              mergeSnapshotGlobalSettingsFromZip(zipPath, entryName)
+            case None => snapshotPluginSettingsXml
+          }
+        } else snapshotPluginSettingsXml
     }
 
   def resolveInstallationGlobalSettings(
@@ -204,11 +222,7 @@ object MavenMbtImporter {
       projectRoot: AbsolutePath,
       env: Map[String, String] = sys.env,
   ): Option[Path] = {
-    val mvnDir = projectRoot.resolve(".mvn")
-    val allTokens =
-      baseArgs ++
-        configFileTokens(mvnDir.resolve("maven.config").toNIO) ++
-        configFileTokens(mvnDir.resolve("jvm.config").toNIO)
+    val allTokens = collectMavenTokens(baseArgs, projectRoot)
 
     val fromMavenConf =
       for {
@@ -218,104 +232,47 @@ object MavenMbtImporter {
         if Files.isRegularFile(settings)
       } yield settings
 
-    val fromMavenHomeProp =
-      for {
-        rawHome <- extractSystemProperty(allTokens, "maven.home")
-        homeDir <- resolvePath(projectRoot, rawHome)
-        settings = homeDir.resolve("conf").resolve("settings.xml")
-        if Files.isRegularFile(settings)
-      } yield settings
+    if (isMavenWrapperCommand(baseArgs)) {
+      fromMavenConf.orElse(
+        resolveWrapperGlobalSettingsFile(baseArgs, allTokens, projectRoot, env)
+      )
+    } else {
+      val fromMavenHomeProp =
+        for {
+          rawHome <- extractSystemProperty(allTokens, "maven.home")
+          homeDir <- resolvePath(projectRoot, rawHome)
+          settings = homeDir.resolve("conf").resolve("settings.xml")
+          if Files.isRegularFile(settings)
+        } yield settings
 
-    fromMavenConf
-      .orElse(fromMavenHomeProp)
-      .orElse {
-        if (isMavenWrapperCommand(baseArgs)) None
-        else
+      fromMavenConf
+        .orElse(fromMavenHomeProp)
+        .orElse(
           baseArgs.headOption
             .flatMap(cmd => resolveExecutable(cmd, projectRoot, env))
             .flatMap(settingsFromExecutable)
-            .orElse(settingsFromEnvironment(projectRoot, env))
-      }
+        )
+        .orElse(settingsFromEnvironment(projectRoot, env))
+    }
+  }
+
+  private def collectMavenTokens(
+      baseArgs: List[String],
+      projectRoot: AbsolutePath,
+  ): List[String] = {
+    val mvnDir = projectRoot.resolve(".mvn")
+    baseArgs ++
+      configFileTokens(mvnDir.resolve("maven.config").toNIO) ++
+      configFileTokens(mvnDir.resolve("jvm.config").toNIO)
   }
 
   private[importer] def mergeSnapshotGlobalSettingsXml(
       existingSettings: Path
   ): String =
     try {
-      val dbf = DocumentBuilderFactory.newInstance()
-      dbf.setNamespaceAware(true)
-      dbf.setFeature(
-        "http://apache.org/xml/features/disallow-doctype-decl",
-        true,
-      )
-      List(
-        "http://xml.org/sax/features/external-general-entities",
-        "http://xml.org/sax/features/external-parameter-entities",
-        "http://apache.org/xml/features/nonvalidating/load-external-dtd",
-      ).foreach(dbf.setFeature(_, false))
-      dbf.setXIncludeAware(false)
-      dbf.setExpandEntityReferences(false)
-
-      val doc = Using.resource(Files.newInputStream(existingSettings)) { in =>
-        val builder = dbf.newDocumentBuilder()
-        builder.setErrorHandler(new DefaultHandler())
-        builder.parse(in)
+      Using.resource(Files.newInputStream(existingSettings)) { in =>
+        mergeSnapshotGlobalSettingsStream(in, existingSettings.toString)
       }
-      val root = Option(doc.getDocumentElement)
-        .filter(el => elementName(el) == "settings")
-        .getOrElse(
-          throw new IllegalArgumentException(
-            s"Expected <settings> root in $existingSettings"
-          )
-        )
-      val ns = Option(root.getNamespaceURI).filter(_.nonEmpty)
-      val prefix = Option(root.getPrefix).filter(_.nonEmpty)
-
-      val profiles = directChildElement(root, "profiles").getOrElse {
-        val created = createElement(doc, ns, prefix, "profiles")
-        root.appendChild(created)
-        created
-      }
-      val hasProfile = directChildElements(profiles).exists { el =>
-        elementName(el) == "profile" &&
-        directChildElement(el, "id").exists(
-          _.getTextContent.trim == snapshotsProfileId
-        )
-      }
-      if (!hasProfile) {
-        profiles.appendChild(createSnapshotProfileElement(doc, ns, prefix))
-      }
-
-      val activeProfiles =
-        directChildElement(root, "activeProfiles").getOrElse {
-          val created = createElement(doc, ns, prefix, "activeProfiles")
-          root.appendChild(created)
-          created
-        }
-      val isAlreadyActive = directChildElements(activeProfiles).exists { el =>
-        elementName(el) == "activeProfile" &&
-        el.getTextContent.trim == snapshotsProfileId
-      }
-      if (!isAlreadyActive) {
-        activeProfiles.appendChild(
-          createTextElement(
-            doc,
-            ns,
-            prefix,
-            "activeProfile",
-            snapshotsProfileId,
-          )
-        )
-      }
-
-      val tf = TransformerFactory.newInstance()
-      Try(tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""))
-      Try(tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, ""))
-      val transformer = tf.newTransformer()
-      transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
-      val writer = new StringWriter()
-      transformer.transform(new DOMSource(doc), new StreamResult(writer))
-      writer.toString
     } catch {
       case NonFatal(e) =>
         scribe.warn(
@@ -324,6 +281,108 @@ object MavenMbtImporter {
         )
         snapshotPluginSettingsXml
     }
+
+  private def mergeSnapshotGlobalSettingsFromZip(
+      zipPath: Path,
+      entryName: String,
+  ): String =
+    try {
+      Using.resource(new ZipFile(zipPath.toFile)) { zip =>
+        val entry = Option(zip.getEntry(entryName)).getOrElse(
+          throw new IllegalArgumentException(
+            s"Missing $entryName in $zipPath"
+          )
+        )
+        Using.resource(zip.getInputStream(entry)) { in =>
+          mergeSnapshotGlobalSettingsStream(in, s"$zipPath!$entryName")
+        }
+      }
+    } catch {
+      case NonFatal(e) =>
+        scribe.warn(
+          s"Failed to merge global Maven settings from $zipPath!$entryName, using standalone snapshot settings",
+          e,
+        )
+        snapshotPluginSettingsXml
+    }
+
+  private def mergeSnapshotGlobalSettingsStream(
+      in: InputStream,
+      sourceDescription: String,
+  ): String = {
+    val dbf = DocumentBuilderFactory.newInstance()
+    dbf.setNamespaceAware(true)
+    dbf.setFeature(
+      "http://apache.org/xml/features/disallow-doctype-decl",
+      true,
+    )
+    List(
+      "http://xml.org/sax/features/external-general-entities",
+      "http://xml.org/sax/features/external-parameter-entities",
+      "http://apache.org/xml/features/nonvalidating/load-external-dtd",
+    ).foreach(dbf.setFeature(_, false))
+    dbf.setXIncludeAware(false)
+    dbf.setExpandEntityReferences(false)
+
+    val builder = dbf.newDocumentBuilder()
+    builder.setErrorHandler(new DefaultHandler())
+    val doc = builder.parse(in)
+    val root = Option(doc.getDocumentElement)
+      .filter(el => elementName(el) == "settings")
+      .getOrElse(
+        throw new IllegalArgumentException(
+          s"Expected <settings> root in $sourceDescription"
+        )
+      )
+    val ns = Option(root.getNamespaceURI).filter(_.nonEmpty)
+    val prefix = Option(root.getPrefix).filter(_.nonEmpty)
+
+    val profiles = directChildElement(root, "profiles").getOrElse {
+      val created = createElement(doc, ns, prefix, "profiles")
+      root.appendChild(created)
+      created
+    }
+    val hasProfile = directChildElements(profiles).exists { el =>
+      elementName(el) == "profile" &&
+      directChildElement(el, "id").exists(
+        _.getTextContent.trim == snapshotsProfileId
+      )
+    }
+    if (!hasProfile) {
+      profiles.appendChild(createSnapshotProfileElement(doc, ns, prefix))
+    }
+
+    val activeProfiles =
+      directChildElement(root, "activeProfiles").getOrElse {
+        val created = createElement(doc, ns, prefix, "activeProfiles")
+        root.appendChild(created)
+        created
+      }
+    val isAlreadyActive = directChildElements(activeProfiles).exists { el =>
+      elementName(el) == "activeProfile" &&
+      el.getTextContent.trim == snapshotsProfileId
+    }
+    if (!isAlreadyActive) {
+      activeProfiles.appendChild(
+        createTextElement(
+          doc,
+          ns,
+          prefix,
+          "activeProfile",
+          snapshotsProfileId,
+        )
+      )
+    }
+
+    val tf = TransformerFactory.newInstance()
+    Try(tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, ""))
+    Try(tf.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, ""))
+    val transformer = tf.newTransformer()
+    transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
+    val writer = new StringWriter()
+    transformer.transform(new DOMSource(doc), new StreamResult(writer))
+    writer.toString
+  }
 
   private def createSnapshotProfileElement(
       doc: Document,
@@ -495,24 +554,436 @@ object MavenMbtImporter {
     candidates.headOption
   }
 
+  private final case class WrapperSpec(
+      effectiveUri: URI,
+      mavenUserHome: Path,
+      distributionBase: String,
+      distributionPath: String,
+      zipStoreBase: String,
+      zipStorePath: String,
+      mavenConfOverride: Option[Path],
+  )
+
+  private def resolveWrapperGlobalSettingsFile(
+      baseArgs: List[String],
+      allTokens: List[String],
+      projectRoot: AbsolutePath,
+      env: Map[String, String],
+  ): Option[Path] =
+    resolveWrapperSpec(baseArgs, allTokens, projectRoot, env).flatMap { spec =>
+      val fromWrapperMavenConf =
+        for {
+          confDir <- spec.mavenConfOverride
+          settings = confDir.resolve("settings.xml")
+          if Files.isRegularFile(settings)
+        } yield settings
+
+      fromWrapperMavenConf.orElse {
+        for {
+          baseDir <- resolveWrapperBaseDir(
+            spec.distributionBase,
+            spec.mavenUserHome,
+            projectRoot,
+          )
+          distsRoot = baseDir.resolve(spec.distributionPath)
+          settings <- findUnpackedWrapperSettings(distsRoot, spec.effectiveUri)
+        } yield settings
+      }
+    }
+
+  private def resolveWrapperGlobalSettingsZip(
+      baseArgs: List[String],
+      allTokens: List[String],
+      projectRoot: AbsolutePath,
+      env: Map[String, String],
+  ): Option[(Path, String)] =
+    resolveWrapperSpec(baseArgs, allTokens, projectRoot, env).flatMap { spec =>
+      val uriPath = Option(spec.effectiveUri.getPath).getOrElse("")
+      val archiveName =
+        Option(Paths.get(uriPath).getFileName).map(_.toString).getOrElse("")
+      val distName = removeLastExtension(archiveName)
+      val uriHash = Integer.toHexString(spec.effectiveUri.hashCode())
+      val cachedZip =
+        for {
+          zipBaseDir <- resolveWrapperBaseDir(
+            spec.zipStoreBase,
+            spec.mavenUserHome,
+            projectRoot,
+          )
+          if distName.nonEmpty && archiveName.nonEmpty
+        } yield zipBaseDir
+          .resolve(spec.zipStorePath)
+          .resolve(distName)
+          .resolve(uriHash)
+          .resolve(archiveName)
+
+      val fileUriZip =
+        if ("file".equalsIgnoreCase(spec.effectiveUri.getScheme))
+          Try(Paths.get(spec.effectiveUri)).toOption
+        else None
+
+      val candidates = List(cachedZip, fileUriZip).flatten.distinct
+      val matches = for {
+        zipPath <- candidates
+        if Files.isRegularFile(zipPath)
+        entryName <- findSettingsEntryInZip(zipPath)
+      } yield (zipPath, entryName)
+      matches.headOption
+    }
+
+  private def resolveWrapperSpec(
+      baseArgs: List[String],
+      allTokens: List[String],
+      projectRoot: AbsolutePath,
+      env: Map[String, String],
+  ): Option[WrapperSpec] =
+    for {
+      propertiesFile <- findWrapperPropertiesFile(
+        baseArgs,
+        allTokens,
+        projectRoot,
+      )
+      wrapperProps <- loadJavaProperties(propertiesFile)
+      rawDistUrl <- Option(wrapperProps.getProperty("distributionUrl"))
+        .map(_.trim)
+        .filter(_.nonEmpty)
+      effectiveUri <- computeWrapperDistributionUri(
+        propertiesFile,
+        rawDistUrl,
+        allTokens,
+        env,
+      )
+      wrapperRootDir = Option(
+        propertiesFile.toAbsolutePath.normalize().getParent
+      )
+        .flatMap(p => Option(p.getParent))
+        .flatMap(p => Option(p.getParent))
+      initialUserHome = resolveInitialMavenUserHome(
+        allTokens,
+        projectRoot,
+        env,
+      )
+      extraSysProps = initialUserHome
+        .map(h => readWrapperSystemProperties(h.resolve("maven.properties")))
+        .getOrElse(Map.empty[String, String]) ++
+        wrapperRootDir
+          .map(r => readWrapperSystemProperties(r.resolve("maven.properties")))
+          .getOrElse(Map.empty[String, String])
+      mavenUserHome <- extractSystemProperty(allTokens, "maven.user.home")
+        .orElse(extraSysProps.get("maven.user.home"))
+        .flatMap(resolvePath(projectRoot, _))
+        .orElse(initialUserHome)
+    } yield {
+      val mavenConfOverride =
+        extraSysProps
+          .get("maven.conf")
+          .flatMap(resolvePath(projectRoot, _))
+      WrapperSpec(
+        effectiveUri = effectiveUri,
+        mavenUserHome = mavenUserHome,
+        distributionBase = Option(wrapperProps.getProperty("distributionBase"))
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .getOrElse("MAVEN_USER_HOME"),
+        distributionPath = Option(wrapperProps.getProperty("distributionPath"))
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .getOrElse("wrapper/dists"),
+        zipStoreBase = Option(wrapperProps.getProperty("zipStoreBase"))
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .getOrElse("MAVEN_USER_HOME"),
+        zipStorePath = Option(wrapperProps.getProperty("zipStorePath"))
+          .map(_.trim)
+          .filter(_.nonEmpty)
+          .getOrElse("wrapper/dists"),
+        mavenConfOverride = mavenConfOverride,
+      )
+    }
+
+  private def findWrapperPropertiesFile(
+      baseArgs: List[String],
+      allTokens: List[String],
+      projectRoot: AbsolutePath,
+  ): Option[Path] = {
+    val fromClasspath =
+      if (baseArgs.contains("org.apache.maven.wrapper.MavenWrapperMain")) {
+        val cpEntries = extractClasspathEntries(baseArgs, projectRoot)
+        val wrapperJars =
+          cpEntries.filter { p =>
+            Option(p.getFileName)
+              .map(_.toString.toLowerCase)
+              .exists(n => n.contains("maven-wrapper") && n.endsWith(".jar"))
+          } ++ cpEntries.filter { p =>
+            Option(p.getFileName)
+              .map(_.toString.toLowerCase)
+              .exists(_.endsWith(".jar"))
+          }
+        wrapperJars.distinct.flatMap { jar =>
+          Option(jar.getFileName).map(_.toString).map { fileName =>
+            jar.resolveSibling(
+              fileName.replaceFirst("(?i)\\.jar$", ".properties")
+            )
+          }
+        }
+      } else Nil
+
+    val fromScript =
+      if (!baseArgs.contains("org.apache.maven.wrapper.MavenWrapperMain"))
+        for {
+          cmd <- baseArgs.headOption
+          scriptPath <- resolvePath(projectRoot, cmd)
+          scriptDir <- Option(
+            scriptPath.toAbsolutePath.normalize().getParent
+          )
+        } yield scriptDir.resolve(".mvn/wrapper/maven-wrapper.properties")
+      else None
+
+    val fromMultiModule =
+      extractSystemProperty(allTokens, "maven.multiModuleProjectDirectory")
+        .flatMap(resolvePath(projectRoot, _))
+        .map(_.resolve(".mvn/wrapper/maven-wrapper.properties"))
+
+    val fromProjectRoot =
+      projectRoot.resolve(".mvn/wrapper/maven-wrapper.properties").toNIO
+
+    (fromClasspath ++ List(
+      fromScript,
+      fromMultiModule,
+      Some(fromProjectRoot),
+    ).flatten).distinct
+      .find(Files.isRegularFile(_))
+  }
+
+  private def extractClasspathEntries(
+      baseArgs: List[String],
+      projectRoot: AbsolutePath,
+  ): List[Path] = {
+    val sep = Regex.quote(File.pathSeparator)
+    val (_, rawEntries) =
+      baseArgs.foldLeft((false, List.empty[String])) {
+        case ((true, acc), cp) =>
+          (false, acc ++ cp.split(sep).filter(_.nonEmpty))
+        case ((false, acc), "-cp" | "-classpath" | "--class-path") =>
+          (true, acc)
+        case ((false, acc), arg) if arg.startsWith("--class-path=") =>
+          val cp = stripQuotes(arg.stripPrefix("--class-path="))
+          (false, acc ++ cp.split(sep).filter(_.nonEmpty))
+        case ((false, acc), _) =>
+          (false, acc)
+      }
+    rawEntries.flatMap(resolvePath(projectRoot, _))
+  }
+
+  private def resolveInitialMavenUserHome(
+      allTokens: List[String],
+      projectRoot: AbsolutePath,
+      env: Map[String, String],
+  ): Option[Path] =
+    extractSystemProperty(allTokens, "maven.user.home")
+      .flatMap(resolvePath(projectRoot, _))
+      .orElse(
+        env
+          .get("MAVEN_USER_HOME")
+          .map(s => stripQuotes(s.trim))
+          .filter(_.nonEmpty)
+          .flatMap(resolvePath(projectRoot, _))
+      )
+      .orElse(
+        extractSystemProperty(allTokens, "user.home")
+          .flatMap(resolvePath(projectRoot, _))
+          .map(_.resolve(".m2"))
+      )
+      .orElse(
+        env
+          .get("HOME")
+          .orElse(env.get("USERPROFILE"))
+          .map(s => stripQuotes(s.trim))
+          .filter(_.nonEmpty)
+          .flatMap(resolvePath(projectRoot, _))
+          .map(_.resolve(".m2"))
+      )
+      .orElse(
+        if (env == sys.env)
+          Option(System.getProperty("user.home"))
+            .filter(_.nonEmpty)
+            .map(Paths.get(_, ".m2"))
+        else None
+      )
+
+  private def computeWrapperDistributionUri(
+      propertiesFile: Path,
+      rawDistUrl: String,
+      allTokens: List[String],
+      env: Map[String, String],
+  ): Option[URI] =
+    Try {
+      val rawUri = new URI(rawDistUrl)
+      if (rawUri.getScheme == null) {
+        Option(propertiesFile.toAbsolutePath.normalize().getParent)
+          .map(_.resolve(rawUri.getSchemeSpecificPart).normalize().toUri)
+          .getOrElse(rawUri)
+      } else {
+        val repoUrlOpt =
+          extractSystemProperty(allTokens, "MVNW_REPOURL")
+            .orElse(env.get("MVNW_REPOURL"))
+            .map(s => stripQuotes(s.trim).stripSuffix("/"))
+            .filter(_.nonEmpty)
+        repoUrlOpt match {
+          case Some(repoUrl) =>
+            val rawPath = Option(rawUri.getPath).getOrElse("")
+            val mvndIdx = rawPath.indexOf("maven/mvnd")
+            val mavenIdx = rawPath.indexOf("org/apache/maven")
+            val idx = if (mvndIdx > 1) mvndIdx else mavenIdx
+            val suffix =
+              if (idx > 1) "/" + rawPath.substring(idx)
+              else if (rawPath.startsWith("/")) rawPath
+              else "/" + rawPath
+            new URI(repoUrl + suffix)
+          case None => rawUri
+        }
+      }
+    }.toOption
+
+  private def resolveWrapperBaseDir(
+      baseName: String,
+      mavenUserHome: Path,
+      projectRoot: AbsolutePath,
+  ): Option[Path] =
+    baseName match {
+      case "MAVEN_USER_HOME" => Some(mavenUserHome)
+      case "PROJECT" => Some(projectRoot.toNIO)
+      case _ => None
+    }
+
+  private def findUnpackedWrapperSettings(
+      distsRoot: Path,
+      effectiveUri: URI,
+  ): Option[Path] = {
+    val uriPath = Option(effectiveUri.getPath).getOrElse("")
+    val archiveName =
+      Option(Paths.get(uriPath).getFileName).map(_.toString).getOrElse("")
+    val withoutLastExt = removeLastExtension(archiveName)
+    val withoutTarGz = archiveName.stripSuffix(".tar.gz")
+    val distNames = List(
+      withoutLastExt,
+      withoutTarGz,
+      withoutLastExt.stripSuffix("-bin"),
+      withoutTarGz.stripSuffix("-bin"),
+    ).filter(_.nonEmpty).distinct
+
+    val hashes = List(
+      Integer.toHexString(effectiveUri.hashCode()),
+      Integer.toHexString(effectiveUri.toString.hashCode()),
+      md5Hex(effectiveUri.toString),
+    ).distinct
+
+    val candidates = for {
+      distName <- distNames
+      hash <- hashes
+      hashDir = distsRoot.resolve(distName).resolve(hash)
+      settings <- settingsInWrapperHashDir(hashDir)
+    } yield settings
+    candidates.headOption
+  }
+
+  private def settingsInWrapperHashDir(hashDir: Path): Option[Path] = {
+    val direct = hashDir.resolve("conf").resolve("settings.xml")
+    if (Files.isRegularFile(direct)) Some(direct)
+    else if (!Files.isDirectory(hashDir)) None
+    else {
+      val subdirs = Try {
+        Using.resource(Files.list(hashDir)) { stream =>
+          stream
+            .toArray(n => new Array[Path](n))
+            .filter(Files.isDirectory(_))
+        }
+      }.getOrElse(Array.empty[Path])
+      if (subdirs.length == 1) {
+        val nested = subdirs(0).resolve("conf").resolve("settings.xml")
+        if (Files.isRegularFile(nested)) Some(nested) else None
+      } else None
+    }
+  }
+
+  private def findSettingsEntryInZip(zipPath: Path): Option[String] =
+    Try {
+      Using.resource(new ZipFile(zipPath.toFile)) { zip =>
+        val entries = zip.stream().toArray(n => new Array[ZipEntry](n))
+        val topDirs = entries.flatMap { entry =>
+          val normalized = entry.getName.stripPrefix("/")
+          val slash = normalized.indexOf('/')
+          if (slash > 0) Some(normalized.substring(0, slash))
+          else if (entry.isDirectory && normalized.nonEmpty) Some(normalized)
+          else None
+        }.distinct
+        if (topDirs.length == 1) {
+          val candidate = s"${topDirs(0)}/conf/settings.xml"
+          Option(zip.getEntry(candidate))
+            .filter(!_.isDirectory)
+            .map(_.getName)
+        } else None
+      }
+    }.toOption.flatten
+
+  private def loadJavaProperties(file: Path): Option[java.util.Properties] =
+    if (!Files.isRegularFile(file)) None
+    else
+      Try {
+        val props = new java.util.Properties()
+        Using.resource(Files.newInputStream(file))(props.load)
+        props
+      }.toOption
+
+  private def readWrapperSystemProperties(file: Path): Map[String, String] =
+    loadJavaProperties(file) match {
+      case None => Map.empty
+      case Some(props) =>
+        val prefix = "systemProp."
+        val keys = props.stringPropertyNames().toArray(new Array[String](0))
+        (for {
+          key <- keys
+          if key.startsWith(prefix)
+          propName = key.stripPrefix(prefix)
+          if propName.nonEmpty
+          value <- Option(props.getProperty(key))
+        } yield propName -> value).toMap
+    }
+
+  private def removeLastExtension(name: String): String = {
+    val dot = name.lastIndexOf('.')
+    if (dot > 0) name.substring(0, dot) else name
+  }
+
+  private def md5Hex(input: String): String = {
+    val digest = MessageDigest
+      .getInstance("MD5")
+      .digest(input.getBytes(StandardCharsets.UTF_8))
+    digest.map(b => f"${b & 0xff}%02x").mkString
+  }
+
   private def extractSystemProperty(
       tokens: Seq[String],
       key: String,
   ): Option[String] = {
     val inlinePrefix = s"-D$key="
     val separatePrefix = s"$key="
-    val fromInline = tokens.collectFirst {
-      case token if token.startsWith(inlinePrefix) =>
-        stripQuotes(token.stripPrefix(inlinePrefix))
-    }
-    fromInline.orElse {
-      tokens
-        .zip(tokens.drop(1))
-        .collectFirst {
-          case ("-D", kv) if kv.startsWith(separatePrefix) =>
-            stripQuotes(kv.stripPrefix(separatePrefix))
-        }
-    }
+    val (_, found) =
+      tokens.foldLeft((false, Option.empty[String])) {
+        case ((true, prev), token) =>
+          val next =
+            if (token.startsWith(separatePrefix))
+              Some(stripQuotes(token.stripPrefix(separatePrefix)))
+            else prev
+          (false, next)
+        case ((false, prev), "-D") =>
+          (true, prev)
+        case ((false, _), token) if token.startsWith(inlinePrefix) =>
+          (false, Some(stripQuotes(token.stripPrefix(inlinePrefix))))
+        case ((false, prev), _) =>
+          (false, prev)
+      }
+    found
   }
 
   private def resolvePath(
@@ -529,11 +1000,8 @@ object MavenMbtImporter {
   private def isMavenWrapperCommand(baseArgs: List[String]): Boolean =
     baseArgs.contains("org.apache.maven.wrapper.MavenWrapperMain") ||
       baseArgs.headOption.exists { cmd =>
-        val name = Try(
-          Option(Paths.get(stripQuotes(cmd)).getFileName)
-            .map(_.toString)
-            .getOrElse(cmd)
-        ).getOrElse(cmd)
+        val normalized = stripQuotes(cmd).replace('\\', '/')
+        val name = normalized.substring(normalized.lastIndexOf('/') + 1)
         name.equalsIgnoreCase("mvnw") || name.equalsIgnoreCase("mvnw.cmd")
       }
 

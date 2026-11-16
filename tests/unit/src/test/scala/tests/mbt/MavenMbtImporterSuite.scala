@@ -2,11 +2,14 @@ package tests.mbt
 
 import java.io.ByteArrayInputStream
 import java.io.IOException
+import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
 import scala.concurrent.Await
@@ -14,6 +17,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.Duration
 import scala.util.Try
+import scala.util.Using
 
 import scala.meta.internal.metals.config.UserConfiguration
 import scala.meta.internal.metals.mbt.importer.MavenMbtImporter
@@ -457,5 +461,194 @@ class MavenMbtImporterSuite extends BaseSuite {
     Await.result(importer.extract(workspace), Duration.Inf)
 
     assert(!recordedArgs.contains("--global-settings"))
+  }
+
+  test("snapshot-version-merges-maven-wrapper-main-distribution-settings") {
+    val workspace =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-wrapper-main"))
+    val tempLauncherDir = Files.createTempDirectory("maven-mbt-launcher-tmp")
+    val wrapperJar = tempLauncherDir.resolve("maven-wrapper.jar")
+    Files.writeString(wrapperJar, "", StandardCharsets.UTF_8)
+
+    val distUrl =
+      "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"
+    Files.writeString(
+      tempLauncherDir.resolve("maven-wrapper.properties"),
+      s"distributionUrl=$distUrl\n",
+      StandardCharsets.UTF_8,
+    )
+
+    // MavenWrapperMain overwrites temporary -Dmaven.home with the unpacked wrapper distribution,
+    // so any settings under tempLauncherDir/conf must NOT override the wrapper distribution settings.
+    val decoyConf = tempLauncherDir.resolve("conf")
+    Files.createDirectories(decoyConf)
+    Files.writeString(
+      decoyConf.resolve("settings.xml"),
+      """|<settings>
+         |  <proxies>
+         |    <proxy>
+         |      <id>decoy-temp-proxy</id>
+         |    </proxy>
+         |  </proxies>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    val mavenUserHome = Files.createTempDirectory("maven-mbt-user-home")
+    val uriHash = Integer.toHexString(new URI(distUrl).hashCode())
+    val wrapperConfDir = mavenUserHome
+      .resolve("wrapper/dists/apache-maven-3.9.9-bin")
+      .resolve(uriHash)
+      .resolve("apache-maven-3.9.9/conf")
+    Files.createDirectories(wrapperConfDir)
+    Files.writeString(
+      wrapperConfDir.resolve("settings.xml"),
+      """|<settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+         |  <proxies>
+         |    <proxy>
+         |      <id>wrapper-corp-proxy</id>
+         |      <active>true</active>
+         |      <protocol>http</protocol>
+         |      <host>proxy.wrapper.internal</host>
+         |      <port>8080</port>
+         |    </proxy>
+         |  </proxies>
+         |  <mirrors>
+         |    <mirror>
+         |      <id>wrapper-corp-mirror</id>
+         |      <mirrorOf>external:*</mirrorOf>
+         |      <url>https://nexus.wrapper.internal/maven-public/</url>
+         |    </mirror>
+         |  </mirrors>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    val wrapperBaseCommand = List(
+      "java",
+      "-Dfile.encoding=UTF-8",
+      s"-Dmaven.multiModuleProjectDirectory=$workspace",
+      s"-Dmaven.home=$tempLauncherDir",
+      "-cp",
+      wrapperJar.toString,
+      "org.apache.maven.wrapper.MavenWrapperMain",
+    )
+
+    var capturedXml: String = ""
+    val importer = new TestMavenMbtImporter(
+      workspace,
+      version = "2.0.0-RC1-22-d02f337b-SNAPSHOT",
+      baseCommand = wrapperBaseCommand,
+      env = Map("MAVEN_USER_HOME" -> mavenUserHome.toString),
+      onRun = { (args, ws) =>
+        val gsIdx = args.indexOf("--global-settings")
+        capturedXml =
+          Files.readString(Paths.get(args(gsIdx + 1)), StandardCharsets.UTF_8)
+        val out = ws.resolve(".metals/mbt-maven.json").toNIO
+        Files.writeString(out, "{}", StandardCharsets.UTF_8)
+        Future.successful(ExitCodes.Success)
+      },
+    )
+
+    Await.result(importer.extract(workspace), Duration.Inf)
+
+    val doc = parseXml(capturedXml)
+    assert(capturedXml.contains("wrapper-corp-proxy"))
+    assert(capturedXml.contains("wrapper-corp-mirror"))
+    assert(!capturedXml.contains("decoy-temp-proxy"))
+    assertEquals(
+      tagValues(doc, "url"),
+      List(
+        "https://nexus.wrapper.internal/maven-public/",
+        MavenMbtImporter.centralSnapshotsUrl,
+      ),
+    )
+    assertEquals(
+      tagValues(doc, "activeProfile"),
+      List("metals-snapshots"),
+    )
+  }
+
+  test("snapshot-version-merges-mvnw-script-and-cached-zip-settings") {
+    val workspace =
+      AbsolutePath(Files.createTempDirectory("maven-mbt-mvnw-script"))
+    val wrapperProps =
+      workspace.resolve(".mvn/wrapper/maven-wrapper.properties").toNIO
+    Files.createDirectories(wrapperProps.getParent)
+    val rawUrl =
+      "https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"
+    val repoUrl = "https://mirror.corp.internal/maven2"
+    val effectiveUrl =
+      "https://mirror.corp.internal/maven2/org/apache/maven/apache-maven/3.9.9/apache-maven-3.9.9-bin.zip"
+    Files.writeString(
+      wrapperProps,
+      s"distributionUrl=$rawUrl\n",
+      StandardCharsets.UTF_8,
+    )
+
+    // 1. Test script-only mvnw layout (<mavenUserHome>/wrapper/dists/apache-maven-3.9.9/<strHash>/conf/settings.xml)
+    val scriptM2 = Files.createTempDirectory("maven-mbt-script-m2")
+    val strHash = Integer.toHexString(effectiveUrl.hashCode())
+    val scriptConf = scriptM2
+      .resolve("wrapper/dists/apache-maven-3.9.9")
+      .resolve(strHash)
+      .resolve("conf")
+    Files.createDirectories(scriptConf)
+    Files.writeString(
+      scriptConf.resolve("settings.xml"),
+      """|<settings>
+         |  <proxies>
+         |    <proxy>
+         |      <id>mvnw-script-proxy</id>
+         |    </proxy>
+         |  </proxies>
+         |</settings>
+         |""".stripMargin,
+      StandardCharsets.UTF_8,
+    )
+
+    val scriptXml = MavenMbtImporter.buildSnapshotGlobalSettingsXml(
+      List("./mvnw"),
+      workspace,
+      Map(
+        "MAVEN_USER_HOME" -> scriptM2.toString,
+        "MVNW_REPOURL" -> s"$repoUrl/",
+      ),
+    )
+    assert(scriptXml.contains("mvnw-script-proxy"))
+    assert(scriptXml.contains(MavenMbtImporter.centralSnapshotsUrl))
+
+    // 2. Test cached wrapper zip before unpacking (<mavenUserHome>/wrapper/dists/apache-maven-3.9.9-bin/<uriHash>/apache-maven-3.9.9-bin.zip)
+    val zipM2 = Files.createTempDirectory("maven-mbt-zip-m2")
+    val uriHash = Integer.toHexString(new URI(rawUrl).hashCode())
+    val zipPath = zipM2
+      .resolve("wrapper/dists/apache-maven-3.9.9-bin")
+      .resolve(uriHash)
+      .resolve("apache-maven-3.9.9-bin.zip")
+    Files.createDirectories(zipPath.getParent)
+    Using.resource(new ZipOutputStream(Files.newOutputStream(zipPath))) { zos =>
+      zos.putNextEntry(new ZipEntry("apache-maven-3.9.9/conf/settings.xml"))
+      zos.write(
+        """|<settings>
+           |  <proxies>
+           |    <proxy>
+           |      <id>cached-zip-proxy</id>
+           |    </proxy>
+           |  </proxies>
+           |</settings>
+           |""".stripMargin.getBytes(StandardCharsets.UTF_8)
+      )
+      zos.closeEntry()
+    }
+
+    val zipXml = MavenMbtImporter.buildSnapshotGlobalSettingsXml(
+      List("./mvnw"),
+      workspace,
+      Map("MAVEN_USER_HOME" -> zipM2.toString),
+    )
+    assert(zipXml.contains("cached-zip-proxy"))
+    assert(zipXml.contains(MavenMbtImporter.centralSnapshotsUrl))
   }
 }
