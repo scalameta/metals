@@ -56,7 +56,7 @@ object BazelQuery {
    * Exit code returned by `bazel query --keep_going` when some packages fail
    * to load or analyze while valid partial query results are still emitted.
    */
-  val PartialAnalysisFailureExitCode: Int = 3
+  private val PartialAnalysisFailureExitCode: Int = 3
 
   private val MaxCapturedStderrLines: Int = 20
 
