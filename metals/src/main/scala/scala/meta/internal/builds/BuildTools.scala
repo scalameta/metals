@@ -109,22 +109,35 @@ final class BuildTools(
     isInBsp(path) && path.filename.contains("mill") &&
       path.filename.endsWith(".json")
 
-  def scalaCliProject: Option[AbsolutePath] =
-    searchForBuildTool(_.resolve("project.scala").isFile)
-      .orElse {
-        try {
-          ScalaCliBspScope.scalaCliBspRoot(workspace) match {
-            case Nil => None
-            case path :: Nil if path.isFile => Some(path.parent)
-            case path :: Nil => Some(path)
-            case _ => Some(workspace)
-          }
-        } catch {
-          case _: ParsingFailedException =>
-            scribe.warn(s"could not parse scala-cli build server configuration")
-            None
-        }
+  /**
+   * A `project.scala` in the project root takes precedence, then the root
+   * defined by an existing scala-cli `.bsp` config, and only then a
+   * `project.scala` found in a subdirectory, since the latter might just
+   * be a part of a larger build defined in the workspace.
+   */
+  def scalaCliProject: Option[AbsolutePath] = {
+    def hasProjectScala(root: AbsolutePath) =
+      root.resolve("project.scala").isFile
+    customProjectRoot
+      .orElse(Some(workspace))
+      .filter(hasProjectScala)
+      .orElse(scalaCliBspProject)
+      .orElse(searchForBuildTool(hasProjectScala))
+  }
+
+  private def scalaCliBspProject: Option[AbsolutePath] =
+    try {
+      ScalaCliBspScope.scalaCliBspRoot(workspace) match {
+        case Nil => None
+        case path :: Nil if path.isFile => Some(path.parent)
+        case path :: Nil => Some(path)
+        case _ => Some(workspace)
       }
+    } catch {
+      case _: ParsingFailedException =>
+        scribe.warn(s"could not parse scala-cli build server configuration")
+        None
+    }
 
   def gradleProject: Option[AbsolutePath] = {
     val defaultGradlePaths = List(
