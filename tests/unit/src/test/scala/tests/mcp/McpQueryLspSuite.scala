@@ -77,7 +77,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/TestClass.scala")
       _ = assertNoDiagnostics()
       // Test searching for "test" - should find packages, classes, objects, trait
-      result <- server.headServer.queryEngine.globSearch(
+      result <- server.headServer.mcpQueryEngine.globSearch(
         "test",
         Set.empty,
       )
@@ -97,7 +97,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Test searching for "matching" - should find package and object
-      matching <- server.headServer.queryEngine.globSearch(
+      matching <- server.headServer.mcpQueryEngine.globSearch(
         "matching",
         Set.empty,
       )
@@ -110,7 +110,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"matching\", Set.empty)",
       )
 
-      testClasses <- server.headServer.queryEngine.globSearch(
+      testClasses <- server.headServer.mcpQueryEngine.globSearch(
         "test",
         Set(SymbolType.Class),
       )
@@ -124,7 +124,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "query: globSearch(\"test\", Set(SymbolType.Class))",
       )
 
-      methods <- server.headServer.queryEngine
+      methods <- server.headServer.mcpQueryEngine
         .globSearch(
           "method",
           Set(SymbolType.Method, SymbolType.Function),
@@ -181,7 +181,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // Case insensitive search for "camel"
-      camel <- server.headServer.queryEngine.globSearch(
+      camel <- server.headServer.mcpQueryEngine.globSearch(
         "camel",
         Set.empty,
       )
@@ -192,7 +192,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
 
-      uppercase <- server.headServer.queryEngine.globSearch(
+      uppercase <- server.headServer.mcpQueryEngine.globSearch(
         "uppercase",
         Set.empty,
       )
@@ -206,7 +206,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
 
-      lowercase <- server.headServer.queryEngine.globSearch(
+      lowercase <- server.headServer.mcpQueryEngine.globSearch(
         "lowercase",
         Set.empty,
       )
@@ -269,7 +269,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // Search for all packages
-      packages <- server.headServer.queryEngine
+      packages <- server.headServer.mcpQueryEngine
         .globSearch(
           "package",
           Set(SymbolType.Package),
@@ -282,7 +282,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for test packages
-      testPackages <- server.headServer.queryEngine
+      testPackages <- server.headServer.mcpQueryEngine
         .globSearch(
           "test",
           Set(SymbolType.Package),
@@ -295,7 +295,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
 
       // Search for nested packages
-      nestedPackages <- server.headServer.queryEngine
+      nestedPackages <- server.headServer.mcpQueryEngine
         .globSearch(
           "nested",
           Set(SymbolType.Package),
@@ -324,7 +324,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/MidWordProbe.scala")
       _ = assertNoDiagnostics()
 
-      prefixMatch <- server.headServer.queryEngine.globSearch(
+      prefixMatch <- server.headServer.mcpQueryEngine.globSearch(
         "MidWord",
         Set(SymbolType.Class),
       )
@@ -339,7 +339,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       // lookup in `WorkspaceSymbolQuery.matches` rejects it. This asserts a
       // deficiency: if candidate lookup ever matches substrings, invert the
       // assertion instead of deleting it.
-      midWord <- server.headServer.queryEngine.globSearch(
+      midWord <- server.headServer.mcpQueryEngine.globSearch(
         "idWordProbe",
         Set(SymbolType.Class),
       )
@@ -375,7 +375,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
 
       // symbols from every module are returned, without a file in focus
-      classes <- server.headServer.queryEngine.globSearch(
+      classes <- server.headServer.mcpQueryEngine.globSearch(
         "McpProbe",
         Set(SymbolType.Class),
       )
@@ -390,7 +390,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertEquals(classes.searchBudgetExhausted, false)
 
       // the package is declared in both modules, but reported once
-      packages <- server.headServer.queryEngine.globSearch(
+      packages <- server.headServer.mcpQueryEngine.globSearch(
         "mcpshared",
         Set(SymbolType.Package),
       )
@@ -402,7 +402,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
 
       // packages are not returned when the requested types exclude them
-      notPackages <- server.headServer.queryEngine.globSearch(
+      notPackages <- server.headServer.mcpQueryEngine.globSearch(
         "mcpshared",
         Set(SymbolType.Class),
       )
@@ -441,7 +441,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         ),
         new BuildTargetIdentifier("stale-target"),
       )
-      result <- server.headServer.queryEngine.globSearch(
+      result <- server.headServer.mcpQueryEngine.globSearch(
         "staleprobe",
         Set(SymbolType.Package),
       )
@@ -478,7 +478,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
 
       // `sourcecode` is only on module "b"'s classpath, dependency search is
       // workspace wide regardless
-      result <- server.headServer.queryEngine.globSearch(
+      result <- server.headServer.mcpQueryEngine.globSearch(
         "Enclosing",
         Set(SymbolType.Class, SymbolType.Object),
       )
@@ -508,7 +508,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       // longer than `Fuzzy.PrefixSearchLimit`, so not a short query, but broad
       // enough to exceed `ClasspathSearch.maxNonExactMatches`, which allows 10
       // non-exact matches, all of them from the JDK here
-      result <- server.headServer.queryEngine.globSearch(
+      result <- server.headServer.mcpQueryEngine.globSearch(
         "String",
         Set.empty,
       )
@@ -582,7 +582,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       path = server.toPath(
         "a/src/main/scala/com/test/nested/package2/Class2.scala"
       )
-      res <- server.headServer.queryEngine.inspect(
+      res <- server.headServer.mcpQueryEngine.inspect(
         "com.test.nested.package1.Class1",
         path,
       )
@@ -597,7 +597,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |	 - someFunction(x: Int): Int
            |""".stripMargin,
       )
-      resPkg <- server.headServer.queryEngine.inspect(
+      resPkg <- server.headServer.mcpQueryEngine.inspect(
         "com.test.nested.package1",
         path,
       )
@@ -609,7 +609,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |	 - deeper
            |""".stripMargin,
       )
-      resMethod <- server.headServer.queryEngine.inspect(
+      resMethod <- server.headServer.mcpQueryEngine.inspect(
         "com.test.nested.package1.Class1.add",
         path,
       )
@@ -619,7 +619,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |method add(x: Int, y: Int): Int
            |""".stripMargin,
       )
-      resNested <- server.headServer.queryEngine.inspect(
+      resNested <- server.headServer.mcpQueryEngine.inspect(
         "com.test.nested.package2.Bar.Foo.Nested",
         path,
       )
@@ -659,7 +659,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen(
         "a/src/main/scala/Main.scala"
       )
-      resPkgObject <- server.headServer.queryEngine.inspect(
+      resPkgObject <- server.headServer.mcpQueryEngine.inspect(
         "foo.o",
         server.toPath("a/src/main/scala/Main.scala"),
       )
@@ -686,7 +686,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       path = server.toPath("a/src/main/scala/Main.scala")
-      result <- server.headServer.queryEngine.inspect(
+      result <- server.headServer.mcpQueryEngine.inspect(
         "java.util.function.Consumer",
         path,
       )
@@ -725,7 +725,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/com/test/nested/package1/Class1.scala"
       )
       _ = assertNoDiagnostics()
-      res = server.headServer.queryEngine.getDocumentation(
+      res = server.headServer.mcpQueryEngine.getDocumentation(
         "com.test.nested.package1.Class1.add"
       )
 
@@ -772,7 +772,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/com/test/Class2.scala"
       )
       _ = assertNoDiff(
-        server.headServer.queryEngine
+        server.headServer.mcpQueryEngine
           .getUsages("com.test.Class1.add", path)
           .show(server.workspace),
         s"""|${Path.of("a/src/main/scala/com/test/Class1.scala")}:4
@@ -811,7 +811,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         "a/src/main/scala/EmptyPackageUsage.scala"
       )
       _ = assertNoDiff(
-        server.headServer.queryEngine
+        server.headServer.mcpQueryEngine
           .getUsages(
             "EmptyPackageClass.add",
             path,
@@ -848,7 +848,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/MyClass.scala")
       _ = assertNoDiagnostics()
       // Call inspect without path - should use smart fallback
-      res <- server.headServer.queryEngine.inspect(
+      res <- server.headServer.mcpQueryEngine.inspect(
         "com.test.MyClass",
         path = None,
         module = None,
@@ -894,7 +894,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/DocClass.scala")
       _ = assertNoDiagnostics()
       // Call getDocumentation without path - should use smart fallback
-      res = server.headServer.queryEngine.getDocumentation(
+      res = server.headServer.mcpQueryEngine.getDocumentation(
         "com.test.DocClass.double",
         path = None,
         module = None,
@@ -939,7 +939,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
       // Call getUsages without path - should use smart fallback
       _ = assertNoDiff(
-        server.headServer.queryEngine
+        server.headServer.mcpQueryEngine
           .getUsages(
             "com.test.UsageClass.helper",
             path = None,
@@ -973,7 +973,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/ModuleClass.scala")
       _ = assertNoDiagnostics()
       // Inspect with explicit module "a"
-      res <- server.headServer.queryEngine.inspect(
+      res <- server.headServer.mcpQueryEngine.inspect(
         "com.test.ModuleClass",
         path = None,
         module = Some("a"),
@@ -1014,7 +1014,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.server.indexingPromise.future
       // `b` owns only the shared file, which maps to `a` first.
-      res = server.headServer.queryEngine.getSource(
+      res = server.headServer.mcpQueryEngine.getSource(
         "com.test.TargetClass",
         module = Some("b"),
       )
@@ -1048,14 +1048,14 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
             |""".stripMargin
       )
       _ <- server.server.indexingPromise.future
-      inspected <- server.headServer.queryEngine.inspect(
+      inspected <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = None,
       )
-      withoutModule = server.headServer.queryEngine.getSource(
+      withoutModule = server.headServer.mcpQueryEngine.getSource(
         "com.test.TargetClass"
       )
-      withInspectedModule = server.headServer.queryEngine.getSource(
+      withInspectedModule = server.headServer.mcpQueryEngine.getSource(
         "com.test.TargetClass",
         module = inspected.primaryTarget,
       )
@@ -1092,48 +1092,48 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
       focusedPath = server.toPath("b/src/main/scala/com/test/TargetClass.scala")
       otherPath = server.toPath("a/src/main/scala/com/test/OtherClass.scala")
-      focused <- server.headServer.queryEngine.inspect(
+      focused <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = Some(focusedPath),
       )
-      byModule <- server.headServer.queryEngine.inspect(
+      byModule <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = None,
         module = Some("b"),
       )
-      moduleOverridesPath <- server.headServer.queryEngine.inspect(
+      moduleOverridesPath <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = Some(otherPath),
         module = Some("b"),
       )
-      wrongModule <- server.headServer.queryEngine.inspect(
+      wrongModule <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = None,
         module = Some("a"),
       )
-      wrongModuleMember <- server.headServer.queryEngine.inspect(
+      wrongModuleMember <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass.targetMethod",
         path = None,
         module = Some("a"),
       )
-      allTargets <- server.headServer.queryEngine.inspect(
+      allTargets <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = None,
         searchAllTargets = true,
       )
-      implicitTarget <- server.headServer.queryEngine.inspect(
+      implicitTarget <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = None,
       )
-      implicitOther <- server.headServer.queryEngine.inspect(
+      implicitOther <- server.headServer.mcpQueryEngine.inspect(
         "com.test.OtherClass",
         path = None,
       )
-      implicitTargetMember <- server.headServer.queryEngine.inspect(
+      implicitTargetMember <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass.targetMethod",
         path = None,
       )
-      wrongPath <- server.headServer.queryEngine.inspect(
+      wrongPath <- server.headServer.mcpQueryEngine.inspect(
         "com.test.TargetClass",
         path = Some(otherPath),
       )
@@ -1151,7 +1151,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertEquals(wrongModuleMember.results, Nil)
       _ = assertEquals(allTargets.results, byModule.results)
       _ = assertEquals(allTargets.searchedTargets.sorted, List("a", "b"))
-      missing <- server.headServer.queryEngine.inspect(
+      missing <- server.headServer.mcpQueryEngine.inspect(
         "com.test.MissingClass",
         path = None,
         module = Some("b"),
@@ -1161,7 +1161,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
         missing.show,
         "Symbol not found (searched targets: b)",
       )
-      implicitMissing <- server.headServer.queryEngine.inspect(
+      implicitMissing <- server.headServer.mcpQueryEngine.inspect(
         "com.test.MissingClass",
         path = None,
       )
@@ -1206,7 +1206,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("b/src/main/scala/com/module_b/DocB.scala")
       _ = assertNoDiagnostics()
       // Get docs for DocA using explicit module "a"
-      resA = server.headServer.queryEngine.getDocumentation(
+      resA = server.headServer.mcpQueryEngine.getDocumentation(
         "com.module_a.DocA.greetA",
         path = None,
         module = Some("a"),
@@ -1219,7 +1219,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
            |""".stripMargin,
       )
       // Get docs for DocB using explicit module "b"
-      resB = server.headServer.queryEngine.getDocumentation(
+      resB = server.headServer.mcpQueryEngine.getDocumentation(
         "com.module_b.DocB.greetB",
         path = None,
         module = Some("b"),
@@ -1274,7 +1274,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
       // Get usages with explicit module "a"
       _ = assertNoDiff(
-        server.headServer.queryEngine
+        server.headServer.mcpQueryEngine
           .getUsages(
             "com.shared.SharedUtil.sharedMethod",
             path = None,
@@ -1308,7 +1308,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.server.indexingPromise.future
       _ <- server.didOpen("a/src/main/scala/com/test/Thing.scala")
       _ = assertNoDiff(
-        server.headServer.queryEngine
+        server.headServer.mcpQueryEngine
           .getUsages(
             "com.test.Thing.method",
             path = None,
@@ -1340,7 +1340,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/SearchClass.scala")
       _ = assertNoDiagnostics()
       // Inspect with searchAllTargets=true (single module)
-      res <- server.headServer.queryEngine.inspect(
+      res <- server.headServer.mcpQueryEngine.inspect(
         "com.test.SearchClass",
         path = None,
         module = None,
@@ -1379,7 +1379,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ <- server.didOpen("a/src/main/scala/com/test/FallbackClass.scala")
       _ = assertNoDiagnostics()
       // Call with invalid module name - should fall back to smart fallback
-      res <- server.headServer.queryEngine.inspect(
+      res <- server.headServer.mcpQueryEngine.inspect(
         "com.test.FallbackClass",
         path = None,
         module = Some("nonexistent-module"),
@@ -1411,7 +1411,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       _ = assertNoDiagnostics()
       path = server.toPath("a/src/main/scala/Main.scala")
       // Default (detailed=false): shortened bodies with ???
-      resShort = server.headServer.queryEngine.getSource(
+      resShort = server.headServer.mcpQueryEngine.getSource(
         "scala.util.DynamicVariable",
         Some(path),
         module = None,
@@ -1450,7 +1450,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
           )
       }
       // detailed=true: full method bodies
-      resFull = server.headServer.queryEngine.getSource(
+      resFull = server.headServer.mcpQueryEngine.getSource(
         "scala.util.DynamicVariable",
         Some(path),
         module = None,
@@ -1469,7 +1469,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
           )
       }
       // Get source via a method - should return the containing file
-      methodRes = server.headServer.queryEngine.getSource(
+      methodRes = server.headServer.mcpQueryEngine.getSource(
         "scala.util.DynamicVariable.value",
         Some(path),
       )
@@ -1519,7 +1519,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       )
       _ <- server.didOpen("a/src/main/scala/Main.scala")
       _ = assertNoDiagnostics()
-      res = server.headServer.queryEngine.getSource(
+      res = server.headServer.mcpQueryEngine.getSource(
         "java.nio.file.FileTreeIterator",
         Some(server.toPath("a/src/main/scala/Main.scala")),
         module = None,
@@ -1537,7 +1537,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
             "Source should be found for java.nio.file.FileTreeIterator"
           )
       }
-      res2 = server.headServer.queryEngine.getSource(
+      res2 = server.headServer.mcpQueryEngine.getSource(
         "java.nio.file.FileTreeIterator",
         Some(server.toPath("a/src/main/scala/Main.scala")),
         module = None,
@@ -1586,7 +1586,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
 
       // `sourcecode` is only on module "b"'s classpath, but the path in focus
       // belongs to module "a" - exact search must fall back to every target.
-      res = server.headServer.queryEngine.getSource(
+      res = server.headServer.mcpQueryEngine.getSource(
         "sourcecode.Enclosing",
         Some(server.toPath("a/src/main/scala/com/module_a/OnlyA.scala")),
         module = None,
@@ -1632,7 +1632,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
       // module "a" declares a `sourcecode` package, which matches the query
       // but has no definition to show - exact search must still fall back
       // to every target instead of stopping at that package-only match.
-      res = server.headServer.queryEngine.getSource(
+      res = server.headServer.mcpQueryEngine.getSource(
         "sourcecode.Enclosing",
         Some(server.toPath("a/src/main/scala/sourcecode/Marker.scala")),
         module = None,
@@ -1677,7 +1677,7 @@ class McpQueryLspSuite extends BaseLspSuite("query") {
 
       // Same fallback must apply to get-docs, which currently has no
       // dependency-symbol coverage at all.
-      res = server.headServer.queryEngine.getDocumentation(
+      res = server.headServer.mcpQueryEngine.getDocumentation(
         "sourcecode.Enclosing",
         Some(server.toPath("a/src/main/scala/com/module_a/OnlyA.scala")),
         module = None,

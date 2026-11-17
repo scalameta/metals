@@ -24,6 +24,8 @@ import scala.meta.internal.metals.clients.language.ConfiguredLanguageClient
 import scala.meta.internal.metals.data.ResetWorkspaceState
 import scala.meta.internal.metals.doctor.HeadDoctor
 import scala.meta.internal.metals.doctor.MetalsServiceInfo
+import scala.meta.internal.metals.mcp.McpCompiler
+import scala.meta.internal.metals.mcp.McpDependencyFinder
 import scala.meta.internal.metals.mcp.McpQueryEngine
 import scala.meta.internal.metals.mcp.McpSymbolSearch
 import scala.meta.internal.metals.mcp.McpTestRunner
@@ -245,7 +247,7 @@ class ProjectMetalsLspService(
     workspaceSymbols,
   )
 
-  lazy val queryEngine =
+  lazy val mcpQueryEngine =
     new McpQueryEngine(
       compilers,
       symbolDocs,
@@ -256,6 +258,18 @@ class ProjectMetalsLspService(
       folder,
       initialServerConfig.maxMcpSearchResults,
     )
+
+  lazy val mcpCompiler =
+    new McpCompiler(
+      folder,
+      compilations,
+      diagnostics,
+      buildTargets,
+      initialServerConfig.maxMcpCompileDiagnostics,
+    )
+
+  lazy val mcpDependencyFinder =
+    new McpDependencyFinder(folder, scalaVersionSelector)
 
   lazy val mcpTestRunner =
     new McpTestRunner(
@@ -294,11 +308,10 @@ class ProjectMetalsLspService(
         if (useStdio) {
           register(
             new MetalsMcpStdioServer(
-              queryEngine,
+              mcpQueryEngine,
               folder,
-              compilations,
+              mcpCompiler,
               () => focusedDocument,
-              diagnostics,
               buildTargets,
               mcpTestRunner,
               userConfig.mcpClient.getOrElse(
@@ -306,22 +319,20 @@ class ProjectMetalsLspService(
               ),
               getVisibleName,
               connectionProvider,
-              scalaVersionSelector,
+              mcpDependencyFinder,
               scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
-              initialServerConfig.maxMcpCompileDiagnostics,
               onStdinClosed,
             )
           ).run()
         } else {
           register(
             new MetalsMcpServer(
-              queryEngine,
+              mcpQueryEngine,
               folder,
-              compilations,
+              mcpCompiler,
               () => focusedDocument,
-              diagnostics,
               buildTargets,
               mcpTestRunner,
               userConfig.mcpClient.getOrElse(
@@ -330,11 +341,10 @@ class ProjectMetalsLspService(
               getVisibleName,
               languageClient,
               connectionProvider,
-              scalaVersionSelector,
+              mcpDependencyFinder,
               scalafmtRunner,
               scalafixLlmRuleProvider,
               indexingPromise,
-              initialServerConfig.maxMcpCompileDiagnostics,
             )
           ).run()
         }
