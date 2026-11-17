@@ -16,6 +16,7 @@ import scala.util.Try
 import scala.util.control.NonFatal
 
 import scala.meta.internal.bsp.BuildChange
+import scala.meta.internal.builds.SbtBuildTool
 import scala.meta.internal.metals.BuildTargets
 import scala.meta.internal.metals.Cancelable
 import scala.meta.internal.metals.Compilations
@@ -826,19 +827,27 @@ trait MetalsMcpTools extends Cancelable {
         val scalaBinaryVersion =
           ScalaVersions.scalaBinaryVersionFromFullVersion(scalaVersion)
 
+        val isSbt2 =
+          SbtBuildTool.loadVersion(projectPath).exists(_.startsWith("2."))
+        val artifactCandidates = (name: String) => {
+          val sbt1Plugin = s"${name}_2.12_1.0"
+          val sbt2Plugin = s"${name}_sbt2_3"
+          val sbtPlugins =
+            if (isSbt2) List(sbt2Plugin, sbt1Plugin)
+            else List(sbt1Plugin, sbt2Plugin)
+          (s"${name}_$scalaBinaryVersion" :: sbtPlugins) :+ name
+        }
+
         val potentialDepStrings = (org, name, version) match {
           case (Some(org), Some(name), Some(version)) =>
             val versionQuery = if (version.contains("latest")) "" else version
-            List(
-              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:$versionQuery",
-              FindDepKey.version -> s"$org:$name:$versionQuery",
+            artifactCandidates(name).map(artifact =>
+              FindDepKey.version -> s"$org:$artifact:$versionQuery"
             )
           case (Some(org), Some(name), None) =>
-            List(
-              FindDepKey.version -> s"$org:${name}_$scalaBinaryVersion:",
-              FindDepKey.version -> s"$org:$name:",
-              FindDepKey.name -> s"$org:$name",
-            )
+            artifactCandidates(name).map(artifact =>
+              FindDepKey.version -> s"$org:$artifact:"
+            ) :+ (FindDepKey.name -> s"$org:$name")
           case (Some(org), None, _) =>
             List(
               FindDepKey.name -> s"$org:",
@@ -848,7 +857,7 @@ trait MetalsMcpTools extends Cancelable {
         }
         val completions = {
           for {
-            (key, depString) <- potentialDepStrings.iterator
+            (key, depString) <- potentialDepStrings.view
             message <-
               if (key == FindDepKey.version) {
                 val (stable, preRelease) =

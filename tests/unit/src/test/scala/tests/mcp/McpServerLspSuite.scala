@@ -94,6 +94,15 @@ class McpServerLspSuite extends BaseLspSuite("mcp-server") with McpTestUtils {
         resultPlatformSuffix.mkString("\n"),
         McpMessages.FindDep.versionMessage(Some("33.0.0-android")),
       )
+      resultSbtPlugin <- client.findDep(
+        "org.scalaxb",
+        Some("sbt-scalaxb"),
+        Some("1.11."),
+      )
+      _ = assertNoDiff(
+        resultSbtPlugin.mkString("\n"),
+        McpMessages.FindDep.versionMessage(Some("1.11.1")),
+      )
       _ <- client.shutdown()
     } yield ()
   }
